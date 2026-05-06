@@ -9,9 +9,10 @@ import { UserMenu } from '@/components/auth/UserMenu'
 import Link from 'next/link'
 interface NavbarProps {
   user: any // Supabase user object
+  profile?: any // Custom profile data from public.profiles
 }
 
-export function Navbar({ user }: NavbarProps) {
+export function Navbar({ user, profile }: NavbarProps) {
   const [isAuthOpen, setIsAuthOpen] = useState(false)
 
   return (
@@ -28,7 +29,7 @@ export function Navbar({ user }: NavbarProps) {
         
         {user ? (
           <div className="flex items-center gap-4">
-            <UserMenu user={user} />
+            <UserMenu user={user} profile={profile} />
           </div>
         ) : (
           <button 

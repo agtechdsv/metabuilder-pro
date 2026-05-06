@@ -106,17 +106,41 @@ export async function updateAvatar(formData: FormData) {
   // Adicionamos um timestamp para evitar cache do navegador ao trocar a foto
   const timestampUrl = `${publicUrl}?t=${Date.now()}`
 
-  // 3. Atualizar o avatar_url no metadata do usuário
-  const { error: updateError } = await supabase.auth.updateUser({
-    data: { avatar_url: timestampUrl }
-  })
+  // 3. Atualizar o avatar_url na tabela public.profiles
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({ 
+      avatar_url: timestampUrl,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', user.id)
 
   if (updateError) {
-    console.error('DETALHE ERRO METADATA:', updateError)
+    console.error('DETALHE ERRO PROFILES:', updateError)
     throw new Error(`Erro ao atualizar perfil: ${updateError.message}`)
   }
 
   return timestampUrl
+}
+
+export async function getProfile() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) return null
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
+  if (error) {
+    console.error('Erro ao buscar perfil:', error)
+    return null
+  }
+
+  return data
 }
 
 export async function resetAvatar() {
@@ -124,12 +148,17 @@ export async function resetAvatar() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  const originalPicture = user.user_metadata?.picture
+  // Pegamos a foto original do metadados (Google) para restaurar no perfil
+  const originalPicture = user.user_metadata?.picture || user.user_metadata?.avatar_url
 
-  // Restaura o avatar_url para a foto original do Google
-  const { error } = await supabase.auth.updateUser({
-    data: { avatar_url: originalPicture }
-  })
+  // Restaura o avatar_url na tabela profiles
+  const { error } = await supabase
+    .from('profiles')
+    .update({ 
+      avatar_url: originalPicture,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', user.id)
 
   if (error) {
     console.error('Erro ao restaurar avatar:', error.message)
@@ -137,6 +166,39 @@ export async function resetAvatar() {
   }
 
   return true
+}
+
+export async function updateProfile(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autorizado' }
+
+  const updates = {
+    full_name: formData.get('full_name') as string,
+    whatsapp: formData.get('whatsapp') as string,
+    company_name: formData.get('company_name') as string,
+    cnpj: formData.get('cnpj') as string,
+    address_zip: formData.get('address_zip') as string,
+    address_street: formData.get('address_street') as string,
+    address_number: formData.get('address_number') as string,
+    address_complement: formData.get('address_complement') as string,
+    address_neighborhood: formData.get('address_neighborhood') as string,
+    address_city: formData.get('address_city') as string,
+    address_state: formData.get('address_state') as string,
+    updated_at: new Date().toISOString(),
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', user.id)
+
+  if (error) {
+    console.error('Erro ao atualizar perfil:', error)
+    return { error: error.message }
+  }
+
+  return { success: true }
 }
 
 export async function signOut() {

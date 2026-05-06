@@ -8,6 +8,16 @@ export default async function Home() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  let profile = null
+  if (user) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+    profile = data
+  }
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-6 md:p-24 bg-gradient-to-b from-neutral-900 to-black text-white relative overflow-hidden">
       {/* Decorative background elements */}
@@ -17,7 +27,7 @@ export default async function Home() {
         <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] bg-purple-500/5 rounded-full blur-[100px]"></div>
       </div>
 
-      <Navbar user={user} />
+      <Navbar user={user} profile={profile} />
 
       <div className="z-10 max-w-5xl w-full flex flex-col gap-12 mt-12">
         <div className="flex flex-col gap-6 text-center md:text-left max-w-3xl">

@@ -8,29 +8,40 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
+import { ProfileDrawer } from '@/components/profile/ProfileDrawer'
 
 interface UserMenuProps {
   user: any
+  profile?: any
 }
 
-export function UserMenu({ user }: UserMenuProps) {
+export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [imgError, setImgError] = useState(false)
+  const [localProfile, setLocalProfile] = useState(initialProfile)
   const menuRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
+  useEffect(() => {
+    setLocalProfile(initialProfile)
+  }, [initialProfile])
+
   const metadata = user?.user_metadata || {}
   
+  // Lógica de Prioridade: 
+  // 1. Tabela Profiles (upload personalizado)
+  // 2. Metadados do Google (gravados no perfil inicialmente)
+  // 3. Fallback final para metadados diretos do Auth
   const avatarUrl = 
+    localProfile?.avatar_url ||
     metadata.custom_avatar ||
     metadata.avatar_url || 
-    metadata.picture || 
-    user?.identities?.[0]?.identity_data?.avatar_url || 
-    user?.identities?.[0]?.identity_data?.picture
+    metadata.picture
   
-  const fullName = metadata.full_name || metadata.name || user?.email || 'Usuário'
+  const fullName = localProfile?.full_name || metadata.full_name || metadata.name || user?.email || 'Usuário'
   const initials = fullName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
 
   useEffect(() => {
@@ -80,7 +91,8 @@ export function UserMenu({ user }: UserMenuProps) {
     }
   }
 
-  const isCustomAvatar = !!metadata.custom_avatar
+  const googleAvatar = metadata.picture || metadata.avatar_url
+  const isCustomAvatar = localProfile?.avatar_url && localProfile.avatar_url !== googleAvatar
 
   return (
     <div 
@@ -168,16 +180,18 @@ export function UserMenu({ user }: UserMenuProps) {
                   <span className="text-sm font-medium">Dashboard</span>
                 </Link>
                 
-                <Link
-                  href="/profile"
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-neutral-300 hover:text-white transition-all group"
+                <button
+                  onClick={() => {
+                    setIsOpen(false)
+                    setIsProfileOpen(true)
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-neutral-300 hover:text-white transition-all group"
                 >
                   <div className="p-2 bg-neutral-800 rounded-lg group-hover:bg-neutral-700 transition-all text-neutral-400 group-hover:text-white">
                     <User className="w-4 h-4" />
                   </div>
                   <span className="text-sm font-medium">Meu Perfil</span>
-                </Link>
+                </button>
 
                 {isCustomAvatar && (
                   <button
@@ -207,6 +221,13 @@ export function UserMenu({ user }: UserMenuProps) {
           </motion.div>
         )}
       </AnimatePresence>
+      <ProfileDrawer 
+        isOpen={isProfileOpen} 
+        onClose={() => setIsProfileOpen(false)} 
+        profile={localProfile} 
+        user={user}
+        onUpdate={(updatedData) => setLocalProfile((prev: any) => ({ ...prev, ...updatedData }))}
+      />
     </div>
   )
 }
