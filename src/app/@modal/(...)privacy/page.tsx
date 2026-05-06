@@ -1,0 +1,1 @@
+﻿import { Modal } from "@/components/ui/Modal"; import { PrivacyContent } from "@/components/legal/PrivacyContent"; export default function PrivacyModal() { return ( <Modal title="Política de Privacidade" type="privacy"> <PrivacyContent /> </Modal> ); }

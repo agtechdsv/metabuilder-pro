@@ -1,0 +1,1 @@
+﻿import { Modal } from "@/components/ui/Modal"; import { AgTechContent } from "@/components/legal/AgTechContent"; export default function AgTechModal() { return ( <Modal title="A engenharia por trás do MetaBuilderPRO" type="agtech"> <AgTechContent /> </Modal> ); }
