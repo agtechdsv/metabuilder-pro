@@ -1,29 +1,34 @@
-import { FileText, Gavel, UserCheck, AlertTriangle } from 'lucide-react'
+'use client'
 
-const sections = [
-  {
-    icon: <FileText className="w-4 h-4" />,
-    title: "Aceitação dos Termos",
-    content: "Ao acessar este aplicativo, você concorda em cumprir estes termos de serviço e todas as leis aplicáveis ao exercício de desenvolvimento e proteção de dados (LGPD)."
-  },
-  {
-    icon: <Gavel className="w-4 h-4" />,
-    title: "Isenção de Responsabilidade",
-    content: "O MetaBuilderPRO é uma ferramenta de automação e auxílio técnico. As decisões de arquitetura e implementação final devem ser obrigatoriamente revisadas por um desenvolvedor humano responsável."
-  },
-  {
-    icon: <UserCheck className="w-4 h-4" />,
-    title: "Uso da Conta e BYODB",
-    content: "O acesso é pessoal e intransferível. O usuário é o único responsável pela segurança de suas chaves de API e credenciais de banco de dados (Bring Your Own Database)."
-  },
-  {
-    icon: <AlertTriangle className="w-4 h-4" />,
-    title: "Propriedade Intelectual",
-    content: "Todo o design e marca MetaBuilderPRO são de propriedade da AGTech. O código gerado pela engine em sua infraestrutura permanece de sua posse e responsabilidade."
-  }
-]
+import { FileText, Gavel, UserCheck, AlertTriangle } from 'lucide-react'
+import { useI18n } from '@/i18n/I18nContext'
 
 export function TermsContent() {
+  const { t } = useI18n()
+
+  const sections = [
+    {
+      icon: <FileText className="w-4 h-4" />,
+      title: t('terms.item1_title'),
+      content: t('terms.item1_desc')
+    },
+    {
+      icon: <Gavel className="w-4 h-4" />,
+      title: t('terms.item2_title'),
+      content: t('terms.item2_desc')
+    },
+    {
+      icon: <UserCheck className="w-4 h-4" />,
+      title: t('terms.item3_title'),
+      content: t('terms.item3_desc')
+    },
+    {
+      icon: <AlertTriangle className="w-4 h-4" />,
+      title: t('terms.item4_title'),
+      content: t('terms.item4_desc')
+    }
+  ]
+
   return (
     <div className="space-y-6">
       {sections.map((section, idx) => (
@@ -32,11 +37,11 @@ export function TermsContent() {
             {idx + 1}
           </div>
           <div className="space-y-1.5">
-            <h3 className="text-white font-bold text-base tracking-tight flex items-center gap-2">
-              <span className="text-blue-400 opacity-50">{section.icon}</span>
+            <h3 className="text-neutral-900 dark:text-white font-bold text-base tracking-tight flex items-center gap-2 transition-colors">
+              <span className="text-blue-500 opacity-70">{section.icon}</span>
               {section.title}
             </h3>
-            <p className="text-sm text-neutral-400 leading-relaxed">
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed transition-colors">
               {section.content}
             </p>
           </div>

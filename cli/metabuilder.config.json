@@ -1,0 +1,12 @@
+{
+  "connections": [
+    {
+      "projectId": "f9a5f29d-a19b-4778-9778-fed7e7bcbcaa",
+      "secretToken": "test-token",
+      "connectionString": "postgresql://postgres.chmstvtepzmjhpyxjjam:Goeta815617%40@aws-1-sa-east-1.pooler.supabase.com:6543/postgres"
+    }
+  ],
+  "supabaseUrl": "https://chmstvtepzmjhpyxjjam.supabase.co",
+  "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNobXN0dnRlcHptamhweXhqamFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMjk1ODgsImV4cCI6MjA5MzYwNTU4OH0.eMw33Jv7lco6uXWJnz0bdMSbHRAQFW0Ala7K6S_R8To",
+  "apiUrl": "http://localhost:3000/api/metadata/sync"
+}

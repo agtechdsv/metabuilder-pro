@@ -1,0 +1,24 @@
+{
+  "name": "cli",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "bin": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "build": "npx pkg . --targets node18-win-x64,node18-linux-x64 --out-path dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.105.3",
+    "axios": "^1.16.0",
+    "chalk": "^4.1.2",
+    "dotenv": "^17.4.2",
+    "inquirer": "^8.2.7",
+    "pg": "^8.20.0",
+    "ws": "^8.20.0"
+  }
+}
