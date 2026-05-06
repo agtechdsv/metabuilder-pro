@@ -1,29 +1,34 @@
-import { ShieldCheck, Database, EyeOff, Lock } from 'lucide-react'
+'use client'
 
-const sections = [
-  {
-    icon: <Database className="w-4 h-4" />,
-    title: "Informações que Coletamos",
-    content: "Ao utilizar o login ou preencher suas credenciais BYODB, coletamos apenas os dados essenciais (nome, e-mail e chaves de infraestrutura) para fins de autenticação e funcionamento técnico do sistema."
-  },
-  {
-    icon: <Lock className="w-4 h-4" />,
-    title: "Uso dos Dados",
-    content: "Seus dados são utilizados exclusivamente para autenticar seu acesso, sincronizar seus registros de forma privada em sua própria estrutura (Supabase) e permitir a interação com a inteligência artificial da engine."
-  },
-  {
-    icon: <EyeOff className="w-4 h-4" />,
-    title: "Armazenamento Local",
-    content: "Importante: Suas chaves de API e metadados sensíveis são gerenciados localmente pelo CLI Agent e nunca são enviados aos nossos servidores centrais. Isso garante soberania total sobre seus dados."
-  },
-  {
-    icon: <ShieldCheck className="w-4 h-4" />,
-    title: "Cookies e Segurança",
-    content: "Utilizamos apenas cookies estritamente necessários para manter sua sessão ativa e salvar suas preferências de tema (Dark Mode). Toda comunicação é criptografada via TLS 1.3."
-  }
-]
+import { ShieldCheck, Database, EyeOff, Lock } from 'lucide-react'
+import { useI18n } from '@/i18n/I18nContext'
 
 export function PrivacyContent() {
+  const { t } = useI18n()
+
+  const sections = [
+    {
+      icon: <Database className="w-4 h-4" />,
+      title: t('privacy.item1_title'),
+      content: t('privacy.item1_desc')
+    },
+    {
+      icon: <Lock className="w-4 h-4" />,
+      title: t('privacy.item2_title'),
+      content: t('privacy.item2_desc')
+    },
+    {
+      icon: <EyeOff className="w-4 h-4" />,
+      title: t('privacy.item3_title'),
+      content: t('privacy.item3_desc')
+    },
+    {
+      icon: <ShieldCheck className="w-4 h-4" />,
+      title: t('privacy.item4_title'),
+      content: t('privacy.item4_desc')
+    }
+  ]
+
   return (
     <div className="space-y-6">
       {sections.map((section, idx) => (
@@ -32,11 +37,11 @@ export function PrivacyContent() {
             {idx + 1}
           </div>
           <div className="space-y-1.5">
-            <h3 className="text-white font-bold text-base tracking-tight flex items-center gap-2">
-              <span className="text-blue-400 opacity-50">{section.icon}</span>
+            <h3 className="text-neutral-900 dark:text-white font-bold text-base tracking-tight flex items-center gap-2 transition-colors">
+              <span className="text-blue-500 opacity-70">{section.icon}</span>
               {section.title}
             </h3>
-            <p className="text-sm text-neutral-400 leading-relaxed">
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed transition-colors">
               {section.content}
             </p>
           </div>

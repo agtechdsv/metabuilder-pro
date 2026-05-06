@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description: "Generate dynamic database-driven CRUD applications without physical file generation.",
 };
 
+import { Providers } from "@/components/Providers";
+
 export default function RootLayout({
   children,
   modal,
@@ -27,11 +29,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-black text-white">
-        {children}
-        {modal}
+      <body className="min-h-full flex flex-col bg-white dark:bg-black text-black dark:text-white transition-colors duration-300">
+        <Providers>
+          {children}
+          {modal}
+        </Providers>
       </body>
     </html>
   );

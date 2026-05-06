@@ -2,14 +2,13 @@
 
 import { useState } from 'react'
 import { LayoutDashboard, ArrowRight } from 'lucide-react'
-import { AuthDrawer } from '@/components/auth/AuthDrawer'
+import { AuthModal } from '@/components/auth/AuthModal'
+import { LoginForm } from '@/components/auth/LoginForm'
 import Link from 'next/link'
 
 interface HeroActionsProps {
   user: any
 }
-
-import { LoginForm } from '@/components/auth/LoginForm'
 
 export function HeroActions({ user }: HeroActionsProps) {
   const [isAuthOpen, setIsAuthOpen] = useState(false)
@@ -37,9 +36,9 @@ export function HeroActions({ user }: HeroActionsProps) {
         </button>
       </div>
 
-      <AuthDrawer isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)}>
+      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)}>
         <LoginForm />
-      </AuthDrawer>
+      </AuthModal>
     </>
   )
 }

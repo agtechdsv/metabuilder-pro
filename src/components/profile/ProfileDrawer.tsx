@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react'
 import { updateProfile, updateAvatar, resetAvatar } from '@/app/auth/actions'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface ProfileDrawerProps {
   isOpen: boolean
@@ -23,6 +24,7 @@ const BR_STATES = [
 ]
 
 export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: ProfileDrawerProps) {
+  const { t } = useI18n()
   const [activeTab, setActiveTab] = useState<Tab>('basic')
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
@@ -54,22 +56,19 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
     }
   }, [profile, isOpen])
 
-  // Lógica de Foco Automático mais robusta (sincronizada com AnimatePresence)
   useEffect(() => {
     if (isOpen) {
-      // O timeout precisa ser maior que o tempo de saída (exit) do AnimatePresence
       const timer = setTimeout(() => {
         if (activeTab === 'basic') {
           nameInputRef.current?.focus()
         } else {
           companyInputRef.current?.focus()
         }
-      }, 500) // 500ms garante que a aba anterior já saiu e a nova montou
+      }, 500)
       return () => clearTimeout(timer)
     }
   }, [isOpen, activeTab])
 
-  // Máscaras
   const applyMask = (name: string, value: string) => {
     let v = value.replace(/\D/g, '')
     if (name === 'whatsapp') {
@@ -101,7 +100,6 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
     const maskedValue = applyMask(name, value)
     setFormData((prev: any) => ({ ...prev, [name]: maskedValue }))
 
-    // ViaCEP Integration
     if (name === 'address_zip' && maskedValue.replace(/\D/g, '').length === 8) {
       fetchViaCEP(maskedValue.replace(/\D/g, ''))
     }
@@ -148,7 +146,6 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
     setIsUploading(true)
     try {
       await resetAvatar()
-      // Recarregamos para pegar a URL original do Google
       window.location.reload()
     } catch (err) {
       console.error('Erro reset:', err)
@@ -183,22 +180,22 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
     <AnimatePresence>
       {isOpen && (
         <>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-md z-[150]" />
-          <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }} className="fixed right-0 top-0 h-full w-full max-w-lg bg-[#0a0a0a] border-l border-neutral-800/50 z-[160] shadow-[-20px_0_50px_rgba(0,0,0,0.5)] flex flex-col">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-md z-[150]" />
+          <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }} className="fixed right-0 top-0 h-full w-full max-w-lg bg-white dark:bg-[#0a0a0a] border-l border-neutral-200 dark:border-neutral-800/50 z-[160] shadow-[-20px_0_80px_rgba(0,0,0,0.1)] dark:shadow-[-20px_0_50px_rgba(0,0,0,0.5)] flex flex-col">
             
             {/* Header */}
-            <div className="p-8 border-b border-neutral-800/50 flex justify-between items-center bg-neutral-900/20">
+            <div className="p-8 border-b border-neutral-100 dark:border-neutral-800/50 flex justify-between items-center bg-neutral-50/50 dark:bg-neutral-900/20">
               <div>
-                <h2 className="text-2xl font-bold text-white tracking-tight">Meu Perfil</h2>
-                <p className="text-xs text-neutral-500 mt-1 uppercase tracking-widest font-bold">Configurações de conta</p>
+                <h2 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">{t('profile.title')}</h2>
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1 uppercase tracking-widest font-bold">{t('profile.subtitle')}</p>
               </div>
-              <button onClick={onClose} className="p-2.5 rounded-xl bg-neutral-900/50 border border-neutral-800 text-neutral-500 hover:text-white transition-all hover:bg-neutral-800"><X className="w-5 h-5" /></button>
+              <button onClick={onClose} className="p-2.5 rounded-xl bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800"><X className="w-5 h-5" /></button>
             </div>
 
             {/* Tabs */}
-            <div className="flex p-2 bg-neutral-900/30 border-b border-neutral-800/50">
-              <button onClick={() => setActiveTab('basic')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all", activeTab === 'basic' ? "bg-blue-500/10 text-blue-500 border border-blue-500/20" : "text-neutral-500 hover:text-neutral-300 hover:bg-white/5")}><User className="w-4 h-4" />Dados Básicos</button>
-              <button onClick={() => setActiveTab('company')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all", activeTab === 'company' ? "bg-indigo-500/10 text-indigo-500 border border-indigo-500/20" : "text-neutral-500 hover:text-neutral-300 hover:bg-white/5")}><Building2 className="w-4 h-4" />Dados da Empresa</button>
+            <div className="flex p-2 bg-neutral-50 dark:bg-neutral-900/30 border-b border-neutral-100 dark:border-neutral-800/50">
+              <button onClick={() => setActiveTab('basic')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all", activeTab === 'basic' ? "bg-blue-500/10 text-blue-600 dark:text-blue-500 border border-blue-500/20 shadow-sm" : "text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5")}><User className="w-4 h-4" />{t('profile.tab_basic')}</button>
+              <button onClick={() => setActiveTab('company')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all", activeTab === 'company' ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 border border-indigo-500/20 shadow-sm" : "text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5")}><Building2 className="w-4 h-4" />{t('profile.tab_company')}</button>
             </div>
 
             {/* Form */}
@@ -208,36 +205,35 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
                   <motion.div key="basic" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
                     
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest ml-1">Nome Completo</label>
+                      <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-1">{t('profile.full_name')}</label>
                       <div className="relative group">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 group-focus-within:text-blue-500 transition-colors" />
-                        <input ref={nameInputRef} name="full_name" value={formData.full_name} onChange={handleChange} className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-blue-500/50 focus:bg-neutral-900 transition-all" placeholder="Ex: Alexandre Santos" />
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-600 group-focus-within:text-blue-500 transition-colors" />
+                        <input ref={nameInputRef} name="full_name" value={formData.full_name} onChange={handleChange} className="w-full bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl py-3 pl-12 pr-4 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500/50 focus:bg-white dark:focus:bg-neutral-900 transition-all placeholder:text-neutral-300 dark:placeholder:text-neutral-700" placeholder="Ex: Alexandre Santos" />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest ml-1">E-mail de Contato</label>
+                      <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-1">{t('profile.email')}</label>
                       <div className="relative group">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 group-focus-within:text-blue-500 transition-colors" />
-                        <input name="email" value={formData.email} onChange={handleChange} className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-blue-500/50 focus:bg-neutral-900 transition-all" placeholder="email@exemplo.com" />
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-600 group-focus-within:text-blue-500 transition-colors" />
+                        <input name="email" value={formData.email} onChange={handleChange} className="w-full bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl py-3 pl-12 pr-4 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500/50 focus:bg-white dark:focus:bg-neutral-900 transition-all placeholder:text-neutral-300 dark:placeholder:text-neutral-700" placeholder="email@exemplo.com" />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest ml-1">WhatsApp / Telefone</label>
+                      <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-1">{t('profile.whatsapp')}</label>
                       <div className="relative group">
-                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 group-focus-within:text-blue-500 transition-colors" />
-                        <input name="whatsapp" value={formData.whatsapp} onChange={handleChange} className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-blue-500/50 focus:bg-neutral-900 transition-all" placeholder="(00) 00000-0000" />
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-600 group-focus-within:text-blue-500 transition-colors" />
+                        <input name="whatsapp" value={formData.whatsapp} onChange={handleChange} className="w-full bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl py-3 pl-12 pr-4 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-blue-500/50 focus:bg-white dark:focus:bg-neutral-900 transition-all placeholder:text-neutral-300 dark:placeholder:text-neutral-700" placeholder="(00) 00000-0000" />
                       </div>
                     </div>
 
-                    {/* Avatar Section */}
-                    <div className="pt-4 border-t border-neutral-800/50">
-                      <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest ml-1 mb-4 block">Foto de Perfil</label>
-                      <div className="flex items-center gap-6 p-4 bg-neutral-900/40 rounded-2xl border border-neutral-800/50">
+                    <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
+                      <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-1 mb-4 block">Foto de Perfil</label>
+                      <div className="flex items-center gap-6 p-4 bg-neutral-50 dark:bg-neutral-900/40 rounded-2xl border border-neutral-100 dark:border-neutral-800/50">
                         <div className="relative group">
                           <input type="file" ref={fileInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/*" />
-                          <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-neutral-800 group-hover:border-blue-500/50 transition-all relative">
+                          <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-neutral-200 dark:border-neutral-800 group-hover:border-blue-500/50 transition-all relative shadow-sm">
                             {isUploading && (
                               <div className="absolute inset-0 bg-black/60 z-10 flex items-center justify-center">
                                 <Loader2 className="w-6 h-6 text-white animate-spin" />
@@ -250,11 +246,11 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
                           </button>
                         </div>
                         <div className="flex flex-col gap-2">
-                          <p className="text-xs text-neutral-400 font-medium leading-tight">Envie uma imagem JPG, PNG ou GIF.</p>
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium leading-tight">Envie uma imagem JPG, PNG ou GIF.</p>
                           {isCustomAvatar && (
-                            <button type="button" onClick={handleAvatarReset} className="flex items-center gap-2 text-[10px] font-bold text-blue-500 hover:text-blue-400 transition-colors uppercase tracking-wider">
+                            <button type="button" onClick={handleAvatarReset} className="flex items-center gap-2 text-[10px] font-bold text-blue-600 dark:text-blue-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors uppercase tracking-wider">
                               <RefreshCcw className="w-3 h-3" />
-                              Usar foto do Google
+                              {t('profile.avatar_google')}
                             </button>
                           )}
                         </div>
@@ -265,61 +261,61 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
                   <motion.div key="company" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2 col-span-2">
-                        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest ml-1">Razão Social / Nome da Empresa</label>
+                        <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-1">{t('profile.company_name')}</label>
                         <div className="relative group">
-                          <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 group-focus-within:text-indigo-500 transition-colors" />
-                          <input ref={companyInputRef} name="company_name" value={formData.company_name} onChange={handleChange} className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-indigo-500/50 focus:bg-neutral-900 transition-all" placeholder="Nome da sua empresa" />
+                          <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-600 group-focus-within:text-indigo-500 transition-colors" />
+                          <input ref={companyInputRef} name="company_name" value={formData.company_name} onChange={handleChange} className="w-full bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl py-3 pl-12 pr-4 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-indigo-500/50 focus:bg-white dark:focus:bg-neutral-900 transition-all placeholder:text-neutral-300 dark:placeholder:text-neutral-700" placeholder="Nome da sua empresa" />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest ml-1">CNPJ</label>
+                        <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-1">{t('profile.cnpj')}</label>
                         <div className="relative group">
-                          <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 group-focus-within:text-indigo-500 transition-colors" />
-                          <input name="cnpj" value={formData.cnpj} onChange={handleChange} className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-indigo-500/50 focus:bg-neutral-900 transition-all" placeholder="00.000.000/0000-00" />
+                          <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-600 group-focus-within:text-indigo-500 transition-colors" />
+                          <input name="cnpj" value={formData.cnpj} onChange={handleChange} className="w-full bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl py-3 pl-12 pr-4 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-indigo-500/50 focus:bg-white dark:focus:bg-neutral-900 transition-all placeholder:text-neutral-300 dark:placeholder:text-neutral-700" placeholder="00.000.000/0000-00" />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest ml-1">CEP</label>
+                        <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-1">{t('profile.cep')}</label>
                         <div className="relative group">
-                          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 group-focus-within:text-indigo-500 transition-colors" />
-                          <input name="address_zip" value={formData.address_zip} onChange={handleChange} className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-indigo-500/50 focus:bg-neutral-900 transition-all" placeholder="00000-000" />
+                          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-600 group-focus-within:text-indigo-500 transition-colors" />
+                          <input name="address_zip" value={formData.address_zip} onChange={handleChange} className="w-full bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl py-3 pl-12 pr-4 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-indigo-500/50 focus:bg-white dark:focus:bg-neutral-900 transition-all placeholder:text-neutral-300 dark:placeholder:text-neutral-700" placeholder="00000-000" />
                         </div>
                       </div>
 
                       <div className="space-y-2 col-span-2">
-                        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest ml-1">Logradouro (Rua/Av)</label>
-                        <input name="address_street" value={formData.address_street} onChange={handleChange} className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-indigo-500/50 focus:bg-neutral-900 transition-all" placeholder="Nome da rua" />
+                        <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-1">{t('profile.address')}</label>
+                        <input name="address_street" value={formData.address_street} onChange={handleChange} className="w-full bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl py-3 px-4 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-indigo-500/50 focus:bg-white dark:focus:bg-neutral-900 transition-all placeholder:text-neutral-300 dark:placeholder:text-neutral-700" />
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest ml-1">Número</label>
-                        <input name="address_number" value={formData.address_number} onChange={handleChange} className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-indigo-500/50 focus:bg-neutral-900 transition-all" placeholder="123" />
+                        <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-1">{t('profile.number')}</label>
+                        <input name="address_number" value={formData.address_number} onChange={handleChange} className="w-full bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl py-3 px-4 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-indigo-500/50 focus:bg-white dark:focus:bg-neutral-900 transition-all placeholder:text-neutral-300 dark:placeholder:text-neutral-700" />
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest ml-1">Complemento</label>
-                        <input name="address_complement" value={formData.address_complement} onChange={handleChange} className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-indigo-500/50 focus:bg-neutral-900 transition-all" placeholder="Sala 402, Bloco A" />
+                        <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-1">{t('profile.complement')}</label>
+                        <input name="address_complement" value={formData.address_complement} onChange={handleChange} className="w-full bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl py-3 px-4 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-indigo-500/50 focus:bg-white dark:focus:bg-neutral-900 transition-all placeholder:text-neutral-300 dark:placeholder:text-neutral-700" />
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest ml-1">Bairro</label>
-                        <input name="address_neighborhood" value={formData.address_neighborhood} onChange={handleChange} className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-indigo-500/50 focus:bg-neutral-900 transition-all" placeholder="Centro" />
+                        <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-1">{t('profile.neighborhood')}</label>
+                        <input name="address_neighborhood" value={formData.address_neighborhood} onChange={handleChange} className="w-full bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl py-3 px-4 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-indigo-500/50 focus:bg-white dark:focus:bg-neutral-900 transition-all placeholder:text-neutral-300 dark:placeholder:text-neutral-700" />
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest ml-1">Cidade</label>
-                        <input name="address_city" value={formData.address_city} onChange={handleChange} className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-indigo-500/50 focus:bg-neutral-900 transition-all" placeholder="Sua cidade" />
+                        <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-1">{t('profile.city')}</label>
+                        <input name="address_city" value={formData.address_city} onChange={handleChange} className="w-full bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl py-3 px-4 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-indigo-500/50 focus:bg-white dark:focus:bg-neutral-900 transition-all placeholder:text-neutral-300 dark:placeholder:text-neutral-700" />
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest ml-1">UF / Estado</label>
+                        <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-1">{t('profile.state')}</label>
                         <select 
                           name="address_state" 
                           value={formData.address_state} 
                           onChange={handleChange} 
-                          className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl py-[11px] px-4 text-sm text-white focus:outline-none focus:border-indigo-500/50 focus:bg-neutral-900 transition-all appearance-none cursor-pointer"
+                          className="w-full bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl py-[11px] px-4 text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-indigo-500/50 focus:bg-white dark:focus:bg-neutral-900 transition-all appearance-none cursor-pointer"
                         >
                           <option value="">UF</option>
                           {BR_STATES.map(uf => <option key={uf} value={uf}>{uf}</option>)}
@@ -331,10 +327,12 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
               </AnimatePresence>
             </form>
 
-            <div className="p-8 border-t border-neutral-800/50 bg-neutral-900/20 flex gap-4">
-              <button type="button" onClick={onClose} className="flex-1 py-3.5 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white hover:bg-white/5 transition-all font-bold text-sm">Cancelar</button>
-              <button type="submit" onClick={handleSubmit} disabled={isLoading} className={cn("flex-[2] py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2", isSuccess ? "bg-emerald-500 text-white" : "bg-blue-600 hover:bg-blue-500 text-white")}>
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : isSuccess ? <><CheckCircle2 className="w-5 h-5" /> Salvo!</> : <><Save className="w-5 h-5" /> Salvar</>}
+            <div className="p-8 border-t border-neutral-100 dark:border-neutral-800/50 bg-neutral-50/50 dark:bg-neutral-900/20 flex gap-4">
+              <button type="button" onClick={onClose} className="flex-1 py-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5 transition-all font-bold text-sm">
+                {t('profile.cancel')}
+              </button>
+              <button type="submit" onClick={handleSubmit} disabled={isLoading} className={cn("flex-[2] py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2", isSuccess ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20")}>
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : isSuccess ? <><CheckCircle2 className="w-5 h-5" /> Salvo!</> : <><Save className="w-5 h-5" /> {t('profile.save')}</>}
               </button>
             </div>
           </motion.div>
