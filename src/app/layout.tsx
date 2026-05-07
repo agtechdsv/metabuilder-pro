@@ -18,22 +18,26 @@ export const metadata: Metadata = {
 };
 
 import { Providers } from "@/components/Providers";
+import { cookies } from "next/headers";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
   modal,
 }: Readonly<{
   children: React.ReactNode;
   modal: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("app-language")?.value || "pt";
+
   return (
     <html
-      lang="en"
+      lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-white dark:bg-black text-black dark:text-white transition-colors duration-300">
-        <Providers>
+        <Providers initialLocale={locale as any}>
           {children}
           {modal}
         </Providers>

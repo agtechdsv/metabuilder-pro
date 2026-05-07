@@ -19,11 +19,14 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
+import { HeaderActions } from '@/components/layout/HeaderActions'
+import { useI18n } from '@/i18n/I18nContext'
 
 /**
  * MetaBuilder Studio - Configurador de Telas (Views)
  */
 export default function ViewConfigurator() {
+  const { t } = useI18n()
   const params = useParams()
   const router = useRouter()
   const { workspace_slug, project_slug, model_id } = params
@@ -159,68 +162,71 @@ export default function ViewConfigurator() {
     }
   }
 
-  if (isLoading) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Carregando Studio...</div>
+  if (isLoading) return <div className="min-h-screen bg-white dark:bg-[#050505] flex items-center justify-center text-neutral-900 dark:text-white">{t('common.loading')} Studio...</div>
 
   return (
-    <div className="min-h-screen bg-[#080808] text-white selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-white dark:bg-[#080808] text-neutral-900 dark:text-white selection:bg-indigo-500/30 transition-colors duration-300">
       
       {/* Top Bar Config */}
-      <nav className="h-16 border-b border-neutral-800 bg-neutral-900/50 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-20">
+      <nav className="h-16 border-b border-neutral-200 dark:border-neutral-800 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-20">
         <div className="flex items-center gap-4">
-          <Link href={`/admin/${workspace_slug}/${project_slug}/studio`} className="p-2 hover:bg-neutral-800 rounded-lg transition-colors text-neutral-400 hover:text-white">
+          <Link href={`/admin/${workspace_slug}/${project_slug}/studio`} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-400 hover:text-indigo-600 dark:hover:text-white">
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <div className="h-6 w-px bg-neutral-800 mx-1"></div>
+          <div className="h-6 w-px bg-neutral-200 dark:bg-neutral-800 mx-1"></div>
           <div>
-            <h1 className="text-sm font-bold text-white">Configurando Tela</h1>
+            <h1 className="text-sm font-bold text-neutral-900 dark:text-white">{t('dashboard.projects.studio.config.title')}</h1>
             <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">{model?.db_table_name}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex bg-neutral-800 p-1 rounded-lg border border-neutral-700">
-            <button className="p-1.5 bg-neutral-700 rounded-md text-white"><Monitor className="w-4 h-4" /></button>
-            <button className="p-1.5 text-neutral-500 hover:text-white transition-colors"><Tablet className="w-4 h-4" /></button>
-            <button className="p-1.5 text-neutral-500 hover:text-white transition-colors"><Smartphone className="w-4 h-4" /></button>
+        <div className="flex items-center gap-6">
+          <div className="flex bg-neutral-100 dark:bg-neutral-800 p-1 rounded-lg border border-neutral-200 dark:border-neutral-700">
+            <button className="p-1.5 bg-white dark:bg-neutral-700 rounded-md text-indigo-600 dark:text-white shadow-sm dark:shadow-none"><Monitor className="w-4 h-4" /></button>
+            <button className="p-1.5 text-neutral-400 hover:text-indigo-600 dark:hover:text-white transition-colors"><Tablet className="w-4 h-4" /></button>
+            <button className="p-1.5 text-neutral-400 hover:text-indigo-600 dark:hover:text-white transition-colors"><Smartphone className="w-4 h-4" /></button>
           </div>
-          <button 
-            onClick={handleSave}
-            disabled={isSaving || isSuccess}
-            className={`flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold transition-all ${isSuccess ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-700 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)]'}`}
-          >
-            {isSaving ? 'Salvando...' : isSuccess ? 'Salvo com sucesso!' : <><Save className="w-4 h-4" /> Salvar Alterações</>}
-          </button>
+          <div className="flex items-center gap-4 border-l border-neutral-200 dark:border-neutral-800 pl-4">
+            <button 
+              onClick={handleSave}
+              disabled={isSaving || isSuccess}
+              className={`flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold transition-all ${isSuccess ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-300 dark:disabled:bg-neutral-700 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)]'}`}
+            >
+              {isSaving ? t('dashboard.projects.studio.config.saving') : isSuccess ? t('dashboard.projects.studio.config.saved_success') : <><Save className="w-4 h-4" /> {t('dashboard.projects.studio.config.save_changes')}</>}
+            </button>
+            <HeaderActions />
+          </div>
         </div>
       </nav>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 h-[calc(100vh-64px)]">
         
         {/* Painel de Propriedades (Esquerda) */}
-        <aside className="lg:col-span-4 border-r border-neutral-800 bg-neutral-900/20 p-8 space-y-10 overflow-y-auto">
+        <aside className="lg:col-span-4 border-r border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/20 p-8 space-y-10 overflow-y-auto">
           
           <div className="space-y-6">
-            <h3 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em]">Propriedades da Tela</h3>
+            <h3 className="text-xs font-black text-indigo-600 dark:text-indigo-500 uppercase tracking-[0.2em]">{t('dashboard.projects.studio.config.screen_properties')}</h3>
             
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-neutral-500 uppercase">Nome da View</label>
+                <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase">{t('dashboard.projects.studio.config.view_name')}</label>
                 <input 
                   type="text" 
                   value={viewConfig.name}
                   onChange={e => setViewConfig({...viewConfig, name: e.target.value})}
-                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all"
+                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white"
                   placeholder="Ex: Painel de Vendas"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-neutral-500 uppercase">Slug da URL</label>
-                <div className="flex items-center bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-sm group focus-within:border-indigo-500">
-                  <span className="text-neutral-600 mr-1">/</span>
+                <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase">{t('dashboard.projects.studio.config.url_slug')}</label>
+                <div className="flex items-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm group focus-within:border-indigo-500 transition-all">
+                  <span className="text-neutral-300 dark:text-neutral-600 mr-1">/</span>
                   <input 
                     type="text" 
                     value={viewConfig.slug}
                     onChange={e => setViewConfig({...viewConfig, slug: e.target.value.toLowerCase().replace(/\s/g, '-')})}
-                    className="w-full bg-transparent outline-none"
+                    className="w-full bg-transparent outline-none text-neutral-900 dark:text-white"
                     placeholder="vendas"
                   />
                 </div>
@@ -229,21 +235,21 @@ export default function ViewConfigurator() {
           </div>
 
           <div className="space-y-6">
-            <h3 className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em]">Tipo de Visualização</h3>
+            <h3 className="text-xs font-black text-indigo-600 dark:text-indigo-500 uppercase tracking-[0.2em]">{t('dashboard.projects.studio.config.view_type')}</h3>
             <div className="grid grid-cols-2 gap-3">
               <button 
                 onClick={() => setViewConfig({...viewConfig, view_type: 'crud_grid'})}
-                className={`p-4 rounded-2xl border flex flex-col items-center gap-3 transition-all ${viewConfig.view_type === 'crud_grid' ? 'bg-indigo-500/10 border-indigo-500 text-white' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-700'}`}
+                className={`p-4 rounded-2xl border flex flex-col items-center gap-3 transition-all ${viewConfig.view_type === 'crud_grid' ? 'bg-indigo-600/5 dark:bg-indigo-500/10 border-indigo-500 text-indigo-600 dark:text-white' : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-700'}`}
               >
                 <Layout className="w-6 h-6" />
-                <span className="text-[10px] font-bold uppercase">Tabela CRUD</span>
+                <span className="text-[10px] font-bold uppercase">{t('dashboard.projects.studio.config.crud_table')}</span>
               </button>
               <button 
                 disabled
-                className="p-4 rounded-2xl border border-neutral-800 bg-neutral-900/20 text-neutral-700 flex flex-col items-center gap-3 cursor-not-allowed"
+                className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/20 text-neutral-300 dark:text-neutral-700 flex flex-col items-center gap-3 cursor-not-allowed"
               >
                 <GripVertical className="w-6 h-6 opacity-20" />
-                <span className="text-[10px] font-bold uppercase opacity-20">Kanban (Breve)</span>
+                <span className="text-[10px] font-bold uppercase opacity-20">{t('dashboard.projects.studio.config.kanban_soon')}</span>
               </button>
             </div>
           </div>
@@ -251,11 +257,11 @@ export default function ViewConfigurator() {
           <Link 
             href={`/${workspace_slug}/${project_slug}/${viewConfig.slug}`} 
             target="_blank"
-            className="flex items-center justify-between p-4 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl text-indigo-400 hover:bg-indigo-500/10 transition-all group"
+            className="flex items-center justify-between p-4 bg-indigo-600/5 border border-indigo-500/20 rounded-2xl text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 transition-all group shadow-sm dark:shadow-none"
           >
             <div className="flex items-center gap-3">
               <Eye className="w-5 h-5" />
-              <span className="text-xs font-bold uppercase">Visualizar Preview</span>
+              <span className="text-xs font-bold uppercase">{t('dashboard.projects.studio.config.preview_view')}</span>
             </div>
             <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
@@ -266,23 +272,23 @@ export default function ViewConfigurator() {
           <div className="max-w-4xl mx-auto space-y-8">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold">Campos do Banco</h2>
-                <p className="text-neutral-500 text-sm">Selecione quais colunas do {model?.db_table_name} devem aparecer nesta View.</p>
+                <h2 className="text-2xl font-bold text-neutral-900 dark:text-white">{t('dashboard.projects.studio.config.db_fields')}</h2>
+                <p className="text-neutral-500 dark:text-neutral-400 text-sm">{t('dashboard.projects.studio.config.db_fields_desc').replace('{table}', model?.db_table_name || '')}</p>
               </div>
-              <div className="flex items-center gap-2 text-[10px] font-bold text-neutral-500 bg-neutral-900 px-3 py-1.5 rounded-full border border-neutral-800">
+              <div className="flex items-center gap-2 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 bg-neutral-100 dark:bg-neutral-900 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-800">
                 <Settings className="w-3 h-3" /> 
-                {fields.length} CAMPOS DETECTADOS
+                {fields.length} {t('dashboard.projects.studio.config.fields_detected')}
               </div>
             </div>
 
-            <div className="bg-neutral-900/50 border border-neutral-800 rounded-[2.5rem] overflow-hidden backdrop-blur-sm shadow-2xl">
+            <div className="bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] overflow-hidden backdrop-blur-sm shadow-xl dark:shadow-none transition-all">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-neutral-800/50 text-[10px] font-black text-neutral-500 uppercase tracking-widest">
-                    <th className="px-8 py-5 w-20">Visível</th>
-                    <th className="px-8 py-5">Nome Original</th>
-                    <th className="px-8 py-5">Tipo</th>
-                    <th className="px-8 py-5">Rótulo na UI</th>
+                  <tr className="border-b border-neutral-200 dark:border-neutral-800/50 text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest bg-neutral-50 dark:bg-transparent">
+                    <th className="px-8 py-5 w-20">{t('dashboard.projects.studio.config.visible')}</th>
+                    <th className="px-8 py-5">{t('dashboard.projects.studio.config.original_name')}</th>
+                    <th className="px-8 py-5">{t('dashboard.projects.studio.config.type')}</th>
+                    <th className="px-8 py-5">{t('dashboard.projects.studio.config.ui_label')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-800/50">
@@ -290,7 +296,7 @@ export default function ViewConfigurator() {
                     <tr 
                       key={field.id}
                       onClick={() => setSelectedFields(prev => ({...prev, [field.id]: !prev[field.id]}))}
-                      className={`group cursor-pointer transition-colors ${selectedFields[field.id] ? 'bg-indigo-500/[0.02]' : 'opacity-40 hover:opacity-70'}`}
+                      className={`group cursor-pointer transition-colors ${selectedFields[field.id] ? 'bg-indigo-500/[0.02]' : 'opacity-60 hover:opacity-90'}`}
                     >
                       <td className="px-8 py-6">
                         {selectedFields[field.id] ? (
@@ -301,12 +307,12 @@ export default function ViewConfigurator() {
                       </td>
                       <td className="px-8 py-6">
                         <div className="flex flex-col">
-                          <span className="text-sm font-bold text-white">{field.db_column_name}</span>
-                          {field.is_primary_key && <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-tighter">PRIMARY KEY</span>}
+                          <span className="text-sm font-bold text-neutral-900 dark:text-white">{field.db_column_name}</span>
+                          {field.is_primary_key && <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-tighter">{{ pt: 'CHAVE PRIMÁRIA', en: 'PRIMARY KEY', es: 'CLAVE PRIMARIA' }[t('dashboard.projects.studio.config.type') === 'Tipo' ? 'pt' : 'en'] || 'PRIMARY KEY'}</span>}
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        <span className="px-2 py-1 bg-neutral-800 rounded-md text-[10px] font-mono text-neutral-400 border border-neutral-700">
+                        <span className="px-2 py-1 bg-neutral-100 dark:bg-neutral-800 rounded-md text-[10px] font-mono text-neutral-800 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
                           {field.data_type}
                         </span>
                       </td>
@@ -316,7 +322,7 @@ export default function ViewConfigurator() {
                           value={customLabels[field.id] || ''}
                           onChange={e => setCustomLabels(prev => ({...prev, [field.id]: e.target.value}))}
                           onClick={e => e.stopPropagation()}
-                          className="bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-1.5 text-xs focus:border-indigo-500 outline-none w-full"
+                          className="bg-neutral-100 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-1.5 text-xs focus:border-indigo-500 outline-none w-full text-neutral-900 dark:text-white transition-all"
                         />
                       </td>
                     </tr>
@@ -325,13 +331,13 @@ export default function ViewConfigurator() {
               </table>
             </div>
 
-            <div className="p-8 border border-dashed border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center text-center gap-4 group hover:border-indigo-500/30 transition-colors">
-              <div className="p-4 bg-neutral-900 rounded-2xl group-hover:bg-indigo-500/10 transition-colors">
-                <Plus className="w-8 h-8 text-neutral-700 group-hover:text-indigo-400" />
+            <div className="p-8 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center text-center gap-4 group hover:border-indigo-500/30 transition-colors bg-white/50 dark:bg-transparent">
+              <div className="p-4 bg-neutral-100 dark:bg-neutral-900 rounded-2xl group-hover:bg-indigo-500/10 transition-colors">
+                <Plus className="w-8 h-8 text-neutral-400 dark:text-neutral-700 group-hover:text-indigo-600 dark:group-hover:text-indigo-400" />
               </div>
               <div>
-                <p className="text-sm font-bold text-neutral-400">Adicionar Campo Virtual</p>
-                <p className="text-xs text-neutral-600 mt-1">Crie campos calculados ou botões de ação personalizados.</p>
+                <p className="text-sm font-bold text-neutral-500 dark:text-neutral-400">{t('dashboard.projects.studio.config.add_virtual_field')}</p>
+                <p className="text-xs text-neutral-400 dark:text-neutral-600 mt-1">{t('dashboard.projects.studio.config.add_virtual_field_desc')}</p>
               </div>
             </div>
           </div>

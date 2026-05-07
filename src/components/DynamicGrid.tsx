@@ -75,8 +75,8 @@ export default function DynamicGrid({ projectId, modelName, fields }: DynamicGri
         <td colSpan={fields.length + 2} className="px-6 py-16 text-center text-neutral-500">
           <div className="flex flex-col items-center justify-center">
             <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
-            <h3 className="text-lg font-medium text-neutral-300">Conectando ao banco de dados do cliente...</h3>
-            <p className="text-sm mt-2">Aguardando resposta do Agente CLI via Túnel Seguro.</p>
+            <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-200">Conectando ao banco de dados do cliente...</h3>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">Aguardando resposta do Agente CLI via Túnel Seguro.</p>
           </div>
         </td>
       </tr>
@@ -113,21 +113,21 @@ export default function DynamicGrid({ projectId, modelName, fields }: DynamicGri
   return (
     <>
       {data.map((row, rowIndex) => (
-        <tr key={rowIndex} className="hover:bg-neutral-800/50 transition-colors">
-          <td className="px-6 py-4 whitespace-nowrap w-12">
-            <input type="checkbox" className="rounded bg-neutral-800 border-neutral-700 text-indigo-500" />
+        <tr key={rowIndex} className="hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-colors border-b border-neutral-100 dark:border-neutral-800/50 last:border-0">
+          <td className="px-8 py-5 whitespace-nowrap w-12 text-center">
+            <input type="checkbox" className="rounded-md bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-indigo-600 focus:ring-indigo-500" />
           </td>
           {fields.map((field) => (
-            <td key={field.id} className="px-6 py-4 whitespace-nowrap text-sm text-neutral-300">
+            <td key={field.id} className="px-6 py-5 whitespace-nowrap text-sm font-medium text-neutral-900 dark:text-neutral-300">
               {/* Uma verificação super simples para mostrar objects/arrays como string */}
               {typeof row[field.db_column_name] === 'object' 
                 ? JSON.stringify(row[field.db_column_name]) 
                 : String(row[field.db_column_name] ?? '')}
             </td>
           ))}
-          <td className="px-6 py-4 text-right whitespace-nowrap text-sm font-medium">
-            <button className="text-indigo-400 hover:text-indigo-300 mr-4">Editar</button>
-            <button className="text-red-400 hover:text-red-300">Excluir</button>
+          <td className="px-8 py-5 text-right whitespace-nowrap text-sm font-bold">
+            <button className="text-indigo-600 dark:text-indigo-400 hover:underline mr-4">Editar</button>
+            <button className="text-red-500 hover:underline">Excluir</button>
           </td>
         </tr>
       ))}

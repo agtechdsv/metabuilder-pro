@@ -13,8 +13,11 @@ import {
   Fingerprint
 } from 'lucide-react'
 import Link from 'next/link'
+import { HeaderActions } from '@/components/layout/HeaderActions'
+import { useI18n } from '@/i18n/I18nContext'
 
 export default function AuthSettingsPage() {
+  const { t } = useI18n()
   const params = useParams()
   const router = useRouter()
   const { workspace_slug, project_slug } = params
@@ -97,71 +100,74 @@ export default function AuthSettingsPage() {
     }
   }
 
-  if (isLoading) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Carregando Configurações...</div>
+  if (isLoading) return <div className="min-h-screen bg-white dark:bg-[#050505] flex items-center justify-center text-neutral-900 dark:text-white">{t('common.loading')}...</div>
 
   // Helper to get fields of selected table
   const selectedModel = models.find(m => m.db_table_name === authConfig.db_table_name)
   const fields = selectedModel?.fields || []
 
   return (
-    <div className="min-h-screen bg-[#080808] text-white">
+    <div className="min-h-screen bg-white dark:bg-[#080808] text-neutral-900 dark:text-white transition-colors duration-300">
       
-      <nav className="h-16 border-b border-neutral-800 bg-neutral-900/50 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-20">
+      <nav className="h-16 border-b border-neutral-200 dark:border-neutral-800 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-20">
         <div className="flex items-center gap-4">
-          <Link href={`/admin/${workspace_slug}/${project_slug}/studio`} className="p-2 hover:bg-neutral-800 rounded-lg transition-colors text-neutral-400 hover:text-white">
+          <Link href={`/admin/${workspace_slug}/${project_slug}/studio`} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-400 hover:text-indigo-600 dark:hover:text-white">
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <div className="h-6 w-px bg-neutral-800 mx-1"></div>
+          <div className="h-6 w-px bg-neutral-200 dark:bg-neutral-800 mx-1"></div>
           <div>
-            <h1 className="text-sm font-bold text-white">Identidade e Acesso (Consumidores)</h1>
+            <h1 className="text-sm font-bold text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.title')}</h1>
           </div>
         </div>
 
-        <button 
-          onClick={handleSave}
-          disabled={isSaving || isSuccess}
-          className={`flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold transition-all ${isSuccess ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-700 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)]'}`}
-        >
-          {isSaving ? 'Salvando...' : isSuccess ? 'Salvo com sucesso!' : <><Save className="w-4 h-4" /> Salvar Configurações</>}
-        </button>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={handleSave}
+            disabled={isSaving || isSuccess}
+            className={`flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold transition-all ${isSuccess ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-300 dark:disabled:bg-neutral-700 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)]'}`}
+          >
+            {isSaving ? t('dashboard.projects.studio.config.saving') : isSuccess ? t('dashboard.projects.studio.config.saved_success') : <><Save className="w-4 h-4" /> {t('dashboard.projects.studio.auth.save_settings')}</>}
+          </button>
+          <HeaderActions />
+        </div>
       </nav>
 
       <main className="max-w-5xl mx-auto p-10 space-y-12">
         
         <section className="space-y-4">
-          <h2 className="text-3xl font-bold flex items-center gap-3">
-            <Fingerprint className="w-8 h-8 text-indigo-500" />
-            Estratégia de Autenticação
+          <h2 className="text-3xl font-bold flex items-center gap-3 text-neutral-900 dark:text-white">
+            <Fingerprint className="w-8 h-8 text-indigo-600 dark:text-indigo-500" />
+            {t('dashboard.projects.studio.auth.strategy')}
           </h2>
-          <p className="text-neutral-500">Escolha como os usuários finais farão login na sua aplicação.</p>
+          <p className="text-neutral-500 dark:text-neutral-400">{t('dashboard.projects.studio.auth.strategy_desc')}</p>
         </section>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <button 
             onClick={() => setAuthConfig({...authConfig, auth_type: 'managed'})}
-            className={`p-6 border rounded-3xl text-left transition-all ${authConfig.auth_type === 'managed' ? 'bg-indigo-600/10 border-indigo-500' : 'bg-neutral-900/50 border-neutral-800 hover:border-neutral-700'}`}
+            className={`p-6 border rounded-3xl text-left transition-all shadow-sm dark:shadow-none ${authConfig.auth_type === 'managed' ? 'bg-indigo-600/5 dark:bg-indigo-500/10 border-indigo-500' : 'bg-white dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'}`}
           >
-            <Users className={`w-8 h-8 mb-4 ${authConfig.auth_type === 'managed' ? 'text-indigo-400' : 'text-neutral-500'}`} />
-            <h3 className="font-bold text-lg">Managed Auth</h3>
-            <p className="text-sm text-neutral-500 mt-2">O MetaBuilder gerencia os usuários em um banco isolado. Rápido e fácil.</p>
+            <Users className={`w-8 h-8 mb-4 ${authConfig.auth_type === 'managed' ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-300 dark:text-neutral-500'}`} />
+            <h3 className="font-bold text-lg text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.managed_title')}</h3>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">{t('dashboard.projects.studio.auth.managed_desc')}</p>
           </button>
 
           <button 
             onClick={() => setAuthConfig({...authConfig, auth_type: 'database'})}
-            className={`p-6 border rounded-3xl text-left transition-all ${authConfig.auth_type === 'database' ? 'bg-indigo-600/10 border-indigo-500' : 'bg-neutral-900/50 border-neutral-800 hover:border-neutral-700'}`}
+            className={`p-6 border rounded-3xl text-left transition-all shadow-sm dark:shadow-none ${authConfig.auth_type === 'database' ? 'bg-indigo-600/5 dark:bg-indigo-500/10 border-indigo-500' : 'bg-white dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'}`}
           >
-            <Database className={`w-8 h-8 mb-4 ${authConfig.auth_type === 'database' ? 'text-indigo-400' : 'text-neutral-500'}`} />
-            <h3 className="font-bold text-lg">Via Banco Legado</h3>
-            <p className="text-sm text-neutral-500 mt-2">O Agente CLI valida o login batendo na SUA tabela de usuários sincronizada.</p>
+            <Database className={`w-8 h-8 mb-4 ${authConfig.auth_type === 'database' ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-300 dark:text-neutral-500'}`} />
+            <h3 className="font-bold text-lg text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.database_title')}</h3>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">{t('dashboard.projects.studio.auth.database_desc')}</p>
           </button>
 
           <button 
             onClick={() => setAuthConfig({...authConfig, auth_type: 'ldap'})}
-            className={`p-6 border rounded-3xl text-left transition-all ${authConfig.auth_type === 'ldap' ? 'bg-indigo-600/10 border-indigo-500' : 'bg-neutral-900/50 border-neutral-800 hover:border-neutral-700'}`}
+            className={`p-6 border rounded-3xl text-left transition-all shadow-sm dark:shadow-none ${authConfig.auth_type === 'ldap' ? 'bg-indigo-600/5 dark:bg-indigo-500/10 border-indigo-500' : 'bg-white dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'}`}
           >
-            <Network className={`w-8 h-8 mb-4 ${authConfig.auth_type === 'ldap' ? 'text-indigo-400' : 'text-neutral-500'}`} />
-            <h3 className="font-bold text-lg">LDAP / AD</h3>
-            <p className="text-sm text-neutral-500 mt-2">Integração corporativa nativa. Validação via Active Directory do cliente.</p>
+            <Network className={`w-8 h-8 mb-4 ${authConfig.auth_type === 'ldap' ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-300 dark:text-neutral-500'}`} />
+            <h3 className="font-bold text-lg text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.ldap_title')}</h3>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">{t('dashboard.projects.studio.auth.ldap_desc')}</p>
           </button>
         </div>
 
@@ -170,25 +176,25 @@ export default function AuthSettingsPage() {
           
           {authConfig.auth_type === 'managed' && (
             <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
-              <ShieldCheck className="w-16 h-16 text-indigo-500/50" />
+              <ShieldCheck className="w-16 h-16 text-indigo-500/30 dark:text-indigo-500/50" />
               <div>
-                <h3 className="text-xl font-bold">Banco de Usuários Pronto!</h3>
-                <p className="text-neutral-500 max-w-md mt-2">Nós criaremos automaticamente a tabela e as APIs de login e cadastro. Nenhuma configuração adicional é necessária.</p>
+                <h3 className="text-xl font-bold text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.managed_ready')}</h3>
+                <p className="text-neutral-500 dark:text-neutral-400 max-w-md mt-2">{t('dashboard.projects.studio.auth.managed_ready_desc')}</p>
               </div>
             </div>
           )}
 
           {authConfig.auth_type === 'database' && (
             <div className="space-y-6">
-              <h3 className="text-xl font-bold border-b border-neutral-800 pb-4">Mapeamento de Banco Legado</h3>
+              <h3 className="text-xl font-bold border-b border-neutral-200 dark:border-neutral-800 pb-4 text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.mapping_title')}</h3>
               
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-neutral-500 uppercase">Tabela de Usuários</label>
+                  <label className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase">{t('dashboard.projects.studio.auth.table_label')}</label>
                   <select 
                     value={authConfig.db_table_name || ''}
                     onChange={(e) => setAuthConfig({...authConfig, db_table_name: e.target.value})}
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 mt-1 text-sm outline-none focus:border-indigo-500"
+                    className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 mt-1 text-sm outline-none focus:border-indigo-500 text-neutral-900 dark:text-white"
                   >
                     <option value="">Selecione a tabela...</option>
                     {models.map(m => (
@@ -199,11 +205,11 @@ export default function AuthSettingsPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-bold text-neutral-500 uppercase">Coluna de Login (Email/Usuário)</label>
+                    <label className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase">{t('dashboard.projects.studio.auth.login_col')}</label>
                     <select 
                       value={authConfig.db_email_column || ''}
                       onChange={(e) => setAuthConfig({...authConfig, db_email_column: e.target.value})}
-                      className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 mt-1 text-sm outline-none focus:border-indigo-500"
+                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 mt-1 text-sm outline-none focus:border-indigo-500 text-neutral-900 dark:text-white"
                     >
                       <option value="">Selecione o campo...</option>
                       {fields.map((f: any) => (
@@ -212,11 +218,11 @@ export default function AuthSettingsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-neutral-500 uppercase">Coluna de Senha</label>
+                    <label className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase">{t('dashboard.projects.studio.auth.pass_col')}</label>
                     <select 
                       value={authConfig.db_password_column || ''}
                       onChange={(e) => setAuthConfig({...authConfig, db_password_column: e.target.value})}
-                      className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 mt-1 text-sm outline-none focus:border-indigo-500"
+                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 mt-1 text-sm outline-none focus:border-indigo-500 text-neutral-900 dark:text-white"
                     >
                       <option value="">Selecione o campo...</option>
                       {fields.map((f: any) => (
@@ -227,11 +233,11 @@ export default function AuthSettingsPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-neutral-500 uppercase">Formato do Hash da Senha</label>
+                  <label className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase">{t('dashboard.projects.studio.auth.hash_format')}</label>
                   <select 
                     value={authConfig.db_password_hash_type || 'bcrypt'}
                     onChange={(e) => setAuthConfig({...authConfig, db_password_hash_type: e.target.value})}
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 mt-1 text-sm outline-none focus:border-indigo-500"
+                    className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 mt-1 text-sm outline-none focus:border-indigo-500 text-neutral-900 dark:text-white"
                   >
                     <option value="bcrypt">Bcrypt (Recomendado)</option>
                     <option value="md5">MD5 (Legado)</option>
@@ -245,28 +251,28 @@ export default function AuthSettingsPage() {
 
           {authConfig.auth_type === 'ldap' && (
             <div className="space-y-6">
-              <h3 className="text-xl font-bold border-b border-neutral-800 pb-4">Conexão LDAP</h3>
-              <p className="text-sm text-neutral-500">O Agente CLI usará essas credenciais para tentar autenticar na rede local da empresa.</p>
+              <h3 className="text-xl font-bold border-b border-neutral-200 dark:border-neutral-800 pb-4 text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.ldap_conn')}</h3>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('dashboard.projects.studio.auth.ldap_conn_desc')}</p>
               
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-neutral-500 uppercase">Servidor LDAP (URL)</label>
+                  <label className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase">Servidor LDAP (URL)</label>
                   <input 
                     type="text"
                     placeholder="ldap://servidor.empresa.local:389"
                     value={authConfig.ldap_server_url || ''}
                     onChange={(e) => setAuthConfig({...authConfig, ldap_server_url: e.target.value})}
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 mt-1 text-sm outline-none focus:border-indigo-500"
+                    className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 mt-1 text-sm outline-none focus:border-indigo-500 text-neutral-900 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-neutral-500 uppercase">Base DN</label>
+                  <label className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase">Base DN</label>
                   <input 
                     type="text"
                     placeholder="dc=empresa,dc=local"
                     value={authConfig.ldap_base_dn || ''}
                     onChange={(e) => setAuthConfig({...authConfig, ldap_base_dn: e.target.value})}
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 mt-1 text-sm outline-none focus:border-indigo-500"
+                    className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 mt-1 text-sm outline-none focus:border-indigo-500 text-neutral-900 dark:text-white"
                   />
                 </div>
               </div>
