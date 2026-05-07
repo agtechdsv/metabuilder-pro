@@ -53,11 +53,21 @@ export default async function SlugPage({ params }: PageProps) {
   let viewName = ''
   let modelName = ''
   let modelId = ''
+  let displayFields: any[] = []
 
-  // Tenta buscar na tabela de Views customizadas
+  // Tenta buscar na tabela de Views customizadas, trazendo os componentes e os fields relacionados
   const { data: view, error: viewError } = await supabase
     .from('ui_views')
-    .select(`*, model:models (*)`)
+    .select(`
+      *, 
+      model:models (*),
+      ui_components (
+        label,
+        order_index,
+        is_visible,
+        field:fields (*)
+      )
+    `)
     .eq('slug', view_slug)
     .eq('project_id', project.id)
     .single()
@@ -66,14 +76,26 @@ export default async function SlugPage({ params }: PageProps) {
     viewName = view.name
     modelName = view.model?.db_table_name || ''
     modelId = view.model_id
+    
+    // Transforma os componentes em fields para o Grid, respeitando a visibilidade e rótulos do Studio
+    displayFields = (view.ui_components || [])
+      .filter((c: any) => c.is_visible)
+      .sort((a: any, b: any) => a.order_index - b.order_index)
+      .map((c: any) => ({
+        id: c.field.id,
+        display_name: c.label || c.field.display_name || c.field.db_column_name, // Fallback triplo de segurança
+        db_column_name: c.field.db_column_name,
+        is_primary_key: c.field.is_primary_key,
+        data_type: c.field.data_type
+      }))
   } else {
     // FALLBACK: Se não existe uma View com esse slug, 
-    // verificamos se existe um Model (tabela bruta) com esse nome.
+    // buscamos o Model bruto e seus campos originais.
     const { data: model, error: modelError } = await supabase
       .from('models')
-      .select('*')
+      .select('*, fields(*)')
       .eq('project_id', project.id)
-      .eq('db_table_name', view_slug) // Aqui o view_slug funciona como o nome da tabela
+      .eq('db_table_name', view_slug)
       .single()
 
     if (modelError || !model) {
@@ -84,21 +106,10 @@ export default async function SlugPage({ params }: PageProps) {
     viewName = model.display_name || model.db_table_name
     modelName = model.db_table_name
     modelId = model.id
+    displayFields = (model.fields || [])
+      .filter((f: any) => f.is_visible_in_list)
+      .sort((a: any, b: any) => a.order_index - b.order_index)
   }
-
-  // 4. Busca as Colunas configuradas para esta tabela
-  const { data: fields, error: fieldsError } = await supabase
-    .from('fields')
-    .select('*')
-    .eq('model_id', modelId)
-    .eq('is_visible_in_list', true)
-    .order('order_index', { ascending: true })
-
-  if (fieldsError) {
-    console.error('Fields fetch error:', fieldsError)
-  }
-
-  const displayFields = fields || []
 
   return (
     <div className="min-h-screen bg-black text-neutral-200">
