@@ -18,21 +18,35 @@ const translations: Record<Language, any> = { pt, en, es }
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined)
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('pt')
+export function I18nProvider({ 
+  children,
+  initialLocale = 'pt' 
+}: { 
+  children: React.ReactNode,
+  initialLocale?: Language 
+}) {
+  const [language, setLanguageState] = useState<Language>(initialLocale)
 
   useEffect(() => {
+    // Sincroniza com localStorage se existir, mas o initialLocale manda no primeiro render
     const savedLang = localStorage.getItem('app-language') as Language
-    if (savedLang && ['pt', 'en', 'es'].includes(savedLang)) {
+    if (savedLang && ['pt', 'en', 'es'].includes(savedLang) && savedLang !== initialLocale) {
       setLanguageState(savedLang)
+      // Se o que temos no localStorage for diferente do que o server mandou,
+      // talvez precisemos atualizar o cookie e recarregar, mas vamos deixar o server mandar por enquanto.
     }
-  }, [])
+  }, [initialLocale])
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)
     localStorage.setItem('app-language', lang)
+    // Persiste em cookie para o Server Side Rendering (SSR)
+    document.cookie = `app-language=${lang}; path=/; max-age=31536000`
     // Atualiza o atributo lang do HTML
     document.documentElement.lang = lang
+    
+    // Força um reload para que as partes Server Component (como o configurador de login) atualizem
+    window.location.reload()
   }
 
   const t = (path: string): string => {

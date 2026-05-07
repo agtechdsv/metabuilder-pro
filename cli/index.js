@@ -225,8 +225,8 @@ async function run() {
         name: 'mode',
         message: 'O que deseja fazer?',
         choices: [
-          { name: '1. Sincronizar Estrutura do Banco (Introspecção)', value: 'sync' },
-          { name: '2. Iniciar Túnel Seguro de Dados (Escuta Contínua)', value: 'tunnel' }
+          { name: '1. Iniciar Túnel Seguro de Dados (Escuta Contínua)', value: 'tunnel' },
+          { name: '2. Sincronizar Estrutura do Banco (Introspecção)', value: 'sync' }
         ]
       }
     ]);
