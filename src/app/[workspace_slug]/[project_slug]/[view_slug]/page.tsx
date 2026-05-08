@@ -2,8 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { Table, LayoutGrid, Plus, Search, Filter } from 'lucide-react'
 import DynamicGrid from '@/components/DynamicGrid'
-import ViewContainer from '@/components/runtime/ViewContainer'
-import { HeaderActions } from '@/components/layout/HeaderActions'
+import ViewPageContent from '@/components/runtime/ViewPageContent'
 import { TranslationProvider } from '@/i18n/TranslationProvider'
 import { getLocale } from '@/i18n/get-locale'
 
@@ -101,9 +100,22 @@ export default async function SlugPage({ params }: PageProps) {
         config: c.config
       }))
 
+    // Extrai os campos do Formulário (Zona Form)
+    const formFields = allComponents
+      .filter((c: any) => c.is_visible && c.config?.zones?.includes('form'))
+      .sort((a: any, b: any) => a.order_index - b.order_index)
+      .map((c: any) => ({
+        id: c.field.id,
+        display_name: c.label || c.field.display_name || c.field.db_column_name,
+        db_column_name: c.field.db_column_name,
+        data_type: c.field.data_type,
+        is_primary_key: c.field.is_primary_key,
+        config: c.config
+      }))
+
     // Extrai os campos de Filtro (Zona Filter)
     const filterFields = allComponents
-      .filter((c: any) => c.config?.zones?.includes('filter'))
+      .filter((c: any) => c.is_visible && c.config?.zones?.includes('filter'))
       .map((c: any) => ({
         id: c.field.id,
         display_name: c.label || c.field.display_name || c.field.db_column_name,
@@ -111,65 +123,31 @@ export default async function SlugPage({ params }: PageProps) {
         data_type: c.field.data_type
       }))
 
+    // Tenta encontrar a PK em qualquer campo da view
+    const primaryKeyField = allComponents.find((c: any) => c.field?.is_primary_key)?.field
+    const primaryKeyName = primaryKeyField?.db_column_name || 'id'
+
     const buttonsConfig = view.buttons_config || []
     const canAdd = buttonsConfig.find((b: any) => b.id === 'add')?.visible !== false
 
     return (
       <TranslationProvider locale={locale}>
-        <div className="min-h-screen bg-white dark:bg-[#050505] text-neutral-900 dark:text-neutral-200 transition-colors duration-300">
-          {/* Header com Branding Dinâmico */}
-          <header className="border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/50 sticky top-0 z-10 backdrop-blur-md">
-            <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
-                  <Table className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700">
-                      {workspace.name}
-                    </span>
-                    <span className="text-neutral-300 dark:text-neutral-600 text-xs">/</span>
-                    <span className="text-neutral-500 dark:text-neutral-400 text-xs font-medium">
-                      {project.name}
-                    </span>
-                  </div>
-                  <h1 className="text-2xl font-bold text-neutral-900 dark:text-white capitalize tracking-tight">
-                    {viewName}
-                  </h1>
-                </div>
-              </div>
- 
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 pr-4 border-r border-neutral-200 dark:border-neutral-800">
-                  <button className="p-2 text-neutral-400 hover:text-indigo-600 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-all">
-                    <LayoutGrid className="w-5 h-5" />
-                  </button>
-                  <HeaderActions />
-                </div>
-                {canAdd && (
-                  <button className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full transition-all font-bold text-xs shadow-[0_0_20px_rgba(79,70,229,0.3)]">
-                    <Plus className="w-4 h-4" />
-                    {{ pt: 'Novo Registro', en: 'New Record', es: 'Nuevo Registro' }[locale] || 'New Record'}
-                  </button>
-                )}
-              </div>
-            </div>
-          </header>
- 
-          <main className="max-w-7xl mx-auto px-6 py-8">
-            <ViewContainer 
-              projectId={project.id}
-              modelName={modelName}
-              displayFields={displayFields}
-              filterFields={filterFields}
-              displayType={displayType}
-              defaultView={view.layout_config?.default_view || 'list'}
-              buttonsConfig={buttonsConfig}
-              locale={locale}
-            />
-          </main>
-        </div>
+        <ViewPageContent 
+          workspace={workspace}
+          project={project}
+          viewName={viewName}
+          modelName={modelName}
+          displayFields={displayFields}
+          filterFields={filterFields}
+          formFields={formFields}
+          displayType={displayType}
+          defaultView={view.layout_config?.default_view || 'list'}
+          buttonsConfig={buttonsConfig}
+          locale={locale}
+          canAdd={canAdd}
+          viewId={view.id}
+          primaryKeyName={primaryKeyName}
+        />
       </TranslationProvider>
     )
   } else {

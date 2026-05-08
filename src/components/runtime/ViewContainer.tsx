@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { LayoutGrid, List, Search, Filter, Plus, Pencil, Trash2 } from 'lucide-react'
+import { LayoutGrid, List, Search, Filter, Plus, Pencil, Trash2, RefreshCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import DynamicGrid from '@/components/DynamicGrid'
 
@@ -10,10 +10,14 @@ interface ViewContainerProps {
   modelName: string
   displayFields: any[]
   filterFields: any[]
+  formFields: any[]
   displayType: 'list' | 'card' | 'both'
   defaultView?: 'list' | 'card'
   buttonsConfig: any[]
   locale: string
+  onView?: (row: any) => void
+  onEdit?: (row: any) => void
+  onDelete?: (row: any) => void
 }
 
 import DynamicCardList from './DynamicCardList'
@@ -29,65 +33,98 @@ export default function ViewContainer({
   displayType = 'list',
   defaultView = 'list',
   buttonsConfig = [],
-  locale 
+  formFields = [],
+  locale,
+  onView,
+  onEdit,
+  onDelete 
 }: ViewContainerProps) {
   const [viewMode, setViewMode] = useState<'list' | 'card'>(displayType === 'both' ? defaultView : (displayType as any))
   const [searchQuery, setSearchQuery] = useState('')
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({})
 
   const canSearch = buttonsConfig.find((b: any) => b.id === 'search')?.visible === true
+  const canClear = buttonsConfig.find((b: any) => b.id === 'clear')?.visible === true
   const [data, setData] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const supabase = createClient()
 
-  useEffect(() => {
-    // 1. Gera um ID único para esta requisição
+  const fetchData = async (currentFilters: any = {}) => {
+    // 1. Gera um ID único para esta requisição e limpa estados anteriores
     const queryId = crypto.randomUUID()
     const channelName = `tunnel:${projectId}`
     
     setIsLoading(true)
+    setError(null)
+    
+    console.log(`[MetaBuilder] Iniciando busca ${queryId}...`, { table: modelName, filters: currentFilters })
+    
     const channel = supabase.channel(channelName)
 
     // 2. Se inscreve para ouvir a resposta do Agente
     channel
       .on('broadcast', { event: `query_result_${queryId}` }, (payload) => {
+        console.log(`[MetaBuilder] Resposta recebida para ${queryId}`, payload)
         if (payload.payload.success) {
           setData(payload.payload.data)
         } else {
           setError(payload.payload.error)
         }
         setIsLoading(false)
+        supabase.removeChannel(channel) // Limpa após receber
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          channel.send({
-            type: 'broadcast',
-            event: 'sql_query',
-            payload: {
-              queryId: queryId,
-              table: modelName,
-              action: 'select',
-              token: 'test-token'
-            }
-          })
+          const payload: any = {
+            queryId: queryId,
+            table: modelName,
+            tableName: modelName,
+            action: 'select',
+            token: 'test-token'
+          }
+
+          if (currentFilters && Object.keys(currentFilters).length > 0) {
+            payload.filters = currentFilters
+          }
+
+          // Pequeno delay para garantir que o canal de broadcast esteja "quente"
+          setTimeout(() => {
+            channel.send({
+              type: 'broadcast',
+              event: 'sql_query',
+              payload
+            })
+          }, 200)
           
+          // Timeout de segurança
           setTimeout(() => {
             setIsLoading(prev => {
               if (prev) {
+                console.warn(`[MetaBuilder] Timeout na requisição ${queryId}`)
                 setError('O Agente CLI não respondeu a tempo. Verifique a conexão.')
                 return false
               }
               return prev
             })
-          }, 8000)
+          }, 10000)
         }
       })
+  }
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [projectId, modelName, supabase])
+  useEffect(() => {
+    fetchData()
+  }, [projectId, modelName])
+
+  const handleSearch = () => {
+    fetchData(filterValues)
+  }
+
+  const handleClear = () => {
+    setFilterValues({})
+    fetchData({}) // Pesquisa sem filtros
+  }
 
   const t = {
     pt: {
@@ -190,6 +227,8 @@ export default function ViewContainer({
                     <input 
                       type="text" 
                       placeholder={`Filtrar por ${field.display_name}...`}
+                      value={filterValues[field.db_column_name] || ''}
+                      onChange={e => setFilterValues({ ...filterValues, [field.db_column_name]: e.target.value })}
                       className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all shadow-sm"
                     />
                   </div>
@@ -197,12 +236,27 @@ export default function ViewContainer({
               ))}
             </div>
             
-            {canSearch && (
-              <button className="h-[42px] px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2 mb-[1px]">
-                <Search className="w-4 h-4" />
-                Pesquisar
-              </button>
-            )}
+            <div className="flex items-center gap-3 mb-[1px]">
+              {canSearch && (
+                <button 
+                  onClick={handleSearch}
+                  className="h-[42px] px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2"
+                >
+                  <Search className="w-4 h-4" />
+                  Pesquisar
+                </button>
+              )}
+
+              {canClear && (
+                <button 
+                  onClick={handleClear}
+                  className="h-[42px] px-6 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-sm flex items-center gap-2"
+                >
+                  <RefreshCcw className="w-4 h-4" />
+                  Limpar
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -249,6 +303,9 @@ export default function ViewContainer({
                   fields={displayFields} 
                   data={data}
                   buttonsConfig={buttonsConfig}
+                  onView={onView}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
                 />
               </tbody>
             </table>
@@ -260,6 +317,9 @@ export default function ViewContainer({
             fields={displayFields}
             data={data}
             buttonsConfig={buttonsConfig}
+            onView={onView}
+            onEdit={onEdit}
+            onDelete={onDelete}
           />
         </div>
       )}
