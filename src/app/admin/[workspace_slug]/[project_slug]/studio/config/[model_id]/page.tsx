@@ -21,6 +21,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { HeaderActions } from '@/components/layout/HeaderActions'
 import { useI18n } from '@/i18n/I18nContext'
+import { useToast } from '@/components/ui/Toast'
 
 /**
  * MetaBuilder Studio - Configurador de Telas (Views)
@@ -46,6 +47,7 @@ export default function ViewConfigurator() {
   const [customLabels, setCustomLabels] = useState<Record<string, string>>({})
 
   const supabase = createClient()
+  const { toast } = useToast()
 
   useEffect(() => {
     const loadData = async () => {
@@ -156,7 +158,7 @@ export default function ViewConfigurator() {
       }, 1500)
     } catch (err: any) {
       console.error(err)
-      alert('Erro ao salvar: ' + err.message)
+      toast('Erro ao salvar: ' + err.message, 'error')
     } finally {
       setIsSaving(false)
     }

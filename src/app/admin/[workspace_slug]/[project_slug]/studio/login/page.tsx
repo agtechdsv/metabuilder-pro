@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useI18n } from '@/i18n/I18nContext'
+import { useToast } from '@/components/ui/Toast'
 
 import { HeaderActions } from '@/components/layout/HeaderActions'
 
@@ -41,6 +42,7 @@ export default function LoginVisualConfigurator() {
   })
 
   const supabase = createClient()
+  const { toast } = useToast()
 
   useEffect(() => {
     async function loadData() {
@@ -88,7 +90,7 @@ export default function LoginVisualConfigurator() {
       setTimeout(() => setIsSuccess(false), 2500)
     } catch (err: any) {
       console.error(err)
-      alert('Erro ao salvar: ' + err.message)
+      toast('Erro ao salvar: ' + err.message, 'error')
     } finally {
       setIsSaving(false)
     }

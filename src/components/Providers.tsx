@@ -3,6 +3,8 @@
 import { ThemeProvider } from 'next-themes'
 import { I18nProvider } from '@/i18n/I18nContext'
 
+import { ToastProvider } from '@/components/ui/Toast'
+
 export function Providers({ 
   children,
   initialLocale = 'pt'
@@ -13,7 +15,9 @@ export function Providers({
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       <I18nProvider initialLocale={initialLocale}>
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </I18nProvider>
     </ThemeProvider>
   )

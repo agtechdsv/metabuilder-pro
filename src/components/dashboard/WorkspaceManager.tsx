@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
+import { useToast } from '@/components/ui/Toast'
 import { useRouter } from 'next/navigation'
 import { Drawer } from '@/components/ui/Drawer'
 import { Modal } from '@/components/ui/Modal'
@@ -39,6 +40,7 @@ export function WorkspaceManager({ initialWorkspaces, userName }: WorkspaceManag
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 
   const supabase = createClient()
+  const { toast } = useToast()
   const router = useRouter()
   const { t } = useI18n()
 
@@ -93,7 +95,7 @@ export function WorkspaceManager({ initialWorkspaces, userName }: WorkspaceManag
       closeDrawer()
       router.refresh()
     } catch (err: any) {
-      alert(err.message)
+      toast(err.message, 'error')
     } finally {
       setIsSaving(false)
     }
@@ -121,7 +123,7 @@ export function WorkspaceManager({ initialWorkspaces, userName }: WorkspaceManag
       setSelectedWorkspace(null)
       router.refresh()
     } catch (err: any) {
-      alert(err.message)
+      toast(err.message, 'error')
     } finally {
       setIsDeleting(false)
     }

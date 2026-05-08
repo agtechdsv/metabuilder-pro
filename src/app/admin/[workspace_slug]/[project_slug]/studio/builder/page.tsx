@@ -21,6 +21,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { HeaderActions } from '@/components/layout/HeaderActions'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
+import { useToast } from '@/components/ui/Toast'
 
 /**
  * MetaBuilder Studio - Advanced Use Case Builder
@@ -32,6 +33,7 @@ export default function UseCaseBuilder() {
   const router = useRouter()
   const { workspace_slug, project_slug } = params
   const supabase = createClient()
+  const { toast } = useToast()
 
   // Estados do Wizard
   const [currentStep, setCurrentStep] = useState(1)
@@ -87,7 +89,7 @@ export default function UseCaseBuilder() {
 
   const handleSave = async () => {
     if (!config.name || !config.slug) {
-      alert('Por favor, preencha o nome e o slug da tela.')
+      toast('Por favor, preencha o nome e o slug da tela.', 'error')
       return
     }
 
@@ -143,7 +145,7 @@ export default function UseCaseBuilder() {
       router.push(`/admin/${workspace_slug}/${project_slug}/studio`)
     } catch (err: any) {
       console.error(err)
-      alert('Erro ao salvar caso de uso: ' + err.message)
+      toast('Erro ao salvar caso de uso: ' + err.message, 'error')
     } finally {
       setIsSaving(false)
     }
