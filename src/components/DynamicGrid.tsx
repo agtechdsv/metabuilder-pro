@@ -1,103 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/utils/supabase/client'
-import { LayoutGrid, Loader2 } from 'lucide-react'
+import { Pencil, Trash2, Search } from 'lucide-react'
 
 interface DynamicGridProps {
-  projectId: string
-  modelName: string
   fields: any[]
+  data: any[]
+  buttonsConfig?: any[]
 }
 
-export default function DynamicGrid({ projectId, modelName, fields }: DynamicGridProps) {
-  const [data, setData] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  
-  const supabase = createClient()
-
-  useEffect(() => {
-    // 1. Gera um ID único para esta requisição
-    const queryId = crypto.randomUUID()
-    const channelName = `tunnel:${projectId}`
-    
-    console.log(`Conectando ao canal: ${channelName}`)
-    const channel = supabase.channel(channelName)
-
-    // 2. Se inscreve para ouvir a resposta do Agente (usando o queryId que geramos)
-    channel
-      .on('broadcast', { event: `query_result_${queryId}` }, (payload) => {
-        console.log('Resposta do Agente Recebida:', payload)
-        if (payload.payload.success) {
-          setData(payload.payload.data)
-        } else {
-          setError(payload.payload.error)
-        }
-        setIsLoading(false)
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          // 3. Assim que conectar no túnel, grita para o Agente CLI pedir os dados
-          console.log('Enviando pedido de dados para o Agente...')
-          channel.send({
-            type: 'broadcast',
-            event: 'sql_query',
-            payload: {
-              queryId: queryId,
-              table: modelName,
-              action: 'select',
-              token: 'test-token' // Simulando o token por enquanto
-            }
-          })
-          
-          // Timeout de segurança caso o Agente não esteja rodando
-          setTimeout(() => {
-            setIsLoading(prev => {
-              if (prev) {
-                setError('O Agente CLI não respondeu a tempo. Ele está rodando na máquina do cliente?')
-                return false
-              }
-              return prev
-            })
-          }, 8000)
-        }
-      })
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [projectId, modelName, supabase])
-
-  if (isLoading) {
-    return (
-      <tr>
-        <td colSpan={fields.length + 2} className="px-6 py-16 text-center text-neutral-500">
-          <div className="flex flex-col items-center justify-center">
-            <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-200">Conectando ao banco de dados do cliente...</h3>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">Aguardando resposta do Agente CLI via Túnel Seguro.</p>
-          </div>
-        </td>
-      </tr>
-    )
-  }
-
-  if (error) {
-    return (
-      <tr>
-        <td colSpan={fields.length + 2} className="px-6 py-16 text-center text-red-500">
-          <div className="flex flex-col items-center justify-center">
-            <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mb-4 border border-red-500/20">
-              <span className="text-xl">❌</span>
-            </div>
-            <h3 className="text-lg font-medium text-red-400 mb-1">Falha na Comunicação</h3>
-            <p className="text-sm">{error}</p>
-          </div>
-        </td>
-      </tr>
-    )
-  }
+export default function DynamicGrid({ fields, data, buttonsConfig = [] }: DynamicGridProps) {
+  const canView = buttonsConfig.find((b: any) => b.id === 'view')?.visible === true
+  const canEdit = buttonsConfig.find((b: any) => b.id === 'edit')?.visible === true
+  const canDelete = buttonsConfig.find((b: any) => b.id === 'delete')?.visible === true
 
   if (data.length === 0) {
     return (
@@ -109,7 +23,6 @@ export default function DynamicGrid({ projectId, modelName, fields }: DynamicGri
     )
   }
 
-  // Renderiza as linhas de DADOS REAIS
   return (
     <>
       {data.map((row, rowIndex) => (
@@ -119,15 +32,38 @@ export default function DynamicGrid({ projectId, modelName, fields }: DynamicGri
           </td>
           {fields.map((field) => (
             <td key={field.id} className="px-6 py-5 whitespace-nowrap text-sm font-medium text-neutral-900 dark:text-neutral-300">
-              {/* Uma verificação super simples para mostrar objects/arrays como string */}
               {typeof row[field.db_column_name] === 'object' 
                 ? JSON.stringify(row[field.db_column_name]) 
                 : String(row[field.db_column_name] ?? '')}
             </td>
           ))}
           <td className="px-8 py-5 text-right whitespace-nowrap text-sm font-bold">
-            <button className="text-indigo-600 dark:text-indigo-400 hover:underline mr-4">Editar</button>
-            <button className="text-red-500 hover:underline">Excluir</button>
+            <div className="flex items-center justify-end gap-2">
+              {canView && (
+                <button 
+                  title="Visualizar"
+                  className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800/50 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all active:scale-90"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+              )}
+              {canEdit && (
+                <button 
+                  title="Editar"
+                  className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-90"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+              )}
+              {canDelete && (
+                <button 
+                  title="Excluir"
+                  className="p-2 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 transition-all active:scale-90"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </td>
         </tr>
       ))}

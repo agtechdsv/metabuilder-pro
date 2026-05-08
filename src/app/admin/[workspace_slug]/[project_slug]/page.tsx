@@ -16,6 +16,9 @@ export default async function ProjectDashboard({ params }: ProjectDashboardProps
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Redireciona diretamente para o Studio, que agora é a central única do projeto
+  redirect(`/admin/${workspace_slug}/${project_slug}/studio`)
+
   // Busca perfil para o Header
   const { data: profile } = await supabase
     .from('profiles')

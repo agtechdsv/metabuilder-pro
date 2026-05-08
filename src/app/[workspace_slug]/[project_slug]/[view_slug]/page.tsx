@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { Table, LayoutGrid, Plus, Search, Filter } from 'lucide-react'
 import DynamicGrid from '@/components/DynamicGrid'
+import ViewContainer from '@/components/runtime/ViewContainer'
 import { HeaderActions } from '@/components/layout/HeaderActions'
 import { TranslationProvider } from '@/i18n/TranslationProvider'
 import { getLocale } from '@/i18n/get-locale'
@@ -59,6 +60,7 @@ export default async function SlugPage({ params }: PageProps) {
   let modelName = ''
   let modelId = ''
   let displayFields: any[] = []
+  let displayType: 'list' | 'card' | 'both' = 'list'
 
   // Tenta buscar na tabela de Views customizadas, trazendo os componentes e os fields relacionados
   const { data: view, error: viewError } = await supabase
@@ -70,6 +72,7 @@ export default async function SlugPage({ params }: PageProps) {
         label,
         order_index,
         is_visible,
+        config,
         field:fields (*)
       )
     `)
@@ -77,22 +80,98 @@ export default async function SlugPage({ params }: PageProps) {
     .eq('project_id', project.id)
     .single()
 
-  if (view && !viewError) {
+  if (view && !viewError && view.layout_config?.is_active !== false) {
     viewName = view.name
     modelName = view.model?.db_table_name || ''
     modelId = view.model_id
+    displayType = view.layout_config?.display_type || 'list'
     
-    // Transforma os componentes em fields para o Grid, respeitando a visibilidade e rótulos do Studio
-    displayFields = (view.ui_components || [])
-      .filter((c: any) => c.is_visible)
+    const allComponents = view.ui_components || []
+    
+    // Transforma os componentes em fields para o Grid (Zona Grid)
+    displayFields = allComponents
+      .filter((c: any) => c.is_visible && (c.config?.zones?.includes('grid') || !c.config?.zones))
       .sort((a: any, b: any) => a.order_index - b.order_index)
       .map((c: any) => ({
         id: c.field.id,
-        display_name: c.label || c.field.display_name || c.field.db_column_name, // Fallback triplo de segurança
+        display_name: c.label || c.field.display_name || c.field.db_column_name,
         db_column_name: c.field.db_column_name,
         is_primary_key: c.field.is_primary_key,
+        data_type: c.field.data_type,
+        config: c.config
+      }))
+
+    // Extrai os campos de Filtro (Zona Filter)
+    const filterFields = allComponents
+      .filter((c: any) => c.config?.zones?.includes('filter'))
+      .map((c: any) => ({
+        id: c.field.id,
+        display_name: c.label || c.field.display_name || c.field.db_column_name,
+        db_column_name: c.field.db_column_name,
         data_type: c.field.data_type
       }))
+
+    const buttonsConfig = view.buttons_config || []
+    const canAdd = buttonsConfig.find((b: any) => b.id === 'add')?.visible !== false
+
+    return (
+      <TranslationProvider locale={locale}>
+        <div className="min-h-screen bg-white dark:bg-[#050505] text-neutral-900 dark:text-neutral-200 transition-colors duration-300">
+          {/* Header com Branding Dinâmico */}
+          <header className="border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/50 sticky top-0 z-10 backdrop-blur-md">
+            <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
+                  <Table className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700">
+                      {workspace.name}
+                    </span>
+                    <span className="text-neutral-300 dark:text-neutral-600 text-xs">/</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 text-xs font-medium">
+                      {project.name}
+                    </span>
+                  </div>
+                  <h1 className="text-2xl font-bold text-neutral-900 dark:text-white capitalize tracking-tight">
+                    {viewName}
+                  </h1>
+                </div>
+              </div>
+ 
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 pr-4 border-r border-neutral-200 dark:border-neutral-800">
+                  <button className="p-2 text-neutral-400 hover:text-indigo-600 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-all">
+                    <LayoutGrid className="w-5 h-5" />
+                  </button>
+                  <HeaderActions />
+                </div>
+                {canAdd && (
+                  <button className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full transition-all font-bold text-xs shadow-[0_0_20px_rgba(79,70,229,0.3)]">
+                    <Plus className="w-4 h-4" />
+                    {{ pt: 'Novo Registro', en: 'New Record', es: 'Nuevo Registro' }[locale] || 'New Record'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </header>
+ 
+          <main className="max-w-7xl mx-auto px-6 py-8">
+            <ViewContainer 
+              projectId={project.id}
+              modelName={modelName}
+              displayFields={displayFields}
+              filterFields={filterFields}
+              displayType={displayType}
+              defaultView={view.layout_config?.default_view || 'list'}
+              buttonsConfig={buttonsConfig}
+              locale={locale}
+            />
+          </main>
+        </div>
+      </TranslationProvider>
+    )
   } else {
     // FALLBACK: Se não existe uma View com esse slug, 
     // buscamos o Model bruto e seus campos originais.
@@ -114,111 +193,38 @@ export default async function SlugPage({ params }: PageProps) {
     displayFields = (model.fields || [])
       .filter((f: any) => f.is_visible_in_list)
       .sort((a: any, b: any) => a.order_index - b.order_index)
-  }
 
-  return (
-    <TranslationProvider locale={locale}>
-      <div className="min-h-screen bg-white dark:bg-[#050505] text-neutral-900 dark:text-neutral-200 transition-colors duration-300">
-        {/* Header com Branding Dinâmico */}
-        <header className="border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/50 sticky top-0 z-10 backdrop-blur-md">
-          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
-                <Table className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700">
-                    {workspace.name}
-                  </span>
-                  <span className="text-neutral-300 dark:text-neutral-600 text-xs">/</span>
-                  <span className="text-neutral-500 dark:text-neutral-400 text-xs font-medium">
-                    {project.name}
-                  </span>
+    return (
+      <TranslationProvider locale={locale}>
+        <div className="min-h-screen bg-white dark:bg-[#050505] text-neutral-900 dark:text-neutral-200 transition-colors duration-300">
+          <header className="border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/50 sticky top-0 z-10 backdrop-blur-md">
+            <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
+                  <Table className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                 </div>
-                <h1 className="text-2xl font-bold text-neutral-900 dark:text-white capitalize tracking-tight">
-                  {viewName}
-                </h1>
+                <div>
+                  <h1 className="text-2xl font-bold text-neutral-900 dark:text-white capitalize tracking-tight">
+                    {viewName}
+                  </h1>
+                </div>
               </div>
+              <HeaderActions />
             </div>
+          </header>
 
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 pr-4 border-r border-neutral-200 dark:border-neutral-800">
-                <button className="p-2 text-neutral-400 hover:text-indigo-600 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-all">
-                  <LayoutGrid className="w-5 h-5" />
-                </button>
-                <HeaderActions />
-              </div>
-              <button className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full transition-all font-bold text-xs shadow-[0_0_20px_rgba(79,70,229,0.3)]">
-                <Plus className="w-4 h-4" />
-                {{ pt: 'Novo Registro', en: 'New Record', es: 'Nuevo Registro' }[locale] || 'New Record'}
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-6 py-8">
-          
-          {/* Toolbar */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className="relative group">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" />
-                <input 
-                  type="text"
-                  placeholder={{ pt: 'Buscar registros...', en: 'Search records...', es: 'Buscar registros...' }[locale] || 'Search records...'}
-                  className="pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-200 outline-none focus:border-indigo-500 transition-all w-72 shadow-sm dark:shadow-none"
-                />
-              </div>
-              <button className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-indigo-500/50 text-neutral-600 dark:text-neutral-300 rounded-xl text-xs font-bold transition-all shadow-sm dark:shadow-none">
-                <Filter className="w-4 h-4" />
-                {{ pt: 'Filtros', en: 'Filters', es: 'Filtros' }[locale] || 'Filters'}
-              </button>
-            </div>
-            <div className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest bg-neutral-100 dark:bg-neutral-900/50 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-800">
-              {displayFields.length} {{ pt: 'colunas mapeadas', en: 'columns mapped', es: 'columnas mapeadas' }[locale] || 'columns mapped'}
-            </div>
-          </div>
-
-          {/* Data Grid Card */}
-          <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-xl dark:shadow-none backdrop-blur-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-neutral-50 dark:bg-neutral-900/50 border-b border-neutral-200 dark:border-neutral-800">
-                    <th className="px-8 py-5 w-12">
-                      <input type="checkbox" className="rounded-md bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-indigo-600 focus:ring-indigo-500 transition-all" />
-                    </th>
-                    {displayFields.map((field) => (
-                      <th 
-                        key={field.id} 
-                        className="px-6 py-5 text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.15em] whitespace-nowrap"
-                      >
-                        <div className="flex items-center gap-2">
-                          {field.display_name}
-                          {field.is_primary_key && <span className="text-indigo-500" title="Chave Primária">🔑</span>}
-                        </div>
-                      </th>
-                    ))}
-                    <th className="px-8 py-5 text-right text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.15em]">
-                      {{ pt: 'Ações', en: 'Actions', es: 'Acciones' }[locale] || 'Actions'}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/50">
-                  <DynamicGrid 
-                    projectId={project.id} 
-                    modelName={modelName} 
-                    fields={displayFields} 
-                  />
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-        </main>
-      </div>
-    </TranslationProvider>
-  )
+          <main className="max-w-7xl mx-auto px-6 py-8">
+            <ViewContainer 
+              projectId={project.id}
+              modelName={modelName}
+              displayFields={displayFields}
+              filterFields={[]}
+              displayType="list"
+              locale={locale}
+            />
+          </main>
+        </div>
+      </TranslationProvider>
+    )
+  }
 }
