@@ -6,9 +6,19 @@ interface DynamicGridProps {
   fields: any[]
   data: any[]
   buttonsConfig?: any[]
+  onView?: (row: any) => void
+  onEdit?: (row: any) => void
+  onDelete?: (row: any) => void
 }
 
-export default function DynamicGrid({ fields, data, buttonsConfig = [] }: DynamicGridProps) {
+export default function DynamicGrid({ 
+  fields, 
+  data, 
+  buttonsConfig = [],
+  onView,
+  onEdit,
+  onDelete
+}: DynamicGridProps) {
   const canView = buttonsConfig.find((b: any) => b.id === 'view')?.visible === true
   const canEdit = buttonsConfig.find((b: any) => b.id === 'edit')?.visible === true
   const canDelete = buttonsConfig.find((b: any) => b.id === 'delete')?.visible === true
@@ -42,6 +52,7 @@ export default function DynamicGrid({ fields, data, buttonsConfig = [] }: Dynami
               {canView && (
                 <button 
                   title="Visualizar"
+                  onClick={() => onView?.(row)}
                   className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800/50 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all active:scale-90"
                 >
                   <Search className="w-4 h-4" />
@@ -50,6 +61,7 @@ export default function DynamicGrid({ fields, data, buttonsConfig = [] }: Dynami
               {canEdit && (
                 <button 
                   title="Editar"
+                  onClick={() => onEdit?.(row)}
                   className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-90"
                 >
                   <Pencil className="w-4 h-4" />
@@ -58,6 +70,7 @@ export default function DynamicGrid({ fields, data, buttonsConfig = [] }: Dynami
               {canDelete && (
                 <button 
                   title="Excluir"
+                  onClick={() => onDelete?.(row)}
                   className="p-2 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 transition-all active:scale-90"
                 >
                   <Trash2 className="w-4 h-4" />

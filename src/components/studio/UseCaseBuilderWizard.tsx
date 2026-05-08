@@ -17,7 +17,8 @@ import {
   AlertCircle,
   Loader2,
   Search,
-  Pencil
+  Pencil,
+  RefreshCcw
 } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
@@ -67,6 +68,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
         buttons_config: (() => {
           const defaults = [
             { id: 'search', label: 'Pesquisar', icon: 'search', action: 'search', visible: true },
+            { id: 'clear', label: 'Limpar', icon: 'refresh-ccw', action: 'clear', visible: true },
             { id: 'view', label: 'Visualizar', icon: 'search', action: 'view', visible: true },
             { id: 'add', label: 'Adicionar', icon: 'plus', action: 'create', visible: true },
             { id: 'edit', label: 'Editar', icon: 'edit', action: 'pencil', action_key: 'update', visible: true },
@@ -103,6 +105,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
     },
       buttons_config: [
         { id: 'search', label: 'Pesquisar', icon: 'search', action: 'search', visible: true },
+        { id: 'clear', label: 'Limpar', icon: 'refresh-ccw', action: 'clear', visible: true },
         { id: 'view', label: 'Visualizar', icon: 'search', action: 'view', visible: true },
         { id: 'add', label: 'Adicionar', icon: 'plus', action: 'create', visible: true },
         { id: 'edit', label: 'Editar', icon: 'edit', action: 'pencil', action_key: 'update', visible: true },
@@ -142,6 +145,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
         ...prev,
         buttons_config: prev.buttons_config.map(btn => {
           if (btn.id === 'search') return { ...btn, visible: searchVis }
+          if (btn.id === 'clear') return { ...btn, visible: searchVis } // Limpar segue o Pesquisar
           if (btn.id === 'view') return { ...btn, visible: viewVis }
           if (btn.id === 'add') return { ...btn, visible: addVis }
           if (btn.id === 'edit') return { ...btn, visible: editVis }
@@ -521,7 +525,20 @@ function StepLogic({ config, setConfig }: any) {
             <input 
               type="text" 
               value={config.name}
-              onChange={e => setConfig({...config, name: e.target.value})}
+              onChange={e => {
+                const val = e.target.value
+                const suggestedSlug = val.toLowerCase()
+                  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                  .replace(/[^a-z0-9\s-]/g, '')
+                  .trim()
+                  .replace(/\s+/g, '-')
+                
+                setConfig({
+                  ...config, 
+                  name: val,
+                  slug: (!config.slug || config.slug === config.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-')) ? suggestedSlug : config.slug
+                })
+              }}
               placeholder="Ex: Gestão de Contratos"
               className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-6 py-4 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
             />
@@ -918,6 +935,7 @@ function StepActions({ config, setConfig }: any) {
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-neutral-500">
                     {btn.id === 'search' && <Search className="w-5 h-5" />}
+                    {btn.id === 'clear' && <RefreshCcw className="w-5 h-5" />}
                     {btn.id === 'view' && <Search className="w-5 h-5" />}
                     {btn.id === 'add' && <Plus className="w-5 h-5" />}
                     {btn.id === 'edit' && <Pencil className="w-5 h-5" />}

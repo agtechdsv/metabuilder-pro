@@ -128,8 +128,28 @@ async function startTunnel(projectId, secretToken, connectionString, configSupab
         let result;
 
         if (action === 'select') {
-          sql = `SELECT * FROM "${safeTable}" LIMIT 100`;
-          result = await pgClient.query(sql);
+          const filters = payload.payload.filters;
+          let whereClause = '';
+          
+          if (filters && Object.keys(filters).length > 0) {
+            const conditions = [];
+            let i = 1;
+            for (const [key, value] of Object.entries(filters)) {
+              if (value !== undefined && value !== '') {
+                const safeKey = key.replace(/[^a-zA-Z0-9_]/g, '');
+                // Usa ILIKE com cast para text para buscas parciais sem case sensitive
+                conditions.push(`CAST("${safeKey}" AS text) ILIKE $${i}`);
+                params.push(`%${value}%`);
+                i++;
+              }
+            }
+            if (conditions.length > 0) {
+              whereClause = ` WHERE ${conditions.join(' AND ')}`;
+            }
+          }
+          
+          sql = `SELECT * FROM "${safeTable}"${whereClause} LIMIT 100`;
+          result = await pgClient.query(sql, params);
           console.log(chalk.green(`[ OK ] SELECT: Retornou ${result.rows.length} linhas.`));
         } 
         else if (action === 'insert') {

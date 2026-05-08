@@ -6,9 +6,19 @@ interface DynamicCardListProps {
   fields: any[]
   data: any[]
   buttonsConfig?: any[]
+  onView?: (row: any) => void
+  onEdit?: (row: any) => void
+  onDelete?: (row: any) => void
 }
 
-export default function DynamicCardList({ fields, data, buttonsConfig = [] }: DynamicCardListProps) {
+export default function DynamicCardList({ 
+  fields, 
+  data, 
+  buttonsConfig = [],
+  onView,
+  onEdit,
+  onDelete
+}: DynamicCardListProps) {
   const canView = buttonsConfig.find((b: any) => b.id === 'view')?.visible === true
   const canEdit = buttonsConfig.find((b: any) => b.id === 'edit')?.visible === true
   const canDelete = buttonsConfig.find((b: any) => b.id === 'delete')?.visible === true
@@ -33,19 +43,28 @@ export default function DynamicCardList({ fields, data, buttonsConfig = [] }: Dy
             <div className="p-2.5 bg-indigo-500/10 rounded-xl border border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
               <Type className="w-5 h-5" />
             </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-2">
               {canView && (
-                <button className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">
+                <button 
+                  onClick={() => onView?.(row)}
+                  className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800/50 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all active:scale-90"
+                >
                   <Search className="w-4 h-4" />
                 </button>
               )}
               {canEdit && (
-                <button className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-indigo-500 transition-colors">
+                <button 
+                  onClick={() => onEdit?.(row)}
+                  className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-90"
+                >
                   <Pencil className="w-4 h-4" />
                 </button>
               )}
               {canDelete && (
-                <button className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-red-500 transition-colors">
+                <button 
+                  onClick={() => onDelete?.(row)}
+                  className="p-2 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 transition-all active:scale-90"
+                >
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}
