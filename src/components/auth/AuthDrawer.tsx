@@ -46,13 +46,13 @@ export function AuthDrawer({ isOpen, onClose, children }: AuthDrawerProps) {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed right-0 top-0 h-full w-full max-w-md bg-[#0a0a0a] border-l border-neutral-800/50 z-[160] shadow-[ -10px_0_50px_rgba(0,0,0,0.5) ] flex flex-col"
+            className="fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-[#0a0a0a] border-l border-neutral-200 dark:border-neutral-800/50 z-[160] shadow-[-10px_0_50px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_50px_rgba(0,0,0,0.5)] flex flex-col transition-colors"
           >
             {/* Header / Close Button */}
             <div className="absolute top-6 right-6 z-[170]">
               <button
                 onClick={onClose}
-                className="p-2.5 rounded-xl bg-neutral-900/50 border border-neutral-800 text-neutral-500 hover:text-white transition-all hover:bg-neutral-800 active:scale-95 group"
+                className="p-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-all hover:bg-neutral-200 dark:hover:bg-neutral-800 active:scale-95 group"
               >
                 <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
               </button>

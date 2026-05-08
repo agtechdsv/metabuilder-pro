@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, User, Building2, Save, Mail, Phone, Hash, MapPin, Loader2, CheckCircle2, Camera, RefreshCcw } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { updateProfile, updateAvatar, resetAvatar } from '@/app/auth/actions'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
@@ -30,7 +31,12 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
   const [isSuccess, setIsSuccess] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [formData, setFormData] = useState<any>({})
+  const [mounted, setMounted] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Refs para Foco
   const nameInputRef = useRef<HTMLInputElement>(null)
@@ -176,7 +182,9 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
   const googleAvatar = user?.user_metadata?.picture || user?.user_metadata?.avatar_url
   const isCustomAvatar = profile?.avatar_url && profile.avatar_url !== googleAvatar
 
-  return (
+  if (!mounted) return null
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
@@ -194,8 +202,8 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
 
             {/* Tabs */}
             <div className="flex p-2 bg-neutral-50 dark:bg-neutral-900/30 border-b border-neutral-100 dark:border-neutral-800/50">
-              <button onClick={() => setActiveTab('basic')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all", activeTab === 'basic' ? "bg-blue-500/10 text-blue-600 dark:text-blue-500 border border-blue-500/20 shadow-sm" : "text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5")}><User className="w-4 h-4" />{t('profile.tab_basic')}</button>
-              <button onClick={() => setActiveTab('company')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all", activeTab === 'company' ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 border border-indigo-500/20 shadow-sm" : "text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5")}><Building2 className="w-4 h-4" />{t('profile.tab_company')}</button>
+              <button type="button" onClick={() => setActiveTab('basic')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all", activeTab === 'basic' ? "bg-blue-500/10 text-blue-600 dark:text-blue-500 border border-blue-500/20 shadow-sm" : "text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5")}><User className="w-4 h-4" />{t('profile.tab_basic')}</button>
+              <button type="button" onClick={() => setActiveTab('company')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all", activeTab === 'company' ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 border border-indigo-500/20 shadow-sm" : "text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5")}><Building2 className="w-4 h-4" />{t('profile.tab_company')}</button>
             </div>
 
             {/* Form */}
@@ -229,7 +237,7 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
                     </div>
 
                     <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
-                      <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-1 mb-4 block">Foto de Perfil</label>
+                      <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest ml-1 mb-4 block">{t('profile.avatar')}</label>
                       <div className="flex items-center gap-6 p-4 bg-neutral-50 dark:bg-neutral-900/40 rounded-2xl border border-neutral-100 dark:border-neutral-800/50">
                         <div className="relative group">
                           <input type="file" ref={fileInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/*" />
@@ -246,7 +254,7 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
                           </button>
                         </div>
                         <div className="flex flex-col gap-2">
-                          <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium leading-tight">Envie uma imagem JPG, PNG ou GIF.</p>
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium leading-tight">{t('profile.avatar_hint')}</p>
                           {isCustomAvatar && (
                             <button type="button" onClick={handleAvatarReset} className="flex items-center gap-2 text-[10px] font-bold text-blue-600 dark:text-blue-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors uppercase tracking-wider">
                               <RefreshCcw className="w-3 h-3" />
@@ -332,12 +340,13 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
                 {t('profile.cancel')}
               </button>
               <button type="submit" onClick={handleSubmit} disabled={isLoading} className={cn("flex-[2] py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2", isSuccess ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20")}>
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : isSuccess ? <><CheckCircle2 className="w-5 h-5" /> Salvo!</> : <><Save className="w-5 h-5" /> {t('profile.save')}</>}
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : isSuccess ? <><CheckCircle2 className="w-5 h-5" /> {t('common.success')}</> : <><Save className="w-5 h-5" /> {t('profile.save')}</>}
               </button>
             </div>
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }

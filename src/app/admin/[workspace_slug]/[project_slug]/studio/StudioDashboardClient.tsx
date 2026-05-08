@@ -148,6 +148,12 @@ export function StudioDashboardClient({
                 <Database className="w-5 h-5 text-indigo-600 dark:text-indigo-500" />
                 {t('dashboard.projects.studio.data_structure')}
               </h3>
+              <Link 
+                href={`/admin/${workspace_slug}/${project_slug}/studio/builder`}
+                className="flex items-center gap-2 px-6 py-2.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-indigo-500/10"
+              >
+                <Plus className="w-4 h-4" /> Novo Caso de Uso
+              </Link>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
