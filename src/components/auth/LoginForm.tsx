@@ -117,10 +117,10 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
             <Layers className="w-8 h-8 text-blue-500" />
           </div>
         </div>
-        <h2 className="text-2xl font-bold text-white tracking-tight">
+        <h2 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
           {mode === 'login' ? 'Bem-vindo de volta' : 'Crie sua conta'}
         </h2>
-        <p className="text-neutral-500 text-sm">
+        <p className="text-neutral-500 dark:text-neutral-400 text-sm font-medium">
           {mode === 'login' 
             ? 'Acesse seu ecossistema metadata PRO' 
             : 'Comece a construir sua aplicação hoje'}
@@ -140,7 +140,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
       <button 
         type="button"
         onClick={handleGoogleLogin}
-        className="w-full bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
+        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-sm"
       >
         <svg className="w-4 h-4" viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -152,9 +152,9 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
       </button>
 
       <div className="relative flex items-center py-1">
-        <div className="flex-grow border-t border-neutral-800/50"></div>
-        <span className="flex-shrink mx-4 text-[10px] text-neutral-600 font-bold uppercase tracking-widest">OU USE E-MAIL</span>
-        <div className="flex-grow border-t border-neutral-800/50"></div>
+        <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800/50"></div>
+        <span className="flex-shrink mx-4 text-[10px] text-neutral-400 dark:text-neutral-600 font-black uppercase tracking-widest">OU USE E-MAIL</span>
+        <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800/50"></div>
       </div>
 
       <form onSubmit={handleEmailAction} className="space-y-4">
@@ -169,7 +169,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
                 required
                 ref={nameInputRef}
                 placeholder="Seu nome ou apelido"
-                className="w-full bg-neutral-900 border border-neutral-800 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-3 pl-12 pr-4 text-sm text-white placeholder:text-neutral-600 transition-all outline-none"
+                className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-3 pl-12 pr-4 text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600 transition-all outline-none"
               />
             </div>
           </div>
@@ -187,7 +187,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="exemplo@email.com"
-              className="w-full bg-neutral-900 border border-neutral-800 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-3 pl-12 pr-4 text-sm text-white placeholder:text-neutral-600 transition-all outline-none"
+              className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-3 pl-12 pr-4 text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600 transition-all outline-none"
             />
           </div>
         </div>
@@ -208,7 +208,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full bg-neutral-900 border border-neutral-800 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-3 pl-12 pr-12 text-sm text-white placeholder:text-neutral-600 transition-all outline-none"
+              className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-3 pl-12 pr-12 text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600 transition-all outline-none"
             />
             <button
               type="button"
@@ -229,7 +229,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
                       "flex-1 rounded-full transition-all duration-500",
                       step <= strengthScore 
                         ? (strengthScore <= 2 ? "bg-red-500" : strengthScore === 3 ? "bg-yellow-500" : "bg-green-500")
-                        : "bg-neutral-800"
+                        : "bg-neutral-200 dark:bg-neutral-800"
                     )}
                   />
                 ))}
@@ -257,9 +257,9 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
                 className={cn(
-                  "w-full bg-neutral-900 border rounded-xl py-3 pl-12 pr-4 text-sm text-white placeholder:text-neutral-600 transition-all outline-none",
+                  "w-full bg-neutral-50 dark:bg-neutral-900 border rounded-xl py-3 pl-12 pr-4 text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600 transition-all outline-none",
                   confirmPassword && (password === confirmPassword ? "border-green-500/50 focus:border-green-500" : "border-red-500/50 focus:border-red-500"),
-                  !confirmPassword && "border-neutral-800 focus:border-blue-500/50"
+                  !confirmPassword && "border-neutral-200 dark:border-neutral-800 focus:border-blue-500/50"
                 )}
               />
             </div>

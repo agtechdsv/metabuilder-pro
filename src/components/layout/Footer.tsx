@@ -30,10 +30,10 @@ export function Footer() {
         {/* Legal Links */}
         <div className="flex gap-8 items-center">
           <Link href="/privacy" className="text-xs font-bold text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors tracking-widest uppercase">
-            {language === 'pt' ? 'Privacidade' : language === 'es' ? 'Privacidad' : 'Privacy'}
+            {t('privacy.title')}
           </Link>
           <Link href="/terms" className="text-xs font-bold text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors tracking-widest uppercase">
-            {language === 'pt' ? 'Termos' : language === 'es' ? 'Términos' : 'Terms'}
+            {t('terms.title')}
           </Link>
         </div>
       </div>
