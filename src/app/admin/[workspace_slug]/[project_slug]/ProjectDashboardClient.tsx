@@ -8,7 +8,7 @@ import {
   Zap
 } from 'lucide-react'
 import Link from 'next/link'
-import { UseCaseManager } from '@/components/dashboard/UseCaseManager'
+import { UseCaseManager } from '@/components/workspace/UseCaseManager'
 import { useI18n } from '@/i18n/I18nContext'
 
 import { HeaderActions } from '@/components/layout/HeaderActions'
@@ -34,8 +34,8 @@ export function ProjectDashboardClient({ workspace, project, profile, views, wor
     <div className="min-h-screen bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300">
       
       {/* Header Profissional */}
-      <nav className="h-20 border-b border-neutral-200 dark:border-neutral-900 bg-white/50 dark:bg-neutral-950/50 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-8 h-full flex items-center justify-between">
+      <nav className="h-16 border-b border-neutral-200 dark:border-neutral-900 bg-white/50 dark:bg-neutral-950/50 backdrop-blur-md sticky top-0 z-20">
+        <div className="w-full px-10 h-full flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href={`/admin/${workspace_slug}`} className="p-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900 rounded-lg transition-all">
               <ArrowLeft className="w-5 h-5" />
@@ -70,7 +70,7 @@ export function ProjectDashboardClient({ workspace, project, profile, views, wor
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-8 py-12">
+      <main className="w-full px-10 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           {/* Coluna Esquerda: Listagem de Views */}

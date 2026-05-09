@@ -1,5 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
-import { notFound } from 'next/navigation'
+import { createClient } from '@/utils/supabase/server'
+import { notFound, redirect } from 'next/navigation'
 import { StudioDashboardClient } from './StudioDashboardClient'
 
 interface StudioDashboardProps {
@@ -11,11 +11,17 @@ interface StudioDashboardProps {
 
 export default async function StudioDashboard({ params }: StudioDashboardProps) {
   const { workspace_slug, project_slug } = await params
+  const supabase = await createClient()
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  // Busca perfil para o Header
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
 
   // 1. Resolve Workspace
   const { data: workspace, error: workspaceError } = await supabase
@@ -57,6 +63,8 @@ export default async function StudioDashboard({ params }: StudioDashboardProps) 
       views={views || []}
       workspace_slug={workspace_slug}
       project_slug={project_slug}
+      user={user}
+      profile={profile}
     />
   )
 }
