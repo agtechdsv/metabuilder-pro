@@ -64,7 +64,7 @@
   "common": {
     "login": "Login",
     "signup": "Get Started",
-    "dashboard": "Dashboard",
+    "dashboard": "Workspace",
     "profile": "My Profile",
     "logout": "Sign Out",
     "cancel": "Cancel",

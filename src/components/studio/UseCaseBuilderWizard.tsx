@@ -378,8 +378,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
             </button>
             <div className="h-8 w-px bg-neutral-200 dark:bg-neutral-800 mx-2"></div>
             <div>
-              <h1 className="text-lg font-black tracking-tight">Use Case Builder</h1>
-              <p className="text-[10px] text-indigo-600 dark:text-indigo-400 uppercase font-black tracking-[0.2em]">{initialData ? 'Editando Caso de Uso' : 'Novo Caso de Uso'}</p>
+              <h1 className="text-sm font-black tracking-tight">Use Case Builder</h1>
+              <p className="text-[8px] text-indigo-600 dark:text-indigo-400 uppercase font-black tracking-[0.2em]">{initialData ? 'Editando Caso de Uso' : 'Novo Caso de Uso'}</p>
             </div>
           </div>
 
@@ -387,16 +387,16 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
             <button 
               onClick={handleSave}
               disabled={isSaving}
-              className="flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-95"
+              className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-95"
             >
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {isSaving ? (initialData ? 'Atualizando...' : 'Salvando...') : (initialData ? 'Atualizar Caso de Uso' : 'Finalizar Caso de Uso')}
+              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+              {isSaving ? (initialData ? 'Atualizando...' : 'Salvando...') : (initialData ? 'Atualizar' : 'Finalizar')}
             </button>
           </div>
         </div>
 
         {/* Stepper Progress Bar */}
-        <div className="bg-neutral-50/50 dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 px-8 py-6 rounded-[2.5rem]">
+        <div className="bg-neutral-50/50 dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 px-6 py-4 rounded-[2rem]">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             {steps.map((step, idx) => (
               <div key={step.id} className="flex items-center flex-1 last:flex-none">
@@ -407,13 +407,13 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
                   )}
                 >
                   <div className={cn(
-                    "w-10 h-10 rounded-2xl border-2 flex items-center justify-center font-black text-sm transition-all shadow-sm",
+                    "w-8 h-8 rounded-xl border-2 flex items-center justify-center font-black text-[10px] transition-all shadow-sm",
                     currentStep === step.id ? 'border-indigo-600 bg-indigo-600 text-white rotate-3 shadow-indigo-500/20' : 
                     currentStep > step.id ? 'border-indigo-600 bg-indigo-600/10' : 'border-neutral-200 dark:border-neutral-800'
                   )}>
-                    {currentStep > step.id ? <CheckCircle2 className="w-6 h-6" /> : step.id}
+                    {currentStep > step.id ? <CheckCircle2 className="w-5 h-5" /> : step.id}
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.15em] hidden sm:block">{step.title}</span>
+                  <span className="text-[9px] font-black uppercase tracking-[0.15em] hidden sm:block">{step.title}</span>
                 </div>
                 {idx < steps.length - 1 && (
                   <div className={cn(
@@ -428,7 +428,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       </div>
 
       {/* Content Area */}
-      <div className="mt-12 min-h-[500px]">
+      <div className="mt-6 min-h-[500px]">
         {currentStep === 1 && (
           <StepLogic config={config} setConfig={setConfig} />
         )}
@@ -444,26 +444,26 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       </div>
 
       {/* Floating Footer Navigation */}
-      <div className="fixed bottom-8 left-0 right-0 flex justify-center px-6 z-40">
-        <div className="w-full max-w-4xl bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 p-4 rounded-[2.5rem] flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+      <div className="fixed bottom-6 left-0 right-0 flex justify-center px-6 z-40">
+        <div className="w-full max-w-2xl bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 p-2 rounded-full flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
           <button 
             onClick={prevStep}
             disabled={currentStep === 1}
             className={cn(
-              "flex items-center gap-2 px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-0",
+              "flex items-center gap-2 px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-0",
               currentStep === steps.length 
                 ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-xl" 
                 : "text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
             )}
           >
-            <ChevronLeft className="w-4 h-4" /> Passo Anterior
+            <ChevronLeft className="w-3 h-3" /> Passo Anterior
           </button>
 
           <button 
             onClick={currentStep === steps.length ? handleSave : nextStep}
             disabled={isSaving}
             className={cn(
-              "flex items-center gap-2 px-10 py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl",
+              "flex items-center gap-2 px-8 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl",
               currentStep === steps.length 
                 ? "text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 : "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-neutral-900/10 dark:shadow-white/5"
@@ -471,12 +471,12 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
           >
             {currentStep === steps.length ? (
               isSaving ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> {initialData ? 'Atualizando...' : 'Salvando...'}</>
+                <><Loader2 className="w-3 h-3 animate-spin" /> {initialData ? 'Atualizando...' : 'Salvando...'}</>
               ) : (
-                <>{initialData ? 'Atualizar Caso de Uso' : 'Finalizar Caso de Uso'} <Save className="w-4 h-4 ml-1" /></>
+                <>{initialData ? 'Atualizar' : 'Finalizar'} <Save className="w-3 h-3 ml-1" /></>
               )
             ) : (
-              <>Próximo Passo <ChevronRight className="w-4 h-4" /></>
+              <>Próximo Passo <ChevronRight className="w-3 h-3" /></>
             )}
           </button>
         </div>
@@ -495,73 +495,74 @@ function StepLogic({ config, setConfig }: any) {
   ]
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
-      <div className="space-y-3">
-        <h2 className="text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white">Qual a lógica do seu caso de uso?</h2>
-        <p className="text-neutral-500 dark:text-neutral-400 text-lg">Defina o comportamento principal desta tela no MetaBuilder.</p>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      <div className="space-y-2">
+        <h2 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white">Qual a lógica do seu caso de uso?</h2>
+        <p className="text-neutral-500 dark:text-neutral-400 text-sm">Defina o comportamento principal desta tela no MetaBuilder.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {types.map(t => (
           <button
             key={t.id}
             onClick={() => setConfig({...config, logic_type: t.id})}
             className={cn(
-              "p-10 rounded-[3rem] border-2 text-left transition-all group relative overflow-hidden",
+              "p-4 rounded-[1.5rem] border-2 text-left transition-all group relative overflow-hidden",
               config.logic_type === t.id 
                 ? 'border-indigo-600 bg-indigo-600/5 shadow-2xl shadow-indigo-500/10 scale-[1.02]' 
                 : 'border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/30'
             )}
           >
             <div className={cn(
-              "w-14 h-14 rounded-2xl flex items-center justify-center mb-8 transition-all shadow-sm",
+              "w-8 h-8 rounded-lg flex items-center justify-center mb-3 transition-all shadow-sm",
               config.logic_type === t.id ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 group-hover:text-indigo-600'
             )}>
-              <Layout className="w-7 h-7" />
+              <Layout className="w-4 h-4" />
             </div>
-            <h3 className="font-bold text-xl mb-3">{t.title}</h3>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium">{t.desc}</p>
+            <h3 className="font-bold text-base mb-1">{t.title}</h3>
+            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium">{t.desc}</p>
           </button>
         ))}
       </div>
 
-      <div className="p-10 bg-neutral-50/50 dark:bg-neutral-900/30 rounded-[3.5rem] border border-neutral-200 dark:border-neutral-800 space-y-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+      <div className="p-4 bg-neutral-50/50 dark:bg-neutral-900/30 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Nome da Tela</label>
-            <input 
-              type="text" 
-              value={config.name}
-              onChange={e => {
-                const val = e.target.value
-                const suggestedSlug = val.toLowerCase()
-                  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-                  .replace(/[^a-z0-9\s-]/g, '')
-                  .trim()
-                  .replace(/\s+/g, '-')
-                
-                setConfig({
-                  ...config, 
-                  name: val,
-                  slug: (!config.slug || config.slug === config.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-')) ? suggestedSlug : config.slug
-                })
-              }}
-              placeholder="Ex: Gestão de Contratos"
-              className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-6 py-4 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-            />
-          </div>
-          <div className="space-y-3">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">URL Amigável (Slug)</label>
-            <div className="flex items-center bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-6 py-4 focus-within:border-indigo-600 transition-all shadow-sm">
-              <span className="text-neutral-400 mr-2 font-bold">/</span>
               <input 
+                required
                 type="text" 
-                value={config.slug}
-                onChange={e => setConfig({...config, slug: e.target.value.toLowerCase().replace(/\s/g, '-')})}
-                placeholder="contratos"
-                className="w-full bg-transparent outline-none text-sm font-bold"
+                value={config.name}
+                onChange={e => {
+                  const val = e.target.value
+                  const suggestedSlug = val.toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .trim()
+                    .replace(/\s+/g, '-')
+                  
+                  setConfig({
+                    ...config, 
+                    name: val,
+                    slug: (!config.slug || config.slug === config.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-')) ? suggestedSlug : config.slug
+                  })
+                }}
+                placeholder="Ex: Gestão de Contratos"
+                className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
               />
             </div>
+            <div className="space-y-3">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">URL Amigável (Slug)</label>
+              <div className="flex items-center bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus-within:border-indigo-600 transition-all shadow-sm">
+                <span className="text-neutral-400 mr-2 font-bold">/</span>
+                <input 
+                  type="text" 
+                  value={config.slug}
+                  onChange={e => setConfig({...config, slug: e.target.value.toLowerCase().replace(/\s/g, '-')})}
+                  placeholder="contratos"
+                  className="w-full bg-transparent outline-none text-sm font-bold"
+                />
+              </div>
           </div>
         </div>
 
@@ -583,13 +584,13 @@ function StepLogic({ config, setConfig }: any) {
 
 function StepTables({ config, setConfig, models }: any) {
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
-       <div className="space-y-3">
-        <h2 className="text-4xl font-extrabold tracking-tight">Quais tabelas compõem este caso?</h2>
-        <p className="text-neutral-500 dark:text-neutral-400 text-lg">Você pode selecionar uma ou mais tabelas. A lógica de Join será configurada a seguir.</p>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
+       <div className="space-y-2">
+        <h2 className="text-xl font-extrabold tracking-tight">Quais tabelas compõem este caso?</h2>
+        <p className="text-neutral-500 dark:text-neutral-400 text-sm">Você pode selecionar uma ou mais tabelas. A lógica de Join será configurada a seguir.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {models.map((m: any) => {
           const isSelected = config.selected_models.includes(m.id)
           return (
@@ -597,27 +598,27 @@ function StepTables({ config, setConfig, models }: any) {
               key={m.id}
               onClick={() => {
                 const newSelected = isSelected 
-                  ? config.selected_models.filter((id: string) => id !== m.id)
+                   ? config.selected_models.filter((id: string) => id !== m.id)
                   : [...config.selected_models, m.id]
                 setConfig({...config, selected_models: newSelected})
               }}
               className={cn(
-                "p-8 rounded-[2.5rem] border-2 text-left transition-all relative group",
+                "p-4 rounded-[1.5rem] border-2 text-left transition-all relative group",
                 isSelected 
                   ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10' 
                   : 'border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/30'
               )}
             >
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4">
                 <div className={cn(
-                  "p-3 rounded-xl transition-all",
+                  "p-2.5 rounded-xl transition-all",
                   isSelected ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
                 )}>
-                  <Database className="w-6 h-6" />
+                  <Database className="w-5 h-5" />
                 </div>
                 {isSelected && <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-indigo-500/40"><CheckCircle2 className="w-4 h-4" /></div>}
               </div>
-              <h4 className="font-bold text-lg text-neutral-900 dark:text-white">{m.display_name || m.db_table_name}</h4>
+              <h4 className="font-bold text-base text-neutral-900 dark:text-white">{m.display_name || m.db_table_name}</h4>
               <p className="text-[10px] text-neutral-400 font-mono mt-1 uppercase tracking-widest">{m.db_table_name}</p>
             </button>
           )
@@ -667,17 +668,17 @@ function StepLayout({ config, setConfig, models }: any) {
   }
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
-       <div className="space-y-3">
-        <h2 className="text-4xl font-extrabold tracking-tight">Desenhe o Layout da Tela</h2>
-        <p className="text-neutral-500 dark:text-neutral-400 text-lg">Organize os campos em zonas específicas. Um campo pode estar em mais de uma zona.</p>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
+       <div className="space-y-2">
+        <h2 className="text-xl font-extrabold tracking-tight">Desenhe o Layout da Tela</h2>
+        <p className="text-neutral-500 dark:text-neutral-400 text-sm">Organize os campos em zonas específicas. Um campo pode estar em mais de uma zona.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Lista de Campos Disponíveis */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="p-8 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] sticky top-28">
-            <h4 className="text-[10px] font-black uppercase text-neutral-400 mb-8 flex items-center gap-3 tracking-[0.2em]">
+        <div className="lg:col-span-4 space-y-3">
+          <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] sticky top-28">
+            <h4 className="text-[10px] font-black uppercase text-neutral-400 mb-6 flex items-center gap-3 tracking-[0.2em]">
               <Database className="w-4 h-4" /> Campos Disponíveis
             </h4>
             <div className="space-y-8 max-h-[55vh] overflow-y-auto pr-4 custom-scrollbar">
@@ -738,14 +739,14 @@ function StepLayout({ config, setConfig, models }: any) {
         </div>
 
         {/* Visualização de Zonas */}
-        <div className="lg:col-span-8 space-y-8">
+        <div className="lg:col-span-8 space-y-6">
           
           {/* ZONA: FILTROS */}
           {config.logic_type.includes('pesquisa') && (
-            <div className="p-10 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[3rem] space-y-8 shadow-sm">
+            <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
               <div className="flex items-center justify-between">
-                <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Zona 01: Filtros de Pesquisa</h4>
-                <span className="px-3 py-1 bg-indigo-500/10 text-indigo-600 rounded-full text-[10px] font-black tracking-widest">{config.layout_config.filter_fields.length} campos</span>
+                <h4 className="text-[9px] font-black uppercase text-indigo-600 tracking-[0.3em]">Zona 01: Filtros de Pesquisa</h4>
+                <span className="px-3 py-1 bg-indigo-500/10 text-indigo-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.filter_fields.length} campos</span>
               </div>
               <div className="flex flex-wrap gap-3 min-h-[80px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-center">
                 {config.layout_config.filter_fields.length === 0 ? (
@@ -762,11 +763,11 @@ function StepLayout({ config, setConfig, models }: any) {
             </div>
           )}
 
-          <div className="p-10 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[3rem] space-y-8 shadow-sm">
+          <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
             <div className="flex items-center justify-between">
-              <div className="space-y-3">
-                <h4 className="text-[10px] font-black uppercase text-emerald-600 tracking-[0.3em]">Zona 02: Listagem (Grid/Tabela)</h4>
-                <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-1 rounded-xl w-fit">
+              <div className="space-y-1">
+                <h4 className="text-[9px] font-black uppercase text-emerald-600 tracking-[0.3em]">Zona 02: Listagem (Grid/Tabela)</h4>
+                <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg w-fit">
                   {[
                     { id: 'list', label: 'Tabela' },
                     { id: 'card', label: 'Cards' },
@@ -779,7 +780,7 @@ function StepLayout({ config, setConfig, models }: any) {
                         layout_config: { ...config.layout_config, display_type: opt.id }
                       })}
                       className={cn(
-                        "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                        "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all",
                         (config.layout_config.display_type || 'list') === opt.id 
                           ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' 
                           : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
@@ -790,57 +791,55 @@ function StepLayout({ config, setConfig, models }: any) {
                   ))}
                 </div>
               </div>
-
-              {/* Se for AMBOS, permite escolher o padrão */}
-              {config.layout_config.display_type === 'both' && (
-                <div className="space-y-3">
-                  <h4 className="text-[10px] font-black uppercase text-neutral-400 tracking-[0.2em]">Padrão de Entrada</h4>
-                  <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-1 rounded-xl w-fit">
-                    {[
-                      { id: 'list', label: 'Lista' },
-                      { id: 'card', label: 'Cards' }
-                    ].map(opt => (
-                      <button
-                        key={opt.id}
-                        onClick={() => setConfig({
-                          ...config,
-                          layout_config: { ...config.layout_config, default_view: opt.id }
-                        })}
-                        className={cn(
-                          "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
-                          (config.layout_config.default_view || 'list') === opt.id 
-                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
-                            : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
-                        )}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-full text-[10px] font-black tracking-widest">{config.layout_config.grid_fields.length} campos</span>
+              <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.grid_fields.length} campos</span>
             </div>
-            <div className="min-h-[120px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
+
+            {config.layout_config.display_type === 'both' && (
+              <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800/50">
+                <h4 className="text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">Padrão de Entrada</h4>
+                <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg w-fit">
+                  {[
+                    { id: 'list', label: 'Lista' },
+                    { id: 'card', label: 'Cards' }
+                  ].map(opt => (
+                    <button
+                      key={opt.id}
+                      onClick={() => setConfig({
+                        ...config,
+                        layout_config: { ...config.layout_config, default_view: opt.id }
+                      })}
+                      className={cn(
+                        "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all",
+                        (config.layout_config.default_view || 'list') === opt.id 
+                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
+                          : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="min-h-[100px] p-4 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[1.5rem]">
               {config.layout_config.grid_fields.length === 0 ? (
                 <div className="h-full flex items-center justify-center italic text-xs text-neutral-400 font-medium">Selecione campos para exibir na tabela de resultados...</div>
               ) : (
-                <div className="w-full overflow-hidden rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm">
+                <div className="w-full overflow-hidden rounded-[1.2rem] border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm">
                   <table className="w-full text-[10px] text-left">
                     <thead className="bg-neutral-50 dark:bg-neutral-800/50 font-black uppercase text-neutral-400 tracking-wider">
                       <tr>
-                        <th className="px-6 py-4">Campo</th>
-                        <th className="px-6 py-4 w-12 text-center">Ação</th>
+                        <th className="px-4 py-3">Campo</th>
+                        <th className="px-4 py-3 w-10 text-center">Ação</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
                       {config.layout_config.grid_fields.map((id: string) => (
                         <tr key={id} className="group hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
-                          <td className="px-6 py-4 font-bold text-neutral-700 dark:text-neutral-200">{getFieldName(id)}</td>
-                          <td className="px-6 py-4 text-center">
-                            <button onClick={() => toggleField(id, 'grid_fields')} className="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-lg text-neutral-400 transition-all">
-                              <Trash2 className="w-4 h-4" />
+                          <td className="px-4 py-2.5 font-bold text-neutral-700 dark:text-neutral-200">{getFieldName(id)}</td>
+                          <td className="px-4 py-2.5 text-center">
+                            <button onClick={() => toggleField(id, 'grid_fields')} className="p-1.5 hover:bg-red-500/10 hover:text-red-500 rounded-lg text-neutral-400 transition-all">
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </td>
                         </tr>
@@ -854,12 +853,12 @@ function StepLayout({ config, setConfig, models }: any) {
 
           {/* ZONA: FORM */}
           {config.logic_type.includes('cadastro') && (
-            <div className="p-10 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[3rem] space-y-8 shadow-sm">
+            <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
               <div className="flex items-center justify-between">
-                <h4 className="text-[10px] font-black uppercase text-amber-600 tracking-[0.3em]">Zona 03: Formulário de Edição</h4>
-                <span className="px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-[10px] font-black tracking-widest">{config.layout_config.form_fields.length} campos</span>
+                <h4 className="text-[9px] font-black uppercase text-amber-600 tracking-[0.3em]">Zona 03: Formulário de Edição</h4>
+                <span className="px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.form_fields.length} campos</span>
               </div>
-              <div className="min-h-[120px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
+              <div className="min-h-[100px] p-4 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[1.5rem]">
                 {config.layout_config.form_fields.length === 0 ? (
                   <div className="h-full flex items-center justify-center italic text-xs text-neutral-400 font-medium">Quais campos poderão ser preenchidos pelo usuário?</div>
                 ) : (
@@ -889,35 +888,35 @@ function StepLayout({ config, setConfig, models }: any) {
 
 function StepActions({ config, setConfig }: any) {
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
-       <div className="space-y-3">
-        <h2 className="text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white">Query & Ações Finais</h2>
-        <p className="text-neutral-500 dark:text-neutral-400 text-lg">Configure como os dados serão recuperados e quais botões estarão disponíveis.</p>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
+       <div className="space-y-2">
+        <h2 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white">Query & Ações Finais</h2>
+        <p className="text-neutral-500 dark:text-neutral-400 text-sm">Configure como os dados serão recuperados e quais botões estarão disponíveis.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-8">
           <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Estratégia de Dados</h4>
           <div className="space-y-6">
             <button 
               onClick={() => setConfig({...config, query_type: 'dynamic'})}
               className={cn(
-                "w-full p-8 rounded-[2.5rem] border-2 text-left transition-all",
+                "w-full p-4 rounded-[1.5rem] border-2 text-left transition-all",
                 config.query_type === 'dynamic' ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10' : 'border-neutral-100 dark:border-neutral-800/50 bg-white dark:bg-neutral-900/30'
               )}
             >
-              <h5 className="font-bold text-lg mb-2">Query Dinâmica (Automática)</h5>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium leading-relaxed">O MetaBuilder gera os Joins e Selects baseado nas relações das tabelas.</p>
+              <h5 className="font-bold text-sm mb-1">Query Dinâmica (Automática)</h5>
+              <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium leading-relaxed">O MetaBuilder gera os Joins e Selects baseado nas relações das tabelas.</p>
             </button>
             <button 
               onClick={() => setConfig({...config, query_type: 'custom'})}
               className={cn(
-                "w-full p-8 rounded-[2.5rem] border-2 text-left transition-all",
+                "w-full p-4 rounded-[1.5rem] border-2 text-left transition-all",
                 config.query_type === 'custom' ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10' : 'border-neutral-100 dark:border-neutral-800/50 bg-white dark:bg-neutral-900/30'
               )}
             >
-              <h5 className="font-bold text-lg mb-2">Query Manual (SQL)</h5>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium leading-relaxed">Você escreve o SQL puro para maior controle e performance.</p>
+              <h5 className="font-bold text-sm mb-1">Query Manual (SQL)</h5>
+              <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium leading-relaxed">Você escreve o SQL puro para maior controle e performance.</p>
             </button>
           </div>
 
@@ -927,7 +926,7 @@ function StepActions({ config, setConfig }: any) {
               <textarea 
                 value={config.custom_query}
                 onChange={e => setConfig({...config, custom_query: e.target.value})}
-                className="w-full h-56 bg-neutral-900 text-indigo-400 font-mono text-xs p-8 rounded-[2rem] border border-neutral-800 outline-none focus:border-indigo-600 transition-all shadow-2xl"
+                className="w-full h-40 bg-neutral-900 text-indigo-400 font-mono text-[10px] p-5 rounded-[1.5rem] border border-neutral-800 outline-none focus:border-indigo-600 transition-all shadow-2xl"
                 placeholder="SELECT * FROM table1 JOIN table2..."
               />
             </div>
@@ -938,19 +937,19 @@ function StepActions({ config, setConfig }: any) {
           <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Botões da Interface</h4>
           <div className="space-y-4">
             {config.buttons_config.map((btn: any) => (
-              <div key={btn.id} className="flex items-center justify-between p-6 bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-[2rem] shadow-sm hover:border-indigo-500/30 transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-neutral-500">
-                    {btn.id === 'search' && <Search className="w-5 h-5" />}
-                    {btn.id === 'clear' && <RefreshCcw className="w-5 h-5" />}
-                    {btn.id === 'view' && <Search className="w-5 h-5" />}
-                    {btn.id === 'add' && <Plus className="w-5 h-5" />}
-                    {btn.id === 'edit' && <Pencil className="w-5 h-5" />}
-                    {btn.id === 'delete' && <Trash2 className="w-5 h-5" />}
+              <div key={btn.id} className="flex items-center justify-between p-3 bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-[1.2rem] shadow-sm hover:border-indigo-500/30 transition-all">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-neutral-500">
+                    {btn.id === 'search' && <Search className="w-4 h-4" />}
+                    {btn.id === 'clear' && <RefreshCcw className="w-4 h-4" />}
+                    {btn.id === 'view' && <Search className="w-4 h-4" />}
+                    {btn.id === 'add' && <Plus className="w-4 h-4" />}
+                    {btn.id === 'edit' && <Pencil className="w-4 h-4" />}
+                    {btn.id === 'delete' && <Trash2 className="w-4 h-4" />}
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm font-bold text-neutral-900 dark:text-white">{btn.label}</span>
-                    <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{btn.id}</span>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-bold text-neutral-900 dark:text-white">{btn.label}</span>
+                    <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">{btn.id}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">

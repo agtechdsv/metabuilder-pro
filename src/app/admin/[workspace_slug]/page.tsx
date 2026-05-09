@@ -5,9 +5,10 @@ import {
   Box,
   Settings
 } from 'lucide-react'
-import Link from 'next/link'
-import { ProjectManager } from '@/components/dashboard/ProjectManager'
-import { HeaderActions } from '@/components/layout/HeaderActions'
+import { Navbar } from '@/components/layout/Navbar'
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
+import { ProjectManager } from '@/components/workspace/ProjectManager'
+import { Footer } from '@/components/layout/Footer'
 
 interface WorkspaceDashboardProps {
   params: Promise<{
@@ -46,33 +47,15 @@ export default async function WorkspaceDashboard({ params }: WorkspaceDashboardP
     .order('created_at', { ascending: false })
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300">
+    <div className="min-h-screen flex flex-col pt-16 bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300">
       
-      {/* Navbar Superior */}
-      <nav className="h-20 border-b border-neutral-200 dark:border-neutral-900 bg-white/50 dark:bg-neutral-950/50 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-8 h-full flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link href="/dashboard" className="p-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900 rounded-lg transition-all">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
-                <Box className="w-5 h-5 text-indigo-400" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold leading-none text-neutral-900 dark:text-white">{workspace.name}</h1>
-                <p className="text-[10px] text-neutral-500 uppercase tracking-widest mt-1 font-bold">Workspace</p>
-              </div>
-            </div>
-          </div>
+      <Navbar user={user} profile={profile} />
+      <Breadcrumbs 
+        workspaceName={workspace.name} 
+        workspaceSlug={workspace.slug} 
+      />
 
-          <div className="flex items-center gap-4">
-            <HeaderActions user={user} profile={profile} />
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-8 py-12">
+      <main className="w-full px-10 pt-4 pb-4 flex-grow">
         
         <ProjectManager 
           initialProjects={projects || []} 
@@ -82,6 +65,7 @@ export default async function WorkspaceDashboard({ params }: WorkspaceDashboardP
         />
 
       </main>
+      <Footer />
     </div>
   )
 }

@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { 
-  Database, 
-  Plus, 
+import {
+  Database,
+  Plus,
   ChevronRight,
   Pencil,
   Trash2,
@@ -46,21 +46,21 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  
+
   const supabase = createClient()
   const router = useRouter()
   const { t } = useI18n()
 
   const openDrawer = (project: Project | null = null) => {
     setSelectedProject(project)
-    setFormData(project 
-      ? { 
-          name: project.name, 
-          slug: project.slug, 
-          description: project.description || '', 
-          icon: project.icon || '', 
-          is_active: project.is_active 
-        } 
+    setFormData(project
+      ? {
+        name: project.name,
+        slug: project.slug,
+        description: project.description || '',
+        icon: project.icon || '',
+        is_active: project.is_active
+      }
       : { name: '', slug: '', description: '', icon: '', is_active: true }
     )
     setIsDrawerOpen(true)
@@ -81,12 +81,12 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
         // Edit
         const { error } = await supabase
           .from('projects')
-          .update({ 
-            name: formData.name, 
+          .update({
+            name: formData.name,
             slug: formData.slug.toLowerCase(),
             description: formData.description,
             icon: formData.icon,
-            is_active: formData.is_active 
+            is_active: formData.is_active
           })
           .eq('id', selectedProject.id)
 
@@ -95,8 +95,8 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
         // Create
         const { error } = await supabase
           .from('projects')
-          .insert({ 
-            name: formData.name, 
+          .insert({
+            name: formData.name,
             slug: formData.slug.toLowerCase(),
             description: formData.description,
             icon: formData.icon,
@@ -113,7 +113,7 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
         .select('*, models(count)')
         .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false })
-      
+
       setProjects(data || [])
       closeDrawer()
       router.refresh()
@@ -154,7 +154,7 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
 
   const toggleActive = async (project: Project) => {
     const newStatus = !project.is_active
-    
+
     try {
       const { error } = await supabase
         .from('projects')
@@ -171,28 +171,28 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
   }
 
   return (
-    <div className="space-y-12">
-      
+    <div className="space-y-6">
+
       {/* Banner de Boas Vindas */}
-      <div className="relative p-12 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[3rem] overflow-hidden group shadow-sm dark:shadow-none">
+      <div className="relative py-6 px-12 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] overflow-hidden group shadow-sm dark:shadow-none">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/5 blur-[100px] -mr-48 -mt-48 group-hover:bg-indigo-600/10 transition-all duration-700"></div>
-        
+
         <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
-          <div className="space-y-4 max-w-2xl">
+          <div className="space-y-3 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 rounded-full border border-indigo-500/20 text-[10px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest">
               Ambiente de Trabalho Ativo
             </div>
-            <h2 className="text-5xl font-black tracking-tight leading-tight text-neutral-900 dark:text-white">
+            <h2 className="text-3xl font-black tracking-tight leading-tight text-neutral-900 dark:text-white">
               {t('dashboard.projects.title')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-indigo-400 dark:from-white dark:to-neutral-500">{workspaceName}</span>
             </h2>
-            <p className="text-neutral-500 dark:text-neutral-400 text-lg leading-relaxed">
+            <p className="text-neutral-500 dark:text-neutral-400 text-base leading-relaxed">
               {t('dashboard.projects.subtitle')}
             </p>
           </div>
-          
-          <button 
+
+          <button
             onClick={() => openDrawer()}
-            className="flex items-center gap-2 px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)] whitespace-nowrap"
+            className="flex items-center gap-2 px-7 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)] whitespace-nowrap text-sm"
           >
             <Plus className="w-5 h-5" /> {t('dashboard.projects.new_project')}
           </button>
@@ -211,15 +211,15 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
           {projects.map((project) => (
-            <div 
+            <div
               key={project.id}
-              className="group relative p-8 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] hover:border-indigo-500/50 transition-all shadow-sm hover:shadow-xl dark:shadow-none"
+              className="group relative p-5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] hover:border-indigo-500/50 transition-all shadow-sm hover:shadow-xl dark:shadow-none"
             >
-              <div className="flex flex-col h-full gap-8">
+              <div className="flex flex-col h-full gap-4">
                 <div className="flex items-start justify-between">
-                  <Link href={`/admin/${workspaceSlug}/${project.slug}`} className="space-y-3 flex-1">
+                  <Link href={`/admin/${workspaceSlug}/${project.slug}/studio`} className="space-y-3 flex-1">
                     <div className="p-3 bg-neutral-100 dark:bg-neutral-800 rounded-2xl w-fit group-hover:bg-indigo-500/10 transition-colors overflow-hidden flex items-center justify-center min-w-[48px] min-h-[48px]">
                       {project.icon ? (
                         <div className="w-6 h-6 flex items-center justify-center text-neutral-400 group-hover:text-indigo-500" dangerouslySetInnerHTML={{ __html: project.icon }} />
@@ -228,8 +228,8 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
                       )}
                     </div>
                     <div>
-                      <h4 className="text-2xl font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-white transition-colors">{project.name}</h4>
-                      <p className="text-sm text-neutral-500 font-mono mt-1">/{project.slug}</p>
+                      <h4 className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-white transition-colors">{project.name}</h4>
+                      <p className="text-xs text-neutral-500 font-mono mt-0.5">/{project.slug}</p>
                       {project.description && (
                         <p className="text-xs text-neutral-500 dark:text-neutral-600 mt-2 line-clamp-2 leading-relaxed">
                           {project.description}
@@ -237,32 +237,31 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
                       )}
                     </div>
                   </Link>
-                  
+
                   <div className="flex flex-col items-end gap-4">
-                    <div className={`px-4 py-1.5 text-[10px] font-bold rounded-full border uppercase tracking-widest transition-all ${
-                      project.is_active 
-                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
-                        : 'bg-red-500/10 text-red-500 border-red-500/20'
-                    }`}>
+                    <div className={`px-4 py-1.5 text-[10px] font-bold rounded-full border uppercase tracking-widest transition-all ${project.is_active
+                      ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                      : 'bg-red-500/10 text-red-500 border-red-500/20'
+                      }`}>
                       {project.is_active ? t('dashboard.projects.status_active') : t('dashboard.projects.status_inactive')}
                     </div>
 
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
+                      <button
                         onClick={() => toggleActive(project)}
                         className={`p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ${project.is_active ? 'text-neutral-500 hover:text-red-400' : 'text-neutral-500 hover:text-emerald-400'}`}
                         title={project.is_active ? t('dashboard.projects.toggle_inactive') : t('dashboard.projects.toggle_active')}
                       >
                         {project.is_active ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
                       </button>
-                      <button 
+                      <button
                         onClick={() => openDrawer(project)}
                         className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
                         title={t('dashboard.projects.edit_project')}
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
-                      <button 
+                      <button
                         onClick={() => openDeleteModal(project)}
                         className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400"
                         title={t('dashboard.projects.delete_project')}
@@ -277,18 +276,18 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
                   <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2">
                       <Activity className="w-4 h-4 text-neutral-400" />
-                      <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter">
+                      <span className="text-xs font-bold text-neutral-400 tracking-tighter">
                         {project.models?.[0]?.count || 0} {t('dashboard.projects.tables')}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Layers className="w-4 h-4 text-neutral-400" />
-                      <span className="text-xs font-bold text-neutral-400 uppercase tracking-tighter">
+                      <span className="text-xs font-bold text-neutral-400 tracking-tighter">
                         {t('dashboard.projects.use_cases')}
                       </span>
                     </div>
                   </div>
-                  <Link href={`/admin/${workspaceSlug}/${project.slug}`} className="w-10 h-10 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center group-hover:bg-indigo-600 transition-all shadow-sm dark:shadow-none">
+                  <Link href={`/admin/${workspaceSlug}/${project.slug}/studio`} className="w-10 h-10 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center group-hover:bg-indigo-600 transition-all shadow-sm dark:shadow-none">
                     <ChevronRight className="w-5 h-5 text-neutral-400 group-hover:text-white" />
                   </Link>
                 </div>
@@ -297,7 +296,7 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
           ))}
 
           {/* Add New Card */}
-          <button 
+          <button
             onClick={() => openDrawer()}
             className="p-8 bg-neutral-50 dark:bg-neutral-950 border-2 border-dashed border-neutral-300 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-white dark:hover:bg-neutral-900 hover:border-indigo-500/30 transition-all group min-h-[250px] shadow-inner dark:shadow-none"
           >
@@ -313,18 +312,18 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
       </section>
 
       {/* Drawer para Criar/Editar */}
-      <Drawer 
-        isOpen={isDrawerOpen} 
-        onClose={closeDrawer} 
+      <Drawer
+        isOpen={isDrawerOpen}
+        onClose={closeDrawer}
         title={selectedProject ? t('dashboard.projects.edit_project') : t('dashboard.projects.new_project')}
       >
         <form onSubmit={handleSave} className="space-y-8">
           <div className="space-y-6">
             <div className="space-y-2">
               <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">{t('dashboard.projects.project_name')}</label>
-              <input 
+              <input
                 required
-                type="text" 
+                type="text"
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value, slug: selectedProject ? formData.slug : e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-') })}
                 placeholder="Ex: CRM Vendas"
@@ -336,9 +335,9 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
               <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">{t('dashboard.projects.project_slug')}</label>
               <div className="flex items-center gap-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3">
                 <span className="text-neutral-400 dark:text-neutral-600 text-sm">/</span>
-                <input 
+                <input
                   required
-                  type="text" 
+                  type="text"
                   value={formData.slug}
                   onChange={e => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-') })}
                   placeholder="crm-vendas"
@@ -350,7 +349,7 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
 
             <div className="space-y-2">
               <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">{t('dashboard.projects.project_description')}</label>
-              <textarea 
+              <textarea
                 value={formData.description}
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Ex: Sistema de gestão de vendas e funil."
@@ -361,7 +360,7 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
 
             <div className="space-y-2">
               <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">{t('dashboard.projects.project_icon')}</label>
-              <textarea 
+              <textarea
                 value={formData.icon}
                 onChange={e => setFormData({ ...formData, icon: e.target.value })}
                 placeholder="Cole aqui o código <svg>..."
@@ -377,7 +376,7 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
                   <p className="text-sm font-bold text-neutral-900 dark:text-white">{t('dashboard.projects.status_title')}</p>
                   <p className="text-xs text-neutral-500">{t('dashboard.projects.status_desc')}</p>
                 </div>
-                <button 
+                <button
                   type="button"
                   onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
                   className={`w-12 h-6 rounded-full transition-all relative ${formData.is_active ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-800'}`}
@@ -389,7 +388,7 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
           </div>
 
           <div className="pt-6 border-t border-neutral-900">
-            <button 
+            <button
               type="submit"
               disabled={isSaving}
               className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-800 text-white rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)]"
@@ -416,14 +415,14 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
           </div>
 
           <div className="flex flex-col gap-3">
-            <button 
+            <button
               onClick={handleDelete}
               disabled={isDeleting}
               className="w-full py-4 bg-red-600 hover:bg-red-500 disabled:bg-neutral-800 text-white rounded-2xl font-bold transition-all shadow-[0_0_20px_rgba(220,38,38,0.2)]"
             >
               {isDeleting ? t('common.loading') : t('dashboard.projects.yes_delete')}
             </button>
-            <button 
+            <button
               onClick={() => setIsDeleteModalOpen(false)}
               className="w-full py-4 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all"
             >

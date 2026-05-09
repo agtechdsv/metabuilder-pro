@@ -71,11 +71,11 @@ export function UseCaseManager({ initialViews, workspaceSlug, projectSlug, proje
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-extrabold tracking-tight">{t('dashboard.projects.use_cases_title')}</h2>
-          <p className="text-neutral-500 text-sm mt-1">{t('dashboard.projects.use_cases_subtitle')}</p>
+          <h2 className="text-xl font-extrabold tracking-tight">{t('dashboard.projects.use_cases_title')}</h2>
+          <p className="text-neutral-500 text-[11px] mt-0.5">{t('dashboard.projects.use_cases_subtitle')}</p>
         </div>
         <Link 
           href={`/admin/${workspaceSlug}/${projectSlug}/studio`}
@@ -85,36 +85,36 @@ export function UseCaseManager({ initialViews, workspaceSlug, projectSlug, proje
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
         
         {/* Card Fixo: Portal de Login */}
-        <div className="group p-6 bg-white dark:bg-neutral-900/40 border border-indigo-500/20 rounded-3xl hover:border-indigo-500/50 transition-all shadow-lg relative overflow-hidden dark:shadow-none">
+        <div className="group p-4 bg-white dark:bg-neutral-900/40 border border-indigo-500/20 rounded-2xl hover:border-indigo-500/50 transition-all shadow-lg relative overflow-hidden dark:shadow-none">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-[50px] group-hover:bg-indigo-500/10 transition-all"></div>
           <div className="flex flex-col gap-6 relative z-10">
             <div className="flex items-start justify-between">
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Portal de Login</h4>
-                  <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[9px] font-bold uppercase tracking-widest border border-indigo-500/20 rounded-full">{t('dashboard.projects.system_label')}</span>
+                  <h4 className="text-base font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Portal de Login</h4>
+                  <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[8px] font-bold uppercase tracking-widest border border-indigo-500/20 rounded-full">{t('dashboard.projects.system_label')}</span>
                 </div>
-                <p className="text-xs text-neutral-500 font-mono">/{workspaceSlug}/{projectSlug}/login</p>
+                <p className="text-[10px] text-neutral-500 font-mono">/{workspaceSlug}/{projectSlug}/login</p>
               </div>
-              <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-500 dark:text-indigo-400">
-                <ShieldCheck className="w-5 h-5" />
+              <div className="p-1.5 bg-indigo-500/10 rounded-lg text-indigo-500 dark:text-indigo-400">
+                <ShieldCheck className="w-4 h-4" />
               </div>
             </div>
 
             <div className="flex items-center gap-2">
               <Link 
                 href={`/admin/${workspaceSlug}/${projectSlug}/studio/login`}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-[0_0_15px_rgba(79,70,229,0.3)]"
+                className="flex-1 flex items-center justify-center gap-2 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-bold transition-all shadow-[0_0_15px_rgba(79,70,229,0.3)]"
               >
                 <Layout className="w-4 h-4" /> {t('dashboard.projects.personalize_visual')}
               </Link>
               <Link 
                 href={`/${workspaceSlug}/${projectSlug}/login`}
                 target="_blank"
-                className="p-2.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-xl transition-all border border-neutral-200 dark:border-transparent"
+                className="p-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-all border border-neutral-200 dark:border-transparent"
                 title="Ver Tela de Login"
               >
                 <ExternalLink className="w-4 h-4 text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white" />
@@ -125,15 +125,15 @@ export function UseCaseManager({ initialViews, workspaceSlug, projectSlug, proje
 
         {/* Listagem de Views Dinâmicas */}
         {views.map((view) => (
-          <div key={view.id} className="group p-6 bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl hover:border-indigo-500/30 transition-all hover:bg-neutral-50 dark:hover:bg-neutral-900 shadow-lg dark:shadow-none relative overflow-hidden">
-            <div className="flex flex-col gap-6">
+          <div key={view.id} className="group p-4 bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-2xl hover:border-indigo-500/30 transition-all hover:bg-neutral-50 dark:hover:bg-neutral-900 shadow-lg dark:shadow-none relative overflow-hidden">
+            <div className="flex flex-col gap-4">
               <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <h4 className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{view.name}</h4>
-                  <p className="text-xs text-neutral-500 font-mono">/{workspaceSlug}/{projectSlug}/{view.slug}</p>
+                <div className="space-y-0.5">
+                  <h4 className="text-base font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{view.name}</h4>
+                  <p className="text-[10px] text-neutral-500 font-mono">/{workspaceSlug}/{projectSlug}/{view.slug}</p>
                 </div>
-                <div className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-neutral-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                  <Layout className="w-5 h-5" />
+                <div className="p-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-neutral-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  <Layout className="w-4 h-4" />
                 </div>
               </div>
 
@@ -141,13 +141,13 @@ export function UseCaseManager({ initialViews, workspaceSlug, projectSlug, proje
                 <Link 
                   href={`/${workspaceSlug}/${projectSlug}/${view.slug}`}
                   target="_blank"
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-xl text-xs font-bold transition-all text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700"
+                  className="flex-1 flex items-center justify-center gap-2 py-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg text-[11px] font-bold transition-all text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700"
                 >
                   <ExternalLink className="w-4 h-4" /> {t('dashboard.projects.open_app')}
                 </Link>
                 <button 
                   onClick={() => openDeleteModal(view)}
-                  className="p-2.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-xl transition-all border border-neutral-200 dark:border-transparent hover:border-red-500/30 text-neutral-400 hover:text-red-600 dark:hover:text-red-400"
+                  className="p-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-all border border-neutral-200 dark:border-transparent hover:border-red-500/30 text-neutral-400 hover:text-red-600 dark:hover:text-red-400"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

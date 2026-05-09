@@ -168,7 +168,7 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
 
               <div className="p-3">
                 <Link
-                  href="/dashboard"
+                  href="/workspace"
                   onClick={() => setIsOpen(false)}
                   className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-300 hover:text-blue-600 dark:hover:text-white transition-all group"
                 >
