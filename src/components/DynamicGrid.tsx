@@ -1,6 +1,7 @@
 'use client'
 
 import { Pencil, Trash2, Search } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface DynamicGridProps {
   fields: any[]
@@ -36,44 +37,61 @@ export default function DynamicGrid({
   return (
     <>
       {data.map((row, rowIndex) => (
-        <tr key={rowIndex} className="hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-colors border-b border-neutral-100 dark:border-neutral-800/50 last:border-0">
-          <td className="px-8 py-5 whitespace-nowrap w-12 text-center">
+        <tr key={rowIndex} className="group border-b border-neutral-100 dark:border-neutral-800/50 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
+          <td className={cn(
+            "sticky left-0 z-10 px-4 py-4 whitespace-nowrap w-[60px] text-center border-r border-neutral-200/50 dark:border-neutral-700/50 shadow-[4px_0_10px_rgba(0,0,0,0.03)] transition-colors",
+            rowIndex % 2 === 0 ? "bg-white dark:bg-neutral-900" : "bg-neutral-100/90 dark:bg-neutral-800"
+          )}>
             <input type="checkbox" className="rounded-md bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-indigo-600 focus:ring-indigo-500" />
           </td>
-          {fields.map((field) => (
-            <td key={field.id} className="px-6 py-5 whitespace-nowrap text-sm font-medium text-neutral-900 dark:text-neutral-300">
-              {typeof row[field.db_column_name] === 'object' 
-                ? JSON.stringify(row[field.db_column_name]) 
-                : String(row[field.db_column_name] ?? '')}
-            </td>
-          ))}
-          <td className="px-8 py-5 text-right whitespace-nowrap text-sm font-bold">
-            <div className="flex items-center justify-end gap-2">
+          {fields.map((field) => {
+            const val = typeof row[field.db_column_name] === 'object' 
+              ? JSON.stringify(row[field.db_column_name]) 
+              : String(row[field.db_column_name] ?? '')
+            
+            return (
+              <td 
+                key={field.id} 
+                title={val}
+                className={cn(
+                  "px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900 dark:text-neutral-300 transition-colors max-w-[300px] truncate cursor-help",
+                  rowIndex % 2 === 0 ? "bg-white dark:bg-neutral-900" : "bg-neutral-100/90 dark:bg-neutral-800"
+                )}
+              >
+                {val}
+              </td>
+            )
+          })}
+          <td className={cn(
+            "sticky right-0 z-10 px-4 py-4 text-right whitespace-nowrap text-sm font-bold border-l border-neutral-200/50 dark:border-neutral-700/50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] transition-colors",
+            rowIndex % 2 === 0 ? "bg-white dark:bg-neutral-900" : "bg-neutral-100/90 dark:bg-neutral-800"
+          )}>
+            <div className="flex items-center justify-end gap-1.5">
               {canView && (
                 <button 
                   title="Visualizar"
                   onClick={() => onView?.(row)}
-                  className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800/50 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all active:scale-90"
+                  className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all active:scale-90 shadow-sm"
                 >
-                  <Search className="w-4 h-4" />
+                  <Search className="w-3.5 h-3.5" />
                 </button>
               )}
               {canEdit && (
                 <button 
                   title="Editar"
                   onClick={() => onEdit?.(row)}
-                  className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-90"
+                  className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-neutral-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-90 shadow-sm"
                 >
-                  <Pencil className="w-4 h-4" />
+                  <Pencil className="w-3.5 h-3.5" />
                 </button>
               )}
               {canDelete && (
                 <button 
                   title="Excluir"
                   onClick={() => onDelete?.(row)}
-                  className="p-2 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 transition-all active:scale-90"
+                  className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-red-500 border border-neutral-200 dark:border-neutral-700 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all active:scale-90 shadow-sm"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>

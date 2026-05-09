@@ -46,8 +46,10 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
   const [models, setModels] = useState<any[]>([])
 
   // Popula os dados iniciais se estiver em modo edição
+  const [isInitialized, setIsInitialized] = useState(false)
+
   useEffect(() => {
-    if (initialData) {
+    if (initialData && !isInitialized) {
       setConfig({
         name: initialData.name || '',
         slug: initialData.slug || '',
@@ -78,18 +80,19 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
           // Merge: Keep existing visible states, but ensure all default IDs exist
           return defaults.map(def => {
             const existing = initialData.buttons_config.find((b: any) => b.id === def.id)
-            return existing ? existing : { ...def, visible: false } // Se for novo, vem desabilitado por segurança em views velhas
+            return existing ? existing : { ...def, visible: false }
           })
         })()
       })
+      setIsInitialized(true)
     }
-  }, [initialData])
+  }, [initialData, isInitialized])
 
   // Configuração da View sendo criada
   const [config, setConfig] = useState({
     name: '',
     slug: '',
-    logic_type: 'pesquisa_cadastro', // pesquisa, pesquisa_cadastro, cadastro
+    logic_type: 'pesquisa_cadastro',
     has_arguments: true,
     selected_models: [] as string[],
     tables_config: [] as any[],
@@ -99,22 +102,26 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       filter_fields: [] as string[],
       grid_fields: [] as string[],
       form_fields: [] as string[],
-      grouping_type: 'sections', // sections, tabs
-      display_type: 'list', // list, card, both
-      default_view: 'list' // list, card
+      grouping_type: 'sections',
+      display_type: 'list',
+      default_view: 'list'
     },
-      buttons_config: [
-        { id: 'search', label: 'Pesquisar', icon: 'search', action: 'search', visible: true },
-        { id: 'clear', label: 'Limpar', icon: 'refresh-ccw', action: 'clear', visible: true },
-        { id: 'view', label: 'Visualizar', icon: 'search', action: 'view', visible: true },
-        { id: 'add', label: 'Adicionar', icon: 'plus', action: 'create', visible: true },
-        { id: 'edit', label: 'Editar', icon: 'edit', action: 'pencil', action_key: 'update', visible: true },
-        { id: 'delete', label: 'Excluir', icon: 'trash', action_key: 'delete', visible: true }
-      ]
+    buttons_config: [
+      { id: 'search', label: 'Pesquisar', icon: 'search', action: 'search', visible: true },
+      { id: 'clear', label: 'Limpar', icon: 'refresh-ccw', action: 'clear', visible: true },
+      { id: 'view', label: 'Visualizar', icon: 'search', action: 'view', visible: true },
+      { id: 'add', label: 'Adicionar', icon: 'plus', action: 'create', visible: true },
+      { id: 'edit', label: 'Editar', icon: 'edit', action: 'pencil', action_key: 'update', visible: true },
+      { id: 'delete', label: 'Excluir', icon: 'trash', action_key: 'delete', visible: true }
+    ]
   })
 
   // Sugestão automática de botões baseado na lógica selecionada
   useEffect(() => {
+    // Se estivermos em modo edição (initialData presente), NUNCA rodamos a sugestão automática
+    // para não atropelar as escolhas já salvas e persistidas pelo usuário.
+    if (initialData) return
+
     // Só sugerimos enquanto o usuário não chegou na etapa de edição manual (Passo 4)
     if (currentStep < 4) {
       const isPesquisa = config.logic_type === 'pesquisa'
@@ -127,7 +134,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       let addVis = false
       let editVis = false
       let delVis = false
- 
+
       if (isPesquisa) {
         searchVis = hasArgs
         viewVis = true
@@ -140,12 +147,12 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       } else if (isCadastro) {
         addVis = true
       }
- 
+
       setConfig(prev => ({
         ...prev,
         buttons_config: prev.buttons_config.map(btn => {
           if (btn.id === 'search') return { ...btn, visible: searchVis }
-          if (btn.id === 'clear') return { ...btn, visible: searchVis } // Limpar segue o Pesquisar
+          if (btn.id === 'clear') return { ...btn, visible: searchVis }
           if (btn.id === 'view') return { ...btn, visible: viewVis }
           if (btn.id === 'add') return { ...btn, visible: addVis }
           if (btn.id === 'edit') return { ...btn, visible: editVis }
@@ -154,7 +161,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
         })
       }))
     }
-  }, [config.logic_type, config.has_arguments, currentStep])
+  }, [config.logic_type, config.has_arguments, currentStep, isInitialized, initialData])
 
   // Limpeza automática de campos se a lógica mudar
   useEffect(() => {
