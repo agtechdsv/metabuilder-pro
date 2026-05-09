@@ -120,7 +120,8 @@ export default async function SlugPage({ params }: PageProps) {
         id: c.field.id,
         display_name: c.label || c.field.display_name || c.field.db_column_name,
         db_column_name: c.field.db_column_name,
-        data_type: c.field.data_type
+        data_type: c.field.data_type,
+        config: c.config
       }))
 
     // Tenta encontrar a PK em qualquer campo da view

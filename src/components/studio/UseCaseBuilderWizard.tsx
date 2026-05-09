@@ -2,10 +2,10 @@
 // Refined UseCaseBuilderWizard - Metadata Driven Actions Order
 
 import { useState, useEffect } from 'react'
-import { 
-  ArrowLeft, 
-  Save, 
-  ChevronRight, 
+import {
+  ArrowLeft,
+  Save,
+  ChevronRight,
   ChevronLeft,
   Settings2,
   Database,
@@ -18,13 +18,25 @@ import {
   Loader2,
   Search,
   Pencil,
-  RefreshCcw
+  RefreshCcw,
+  Table,
+  GripVertical,
+  ArrowRight,
+  Type,
+  Palette,
+  Maximize2,
+  Lock,
+  Type as FontIcon,
+  Share2,
+  Columns,
+  Settings
 } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { cn } from '@/lib/utils'
+import { Drawer } from '@/components/ui/Drawer'
 
 interface UseCaseBuilderWizardProps {
   initialData?: any
@@ -65,7 +77,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
           form_fields: initialData.layout_config?.form_fields || [],
           grouping_type: initialData.layout_config?.grouping_type || 'sections',
           display_type: initialData.layout_config?.display_type || 'list',
-          default_view: initialData.layout_config?.default_view || 'list'
+          default_view: initialData.layout_config?.default_view || 'list',
+          fields_metadata: initialData.layout_config?.fields_metadata || {}
         },
         buttons_config: (() => {
           const defaults = [
@@ -104,7 +117,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       form_fields: [] as string[],
       grouping_type: 'sections',
       display_type: 'list',
-      default_view: 'list'
+      default_view: 'list',
+      fields_metadata: {} as Record<string, any>
     },
     buttons_config: [
       { id: 'search', label: 'Pesquisar', icon: 'search', action: 'search', visible: true },
@@ -193,7 +207,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
         .from('models')
         .select('*, fields(*)')
         .order('db_table_name')
-      
+
       if (data) setModels(data)
       setIsLoading(false)
     }
@@ -269,7 +283,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
     try {
       // 1. Criar/Atualizar a View Principal
       const { data: projectData } = await supabase.from('projects').select('id').eq('slug', project_slug).single()
-      
+
       const viewPayload = {
         project_id: projectData?.id,
         name: config.name,
@@ -324,18 +338,25 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       const componentMap: Record<string, any> = {}
 
       const addOrUpdateComponent = (fid: string, zone: string) => {
+        const metadata = config.layout_config.fields_metadata[fid] || {}
         if (!componentMap[fid]) {
           componentMap[fid] = {
             view_id: view.id,
             field_id: fid,
             component_type: zone, // Usa a primeira zona como tipo inicial
-            label: '',
-            config: { zones: [zone] }
+            label: metadata.label?.text || '',
+            config: {
+              zones: [zone],
+              ...metadata // Inclui todas as propriedades (font, size, color, mask, required) no config
+            }
           }
         } else {
           if (!componentMap[fid].config.zones.includes(zone)) {
             componentMap[fid].config.zones.push(zone)
           }
+          // Garante que o label e o config estejam atualizados mesmo se já existir
+          componentMap[fid].label = metadata.label?.text || componentMap[fid].label
+          componentMap[fid].config = { ...componentMap[fid].config, ...metadata }
         }
       }
 
@@ -349,7 +370,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
         const { error: compError } = await supabase.from('ui_components').insert(componentsToInsert)
         if (compError) throw compError
       }
-      
+
       onSaveSuccess()
     } catch (err: any) {
       console.error(err)
@@ -368,7 +389,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
 
   return (
     <div className="flex flex-col animate-in fade-in duration-500 pb-32">
-      
+
       {/* Header Interno do Builder (Imagem 2) */}
       <div className="flex flex-col gap-8">
         <div className="flex items-center justify-between">
@@ -384,7 +405,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
           </div>
 
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={handleSave}
               disabled={isSaving}
               className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-95"
@@ -400,7 +421,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             {steps.map((step, idx) => (
               <div key={step.id} className="flex items-center flex-1 last:flex-none">
-                <div 
+                <div
                   className={cn(
                     "flex items-center gap-3 transition-all",
                     currentStep >= step.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-400'
@@ -408,8 +429,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
                 >
                   <div className={cn(
                     "w-8 h-8 rounded-xl border-2 flex items-center justify-center font-black text-[10px] transition-all shadow-sm",
-                    currentStep === step.id ? 'border-indigo-600 bg-indigo-600 text-white rotate-3 shadow-indigo-500/20' : 
-                    currentStep > step.id ? 'border-indigo-600 bg-indigo-600/10' : 'border-neutral-200 dark:border-neutral-800'
+                    currentStep === step.id ? 'border-indigo-600 bg-indigo-600 text-white rotate-3 shadow-indigo-500/20' :
+                      currentStep > step.id ? 'border-indigo-600 bg-indigo-600/10' : 'border-neutral-200 dark:border-neutral-800'
                   )}>
                     {currentStep > step.id ? <CheckCircle2 className="w-5 h-5" /> : step.id}
                   </div>
@@ -446,25 +467,25 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       {/* Floating Footer Navigation */}
       <div className="fixed bottom-6 left-0 right-0 flex justify-center px-6 z-40">
         <div className="w-full max-w-2xl bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 p-2 rounded-full flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
-          <button 
+          <button
             onClick={prevStep}
             disabled={currentStep === 1}
             className={cn(
               "flex items-center gap-2 px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-0",
-              currentStep === steps.length 
-                ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-xl" 
+              currentStep === steps.length
+                ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-xl"
                 : "text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
             )}
           >
             <ChevronLeft className="w-3 h-3" /> Passo Anterior
           </button>
 
-          <button 
+          <button
             onClick={currentStep === steps.length ? handleSave : nextStep}
             disabled={isSaving}
             className={cn(
               "flex items-center gap-2 px-8 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl",
-              currentStep === steps.length 
+              currentStep === steps.length
                 ? "text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 : "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-neutral-900/10 dark:shadow-white/5"
             )}
@@ -489,9 +510,12 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
 
 function StepLogic({ config, setConfig }: any) {
   const types = [
-    { id: 'pesquisa', title: 'Pesquisa', desc: 'Focado em busca e visualização de dados.' },
-    { id: 'pesquisa_cadastro', title: 'Pesquisa + Cadastro', desc: 'Fluxo completo: busca, listagem e formulário.' },
-    { id: 'cadastro', title: 'Apenas Cadastro', desc: 'Formulário direto para inserção de dados.' }
+    { id: 'pesquisa', title: 'Apenas Pesquisa', desc: 'Focado em busca e visualização de dados.', icon: Layout },
+    { id: 'pesquisa_cadastro', title: 'Pesquisa + Cadastro', desc: 'Fluxo completo: busca, listagem e formulário.', icon: Layout },
+    { id: 'cadastro', title: 'Apenas Cadastro', desc: 'Formulário direto para inserção de dados.', icon: Layout },
+    { id: 'mapa_mental', title: 'Mapa Mental', desc: 'Visualização hierárquica e conexões entre dados.', icon: Share2 },
+    { id: 'kanban', title: 'Kanban', desc: 'Gestão de fluxo de trabalho por colunas e status.', icon: Columns },
+    { id: 'personalizado', title: 'Personalizado', desc: 'Lógica customizada e fluxos de trabalho únicos.', icon: Settings }
   ]
 
   return (
@@ -501,15 +525,15 @@ function StepLogic({ config, setConfig }: any) {
         <p className="text-neutral-500 dark:text-neutral-400 text-sm">Defina o comportamento principal desta tela no MetaBuilder.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         {types.map(t => (
           <button
             key={t.id}
-            onClick={() => setConfig({...config, logic_type: t.id})}
+            onClick={() => setConfig({ ...config, logic_type: t.id })}
             className={cn(
               "p-4 rounded-[1.5rem] border-2 text-left transition-all group relative overflow-hidden",
-              config.logic_type === t.id 
-                ? 'border-indigo-600 bg-indigo-600/5 shadow-2xl shadow-indigo-500/10 scale-[1.02]' 
+              config.logic_type === t.id
+                ? 'border-indigo-600 bg-indigo-600/5 shadow-2xl shadow-indigo-500/10 scale-[1.02]'
                 : 'border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/30'
             )}
           >
@@ -517,10 +541,10 @@ function StepLogic({ config, setConfig }: any) {
               "w-8 h-8 rounded-lg flex items-center justify-center mb-3 transition-all shadow-sm",
               config.logic_type === t.id ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 group-hover:text-indigo-600'
             )}>
-              <Layout className="w-4 h-4" />
+              <t.icon className="w-4 h-4" />
             </div>
-            <h3 className="font-bold text-base mb-1">{t.title}</h3>
-            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium">{t.desc}</p>
+            <h3 className="font-bold text-sm mb-1">{t.title}</h3>
+            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium line-clamp-2">{t.desc}</p>
           </button>
         ))}
       </div>
@@ -529,45 +553,45 @@ function StepLogic({ config, setConfig }: any) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Nome da Tela</label>
-              <input 
-                required
-                type="text" 
-                value={config.name}
-                onChange={e => {
-                  const val = e.target.value
-                  const suggestedSlug = val.toLowerCase()
-                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-                    .replace(/[^a-z0-9\s-]/g, '')
-                    .trim()
-                    .replace(/\s+/g, '-')
-                  
-                  setConfig({
-                    ...config, 
-                    name: val,
-                    slug: (!config.slug || config.slug === config.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-')) ? suggestedSlug : config.slug
-                  })
-                }}
-                placeholder="Ex: Gestão de Contratos"
-                className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+            <input
+              required
+              type="text"
+              value={config.name}
+              onChange={e => {
+                const val = e.target.value
+                const suggestedSlug = val.toLowerCase()
+                  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                  .replace(/[^a-z0-9\s-]/g, '')
+                  .trim()
+                  .replace(/\s+/g, '-')
+
+                setConfig({
+                  ...config,
+                  name: val,
+                  slug: (!config.slug || config.slug === config.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-')) ? suggestedSlug : config.slug
+                })
+              }}
+              placeholder="Ex: Gestão de Contratos"
+              className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+            />
+          </div>
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">URL Amigável (Slug)</label>
+            <div className="flex items-center bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus-within:border-indigo-600 transition-all shadow-sm">
+              <span className="text-neutral-400 mr-2 font-bold">/</span>
+              <input
+                type="text"
+                value={config.slug}
+                onChange={e => setConfig({ ...config, slug: e.target.value.toLowerCase().replace(/\s/g, '-') })}
+                placeholder="contratos"
+                className="w-full bg-transparent outline-none text-sm font-bold"
               />
             </div>
-            <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">URL Amigável (Slug)</label>
-              <div className="flex items-center bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus-within:border-indigo-600 transition-all shadow-sm">
-                <span className="text-neutral-400 mr-2 font-bold">/</span>
-                <input 
-                  type="text" 
-                  value={config.slug}
-                  onChange={e => setConfig({...config, slug: e.target.value.toLowerCase().replace(/\s/g, '-')})}
-                  placeholder="contratos"
-                  className="w-full bg-transparent outline-none text-sm font-bold"
-                />
-              </div>
           </div>
         </div>
 
         {config.logic_type.includes('pesquisa') && (
-          <div className="flex items-center gap-4 p-6 bg-white dark:bg-neutral-950/50 rounded-2xl border border-neutral-200 dark:border-neutral-800 group cursor-pointer hover:border-indigo-500/30 transition-all" onClick={() => setConfig({...config, has_arguments: !config.has_arguments})}>
+          <div className="flex items-center gap-4 p-6 bg-white dark:bg-neutral-950/50 rounded-2xl border border-neutral-200 dark:border-neutral-800 group cursor-pointer hover:border-indigo-500/30 transition-all" onClick={() => setConfig({ ...config, has_arguments: !config.has_arguments })}>
             <div className={cn(
               "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
               config.has_arguments ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-neutral-200 dark:border-neutral-800'
@@ -585,7 +609,7 @@ function StepLogic({ config, setConfig }: any) {
 function StepTables({ config, setConfig, models }: any) {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
-       <div className="space-y-2">
+      <div className="space-y-2">
         <h2 className="text-xl font-extrabold tracking-tight">Quais tabelas compõem este caso?</h2>
         <p className="text-neutral-500 dark:text-neutral-400 text-sm">Você pode selecionar uma ou mais tabelas. A lógica de Join será configurada a seguir.</p>
       </div>
@@ -597,15 +621,15 @@ function StepTables({ config, setConfig, models }: any) {
             <button
               key={m.id}
               onClick={() => {
-                const newSelected = isSelected 
-                   ? config.selected_models.filter((id: string) => id !== m.id)
+                const newSelected = isSelected
+                  ? config.selected_models.filter((id: string) => id !== m.id)
                   : [...config.selected_models, m.id]
-                setConfig({...config, selected_models: newSelected})
+                setConfig({ ...config, selected_models: newSelected })
               }}
               className={cn(
                 "p-4 rounded-[1.5rem] border-2 text-left transition-all relative group",
-                isSelected 
-                  ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10' 
+                isSelected
+                  ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10'
                   : 'border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/30'
               )}
             >
@@ -638,18 +662,21 @@ function StepTables({ config, setConfig, models }: any) {
 }
 
 function StepLayout({ config, setConfig, models }: any) {
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+
   const selectedModelsData = models.filter((m: any) => config.selected_models.includes(m.id))
-  
+
   const toggleField = (fieldId: string, zone: 'filter_fields' | 'grid_fields' | 'form_fields') => {
     const currentFields = [...config.layout_config[zone]]
     const index = currentFields.indexOf(fieldId)
-    
+
     if (index > -1) {
       currentFields.splice(index, 1)
     } else {
       currentFields.push(fieldId)
     }
-    
+
     setConfig({
       ...config,
       layout_config: {
@@ -667,9 +694,31 @@ function StepLayout({ config, setConfig, models }: any) {
     return id
   }
 
+  const currentFieldMeta = editingFieldId ? (config.layout_config.fields_metadata[editingFieldId] || {
+    label: { text: getFieldName(editingFieldId).split('.').pop(), font: 'Inter', size: '9px', color: '' },
+    content: { font: 'Inter', size: '12px', color: '', mask: '', required: false }
+  }) : null
+
+  const updateMeta = (section: 'label' | 'content', key: string, value: any) => {
+    if (!editingFieldId) return
+    const newMeta = { ...currentFieldMeta }
+    newMeta[section] = { ...newMeta[section], [key]: value }
+
+    setConfig({
+      ...config,
+      layout_config: {
+        ...config.layout_config,
+        fields_metadata: {
+          ...config.layout_config.fields_metadata,
+          [editingFieldId]: newMeta
+        }
+      }
+    })
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
-       <div className="space-y-2">
+      <div className="space-y-2">
         <h2 className="text-xl font-extrabold tracking-tight">Desenhe o Layout da Tela</h2>
         <p className="text-neutral-500 dark:text-neutral-400 text-sm">Organize os campos em zonas específicas. Um campo pode estar em mais de uma zona.</p>
       </div>
@@ -696,7 +745,7 @@ function StepLayout({ config, setConfig, models }: any) {
                           <span className="text-[9px] font-black font-mono text-neutral-400 bg-neutral-100 dark:bg-neutral-900 px-2 py-0.5 rounded-md">{f.data_type}</span>
                         </div>
                         <div className="flex gap-2">
-                          <button 
+                          <button
                             disabled={!config.has_arguments || config.logic_type === 'cadastro'}
                             onClick={() => toggleField(f.id, 'filter_fields')}
                             className={cn(
@@ -708,7 +757,7 @@ function StepLayout({ config, setConfig, models }: any) {
                           >
                             Filtro
                           </button>
-                          <button 
+                          <button
                             onClick={() => toggleField(f.id, 'grid_fields')}
                             className={cn(
                               "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all",
@@ -717,7 +766,7 @@ function StepLayout({ config, setConfig, models }: any) {
                           >
                             Grid
                           </button>
-                          <button 
+                          <button
                             disabled={config.logic_type === 'pesquisa'}
                             onClick={() => toggleField(f.id, 'form_fields')}
                             className={cn(
@@ -740,7 +789,7 @@ function StepLayout({ config, setConfig, models }: any) {
 
         {/* Visualização de Zonas */}
         <div className="lg:col-span-8 space-y-6">
-          
+
           {/* ZONA: FILTROS */}
           {config.logic_type.includes('pesquisa') && (
             <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
@@ -753,9 +802,16 @@ function StepLayout({ config, setConfig, models }: any) {
                   <p className="text-xs text-neutral-400 font-medium w-full text-center italic">Arraste ou selecione campos para os filtros...</p>
                 ) : (
                   config.layout_config.filter_fields.map((id: string) => (
-                    <div key={id} className="flex items-center gap-3 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg shadow-indigo-500/20 group">
-                      {getFieldName(id)}
-                      <Trash2 className="w-3.5 h-3.5 cursor-pointer hover:text-red-300 transition-colors" onClick={() => toggleField(id, 'filter_fields')} />
+                    <div
+                      key={id}
+                      onClick={() => { setEditingFieldId(id); setIsDrawerOpen(true); }}
+                      className="flex items-center gap-3 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg shadow-indigo-500/20 group cursor-pointer hover:bg-indigo-500 transition-all"
+                    >
+                      {config.layout_config.fields_metadata[id]?.label?.text || getFieldName(id)}
+                      <Trash2
+                        className="w-3.5 h-3.5 cursor-pointer hover:text-red-300 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); toggleField(id, 'filter_fields'); }}
+                      />
                     </div>
                   ))
                 )}
@@ -781,8 +837,8 @@ function StepLayout({ config, setConfig, models }: any) {
                       })}
                       className={cn(
                         "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all",
-                        (config.layout_config.display_type || 'list') === opt.id 
-                          ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' 
+                        (config.layout_config.display_type || 'list') === opt.id
+                          ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
                           : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
                       )}
                     >
@@ -810,8 +866,8 @@ function StepLayout({ config, setConfig, models }: any) {
                       })}
                       className={cn(
                         "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all",
-                        (config.layout_config.default_view || 'list') === opt.id 
-                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
+                        (config.layout_config.default_view || 'list') === opt.id
+                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
                           : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
                       )}
                     >
@@ -835,8 +891,13 @@ function StepLayout({ config, setConfig, models }: any) {
                     </thead>
                     <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
                       {config.layout_config.grid_fields.map((id: string) => (
-                        <tr key={id} className="group hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
-                          <td className="px-4 py-2.5 font-bold text-neutral-700 dark:text-neutral-200">{getFieldName(id)}</td>
+                        <tr key={id} className="group hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
+                          <td
+                            onClick={() => { setEditingFieldId(id); setIsDrawerOpen(true); }}
+                            className="px-4 py-2.5 font-bold text-neutral-700 dark:text-neutral-200"
+                          >
+                            {config.layout_config.fields_metadata[id]?.label?.text || getFieldName(id)}
+                          </td>
                           <td className="px-4 py-2.5 text-center">
                             <button onClick={() => toggleField(id, 'grid_fields')} className="p-1.5 hover:bg-red-500/10 hover:text-red-500 rounded-lg text-neutral-400 transition-all">
                               <Trash2 className="w-3.5 h-3.5" />
@@ -864,9 +925,15 @@ function StepLayout({ config, setConfig, models }: any) {
                 ) : (
                   <div className="grid grid-cols-2 gap-4 w-full">
                     {config.layout_config.form_fields.map((id: string) => (
-                      <div key={id} className="p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex items-center justify-between group shadow-sm hover:border-amber-500/30 transition-all">
+                      <div
+                        key={id}
+                        onClick={() => { setEditingFieldId(id); setIsDrawerOpen(true); }}
+                        className="p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex items-center justify-between group shadow-sm hover:border-indigo-500/30 transition-all cursor-pointer"
+                      >
                         <div className="flex flex-col gap-1">
-                          <span className="text-[10px] font-black text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">{getFieldName(id)}</span>
+                          <span className="text-[10px] font-black text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
+                            {config.layout_config.fields_metadata[id]?.label?.text || getFieldName(id)}
+                          </span>
                           <span className="text-[8px] font-black text-amber-500 uppercase tracking-[0.2em]">Input Text</span>
                         </div>
                         <button onClick={() => toggleField(id, 'form_fields')} className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-500 rounded-lg text-neutral-400 transition-all">
@@ -882,6 +949,160 @@ function StepLayout({ config, setConfig, models }: any) {
 
         </div>
       </div>
+
+      <Drawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        title={`Propriedades: ${editingFieldId ? getFieldName(editingFieldId) : ''}`}
+      >
+        {currentFieldMeta && (
+          <div className="space-y-10 pb-20">
+            {/* Seção de Label */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-4 bg-indigo-600 rounded-full"></div>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Configuração do Label</h3>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Texto de Exibição</label>
+                  <input
+                    type="text"
+                    value={currentFieldMeta.label.text}
+                    onChange={e => updateMeta('label', 'text', e.target.value)}
+                    className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold focus:border-indigo-500 outline-none transition-all"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Fonte</label>
+                    <select
+                      value={currentFieldMeta.label.font}
+                      onChange={e => updateMeta('label', 'font', e.target.value)}
+                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
+                    >
+                      <option value="Inter">Inter (Padrão)</option>
+                      <option value="Roboto">Roboto</option>
+                      <option value="Outfit">Outfit</option>
+                      <option value="JetBrains Mono">Mono</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Tamanho</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 12px"
+                      value={currentFieldMeta.label.size}
+                      onChange={e => updateMeta('label', 'size', e.target.value)}
+                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Cor do Texto</label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="color"
+                      value={currentFieldMeta.label.color || '#6366f1'}
+                      onChange={e => updateMeta('label', 'color', e.target.value)}
+                      className="w-8 h-8 rounded-lg cursor-pointer overflow-hidden border-none p-0"
+                    />
+                    <input
+                      type="text"
+                      value={currentFieldMeta.label.color}
+                      onChange={e => updateMeta('label', 'color', e.target.value)}
+                      placeholder="#HEX"
+                      className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-mono font-bold outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Seção de Conteúdo */}
+            <div className="space-y-6 pt-6 border-t border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-4 bg-emerald-600 rounded-full"></div>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Configuração do Conteúdo</h3>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Fonte</label>
+                    <select
+                      value={currentFieldMeta.content.font}
+                      onChange={e => updateMeta('content', 'font', e.target.value)}
+                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
+                    >
+                      <option value="Inter">Inter (Padrão)</option>
+                      <option value="Roboto">Roboto</option>
+                      <option value="Outfit">Outfit</option>
+                      <option value="JetBrains Mono">Mono</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Tamanho</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 14px"
+                      value={currentFieldMeta.content.size}
+                      onChange={e => updateMeta('content', 'size', e.target.value)}
+                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Cor do Conteúdo</label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="color"
+                      value={currentFieldMeta.content.color || '#000000'}
+                      onChange={e => updateMeta('content', 'color', e.target.value)}
+                      className="w-8 h-8 rounded-lg cursor-pointer overflow-hidden border-none p-0"
+                    />
+                    <input
+                      type="text"
+                      value={currentFieldMeta.content.color}
+                      onChange={e => updateMeta('content', 'color', e.target.value)}
+                      placeholder="#HEX"
+                      className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-mono font-bold outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Máscara (Input Mask)</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 000.000.000-00"
+                    value={currentFieldMeta.content.mask}
+                    onChange={e => updateMeta('content', 'mask', e.target.value)}
+                    className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center gap-4 p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-2xl border border-neutral-100 dark:border-neutral-800 cursor-pointer group" onClick={() => updateMeta('content', 'required', !currentFieldMeta.content.required)}>
+                  <div className={cn(
+                    "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
+                    currentFieldMeta.content.required ? 'bg-red-500 border-red-500 text-white' : 'border-neutral-300 dark:border-neutral-700'
+                  )}>
+                    {currentFieldMeta.content.required && <Plus className="w-3 h-3 rotate-45" />}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase tracking-widest">Campo Obrigatório</span>
+                    <span className="text-[8px] text-neutral-400 font-medium">Validar se o campo está preenchido</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Drawer>
     </div>
   )
 }
@@ -889,7 +1110,7 @@ function StepLayout({ config, setConfig, models }: any) {
 function StepActions({ config, setConfig }: any) {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
-       <div className="space-y-2">
+      <div className="space-y-2">
         <h2 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white">Query & Ações Finais</h2>
         <p className="text-neutral-500 dark:text-neutral-400 text-sm">Configure como os dados serão recuperados e quais botões estarão disponíveis.</p>
       </div>
@@ -898,8 +1119,8 @@ function StepActions({ config, setConfig }: any) {
         <div className="space-y-8">
           <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Estratégia de Dados</h4>
           <div className="space-y-6">
-            <button 
-              onClick={() => setConfig({...config, query_type: 'dynamic'})}
+            <button
+              onClick={() => setConfig({ ...config, query_type: 'dynamic' })}
               className={cn(
                 "w-full p-4 rounded-[1.5rem] border-2 text-left transition-all",
                 config.query_type === 'dynamic' ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10' : 'border-neutral-100 dark:border-neutral-800/50 bg-white dark:bg-neutral-900/30'
@@ -908,8 +1129,8 @@ function StepActions({ config, setConfig }: any) {
               <h5 className="font-bold text-sm mb-1">Query Dinâmica (Automática)</h5>
               <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium leading-relaxed">O MetaBuilder gera os Joins e Selects baseado nas relações das tabelas.</p>
             </button>
-            <button 
-              onClick={() => setConfig({...config, query_type: 'custom'})}
+            <button
+              onClick={() => setConfig({ ...config, query_type: 'custom' })}
               className={cn(
                 "w-full p-4 rounded-[1.5rem] border-2 text-left transition-all",
                 config.query_type === 'custom' ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10' : 'border-neutral-100 dark:border-neutral-800/50 bg-white dark:bg-neutral-900/30'
@@ -923,9 +1144,9 @@ function StepActions({ config, setConfig }: any) {
           {config.query_type === 'custom' && (
             <div className="space-y-4 animate-in fade-in zoom-in-95 duration-500">
               <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-2">SQL Query Editor</label>
-              <textarea 
+              <textarea
                 value={config.custom_query}
-                onChange={e => setConfig({...config, custom_query: e.target.value})}
+                onChange={e => setConfig({ ...config, custom_query: e.target.value })}
                 className="w-full h-40 bg-neutral-900 text-indigo-400 font-mono text-[10px] p-5 rounded-[1.5rem] border border-neutral-800 outline-none focus:border-indigo-600 transition-all shadow-2xl"
                 placeholder="SELECT * FROM table1 JOIN table2..."
               />
@@ -953,9 +1174,9 @@ function StepActions({ config, setConfig }: any) {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <div 
+                  <div
                     onClick={() => {
-                      const newButtons = config.buttons_config.map((b: any) => 
+                      const newButtons = config.buttons_config.map((b: any) =>
                         b.id === btn.id ? { ...b, visible: !b.visible } : b
                       )
                       setConfig({ ...config, buttons_config: newButtons })

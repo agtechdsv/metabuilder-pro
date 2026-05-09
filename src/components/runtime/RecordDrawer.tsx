@@ -72,22 +72,41 @@ export default function RecordDrawer({
               if (!field) return null;
               return (
                 <div key={field.id} className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">
+                <label 
+                  style={{
+                    fontFamily: field.config?.label?.font,
+                    fontSize: field.config?.label?.size,
+                    color: field.config?.label?.color,
+                  }}
+                  className={cn(
+                    "text-[10px] font-black tracking-widest ml-1",
+                    !field.config?.label?.color && "text-neutral-400",
+                    !field.config?.label?.font && "uppercase"
+                  )}
+                >
                   {field.display_name}
                   {field.is_primary_key && <span className="ml-2 text-indigo-500"># PK</span>}
+                  {field.config?.content?.required && <span className="ml-1 text-red-500">*</span>}
                 </label>
                 
                 <div className="relative group">
                   <input 
                     type="text"
                     disabled={mode === 'view' || field.is_primary_key}
+                    required={field.config?.content?.required}
                     value={formData[field.db_column_name] ?? ''}
                     onChange={e => setFormData({ ...formData, [field.db_column_name]: e.target.value })}
+                    style={{
+                      fontFamily: field.config?.content?.font,
+                      fontSize: field.config?.content?.size,
+                      color: field.config?.content?.color,
+                    }}
                     className={cn(
                       "w-full px-5 py-3.5 bg-neutral-50 dark:bg-neutral-900 border rounded-2xl text-sm outline-none transition-all shadow-sm",
                       mode === 'view' 
                         ? "border-transparent bg-neutral-100/50 dark:bg-neutral-900/50 cursor-default opacity-80" 
-                        : "border-neutral-200 dark:border-neutral-800 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 group-hover:border-neutral-300 dark:group-hover:border-neutral-700"
+                        : "border-neutral-200 dark:border-neutral-800 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 group-hover:border-neutral-300 dark:group-hover:border-neutral-700",
+                      !field.config?.content?.color && "text-neutral-900 dark:text-neutral-300"
                     )}
                     placeholder={mode === 'view' ? '' : `Digite o valor para ${field.display_name}...`}
                   />

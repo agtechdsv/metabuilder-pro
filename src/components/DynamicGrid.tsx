@@ -53,8 +53,14 @@ export default function DynamicGrid({
               <td 
                 key={field.id} 
                 title={val}
+                style={{
+                  fontFamily: field.config?.content?.font,
+                  fontSize: field.config?.content?.size,
+                  color: field.config?.content?.color,
+                }}
                 className={cn(
-                  "px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900 dark:text-neutral-300 transition-colors max-w-[300px] truncate cursor-help",
+                  "px-6 py-4 whitespace-nowrap text-sm font-medium transition-colors max-w-[300px] truncate cursor-help",
+                  !field.config?.content?.color && "text-neutral-900 dark:text-neutral-300",
                   rowIndex % 2 === 0 ? "bg-white dark:bg-neutral-900" : "bg-neutral-100/90 dark:bg-neutral-800"
                 )}
               >
