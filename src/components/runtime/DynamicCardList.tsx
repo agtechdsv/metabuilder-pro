@@ -1,6 +1,7 @@
 'use client'
 
 import { Pencil, Trash2, Calendar, Hash, Type, Search } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface DynamicCardListProps {
   fields: any[]
@@ -83,7 +84,15 @@ export default function DynamicCardList({
                   <h4 
                     key={field.id} 
                     title={displayVal}
-                    className="text-sm font-bold text-neutral-900 dark:text-white line-clamp-1 leading-tight mb-2 min-h-[1.2rem] cursor-help"
+                    style={{
+                      fontFamily: field.config?.content?.font,
+                      fontSize: field.config?.content?.size,
+                      color: field.config?.content?.color,
+                    }}
+                    className={cn(
+                      "text-sm font-bold line-clamp-1 leading-tight mb-2 min-h-[1.2rem] cursor-help",
+                      !field.config?.content?.color && "text-neutral-900 dark:text-white"
+                    )}
                   >
                     {displayVal}
                   </h4>
@@ -92,12 +101,31 @@ export default function DynamicCardList({
 
               return (
                 <div key={field.id} className="flex flex-col gap-0.5">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">
+                  <span 
+                    style={{
+                      fontFamily: field.config?.label?.font,
+                      fontSize: field.config?.label?.size,
+                      color: field.config?.label?.color,
+                    }}
+                    className={cn(
+                      "text-[9px] font-black tracking-widest ml-1",
+                      !field.config?.label?.color && "text-neutral-400",
+                      !field.config?.label?.font && "uppercase"
+                    )}
+                  >
                     {field.display_name}
                   </span>
                   <div 
                     title={displayVal}
-                    className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-2 min-h-[2rem] cursor-help"
+                    style={{
+                      fontFamily: field.config?.content?.font,
+                      fontSize: field.config?.content?.size,
+                      color: field.config?.content?.color,
+                    }}
+                    className={cn(
+                      "text-xs line-clamp-2 min-h-[2rem] cursor-help",
+                      !field.config?.content?.color && "text-neutral-600 dark:text-neutral-400"
+                    )}
                   >
                     {displayVal}
                   </div>

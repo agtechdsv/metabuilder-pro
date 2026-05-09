@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { 
-  ArrowLeft, 
-  Save, 
-  ChevronRight, 
+import {
+  ArrowLeft,
+  Save,
+  ChevronRight,
   ChevronLeft,
   Settings2,
   Database,
@@ -70,7 +70,7 @@ export default function UseCaseBuilder() {
         .from('models')
         .select('*, fields(*)')
         .order('db_table_name')
-      
+
       if (data) setModels(data)
       setIsLoading(false)
     }
@@ -141,7 +141,7 @@ export default function UseCaseBuilder() {
         const { error: compError } = await supabase.from('ui_components').insert(componentsToInsert)
         if (compError) throw compError
       }
-      
+
       router.push(`/admin/${workspace_slug}/${project_slug}/studio`)
     } catch (err: any) {
       console.error(err)
@@ -155,7 +155,7 @@ export default function UseCaseBuilder() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#080808] text-neutral-900 dark:text-white selection:bg-indigo-500/30">
-      
+
       {/* Top Navigation */}
       <nav className="h-16 border-b border-neutral-200 dark:border-neutral-800 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
@@ -170,7 +170,7 @@ export default function UseCaseBuilder() {
         </div>
 
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={handleSave}
             disabled={isSaving}
             className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50"
@@ -187,7 +187,7 @@ export default function UseCaseBuilder() {
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           {steps.map((step, idx) => (
             <div key={step.id} className="flex items-center flex-1 last:flex-none">
-              <div 
+              <div
                 className={`flex items-center gap-3 transition-all ${currentStep >= step.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-400'}`}
               >
                 <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-xs transition-all ${currentStep === step.id ? 'border-indigo-600 bg-indigo-600 text-white' : currentStep > step.id ? 'border-indigo-600 bg-indigo-600/10' : 'border-neutral-300 dark:border-neutral-700'}`}>
@@ -205,7 +205,7 @@ export default function UseCaseBuilder() {
 
       {/* Content Area */}
       <main className="max-w-6xl mx-auto p-10 min-h-[calc(100vh-160px)] flex flex-col">
-        
+
         <div className="flex-1">
           {currentStep === 1 && (
             <StepLogic config={config} setConfig={setConfig} />
@@ -223,7 +223,7 @@ export default function UseCaseBuilder() {
 
         {/* Footer Navigation */}
         <div className="mt-auto pt-10 flex items-center justify-between border-t border-neutral-200 dark:border-neutral-800">
-          <button 
+          <button
             onClick={prevStep}
             disabled={currentStep === 1}
             className="flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-bold text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all disabled:opacity-0"
@@ -231,7 +231,7 @@ export default function UseCaseBuilder() {
             <ChevronLeft className="w-4 h-4" /> Voltar Passo
           </button>
 
-          <button 
+          <button
             onClick={nextStep}
             disabled={currentStep === steps.length}
             className="flex items-center gap-2 px-8 py-3 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-xs font-bold hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
@@ -248,7 +248,7 @@ export default function UseCaseBuilder() {
 
 function StepLogic({ config, setConfig }: any) {
   const types = [
-    { id: 'pesquisa', title: 'Pesquisa', desc: 'Focado em busca e visualização de dados.' },
+    { id: 'pesquisa', title: 'Apenas Pesquisa', desc: 'Focado em busca e visualização de dados.' },
     { id: 'pesquisa_cadastro', title: 'Pesquisa + Cadastro', desc: 'Fluxo completo: busca, listagem e formulário.' },
     { id: 'cadastro', title: 'Apenas Cadastro', desc: 'Formulário direto para inserção de dados.' }
   ]
@@ -264,7 +264,7 @@ function StepLogic({ config, setConfig }: any) {
         {types.map(t => (
           <button
             key={t.id}
-            onClick={() => setConfig({...config, logic_type: t.id})}
+            onClick={() => setConfig({ ...config, logic_type: t.id })}
             className={`p-8 rounded-[2.5rem] border-2 text-left transition-all group ${config.logic_type === t.id ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10' : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'}`}
           >
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 transition-all ${config.logic_type === t.id ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 group-hover:text-neutral-600'}`}>
@@ -280,10 +280,10 @@ function StepLogic({ config, setConfig }: any) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Nome da Tela</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={config.name}
-              onChange={e => setConfig({...config, name: e.target.value})}
+              onChange={e => setConfig({ ...config, name: e.target.value })}
               placeholder="Ex: Gestão de Contratos"
               className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-5 py-4 focus:border-indigo-600 outline-none transition-all"
             />
@@ -292,10 +292,10 @@ function StepLogic({ config, setConfig }: any) {
             <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">URL Amigável (Slug)</label>
             <div className="flex items-center bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-5 py-4 focus-within:border-indigo-600 transition-all">
               <span className="text-neutral-400 mr-2">/</span>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={config.slug}
-                onChange={e => setConfig({...config, slug: e.target.value.toLowerCase().replace(/\s/g, '-')})}
+                onChange={e => setConfig({ ...config, slug: e.target.value.toLowerCase().replace(/\s/g, '-') })}
                 placeholder="contratos"
                 className="w-full bg-transparent outline-none"
               />
@@ -305,11 +305,11 @@ function StepLogic({ config, setConfig }: any) {
 
         {config.logic_type.includes('pesquisa') && (
           <div className="flex items-center gap-4 p-4 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800">
-            <input 
-              type="checkbox" 
-              id="args" 
+            <input
+              type="checkbox"
+              id="args"
               checked={config.has_arguments}
-              onChange={e => setConfig({...config, has_arguments: e.target.checked})}
+              onChange={e => setConfig({ ...config, has_arguments: e.target.checked })}
               className="w-5 h-5 rounded-md accent-indigo-600"
             />
             <label htmlFor="args" className="text-sm font-medium cursor-pointer">Habilitar Argumentos (Filtros de pesquisa na URL)</label>
@@ -323,7 +323,7 @@ function StepLogic({ config, setConfig }: any) {
 function StepTables({ config, setConfig, models }: any) {
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-       <div className="space-y-2">
+      <div className="space-y-2">
         <h2 className="text-3xl font-extrabold tracking-tight">Quais tabelas compõem este caso?</h2>
         <p className="text-neutral-500">Você pode selecionar uma ou mais tabelas. A lógica de Join será configurada a seguir.</p>
       </div>
@@ -335,10 +335,10 @@ function StepTables({ config, setConfig, models }: any) {
             <button
               key={m.id}
               onClick={() => {
-                const newSelected = isSelected 
+                const newSelected = isSelected
                   ? config.selected_models.filter((id: string) => id !== m.id)
                   : [...config.selected_models, m.id]
-                setConfig({...config, selected_models: newSelected})
+                setConfig({ ...config, selected_models: newSelected })
               }}
               className={`p-6 rounded-3xl border-2 text-left transition-all relative ${isSelected ? 'border-indigo-600 bg-indigo-600/5' : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'}`}
             >
@@ -365,17 +365,17 @@ function StepTables({ config, setConfig, models }: any) {
 
 function StepLayout({ config, setConfig, models }: any) {
   const selectedModelsData = models.filter((m: any) => config.selected_models.includes(m.id))
-  
+
   const toggleField = (fieldId: string, zone: 'filter_fields' | 'grid_fields' | 'form_fields') => {
     const currentFields = [...config.layout_config[zone]]
     const index = currentFields.indexOf(fieldId)
-    
+
     if (index > -1) {
       currentFields.splice(index, 1)
     } else {
       currentFields.push(fieldId)
     }
-    
+
     setConfig({
       ...config,
       layout_config: {
@@ -395,7 +395,7 @@ function StepLayout({ config, setConfig, models }: any) {
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-       <div className="space-y-2">
+      <div className="space-y-2">
         <h2 className="text-3xl font-extrabold tracking-tight">Desenhe o Layout da Tela</h2>
         <p className="text-neutral-500">Organize os campos em zonas específicas. Um campo pode estar em mais de uma zona.</p>
       </div>
@@ -422,19 +422,19 @@ function StepLayout({ config, setConfig, models }: any) {
                           <span className="text-[10px] font-mono text-neutral-400">{f.data_type}</span>
                         </div>
                         <div className="flex gap-1">
-                          <button 
+                          <button
                             onClick={() => toggleField(f.id, 'filter_fields')}
                             className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-tighter transition-all ${config.layout_config.filter_fields.includes(f.id) ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'}`}
                           >
                             Filtro
                           </button>
-                          <button 
+                          <button
                             onClick={() => toggleField(f.id, 'grid_fields')}
                             className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-tighter transition-all ${config.layout_config.grid_fields.includes(f.id) ? 'bg-emerald-600 text-white' : 'bg-neutral-100 dark:border-neutral-800 text-neutral-400'}`}
                           >
                             Grid
                           </button>
-                          <button 
+                          <button
                             onClick={() => toggleField(f.id, 'form_fields')}
                             className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-tighter transition-all ${config.layout_config.form_fields.includes(f.id) ? 'bg-amber-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'}`}
                           >
@@ -452,7 +452,7 @@ function StepLayout({ config, setConfig, models }: any) {
 
         {/* Visualização de Zonas */}
         <div className="lg:col-span-8 space-y-6">
-          
+
           {/* ZONA: FILTROS */}
           {config.logic_type.includes('pesquisa') && (
             <div className="p-8 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] space-y-6 shadow-sm">
@@ -545,7 +545,7 @@ function StepLayout({ config, setConfig, models }: any) {
 function StepActions({ config, setConfig }: any) {
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-       <div className="space-y-2">
+      <div className="space-y-2">
         <h2 className="text-3xl font-extrabold tracking-tight">Query & Ações Finais</h2>
         <p className="text-neutral-500">Configure como os dados serão recuperados e quais botões estarão disponíveis.</p>
       </div>
@@ -554,15 +554,15 @@ function StepActions({ config, setConfig }: any) {
         <div className="space-y-6">
           <h4 className="text-xs font-black uppercase text-indigo-600">Estratégia de Dados</h4>
           <div className="space-y-4">
-            <button 
-              onClick={() => setConfig({...config, query_type: 'dynamic'})}
+            <button
+              onClick={() => setConfig({ ...config, query_type: 'dynamic' })}
               className={`w-full p-6 rounded-3xl border-2 text-left transition-all ${config.query_type === 'dynamic' ? 'border-indigo-600 bg-indigo-600/5' : 'border-neutral-200 dark:border-neutral-800'}`}
             >
               <h5 className="font-bold text-sm">Query Dinâmica (Automática)</h5>
               <p className="text-xs text-neutral-500 mt-1">O MetaBuilder gera os Joins e Selects baseado nas relações das tabelas.</p>
             </button>
-            <button 
-              onClick={() => setConfig({...config, query_type: 'custom'})}
+            <button
+              onClick={() => setConfig({ ...config, query_type: 'custom' })}
               className={`w-full p-6 rounded-3xl border-2 text-left transition-all ${config.query_type === 'custom' ? 'border-indigo-600 bg-indigo-600/5' : 'border-neutral-200 dark:border-neutral-800'}`}
             >
               <h5 className="font-bold text-sm">Query Manual (SQL)</h5>
@@ -571,9 +571,9 @@ function StepActions({ config, setConfig }: any) {
           </div>
 
           {config.query_type === 'custom' && (
-            <textarea 
+            <textarea
               value={config.custom_query}
-              onChange={e => setConfig({...config, custom_query: e.target.value})}
+              onChange={e => setConfig({ ...config, custom_query: e.target.value })}
               className="w-full h-40 bg-neutral-900 text-indigo-400 font-mono text-xs p-6 rounded-3xl border border-neutral-800 outline-none focus:border-indigo-600 transition-all"
               placeholder="SELECT * FROM table1 JOIN table2..."
             />
@@ -593,7 +593,7 @@ function StepActions({ config, setConfig }: any) {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-[10px] font-black text-neutral-400 uppercase tracking-tighter">{btn.action}</span>
-                  <input type="checkbox" checked={btn.visible} onChange={() => {}} className="w-4 h-4 accent-indigo-600" />
+                  <input type="checkbox" checked={btn.visible} onChange={() => { }} className="w-4 h-4 accent-indigo-600" />
                 </div>
               </div>
             ))}

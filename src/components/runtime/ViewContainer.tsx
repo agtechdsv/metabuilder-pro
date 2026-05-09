@@ -307,7 +307,18 @@ export default function ViewContainer({
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full">
               {filterFields.map(field => (
                 <div key={field.id} className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">
+                  <label 
+                    style={{
+                      fontFamily: field.config?.label?.font,
+                      fontSize: field.config?.label?.size,
+                      color: field.config?.label?.color,
+                    }}
+                    className={cn(
+                      "text-[10px] font-black tracking-widest ml-1",
+                      !field.config?.label?.color && "text-neutral-400",
+                      !field.config?.label?.font && "uppercase" // Mantém uppercase apenas se for o padrão do sistema
+                    )}
+                  >
                     {field.display_name}
                   </label>
                   <div className="relative group">
@@ -317,7 +328,15 @@ export default function ViewContainer({
                       placeholder={`Filtrar por ${field.display_name}...`}
                       value={filterValues[field.db_column_name] || ''}
                       onChange={e => setFilterValues({ ...filterValues, [field.db_column_name]: e.target.value })}
-                      className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all shadow-sm"
+                      style={{
+                        fontFamily: field.config?.content?.font,
+                        fontSize: field.config?.content?.size,
+                        color: field.config?.content?.color,
+                      }}
+                      className={cn(
+                        "w-full pl-9 pr-4 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all shadow-sm",
+                        !field.config?.content?.color && "text-neutral-900 dark:text-neutral-300"
+                      )}
                     />
                   </div>
                 </div>
