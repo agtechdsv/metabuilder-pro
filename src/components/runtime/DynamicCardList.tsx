@@ -32,85 +32,98 @@ export default function DynamicCardList({
   }
 
   return (
-    <>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {data.map((row, index) => (
         <div
           key={index}
-          className="group relative bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 hover:shadow-2xl hover:shadow-indigo-500/10 hover:border-indigo-500/30 transition-all duration-300 flex flex-col"
+          className="group relative bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-500/30 transition-all duration-300 flex flex-col h-full min-h-[180px]"
         >
           {/* Badge de ID ou Principal */}
-          <div className="flex items-start justify-between mb-6">
-            <div className="p-2.5 bg-indigo-500/10 rounded-xl border border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
-              <Type className="w-5 h-5" />
+          <div className="flex items-start justify-between mb-3">
+            <div className="p-1.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+              <Type className="w-4 h-4" />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {canView && (
                 <button 
                   onClick={() => onView?.(row)}
-                  className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800/50 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all active:scale-90"
+                  className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800/50 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all active:scale-90"
                 >
-                  <Search className="w-4 h-4" />
+                  <Search className="w-3.5 h-3.5" />
                 </button>
               )}
               {canEdit && (
                 <button 
                   onClick={() => onEdit?.(row)}
-                  className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-90"
+                  className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all active:scale-90"
                 >
-                  <Pencil className="w-4 h-4" />
+                  <Pencil className="w-3.5 h-3.5" />
                 </button>
               )}
               {canDelete && (
                 <button 
                   onClick={() => onDelete?.(row)}
-                  className="p-2 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 transition-all active:scale-90"
+                  className="p-1.5 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 transition-all active:scale-90"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
           </div>
 
-          {/* Dados do Card */}
-          <div className="space-y-4 flex-1">
-            {fields.map((field, fIdx) => {
+          {/* Dados do Card - Limitado a 3 campos principais para não ficar gigante */}
+          <div className="space-y-3 flex-1">
+            {fields.slice(0, 4).map((field, fIdx) => {
               const val = row[field.db_column_name]
               const isFirst = fIdx === 0
+              const displayVal = typeof val === 'object' ? JSON.stringify(val) : String(val ?? '')
 
               if (isFirst) {
                 return (
-                  <h4 key={field.id} className="text-lg font-bold text-neutral-900 dark:text-white line-clamp-2 leading-tight">
-                    {String(val ?? '')}
+                  <h4 
+                    key={field.id} 
+                    title={displayVal}
+                    className="text-sm font-bold text-neutral-900 dark:text-white line-clamp-1 leading-tight mb-2 min-h-[1.2rem] cursor-help"
+                  >
+                    {displayVal}
                   </h4>
                 )
               }
 
               return (
-                <div key={field.id} className="flex flex-col gap-1">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                <div key={field.id} className="flex flex-col gap-0.5">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">
                     {field.display_name}
                   </span>
-                  <div className="text-sm text-neutral-600 dark:text-neutral-400 line-clamp-3">
-                    {typeof val === 'object' ? JSON.stringify(val) : String(val ?? '')}
+                  <div 
+                    title={displayVal}
+                    className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-2 min-h-[2rem] cursor-help"
+                  >
+                    {displayVal}
                   </div>
                 </div>
               )
             })}
+            {fields.length > 4 && (
+              <div className="text-[9px] text-indigo-500 font-bold uppercase tracking-widest pt-1 italic opacity-50">
+                + {fields.length - 4} outros campos
+              </div>
+            )}
           </div>
 
           {/* Footer do Card */}
-          <div className="mt-8 pt-4 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-3 h-3" />
-              <span>Atualizado</span>
-            </div>
+          <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-[9px] font-bold text-neutral-400 uppercase tracking-tighter">
             <div className="flex items-center gap-1.5">
-              <Hash className="w-3 h-3 text-indigo-500" />
+              <Calendar className="w-2.5 h-2.5" />
+              <span>Hoje</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Hash className="w-2.5 h-2.5 text-indigo-500" />
               <span>#{index + 1}</span>
             </div>
           </div>
         </div>
       ))}
-    </>
+    </div>
   )
 }

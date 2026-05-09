@@ -3,10 +3,14 @@
 import { useState } from 'react'
 import { Table, Plus, LayoutGrid } from 'lucide-react'
 import { HeaderActions } from '@/components/layout/HeaderActions'
-import ViewContainer from './ViewContainer'
 import RecordDrawer from './RecordDrawer'
 import DeleteConfirmModal from './DeleteConfirmModal'
 import { createClient } from '@/utils/supabase/client'
+import dynamic from 'next/dynamic'
+
+// Importamos o ViewContainer sem SSR para evitar o "piscar" do loader
+// e conflitos de hidratação com o sessionStorage
+const ViewContainer = dynamic(() => import('./ViewContainer'), { ssr: false })
 
 interface ViewPageContentProps {
   workspace: any

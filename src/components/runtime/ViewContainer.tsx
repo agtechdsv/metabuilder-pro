@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { LayoutGrid, List, Search, Filter, Plus, Pencil, Trash2, RefreshCcw } from 'lucide-react'
+import { LayoutGrid, List, Search, Filter, Plus, Pencil, Trash2, RefreshCcw, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import DynamicGrid from '@/components/DynamicGrid'
 
@@ -25,6 +25,18 @@ import { useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Loader2 } from 'lucide-react'
 
+// Cache persistente entre reloads de página (essencial para troca de idioma via cookie/hard reload)
+const getCachedData = (key: string) => {
+  if (typeof window === 'undefined') return null
+  const cached = sessionStorage.getItem(`metabuilder_cache_${key}`)
+  return cached ? JSON.parse(cached) : null
+}
+
+const setCachedData = (key: string, data: any[]) => {
+  if (typeof window === 'undefined') return
+  sessionStorage.setItem(`metabuilder_cache_${key}`, JSON.stringify(data))
+}
+
 export default function ViewContainer({ 
   projectId, 
   modelName, 
@@ -45,18 +57,55 @@ export default function ViewContainer({
 
   const canSearch = buttonsConfig.find((b: any) => b.id === 'search')?.visible === true
   const canClear = buttonsConfig.find((b: any) => b.id === 'clear')?.visible === true
-  const [data, setData] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  
+  // Como agora este componente roda apenas no Cliente (SSR: false), 
+  // podemos inicializar direto do sessionStorage sem medo de Hydration Mismatch.
+  const [data, setData] = useState<any[]>(() => getCachedData(`${projectId}:${modelName}`) || [])
+  const [isLoading, setIsLoading] = useState(!getCachedData(`${projectId}:${modelName}`))
   const [error, setError] = useState<string | null>(null)
+
+  // Paginação e Ordenação
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(viewMode === 'list' ? 15 : 10)
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null)
+
+  // Recupera do cache inicial se necessário (redundante com useState inicial mas bom para sincronia)
+  useEffect(() => {
+    const cached = getCachedData(`${projectId}:${modelName}`)
+    if (cached && data.length === 0) {
+      setData(cached)
+      setIsLoading(false)
+    }
+  }, [projectId, modelName])
+
+  // Cache global para evitar fetch no re-mount por troca de idioma
+  const [hasFetchedInitial, setHasFetchedInitial] = useState(false)
+
+  // Atualiza itemsPerPage padrão ao mudar de modo, se o usuário ainda não tiver mudado manualmente
+  useEffect(() => {
+    setItemsPerPage(viewMode === 'list' ? 15 : 10)
+    setCurrentPage(1)
+  }, [viewMode])
 
   const supabase = createClient()
 
-  const fetchData = async (currentFilters: any = {}) => {
+  const fetchData = async (currentFilters: any = {}, forceRefresh: boolean = false) => {
+    const cacheKey = `${projectId}:${modelName}`
+    const cached = getCachedData(cacheKey)
+
+    // Se não for um refresh forçado e já tivermos dados no cache, não busca de novo
+    if (!forceRefresh && cached && !Object.keys(currentFilters).length) {
+      setData(cached)
+      setIsLoading(false)
+      return
+    }
+
     // 1. Gera um ID único para esta requisição e limpa estados anteriores
     const queryId = crypto.randomUUID()
     const channelName = `tunnel:${projectId}`
     
-    setIsLoading(true)
+    // Se não temos cache, mostramos o loader. Se temos, buscamos em background
+    if (!cached) setIsLoading(true)
     setError(null)
     
     console.log(`[MetaBuilder] Iniciando busca ${queryId}...`, { table: modelName, filters: currentFilters })
@@ -68,7 +117,12 @@ export default function ViewContainer({
       .on('broadcast', { event: `query_result_${queryId}` }, (payload) => {
         console.log(`[MetaBuilder] Resposta recebida para ${queryId}`, payload)
         if (payload.payload.success) {
-          setData(payload.payload.data)
+          const resultData = payload.payload.data
+          setData(resultData)
+          // Salva no cache se for uma busca sem filtros (carga inicial)
+          if (!Object.keys(currentFilters).length) {
+            setCachedData(cacheKey, resultData)
+          }
         } else {
           setError(payload.payload.error)
         }
@@ -114,16 +168,23 @@ export default function ViewContainer({
   }
 
   useEffect(() => {
-    fetchData()
+    // Só faz o fetch inicial se não houver cache para esta tabela
+    const cacheKey = `${projectId}:${modelName}`
+    const cached = getCachedData(cacheKey)
+    if (!cached) {
+      fetchData()
+    } else {
+      setIsLoading(false)
+    }
   }, [projectId, modelName])
 
   const handleSearch = () => {
-    fetchData(filterValues)
+    fetchData(filterValues, true) // Busca sempre força o refresh
   }
 
   const handleClear = () => {
     setFilterValues({})
-    fetchData({}) // Pesquisa sem filtros
+    fetchData({}, true) // Limpar força o refresh
   }
 
   const t = {
@@ -153,6 +214,33 @@ export default function ViewContainer({
     edit: 'Edit',
     delete: 'Delete',
     no_results: 'No records found.'
+  }
+
+  // Lógica de Ordenação Local
+  const sortedData = [...data].sort((a, b) => {
+    if (!sortConfig) return 0
+    const { key, direction } = sortConfig
+    const valA = a[key]
+    const valB = b[key]
+
+    if (valA < valB) return direction === 'asc' ? -1 : 1
+    if (valA > valB) return direction === 'asc' ? 1 : -1
+    return 0
+  })
+
+  // Lógica de Paginação Local
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage)
+  const paginatedData = sortedData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
+
+  const handleSort = (columnName: string) => {
+    let direction: 'asc' | 'desc' = 'asc'
+    if (sortConfig && sortConfig.key === columnName && sortConfig.direction === 'asc') {
+      direction = 'desc'
+    }
+    setSortConfig({ key: columnName, direction })
   }
 
   return (
@@ -274,26 +362,32 @@ export default function ViewContainer({
            <p className="text-red-500 font-bold">{error}</p>
         </div>
       ) : viewMode === 'list' ? (
-        <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-xl dark:shadow-none backdrop-blur-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-neutral-50 dark:bg-neutral-900/50 border-b border-neutral-200 dark:border-neutral-800">
-                  <th className="px-8 py-5 w-12">
+        <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-xl dark:shadow-none backdrop-blur-sm flex flex-col w-full">
+          <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
+            <table className="w-full text-left border-collapse min-w-[1200px]">
+              <thead className="sticky top-0 z-20">
+                <tr className="bg-neutral-100 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
+                  <th className="sticky left-0 z-30 bg-neutral-100 dark:bg-neutral-900 px-4 py-4 w-[60px] border-r border-neutral-200/50 dark:border-neutral-700/50 shadow-[4px_0_10px_rgba(0,0,0,0.03)]">
                     <input type="checkbox" className="rounded-md bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-indigo-600 focus:ring-indigo-500 transition-all" />
                   </th>
                   {displayFields.map((field) => (
                     <th 
                       key={field.id} 
-                      className="px-6 py-5 text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.15em] whitespace-nowrap"
+                      onClick={() => handleSort(field.db_column_name)}
+                      className="px-6 py-4 text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.15em] whitespace-nowrap cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors group/th"
                     >
                       <div className="flex items-center gap-2">
                         {field.display_name}
                         {field.is_primary_key && <span className="text-indigo-500" title="Chave Primária">🔑</span>}
+                        <div className="opacity-0 group-hover/th:opacity-100 transition-opacity">
+                          {sortConfig?.key === field.db_column_name ? (
+                            sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                          ) : <ArrowUpDown className="w-3 h-3" />}
+                        </div>
                       </div>
                     </th>
                   ))}
-                  <th className="px-8 py-5 text-right text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.15em]">
+                  <th className="sticky right-0 z-30 bg-neutral-100 dark:bg-neutral-900 px-4 py-4 text-right text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.15em] border-l border-neutral-200/50 dark:border-neutral-700/50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)]">
                     {t.actions}
                   </th>
                 </tr>
@@ -301,7 +395,7 @@ export default function ViewContainer({
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/50">
                 <DynamicGrid 
                   fields={displayFields} 
-                  data={data}
+                  data={paginatedData}
                   buttonsConfig={buttonsConfig}
                   onView={onView}
                   onEdit={onEdit}
@@ -310,17 +404,91 @@ export default function ViewContainer({
               </tbody>
             </table>
           </div>
+          
+          {/* Paginador Footer */}
+          <div className="px-8 py-4 bg-neutral-50/50 dark:bg-neutral-900/50 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+            <div className="flex items-center gap-4 text-[11px] font-bold text-neutral-500 uppercase tracking-widest">
+              <span className="opacity-60">Exibir</span>
+              <select 
+                value={itemsPerPage}
+                onChange={e => {
+                  setItemsPerPage(Number(e.target.value))
+                  setCurrentPage(1)
+                }}
+                className="bg-transparent border-none outline-none text-indigo-600 focus:ring-0 cursor-pointer"
+              >
+                <option value={10}>10 linhas</option>
+                <option value={15}>15 linhas</option>
+                <option value={25}>25 linhas</option>
+                <option value={50}>50 linhas</option>
+              </select>
+              <span className="mx-2 opacity-20">|</span>
+              <span className="opacity-60">Total: <span className="text-neutral-900 dark:text-white">{data.length}</span></span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-30 transition-all"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <div className="flex items-center gap-1">
+                {[...Array(totalPages)].map((_, i) => (
+                  <button 
+                    key={i}
+                    onClick={() => setCurrentPage(i + 1)}
+                    className={cn(
+                      "w-8 h-8 rounded-lg text-[10px] font-black transition-all",
+                      currentPage === i + 1 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800'
+                    )}
+                  >
+                    {i + 1}
+                  </button>
+                )).slice(Math.max(0, currentPage - 3), Math.min(totalPages, currentPage + 2))}
+              </div>
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-30 transition-all"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="space-y-6">
           <DynamicCardList 
             fields={displayFields}
-            data={data}
+            data={paginatedData}
             buttonsConfig={buttonsConfig}
             onView={onView}
             onEdit={onEdit}
             onDelete={onDelete}
           />
+
+          {/* Paginador Footer para Cards */}
+          <div className="flex items-center justify-center gap-4 py-4">
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-3 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-indigo-600 transition-all shadow-sm disabled:opacity-30"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div className="bg-white dark:bg-neutral-900 px-6 py-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-[11px] font-black uppercase tracking-[0.2em] text-neutral-400">
+              Página <span className="text-indigo-600">{currentPage}</span> de {totalPages || 1}
+            </div>
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="p-3 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-indigo-600 transition-all shadow-sm disabled:opacity-30"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       )}
     </div>
