@@ -422,10 +422,17 @@
       "title": "Design the Screen Layout",
       "subtitle": "Organize fields into specific zones. A field can be in more than one zone.",
       "available_fields": "Available Fields",
+      "relationships": "Relationships",
+      "relationships_desc": "You selected multiple tables. Define how they connect (Joins).",
+      "select_table": "Select Table...",
+      "select_field": "Select Field...",
+      "add_relationship": "Add Relationship",
       "zones": {
         "filter": "Filter",
         "grid": "Grid",
         "form": "Form",
+        "kanban_card": "Card Fields",
+        "card": "Card",
         "zone_01": "Zone 01",
         "zone_02": "Zone 02",
         "zone_03": "Zone 03"

@@ -422,10 +422,17 @@
       "title": "Desenhe o Layout da Tela",
       "subtitle": "Organize os campos em zonas específicas. Um campo pode estar em mais de uma zona.",
       "available_fields": "Campos Disponíveis",
+      "relationships": "Relacionamentos",
+      "relationships_desc": "Você selecionou múltiplas tabelas. Defina como elas se conectam (Joins).",
+      "select_table": "Selecione a Tabela...",
+      "select_field": "Selecione o Campo...",
+      "add_relationship": "Adicionar Relacionamento",
       "zones": {
         "filter": "Filtro",
         "grid": "Grid",
         "form": "Formulário",
+        "kanban_card": "Campos do Card",
+        "card": "Card",
         "zone_01": "Zona 01",
         "zone_02": "Zona 02",
         "zone_03": "Zona 03"

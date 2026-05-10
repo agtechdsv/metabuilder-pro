@@ -19,9 +19,15 @@ interface ViewContainerProps {
   onView?: (row: any) => void
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
+  logicType?: string
+  primaryKeyName?: string
+  kanbanGroupField?: string
+  dictionary?: any
+  joins?: any[]
 }
 
 import DynamicCardList from './DynamicCardList'
+import DynamicKanban from './DynamicKanban'
 import { useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Loader2 } from 'lucide-react'
@@ -50,9 +56,16 @@ export default function ViewContainer({
   locale,
   onView,
   onEdit,
-  onDelete 
+  onDelete,
+  logicType,
+  primaryKeyName = 'id',
+  kanbanGroupField,
+  dictionary = {},
+  joins = []
 }: ViewContainerProps) {
-  const [viewMode, setViewMode] = useState<'list' | 'card'>(displayType === 'both' ? defaultView : (displayType as any))
+  const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban'>(
+    logicType === 'kanban' ? 'kanban' : (displayType === 'both' ? defaultView : (displayType as any))
+  )
   const [searchQuery, setSearchQuery] = useState('')
   const [filterValues, setFilterValues] = useState<Record<string, string>>({})
 
@@ -118,7 +131,10 @@ export default function ViewContainer({
       .on('broadcast', { event: `query_result_${queryId}` }, (payload) => {
         console.log(`[MetaBuilder] Resposta recebida para ${queryId}`, payload)
         if (payload.payload.success) {
-          const resultData = payload.payload.data
+          const resultData = payload.payload.data.map((row: any) => ({
+            ...row,
+            _key: crypto.randomUUID()
+          }))
           setData(resultData)
           // Salva no cache se for uma busca sem filtros (carga inicial)
           if (!Object.keys(currentFilters).length) {
@@ -137,7 +153,8 @@ export default function ViewContainer({
             table: modelName,
             tableName: modelName,
             action: 'select',
-            token: 'test-token'
+            token: 'test-token',
+            joins: joins
           }
 
           if (currentFilters && Object.keys(currentFilters).length > 0) {
@@ -166,6 +183,61 @@ export default function ViewContainer({
           }, 10000)
         }
       })
+  }
+
+  const handleMove = async (recordId: string, newValue: any) => {
+    // 1. Descobrir o valor real da chave primária para enviar ao DB
+    const movedItem = data.find(item => String(item._key || item.id || item.ID || item[primaryKeyName]) === recordId)
+    if (!movedItem) return
+    const actualPrimaryKey = movedItem[primaryKeyName] || movedItem.id || movedItem.ID
+
+    // 2. Otimismo: Atualiza localmente o estado
+    setData(prev => prev.map(item => {
+      const itemId = String(item._key || item.id || item.ID || item[primaryKeyName])
+      if (itemId === recordId) {
+        // Pega o nome da coluna de agrupamento do layout_config se disponível
+        // Mas aqui no ViewContainer o fields já contém o groupField no layout_config da view original
+        // Vamos assumir que a coluna de agrupamento é a definida na view
+        const groupFieldName = displayFields.find(f => f.config?.kanban_group_field)?.db_column_name || 'status'
+        return { ...item, [groupFieldName]: newValue }
+      }
+      return item
+    }))
+
+    // 3. Dispara o Update via Tunnel
+    const queryId = crypto.randomUUID()
+    const channelName = `tunnel:${projectId}`
+    const channel = supabase.channel(channelName)
+
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        const groupFieldName = displayFields.find(f => f.config?.kanban_group_field)?.db_column_name || 'status'
+        
+        const rawQuery = `UPDATE ${modelName} SET ${groupFieldName} = '${String(newValue).replace(/'/g, "''")}' WHERE ${primaryKeyName} = '${String(actualPrimaryKey).replace(/'/g, "''")}'`
+        
+        const payload: any = {
+          queryId,
+          table: modelName,
+          tableName: modelName,
+          action: 'update',
+          data: { [groupFieldName]: newValue },
+          query: rawQuery,
+          sql: rawQuery,
+          idColumn: primaryKeyName,
+          idValue: actualPrimaryKey,
+          token: 'test-token'
+        }
+
+        channel.send({
+          type: 'broadcast',
+          event: 'sql_query',
+          payload
+        })
+        
+        // Limpa canal após um tempo
+        setTimeout(() => supabase.removeChannel(channel), 2000)
+      }
+    })
   }
 
   useEffect(() => {
@@ -363,7 +435,7 @@ export default function ViewContainer({
                   <th className="sticky left-0 z-30 bg-neutral-100 dark:bg-neutral-900 px-4 py-4 w-[60px] border-r border-neutral-200/50 dark:border-neutral-700/50 shadow-[4px_0_10px_rgba(0,0,0,0.03)]">
                     <input type="checkbox" className="rounded-md bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-indigo-600 focus:ring-indigo-500 transition-all" />
                   </th>
-                  {displayFields.map((field) => (
+                  {displayFields.filter(f => !f.hidden).map((field) => (
                     <th 
                       key={field.id} 
                       onClick={() => handleSort(field.db_column_name)}
@@ -387,7 +459,7 @@ export default function ViewContainer({
               </thead>
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/50">
                 <DynamicGrid 
-                  fields={displayFields} 
+                  fields={displayFields.filter(f => !f.hidden)} 
                   data={paginatedData}
                   buttonsConfig={buttonsConfig}
                   onView={onView}
@@ -451,10 +523,21 @@ export default function ViewContainer({
             </div>
           </div>
         </div>
+      ) : viewMode === 'kanban' ? (
+        <DynamicKanban 
+          data={data}
+          fields={displayFields}
+          groupField={displayFields.find(f => f.id === kanbanGroupField) || displayFields.find(f => f.db_column_name === 'status') || { db_column_name: 'status' }}
+          dictionary={dictionary}
+          onMove={handleMove}
+          onView={onView}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       ) : (
         <div className="space-y-6">
           <DynamicCardList 
-            fields={displayFields}
+            fields={displayFields.filter(f => !f.hidden)}
             data={paginatedData}
             buttonsConfig={buttonsConfig}
             onView={onView}

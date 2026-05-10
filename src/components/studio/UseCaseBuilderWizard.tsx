@@ -32,7 +32,8 @@ import {
   Settings,
   Wand2,
   Terminal,
-  RotateCcw
+  RotateCcw,
+  Link
 } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
@@ -82,6 +83,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
           grouping_type: initialData.layout_config?.grouping_type || 'sections',
           display_type: initialData.layout_config?.display_type || 'list',
           default_view: initialData.layout_config?.default_view || 'list',
+          kanban_group_field: initialData.layout_config?.kanban_group_field || '',
+          joins: initialData.layout_config?.joins || [],
           fields_metadata: initialData.layout_config?.fields_metadata || {}
         },
         buttons_config: (() => {
@@ -122,6 +125,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       grouping_type: 'sections',
       display_type: 'list',
       default_view: 'list',
+      kanban_group_field: '',
       fields_metadata: {} as Record<string, any>
     },
     buttons_config: [
@@ -268,6 +272,17 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
         }
         if (has_arguments && !hasFilter) {
           toast(t('wizard.buttons.validation.filter_required'), 'error')
+          return
+        }
+      }
+
+      if (logic_type === 'kanban') {
+        if (!config.layout_config.kanban_group_field) {
+          toast("Please select a grouping field for the Kanban columns.", 'error')
+          return
+        }
+        if (!hasGrid) {
+          toast(t('wizard.buttons.validation.grid_required'), 'error')
           return
         }
       }
@@ -776,6 +791,8 @@ function StepLayout({ config, setConfig, models }: any) {
         </div>
       </Modal>
 
+
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="md:col-span-1 bg-neutral-50/50 dark:bg-neutral-900/30 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 flex flex-col h-[600px]">
           <div className="p-5 border-b border-neutral-200 dark:border-neutral-800">
@@ -796,17 +813,19 @@ function StepLayout({ config, setConfig, models }: any) {
                         <span className="text-[9px] font-black font-mono text-neutral-400 bg-neutral-100 dark:bg-neutral-900 px-2 py-0.5 rounded-md">{f.data_type}</span>
                       </div>
                       <div className="flex gap-2">
-                        <button
-                          disabled={!config.has_arguments || config.logic_type === 'cadastro'}
-                          onClick={() => toggleField(f.id, 'filter_fields')}
-                          className={cn(
-                            "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all",
-                            config.layout_config.filter_fields.includes(f.id) ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200',
-                            (!config.has_arguments || config.logic_type === 'cadastro') && "opacity-20 cursor-not-allowed grayscale"
-                          )}
-                        >
-                          {t('wizard.layout.zones.filter')}
-                        </button>
+                        {config.logic_type !== 'kanban' && (
+                          <button
+                            disabled={!config.has_arguments || config.logic_type === 'cadastro'}
+                            onClick={() => toggleField(f.id, 'filter_fields')}
+                            className={cn(
+                              "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all",
+                              config.layout_config.filter_fields.includes(f.id) ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200',
+                              (!config.has_arguments || config.logic_type === 'cadastro') && "opacity-20 cursor-not-allowed grayscale"
+                            )}
+                          >
+                            {t('wizard.layout.zones.filter')}
+                          </button>
+                        )}
                         <button
                           onClick={() => toggleField(f.id, 'grid_fields')}
                           className={cn(
@@ -814,19 +833,21 @@ function StepLayout({ config, setConfig, models }: any) {
                             config.layout_config.grid_fields.includes(f.id) ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200'
                           )}
                         >
-                          {t('wizard.layout.zones.grid')}
+                          {config.logic_type === 'kanban' ? t('wizard.layout.zones.card', 'Card') : t('wizard.layout.zones.grid')}
                         </button>
-                        <button
-                          disabled={config.logic_type === 'pesquisa'}
-                          onClick={() => toggleField(f.id, 'form_fields')}
-                          className={cn(
-                            "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all",
-                            config.layout_config.form_fields.includes(f.id) ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200',
-                            config.logic_type === 'pesquisa' && "opacity-20 cursor-not-allowed grayscale"
-                          )}
-                        >
-                          {t('wizard.layout.zones.form')}
-                        </button>
+                        {config.logic_type !== 'kanban' && (
+                          <button
+                            disabled={config.logic_type === 'pesquisa'}
+                            onClick={() => toggleField(f.id, 'form_fields')}
+                            className={cn(
+                              "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all",
+                              config.layout_config.form_fields.includes(f.id) ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200',
+                              config.logic_type === 'pesquisa' && "opacity-20 cursor-not-allowed grayscale"
+                            )}
+                          >
+                            {t('wizard.layout.zones.form')}
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -837,6 +858,153 @@ function StepLayout({ config, setConfig, models }: any) {
         </div>
 
         <div className="md:col-span-3 space-y-6">
+          {/* ZONA: KANBAN CONFIG */}
+          {config.logic_type === 'kanban' && (
+            <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
+                    <Columns className="w-4 h-4" />
+                  </div>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Kanban Configuration</h4>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Grouping Field (Columns)</label>
+                <select
+                  value={config.layout_config.kanban_group_field || ''}
+                  onChange={e => setConfig({
+                    ...config,
+                    layout_config: { ...config.layout_config, kanban_group_field: e.target.value }
+                  })}
+                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                >
+                  <option value="">Select a field to define columns...</option>
+                  {selectedModelsData.flatMap((m: any) => m.fields).map((f: any) => (
+                    <option key={f.id} value={f.id}>
+                      {getFieldName(f.id)} ({f.data_type})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-neutral-400 font-medium italic ml-1">This field will determine the Kanban columns (e.g., Status, Stage).</p>
+              </div>
+            </div>
+          )}
+
+          {/* RELATIONSHIPS CARD */}
+          {selectedModelsData.length > 1 && (
+            <div className="bg-indigo-50/50 dark:bg-indigo-900/10 rounded-[2rem] border border-indigo-200 dark:border-indigo-800/50 p-6 flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-indigo-600 text-white">
+                  <Link className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900 dark:text-white uppercase tracking-widest">{t('wizard.layout.relationships')}</h3>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">{t('wizard.layout.relationships_desc', 'You selected multiple tables. Define how they connect to each other.')}</p>
+                </div>
+              </div>
+              
+              <div className="space-y-3 mt-2">
+                {(config.layout_config.joins || []).map((join: any, index: number) => (
+                  <div key={index} className="flex items-center gap-3 p-3 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
+                    {/* FROM TABLE */}
+                    <select
+                      value={join.from}
+                      onChange={e => {
+                        const newJoins = [...(config.layout_config.joins || [])]
+                        newJoins[index].from = e.target.value
+                        newJoins[index].localKey = ''
+                        setConfig({ ...config, layout_config: { ...config.layout_config, joins: newJoins } })
+                      }}
+                      className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                    >
+                      <option value="">{t('wizard.layout.select_table', 'Select Table...')}</option>
+                      {selectedModelsData.map((m: any) => (
+                        <option key={m.id} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>
+                      ))}
+                    </select>
+                    
+                    {/* FROM KEY */}
+                    <select
+                      value={join.localKey}
+                      onChange={e => {
+                        const newJoins = [...(config.layout_config.joins || [])]
+                        newJoins[index].localKey = e.target.value
+                        setConfig({ ...config, layout_config: { ...config.layout_config, joins: newJoins } })
+                      }}
+                      className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                    >
+                      <option value="">{t('wizard.layout.select_field', 'Select Field...')}</option>
+                      {selectedModelsData.find((m: any) => m.db_table_name === join.from)?.fields.map((f: any) => (
+                        <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                      ))}
+                    </select>
+
+                    <div className="px-2 text-neutral-400">
+                      <ArrowRight className="w-4 h-4" />
+                    </div>
+
+                    {/* TO TABLE */}
+                    <select
+                      value={join.to}
+                      onChange={e => {
+                        const newJoins = [...(config.layout_config.joins || [])]
+                        newJoins[index].to = e.target.value
+                        newJoins[index].foreignKey = ''
+                        setConfig({ ...config, layout_config: { ...config.layout_config, joins: newJoins } })
+                      }}
+                      className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                    >
+                      <option value="">{t('wizard.layout.select_table', 'Select Table...')}</option>
+                      {selectedModelsData.map((m: any) => (
+                        <option key={m.id} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>
+                      ))}
+                    </select>
+
+                    {/* TO KEY */}
+                    <select
+                      value={join.foreignKey}
+                      onChange={e => {
+                        const newJoins = [...(config.layout_config.joins || [])]
+                        newJoins[index].foreignKey = e.target.value
+                        setConfig({ ...config, layout_config: { ...config.layout_config, joins: newJoins } })
+                      }}
+                      className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                    >
+                      <option value="">{t('wizard.layout.select_field', 'Select Field...')}</option>
+                      {selectedModelsData.find((m: any) => m.db_table_name === join.to)?.fields.map((f: any) => (
+                        <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                      ))}
+                    </select>
+
+                    <button
+                      onClick={() => {
+                        const newJoins = [...(config.layout_config.joins || [])]
+                        newJoins.splice(index, 1)
+                        setConfig({ ...config, layout_config: { ...config.layout_config, joins: newJoins } })
+                      }}
+                      className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+
+                <button
+                  onClick={() => {
+                    const newJoins = [...(config.layout_config.joins || []), { from: '', localKey: '', to: '', foreignKey: '' }]
+                    setConfig({ ...config, layout_config: { ...config.layout_config, joins: newJoins } })
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold uppercase tracking-widest transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  {t('wizard.layout.add_relationship', 'Add Relationship')}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* ZONA: FILTROS */}
           {config.logic_type.includes('pesquisa') && (
             <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
@@ -882,30 +1050,34 @@ function StepLayout({ config, setConfig, models }: any) {
           <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <h4 className="text-[9px] font-black uppercase text-emerald-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_02')}: {t('wizard.layout.zones.grid')}</h4>
-                <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg w-fit">
-                  {[
-                    { id: 'list', label: t('wizard.layout.display_options.list') },
-                    { id: 'card', label: t('wizard.layout.display_options.card') },
-                    { id: 'both', label: t('wizard.layout.display_options.both') }
-                  ].map(opt => (
-                    <button
-                      key={opt.id}
-                      onClick={() => setConfig({
-                        ...config,
-                        layout_config: { ...config.layout_config, display_type: opt.id }
-                      })}
-                      className={cn(
-                        "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all",
-                        (config.layout_config.display_type || 'list') === opt.id
-                          ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
-                          : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
+                <h4 className="text-[9px] font-black uppercase text-emerald-600 tracking-[0.3em]">
+                  {config.logic_type === 'kanban' ? t('wizard.layout.zones.kanban_card', 'Campos do Card') : `${t('wizard.layout.zones.zone_02')}: ${t('wizard.layout.zones.grid')}`}
+                </h4>
+                {config.logic_type !== 'kanban' && (
+                  <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg w-fit">
+                    {[
+                      { id: 'list', label: t('wizard.layout.display_options.list') },
+                      { id: 'card', label: t('wizard.layout.display_options.card') },
+                      { id: 'both', label: t('wizard.layout.display_options.both') }
+                    ].map(opt => (
+                      <button
+                        key={opt.id}
+                        onClick={() => setConfig({
+                          ...config,
+                          layout_config: { ...config.layout_config, display_type: opt.id }
+                        })}
+                        className={cn(
+                          "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all",
+                          (config.layout_config.display_type || 'list') === opt.id
+                            ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                            : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.grid_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
             </div>

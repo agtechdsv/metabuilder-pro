@@ -129,6 +129,7 @@ async function startTunnel(projectId, secretToken, connectionString, configSupab
 
         if (action === 'select') {
           const filters = payload.payload.filters;
+          const joins = payload.payload.joins || [];
           let whereClause = '';
           
           if (filters && Object.keys(filters).length > 0) {
@@ -137,8 +138,8 @@ async function startTunnel(projectId, secretToken, connectionString, configSupab
             for (const [key, value] of Object.entries(filters)) {
               if (value !== undefined && value !== '') {
                 const safeKey = key.replace(/[^a-zA-Z0-9_]/g, '');
-                // Usa ILIKE com cast para text para buscas parciais sem case sensitive
-                conditions.push(`CAST("${safeKey}" AS text) ILIKE $${i}`);
+                // Prefixa com a tabela principal para evitar ambiguidade se houver joins
+                conditions.push(`CAST("${safeTable}"."${safeKey}" AS text) ILIKE $${i}`);
                 params.push(`%${value}%`);
                 i++;
               }
@@ -147,8 +148,26 @@ async function startTunnel(projectId, secretToken, connectionString, configSupab
               whereClause = ` WHERE ${conditions.join(' AND ')}`;
             }
           }
+
+          let selectCols = `"${safeTable}".*`;
+          let joinClause = '';
+
+          if (joins && joins.length > 0) {
+            joins.forEach(j => {
+               if(j.from && j.to && j.localKey && j.foreignKey) {
+                  const safeFrom = j.from.replace(/[^a-zA-Z0-9_]/g, '');
+                  const safeTo = j.to.replace(/[^a-zA-Z0-9_]/g, '');
+                  const safeLocal = j.localKey.replace(/[^a-zA-Z0-9_]/g, '');
+                  const safeForeign = j.foreignKey.replace(/[^a-zA-Z0-9_]/g, '');
+                  
+                  // Retorna toda a linha da tabela joinada como um objeto JSON aninhado
+                  selectCols += `, row_to_json("${safeTo}".*) AS "${safeTo}"`;
+                  joinClause += ` LEFT JOIN "${safeTo}" ON "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}"`;
+               }
+            });
+          }
           
-          sql = `SELECT * FROM "${safeTable}"${whereClause} LIMIT 100`;
+          sql = `SELECT ${selectCols} FROM "${safeTable}"${joinClause}${whereClause} LIMIT 100`;
           result = await pgClient.query(sql, params);
           console.log(chalk.green(`[ OK ] SELECT: Retornou ${result.rows.length} linhas.`));
         } 

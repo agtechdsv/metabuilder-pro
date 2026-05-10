@@ -66,7 +66,7 @@ export default async function SlugPage({ params }: PageProps) {
     .from('ui_views')
     .select(`
       *, 
-      model:models (*),
+      model:models (*, fields (*)),
       ui_components (
         label,
         order_index,
@@ -87,6 +87,20 @@ export default async function SlugPage({ params }: PageProps) {
     
     const allComponents = view.ui_components || []
     
+    const { data: allModels } = await supabase.from('models').select('id, display_name, db_table_name').eq('project_id', project.id)
+    const dictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.display_name }), {}) || {}
+
+    const resolveDbColName = (field: any) => {
+      let dbColName = field.db_column_name
+      if (field.model_id && field.model_id !== view.model_id) {
+        const joinedTable = allModels?.find(m => m.id === field.model_id)?.db_table_name
+        if (joinedTable) {
+          dbColName = `${joinedTable}.${dbColName}`
+        }
+      }
+      return dbColName
+    }
+    
     // Transforma os componentes em fields para o Grid (Zona Grid)
     displayFields = allComponents
       .filter((c: any) => c.is_visible && (c.config?.zones?.includes('grid') || !c.config?.zones))
@@ -94,7 +108,7 @@ export default async function SlugPage({ params }: PageProps) {
       .map((c: any) => ({
         id: c.field.id,
         display_name: c.label || c.field.display_name || c.field.db_column_name,
-        db_column_name: c.field.db_column_name,
+        db_column_name: resolveDbColName(c.field),
         is_primary_key: c.field.is_primary_key,
         data_type: c.field.data_type,
         config: c.config
@@ -107,7 +121,7 @@ export default async function SlugPage({ params }: PageProps) {
       .map((c: any) => ({
         id: c.field.id,
         display_name: c.label || c.field.display_name || c.field.db_column_name,
-        db_column_name: c.field.db_column_name,
+        db_column_name: resolveDbColName(c.field),
         data_type: c.field.data_type,
         is_primary_key: c.field.is_primary_key,
         config: c.config
@@ -119,14 +133,42 @@ export default async function SlugPage({ params }: PageProps) {
       .map((c: any) => ({
         id: c.field.id,
         display_name: c.label || c.field.display_name || c.field.db_column_name,
-        db_column_name: c.field.db_column_name,
+        db_column_name: resolveDbColName(c.field),
         data_type: c.field.data_type,
         config: c.config
       }))
 
-    // Tenta encontrar a PK em qualquer campo da view
     const primaryKeyField = allComponents.find((c: any) => c.field?.is_primary_key)?.field
     const primaryKeyName = primaryKeyField?.db_column_name || 'id'
+
+    // Garante que o campo de agrupamento do Kanban esteja presente nos metadados
+    const kanbanGroupFieldId = view.layout_config?.kanban_group_field
+    if (view.logic_type === 'kanban' && kanbanGroupFieldId) {
+      // Primeiro busca nos componentes existentes
+      let groupFieldData = allComponents.find((c: any) => c.field?.id === kanbanGroupFieldId)?.field
+      
+      // Se não achar (campo não está em nenhuma zona), busca nos campos brutos do modelo
+      if (!groupFieldData && view.model?.fields) {
+        groupFieldData = view.model.fields.find((f: any) => f.id === kanbanGroupFieldId)
+      }
+
+      // Se ainda não achar (pode ser um campo de uma tabela relacionada via JOIN), busca direto no banco
+      if (!groupFieldData) {
+        const { data: remoteField } = await supabase.from('fields').select('*').eq('id', kanbanGroupFieldId).single()
+        if (remoteField) groupFieldData = remoteField
+      }
+
+      if (groupFieldData && !displayFields.find(f => f.id === kanbanGroupFieldId)) {
+        displayFields.push({
+          id: groupFieldData.id,
+          display_name: groupFieldData.display_name || groupFieldData.db_column_name,
+          db_column_name: resolveDbColName(groupFieldData),
+          data_type: groupFieldData.data_type,
+          config: {},
+          hidden: true
+        })
+      }
+    }
 
     const buttonsConfig = view.buttons_config || []
     const canAdd = buttonsConfig.find((b: any) => b.id === 'add')?.visible !== false
@@ -148,6 +190,10 @@ export default async function SlugPage({ params }: PageProps) {
           canAdd={canAdd}
           viewId={view.id}
           primaryKeyName={primaryKeyName}
+          logicType={view.logic_type}
+          kanbanGroupField={view.layout_config?.kanban_group_field}
+          dictionary={dictionary}
+          joins={view.layout_config?.joins || []}
         />
       </TranslationProvider>
     )
