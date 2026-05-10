@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Drawer } from '@/components/ui/Drawer'
 import { Loader2, Save, Eye, Pencil, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface RecordDrawerProps {
   isOpen: boolean
@@ -24,6 +25,7 @@ export default function RecordDrawer({
   onSave,
   isLoading = false
 }: RecordDrawerProps) {
+  const { t } = useI18n()
   const [formData, setFormData] = useState<any>(initialData || {})
 
   useEffect(() => {
@@ -33,9 +35,9 @@ export default function RecordDrawer({
   }, [isOpen, initialData])
 
   const titles = {
-    create: 'Novo Registro',
-    edit: 'Editar Registro',
-    view: 'Visualizar Detalhes'
+    create: t('runtime.new_record'),
+    edit: t('dashboard.projects.studio.config.configure_view'),
+    view: t('runtime.view')
   }
 
   const icons = {
@@ -61,7 +63,7 @@ export default function RecordDrawer({
           <div>
             <h3 className="text-xl font-bold text-neutral-900 dark:text-white">{titles[mode]}</h3>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-              {mode === 'create' ? 'Novo Item' : `Registro #${initialData.id || 'N/A'}`}
+              {mode === 'create' ? t('runtime.record_drawer.new_item') : t('runtime.record_drawer.record_id').replace('{id}', initialData.id || 'N/A')}
             </p>
           </div>
         </div>
@@ -108,7 +110,7 @@ export default function RecordDrawer({
                         : "border-neutral-200 dark:border-neutral-800 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 group-hover:border-neutral-300 dark:group-hover:border-neutral-700",
                       !field.config?.content?.color && "text-neutral-900 dark:text-neutral-300"
                     )}
-                    placeholder={mode === 'view' ? '' : `Digite o valor para ${field.display_name}...`}
+                    placeholder={mode === 'view' ? '' : t('runtime.record_drawer.input_placeholder').replace('{field}', field.display_name)}
                   />
                 </div>
               </div>
@@ -123,7 +125,7 @@ export default function RecordDrawer({
               onClick={onClose}
               className="px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
             >
-              {mode === 'view' ? 'Fechar' : 'Cancelar'}
+              {mode === 'view' ? t('runtime.close') : t('common.cancel')}
             </button>
             
             {mode !== 'view' && (
@@ -133,7 +135,7 @@ export default function RecordDrawer({
                 className="flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+                {isLoading ? t('runtime.saving') : t('common.save')}
               </button>
             )}
           </div>

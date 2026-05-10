@@ -58,9 +58,9 @@ export default function UseCaseBuilder() {
       grouping_type: 'sections' // sections, tabs
     },
     buttons_config: [
-      { id: 'add', label: 'Adicionar', icon: 'plus', action: 'create', visible: true },
-      { id: 'edit', label: 'Editar', icon: 'edit', action: 'update', visible: true },
-      { id: 'delete', label: 'Excluir', icon: 'trash', action: 'delete', visible: true }
+      { id: 'add', label: t('dashboard.projects.studio.wizard.buttons.add'), icon: 'plus', action: 'create', visible: true },
+      { id: 'edit', label: t('dashboard.projects.studio.wizard.buttons.edit'), icon: 'edit', action: 'update', visible: true },
+      { id: 'delete', label: t('dashboard.projects.studio.wizard.buttons.delete'), icon: 'trash', action: 'delete', visible: true }
     ]
   })
 
@@ -78,10 +78,10 @@ export default function UseCaseBuilder() {
   }, [supabase])
 
   const steps = [
-    { id: 1, title: 'Lógica', icon: <Settings2 className="w-4 h-4" /> },
-    { id: 2, title: 'Tabelas', icon: <Database className="w-4 h-4" /> },
-    { id: 3, title: 'Campos & Layout', icon: <Layout className="w-4 h-4" /> },
-    { id: 4, title: 'Ações & Query', icon: <MousePointer2 className="w-4 h-4" /> }
+    { id: 1, title: t('dashboard.projects.studio.builder.logic_step'), icon: <Settings2 className="w-4 h-4" /> },
+    { id: 2, title: t('dashboard.projects.studio.builder.tables_step'), icon: <Database className="w-4 h-4" /> },
+    { id: 3, title: t('dashboard.projects.studio.builder.layout_step'), icon: <Layout className="w-4 h-4" /> },
+    { id: 4, title: t('dashboard.projects.studio.builder.actions_step'), icon: <MousePointer2 className="w-4 h-4" /> }
   ]
 
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length))
@@ -89,7 +89,7 @@ export default function UseCaseBuilder() {
 
   const handleSave = async () => {
     if (!config.name || !config.slug) {
-      toast('Por favor, preencha o nome e o slug da tela.', 'error')
+      toast(t('dashboard.projects.studio.builder.fill_name_slug'), 'error')
       return
     }
 
@@ -145,13 +145,13 @@ export default function UseCaseBuilder() {
       router.push(`/admin/${workspace_slug}/${project_slug}/studio`)
     } catch (err: any) {
       console.error(err)
-      toast('Erro ao salvar caso de uso: ' + err.message, 'error')
+      toast(t('dashboard.projects.studio.builder.error_save') + err.message, 'error')
     } finally {
       setIsSaving(false)
     }
   }
 
-  if (isLoading) return <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white">Carregando Builder...</div>
+  if (isLoading) return <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white">{t('dashboard.projects.studio.config.loading_studio')}</div>
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#080808] text-neutral-900 dark:text-white selection:bg-indigo-500/30">
@@ -164,8 +164,8 @@ export default function UseCaseBuilder() {
           </Link>
           <div className="h-6 w-px bg-neutral-200 dark:bg-neutral-800 mx-1"></div>
           <div>
-            <h1 className="text-sm font-bold">Use Case Builder</h1>
-            <p className="text-[10px] text-neutral-500 uppercase font-black tracking-widest">Novo Caso de Uso</p>
+            <h1 className="text-sm font-bold">{t('dashboard.projects.studio.builder.title')}</h1>
+            <p className="text-[10px] text-neutral-500 uppercase font-black tracking-widest">{t('dashboard.projects.studio.builder.subtitle')}</p>
           </div>
         </div>
 
@@ -176,7 +176,7 @@ export default function UseCaseBuilder() {
             className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
-            {isSaving ? 'Salvando...' : 'Finalizar Caso de Uso'}
+            {isSaving ? t('dashboard.projects.studio.builder.saving') : t('dashboard.projects.studio.builder.finish_builder')}
           </button>
           <HeaderActions />
         </div>
@@ -228,7 +228,7 @@ export default function UseCaseBuilder() {
             disabled={currentStep === 1}
             className="flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-bold text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all disabled:opacity-0"
           >
-            <ChevronLeft className="w-4 h-4" /> Voltar Passo
+            <ChevronLeft className="w-4 h-4" /> {t('dashboard.projects.studio.builder.back_step')}
           </button>
 
           <button
@@ -236,7 +236,7 @@ export default function UseCaseBuilder() {
             disabled={currentStep === steps.length}
             className="flex items-center gap-2 px-8 py-3 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-xs font-bold hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
           >
-            Próximo Passo <ChevronRight className="w-4 h-4" />
+            {t('dashboard.projects.studio.builder.next_step')} <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </main>
@@ -248,16 +248,16 @@ export default function UseCaseBuilder() {
 
 function StepLogic({ config, setConfig }: any) {
   const types = [
-    { id: 'pesquisa', title: 'Apenas Pesquisa', desc: 'Focado em busca e visualização de dados.' },
-    { id: 'pesquisa_cadastro', title: 'Pesquisa + Cadastro', desc: 'Fluxo completo: busca, listagem e formulário.' },
-    { id: 'cadastro', title: 'Apenas Cadastro', desc: 'Formulário direto para inserção de dados.' }
+    { id: 'pesquisa', title: t('dashboard.projects.studio.builder.logic_research_only'), desc: t('dashboard.projects.studio.builder.logic_research_only_desc') },
+    { id: 'pesquisa_cadastro', title: t('dashboard.projects.studio.builder.logic_research_registration'), desc: t('dashboard.projects.studio.builder.logic_research_registration_desc') },
+    { id: 'cadastro', title: t('dashboard.projects.studio.builder.logic_registration_only'), desc: t('dashboard.projects.studio.builder.logic_registration_only_desc') }
   ]
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="space-y-2">
-        <h2 className="text-3xl font-extrabold tracking-tight">Qual a lógica do seu caso de uso?</h2>
-        <p className="text-neutral-500">Defina o comportamento principal desta tela no MetaBuilder.</p>
+        <h2 className="text-3xl font-extrabold tracking-tight">{t('dashboard.projects.studio.builder.step_logic_title')}</h2>
+        <p className="text-neutral-500">{t('dashboard.projects.studio.builder.step_logic_desc')}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -279,17 +279,17 @@ function StepLogic({ config, setConfig }: any) {
       <div className="p-8 bg-neutral-50 dark:bg-neutral-900/50 rounded-[2.5rem] border border-neutral-200 dark:border-neutral-800 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Nome da Tela</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('dashboard.projects.studio.builder.screen_name')}</label>
             <input
               type="text"
               value={config.name}
               onChange={e => setConfig({ ...config, name: e.target.value })}
-              placeholder="Ex: Gestão de Contratos"
+              placeholder={t('dashboard.projects.studio.builder.screen_name_placeholder') || 'Ex: Gestão de Contratos'}
               className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-5 py-4 focus:border-indigo-600 outline-none transition-all"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">URL Amigável (Slug)</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('dashboard.projects.studio.builder.slug_label')}</label>
             <div className="flex items-center bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-5 py-4 focus-within:border-indigo-600 transition-all">
               <span className="text-neutral-400 mr-2">/</span>
               <input
@@ -312,7 +312,7 @@ function StepLogic({ config, setConfig }: any) {
               onChange={e => setConfig({ ...config, has_arguments: e.target.checked })}
               className="w-5 h-5 rounded-md accent-indigo-600"
             />
-            <label htmlFor="args" className="text-sm font-medium cursor-pointer">Habilitar Argumentos (Filtros de pesquisa na URL)</label>
+            <label htmlFor="args" className="text-sm font-medium cursor-pointer">{t('dashboard.projects.studio.builder.enable_args')}</label>
           </div>
         )}
       </div>
@@ -324,8 +324,8 @@ function StepTables({ config, setConfig, models }: any) {
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="space-y-2">
-        <h2 className="text-3xl font-extrabold tracking-tight">Quais tabelas compõem este caso?</h2>
-        <p className="text-neutral-500">Você pode selecionar uma ou mais tabelas. A lógica de Join será configurada a seguir.</p>
+        <h2 className="text-3xl font-extrabold tracking-tight">{t('dashboard.projects.studio.builder.step_tables_title')}</h2>
+        <p className="text-neutral-500">{t('dashboard.projects.studio.builder.step_tables_desc')}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -356,7 +356,7 @@ function StepTables({ config, setConfig, models }: any) {
       {config.selected_models.length > 1 && (
         <div className="p-6 bg-amber-500/10 border border-amber-500/20 rounded-[2rem] flex items-center gap-4 text-amber-600 dark:text-amber-400">
           <AlertCircle className="w-6 h-6 shrink-0" />
-          <p className="text-sm font-medium">Você selecionou <strong>{config.selected_models.length} tabelas</strong>. No próximo passo, definiremos as relações (Joins) entre elas.</p>
+          <p className="text-sm font-medium">{t('dashboard.projects.studio.builder.multi_tables_alert').replace('{count}', config.selected_models.length.toString())}</p>
         </div>
       )}
     </div>
@@ -396,8 +396,8 @@ function StepLayout({ config, setConfig, models }: any) {
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="space-y-2">
-        <h2 className="text-3xl font-extrabold tracking-tight">Desenhe o Layout da Tela</h2>
-        <p className="text-neutral-500">Organize os campos em zonas específicas. Um campo pode estar em mais de uma zona.</p>
+        <h2 className="text-3xl font-extrabold tracking-tight">{t('dashboard.projects.studio.builder.step_layout_title')}</h2>
+        <p className="text-neutral-500">{t('dashboard.projects.studio.builder.step_layout_desc')}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -405,7 +405,7 @@ function StepLayout({ config, setConfig, models }: any) {
         <div className="lg:col-span-4 space-y-6">
           <div className="p-6 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] sticky top-24">
             <h4 className="text-[10px] font-black uppercase text-neutral-400 mb-6 flex items-center gap-2">
-              <Database className="w-3 h-3" /> Campos Disponíveis
+              <Database className="w-3 h-3" /> {t('dashboard.projects.studio.builder.available_fields')}
             </h4>
             <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
               {selectedModelsData.map((m: any) => (
@@ -457,12 +457,12 @@ function StepLayout({ config, setConfig, models }: any) {
           {config.logic_type.includes('pesquisa') && (
             <div className="p-8 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] space-y-6 shadow-sm">
               <div className="flex items-center justify-between">
-                <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.2em]">Zona 01: Filtros de Pesquisa</h4>
-                <span className="text-[10px] font-bold text-neutral-400">{config.layout_config.filter_fields.length} campos</span>
+                <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.2em]">{t('dashboard.projects.studio.builder.zone_filter')}</h4>
+                <span className="text-[10px] font-bold text-neutral-400">{config.layout_config.filter_fields.length} {t('dashboard.projects.studio.config.fields_detected')}</span>
               </div>
               <div className="flex flex-wrap gap-2 min-h-[60px] p-4 bg-neutral-50 dark:bg-neutral-950/50 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl items-center">
                 {config.layout_config.filter_fields.length === 0 ? (
-                  <p className="text-[10px] text-neutral-400 italic w-full text-center">Nenhum campo selecionado para filtros...</p>
+                  <p className="text-[10px] text-neutral-400 italic w-full text-center">{t('dashboard.projects.studio.builder.no_fields_selected')}</p>
                 ) : (
                   config.layout_config.filter_fields.map((id: string) => (
                     <div key={id} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold">
@@ -478,12 +478,12 @@ function StepLayout({ config, setConfig, models }: any) {
           {/* ZONA: GRID */}
           <div className="p-8 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] space-y-6 shadow-sm">
             <div className="flex items-center justify-between">
-              <h4 className="text-[10px] font-black uppercase text-emerald-600 tracking-[0.2em]">Zona 02: Listagem (Grid/Tabela)</h4>
-              <span className="text-[10px] font-bold text-neutral-400">{config.layout_config.grid_fields.length} campos</span>
+              <h4 className="text-[10px] font-black uppercase text-emerald-600 tracking-[0.2em]">{t('dashboard.projects.studio.builder.zone_grid')}</h4>
+              <span className="text-[10px] font-bold text-neutral-400">{config.layout_config.grid_fields.length} {t('dashboard.projects.studio.config.fields_detected')}</span>
             </div>
             <div className="flex flex-wrap gap-2 min-h-[100px] p-4 bg-neutral-50 dark:bg-neutral-950/50 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl items-center">
               {config.layout_config.grid_fields.length === 0 ? (
-                <p className="text-[10px] text-neutral-400 italic w-full text-center">Selecione campos para exibir na tabela de resultados...</p>
+                <p className="text-[10px] text-neutral-400 italic w-full text-center">{t('dashboard.projects.studio.builder.no_fields_selected')}</p>
               ) : (
                 <div className="w-full overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800">
                   <table className="w-full text-[10px] text-left">
@@ -513,12 +513,12 @@ function StepLayout({ config, setConfig, models }: any) {
           {config.logic_type.includes('cadastro') && (
             <div className="p-8 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] space-y-6 shadow-sm">
               <div className="flex items-center justify-between">
-                <h4 className="text-[10px] font-black uppercase text-amber-600 tracking-[0.2em]">Zona 03: Formulário de Edição</h4>
-                <span className="text-[10px] font-bold text-neutral-400">{config.layout_config.form_fields.length} campos</span>
+                <h4 className="text-[10px] font-black uppercase text-amber-600 tracking-[0.2em]">{t('dashboard.projects.studio.builder.zone_form')}</h4>
+                <span className="text-[10px] font-bold text-neutral-400">{config.layout_config.form_fields.length} {t('dashboard.projects.studio.config.fields_detected')}</span>
               </div>
               <div className="flex flex-wrap gap-2 min-h-[100px] p-4 bg-neutral-50 dark:bg-neutral-950/50 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl items-center">
                 {config.layout_config.form_fields.length === 0 ? (
-                  <p className="text-[10px] text-neutral-400 italic w-full text-center">Quais campos poderão ser preenchidos pelo usuário?</p>
+                  <p className="text-[10px] text-neutral-400 italic w-full text-center">{t('dashboard.projects.studio.builder.no_fields_selected')}</p>
                 ) : (
                   <div className="grid grid-cols-2 gap-3 w-full">
                     {config.layout_config.form_fields.map((id: string) => (
@@ -546,27 +546,27 @@ function StepActions({ config, setConfig }: any) {
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="space-y-2">
-        <h2 className="text-3xl font-extrabold tracking-tight">Query & Ações Finais</h2>
-        <p className="text-neutral-500">Configure como os dados serão recuperados e quais botões estarão disponíveis.</p>
+        <h2 className="text-3xl font-extrabold tracking-tight">{t('dashboard.projects.studio.builder.step_actions_title')}</h2>
+        <p className="text-neutral-500">{t('dashboard.projects.studio.builder.step_actions_desc')}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         <div className="space-y-6">
-          <h4 className="text-xs font-black uppercase text-indigo-600">Estratégia de Dados</h4>
+          <h4 className="text-xs font-black uppercase text-indigo-600">{t('dashboard.projects.studio.builder.data_strategy')}</h4>
           <div className="space-y-4">
             <button
               onClick={() => setConfig({ ...config, query_type: 'dynamic' })}
               className={`w-full p-6 rounded-3xl border-2 text-left transition-all ${config.query_type === 'dynamic' ? 'border-indigo-600 bg-indigo-600/5' : 'border-neutral-200 dark:border-neutral-800'}`}
             >
-              <h5 className="font-bold text-sm">Query Dinâmica (Automática)</h5>
-              <p className="text-xs text-neutral-500 mt-1">O MetaBuilder gera os Joins e Selects baseado nas relações das tabelas.</p>
+              <h5 className="font-bold text-sm">{t('dashboard.projects.studio.builder.dynamic_query')}</h5>
+              <p className="text-xs text-neutral-500 mt-1">{t('dashboard.projects.studio.builder.dynamic_query_desc')}</p>
             </button>
             <button
               onClick={() => setConfig({ ...config, query_type: 'custom' })}
               className={`w-full p-6 rounded-3xl border-2 text-left transition-all ${config.query_type === 'custom' ? 'border-indigo-600 bg-indigo-600/5' : 'border-neutral-200 dark:border-neutral-800'}`}
             >
-              <h5 className="font-bold text-sm">Query Manual (SQL)</h5>
-              <p className="text-xs text-neutral-500 mt-1">Você escreve o SQL puro para maior controle e performance.</p>
+              <h5 className="font-bold text-sm">{t('dashboard.projects.studio.builder.manual_query')}</h5>
+              <p className="text-xs text-neutral-500 mt-1">{t('dashboard.projects.studio.builder.manual_query_desc')}</p>
             </button>
           </div>
 
@@ -581,7 +581,7 @@ function StepActions({ config, setConfig }: any) {
         </div>
 
         <div className="space-y-6">
-          <h4 className="text-xs font-black uppercase text-indigo-600">Botões da Interface</h4>
+          <h4 className="text-xs font-black uppercase text-indigo-600">{t('dashboard.projects.studio.builder.interface_buttons')}</h4>
           <div className="space-y-3">
             {config.buttons_config.map((btn: any) => (
               <div key={btn.id} className="flex items-center justify-between p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl">

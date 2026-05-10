@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 import pt from './translations/pt.json'
 import en from './translations/en.json'
 import es from './translations/es.json'
+import { useRouter } from 'next/navigation'
 
 type Language = 'pt' | 'en' | 'es'
 type Translations = typeof pt
@@ -26,6 +27,7 @@ export function I18nProvider({
   initialLocale?: Language 
 }) {
   const [language, setLanguageState] = useState<Language>(initialLocale)
+  const router = useRouter()
 
   useEffect(() => {
     // Sincroniza com localStorage se existir, mas o initialLocale manda no primeiro render
@@ -45,8 +47,8 @@ export function I18nProvider({
     // Atualiza o atributo lang do HTML
     document.documentElement.lang = lang
     
-    // Força um reload para que as partes Server Component (como o configurador de login) atualizem
-    window.location.reload()
+    // Atualiza os Server Components sem dar reload na página (mantém o estado do React)
+    router.refresh()
   }
 
   const t = (path: string): string => {

@@ -84,10 +84,10 @@ export function StudioDashboardClient({
 
       if (error) throw error
 
-      toast(`Caso de uso ${!isCurrentlyActive ? 'ativado' : 'desativado'} com sucesso!`, 'success')
+      toast(!isCurrentlyActive ? t('dashboard.projects.studio.toasts.active_success') : t('dashboard.projects.studio.toasts.inactive_success'), 'success')
       router.refresh()
     } catch (err: any) {
-      toast('Erro ao alterar status: ' + err.message, 'error')
+      toast(t('dashboard.projects.studio.toasts.error_status') + err.message, 'error')
     }
   }
 
@@ -101,12 +101,12 @@ export function StudioDashboardClient({
 
       if (error) throw error
 
-      toast('Caso de uso excluído permanentemente.', 'success')
+      toast(t('dashboard.projects.studio.toasts.delete_success'), 'success')
       setIsDeleteModalOpen(false)
       setViewToDelete(null)
       router.refresh()
     } catch (err: any) {
-      toast('Erro ao excluir: ' + err.message, 'error')
+      toast(t('dashboard.projects.studio.toasts.error_delete') + err.message, 'error')
     }
   }
 
@@ -131,7 +131,7 @@ export function StudioDashboardClient({
                 <h2 className="text-2xl font-black tracking-tight text-neutral-900 dark:text-white">
                   MetaBuilder <span className="text-indigo-600 dark:text-indigo-500">Studio</span>
                 </h2>
-                <p className="text-[10px] text-neutral-400 uppercase font-black tracking-[0.2em]">Dashboard de Controle</p>
+                <p className="text-[10px] text-neutral-400 uppercase font-black tracking-[0.2em]">{t('dashboard.projects.studio.control_dashboard')}</p>
               </div>
             </div>
 
@@ -140,7 +140,7 @@ export function StudioDashboardClient({
                 onClick={() => setViewMode('builder')}
                 className="flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95"
               >
-                <Plus className="w-4 h-4" /> Novo Caso de Uso
+                <Plus className="w-4 h-4" /> {t('dashboard.projects.studio.new_use_case')}
               </button>
             </div>
           </div>
@@ -180,17 +180,17 @@ export function StudioDashboardClient({
                 </div>
               </div>
               <div className="space-y-1 relative z-10">
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium leading-tight uppercase tracking-widest">Status do Agente</p>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium leading-tight uppercase tracking-widest">{t('dashboard.projects.studio.agent_status')}</p>
                 <div className="flex items-center justify-between pt-0.5">
                   <code className="text-[8px] text-neutral-400 font-mono bg-neutral-100 dark:bg-black/40 px-1.5 py-0.5 rounded truncate max-w-[100px]">{project.id}</code>
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(project.id)
-                      toast('ID do Projeto copiado!', 'success')
+                      toast(t('dashboard.projects.studio.token_copied'), 'success')
                     }}
                     className="text-[8px] font-black text-indigo-600 dark:text-indigo-400 uppercase hover:underline"
                   >
-                    Copiar Token
+                    {t('dashboard.projects.studio.copy_token')}
                   </button>
                 </div>
               </div>
@@ -212,10 +212,10 @@ export function StudioDashboardClient({
             <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800/50 pb-4">
               <h3 className="text-xl font-black flex items-center gap-3 text-neutral-900 dark:text-white tracking-tight">
                 <Layers className="w-6 h-6 text-indigo-600 dark:text-indigo-500" />
-                Casos de Uso
+                {t('dashboard.projects.studio.use_cases')}
               </h3>
               <div className="px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-[10px] font-black text-neutral-500 dark:text-neutral-400 uppercase tracking-widest border border-neutral-200 dark:border-neutral-800">
-                {views?.length || 0} Criados
+                {views?.length || 0} {t('dashboard.projects.studio.created_suffix')}
               </div>
             </div>
 
@@ -227,10 +227,10 @@ export function StudioDashboardClient({
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <h4 className="text-lg font-black tracking-tight text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                          Portal de Login
+                          {t('dashboard.projects.studio.login_portal')}
                         </h4>
                         <div className="px-2 py-0.5 bg-indigo-600 text-white text-[8px] font-black rounded-lg uppercase tracking-widest shadow-lg shadow-indigo-500/20">
-                          SISTEMA
+                          {t('dashboard.projects.system_label')}
                         </div>
                       </div>
                       <p className="text-[10px] text-neutral-400 font-mono flex items-center gap-1.5 tracking-tight">
@@ -247,7 +247,7 @@ export function StudioDashboardClient({
                       href={`/admin/${workspace_slug}/${project_slug}/studio/auth`}
                       className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-indigo-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-indigo-500/20"
                     >
-                      <Settings2 className="w-4 h-4" /> Configurar Login
+                      <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure_login')}
                     </Link>
                     <Link
                       href={`/${workspace_slug}/${project_slug}/login`}
@@ -275,7 +275,7 @@ export function StudioDashboardClient({
                           <button
                             onClick={() => handleToggleActive(view)}
                             className={`p-1 rounded-md transition-colors ${view.layout_config?.is_active !== false ? 'text-emerald-500 hover:bg-emerald-500/10' : 'text-neutral-400 hover:bg-neutral-500/10'}`}
-                            title={view.layout_config?.is_active !== false ? 'Ativo' : 'Inativo'}
+                            title={view.layout_config?.is_active !== false ? t('dashboard.projects.studio.status_active') : t('dashboard.projects.studio.status_inactive')}
                           >
                             {view.layout_config?.is_active !== false ? <Power className="w-3.5 h-3.5" /> : <PowerOff className="w-3.5 h-3.5" />}
                           </button>
@@ -307,7 +307,7 @@ export function StudioDashboardClient({
                         }}
                         className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
                       >
-                        <Settings2 className="w-4 h-4" /> Configurar
+                        <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure')}
                       </button>
                       <Link
                         href={`/${workspace_slug}/${project_slug}/${view.slug}`}
@@ -326,8 +326,8 @@ export function StudioDashboardClient({
                   <div className="p-4 bg-neutral-50 dark:bg-neutral-900 rounded-full">
                     <Layers className="w-10 h-10 opacity-20" />
                   </div>
-                  <p className="text-sm font-bold tracking-tight">Nenhum caso de uso criado ainda.</p>
-                  <button onClick={() => setViewMode('builder')} className="text-indigo-600 dark:text-indigo-400 text-xs font-black uppercase tracking-widest hover:underline underline-offset-8 transition-all">Começar agora</button>
+                  <p className="text-sm font-bold tracking-tight">{t('dashboard.projects.studio.no_use_cases')}</p>
+                  <button onClick={() => setViewMode('builder')} className="text-indigo-600 dark:text-indigo-400 text-xs font-black uppercase tracking-widest hover:underline underline-offset-8 transition-all">{t('dashboard.projects.studio.start_now')}</button>
                 </div>
               )}
             </div>
@@ -337,14 +337,14 @@ export function StudioDashboardClient({
         <Modal
           isOpen={isDeleteModalOpen}
           onClose={() => setIsDeleteModalOpen(false)}
-          title="Confirmar Exclusão"
+          title={t('dashboard.projects.studio.delete_confirm.title')}
         >
           <div className="space-y-6">
             <div className="flex items-start gap-4 p-4 bg-red-500/5 border border-red-500/20 rounded-2xl">
               <AlertCircle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-bold text-red-600">Esta ação é irreversível</p>
-                <p className="text-xs text-neutral-500 mt-1">Você está prestes a excluir o caso de uso <strong>"{viewToDelete?.name}"</strong>. Todos os componentes associados também serão removidos.</p>
+                <p className="text-sm font-bold text-red-600">{t('dashboard.projects.studio.delete_confirm.warning')}</p>
+                <p className="text-xs text-neutral-500 mt-1">{t('dashboard.projects.studio.delete_confirm.desc', { name: viewToDelete?.name })}</p>
               </div>
             </div>
 
@@ -353,13 +353,13 @@ export function StudioDashboardClient({
                 onClick={handleDeleteView}
                 className="w-full py-4 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_20px_rgba(220,38,38,0.2)]"
               >
-                Excluir Permanentemente
+                {t('dashboard.projects.studio.delete_confirm.yes_delete')}
               </button>
               <button
                 onClick={() => setIsDeleteModalOpen(false)}
                 className="w-full py-4 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all"
               >
-                Cancelar
+                {t('dashboard.projects.studio.delete_confirm.cancel')}
               </button>
             </div>
           </div>

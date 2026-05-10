@@ -28,7 +28,7 @@ export function PrivacyContent() {
   return (
     <div className="space-y-10">
       <p className="text-neutral-400 text-sm leading-relaxed">
-        A <span className="text-white font-bold">MetaBuilder Pro</span> valoriza a sua privacidade. Esta política descreve como tratamos as informações coletadas através do nosso ecossistema de metadados inteligente.
+        {t('privacy.item1_desc').split('.')[0]}. {t('privacy.item2_desc').split('.')[0]}.
       </p>
 
       <div className="space-y-8">
@@ -48,7 +48,7 @@ export function PrivacyContent() {
                 <div className="p-5 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden group/box">
                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover/box:opacity-100 transition-opacity" />
                   <p className="text-sm text-neutral-300 italic leading-relaxed relative">
-                    <span className="text-white font-bold not-italic">Importante:</span> {section.content}
+                    {section.content}
                   </p>
                 </div>
               ) : (
