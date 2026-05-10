@@ -21,8 +21,11 @@ export default function DynamicCardList({
   onDelete
 }: DynamicCardListProps) {
   const canView = buttonsConfig.find((b: any) => b.id === 'view')?.visible === true
-  const canEdit = buttonsConfig.find((b: any) => b.id === 'edit')?.visible === true
   const canDelete = buttonsConfig.find((b: any) => b.id === 'delete')?.visible === true
+
+  const getNestedValue = (obj: any, path: string) => {
+    return path.split('.').reduce((acc, part) => acc && acc[part], obj)
+  }
 
   if (data.length === 0) {
     return (
@@ -75,9 +78,9 @@ export default function DynamicCardList({
           {/* Dados do Card - Limitado a 3 campos principais para não ficar gigante */}
           <div className="space-y-3 flex-1">
             {fields.slice(0, 4).map((field, fIdx) => {
-              const val = row[field.db_column_name]
+              const rawVal = getNestedValue(row, field.db_column_name)
               const isFirst = fIdx === 0
-              const displayVal = typeof val === 'object' ? JSON.stringify(val) : String(val ?? '')
+              const displayVal = typeof rawVal === 'object' && rawVal !== null ? JSON.stringify(rawVal) : String(rawVal ?? '')
 
               if (isFirst) {
                 return (

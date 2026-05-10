@@ -28,6 +28,10 @@ interface ViewPageContentProps {
   canAdd: boolean
   viewId: string
   primaryKeyName: string
+  logicType?: string
+  kanbanGroupField?: string
+  dictionary?: any
+  joins?: any[]
 }
 
 export default function ViewPageContent({
@@ -44,7 +48,11 @@ export default function ViewPageContent({
   locale,
   canAdd,
   viewId,
-  primaryKeyName
+  primaryKeyName,
+  logicType,
+  kanbanGroupField,
+  dictionary = {},
+  joins = []
 }: ViewPageContentProps) {
   const { t } = useI18n()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
@@ -292,6 +300,11 @@ export default function ViewPageContent({
           onView={handleOpenView}
           onEdit={handleOpenEdit}
           onDelete={handleOpenDelete}
+          logicType={logicType}
+          primaryKeyName={primaryKeyName}
+          kanbanGroupField={kanbanGroupField}
+          dictionary={dictionary}
+          joins={joins}
         />
       </main>
 

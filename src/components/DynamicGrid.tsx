@@ -21,8 +21,11 @@ export default function DynamicGrid({
   onDelete
 }: DynamicGridProps) {
   const canView = buttonsConfig.find((b: any) => b.id === 'view')?.visible === true
-  const canEdit = buttonsConfig.find((b: any) => b.id === 'edit')?.visible === true
   const canDelete = buttonsConfig.find((b: any) => b.id === 'delete')?.visible === true
+
+  const getNestedValue = (obj: any, path: string) => {
+    return path.split('.').reduce((acc, part) => acc && acc[part], obj)
+  }
 
   if (data.length === 0) {
     return (
@@ -45,9 +48,10 @@ export default function DynamicGrid({
             <input type="checkbox" className="rounded-md bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-indigo-600 focus:ring-indigo-500" />
           </td>
           {fields.map((field) => {
-            const val = typeof row[field.db_column_name] === 'object' 
-              ? JSON.stringify(row[field.db_column_name]) 
-              : String(row[field.db_column_name] ?? '')
+            const rawVal = getNestedValue(row, field.db_column_name)
+            const val = typeof rawVal === 'object' && rawVal !== null
+              ? JSON.stringify(rawVal) 
+              : String(rawVal ?? '')
             
             return (
               <td 
