@@ -7,6 +7,7 @@ import RecordDrawer from './RecordDrawer'
 import DeleteConfirmModal from './DeleteConfirmModal'
 import { createClient } from '@/utils/supabase/client'
 import dynamic from 'next/dynamic'
+import { useI18n } from '@/i18n/I18nContext'
 
 // Importamos o ViewContainer sem SSR para evitar o "piscar" do loader
 // e conflitos de hidratação com o sessionStorage
@@ -45,6 +46,7 @@ export default function ViewPageContent({
   viewId,
   primaryKeyName
 }: ViewPageContentProps) {
+  const { t } = useI18n()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [drawerMode, setDrawerMode] = useState<'create' | 'edit' | 'view'>('create')
   const [selectedRow, setSelectedRow] = useState<any>(null)
@@ -268,7 +270,7 @@ export default function ViewPageContent({
                 className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full transition-all font-bold text-xs shadow-[0_0_20px_rgba(79,70,229,0.3)] active:scale-95"
               >
                 <Plus className="w-4 h-4" />
-                {{ pt: 'Novo Registro', en: 'New Record', es: 'Nuevo Registro' }[locale] || 'New Record'}
+                {t('runtime.new_record')}
               </button>
             )}
           </div>

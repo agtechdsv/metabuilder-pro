@@ -106,7 +106,7 @@ export default function ViewConfigurator() {
         setCustomLabels(finalLabels)
         
       } catch (err) {
-        console.error('Erro crítico no carregamento do Studio:', err)
+        console.error('Critical error loading Studio:', err)
       } finally {
         // Só liberamos a tela quando tudo estiver 100% pronto
         setIsLoading(false)
@@ -164,7 +164,7 @@ export default function ViewConfigurator() {
     }
   }
 
-  if (isLoading) return <div className="min-h-screen bg-white dark:bg-[#050505] flex items-center justify-center text-neutral-900 dark:text-white">{t('common.loading')} Studio...</div>
+  if (isLoading) return <div className="min-h-screen bg-white dark:bg-[#050505] flex items-center justify-center text-neutral-900 dark:text-white">{t('dashboard.projects.studio.config.loading_studio')}</div>
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#080808] text-neutral-900 dark:text-white selection:bg-indigo-500/30 transition-colors duration-300">
@@ -310,7 +310,7 @@ export default function ViewConfigurator() {
                       <td className="px-8 py-6">
                         <div className="flex flex-col">
                           <span className="text-sm font-bold text-neutral-900 dark:text-white">{field.db_column_name}</span>
-                          {field.is_primary_key && <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-tighter">{{ pt: 'CHAVE PRIMÁRIA', en: 'PRIMARY KEY', es: 'CLAVE PRIMARIA' }[t('dashboard.projects.studio.config.type') === 'Tipo' ? 'pt' : 'en'] || 'PRIMARY KEY'}</span>}
+                          {field.is_primary_key && <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-tighter">{t('dashboard.projects.studio.config.primary_key')}</span>}
                         </div>
                       </td>
                       <td className="px-8 py-6">

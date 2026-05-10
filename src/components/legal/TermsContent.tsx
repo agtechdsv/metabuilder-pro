@@ -29,7 +29,7 @@ export function TermsContent() {
   return (
     <div className="space-y-10">
       <p className="text-neutral-400 text-sm leading-relaxed">
-        Bem-vindo ao <span className="text-white font-bold">MetaBuilder Pro</span>, o ecossistema de metadados de alta performance. Ao utilizar este sistema, você concorda com os seguintes termos:
+        {t('terms.item1_desc').split('.')[0]}. {t('terms.item3_desc').split('.')[0]}.
       </p>
 
       <div className="space-y-8">
@@ -50,7 +50,7 @@ export function TermsContent() {
                   <div className="flex gap-4 items-start relative">
                     <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-amber-200/80 italic leading-relaxed">
-                      <span className="text-amber-500 font-bold not-italic">Aviso Legal:</span> {section.content}
+                      {section.content}
                     </p>
                   </div>
                 </div>

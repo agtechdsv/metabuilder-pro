@@ -54,16 +54,16 @@ export default function AuthSettingsPage() {
     icon_svg: '', 
     primary_color: '#4f46e5',
     bg_color: '#ffffff',
-    welcome_title: 'Bem-vindo de volta!',
-    welcome_desc: 'Entre com suas credenciais para acessar o portal.',
+    welcome_title: t('dashboard.projects.studio.auth.default_welcome_title'),
+    welcome_desc: t('dashboard.projects.studio.auth.default_welcome_desc'),
     theme: 'light',
-    button_text: 'Entrar no Sistema',
+    button_text: t('dashboard.projects.studio.auth.default_button_text'),
     button_color: '#4f46e5',
-    email_label: 'E-mail',
-    password_label: 'Senha',
-    email_placeholder: 'exemplo@empresa.com',
-    password_placeholder: 'Sua senha secreta',
-    login_tooltip: 'Use suas credenciais de acesso'
+    email_label: t('dashboard.projects.studio.auth.default_email_label'),
+    password_label: t('dashboard.projects.studio.auth.default_pass_label'),
+    email_placeholder: t('dashboard.projects.studio.auth.default_email_placeholder'),
+    password_placeholder: t('dashboard.projects.studio.auth.default_pass_placeholder'),
+    login_tooltip: t('dashboard.projects.studio.auth.default_tooltip')
   })
 
   const [activeTab, setActiveTab] = useState<'visual' | 'strategy'>('strategy')
@@ -151,10 +151,11 @@ export default function AuthSettingsPage() {
 
       if (error) throw error
       setIsSuccess(true)
+      toast(t('common.success'), 'success')
       setTimeout(() => setIsSuccess(false), 2500)
     } catch (err: any) {
       console.error(err)
-      toast('Erro ao salvar: ' + err.message, 'error')
+      toast(t('dashboard.projects.studio.toasts.error_status') + err.message, 'error')
     } finally {
       setIsSaving(false)
     }
@@ -186,7 +187,7 @@ export default function AuthSettingsPage() {
               </div>
               <div>
                 <h2 className="text-xl font-black tracking-tight text-neutral-900 dark:text-white">
-                  Configurar <span className="text-indigo-600 dark:text-indigo-500">Login</span>
+                  {t('dashboard.projects.studio.auth.title')}
                 </h2>
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{t('dashboard.projects.studio.auth.strategy_desc')}</p>
               </div>
@@ -199,13 +200,13 @@ export default function AuthSettingsPage() {
               onClick={() => setActiveTab('strategy')}
               className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'strategy' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
             >
-              <Fingerprint className="w-4 h-4" /> Estratégia de Autenticação
+              <Fingerprint className="w-4 h-4" /> {t('dashboard.projects.studio.auth.strategy_tab')}
             </button>
             <button 
               onClick={() => setActiveTab('visual')}
               className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'visual' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
             >
-              <Palette className="w-4 h-4" /> Personalização Visual
+              <Palette className="w-4 h-4" /> {t('dashboard.projects.studio.auth.visual_tab')}
             </button>
           </div>
         </div>
@@ -260,23 +261,23 @@ export default function AuthSettingsPage() {
 
               {authConfig.auth_type === 'database' && (
                 <div className="space-y-6 animate-in fade-in duration-300">
-                  <h3 className="text-lg font-bold border-b border-neutral-200 dark:border-neutral-800 pb-3 text-neutral-900 dark:text-white">Mapeamento de Tabelas</h3>
+                  <h3 className="text-lg font-bold border-b border-neutral-200 dark:border-neutral-800 pb-3 text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.table_mapping')}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tabela de Usuários</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.user_table')}</label>
                       <select 
                         value={authConfig.db_table_name || ''}
                         onChange={(e) => setAuthConfig({...authConfig, db_table_name: e.target.value})}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
                       >
-                        <option value="">Selecione a tabela...</option>
+                        <option value="">{t('dashboard.projects.studio.auth.select_table')}</option>
                         {models.map(m => (
                           <option key={m.id} value={m.db_table_name}>{m.db_table_name}</option>
                         ))}
                       </select>
                     </div>
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Coluna de E-mail/Login</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.email_column')}</label>
                       <select 
                         value={authConfig.db_email_column || ''}
                         onChange={(e) => setAuthConfig({...authConfig, db_email_column: e.target.value})}
@@ -289,7 +290,7 @@ export default function AuthSettingsPage() {
                       </select>
                     </div>
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Coluna de Senha</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.pass_column')}</label>
                       <select 
                         value={authConfig.db_password_column || ''}
                         onChange={(e) => setAuthConfig({...authConfig, db_password_column: e.target.value})}
@@ -302,16 +303,16 @@ export default function AuthSettingsPage() {
                       </select>
                     </div>
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Formato do Hash</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.hash_format')}</label>
                       <select 
                         value={authConfig.db_password_hash_type || 'bcrypt'}
                         onChange={(e) => setAuthConfig({...authConfig, db_password_hash_type: e.target.value})}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
                       >
-                        <option value="bcrypt">Bcrypt (Recomendado)</option>
-                        <option value="md5">MD5 (Legado)</option>
-                        <option value="sha256">SHA-256</option>
-                        <option value="plain">Texto Plano</option>
+                        <option value="bcrypt">{t('dashboard.projects.studio.auth.bcrypt')}</option>
+                        <option value="md5">{t('dashboard.projects.studio.auth.md5')}</option>
+                        <option value="sha256">{t('dashboard.projects.studio.auth.sha256')}</option>
+                        <option value="plain">{t('dashboard.projects.studio.auth.plain')}</option>
                       </select>
                     </div>
                   </div>
@@ -320,10 +321,10 @@ export default function AuthSettingsPage() {
 
               {authConfig.auth_type === 'ldap' && (
                 <div className="space-y-6 animate-in fade-in duration-300">
-                  <h3 className="text-lg font-bold border-b border-neutral-200 dark:border-neutral-800 pb-3 text-neutral-900 dark:text-white">Conexão LDAP / Active Directory</h3>
+                  <h3 className="text-lg font-bold border-b border-neutral-200 dark:border-neutral-800 pb-3 text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.ldap_config')}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Servidor LDAP (URL)</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.ldap_url')}</label>
                       <input 
                         type="text"
                         placeholder="ldap://servidor.empresa.local:389"
@@ -333,7 +334,7 @@ export default function AuthSettingsPage() {
                       />
                     </div>
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Base DN</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.base_dn')}</label>
                       <input 
                         type="text"
                         placeholder="dc=empresa,dc=local"
@@ -358,13 +359,13 @@ export default function AuthSettingsPage() {
                   <div className="p-1.5 bg-indigo-500/10 rounded-lg text-indigo-600">
                     <Layout className="w-4 h-4" />
                   </div>
-                  <h3 className="font-black uppercase tracking-widest text-[10px] text-neutral-400">Identidade e Logo</h3>
+                  <h3 className="font-black uppercase tracking-widest text-[10px] text-neutral-400">{t('dashboard.projects.studio.auth.identity_logo')}</h3>
                 </div>
                 
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">URL do Logo</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.logo_url')}</label>
                       <input 
                         type="text"
                         value={visualConfig.logo_url}
@@ -374,12 +375,12 @@ export default function AuthSettingsPage() {
                       />
                     </div>
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Ícone SVG (Opcional)</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.icon_svg')}</label>
                       <input 
                         type="text"
                         value={visualConfig.icon_svg}
                         onChange={e => setVisualConfig({...visualConfig, icon_svg: e.target.value})}
-                        placeholder="<svg>...</svg>"
+                        placeholder={t('dashboard.projects.icon_placeholder')}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none text-[10px] font-mono"
                       />
                     </div>
@@ -387,7 +388,7 @@ export default function AuthSettingsPage() {
 
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Cor Primária</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.primary_color')}</label>
                       <div className="flex items-center gap-3 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3">
                         <input 
                           type="color"
@@ -399,15 +400,15 @@ export default function AuthSettingsPage() {
                       </div>
                     </div>
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tema Padrão</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.default_theme')}</label>
                       <select 
                         value={visualConfig.theme}
                         onChange={e => setVisualConfig({...visualConfig, theme: e.target.value})}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
                       >
-                        <option value="light">Light Mode</option>
-                        <option value="dark">Dark Mode</option>
-                        <option value="auto">Automático (Sistema)</option>
+                        <option value="light">{t('dashboard.projects.studio.auth.light_mode')}</option>
+                        <option value="dark">{t('dashboard.projects.studio.auth.dark_mode')}</option>
+                        <option value="auto">{t('dashboard.projects.studio.auth.auto_mode')}</option>
                       </select>
                     </div>
                   </div>
@@ -420,12 +421,12 @@ export default function AuthSettingsPage() {
                   <div className="p-1.5 bg-indigo-500/10 rounded-lg text-indigo-600">
                     <Type className="w-4 h-4" />
                   </div>
-                  <h3 className="font-black uppercase tracking-widest text-[10px] text-neutral-400">Textos e Boas-vindas</h3>
+                  <h3 className="font-black uppercase tracking-widest text-[10px] text-neutral-400">{t('dashboard.projects.studio.auth.welcome_texts')}</h3>
                 </div>
 
                 <div className="space-y-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Título</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.title_label')}</label>
                     <input 
                       type="text"
                       value={visualConfig.welcome_title}
@@ -434,7 +435,7 @@ export default function AuthSettingsPage() {
                     />
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Descrição</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.desc_label')}</label>
                     <textarea 
                       value={visualConfig.welcome_desc}
                       onChange={e => setVisualConfig({...visualConfig, welcome_desc: e.target.value})}
@@ -450,13 +451,13 @@ export default function AuthSettingsPage() {
                   <div className="p-1.5 bg-indigo-500/10 rounded-lg text-indigo-600">
                     <Fingerprint className="w-4 h-4" />
                   </div>
-                  <h3 className="font-black uppercase tracking-widest text-[10px] text-neutral-400">Campos e Tooltips</h3>
+                  <h3 className="font-black uppercase tracking-widest text-[10px] text-neutral-400">{t('dashboard.projects.studio.auth.fields_tooltips')}</h3>
                 </div>
 
                 <div className="grid grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Label E-mail</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.email_label')}</label>
                       <input 
                         type="text"
                         value={visualConfig.email_label}
@@ -465,7 +466,7 @@ export default function AuthSettingsPage() {
                       />
                     </div>
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Placeholder E-mail</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.email_placeholder')}</label>
                       <input 
                         type="text"
                         value={visualConfig.email_placeholder}
@@ -476,7 +477,7 @@ export default function AuthSettingsPage() {
                   </div>
                   <div className="space-y-6">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Label Senha</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.pass_label')}</label>
                       <input 
                         type="text"
                         value={visualConfig.password_label}
@@ -485,7 +486,7 @@ export default function AuthSettingsPage() {
                       />
                     </div>
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Placeholder Senha</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.pass_placeholder')}</label>
                       <input 
                         type="text"
                         value={visualConfig.password_placeholder}
@@ -496,7 +497,7 @@ export default function AuthSettingsPage() {
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Mensagem de Ajuda (Tooltip)</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.help_message')}</label>
                   <input 
                     type="text"
                     value={visualConfig.login_tooltip}
@@ -512,7 +513,7 @@ export default function AuthSettingsPage() {
                   <div className="p-1.5 bg-indigo-500/10 rounded-lg text-indigo-600">
                     <Zap className="w-4 h-4" />
                   </div>
-                  <h3 className="font-black uppercase tracking-widest text-[10px] text-neutral-400">Botão Principal</h3>
+                  <h3 className="font-black uppercase tracking-widest text-[10px] text-neutral-400">{t('dashboard.projects.studio.auth.main_button')}</h3>
                 </div>
 
                 <div className="grid grid-cols-2 gap-8">
@@ -526,7 +527,7 @@ export default function AuthSettingsPage() {
                     />
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Cor do Botão</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.button_color')}</label>
                     <div className="flex items-center gap-3 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3">
                       <input 
                         type="color"
@@ -546,10 +547,10 @@ export default function AuthSettingsPage() {
             <div className="lg:col-span-5 relative">
               <div className="sticky top-[180px] space-y-4">
                 <div className="flex items-center justify-between px-6">
-                  <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Live Preview</h3>
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('dashboard.projects.studio.auth.live_preview')}</h3>
                   <div className="flex items-center gap-2">
                     <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-[9px] font-bold text-green-500 uppercase tracking-tighter">Sincronizado</span>
+                    <span className="text-[9px] font-bold text-green-500 uppercase tracking-tighter">{t('dashboard.projects.studio.auth.synchronized')}</span>
                   </div>
                 </div>
 

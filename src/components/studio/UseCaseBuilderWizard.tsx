@@ -29,7 +29,10 @@ import {
   Type as FontIcon,
   Share2,
   Columns,
-  Settings
+  Settings,
+  Wand2,
+  Terminal,
+  RotateCcw
 } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
@@ -37,6 +40,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { cn } from '@/lib/utils'
 import { Drawer } from '@/components/ui/Drawer'
+import { Modal } from '@/components/ui/Modal'
 
 interface UseCaseBuilderWizardProps {
   initialData?: any
@@ -82,18 +86,18 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
         },
         buttons_config: (() => {
           const defaults = [
-            { id: 'search', label: 'Pesquisar', icon: 'search', action: 'search', visible: true },
-            { id: 'clear', label: 'Limpar', icon: 'refresh-ccw', action: 'clear', visible: true },
-            { id: 'view', label: 'Visualizar', icon: 'search', action: 'view', visible: true },
-            { id: 'add', label: 'Adicionar', icon: 'plus', action: 'create', visible: true },
-            { id: 'edit', label: 'Editar', icon: 'edit', action: 'pencil', action_key: 'update', visible: true },
-            { id: 'delete', label: 'Excluir', icon: 'trash', action_key: 'delete', visible: true }
+            { id: 'search', label: t('runtime.search'), labelKey: 'runtime.search', icon: 'search', action: 'search', visible: true },
+            { id: 'clear', label: t('runtime.clear'), labelKey: 'runtime.clear', icon: 'refresh-ccw', action: 'clear', visible: true },
+            { id: 'view', label: t('runtime.view'), labelKey: 'runtime.view', icon: 'search', action: 'view', visible: true },
+            { id: 'add', label: t('runtime.new_record'), labelKey: 'runtime.new_record', icon: 'plus', action: 'create', visible: true },
+            { id: 'edit', label: t('runtime.edit'), labelKey: 'runtime.edit', icon: 'pencil', action: 'pencil', action_key: 'update', visible: true },
+            { id: 'delete', label: t('runtime.delete'), labelKey: 'runtime.delete', icon: 'trash', action_key: 'delete', visible: true }
           ]
           if (!initialData.buttons_config) return defaults
           // Merge: Keep existing visible states, but ensure all default IDs exist
           return defaults.map(def => {
             const existing = initialData.buttons_config.find((b: any) => b.id === def.id)
-            return existing ? existing : { ...def, visible: false }
+            return existing ? { ...def, ...existing } : { ...def, visible: false }
           })
         })()
       })
@@ -121,12 +125,12 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       fields_metadata: {} as Record<string, any>
     },
     buttons_config: [
-      { id: 'search', label: 'Pesquisar', icon: 'search', action: 'search', visible: true },
-      { id: 'clear', label: 'Limpar', icon: 'refresh-ccw', action: 'clear', visible: true },
-      { id: 'view', label: 'Visualizar', icon: 'search', action: 'view', visible: true },
-      { id: 'add', label: 'Adicionar', icon: 'plus', action: 'create', visible: true },
-      { id: 'edit', label: 'Editar', icon: 'edit', action: 'pencil', action_key: 'update', visible: true },
-      { id: 'delete', label: 'Excluir', icon: 'trash', action_key: 'delete', visible: true }
+      { id: 'search', label: t('runtime.search'), labelKey: 'runtime.search', icon: 'search', action: 'search', visible: true },
+      { id: 'clear', label: t('runtime.clear'), labelKey: 'runtime.clear', icon: 'refresh-ccw', action: 'clear', visible: true },
+      { id: 'view', label: t('runtime.view'), labelKey: 'runtime.view', icon: 'search', action: 'view', visible: true },
+      { id: 'add', label: t('runtime.new_record'), labelKey: 'runtime.new_record', icon: 'plus', action: 'create', visible: true },
+      { id: 'edit', label: t('runtime.edit'), labelKey: 'runtime.edit', icon: 'pencil', action: 'pencil', action_key: 'update', visible: true },
+      { id: 'delete', label: t('runtime.delete'), labelKey: 'runtime.delete', icon: 'trash', action_key: 'delete', visible: true }
     ]
   })
 
@@ -215,16 +219,16 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
   }, [supabase])
 
   const steps = [
-    { id: 1, title: 'Lógica', icon: <Settings2 className="w-4 h-4" /> },
-    { id: 2, title: 'Tabelas', icon: <Database className="w-4 h-4" /> },
-    { id: 3, title: 'Campos & Layout', icon: <Layout className="w-4 h-4" /> },
-    { id: 4, title: 'Ações & Query', icon: <MousePointer2 className="w-4 h-4" /> }
+    { id: 1, title: t('wizard.steps.logic'), icon: <Settings2 className="w-4 h-4" /> },
+    { id: 2, title: t('wizard.steps.tables'), icon: <Database className="w-4 h-4" /> },
+    { id: 3, title: t('wizard.steps.layout'), icon: <Layout className="w-4 h-4" /> },
+    { id: 4, title: t('wizard.steps.actions'), icon: <MousePointer2 className="w-4 h-4" /> }
   ]
 
   const nextStep = () => {
     // Validação Passo 2: Tabelas
     if (currentStep === 2 && config.selected_models.length === 0) {
-      toast('Selecione pelo menos uma tabela para continuar.', 'error')
+      toast(t('dashboard.projects.studio.config.db_fields_desc').replace('{table}', ''), 'error')
       return
     }
 
@@ -237,33 +241,33 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
 
       if (logic_type === 'pesquisa') {
         if (!hasGrid) {
-          toast('Selecione pelo menos um campo para a Listagem (Grid).', 'error')
+          toast(t('wizard.buttons.validation.grid_required'), 'error')
           return
         }
         if (has_arguments && !hasFilter) {
-          toast('Você habilitou argumentos. Selecione pelo menos um campo de Filtro.', 'error')
+          toast(t('wizard.buttons.validation.filter_required'), 'error')
           return
         }
       }
 
       if (logic_type === 'cadastro') {
         if (!hasForm) {
-          toast('Selecione pelo menos um campo para o Formulário.', 'error')
+          toast(t('wizard.buttons.validation.form_required'), 'error')
           return
         }
       }
 
       if (logic_type === 'pesquisa_cadastro') {
         if (!hasGrid) {
-          toast('Selecione pelo menos um campo para a Listagem (Grid).', 'error')
+          toast(t('wizard.buttons.validation.grid_required'), 'error')
           return
         }
         if (!hasForm) {
-          toast('Selecione pelo menos um campo para o Formulário.', 'error')
+          toast(t('wizard.buttons.validation.form_required'), 'error')
           return
         }
         if (has_arguments && !hasFilter) {
-          toast('Você habilitou argumentos. Selecione pelo menos um campo de Filtro.', 'error')
+          toast(t('wizard.buttons.validation.filter_required'), 'error')
           return
         }
       }
@@ -275,7 +279,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
 
   const handleSave = async () => {
     if (!config.name || !config.slug) {
-      toast('Por favor, preencha o nome e o slug da tela.', 'error')
+      toast(t('wizard.buttons.validation.name_slug_required'), 'error')
       return
     }
 
@@ -374,7 +378,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       onSaveSuccess()
     } catch (err: any) {
       console.error(err)
-      toast('Erro ao salvar caso de uso: ' + err.message, 'error')
+      toast(t('wizard.buttons.error_save') + err.message, 'error')
     } finally {
       setIsSaving(false)
     }
@@ -383,7 +387,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
   if (isLoading) return (
     <div className="flex-1 flex flex-col items-center justify-center min-h-[400px] text-neutral-500">
       <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-600" />
-      <p className="text-sm font-bold animate-pulse">Carregando Builder...</p>
+      <p className="text-sm font-bold animate-pulse">{t('common.loading')}</p>
     </div>
   )
 
@@ -399,8 +403,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
             </button>
             <div className="h-8 w-px bg-neutral-200 dark:bg-neutral-800 mx-2"></div>
             <div>
-              <h1 className="text-sm font-black tracking-tight">Use Case Builder</h1>
-              <p className="text-[8px] text-indigo-600 dark:text-indigo-400 uppercase font-black tracking-[0.2em]">{initialData ? 'Editando Caso de Uso' : 'Novo Caso de Uso'}</p>
+              <h1 className="text-sm font-black tracking-tight">{t('wizard.title')}</h1>
+              <p className="text-[8px] text-indigo-600 dark:text-indigo-400 uppercase font-black tracking-[0.2em]">{initialData ? t('wizard.edit_mode') : t('wizard.new_mode')}</p>
             </div>
           </div>
 
@@ -411,7 +415,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
               className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-95"
             >
               {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-              {isSaving ? (initialData ? 'Atualizando...' : 'Salvando...') : (initialData ? 'Atualizar' : 'Finalizar')}
+              {isSaving ? (initialData ? t('wizard.buttons.updating') : t('wizard.buttons.saving')) : (initialData ? t('wizard.buttons.update') : t('wizard.buttons.finish'))}
             </button>
           </div>
         </div>
@@ -477,7 +481,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
                 : "text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
             )}
           >
-            <ChevronLeft className="w-3 h-3" /> Passo Anterior
+            <ChevronLeft className="w-3 h-3" /> {t('wizard.buttons.prev')}
           </button>
 
           <button
@@ -492,12 +496,12 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
           >
             {currentStep === steps.length ? (
               isSaving ? (
-                <><Loader2 className="w-3 h-3 animate-spin" /> {initialData ? 'Atualizando...' : 'Salvando...'}</>
+                <><Loader2 className="w-3 h-3 animate-spin" /> {initialData ? t('wizard.buttons.updating') : t('wizard.buttons.saving')}</>
               ) : (
-                <>{initialData ? 'Atualizar' : 'Finalizar'} <Save className="w-3 h-3 ml-1" /></>
+                <>{initialData ? t('wizard.buttons.update') : t('wizard.buttons.finish')} <Save className="w-3 h-3 ml-1" /></>
               )
             ) : (
-              <>Próximo Passo <ChevronRight className="w-3 h-3" /></>
+              <>{t('wizard.buttons.next')} <ChevronRight className="w-3 h-3" /></>
             )}
           </button>
         </div>
@@ -509,20 +513,21 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
 // --- SUB-COMPONENTES DE PASSOS ---
 
 function StepLogic({ config, setConfig }: any) {
+  const { t } = useI18n()
   const types = [
-    { id: 'pesquisa', title: 'Apenas Pesquisa', desc: 'Focado em busca e visualização de dados.', icon: Layout },
-    { id: 'pesquisa_cadastro', title: 'Pesquisa + Cadastro', desc: 'Fluxo completo: busca, listagem e formulário.', icon: Layout },
-    { id: 'cadastro', title: 'Apenas Cadastro', desc: 'Formulário direto para inserção de dados.', icon: Layout },
-    { id: 'mapa_mental', title: 'Mapa Mental', desc: 'Visualização hierárquica e conexões entre dados.', icon: Share2 },
-    { id: 'kanban', title: 'Kanban', desc: 'Gestão de fluxo de trabalho por colunas e status.', icon: Columns },
-    { id: 'personalizado', title: 'Personalizado', desc: 'Lógica customizada e fluxos de trabalho únicos.', icon: Settings }
+    { id: 'pesquisa', title: t('wizard.logic.types.pesquisa.title'), desc: t('wizard.logic.types.pesquisa.desc'), icon: Layout },
+    { id: 'pesquisa_cadastro', title: t('wizard.logic.types.pesquisa_cadastro.title'), desc: t('wizard.logic.types.pesquisa_cadastro.desc'), icon: Layout },
+    { id: 'cadastro', title: t('wizard.logic.types.cadastro.title'), desc: t('wizard.logic.types.cadastro.desc'), icon: Layout },
+    { id: 'mapa_mental', title: t('wizard.logic.types.mapa_mental.title'), desc: t('wizard.logic.types.mapa_mental.desc'), icon: Share2 },
+    { id: 'kanban', title: t('wizard.logic.types.kanban.title'), desc: t('wizard.logic.types.kanban.desc'), icon: Columns },
+    { id: 'personalizado', title: t('wizard.logic.types.personalizado.title'), desc: t('wizard.logic.types.personalizado.desc'), icon: Settings }
   ]
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
       <div className="space-y-2">
-        <h2 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white">Qual a lógica do seu caso de uso?</h2>
-        <p className="text-neutral-500 dark:text-neutral-400 text-sm">Defina o comportamento principal desta tela no MetaBuilder.</p>
+        <h2 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white">{t('wizard.logic.title')}</h2>
+        <p className="text-neutral-500 dark:text-neutral-400 text-sm">{t('wizard.logic.subtitle')}</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -552,7 +557,7 @@ function StepLogic({ config, setConfig }: any) {
       <div className="p-4 bg-neutral-50/50 dark:bg-neutral-900/30 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Nome da Tela</label>
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.logic.screen_name')}</label>
             <input
               required
               type="text"
@@ -571,19 +576,19 @@ function StepLogic({ config, setConfig }: any) {
                   slug: (!config.slug || config.slug === config.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-')) ? suggestedSlug : config.slug
                 })
               }}
-              placeholder="Ex: Gestão de Contratos"
+              placeholder={t('wizard.logic.screen_name_placeholder')}
               className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
             />
           </div>
           <div className="space-y-3">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">URL Amigável (Slug)</label>
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.logic.slug_label')}</label>
             <div className="flex items-center bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus-within:border-indigo-600 transition-all shadow-sm">
               <span className="text-neutral-400 mr-2 font-bold">/</span>
               <input
                 type="text"
                 value={config.slug}
                 onChange={e => setConfig({ ...config, slug: e.target.value.toLowerCase().replace(/\s/g, '-') })}
-                placeholder="contratos"
+                placeholder={t('wizard.logic.slug_placeholder')}
                 className="w-full bg-transparent outline-none text-sm font-bold"
               />
             </div>
@@ -598,7 +603,7 @@ function StepLogic({ config, setConfig }: any) {
             )}>
               {config.has_arguments && <CheckCircle2 className="w-4 h-4" />}
             </div>
-            <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300">Habilitar Argumentos (Filtros de pesquisa na URL)</span>
+            <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300">{t('wizard.logic.enable_args')}</span>
           </div>
         )}
       </div>
@@ -607,11 +612,12 @@ function StepLogic({ config, setConfig }: any) {
 }
 
 function StepTables({ config, setConfig, models }: any) {
+  const { t } = useI18n()
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
       <div className="space-y-2">
-        <h2 className="text-xl font-extrabold tracking-tight">Quais tabelas compõem este caso?</h2>
-        <p className="text-neutral-500 dark:text-neutral-400 text-sm">Você pode selecionar uma ou mais tabelas. A lógica de Join será configurada a seguir.</p>
+        <h2 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white">{t('wizard.tables.title')}</h2>
+        <p className="text-neutral-500 dark:text-neutral-400 text-sm">{t('wizard.tables.subtitle')}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -648,13 +654,10 @@ function StepTables({ config, setConfig, models }: any) {
           )
         })}
       </div>
-
       {config.selected_models.length > 1 && (
-        <div className="p-8 bg-amber-500/5 border border-amber-500/20 rounded-[2.5rem] flex items-center gap-6 text-amber-600 dark:text-amber-400 animate-bounce-subtle">
-          <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center">
-            <AlertCircle className="w-6 h-6 shrink-0" />
-          </div>
-          <p className="text-sm font-bold">Você selecionou <strong>{config.selected_models.length} tabelas</strong>. No próximo passo, definiremos as relações (Joins) entre elas.</p>
+        <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-600 dark:text-amber-400">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <p className="text-[11px] font-bold leading-relaxed">{t('wizard.tables.selected_warning').replace('{count}', config.selected_models.length.toString())}</p>
         </div>
       )}
     </div>
@@ -662,8 +665,10 @@ function StepTables({ config, setConfig, models }: any) {
 }
 
 function StepLayout({ config, setConfig, models }: any) {
+  const { t } = useI18n()
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   const selectedModelsData = models.filter((m: any) => config.selected_models.includes(m.id))
 
@@ -718,96 +723,150 @@ function StepLayout({ config, setConfig, models }: any) {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
-      <div className="space-y-2">
-        <h2 className="text-xl font-extrabold tracking-tight">Desenhe o Layout da Tela</h2>
-        <p className="text-neutral-500 dark:text-neutral-400 text-sm">Organize os campos em zonas específicas. Um campo pode estar em mais de uma zona.</p>
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <h2 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white">{t('wizard.layout.title')}</h2>
+          <p className="text-neutral-500 dark:text-neutral-400 text-sm">{t('wizard.layout.subtitle')}</p>
+        </div>
+        <button
+          onClick={() => setShowResetConfirm(true)}
+          className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all border border-red-200 dark:border-red-900/50 shadow-sm active:scale-95"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          {t('wizard.layout.reset_formatting')}
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Lista de Campos Disponíveis */}
-        <div className="lg:col-span-4 space-y-3">
-          <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] sticky top-28">
-            <h4 className="text-[10px] font-black uppercase text-neutral-400 mb-6 flex items-center gap-3 tracking-[0.2em]">
-              <Database className="w-4 h-4" /> Campos Disponíveis
-            </h4>
-            <div className="space-y-8 max-h-[55vh] overflow-y-auto pr-4 custom-scrollbar">
-              {selectedModelsData.map((m: any) => (
-                <div key={m.id} className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-1.5 h-4 bg-indigo-500 rounded-full"></div>
-                    <span className="text-[11px] font-black text-neutral-900 dark:text-white uppercase tracking-[0.15em]">{m.display_name || m.db_table_name}</span>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3">
-                    {m.fields.map((f: any) => (
-                      <div key={f.id} className="group p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl text-xs flex flex-col gap-4 hover:border-indigo-500/50 transition-all shadow-sm">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-neutral-700 dark:text-neutral-200">{f.display_name || f.db_column_name}</span>
-                          <span className="text-[9px] font-black font-mono text-neutral-400 bg-neutral-100 dark:bg-neutral-900 px-2 py-0.5 rounded-md">{f.data_type}</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            disabled={!config.has_arguments || config.logic_type === 'cadastro'}
-                            onClick={() => toggleField(f.id, 'filter_fields')}
-                            className={cn(
-                              "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all",
-                              config.layout_config.filter_fields.includes(f.id) ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200',
-                              (!config.has_arguments || config.logic_type === 'cadastro') && "opacity-20 cursor-not-allowed grayscale"
-                            )}
-                            title={!config.has_arguments ? "Habilite argumentos no passo 1" : ""}
-                          >
-                            Filtro
-                          </button>
-                          <button
-                            onClick={() => toggleField(f.id, 'grid_fields')}
-                            className={cn(
-                              "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all",
-                              config.layout_config.grid_fields.includes(f.id) ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200'
-                            )}
-                          >
-                            Grid
-                          </button>
-                          <button
-                            disabled={config.logic_type === 'pesquisa'}
-                            onClick={() => toggleField(f.id, 'form_fields')}
-                            className={cn(
-                              "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all",
-                              config.layout_config.form_fields.includes(f.id) ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200',
-                              config.logic_type === 'pesquisa' && "opacity-20 cursor-not-allowed grayscale"
-                            )}
-                          >
-                            Form
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+      <Modal
+        isOpen={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        title={t('wizard.layout.reset_formatting')}
+      >
+        <div className="space-y-6">
+          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/50 rounded-2xl flex gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+            <p className="text-xs text-red-700 dark:text-red-400 font-medium leading-relaxed">
+              {t('wizard.layout.reset_confirm')}
+            </p>
+          </div>
+          
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowResetConfirm(false)}
+              className="flex-1 px-4 py-3 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-2xl font-bold text-xs uppercase tracking-widest transition-all"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              onClick={() => {
+                setConfig({
+                  ...config,
+                  layout_config: {
+                    ...config.layout_config,
+                    fields_metadata: {}
+                  }
+                })
+                setShowResetConfirm(false)
+              }}
+              className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-red-500/20"
+            >
+              {t('wizard.layout.reset_formatting')}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="md:col-span-1 bg-neutral-50/50 dark:bg-neutral-900/30 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 flex flex-col h-[600px]">
+          <div className="p-5 border-b border-neutral-200 dark:border-neutral-800">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.available_fields')}</h3>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-8 custom-scrollbar">
+            {selectedModelsData.map((m: any) => (
+              <div key={m.id} className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-1.5 h-4 bg-indigo-500 rounded-full"></div>
+                  <span className="text-[11px] font-black text-neutral-900 dark:text-white uppercase tracking-[0.15em]">{m.display_name || m.db_table_name}</span>
                 </div>
-              ))}
-            </div>
+                <div className="grid grid-cols-1 gap-3">
+                  {m.fields.map((f: any) => (
+                    <div key={f.id} className="group p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl text-xs flex flex-col gap-4 hover:border-indigo-500/50 transition-all shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-neutral-700 dark:text-neutral-200">{f.display_name || f.db_column_name}</span>
+                        <span className="text-[9px] font-black font-mono text-neutral-400 bg-neutral-100 dark:bg-neutral-900 px-2 py-0.5 rounded-md">{f.data_type}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          disabled={!config.has_arguments || config.logic_type === 'cadastro'}
+                          onClick={() => toggleField(f.id, 'filter_fields')}
+                          className={cn(
+                            "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all",
+                            config.layout_config.filter_fields.includes(f.id) ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200',
+                            (!config.has_arguments || config.logic_type === 'cadastro') && "opacity-20 cursor-not-allowed grayscale"
+                          )}
+                        >
+                          {t('wizard.layout.zones.filter')}
+                        </button>
+                        <button
+                          onClick={() => toggleField(f.id, 'grid_fields')}
+                          className={cn(
+                            "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all",
+                            config.layout_config.grid_fields.includes(f.id) ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200'
+                          )}
+                        >
+                          {t('wizard.layout.zones.grid')}
+                        </button>
+                        <button
+                          disabled={config.logic_type === 'pesquisa'}
+                          onClick={() => toggleField(f.id, 'form_fields')}
+                          className={cn(
+                            "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all",
+                            config.layout_config.form_fields.includes(f.id) ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200',
+                            config.logic_type === 'pesquisa' && "opacity-20 cursor-not-allowed grayscale"
+                          )}
+                        >
+                          {t('wizard.layout.zones.form')}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Visualização de Zonas */}
-        <div className="lg:col-span-8 space-y-6">
-
+        <div className="md:col-span-3 space-y-6">
           {/* ZONA: FILTROS */}
           {config.logic_type.includes('pesquisa') && (
             <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
               <div className="flex items-center justify-between">
-                <h4 className="text-[9px] font-black uppercase text-indigo-600 tracking-[0.3em]">Zona 01: Filtros de Pesquisa</h4>
-                <span className="px-3 py-1 bg-indigo-500/10 text-indigo-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.filter_fields.length} campos</span>
+                <h4 className="text-[9px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_01')}: {t('wizard.layout.zones.filter')}</h4>
+                <span className="px-3 py-1 bg-indigo-500/10 text-indigo-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.filter_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
               </div>
               <div className="flex flex-wrap gap-3 min-h-[80px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-center">
                 {config.layout_config.filter_fields.length === 0 ? (
-                  <p className="text-xs text-neutral-400 font-medium w-full text-center italic">Arraste ou selecione campos para os filtros...</p>
+                  <p className="text-xs text-neutral-400 font-medium w-full text-center italic">{t('wizard.layout.subtitle')}</p>
                 ) : (
                   config.layout_config.filter_fields.map((id: string) => (
                     <div
                       key={id}
                       onClick={() => { setEditingFieldId(id); setIsDrawerOpen(true); }}
-                      className="flex items-center gap-3 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg shadow-indigo-500/20 group cursor-pointer hover:bg-indigo-500 transition-all"
+                      className="flex items-center gap-3 px-4 py-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20 group cursor-pointer hover:bg-indigo-500 transition-all"
                     >
-                      {config.layout_config.fields_metadata[id]?.label?.text || getFieldName(id)}
+                      <span
+                        style={{
+                          fontFamily: config.layout_config.fields_metadata[id]?.label?.font,
+                          fontSize: config.layout_config.fields_metadata[id]?.label?.size,
+                          color: config.layout_config.fields_metadata[id]?.label?.color || undefined
+                        }}
+                        className={cn(
+                          "text-[10px] font-black tracking-wider",
+                          !config.layout_config.fields_metadata[id]?.label?.font && "uppercase"
+                        )}
+                      >
+                        {config.layout_config.fields_metadata[id]?.label?.text || getFieldName(id)}
+                      </span>
                       <Trash2
                         className="w-3.5 h-3.5 cursor-pointer hover:text-red-300 transition-colors"
                         onClick={(e) => { e.stopPropagation(); toggleField(id, 'filter_fields'); }}
@@ -819,15 +878,16 @@ function StepLayout({ config, setConfig, models }: any) {
             </div>
           )}
 
+          {/* ZONA: GRID */}
           <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <h4 className="text-[9px] font-black uppercase text-emerald-600 tracking-[0.3em]">Zona 02: Listagem (Grid/Tabela)</h4>
+                <h4 className="text-[9px] font-black uppercase text-emerald-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_02')}: {t('wizard.layout.zones.grid')}</h4>
                 <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg w-fit">
                   {[
-                    { id: 'list', label: 'Tabela' },
-                    { id: 'card', label: 'Cards' },
-                    { id: 'both', label: 'Ambos' }
+                    { id: 'list', label: t('wizard.layout.display_options.list') },
+                    { id: 'card', label: t('wizard.layout.display_options.card') },
+                    { id: 'both', label: t('wizard.layout.display_options.both') }
                   ].map(opt => (
                     <button
                       key={opt.id}
@@ -847,46 +907,19 @@ function StepLayout({ config, setConfig, models }: any) {
                   ))}
                 </div>
               </div>
-              <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.grid_fields.length} campos</span>
+              <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.grid_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
             </div>
 
-            {config.layout_config.display_type === 'both' && (
-              <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800/50">
-                <h4 className="text-[8px] font-black uppercase text-neutral-400 tracking-[0.2em]">Padrão de Entrada</h4>
-                <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg w-fit">
-                  {[
-                    { id: 'list', label: 'Lista' },
-                    { id: 'card', label: 'Cards' }
-                  ].map(opt => (
-                    <button
-                      key={opt.id}
-                      onClick={() => setConfig({
-                        ...config,
-                        layout_config: { ...config.layout_config, default_view: opt.id }
-                      })}
-                      className={cn(
-                        "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all",
-                        (config.layout_config.default_view || 'list') === opt.id
-                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                          : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
             <div className="min-h-[100px] p-4 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[1.5rem]">
               {config.layout_config.grid_fields.length === 0 ? (
-                <div className="h-full flex items-center justify-center italic text-xs text-neutral-400 font-medium">Selecione campos para exibir na tabela de resultados...</div>
+                <div className="h-full flex items-center justify-center italic text-xs text-neutral-400 font-medium">{t('wizard.layout.subtitle')}</div>
               ) : (
                 <div className="w-full overflow-hidden rounded-[1.2rem] border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm">
                   <table className="w-full text-[10px] text-left">
                     <thead className="bg-neutral-50 dark:bg-neutral-800/50 font-black uppercase text-neutral-400 tracking-wider">
                       <tr>
-                        <th className="px-4 py-3">Campo</th>
-                        <th className="px-4 py-3 w-10 text-center">Ação</th>
+                        <th className="px-4 py-3">{t('wizard.layout.table.field')}</th>
+                        <th className="px-4 py-3 w-10 text-center">{t('wizard.layout.table.action')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -894,7 +927,16 @@ function StepLayout({ config, setConfig, models }: any) {
                         <tr key={id} className="group hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
                           <td
                             onClick={() => { setEditingFieldId(id); setIsDrawerOpen(true); }}
-                            className="px-4 py-2.5 font-bold text-neutral-700 dark:text-neutral-200"
+                            style={{
+                              fontFamily: config.layout_config.fields_metadata[id]?.label?.font,
+                              fontSize: config.layout_config.fields_metadata[id]?.label?.size,
+                              color: config.layout_config.fields_metadata[id]?.label?.color || undefined
+                            }}
+                            className={cn(
+                              "px-4 py-2.5 font-bold",
+                              !config.layout_config.fields_metadata[id]?.label?.color && "text-neutral-700 dark:text-neutral-200",
+                              !config.layout_config.fields_metadata[id]?.label?.font && "capitalize"
+                            )}
                           >
                             {config.layout_config.fields_metadata[id]?.label?.text || getFieldName(id)}
                           </td>
@@ -916,12 +958,12 @@ function StepLayout({ config, setConfig, models }: any) {
           {config.logic_type.includes('cadastro') && (
             <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
               <div className="flex items-center justify-between">
-                <h4 className="text-[9px] font-black uppercase text-amber-600 tracking-[0.3em]">Zona 03: Formulário de Edição</h4>
-                <span className="px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.form_fields.length} campos</span>
+                <h4 className="text-[9px] font-black uppercase text-amber-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_03')}: {t('wizard.layout.zones.form')}</h4>
+                <span className="px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.form_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
               </div>
               <div className="min-h-[100px] p-4 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[1.5rem]">
                 {config.layout_config.form_fields.length === 0 ? (
-                  <div className="h-full flex items-center justify-center italic text-xs text-neutral-400 font-medium">Quais campos poderão ser preenchidos pelo usuário?</div>
+                  <div className="h-full flex items-center justify-center italic text-xs text-neutral-400 font-medium">{t('wizard.layout.subtitle')}</div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4 w-full">
                     {config.layout_config.form_fields.map((id: string) => (
@@ -931,10 +973,21 @@ function StepLayout({ config, setConfig, models }: any) {
                         className="p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex items-center justify-between group shadow-sm hover:border-indigo-500/30 transition-all cursor-pointer"
                       >
                         <div className="flex flex-col gap-1">
-                          <span className="text-[10px] font-black text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
+                          <span 
+                            style={{
+                              fontFamily: config.layout_config.fields_metadata[id]?.label?.font,
+                              fontSize: config.layout_config.fields_metadata[id]?.label?.size,
+                              color: config.layout_config.fields_metadata[id]?.label?.color || undefined
+                            }}
+                            className={cn(
+                              "text-[10px] font-black",
+                              !config.layout_config.fields_metadata[id]?.label?.color && "text-neutral-800 dark:text-neutral-200",
+                              !config.layout_config.fields_metadata[id]?.label?.font && "uppercase tracking-wider"
+                            )}
+                          >
                             {config.layout_config.fields_metadata[id]?.label?.text || getFieldName(id)}
                           </span>
-                          <span className="text-[8px] font-black text-amber-500 uppercase tracking-[0.2em]">Input Text</span>
+                          <span className="text-[8px] font-black text-amber-500 uppercase tracking-[0.2em]">{t('wizard.layout.zones.form')} Input</span>
                         </div>
                         <button onClick={() => toggleField(id, 'form_fields')} className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-500 rounded-lg text-neutral-400 transition-all">
                           <Trash2 className="w-4 h-4" />
@@ -946,14 +999,13 @@ function StepLayout({ config, setConfig, models }: any) {
               </div>
             </div>
           )}
-
         </div>
       </div>
 
       <Drawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
-        title={`Propriedades: ${editingFieldId ? getFieldName(editingFieldId) : ''}`}
+        title={`${t('wizard.layout.drawer.title')}: ${editingFieldId ? getFieldName(editingFieldId) : ''}`}
       >
         {currentFieldMeta && (
           <div className="space-y-10 pb-20">
@@ -961,12 +1013,12 @@ function StepLayout({ config, setConfig, models }: any) {
             <div className="space-y-6">
               <div className="flex items-center gap-3">
                 <div className="w-1 h-4 bg-indigo-600 rounded-full"></div>
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Configuração do Label</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.label_config')}</h3>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Texto de Exibição</label>
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.display_text')}</label>
                   <input
                     type="text"
                     value={currentFieldMeta.label.text}
@@ -977,20 +1029,20 @@ function StepLayout({ config, setConfig, models }: any) {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Fonte</label>
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.font')}</label>
                     <select
                       value={currentFieldMeta.label.font}
                       onChange={e => updateMeta('label', 'font', e.target.value)}
                       className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
                     >
-                      <option value="Inter">Inter (Padrão)</option>
+                      <option value="Inter">{t('wizard.layout.drawer.font_default')}</option>
                       <option value="Roboto">Roboto</option>
                       <option value="Outfit">Outfit</option>
                       <option value="JetBrains Mono">Mono</option>
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Tamanho</label>
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.size')}</label>
                     <input
                       type="text"
                       placeholder="Ex: 12px"
@@ -1002,7 +1054,7 @@ function StepLayout({ config, setConfig, models }: any) {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Cor do Texto</label>
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.text_color')}</label>
                   <div className="flex gap-2 items-center">
                     <input
                       type="color"
@@ -1014,7 +1066,7 @@ function StepLayout({ config, setConfig, models }: any) {
                       type="text"
                       value={currentFieldMeta.label.color}
                       onChange={e => updateMeta('label', 'color', e.target.value)}
-                      placeholder="#HEX"
+                      placeholder={t('wizard.layout.drawer.text_color')}
                       className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-mono font-bold outline-none"
                     />
                   </div>
@@ -1026,26 +1078,26 @@ function StepLayout({ config, setConfig, models }: any) {
             <div className="space-y-6 pt-6 border-t border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-3">
                 <div className="w-1 h-4 bg-emerald-600 rounded-full"></div>
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Configuração do Conteúdo</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.content_config')}</h3>
               </div>
 
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Fonte</label>
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.font')}</label>
                     <select
                       value={currentFieldMeta.content.font}
                       onChange={e => updateMeta('content', 'font', e.target.value)}
                       className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
                     >
-                      <option value="Inter">Inter (Padrão)</option>
+                      <option value="Inter">{t('wizard.layout.drawer.font_default')}</option>
                       <option value="Roboto">Roboto</option>
                       <option value="Outfit">Outfit</option>
                       <option value="JetBrains Mono">Mono</option>
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Tamanho</label>
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.size')}</label>
                     <input
                       type="text"
                       placeholder="Ex: 14px"
@@ -1057,7 +1109,7 @@ function StepLayout({ config, setConfig, models }: any) {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Cor do Conteúdo</label>
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.content_color')}</label>
                   <div className="flex gap-2 items-center">
                     <input
                       type="color"
@@ -1069,14 +1121,14 @@ function StepLayout({ config, setConfig, models }: any) {
                       type="text"
                       value={currentFieldMeta.content.color}
                       onChange={e => updateMeta('content', 'color', e.target.value)}
-                      placeholder="#HEX"
+                      placeholder={t('wizard.layout.drawer.content_color')}
                       className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-mono font-bold outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Máscara (Input Mask)</label>
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.mask')}</label>
                   <input
                     type="text"
                     placeholder="Ex: 000.000.000-00"
@@ -1094,8 +1146,8 @@ function StepLayout({ config, setConfig, models }: any) {
                     {currentFieldMeta.content.required && <Plus className="w-3 h-3 rotate-45" />}
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase tracking-widest">Campo Obrigatório</span>
-                    <span className="text-[8px] text-neutral-400 font-medium">Validar se o campo está preenchido</span>
+                    <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase tracking-widest">{t('wizard.layout.drawer.required')}</span>
+                    <span className="text-[8px] text-neutral-400 font-medium">{t('wizard.layout.drawer.required_desc')}</span>
                   </div>
                 </div>
               </div>
@@ -1108,94 +1160,112 @@ function StepLayout({ config, setConfig, models }: any) {
 }
 
 function StepActions({ config, setConfig }: any) {
+  const { t } = useI18n()
+  const strategies = [
+    { 
+      id: 'dynamic', 
+      title: t('wizard.actions.dynamic_query.title'), 
+      desc: t('wizard.actions.dynamic_query.desc'), 
+      icon: Wand2 
+    },
+    { 
+      id: 'raw', 
+      title: t('wizard.actions.raw_sql.title'), 
+      desc: t('wizard.actions.raw_sql.desc'), 
+      icon: Terminal 
+    }
+  ]
+
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
       <div className="space-y-2">
-        <h2 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white">Query & Ações Finais</h2>
-        <p className="text-neutral-500 dark:text-neutral-400 text-sm">Configure como os dados serão recuperados e quais botões estarão disponíveis.</p>
+        <h2 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white">{t('wizard.actions.title')}</h2>
+        <p className="text-neutral-500 dark:text-neutral-400 text-sm">{t('wizard.actions.subtitle')}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-8">
-          <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Estratégia de Dados</h4>
-          <div className="space-y-6">
+      <div className="space-y-6">
+        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.interface_buttons')}</label>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {config.buttons_config.map((btn: any) => (
             <button
-              onClick={() => setConfig({ ...config, query_type: 'dynamic' })}
+              key={btn.id}
+              onClick={() => {
+                setConfig({
+                  ...config,
+                  buttons_config: config.buttons_config.map((b: any) => 
+                    b.id === btn.id ? { ...b, visible: !b.visible } : b
+                  )
+                })
+              }}
               className={cn(
-                "w-full p-4 rounded-[1.5rem] border-2 text-left transition-all",
-                config.query_type === 'dynamic' ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10' : 'border-neutral-100 dark:border-neutral-800/50 bg-white dark:bg-neutral-900/30'
+                "p-4 rounded-[1.5rem] border transition-all flex flex-col items-center gap-3",
+                btn.visible 
+                  ? "bg-white dark:bg-neutral-950 border-indigo-600 shadow-lg shadow-indigo-500/5" 
+                  : "bg-neutral-50/50 dark:bg-neutral-900/30 border-neutral-200 dark:border-neutral-800 opacity-50"
               )}
             >
-              <h5 className="font-bold text-sm mb-1">Query Dinâmica (Automática)</h5>
-              <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium leading-relaxed">O MetaBuilder gera os Joins e Selects baseado nas relações das tabelas.</p>
-            </button>
-            <button
-              onClick={() => setConfig({ ...config, query_type: 'custom' })}
-              className={cn(
-                "w-full p-4 rounded-[1.5rem] border-2 text-left transition-all",
-                config.query_type === 'custom' ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10' : 'border-neutral-100 dark:border-neutral-800/50 bg-white dark:bg-neutral-900/30'
-              )}
-            >
-              <h5 className="font-bold text-sm mb-1">Query Manual (SQL)</h5>
-              <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium leading-relaxed">Você escreve o SQL puro para maior controle e performance.</p>
-            </button>
-          </div>
-
-          {config.query_type === 'custom' && (
-            <div className="space-y-4 animate-in fade-in zoom-in-95 duration-500">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-2">SQL Query Editor</label>
-              <textarea
-                value={config.custom_query}
-                onChange={e => setConfig({ ...config, custom_query: e.target.value })}
-                className="w-full h-40 bg-neutral-900 text-indigo-400 font-mono text-[10px] p-5 rounded-[1.5rem] border border-neutral-800 outline-none focus:border-indigo-600 transition-all shadow-2xl"
-                placeholder="SELECT * FROM table1 JOIN table2..."
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-8">
-          <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Botões da Interface</h4>
-          <div className="space-y-4">
-            {config.buttons_config.map((btn: any) => (
-              <div key={btn.id} className="flex items-center justify-between p-3 bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-[1.2rem] shadow-sm hover:border-indigo-500/30 transition-all">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-neutral-500">
-                    {btn.id === 'search' && <Search className="w-4 h-4" />}
-                    {btn.id === 'clear' && <RefreshCcw className="w-4 h-4" />}
-                    {btn.id === 'view' && <Search className="w-4 h-4" />}
-                    {btn.id === 'add' && <Plus className="w-4 h-4" />}
-                    {btn.id === 'edit' && <Pencil className="w-4 h-4" />}
-                    {btn.id === 'delete' && <Trash2 className="w-4 h-4" />}
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-xs font-bold text-neutral-900 dark:text-white">{btn.label}</span>
-                    <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">{btn.id}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div
-                    onClick={() => {
-                      const newButtons = config.buttons_config.map((b: any) =>
-                        b.id === btn.id ? { ...b, visible: !b.visible } : b
-                      )
-                      setConfig({ ...config, buttons_config: newButtons })
-                    }}
-                    className={cn(
-                      "w-12 h-6 rounded-full relative transition-all cursor-pointer",
-                      btn.visible ? 'bg-indigo-600' : 'bg-neutral-200 dark:bg-neutral-800'
-                    )}
-                  >
-                    <div className={cn(
-                      "absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-md",
-                      btn.visible ? 'left-7' : 'left-1'
-                    )} />
-                  </div>
-                </div>
+              <div className={cn(
+                "w-10 h-10 rounded-2xl flex items-center justify-center",
+                btn.visible ? "bg-indigo-500 text-white" : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500"
+              )}>
+                {btn.icon === 'search' && <Search className="w-5 h-5" />}
+                {btn.icon === 'refresh-ccw' && <RefreshCcw className="w-5 h-5" />}
+                {btn.icon === 'plus' && <Plus className="w-5 h-5" />}
+                {btn.icon === 'pencil' && <Pencil className="w-5 h-5" />}
+                {btn.icon === 'trash' && <Trash2 className="w-5 h-5" />}
               </div>
+              <span className="text-[10px] font-black uppercase tracking-widest">{t(btn.labelKey) || btn.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="h-px bg-neutral-100 dark:bg-neutral-800/50 w-full"></div>
+
+      <div className="space-y-6">
+        <div className="space-y-4">
+          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.data_strategy')}</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {strategies.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => setConfig({ ...config, query_type: s.id })}
+                className={cn(
+                  "p-6 rounded-[2rem] border-2 text-left transition-all relative group overflow-hidden",
+                  config.query_type === s.id
+                    ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10'
+                    : 'border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/30'
+                )}
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className={cn(
+                    "p-3 rounded-2xl transition-all",
+                    config.query_type === s.id ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
+                  )}>
+                    <s.icon className="w-5 h-5" />
+                  </div>
+                  {config.query_type === s.id && <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center text-white"><CheckCircle2 className="w-4 h-4" /></div>}
+                </div>
+                <h4 className="font-bold text-base text-neutral-900 dark:text-white">{s.title}</h4>
+                <p className="text-[10px] text-neutral-400 mt-2 leading-relaxed">{s.desc}</p>
+              </button>
             ))}
           </div>
         </div>
+
+        {config.query_type === 'raw' && (
+          <div className="space-y-4 animate-in zoom-in-95 duration-500 mt-6">
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.sql_editor')}</label>
+            <div className="p-6 bg-neutral-900 rounded-[2rem] border border-neutral-800 shadow-2xl">
+              <textarea
+                value={config.raw_sql}
+                onChange={e => setConfig({ ...config, raw_sql: e.target.value })}
+                className="w-full h-40 bg-transparent text-indigo-400 font-mono text-sm outline-none resize-none"
+                placeholder="SELECT * FROM table JOIN ..."
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

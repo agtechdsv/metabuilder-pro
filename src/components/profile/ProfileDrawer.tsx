@@ -152,7 +152,7 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
     setIsUploading(true)
     try {
       await resetAvatar()
-      window.location.reload()
+      router.refresh()
     } catch (err) {
       console.error('Erro reset:', err)
     } finally {

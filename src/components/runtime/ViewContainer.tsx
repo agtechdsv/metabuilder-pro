@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { LayoutGrid, List, Search, Filter, Plus, Pencil, Trash2, RefreshCcw, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import DynamicGrid from '@/components/DynamicGrid'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface ViewContainerProps {
   projectId: string
@@ -157,7 +158,7 @@ export default function ViewContainer({
             setIsLoading(prev => {
               if (prev) {
                 console.warn(`[MetaBuilder] Timeout na requisição ${queryId}`)
-                setError('O Agente CLI não respondeu a tempo. Verifique a conexão.')
+                setError(t('dashboard.projects.studio.config.saved_error') || 'Timeout')
                 return false
               }
               return prev
@@ -187,34 +188,7 @@ export default function ViewContainer({
     fetchData({}, true) // Limpar força o refresh
   }
 
-  const t = {
-    pt: {
-      search: 'Buscar registros...',
-      filters: 'Filtros',
-      mapped: 'colunas mapeadas',
-      actions: 'Ações',
-      edit: 'Editar',
-      delete: 'Excluir',
-      no_results: 'Nenhum registro encontrado.'
-    },
-    en: {
-      search: 'Search records...',
-      filters: 'Filters',
-      mapped: 'columns mapped',
-      actions: 'Actions',
-      edit: 'Edit',
-      delete: 'Delete',
-      no_results: 'No records found.'
-    }
-  }[locale as 'pt' | 'en'] || {
-    search: 'Search records...',
-    filters: 'Filters',
-    mapped: 'columns mapped',
-    actions: 'Actions',
-    edit: 'Edit',
-    delete: 'Delete',
-    no_results: 'No records found.'
-  }
+  const { t } = useI18n()
 
   // Lógica de Ordenação Local
   const sortedData = [...data].sort((a, b) => {
@@ -325,7 +299,7 @@ export default function ViewContainer({
                     <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" />
                     <input 
                       type="text" 
-                      placeholder={`Filtrar por ${field.display_name}...`}
+                      placeholder={t('runtime.filter_placeholder').replace('{field}', field.display_name)}
                       value={filterValues[field.db_column_name] || ''}
                       onChange={e => setFilterValues({ ...filterValues, [field.db_column_name]: e.target.value })}
                       style={{
@@ -350,7 +324,7 @@ export default function ViewContainer({
                   className="h-[42px] px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2"
                 >
                   <Search className="w-4 h-4" />
-                  Pesquisar
+                  {t('runtime.search')}
                 </button>
               )}
 
@@ -360,7 +334,7 @@ export default function ViewContainer({
                   className="h-[42px] px-6 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-sm flex items-center gap-2"
                 >
                   <RefreshCcw className="w-4 h-4" />
-                  Limpar
+                  {t('runtime.clear')}
                 </button>
               )}
             </div>
@@ -372,8 +346,8 @@ export default function ViewContainer({
         <div className="py-20 flex flex-col items-center justify-center gap-4 text-neutral-400 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
           <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
           <div className="text-center">
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-200">Conectando ao banco...</h3>
-            <p className="text-sm">Buscando dados via Túnel Seguro.</p>
+            <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-200">{t('runtime.connecting')}</h3>
+            <p className="text-sm">{t('runtime.fetching_tunnel')}</p>
           </div>
         </div>
       ) : error ? (
@@ -397,7 +371,7 @@ export default function ViewContainer({
                     >
                       <div className="flex items-center gap-2">
                         {field.display_name}
-                        {field.is_primary_key && <span className="text-indigo-500" title="Chave Primária">🔑</span>}
+                        {field.is_primary_key && <span className="text-indigo-500" title={t('runtime.primary_key')}>🔑</span>}
                         <div className="opacity-0 group-hover/th:opacity-100 transition-opacity">
                           {sortConfig?.key === field.db_column_name ? (
                             sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
@@ -407,7 +381,7 @@ export default function ViewContainer({
                     </th>
                   ))}
                   <th className="sticky right-0 z-30 bg-neutral-100 dark:bg-neutral-900 px-4 py-4 text-right text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.15em] border-l border-neutral-200/50 dark:border-neutral-700/50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)]">
-                    {t.actions}
+                    {t('runtime.actions')}
                   </th>
                 </tr>
               </thead>
@@ -427,7 +401,7 @@ export default function ViewContainer({
           {/* Paginador Footer */}
           <div className="px-8 py-4 bg-neutral-50/50 dark:bg-neutral-900/50 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
             <div className="flex items-center gap-4 text-[11px] font-bold text-neutral-500 uppercase tracking-widest">
-              <span className="opacity-60">Exibir</span>
+              <span className="opacity-60">{t('runtime.show')}</span>
               <select 
                 value={itemsPerPage}
                 onChange={e => {
@@ -436,13 +410,13 @@ export default function ViewContainer({
                 }}
                 className="bg-transparent border-none outline-none text-indigo-600 focus:ring-0 cursor-pointer"
               >
-                <option value={10}>10 linhas</option>
-                <option value={15}>15 linhas</option>
-                <option value={25}>25 linhas</option>
-                <option value={50}>50 linhas</option>
+                <option value={10}>10 {t('runtime.rows')}</option>
+                <option value={15}>15 {t('runtime.rows')}</option>
+                <option value={25}>25 {t('runtime.rows')}</option>
+                <option value={50}>50 {t('runtime.rows')}</option>
               </select>
               <span className="mx-2 opacity-20">|</span>
-              <span className="opacity-60">Total: <span className="text-neutral-900 dark:text-white">{data.length}</span></span>
+              <span className="opacity-60">{t('runtime.total')}: <span className="text-neutral-900 dark:text-white">{data.length}</span></span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -498,7 +472,7 @@ export default function ViewContainer({
               <ChevronLeft className="w-5 h-5" />
             </button>
             <div className="bg-white dark:bg-neutral-900 px-6 py-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-[11px] font-black uppercase tracking-[0.2em] text-neutral-400">
-              Página <span className="text-indigo-600">{currentPage}</span> de {totalPages || 1}
+              {t('runtime.page')} <span className="text-indigo-600">{currentPage}</span> {t('runtime.of')} {totalPages || 1}
             </div>
             <button 
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}

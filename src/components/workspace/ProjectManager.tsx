@@ -180,7 +180,7 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
         <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
           <div className="space-y-3 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 rounded-full border border-indigo-500/20 text-[10px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest">
-              Ambiente de Trabalho Ativo
+              {t('dashboard.active_environment')}
             </div>
             <h2 className="text-3xl font-black tracking-tight leading-tight text-neutral-900 dark:text-white">
               {t('dashboard.projects.title')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-indigo-400 dark:from-white dark:to-neutral-500">{workspaceName}</span>
@@ -326,7 +326,7 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
                 type="text"
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value, slug: selectedProject ? formData.slug : e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-') })}
-                placeholder="Ex: CRM Vendas"
+                placeholder={t('dashboard.projects.name_placeholder')}
                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white"
               />
             </div>
@@ -352,7 +352,7 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
               <textarea
                 value={formData.description}
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Ex: Sistema de gestão de vendas e funil."
+                placeholder={t('dashboard.projects.desc_placeholder')}
                 rows={3}
                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white resize-none"
               />
@@ -363,11 +363,11 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
               <textarea
                 value={formData.icon}
                 onChange={e => setFormData({ ...formData, icon: e.target.value })}
-                placeholder="Cole aqui o código <svg>..."
+                placeholder={t('dashboard.projects.icon_placeholder')}
                 rows={4}
                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-mono focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white resize-none"
               />
-              <p className="text-[10px] text-neutral-500 dark:text-neutral-600">Insira um código SVG para personalizar o ícone do projeto.</p>
+              <p className="text-[10px] text-neutral-500 dark:text-neutral-600">{t('dashboard.projects.icon_hint')}</p>
             </div>
 
             {selectedProject && (

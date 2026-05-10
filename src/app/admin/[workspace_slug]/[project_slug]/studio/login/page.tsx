@@ -29,16 +29,16 @@ export default function LoginVisualConfigurator() {
   const [project, setProject] = useState<any>(null)
   
   const [uiConfig, setUiConfig] = useState({
-    title: 'Acessar Conta',
-    subtitle: 'Insira suas credenciais para continuar.',
+    title: t('dashboard.projects.studio.auth.default_welcome_title'),
+    subtitle: t('dashboard.projects.studio.auth.default_welcome_desc'),
     button_color: '#4f46e5',
-    button_text: 'Entrar',
+    button_text: t('dashboard.projects.studio.auth.default_button_text'),
     theme: 'dark',
     iconesvg: '',
-    usertitle: 'Email',
-    userplaceholder: 'Digite seu email',
-    passtitle: 'Senha',
-    passplaceholder: 'Digite sua senha'
+    usertitle: t('dashboard.projects.studio.auth.default_email_label'),
+    userplaceholder: t('dashboard.projects.studio.auth.default_email_placeholder'),
+    passtitle: t('dashboard.projects.studio.auth.default_pass_label'),
+    passplaceholder: t('dashboard.projects.studio.auth.default_pass_placeholder')
   })
 
   const supabase = createClient()
@@ -90,7 +90,7 @@ export default function LoginVisualConfigurator() {
       setTimeout(() => setIsSuccess(false), 2500)
     } catch (err: any) {
       console.error(err)
-      toast('Erro ao salvar: ' + err.message, 'error')
+      toast(t('common.error_save') + err.message, 'error')
     } finally {
       setIsSaving(false)
     }
@@ -160,7 +160,7 @@ export default function LoginVisualConfigurator() {
                   value={uiConfig.title}
                   onChange={e => setUiConfig({...uiConfig, title: e.target.value})}
                   className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white"
-                  placeholder="Ex: Área do Cliente"
+                  placeholder={t('dashboard.projects.studio.login.page_title_placeholder') || 'Ex: Área do Cliente'}
                 />
               </div>
               <div className="space-y-2">
@@ -178,7 +178,7 @@ export default function LoginVisualConfigurator() {
                   value={uiConfig.iconesvg}
                   onChange={e => setUiConfig({...uiConfig, iconesvg: e.target.value})}
                   className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-xs font-mono focus:border-indigo-500 outline-none transition-all h-24 text-neutral-900 dark:text-white"
-                  placeholder="Cole o código SVG aqui..."
+                  placeholder={t('dashboard.projects.icon_placeholder')}
                 />
               </div>
             </div>
