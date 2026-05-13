@@ -3,13 +3,16 @@
 import { motion } from 'framer-motion'
 import { Palette, ImageIcon, Type, Layout, ArrowLeft, MousePointer2 } from 'lucide-react'
 import Link from 'next/link'
+import { useI18n } from '@/i18n/I18nContext'
 
 export default function BrandingFeaturePage() {
+  const { t } = useI18n()
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-20 space-y-24">
       <Link href="/" className="inline-flex items-center gap-2 text-neutral-500 hover:text-indigo-600 transition-colors mb-8 group">
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-        Voltar para a Home
+        {t('common.back_to_home')}
       </Link>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
@@ -18,11 +21,11 @@ export default function BrandingFeaturePage() {
             <Palette className="w-8 h-8" />
           </div>
           <h1 className="text-5xl md:text-7xl font-black tracking-tighter dark:text-white leading-[1]">
-            Sua Marca, <br/>
-            <span className="text-purple-500">Suas Regras.</span>
+            {t('marketing_v2.features.branding.title').split('.')[0]}. <br/>
+            <span className="text-purple-500">{t('marketing_v2.features.branding.title').split('.')[1]}</span>
           </h1>
           <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
-            O MetaBuilderPRO é totalmente whitelabel. Cada projeto pode ter sua própria identidade visual completa, gerenciada dinamicamente pelo nosso Identity Engine.
+            {t('marketing_v2.features.branding.desc')}
           </p>
         </div>
         
@@ -54,7 +57,7 @@ export default function BrandingFeaturePage() {
                       <div className="h-8 w-full bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-100 dark:border-neutral-800"></div>
                    </div>
                    <button className="w-full py-4 bg-purple-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-purple-500/20">
-                      Primary Action Button
+                      {t('marketing_v2.features.branding.primary_action')}
                    </button>
                 </div>
 
@@ -70,37 +73,37 @@ export default function BrandingFeaturePage() {
       <section className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="p-10 rounded-[2.5rem] bg-neutral-100/50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 space-y-4">
            <ImageIcon className="w-6 h-6 text-purple-500" />
-           <h3 className="font-bold dark:text-white">Logos e Favicons</h3>
+           <h3 className="font-bold dark:text-white">{t('marketing_v2.features.branding.item1_title')}</h3>
            <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
-             Cada projeto injeta automaticamente seu próprio favicon e logo em tempo real, garantindo que o usuário final nunca veja o MetaBuilderPRO.
+             {t('marketing_v2.features.branding.item1_desc')}
            </p>
         </div>
         <div className="p-10 rounded-[2.5rem] bg-neutral-100/50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 space-y-4">
            <Type className="w-6 h-6 text-purple-500" />
-           <h3 className="font-bold dark:text-white">Tipografia Customizada</h3>
+           <h3 className="font-bold dark:text-white">{t('marketing_v2.features.branding.item2_title')}</h3>
            <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
-             Defina famílias de fontes específicas para títulos e corpo de texto que reflitam a personalidade da marca do seu cliente.
+             {t('marketing_v2.features.branding.item2_desc')}
            </p>
         </div>
         <div className="p-10 rounded-[2.5rem] bg-neutral-100/50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 space-y-4">
            <Layout className="w-6 h-6 text-purple-500" />
-           <h3 className="font-bold dark:text-white">Temas Adaptativos</h3>
+           <h3 className="font-bold dark:text-white">{t('marketing_v2.features.branding.item3_title')}</h3>
            <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
-             Suporte nativo a Light e Dark mode com cores primárias ajustáveis para cada preferência de projeto.
+             {t('marketing_v2.features.branding.item3_desc')}
            </p>
         </div>
       </section>
 
       <div className="text-center py-20 border-y border-neutral-100 dark:border-neutral-800">
          <h2 className="text-3xl md:text-5xl font-black dark:text-white tracking-tighter mb-6">
-           Não somos um template. <br/>
-           Somos uma <span className="text-purple-600">plataforma de branding.</span>
+           {t('marketing_v2.features.branding.footer_title')} <br/>
+           {t('marketing_v2.features.branding.footer_subtitle')}
          </h2>
          <p className="text-neutral-500 dark:text-neutral-400 max-w-2xl mx-auto text-lg mb-10">
-            Dê aos seus clientes a sensação de que você construiu um sistema exclusivo do zero para eles.
+            {t('marketing_v2.hero.desc')}
          </p>
          <button className="px-12 py-5 bg-purple-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-purple-700 transition-all shadow-2xl shadow-purple-500/20">
-            Começar Configuração Visual
+            {t('marketing_v2.features.branding.footer_cta')}
          </button>
       </div>
     </div>

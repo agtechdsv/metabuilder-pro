@@ -1,15 +1,18 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Database, Link2, ShieldAlert, Cpu, ArrowLeft, Terminal } from 'lucide-react'
+import { Database, Link2, ShieldAlert, Cpu, ArrowLeft, Terminal, Share2, Shield, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
+import { useI18n } from '@/i18n/I18nContext'
 
 export default function IntegrationFeaturePage() {
+  const { t } = useI18n()
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-20 space-y-24">
       <Link href="/" className="inline-flex items-center gap-2 text-neutral-500 hover:text-indigo-600 transition-colors mb-8 group">
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-        Voltar para a Home
+        {t('common.back_to_home')}
       </Link>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
@@ -18,11 +21,11 @@ export default function IntegrationFeaturePage() {
             <Database className="w-8 h-8" />
           </div>
           <h1 className="text-5xl md:text-7xl font-black tracking-tighter dark:text-white leading-[1]">
-            Onde seus <br/>
-            <span className="text-blue-500">dados já estão.</span>
+            {t('marketing_v2.features.integration.title').split('.')[0]}. <br/>
+            <span className="text-blue-500">{t('marketing_v2.features.integration.title').split('.')[1]}</span>
           </h1>
           <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
-            Não gaste recursos em migrações arriscadas. O MetaBuilderPRO atua como uma camada de interface ultra-moderna sobre seus bancos de dados SQL existentes.
+            {t('marketing_v2.features.integration.desc')}
           </p>
         </div>
         
@@ -53,16 +56,16 @@ export default function IntegrationFeaturePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
         <div className="p-12 rounded-[2.5rem] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 space-y-6">
           <Link2 className="w-10 h-10 text-indigo-500" />
-          <h3 className="text-2xl font-black dark:text-white tracking-tight">Preserve sua Lógica</h3>
+          <h3 className="text-2xl font-black dark:text-white tracking-tight">{t('marketing_v2.features.integration.item1_title')}</h3>
           <p className="text-neutral-500 dark:text-neutral-400 leading-relaxed">
-            Continue usando suas Procedures, Triggers e Views. O MetaBuilderPRO respeita a inteligência que você já construiu no banco de dados.
+            {t('marketing_v2.features.integration.item1_desc')}
           </p>
         </div>
         <div className="p-12 rounded-[2.5rem] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 space-y-6">
           <ShieldAlert className="w-10 h-10 text-red-500" />
-          <h3 className="text-2xl font-black dark:text-white tracking-tight">Segurança Transparente</h3>
+          <h3 className="text-2xl font-black dark:text-white tracking-tight">{t('marketing_v2.features.integration.item2_title')}</h3>
           <p className="text-neutral-500 dark:text-neutral-400 leading-relaxed">
-            Seus dados nunca saem da sua infraestrutura. O MetaBuilderPRO apenas gerencia como eles são exibidos e editados através de conexões seguras.
+            {t('marketing_v2.features.integration.item2_desc')}
           </p>
         </div>
       </div>
@@ -76,7 +79,7 @@ export default function IntegrationFeaturePage() {
             <span className="text-2xl font-black">Oracle</span>
             <span className="text-2xl font-black">SQLite</span>
          </div>
-         <p className="text-neutral-400 font-medium">Compatível com os principais motores de banco de dados do mercado.</p>
+         <p className="text-neutral-400 font-medium">{t('marketing_v2.features.integration.supported_engines')}</p>
       </section>
     </div>
   )

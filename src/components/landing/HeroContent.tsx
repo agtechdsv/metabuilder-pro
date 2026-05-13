@@ -36,22 +36,22 @@ export function HeroContent({ user }: HeroContentProps) {
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 dark:text-indigo-400 text-[11px] uppercase tracking-widest font-black"
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em]"
         >
-          <Zap className="w-4 h-4 fill-indigo-500" />
-          A Engine de Software do Futuro
+          <Zap className="w-3.5 h-3.5 fill-current" />
+          {t('marketing_v2.hero.badge')}
         </motion.div>
         
         <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-[1.1] text-black dark:text-white transition-colors">
-          Construa Apps <br />
+          {t('marketing_v2.hero.title')} <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500">
-            Enterprise
+            {t('marketing_v2.hero.enterprise')}
           </span> <br/>
-          em Segundos.
+          {t('marketing_v2.hero.subtitle')}
         </h1>
-        
-        <p className="text-xl md:text-2xl text-neutral-600 dark:text-neutral-400 leading-relaxed max-w-3xl font-medium">
-          Acelere sua entrega técnica com o MetaBuilderPRO. Conecte bancos legados, use IA para gerar interfaces premium e gerencie múltiplos projetos em uma única plataforma whitelabel.
+
+        <p className="text-lg md:text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-2xl font-medium">
+          {t('marketing_v2.hero.desc')}
         </p>
 
         <HeroActions user={user} />
@@ -67,14 +67,14 @@ export function HeroContent({ user }: HeroContentProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10 pointer-events-none"></div>
         <img 
           src="/metabuilder_showcase_mockup.png" 
-          alt="MetaBuilderPRO Interface" 
+          alt={t('marketing_v2.home.bento_title')} 
           className="w-full h-full object-cover"
         />
         {/* Decorative elements over image */}
         <div className="absolute top-10 left-10 z-20 flex gap-4">
            <div className="px-4 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-             Runtime Online
+             {t('common.runtime_online')}
            </div>
         </div>
       </motion.div>
