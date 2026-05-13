@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { X, AlertCircle } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface ModalProps {
   isOpen: boolean
@@ -9,9 +10,10 @@ interface ModalProps {
   title: string
   description?: string
   children: React.ReactNode
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl'
 }
 
-export function Modal({ isOpen, onClose, title, description, children }: ModalProps) {
+export function Modal({ isOpen, onClose, title, description, children, size = 'md' }: ModalProps) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -37,7 +39,15 @@ export function Modal({ isOpen, onClose, title, description, children }: ModalPr
       />
 
       {/* Modal Content */}
-      <div className="relative bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+      <div className={cn(
+        "relative bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 w-full rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300",
+        size === 'sm' && "max-w-sm",
+        size === 'md' && "max-w-md",
+        size === 'lg' && "max-w-lg",
+        size === 'xl' && "max-w-xl",
+        size === '2xl' && "max-w-2xl",
+        size === '4xl' && "max-w-4xl"
+      )}>
         <div className="p-8 space-y-6">
           <div className="flex justify-between items-start">
             <div className="space-y-1">

@@ -1,7 +1,7 @@
-import { Drawer } from '@/components/ui/Drawer'
+import { Modal } from '@/components/ui/Modal'
 import RecordForm from './RecordForm'
 
-interface RecordDrawerProps {
+interface RecordModalProps {
   isOpen: boolean
   onClose: () => void
   mode: 'create' | 'edit' | 'view'
@@ -17,7 +17,7 @@ interface RecordDrawerProps {
   onAddDetail?: (tableName: string) => void
 }
 
-export default function RecordDrawer({ 
+export default function RecordModal({ 
   isOpen, 
   onClose, 
   mode, 
@@ -31,9 +31,14 @@ export default function RecordDrawer({
   onEditDetail,
   onDeleteDetail,
   onAddDetail
-}: RecordDrawerProps) {
+}: RecordModalProps) {
   return (
-    <Drawer isOpen={isOpen} onClose={onClose} title="">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title=""
+      size={logicType === 'master_detail' ? '2xl' : 'xl'}
+    >
       <RecordForm 
         mode={mode}
         fields={fields}
@@ -48,6 +53,6 @@ export default function RecordDrawer({
         onDeleteDetail={onDeleteDetail}
         onAddDetail={onAddDetail}
       />
-    </Drawer>
+    </Modal>
   )
 }

@@ -21,6 +21,7 @@ export default function DynamicCardList({
   onDelete
 }: DynamicCardListProps) {
   const canView = buttonsConfig.find((b: any) => b.id === 'view')?.visible === true
+  const canEdit = buttonsConfig.find((b: any) => b.id === 'edit')?.visible === true
   const canDelete = buttonsConfig.find((b: any) => b.id === 'delete')?.visible === true
 
   const getNestedValue = (obj: any, path: string) => {
@@ -82,19 +83,21 @@ export default function DynamicCardList({
               const isFirst = fIdx === 0
               const displayVal = typeof rawVal === 'object' && rawVal !== null ? JSON.stringify(rawVal) : String(rawVal ?? '')
 
+              const zoneConfig = field.config?.grid_config || field.config || {}
+
               if (isFirst) {
                 return (
                   <h4 
                     key={field.id} 
                     title={displayVal}
                     style={{
-                      fontFamily: field.config?.content?.font,
-                      fontSize: field.config?.content?.size,
-                      color: field.config?.content?.color,
+                      fontFamily: zoneConfig.content?.font,
+                      fontSize: zoneConfig.content?.size,
+                      color: zoneConfig.content?.color,
                     }}
                     className={cn(
                       "text-sm font-bold line-clamp-1 leading-tight mb-2 min-h-[1.2rem] cursor-help",
-                      !field.config?.content?.color && "text-neutral-900 dark:text-white"
+                      !zoneConfig.content?.color && "text-neutral-900 dark:text-white"
                     )}
                   >
                     {displayVal}
@@ -106,28 +109,28 @@ export default function DynamicCardList({
                 <div key={field.id} className="flex flex-col gap-0.5">
                   <span 
                     style={{
-                      fontFamily: field.config?.label?.font,
-                      fontSize: field.config?.label?.size,
-                      color: field.config?.label?.color,
+                      fontFamily: zoneConfig.label?.font,
+                      fontSize: zoneConfig.label?.size,
+                      color: zoneConfig.label?.color,
                     }}
                     className={cn(
                       "text-[9px] font-black tracking-widest ml-1",
-                      !field.config?.label?.color && "text-neutral-400",
-                      !field.config?.label?.font && "uppercase"
+                      !zoneConfig.label?.color && "text-neutral-400",
+                      !zoneConfig.label?.font && "uppercase"
                     )}
                   >
-                    {field.display_name}
+                    {zoneConfig.label?.text || field.display_name}
                   </span>
                   <div 
                     title={displayVal}
                     style={{
-                      fontFamily: field.config?.content?.font,
-                      fontSize: field.config?.content?.size,
-                      color: field.config?.content?.color,
+                      fontFamily: zoneConfig.content?.font,
+                      fontSize: zoneConfig.content?.size,
+                      color: zoneConfig.content?.color,
                     }}
                     className={cn(
                       "text-xs line-clamp-2 min-h-[2rem] cursor-help",
-                      !field.config?.content?.color && "text-neutral-600 dark:text-neutral-400"
+                      !zoneConfig.content?.color && "text-neutral-600 dark:text-neutral-400"
                     )}
                   >
                     {displayVal}

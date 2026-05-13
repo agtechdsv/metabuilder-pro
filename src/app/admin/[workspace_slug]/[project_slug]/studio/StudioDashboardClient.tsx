@@ -19,6 +19,7 @@ import {
   Shield,
   ExternalLink
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useState, useTransition, useEffect } from 'react'
 import Link from 'next/link'
 import { HeaderActions } from '@/components/layout/HeaderActions'
@@ -31,6 +32,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
+import { MenuBuilder } from '@/components/studio/MenuBuilder'
 
 interface StudioDashboardClientProps {
   workspace: any
@@ -59,12 +61,13 @@ export function StudioDashboardClient({
   const { toast } = useToast()
   const [isPending, startTransition] = useTransition()
 
-  const [viewMode, setViewMode] = useState<'list' | 'builder'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'navigation'>('list')
   const [viewToEdit, setViewToEdit] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [viewToDelete, setViewToDelete] = useState<any>(null)
 
   const refreshData = () => {
+    setViewToEdit(null)
     setViewMode('list')
     router.refresh()
   }
@@ -110,6 +113,24 @@ export function StudioDashboardClient({
     }
   }
 
+  const handleSaveNavigation = async (menu: any[]) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ 
+          navigation: menu 
+        })
+        .eq('id', project.id)
+
+      if (error) throw error
+
+      toast('Menu de navegação salvo com sucesso!', 'success')
+      router.refresh()
+    } catch (err: any) {
+      toast('Erro ao salvar menu: ' + err.message, 'error')
+    }
+  }
+
   return (
     <>
       <Breadcrumbs
@@ -121,7 +142,7 @@ export function StudioDashboardClient({
 
       <main className="w-full px-10 pt-4 pb-4 space-y-4 flex-grow">
 
-        {viewMode === 'list' && (
+        {viewMode !== 'builder' && (
           <div className="flex items-center justify-between mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 rotate-3">
@@ -135,9 +156,33 @@ export function StudioDashboardClient({
               </div>
             </div>
 
+            <div className="flex items-center gap-4 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+               <button 
+                onClick={() => setViewMode('list')}
+                className={cn(
+                  "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                  viewMode === 'list' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
+                )}
+               >
+                 Casos de Uso
+               </button>
+               <button 
+                onClick={() => setViewMode('navigation')}
+                className={cn(
+                  "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                  viewMode === 'navigation' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
+                )}
+               >
+                 Navegação
+               </button>
+            </div>
+
             <div className="flex items-center gap-4">
               <button
-                onClick={() => setViewMode('builder')}
+                onClick={() => {
+                  setViewToEdit(null)
+                  setViewMode('builder')
+                }}
                 className="flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95"
               >
                 <Plus className="w-4 h-4" /> {t('dashboard.projects.studio.new_use_case')}
@@ -207,6 +252,14 @@ export function StudioDashboardClient({
             }}
             onSaveSuccess={refreshData}
           />
+        ) : viewMode === 'navigation' ? (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <MenuBuilder 
+              project={project}
+              views={views}
+              onSave={handleSaveNavigation}
+            />
+          </div>
         ) : (
           <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800/50 pb-4">

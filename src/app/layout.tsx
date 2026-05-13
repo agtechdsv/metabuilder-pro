@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   title: "MetaBuilderPRO | The Dynamic Metadata Engine",
   description: "Generate dynamic database-driven CRUD applications without physical file generation.",
 };
-
+import { preinit } from "react-dom";
 import { Providers } from "@/components/Providers";
 import { cookies } from "next/headers";
 
@@ -27,6 +27,9 @@ export default async function RootLayout({
   children: React.ReactNode;
   modal: React.ReactNode;
 }>) {
+  // Oficial React 19 API to inject scripts into the head without triggering component tree warnings
+  preinit("/theme-init.js", { as: "script" });
+
   const cookieStore = await cookies();
   const locale = cookieStore.get("app-language")?.value || "pt";
 
@@ -36,6 +39,7 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head />
       <body className="min-h-full flex flex-col bg-white dark:bg-black text-black dark:text-white transition-colors duration-300">
         <Providers initialLocale={locale as any}>
           {children}

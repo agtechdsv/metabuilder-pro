@@ -1,8 +1,5 @@
 {
-  "common": {
-    "cancel": "Cancel",
-    "confirm": "Confirm"
-  },
+
   "agtech": {
     "title": "The engineering behind MetaBuilderPRO",
     "lab": "AGTECH INNOVATION LAB",
@@ -72,11 +69,13 @@
     "profile": "My Profile",
     "logout": "Sign Out",
     "cancel": "Cancel",
+    "confirm": "Confirm",
     "save": "Save Changes",
     "loading": "Loading...",
     "success": "Saved successfully!",
     "enterprise": "Enterprise",
-    "logged_in_as": "Logged User"
+    "logged_in_as": "Logged User",
+    "all": "All"
   },
   "hero": {
     "badge": "Next-Gen Metadata Engine",
@@ -263,6 +262,7 @@
           "crud_table": "CRUD Table",
           "kanban_soon": "Kanban (Soon)",
           "preview_view": "Preview Screen",
+          "configure_view": "Edit Record",
           "db_fields": "Database Fields",
           "db_fields_desc": "Customize labels and visibility for fields in table {table}.",
           "fields_detected": "fields detected",
@@ -366,7 +366,11 @@
       "new_item": "New Item",
       "record_id": "Record #{id}",
       "input_placeholder": "Enter value for {field}..."
-    }
+    },
+    "master_details": {
+      "main_data": "Main Data"
+    },
+    "back_to_list": "Back to List"
   },
   "wizard": {
     "title": "Use Case Builder",
@@ -427,12 +431,20 @@
       "select_table": "Select Table...",
       "select_field": "Select Field...",
       "add_relationship": "Add Relationship",
+      "mindmap": {
+        "config_title": "Mind Map Configuration",
+        "central_field": "Central Field (Root Node)",
+        "select_central": "Select central field...",
+        "central_desc": "This field will be the root of your mind map. The fields selected in Zone 02 will form the next levels."
+      },
       "zones": {
         "filter": "Filter",
         "grid": "Grid",
         "form": "Form",
         "kanban_card": "Card Fields",
         "card": "Card",
+        "mindmap_nodes": "Map Fields (Levels)",
+        "node": "Node",
         "zone_01": "Zone 01",
         "zone_02": "Zone 02",
         "zone_03": "Zone 03"

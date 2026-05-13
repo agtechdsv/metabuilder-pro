@@ -16,7 +16,12 @@ import {
   Layout,
   Type,
   Image as ImageIcon,
-  Zap
+  Zap,
+  Search,
+  Mail,
+  MoreHorizontal,
+  UserPlus,
+  Trash2
 } from 'lucide-react'
 import { Navbar } from '@/components/layout/Navbar'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
@@ -46,7 +51,8 @@ export default function AuthSettingsPage() {
     db_password_column: '',
     db_password_hash_type: 'bcrypt',
     ldap_server_url: '',
-    ldap_base_dn: ''
+    ldap_base_dn: '',
+    allow_signup: false
   })
   
   const [visualConfig, setVisualConfig] = useState({
@@ -103,9 +109,15 @@ export default function AuthSettingsPage() {
           .single()
 
         if (config) {
-          setAuthConfig(config)
-          if (config.visual_config) {
-            setVisualConfig(config.visual_config)
+          setAuthConfig({
+            ...config,
+            allow_signup: config.ui_config?.allow_signup || false
+          })
+          if (config.ui_config) {
+            setVisualConfig(prev => ({
+              ...prev,
+              ...config.ui_config
+            }))
           }
         }
 
@@ -145,8 +157,17 @@ export default function AuthSettingsPage() {
         .from('project_auth_config')
         .upsert({
           project_id: project.id,
-          ...authConfig,
-          visual_config: visualConfig
+          auth_type: authConfig.auth_type,
+          db_table_name: authConfig.db_table_name,
+          db_email_column: authConfig.db_email_column,
+          db_password_column: authConfig.db_password_column,
+          db_password_hash_type: authConfig.db_password_hash_type,
+          ldap_server_url: authConfig.ldap_server_url,
+          ldap_base_dn: authConfig.ldap_base_dn,
+          ui_config: {
+            ...visualConfig,
+            allow_signup: authConfig.allow_signup
+          }
         })
 
       if (error) throw error
@@ -180,7 +201,7 @@ export default function AuthSettingsPage() {
       <main className="w-full px-10 pt-4 pb-4 space-y-6 flex-grow">
         
         <div className="sticky top-16 z-30 bg-white/80 dark:bg-[#080808]/80 backdrop-blur-xl -mx-10 px-10 py-4 border-b border-neutral-200 dark:border-neutral-800 space-y-4">
-          <section className="space-y-3">
+          <section className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-indigo-600 rounded-xl text-white shadow-lg shadow-indigo-500/20">
                 <ShieldCheck className="w-6 h-6" />
@@ -192,6 +213,25 @@ export default function AuthSettingsPage() {
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{t('dashboard.projects.studio.auth.strategy_desc')}</p>
               </div>
             </div>
+
+            <button 
+              onClick={handleSave}
+              disabled={isSaving}
+              className={`flex items-center gap-2 px-6 h-12 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${
+                isSuccess 
+                  ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' 
+                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50'
+              }`}
+            >
+              {isSaving ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : isSuccess ? (
+                <ShieldCheck className="w-4 h-4" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {isSaving ? t('common.saving') : isSuccess ? t('common.saved') : t('common.save')}
+            </button>
           </section>
 
           {/* Tabs */}
@@ -208,9 +248,14 @@ export default function AuthSettingsPage() {
             >
               <Palette className="w-4 h-4" /> {t('dashboard.projects.studio.auth.visual_tab')}
             </button>
+            <button 
+              onClick={() => setActiveTab('users' as any)}
+              className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'users' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
+            >
+              <Users className="w-4 h-4" /> {t('dashboard.projects.studio.auth.users_tab') || 'Usuários'}
+            </button>
           </div>
         </div>
-
         {activeTab === 'strategy' ? (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -248,7 +293,25 @@ export default function AuthSettingsPage() {
               </button>
             </div>
 
-            <div className="bg-neutral-50 dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 p-6 rounded-[2rem]">
+            <div className="bg-neutral-50 dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 p-6 rounded-[2rem] space-y-6">
+              <div className="flex items-center justify-between p-4 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-600">
+                    <UserPlus className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.allow_signup')}</h4>
+                    <p className="text-[10px] text-neutral-500 dark:text-neutral-400">{t('dashboard.projects.studio.auth.allow_signup_desc')}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setAuthConfig({...authConfig, allow_signup: !authConfig.allow_signup})}
+                  className={`w-12 h-6 rounded-full transition-all relative ${authConfig.allow_signup ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-800'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${authConfig.allow_signup ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+
               {authConfig.auth_type === 'managed' && (
                 <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
                   <ShieldCheck className="w-20 h-20 text-indigo-500/30" />
@@ -284,7 +347,7 @@ export default function AuthSettingsPage() {
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
                       >
                         <option value="">Selecione o campo...</option>
-                        {fields.map((f: any) => (
+                        {models.find(m => m.db_table_name === authConfig.db_table_name)?.ui_components?.filter((c:any) => c.zone === 'grid').map((f: any) => (
                           <option key={f.id} value={f.db_column_name}>{f.db_column_name}</option>
                         ))}
                       </select>
@@ -297,7 +360,7 @@ export default function AuthSettingsPage() {
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
                       >
                         <option value="">Selecione o campo...</option>
-                        {fields.map((f: any) => (
+                        {models.find(m => m.db_table_name === authConfig.db_table_name)?.ui_components?.filter((c:any) => c.zone === 'grid').map((f: any) => (
                           <option key={f.id} value={f.db_column_name}>{f.db_column_name}</option>
                         ))}
                       </select>
@@ -348,7 +411,7 @@ export default function AuthSettingsPage() {
               )}
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'visual' ? (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Coluna de Configurações (8/12) */}
             <div className="lg:col-span-7 space-y-4 pb-20">
@@ -368,7 +431,7 @@ export default function AuthSettingsPage() {
                       <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.logo_url')}</label>
                       <input 
                         type="text"
-                        value={visualConfig.logo_url}
+                        value={visualConfig.logo_url || ''}
                         onChange={e => setVisualConfig({...visualConfig, logo_url: e.target.value})}
                         placeholder="https://..."
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none text-sm font-bold"
@@ -378,7 +441,7 @@ export default function AuthSettingsPage() {
                       <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.icon_svg')}</label>
                       <input 
                         type="text"
-                        value={visualConfig.icon_svg}
+                        value={visualConfig.icon_svg || ''}
                         onChange={e => setVisualConfig({...visualConfig, icon_svg: e.target.value})}
                         placeholder={t('dashboard.projects.icon_placeholder')}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none text-[10px] font-mono"
@@ -402,7 +465,7 @@ export default function AuthSettingsPage() {
                     <div className="space-y-3">
                       <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.default_theme')}</label>
                       <select 
-                        value={visualConfig.theme}
+                        value={visualConfig.theme || 'light'}
                         onChange={e => setVisualConfig({...visualConfig, theme: e.target.value})}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
                       >
@@ -429,7 +492,7 @@ export default function AuthSettingsPage() {
                     <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.title_label')}</label>
                     <input 
                       type="text"
-                      value={visualConfig.welcome_title}
+                      value={visualConfig.welcome_title || ''}
                       onChange={e => setVisualConfig({...visualConfig, welcome_title: e.target.value})}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none text-sm font-bold"
                     />
@@ -437,7 +500,7 @@ export default function AuthSettingsPage() {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.desc_label')}</label>
                     <textarea 
-                      value={visualConfig.welcome_desc}
+                      value={visualConfig.welcome_desc || ''}
                       onChange={e => setVisualConfig({...visualConfig, welcome_desc: e.target.value})}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none text-sm font-bold min-h-[60px] resize-none"
                     />
@@ -460,7 +523,7 @@ export default function AuthSettingsPage() {
                       <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.email_label')}</label>
                       <input 
                         type="text"
-                        value={visualConfig.email_label}
+                        value={visualConfig.email_label || ''}
                         onChange={e => setVisualConfig({...visualConfig, email_label: e.target.value})}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none text-sm font-bold"
                       />
@@ -469,7 +532,7 @@ export default function AuthSettingsPage() {
                       <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.email_placeholder')}</label>
                       <input 
                         type="text"
-                        value={visualConfig.email_placeholder}
+                        value={visualConfig.email_placeholder || ''}
                         onChange={e => setVisualConfig({...visualConfig, email_placeholder: e.target.value})}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none text-sm font-bold"
                       />
@@ -480,7 +543,7 @@ export default function AuthSettingsPage() {
                       <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.pass_label')}</label>
                       <input 
                         type="text"
-                        value={visualConfig.password_label}
+                        value={visualConfig.password_label || ''}
                         onChange={e => setVisualConfig({...visualConfig, password_label: e.target.value})}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none text-sm font-bold"
                       />
@@ -489,7 +552,7 @@ export default function AuthSettingsPage() {
                       <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.pass_placeholder')}</label>
                       <input 
                         type="text"
-                        value={visualConfig.password_placeholder}
+                        value={visualConfig.password_placeholder || ''}
                         onChange={e => setVisualConfig({...visualConfig, password_placeholder: e.target.value})}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none text-sm font-bold"
                       />
@@ -500,7 +563,7 @@ export default function AuthSettingsPage() {
                   <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.help_message')}</label>
                   <input 
                     type="text"
-                    value={visualConfig.login_tooltip}
+                    value={visualConfig.login_tooltip || ''}
                     onChange={e => setVisualConfig({...visualConfig, login_tooltip: e.target.value})}
                     className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none text-sm font-bold"
                   />
@@ -521,7 +584,7 @@ export default function AuthSettingsPage() {
                     <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Texto do Botão</label>
                     <input 
                       type="text"
-                      value={visualConfig.button_text}
+                      value={visualConfig.button_text || ''}
                       onChange={e => setVisualConfig({...visualConfig, button_text: e.target.value})}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none text-sm font-bold"
                     />
@@ -636,7 +699,71 @@ export default function AuthSettingsPage() {
               </div>
             </div>
           </div>
+        ) : (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+            <div className="flex items-center justify-between">
+              <div className="relative w-full max-w-md">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <input 
+                  type="text" 
+                  placeholder="Buscar usuários..."
+                  className="w-full h-12 pl-12 pr-4 rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 outline-none focus:border-indigo-500 text-sm font-medium transition-all"
+                />
+              </div>
+              <button className="flex items-center gap-2 px-6 h-12 bg-indigo-600 text-white rounded-2xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+                <UserPlus className="w-4 h-4" />
+                Novo Usuário
+              </button>
+            </div>
+
+            <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-sm">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Usuário</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">E-mail</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Status</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                  <tr className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 font-bold">
+                          JD
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 transition-colors">João Dantas</p>
+                          <p className="text-[10px] text-neutral-500">Registrado em 12/05/2026</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                      joao.dantas@empresa.com
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="px-3 py-1 bg-green-500/10 text-green-500 text-[9px] font-black uppercase tracking-widest rounded-full border border-green-500/20">
+                        Ativo
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button className="p-2 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition-colors">
+                        <MoreHorizontal className="w-4 h-4 text-neutral-400" />
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              
+              <div className="p-12 text-center border-t border-neutral-100 dark:border-neutral-800">
+                <Users className="w-12 h-12 text-neutral-200 dark:text-neutral-800 mx-auto mb-4" />
+                <p className="text-sm font-medium text-neutral-500">Seus usuários aparecerão aqui assim que se cadastrarem ou forem convidados.</p>
+              </div>
+            </div>
+          </div>
         )}
+
       </main>
     </>
   )

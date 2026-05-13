@@ -33,7 +33,8 @@ import {
   Wand2,
   Terminal,
   RotateCcw,
-  Link
+  Link,
+  Layers
 } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
@@ -42,6 +43,25 @@ import { useToast } from '@/components/ui/Toast'
 import { cn } from '@/lib/utils'
 import { Drawer } from '@/components/ui/Drawer'
 import { Modal } from '@/components/ui/Modal'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+  verticalListSortingStrategy,
+  rectSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface UseCaseBuilderWizardProps {
   initialData?: any
@@ -61,6 +81,10 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [models, setModels] = useState<any[]>([])
+
+  // Helpers de modo edição
+  const isEditMode = !!initialData
+  const viewId = initialData?.id
 
   // Popula os dados iniciais se estiver em modo edição
   const [isInitialized, setIsInitialized] = useState(false)
@@ -84,6 +108,10 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
           display_type: initialData.layout_config?.display_type || 'list',
           default_view: initialData.layout_config?.default_view || 'list',
           kanban_group_field: initialData.layout_config?.kanban_group_field || '',
+          master_model_id: initialData.layout_config?.master_model_id || '',
+          detail_display_mode: initialData.layout_config?.detail_display_mode || 'tabs',
+          mindmap_central_field: initialData.layout_config?.mindmap_central_field || '',
+          action_interface_type: initialData.layout_config?.action_interface_type || 'drawer',
           joins: initialData.layout_config?.joins || [],
           fields_metadata: initialData.layout_config?.fields_metadata || {}
         },
@@ -126,6 +154,10 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       display_type: 'list',
       default_view: 'list',
       kanban_group_field: '',
+      master_model_id: '',
+      detail_display_mode: 'tabs',
+      mindmap_central_field: '',
+      action_interface_type: 'drawer',
       fields_metadata: {} as Record<string, any>
     },
     buttons_config: [
@@ -137,7 +169,6 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       { id: 'delete', label: t('runtime.delete'), labelKey: 'runtime.delete', icon: 'trash', action_key: 'delete', visible: true }
     ]
   })
-
   // Sugestão automática de botões baseado na lógica selecionada
   useEffect(() => {
     // Se estivermos em modo edição (initialData presente), NUNCA rodamos a sugestão automática
@@ -229,63 +260,56 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
     { id: 4, title: t('wizard.steps.actions'), icon: <MousePointer2 className="w-4 h-4" /> }
   ]
 
-  const nextStep = () => {
-    // Validação Passo 2: Tabelas
-    if (currentStep === 2 && config.selected_models.length === 0) {
-      toast(t('dashboard.projects.studio.config.db_fields_desc').replace('{table}', ''), 'error')
-      return
-    }
-
-    // Validação Passo 3: Layout & Campos
-    if (currentStep === 3) {
+  const isStepValid = (step: number) => {
+    if (step === 1) return !!(config.name && config.slug)
+    if (step === 2) return config.selected_models.length > 0
+    if (step === 3) {
       const { logic_type, has_arguments, layout_config } = config
       const hasGrid = layout_config.grid_fields.length > 0
       const hasFilter = layout_config.filter_fields.length > 0
       const hasForm = layout_config.form_fields.length > 0
 
       if (logic_type === 'pesquisa') {
-        if (!hasGrid) {
-          toast(t('wizard.buttons.validation.grid_required'), 'error')
-          return
-        }
-        if (has_arguments && !hasFilter) {
-          toast(t('wizard.buttons.validation.filter_required'), 'error')
-          return
-        }
+        return hasGrid && (!has_arguments || hasFilter)
       }
-
       if (logic_type === 'cadastro') {
-        if (!hasForm) {
-          toast(t('wizard.buttons.validation.form_required'), 'error')
-          return
-        }
+        return hasForm
       }
-
       if (logic_type === 'pesquisa_cadastro') {
-        if (!hasGrid) {
-          toast(t('wizard.buttons.validation.grid_required'), 'error')
-          return
-        }
-        if (!hasForm) {
-          toast(t('wizard.buttons.validation.form_required'), 'error')
-          return
-        }
-        if (has_arguments && !hasFilter) {
-          toast(t('wizard.buttons.validation.filter_required'), 'error')
-          return
-        }
+        return hasGrid && hasForm && (!has_arguments || hasFilter)
+      }
+      if (logic_type === 'kanban') {
+        return !!layout_config.kanban_group_field && hasGrid
+      }
+      if (logic_type === 'mapa_mental') {
+        return !!(layout_config as any).mindmap_central_field && hasGrid
+      }
+      if (logic_type === 'master_detail') {
+        return config.selected_models.length >= 2 && !!(layout_config as any).master_model_id && hasGrid
+      }
+      return true
+    }
+    return true
+  }
+
+  const nextStep = () => {
+    if (!isStepValid(currentStep)) {
+      if (currentStep === 1) toast(t('wizard.buttons.validation.name_slug_required'), 'error')
+      if (currentStep === 2 && config.selected_models.length < (config.logic_type === 'master_detail' ? 2 : 1)) {
+        toast(config.logic_type === 'master_detail' ? "Mestre-Detalhe requer pelo menos 2 tabelas." : t('dashboard.projects.studio.config.db_fields_desc').replace('{table}', ''), 'error')
+        return
       }
 
-      if (logic_type === 'kanban') {
-        if (!config.layout_config.kanban_group_field) {
-          toast("Please select a grouping field for the Kanban columns.", 'error')
-          return
-        }
-        if (!hasGrid) {
-          toast(t('wizard.buttons.validation.grid_required'), 'error')
-          return
-        }
+      if (currentStep === 3) {
+        const { logic_type, has_arguments, layout_config } = config
+        if (!layout_config.grid_fields.length && logic_type !== 'cadastro') toast(t('wizard.buttons.validation.grid_required'), 'error')
+        if (!layout_config.form_fields.length && (logic_type === 'cadastro' || logic_type === 'pesquisa_cadastro' || logic_type === 'master_detail')) toast(t('wizard.buttons.validation.form_required'), 'error')
+        if (has_arguments && !layout_config.filter_fields.length && logic_type.includes('pesquisa')) toast(t('wizard.buttons.validation.filter_required'), 'error')
+        if (logic_type === 'kanban' && !layout_config.kanban_group_field) toast("Please select a grouping field for Kanban.", 'error')
+        if (logic_type === 'mapa_mental' && !(layout_config as any).mindmap_central_field) toast("Please select a central field for Mind Map.", 'error')
+        if (logic_type === 'master_detail' && !(layout_config as any).master_model_id) toast("Please select the Master Table.", 'error')
       }
+      return
     }
 
     setCurrentStep(prev => Math.min(prev + 1, steps.length))
@@ -315,11 +339,12 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
         layout_config: { ...config.layout_config, is_active: true },
         buttons_config: config.buttons_config,
         view_type: 'advanced_use_case',
-        model_id: config.selected_models[0] // Define a primeira tabela como modelo principal
+        model_id: config.selected_models[0], // Define a primeira tabela como modelo principal
+        layout_config: { ...config.layout_config, is_active: true }
       }
 
-      // Verifica se já existe uma view com este slug neste projeto
-      const { data: existingView } = await supabase
+      // Tenta encontrar por slug primeiro
+      const { data: existingBySlug } = await supabase
         .from('ui_views')
         .select('id')
         .eq('project_id', projectData?.id)
@@ -329,11 +354,15 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       let view: any
       let viewError: any
 
-      if (existingView) {
+      // Agora só atualizamos se o ID for explicitamente passado (modo edição) 
+      // ou se o Slug já existir. Não tentamos mais "adivinhar" pelo modelo para não sobrescrever telas diferentes.
+      const targetId = isEditMode ? viewId : existingBySlug?.id
+
+      if (targetId) {
         const { data, error } = await supabase
           .from('ui_views')
           .update(viewPayload)
-          .eq('id', existingView.id)
+          .eq('id', targetId)
           .select()
           .single()
         view = data
@@ -357,7 +386,11 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       const componentMap: Record<string, any> = {}
 
       const addOrUpdateComponent = (fid: string, zone: string) => {
-        const metadata = config.layout_config.fields_metadata[fid] || {}
+        // Tenta carregar a meta específica da zona ou fallback para global
+        const zoneMeta = config.layout_config.fields_metadata[`${zone}-${fid}`]
+        const globalMeta = config.layout_config.fields_metadata[fid] || {}
+        const metadata = zoneMeta || globalMeta
+
         if (!componentMap[fid]) {
           componentMap[fid] = {
             view_id: view.id,
@@ -366,16 +399,21 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
             label: metadata.label?.text || '',
             config: {
               zones: [zone],
-              ...metadata // Inclui todas as propriedades (font, size, color, mask, required) no config
+              [`${zone}_config`]: metadata, // Armazena a config específica da zona
+              ...metadata // Inclui todas as propriedades no root para retrocompatibilidade
             }
           }
         } else {
           if (!componentMap[fid].config.zones.includes(zone)) {
             componentMap[fid].config.zones.push(zone)
           }
-          // Garante que o label e o config estejam atualizados mesmo se já existir
-          componentMap[fid].label = metadata.label?.text || componentMap[fid].label
-          componentMap[fid].config = { ...componentMap[fid].config, ...metadata }
+          // Adiciona a config específica da zona ao componente existente
+          componentMap[fid].config[`${zone}_config`] = metadata
+          
+          // Se for a zona de formulário, ela tende a ditar o label principal
+          if (zone === 'form' && metadata.label?.text) {
+             componentMap[fid].label = metadata.label.text
+          }
         }
       }
 
@@ -506,7 +544,9 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
               "flex items-center gap-2 px-8 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl",
               currentStep === steps.length
                 ? "text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                : "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-neutral-900/10 dark:shadow-white/5"
+                : !isStepValid(currentStep)
+                  ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed opacity-50"
+                  : "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-neutral-900/10 dark:shadow-white/5"
             )}
           >
             {currentStep === steps.length ? (
@@ -535,6 +575,7 @@ function StepLogic({ config, setConfig }: any) {
     { id: 'cadastro', title: t('wizard.logic.types.cadastro.title'), desc: t('wizard.logic.types.cadastro.desc'), icon: Layout },
     { id: 'mapa_mental', title: t('wizard.logic.types.mapa_mental.title'), desc: t('wizard.logic.types.mapa_mental.desc'), icon: Share2 },
     { id: 'kanban', title: t('wizard.logic.types.kanban.title'), desc: t('wizard.logic.types.kanban.desc'), icon: Columns },
+    { id: 'master_detail', title: 'Mestre-Detalhe', desc: 'Explorador relacional profundo com abas e agrupamentos de dados.', icon: Layers },
     { id: 'personalizado', title: t('wizard.logic.types.personalizado.title'), desc: t('wizard.logic.types.personalizado.desc'), icon: Settings }
   ]
 
@@ -610,7 +651,7 @@ function StepLogic({ config, setConfig }: any) {
           </div>
         </div>
 
-        {config.logic_type.includes('pesquisa') && (
+        {(config.logic_type.includes('pesquisa') || config.logic_type === 'kanban') && (
           <div className="flex items-center gap-4 p-6 bg-white dark:bg-neutral-950/50 rounded-2xl border border-neutral-200 dark:border-neutral-800 group cursor-pointer hover:border-indigo-500/30 transition-all" onClick={() => setConfig({ ...config, has_arguments: !config.has_arguments })}>
             <div className={cn(
               "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
@@ -682,8 +723,46 @@ function StepTables({ config, setConfig, models }: any) {
 function StepLayout({ config, setConfig, models }: any) {
   const { t } = useI18n()
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null)
+  const [editingFieldZone, setEditingFieldZone] = useState<string | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+
+  // Sensores e Handlers para Drag & Drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const activeIdStr = String(active.id)
+    const overIdStr = String(over.id)
+
+    const isFilter = activeIdStr.startsWith('filter-')
+    const isGrid = activeIdStr.startsWith('grid-')
+    const isForm = activeIdStr.startsWith('form-')
+
+    const listKey = isFilter ? 'filter_fields' : isGrid ? 'grid_fields' : 'form_fields'
+    
+    const activeId = activeIdStr.replace(/^(filter-|grid-|form-)/, '')
+    const overId = overIdStr.replace(/^(filter-|grid-|form-)/, '')
+
+    setConfig((prev: any) => {
+      const list = [...prev.layout_config[listKey as keyof typeof prev.layout_config] as string[]]
+      const oldIndex = list.indexOf(activeId)
+      const newIndex = list.indexOf(overId)
+      if (oldIndex === -1 || newIndex === -1) return prev
+      return {
+        ...prev,
+        layout_config: {
+          ...prev.layout_config,
+          [listKey]: arrayMove(list, oldIndex, newIndex)
+        }
+      }
+    })
+  }
 
   const selectedModelsData = models.filter((m: any) => config.selected_models.includes(m.id))
 
@@ -714,15 +793,29 @@ function StepLayout({ config, setConfig, models }: any) {
     return id
   }
 
-  const currentFieldMeta = editingFieldId ? (config.layout_config.fields_metadata[editingFieldId] || {
-    label: { text: getFieldName(editingFieldId).split('.').pop(), font: 'Inter', size: '9px', color: '' },
-    content: { font: 'Inter', size: '12px', color: '', mask: '', required: false }
-  }) : null
+  // Chave de metadados: tenta "zona-fieldId", senão usa apenas "fieldId" (fallback global)
+  const getFieldMeta = (fid: string, zone?: string | null) => {
+    const specificKey = zone ? `${zone}-${fid}` : null
+    const meta = (specificKey ? config.layout_config.fields_metadata[specificKey] : null) || config.layout_config.fields_metadata[fid]
+    
+    if (meta) return meta
 
-  const updateMeta = (section: 'label' | 'content', key: string, value: any) => {
+    return {
+      label: { text: getFieldName(fid).split('.').pop(), font: 'Inter', size: '9px', color: '' },
+      content: { font: 'Inter', size: '12px', color: '', mask: '', required: false },
+      component: { type: 'text', rows: 3, width: '100%', options_type: 'fixed', fixed_options: '', rel_table: '', rel_label: '', rel_value: '' }
+    }
+  }
+
+  const currentFieldMeta = editingFieldId ? getFieldMeta(editingFieldId, editingFieldZone) : null
+
+  const updateMeta = (section: 'label' | 'content' | 'component', key: string, value: any) => {
     if (!editingFieldId) return
     const newMeta = { ...currentFieldMeta }
     newMeta[section] = { ...newMeta[section], [key]: value }
+
+    // Salva sempre com o prefixo da zona para garantir independência
+    const metaKey = editingFieldZone ? `${editingFieldZone}-${editingFieldId}` : editingFieldId
 
     setConfig({
       ...config,
@@ -730,7 +823,7 @@ function StepLayout({ config, setConfig, models }: any) {
         ...config.layout_config,
         fields_metadata: {
           ...config.layout_config.fields_metadata,
-          [editingFieldId]: newMeta
+          [metaKey]: newMeta
         }
       }
     })
@@ -813,19 +906,17 @@ function StepLayout({ config, setConfig, models }: any) {
                         <span className="text-[9px] font-black font-mono text-neutral-400 bg-neutral-100 dark:bg-neutral-900 px-2 py-0.5 rounded-md">{f.data_type}</span>
                       </div>
                       <div className="flex gap-2">
-                        {config.logic_type !== 'kanban' && (
-                          <button
-                            disabled={!config.has_arguments || config.logic_type === 'cadastro'}
-                            onClick={() => toggleField(f.id, 'filter_fields')}
-                            className={cn(
-                              "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all",
-                              config.layout_config.filter_fields.includes(f.id) ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200',
-                              (!config.has_arguments || config.logic_type === 'cadastro') && "opacity-20 cursor-not-allowed grayscale"
-                            )}
-                          >
-                            {t('wizard.layout.zones.filter')}
-                          </button>
-                        )}
+                        <button
+                          disabled={!config.has_arguments || config.logic_type === 'cadastro'}
+                          onClick={() => toggleField(f.id, 'filter_fields')}
+                          className={cn(
+                            "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all",
+                            config.layout_config.filter_fields.includes(f.id) ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200',
+                            (!config.has_arguments || config.logic_type === 'cadastro') && "opacity-20 cursor-not-allowed grayscale"
+                          )}
+                        >
+                          {t('wizard.layout.zones.filter')}
+                        </button>
                         <button
                           onClick={() => toggleField(f.id, 'grid_fields')}
                           className={cn(
@@ -833,9 +924,9 @@ function StepLayout({ config, setConfig, models }: any) {
                             config.layout_config.grid_fields.includes(f.id) ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200'
                           )}
                         >
-                          {config.logic_type === 'kanban' ? t('wizard.layout.zones.card', 'Card') : t('wizard.layout.zones.grid')}
+                          {config.logic_type === 'kanban' ? t('wizard.layout.zones.card', 'Card') : config.logic_type === 'mapa_mental' ? t('wizard.layout.zones.node', 'Nó') : t('wizard.layout.zones.grid')}
                         </button>
-                        {config.logic_type !== 'kanban' && (
+                        {config.logic_type !== 'kanban' && config.logic_type !== 'mapa_mental' && (
                           <button
                             disabled={config.logic_type === 'pesquisa'}
                             onClick={() => toggleField(f.id, 'form_fields')}
@@ -857,7 +948,8 @@ function StepLayout({ config, setConfig, models }: any) {
           </div>
         </div>
 
-        <div className="md:col-span-3 space-y-6">
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <div className="md:col-span-3 space-y-6">
           {/* ZONA: KANBAN CONFIG */}
           {config.logic_type === 'kanban' && (
             <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
@@ -888,6 +980,105 @@ function StepLayout({ config, setConfig, models }: any) {
                   ))}
                 </select>
                 <p className="text-[10px] text-neutral-400 font-medium italic ml-1">This field will determine the Kanban columns (e.g., Status, Stage).</p>
+              </div>
+            </div>
+          )}
+
+          {/* ZONA: MASTER-DETAIL CONFIG */}
+          {config.logic_type === 'master_detail' && (
+            <div className="p-6 bg-slate-50/50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800 rounded-[2rem] space-y-6 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Master-Detail Configuration</h4>
+                  <p className="text-[10px] text-neutral-400 font-medium mt-1">Defina a hierarquia e o estilo de navegação dos dados.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Tabela Mestre (Root)</label>
+                  <select
+                    value={(config.layout_config as any).master_model_id || ''}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: { ...config.layout_config, master_model_id: e.target.value }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="">Selecione a tabela principal...</option>
+                    {selectedModelsData.map((m: any) => (
+                      <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Estilo dos Detalhes</label>
+                  <div className="flex p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
+                    <button
+                      onClick={() => setConfig({ ...config, layout_config: { ...config.layout_config, detail_display_mode: 'tabs' } })}
+                      className={cn(
+                        "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                        (config.layout_config as any).detail_display_mode !== 'sections' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600'
+                      )}
+                    >
+                      Abas
+                    </button>
+                    <button
+                      onClick={() => setConfig({ ...config, layout_config: { ...config.layout_config, detail_display_mode: 'sections' } })}
+                      className={cn(
+                        "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                        (config.layout_config as any).detail_display_mode === 'sections' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600'
+                      )}
+                    >
+                      Seções
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-indigo-500/5 rounded-2xl border border-indigo-500/10 flex gap-3 items-start">
+                <AlertCircle className="w-4 h-4 text-indigo-500 mt-0.5" />
+                <p className="text-[10px] text-indigo-600 dark:text-indigo-400 leading-relaxed">
+                  <strong>Dica:</strong> No estilo <strong>Abas</strong>, cada tabela detalhe será uma aba separada. No estilo <strong>Seções</strong>, os dados serão empilhados em grupos dentro do mesmo corpo de formulário.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ZONA: MIND MAP CONFIG */}
+          {config.logic_type === 'mapa_mental' && (
+            <div className="p-4 bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-[1.5rem] space-y-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-600 text-white rounded-xl shadow-lg shadow-purple-500/20">
+                    <Share2 className="w-4 h-4" />
+                  </div>
+                  <h4 className="text-[10px] font-black uppercase text-purple-600 tracking-[0.3em]">{t('wizard.layout.mindmap.config_title', 'Configuração do Mapa Mental')}</h4>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.mindmap.central_field', 'Campo Central (Nó Raiz)')}</label>
+                <select
+                  value={config.layout_config.mindmap_central_field || ''}
+                  onChange={e => setConfig((prev: any) => ({
+                    ...prev,
+                    layout_config: { ...prev.layout_config, mindmap_central_field: e.target.value }
+                  }))}
+                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-purple-600 outline-none transition-all shadow-sm text-sm font-bold"
+                >
+                  <option value="">{t('wizard.layout.mindmap.select_central', 'Selecione o campo central...')}</option>
+                  {selectedModelsData.flatMap((m: any) => m.fields).map((f: any) => (
+                    <option key={f.id} value={f.id}>
+                      {getFieldName(f.id)} ({f.data_type})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-neutral-400 font-medium italic ml-1">{t('wizard.layout.mindmap.central_desc', 'Este campo será a raiz do seu mapa mental. Os campos selecionados na Zona 02 formarão os próximos níveis na ordem definida.')}</p>
               </div>
             </div>
           )}
@@ -1006,7 +1197,7 @@ function StepLayout({ config, setConfig, models }: any) {
           )}
 
           {/* ZONA: FILTROS */}
-          {config.logic_type.includes('pesquisa') && (
+          {(config.logic_type.includes('pesquisa') || config.logic_type === 'kanban' || config.logic_type === 'mapa_mental' || config.logic_type === 'master_detail') && (
             <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
               <div className="flex items-center justify-between">
                 <h4 className="text-[9px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_01')}: {t('wizard.layout.zones.filter')}</h4>
@@ -1016,31 +1207,31 @@ function StepLayout({ config, setConfig, models }: any) {
                 {config.layout_config.filter_fields.length === 0 ? (
                   <p className="text-xs text-neutral-400 font-medium w-full text-center italic">{t('wizard.layout.subtitle')}</p>
                 ) : (
-                  config.layout_config.filter_fields.map((id: string) => (
-                    <div
-                      key={id}
-                      onClick={() => { setEditingFieldId(id); setIsDrawerOpen(true); }}
-                      className="flex items-center gap-3 px-4 py-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20 group cursor-pointer hover:bg-indigo-500 transition-all"
-                    >
-                      <span
-                        style={{
-                          fontFamily: config.layout_config.fields_metadata[id]?.label?.font,
-                          fontSize: config.layout_config.fields_metadata[id]?.label?.size,
-                          color: config.layout_config.fields_metadata[id]?.label?.color || undefined
-                        }}
-                        className={cn(
-                          "text-[10px] font-black tracking-wider",
-                          !config.layout_config.fields_metadata[id]?.label?.font && "uppercase"
-                        )}
+                  <SortableContext items={config.layout_config.filter_fields.map((id: string) => `filter-${id}`)} strategy={rectSortingStrategy}>
+                    {config.layout_config.filter_fields.map((id: string) => (
+                      <SortableFilterItem
+                        key={`filter-${id}`}
+                        id={`filter-${id}`}
+                        itemValue={id}
+                        toggleField={toggleField}
+                        onEdit={() => { setEditingFieldId(id); setEditingFieldZone('filter'); setIsDrawerOpen(true); }}
                       >
-                        {config.layout_config.fields_metadata[id]?.label?.text || getFieldName(id)}
-                      </span>
-                      <Trash2
-                        className="w-3.5 h-3.5 cursor-pointer hover:text-red-300 transition-colors"
-                        onClick={(e) => { e.stopPropagation(); toggleField(id, 'filter_fields'); }}
-                      />
-                    </div>
-                  ))
+                        <span
+                          style={{
+                            fontFamily: getFieldMeta(id, 'filter').label?.font,
+                            fontSize: getFieldMeta(id, 'filter').label?.size,
+                            color: getFieldMeta(id, 'filter').label?.color || undefined
+                          }}
+                          className={cn(
+                            "text-[10px] font-black tracking-wider",
+                            !getFieldMeta(id, 'filter').label?.font && "uppercase"
+                          )}
+                        >
+                          {getFieldMeta(id, 'filter').label?.text || getFieldName(id)}
+                        </span>
+                      </SortableFilterItem>
+                    ))}
+                  </SortableContext>
                 )}
               </div>
             </div>
@@ -1051,9 +1242,9 @@ function StepLayout({ config, setConfig, models }: any) {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <h4 className="text-[9px] font-black uppercase text-emerald-600 tracking-[0.3em]">
-                  {config.logic_type === 'kanban' ? t('wizard.layout.zones.kanban_card', 'Campos do Card') : `${t('wizard.layout.zones.zone_02')}: ${t('wizard.layout.zones.grid')}`}
+                  {config.logic_type === 'kanban' ? t('wizard.layout.zones.kanban_card', 'Campos do Card') : config.logic_type === 'mapa_mental' ? t('wizard.layout.zones.mindmap_nodes', 'Campos do Mapa (Níveis)') : `${t('wizard.layout.zones.zone_02')}: ${t('wizard.layout.zones.grid')}`}
                 </h4>
-                {config.logic_type !== 'kanban' && (
+                {config.logic_type !== 'kanban' && config.logic_type !== 'mapa_mental' && (
                   <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg w-fit">
                     {[
                       { id: 'list', label: t('wizard.layout.display_options.list') },
@@ -1094,32 +1285,33 @@ function StepLayout({ config, setConfig, models }: any) {
                         <th className="px-4 py-3 w-10 text-center">{t('wizard.layout.table.action')}</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                      {config.layout_config.grid_fields.map((id: string) => (
-                        <tr key={id} className="group hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
-                          <td
-                            onClick={() => { setEditingFieldId(id); setIsDrawerOpen(true); }}
-                            style={{
-                              fontFamily: config.layout_config.fields_metadata[id]?.label?.font,
-                              fontSize: config.layout_config.fields_metadata[id]?.label?.size,
-                              color: config.layout_config.fields_metadata[id]?.label?.color || undefined
-                            }}
-                            className={cn(
-                              "px-4 py-2.5 font-bold",
-                              !config.layout_config.fields_metadata[id]?.label?.color && "text-neutral-700 dark:text-neutral-200",
-                              !config.layout_config.fields_metadata[id]?.label?.font && "capitalize"
-                            )}
+                    <SortableContext items={config.layout_config.grid_fields.map((id: string) => `grid-${id}`)} strategy={verticalListSortingStrategy}>
+                      <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                        {config.layout_config.grid_fields.map((id: string) => (
+                          <SortableGridRow
+                            key={`grid-${id}`}
+                            id={`grid-${id}`}
+                            itemValue={id}
+                            toggleField={toggleField}
+                            onEdit={() => { setEditingFieldId(id); setEditingFieldZone('grid'); setIsDrawerOpen(true); }}
                           >
-                            {config.layout_config.fields_metadata[id]?.label?.text || getFieldName(id)}
-                          </td>
-                          <td className="px-4 py-2.5 text-center">
-                            <button onClick={() => toggleField(id, 'grid_fields')} className="p-1.5 hover:bg-red-500/10 hover:text-red-500 rounded-lg text-neutral-400 transition-all">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
+                            <span
+                              style={{
+                                fontFamily: getFieldMeta(id, 'grid').label?.font,
+                                fontSize: getFieldMeta(id, 'grid').label?.size,
+                                color: getFieldMeta(id, 'grid').label?.color || undefined
+                              }}
+                              className={cn(
+                                !getFieldMeta(id, 'grid').label?.color && "text-neutral-700 dark:text-neutral-200",
+                                !getFieldMeta(id, 'grid').label?.font && "capitalize"
+                              )}
+                            >
+                              {getFieldMeta(id, 'grid').label?.text || getFieldName(id)}
+                            </span>
+                          </SortableGridRow>
+                        ))}
+                      </tbody>
+                    </SortableContext>
                   </table>
                 </div>
               )}
@@ -1127,7 +1319,7 @@ function StepLayout({ config, setConfig, models }: any) {
           </div>
 
           {/* ZONA: FORM */}
-          {config.logic_type.includes('cadastro') && (
+          {(config.logic_type.includes('cadastro') || config.logic_type === 'master_detail') && (
             <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
               <div className="flex items-center justify-between">
                 <h4 className="text-[9px] font-black uppercase text-amber-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_03')}: {t('wizard.layout.zones.form')}</h4>
@@ -1137,41 +1329,41 @@ function StepLayout({ config, setConfig, models }: any) {
                 {config.layout_config.form_fields.length === 0 ? (
                   <div className="h-full flex items-center justify-center italic text-xs text-neutral-400 font-medium">{t('wizard.layout.subtitle')}</div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-4 w-full">
-                    {config.layout_config.form_fields.map((id: string) => (
-                      <div
-                        key={id}
-                        onClick={() => { setEditingFieldId(id); setIsDrawerOpen(true); }}
-                        className="p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex items-center justify-between group shadow-sm hover:border-indigo-500/30 transition-all cursor-pointer"
-                      >
-                        <div className="flex flex-col gap-1">
+                  <SortableContext items={config.layout_config.form_fields.map((id: string) => `form-${id}`)} strategy={rectSortingStrategy}>
+                    <div className="grid grid-cols-2 gap-4 w-full">
+                      {config.layout_config.form_fields.map((id: string) => (
+                        <SortableFormCard
+                          key={`form-${id}`}
+                          id={`form-${id}`}
+                          itemValue={id}
+                          toggleField={toggleField}
+                          labelTitle={t('wizard.layout.zones.form')}
+                          onEdit={() => { setEditingFieldId(id); setEditingFieldZone('form'); setIsDrawerOpen(true); }}
+                        >
                           <span 
                             style={{
-                              fontFamily: config.layout_config.fields_metadata[id]?.label?.font,
-                              fontSize: config.layout_config.fields_metadata[id]?.label?.size,
-                              color: config.layout_config.fields_metadata[id]?.label?.color || undefined
+                              fontFamily: getFieldMeta(id, 'form').label?.font,
+                              fontSize: getFieldMeta(id, 'form').label?.size,
+                              color: getFieldMeta(id, 'form').label?.color || undefined
                             }}
                             className={cn(
                               "text-[10px] font-black",
-                              !config.layout_config.fields_metadata[id]?.label?.color && "text-neutral-800 dark:text-neutral-200",
-                              !config.layout_config.fields_metadata[id]?.label?.font && "uppercase tracking-wider"
+                              !getFieldMeta(id, 'form').label?.color && "text-neutral-800 dark:text-neutral-200",
+                              !getFieldMeta(id, 'form').label?.font && "uppercase tracking-wider"
                             )}
                           >
-                            {config.layout_config.fields_metadata[id]?.label?.text || getFieldName(id)}
+                            {getFieldMeta(id, 'form').label?.text || getFieldName(id)}
                           </span>
-                          <span className="text-[8px] font-black text-amber-500 uppercase tracking-[0.2em]">{t('wizard.layout.zones.form')} Input</span>
-                        </div>
-                        <button onClick={() => toggleField(id, 'form_fields')} className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-500 rounded-lg text-neutral-400 transition-all">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                        </SortableFormCard>
+                      ))}
+                    </div>
+                  </SortableContext>
                 )}
               </div>
             </div>
           )}
         </div>
+        </DndContext>
       </div>
 
       <Drawer
@@ -1324,6 +1516,136 @@ function StepLayout({ config, setConfig, models }: any) {
                 </div>
               </div>
             </div>
+
+            {/* Seção de Componente */}
+            <div className="space-y-6 pt-6 border-t border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.component_config', 'Configuração do Componente')}</h3>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.component_type', 'Tipo de Componente')}</label>
+                  <select
+                    value={currentFieldMeta.component?.type || 'text'}
+                    onChange={e => updateMeta('component', 'type', e.target.value)}
+                    className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
+                  >
+                    <option value="text">Input Texto</option>
+                    <option value="textarea">Área de Texto (Textarea)</option>
+                    <option value="number">Número</option>
+                    <option value="select">Combo (Select)</option>
+                    <option value="radio">Radio Buttons</option>
+                    <option value="checkbox">Checkbox Group</option>
+                    <option value="switch">Switch (Liga/Desliga)</option>
+                    <option value="date">Data</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.width', 'Largura')}</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 100% ou 200px"
+                      value={currentFieldMeta.component?.width || '100%'}
+                      onChange={e => updateMeta('component', 'width', e.target.value)}
+                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
+                    />
+                  </div>
+                  {currentFieldMeta.component?.type === 'textarea' && (
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.rows', 'Linhas')}</label>
+                      <input
+                        type="number"
+                        value={currentFieldMeta.component?.rows || 3}
+                        onChange={e => updateMeta('component', 'rows', parseInt(e.target.value))}
+                        className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {(['select', 'radio', 'checkbox'].includes(currentFieldMeta.component?.type)) && (
+                  <div className="space-y-4 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/50">
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-indigo-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.options_source', 'Origem dos Dados')}</label>
+                      <div className="flex gap-2">
+                        {['fixed', 'relational'].map(opt => (
+                          <button
+                            key={opt}
+                            onClick={() => updateMeta('component', 'options_type', opt)}
+                            className={cn(
+                              "flex-1 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all",
+                              (currentFieldMeta.component?.options_type || 'fixed') === opt ? 'bg-indigo-600 text-white shadow-md' : 'bg-white dark:bg-neutral-900 text-neutral-400'
+                            )}
+                          >
+                            {opt === 'fixed' ? 'Valores Fixos' : 'Relacionamento'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {(currentFieldMeta.component?.options_type || 'fixed') === 'fixed' ? (
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.fixed_options', 'Opções (Label:Valor, separadas por vírgula)')}</label>
+                        <textarea
+                          placeholder="Ex: Ativo:A, Inativo:I"
+                          value={currentFieldMeta.component?.fixed_options || ''}
+                          onChange={e => updateMeta('component', 'fixed_options', e.target.value)}
+                          className="w-full h-20 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none resize-none"
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.rel_table', 'Tabela Relacionada')}</label>
+                          <select
+                            value={currentFieldMeta.component?.rel_table || ''}
+                            onChange={e => updateMeta('component', 'rel_table', e.target.value)}
+                            className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                          >
+                            <option value="">Selecione...</option>
+                            {models.map((m: any) => (
+                              <option key={m.id} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Label (Exibição)</label>
+                            <select
+                              value={currentFieldMeta.component?.rel_label || ''}
+                              onChange={e => updateMeta('component', 'rel_label', e.target.value)}
+                              className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                            >
+                              <option value="">Selecione...</option>
+                              {models.find((m: any) => m.db_table_name === currentFieldMeta.component?.rel_table)?.fields.map((f: any) => (
+                                <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Value (ID)</label>
+                            <select
+                              value={currentFieldMeta.component?.rel_value || ''}
+                              onChange={e => updateMeta('component', 'rel_value', e.target.value)}
+                              className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                            >
+                              <option value="">Selecione...</option>
+                              {models.find((m: any) => m.db_table_name === currentFieldMeta.component?.rel_table)?.fields.map((f: any) => (
+                                <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </Drawer>
@@ -1392,6 +1714,43 @@ function StepActions({ config, setConfig }: any) {
         </div>
       </div>
 
+      <div className="space-y-6">
+        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Interface de Ação (Cadastro/Edição)</label>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { id: 'drawer', title: 'Drawer (Lateral)', desc: 'Os formulários abrirão em uma gaveta lateral deslizante.', icon: Layout },
+            { id: 'modal', title: 'Modal (Central)', desc: 'Os formulários abrirão em uma janela centralizada com fundo escurecido.', icon: Maximize2 },
+            { id: 'page', title: 'Mesma Tela (Página)', desc: 'O formulário será exibido na mesma tela, substituindo a lista atual.', icon: Layout }
+          ].map(opt => (
+            <button
+              key={opt.id}
+              onClick={() => setConfig({
+                ...config,
+                layout_config: { ...config.layout_config, action_interface_type: opt.id }
+              })}
+              className={cn(
+                "p-6 rounded-[2rem] border-2 text-left transition-all relative group overflow-hidden",
+                (config.layout_config.action_interface_type || 'drawer') === opt.id
+                  ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10'
+                  : 'border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/30'
+              )}
+            >
+              <div className="flex items-center gap-4 mb-4">
+                <div className={cn(
+                  "p-3 rounded-2xl transition-all",
+                  (config.layout_config.action_interface_type || 'drawer') === opt.id ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
+                )}>
+                  <opt.icon className="w-5 h-5" />
+                </div>
+                {(config.layout_config.action_interface_type || 'drawer') === opt.id && <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center text-white"><CheckCircle2 className="w-4 h-4" /></div>}
+              </div>
+              <h4 className="font-bold text-base text-neutral-900 dark:text-white">{opt.title}</h4>
+              <p className="text-[10px] text-neutral-400 mt-2 leading-relaxed">{opt.desc}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="h-px bg-neutral-100 dark:bg-neutral-800/50 w-full"></div>
 
       <div className="space-y-6">
@@ -1439,6 +1798,97 @@ function StepActions({ config, setConfig }: any) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function SortableFilterItem({ id, itemValue, toggleField, onEdit, children }: any) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  const style = { 
+    transform: CSS.Transform.toString(transform), 
+    transition,
+    ...(isDragging ? { opacity: 0.5, zIndex: 50, position: 'relative' } : {})
+  }
+  
+  return (
+    <div
+      ref={setNodeRef}
+      style={style as any}
+      {...attributes}
+      {...listeners}
+      onClick={onEdit}
+      className="flex items-center gap-3 px-4 py-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20 group cursor-pointer hover:bg-indigo-500 transition-all select-none"
+    >
+      {children}
+      <Trash2
+        className="w-3.5 h-3.5 cursor-pointer hover:text-red-300 transition-colors"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); toggleField(itemValue, 'filter_fields'); }}
+      />
+    </div>
+  )
+}
+
+function SortableGridRow({ id, itemValue, toggleField, onEdit, children }: any) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  const style = { 
+    transform: CSS.Transform.toString(transform), 
+    transition,
+    ...(isDragging ? { position: 'relative', zIndex: 50, display: 'flex', width: '100%', background: 'var(--tw-bg-opacity, 1)' } : {})
+  }
+  
+  return (
+    <tr
+      ref={setNodeRef}
+      style={style as any}
+      {...attributes}
+      {...listeners}
+      className="group hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors cursor-grab active:cursor-grabbing select-none"
+    >
+      <td onClick={onEdit} className="px-4 py-2.5 font-bold text-neutral-700 dark:text-neutral-200">
+        {children}
+      </td>
+      <td className="px-4 py-2.5 text-center">
+        <button 
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); toggleField(itemValue, 'grid_fields'); }} 
+          className="p-1.5 hover:bg-red-500/10 hover:text-red-500 rounded-lg text-neutral-400 transition-all"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </td>
+    </tr>
+  )
+}
+
+function SortableFormCard({ id, itemValue, toggleField, onEdit, children, labelTitle }: any) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  const style = { 
+    transform: CSS.Transform.toString(transform), 
+    transition,
+    ...(isDragging ? { opacity: 0.5, zIndex: 50, position: 'relative' } : {})
+  }
+  
+  return (
+    <div
+      ref={setNodeRef}
+      style={style as any}
+      {...attributes}
+      {...listeners}
+      onClick={onEdit}
+      className="p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex items-center justify-between group shadow-sm hover:border-indigo-500/30 transition-all cursor-grab active:cursor-grabbing select-none"
+    >
+      <div className="flex flex-col gap-1">
+        {children}
+        <span className="text-[8px] font-black text-amber-500 uppercase tracking-[0.2em]">{labelTitle} Input</span>
+      </div>
+      <button 
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); toggleField(itemValue, 'form_fields'); }} 
+        className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-500 rounded-lg text-neutral-400 transition-all"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
     </div>
   )
 }

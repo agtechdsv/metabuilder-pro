@@ -137,9 +137,17 @@ async function startTunnel(projectId, secretToken, connectionString, configSupab
             let i = 1;
             for (const [key, value] of Object.entries(filters)) {
               if (value !== undefined && value !== '') {
-                const safeKey = key.replace(/[^a-zA-Z0-9_]/g, '');
-                // Prefixa com a tabela principal para evitar ambiguidade se houver joins
-                conditions.push(`CAST("${safeTable}"."${safeKey}" AS text) ILIKE $${i}`);
+                let tablePart = safeTable;
+                let columnPart = key;
+                if (key.includes('.')) {
+                  const parts = key.split('.');
+                  tablePart = parts[0].replace(/[^a-zA-Z0-9_]/g, '');
+                  columnPart = parts[1].replace(/[^a-zA-Z0-9_]/g, '');
+                } else {
+                  columnPart = key.replace(/[^a-zA-Z0-9_]/g, '');
+                }
+                
+                conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) ILIKE $${i}`);
                 params.push(`%${value}%`);
                 i++;
               }

@@ -1,6 +1,4 @@
-'use client'
-
-import { ThemeProvider } from 'next-themes'
+import { CustomThemeProvider } from '../CustomThemeProvider'
 import React from 'react'
 
 export function LoginPortalThemeWrapper({ 
@@ -8,16 +6,18 @@ export function LoginPortalThemeWrapper({
   theme 
 }: { 
   children: React.ReactNode, 
-  theme: 'light' | 'dark' 
+  theme: string
 }) {
+  const isFixed = theme === 'light' || theme === 'dark'
+  
   return (
-    <ThemeProvider 
+    <CustomThemeProvider 
       attribute="class" 
-      forcedTheme={theme}
-      enableSystem={false}
-      disableTransitionOnChange
+      defaultTheme={isFixed ? theme : 'system'}
+      enableSystem={!isFixed}
+      forcedTheme={isFixed ? theme : undefined}
     >
       {children}
-    </ThemeProvider>
+    </CustomThemeProvider>
   )
 }
