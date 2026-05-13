@@ -1,10 +1,9 @@
 {
-
   "agtech": {
     "title": "La ingeniería detrás de MetaBuilderPRO",
     "lab": "AGTECH INNOVATION LAB",
     "p1": "AGTech es un laboratorio de innovación e ingeniería de software enfocado en el desarrollo de MetadataTechs de alto rendimiento.",
-    "p2": "Nuestra misión es construir la infraestructura tecnológica invisible que permita a los ecosistemas complejos operar con la máxima eficiencia, seguridad e inteligencia de datos.",
+    "p2": "Nuestra misión es construir la infraestructura tecnológica invisible que permite a los ecosistemas complejos operar con la máxima eficiencia, seguridad e inteligencia de datos.",
     "p3": "Combinamos arquitecturas robustas con un diseño centrado en la experiencia del usuario para entregar herramientas que realmente transformam a rotina operacional.",
     "cta_label": "¿QUIERES ELEVAR EL NIVEL TECNOLÓGICO DE TU PROYECTO?",
     "cta_button": "HABLA CON NUESTROS INGENIEROS",
@@ -17,9 +16,9 @@
     "item1_title": "Información que Recopilamos",
     "item1_desc": "Al utilizar el inicio de sesión o completar sus credenciales BYODB, recopilamos solo los datos esenciales (nombre, correo electrónico y claves de infraestructura) para fines de autenticación y funcionamiento técnico del sistema.",
     "item2_title": "Uso de los Datos",
-    "item2_desc": "Sus datos se utilizan exclusivamente para autenticar su acceso, sincronizar sus registros de forma privada en su propia estructura (Supabase) y permitir la interacción con la Inteligencia Artificial del motor.",
+    "item2_desc": "Sus datos se utilizan exclusivamente para autenticar su acceso, sincronizar sus registros de forma privada en su propia estrutura (Supabase) y permitir la interacción con la Inteligência Artificial del motor.",
     "item3_title": "Almacenamiento Local",
-    "item3_desc": "Importante: Sus claves de API y metadatos sensibles son gestionados localmente por el Agente CLI y nunca se envían a nuestros servidores centrales. Esto garantiza la soberanía total sobre sus datos.",
+    "item3_desc": "Importante: Sus claves de API y metadatos sensibles son gestionados localmente por el Agente CLI e nunca se envían a nuestros servidores centrales. Esto garantiza la soberanía total sobre sus datos.",
     "item4_title": "Cookies y Seguridad",
     "item4_desc": "Utilizamos solo las cookies estrictamente necesarias para mantener su sesión activa y guardar sus preferencias de tema (Dark Mode). Toda la comunicación está cifrada a través de TLS 1.3.",
     "button": "ENTENDIDO"
@@ -75,7 +74,9 @@
     "success": "¡Guardado con éxito!",
     "enterprise": "Enterprise",
     "logged_in_as": "Usuario Conectado",
-    "all": "Todos"
+    "all": "Todos",
+    "back_to_home": "Volver a la Home",
+    "runtime_online": "Runtime Online"
   },
   "hero": {
     "badge": "Motor de Metadatos de Próxima Generación",
@@ -107,7 +108,7 @@
     "slug_hint": "Esta será la dirección pública de sus proyectos.",
     "delete_workspace": "Eliminar Workspace",
     "confirm_delete": "¿Confirmar eliminación?",
-    "delete_desc": "Todos los proyectos y datos de este entorno se eliminarán permanentemente.",
+    "delete_desc": "Todos los proyectos e datos deste ambiente serão removidos permanentemente.",
     "yes_delete": "Sí, Eliminar",
     "stats": {
       "active_workspaces": "Workspaces Activos",
@@ -122,41 +123,41 @@
       "edit_project": "Editar Proyecto",
       "your_projects": "Proyectos del Ecosistema",
       "found": "PROYECTOS ENCONTRADOS",
-      "project_name": "Nombre del Proyecto",
+      "project_name": "Nombre do Projeto",
       "name_placeholder": "Ej: CRM Ventas",
-      "project_slug": "Slug del Proyecto",
+      "project_slug": "Slug do Projeto",
       "project_description": "Descripción",
-      "desc_placeholder": "Ej: Sistema de gestión de ventas y embudo.",
+      "desc_placeholder": "Ej: Sistema de gestão de vendas e funil.",
       "project_icon": "Icono (SVG)",
-      "icon_placeholder": "Pegue el código <svg> aquí...",
+      "icon_placeholder": "Cole aqui o código <svg>...",
       "icon_hint": "Inserte el código SVG para personalizar el icono del proyecto.",
       "change_icon": "Cambiar Icono",
-      "status_active": "Activo",
-      "status_inactive": "Inactivo",
-      "toggle_active": "Activar",
-      "toggle_inactive": "Desactivar",
+      "status_active": "Ativo",
+      "status_inactive": "Inativo",
+      "toggle_active": "Ativar",
+      "toggle_inactive": "Desativar",
       "delete_project": "Eliminar Proyecto",
       "confirm_delete_project": "¿Confirmar eliminación?",
-      "delete_project_desc": "Todos los modelos y datos de este proyecto serán eliminados permanentemente.",
+      "delete_project_desc": "Todos os modelos e dados deste projeto serão removidos permanentemente.",
       "yes_delete": "Sí, Eliminar Proyecto",
       "status_title": "Estado del Proyecto",
       "status_desc": "Determine si el proyecto es accesible.",
       "tables": "Tablas",
       "use_cases": "Casos de Uso Listos",
-      "create_project_title": "Crear Nuevo Proyecto",
+      "create_project_title": "Criar Novo Projeto",
       "create_project_desc": "Comienza una nueva arquitectura de datos",
       "use_cases_title": "Casos de Uso",
-      "use_cases_subtitle": "Todas las interfaces publicadas para este proyecto.",
+      "use_cases_subtitle": "Todas as interfaces publicadas para este projeto.",
       "new_view": "Nueva View",
       "open_app": "Abrir View",
       "personalize_visual": "Personalizar Visual",
       "system_label": "Sistema",
       "confirm_delete_view": "¿Confirmar eliminación de la vista?",
-      "delete_view_desc": "Esta acción eliminará permanentemente la interfaz. Los datos de la base de datos no se verán afectados.",
+      "delete_view_desc": "Esta ação removerá permanentemente a interface. Os dados no banco não serão afetados.",
       "yes_delete_view": "Sí, eliminar vista",
       "studio": {
         "title": "MetaBuilder Studio",
-        "subtitle": "Configure las pantallas de su aplicación. Elija las tablas sincronizadas y defina cómo se deben mostrar los datos a sus usuarios.",
+        "subtitle": "Configure as telas do seu aplicativo. Escolha as tabelas sincronizadas e defina como os dados devem ser exibidos para os seus usuários.",
         "control_dashboard": "Panel de Control",
         "new_use_case": "Nuevo Caso de Uso",
         "agent_status": "Estado del Agente",
@@ -167,14 +168,14 @@
         "login_portal": "Portal de Inicio de Sesión",
         "configure_login": "Configurar Inicio de Sesión",
         "configure": "Configurar",
-        "status_active": "Activo",
-        "status_inactive": "Inactivo",
+        "status_active": "Ativo",
+        "status_inactive": "Inativo",
         "no_use_cases": "Aún no se han creado casos de uso.",
         "start_now": "Empezar ahora",
         "delete_confirm": {
           "title": "Confirmar Eliminación",
           "warning": "Esta acción es irreversible",
-          "desc": "Estás a punto de eliminar el caso de uso \"{name}\". Todos los componentes asociados también serán eliminados.",
+          "desc": "Estás a punto de eliminar el caso de uso \"{name}\". Todos os componentes associados também serão removidos.",
           "yes_delete": "Eliminar Permanentemente",
           "cancel": "Cancelar"
         },
@@ -182,8 +183,8 @@
           "active_success": "¡Caso de uso activado con éxito!",
           "inactive_success": "¡Caso de uso desactivado con éxito!",
           "delete_success": "Caso de uso eliminado permanentemente.",
-          "error_status": "Error al cambiar el estado: ",
-          "error_delete": "Error al eliminar: "
+          "error_status": "Erro ao alterar status: ",
+          "error_delete": "Erro ao excluir: "
         },
         "stats": {
           "synced_tables": "Tablas Sincronizadas",
@@ -196,18 +197,18 @@
           "strategy_tab": "Estrategia de Autenticación",
           "visual_tab": "Personalización Visual",
           "managed_title": "Managed Auth",
-          "managed_desc": "MetaBuilder gestiona los usuarios en una base de datos aislada. Rápido y fácil.",
+          "managed_desc": "MetaBuilder gestiona los usuarios en una base de datos aislada. Rápido e fácil.",
           "database_title": "Vía Base de Datos Legada",
-          "database_desc": "El Agente CLI valida el inicio de sesión comparándolo con SU tabla de usuarios sincronizada.",
+          "database_desc": "O Agente CLI valida o login comparando com SUA tabela de usuários sincronizada.",
           "ldap_title": "LDAP / AD",
-          "ldap_desc": "Integración corporativa nativa. Validación a través del Active Directory del cliente.",
+          "ldap_desc": "Integración corporativa nativa. Validação via Active Directory do cliente.",
           "managed_ready": "¡Base de Datos de Usuarios Lista!",
-          "managed_ready_desc": "Crearemos automáticamente la tabla y as APIs de inicio de sesión y registro. No se requiere configuración adicional.",
+          "managed_ready_desc": "Crearemos automáticamente la tabla y as APIs de inicio de sesión e registro. Nenhuma configuração extra necessária.",
           "table_mapping": "Mapeo de Tablas",
           "user_table": "Tabla de Usuarios",
-          "select_table": "Seleccione la tabla...",
+          "select_table": "Selecione a tabela...",
           "email_column": "Columna de Email/Login",
-          "select_field": "Seleccione el campo...",
+          "select_field": "Selecione o campo...",
           "pass_column": "Columna de Contraseña",
           "hash_format": "Formato de Hash",
           "bcrypt": "Bcrypt (Recomendado)",
@@ -218,7 +219,7 @@
           "ldap_url": "Servidor LDAP (URL)",
           "base_dn": "Base DN",
           "identity_logo": "Identidad y Logo",
-          "logo_url": "URL del Logo",
+          "logo_url": "URL do Logo",
           "icon_svg": "Icono SVG (Opcional)",
           "primary_color": "Color Primario",
           "default_theme": "Tema Predeterminado",
@@ -233,10 +234,10 @@
           "email_placeholder": "Marcador Email",
           "pass_label": "Etiqueta Contraseña",
           "pass_placeholder": "Marcador Contraseña",
-          "help_message": "Mensaje de Ayuda (Tooltip)",
+          "help_message": "Mensaje de Ajuda (Tooltip)",
           "main_button": "Botón Principal",
-          "button_text": "Texto del Botón",
-          "button_color": "Color del Botón",
+          "button_text": "Texto del Botão",
+          "button_color": "Cor do Botão",
           "live_preview": "Vista Previa en Vivo",
           "synchronized": "Sincronizado",
           "default_welcome_title": "¡Bienvenido de nuevo!",
@@ -265,14 +266,14 @@
           "preview_view": "Previsualizar Pantalla",
           "configure_view": "Editar Registro",
           "db_fields": "Campos de la Base de Datos",
-          "db_fields_desc": "Personalice las etiquetas y la visibilidad de los campos en la tabla {table}.",
+          "db_fields_desc": "Personalize las etiquetas e a visibilidade dos campos na tabela {table}.",
           "fields_detected": "campos detectados",
           "visible": "VISIBLE",
           "original_name": "NOMBRE ORIGINAL",
           "type": "TIPO",
           "ui_label": "ETIQUETA UI",
           "add_virtual_field": "Agregar Campo Virtual",
-          "add_virtual_field_desc": "Cree botones de acción o campos calculados.",
+          "add_virtual_field_desc": "Crie botões de ação ou campos calculados.",
           "primary_key": "CLAVE PRIMARIA",
           "loading_studio": "Cargando Studio..."
         },
@@ -284,31 +285,31 @@
           "layout_step": "Campos y Diseño",
           "actions_step": "Acciones y Consulta",
           "step_logic_title": "¿Cuál es la lógica de su caso de uso?",
-          "step_logic_desc": "Defina el comportamiento principal de esta pantalla en MetaBuilder.",
+          "step_logic_desc": "Defina o comportamento principal desta tela no MetaBuilder.",
           "logic_research_only": "Solo Búsqueda",
-          "logic_research_only_desc": "Enfocado en buscar y visualizar datos.",
+          "logic_research_only_desc": "Enfocado en búsqueda e visualização de dados.",
           "logic_research_registration": "Búsqueda + Registro",
-          "logic_research_registration_desc": "Flujo completo: búsqueda, listado y formulario.",
+          "logic_research_registration_desc": "Fluxo completo: busca, listagem e formulário.",
           "logic_registration_only": "Solo Registro",
-          "logic_registration_only_desc": "Formulario directo para inserción de datos.",
+          "logic_registration_only_desc": "Formulário direto para inserção de dados.",
           "screen_name": "Nombre de la Pantalla",
           "slug_label": "URL Amigable (Slug)",
-          "enable_args": "Habilitar Argumentos (Filtros de búsqueda en la URL)",
+          "enable_args": "Habilitar Argumentos (Filtros de pesquisa na URL)",
           "step_tables_title": "¿Qué tablas componen este caso?",
-          "step_tables_desc": "Puede seleccionar una o más tablas. La lógica de Join se configurará a continuación.",
+          "step_tables_desc": "Pode selecionar uma ou mais tabelas. A lógica de Join será configurada a seguir.",
           "multi_tables_alert": "Ha seleccionado {count} tablas. En el siguiente paso, definiremos las relaciones (Joins) entre ellas.",
           "step_layout_title": "Diseñe el Diseño de la Pantalla",
-          "step_layout_desc": "Organice los campos en zonas específicas. Un campo puede estar en más de una zona.",
+          "step_layout_desc": "Organize os campos em zonas específicas. Um campo pode estar em mais de uma zona.",
           "available_fields": "Campos Disponibles",
           "zone_filter": "Zona 01: Filtros de Búsqueda",
           "zone_grid": "Zona 02: Listado (Cuadrícula/Tabla)",
           "zone_form": "Zona 03: Formulario de Edición",
           "no_fields_selected": "Ningún campo seleccionado...",
           "step_actions_title": "Consulta y Acciones Finales",
-          "step_actions_desc": "Configure cómo se recuperarán los datos y qué botones estarán disponibles.",
-          "data_strategy": "Estrategia de Datos",
-          "dynamic_query": "Consulta Dinámica (Automática)",
-          "dynamic_query_desc": "MetaBuilder genera los Joins y Selects basado en las relaciones de las tablas.",
+          "step_actions_desc": "Configure como os dados serão recuperados e quais botões estarão disponíveis.",
+          "data_strategy": "Estratégia de Dados",
+          "dynamic_query": "Consulta Dinâmica (Automática)",
+          "dynamic_query_desc": "O MetaBuilder gera os Joins e Selects baseado nas relações das tabelas.",
           "manual_query": "Consulta Manual (SQL)",
           "manual_query_desc": "Usted escribe el SQL puro para mayor control y rendimiento.",
           "interface_buttons": "Botones de la Interfaz",
@@ -316,8 +317,8 @@
           "back_step": "Volver Paso",
           "next_step": "Próximo Paso",
           "saving": "Guardando...",
-          "error_save": "Error al guardar el caso de uso: ",
-          "fill_name_slug": "Por favor, complete el nombre y el slug de la pantalla."
+          "error_save": "Erro ao salvar caso de uso: ",
+          "fill_name_slug": "Por favor, complete el nome e o slug da tela."
         }
       }
     }
@@ -326,12 +327,12 @@
     "new_record": "Nuevo Registro",
     "search_placeholder": "Buscar registros...",
     "filters": "Filtros",
-    "mapped_columns": "{count} columnas mapeadas",
+    "mapped_columns": "{count} colunas mapeadas",
     "actions": "Acciones",
     "forgot_password": "¿Olvidó su contraseña?",
     "powered_by": "Powered by MetaBuilder",
     "project_inactive": "Proyecto Inactivo",
-    "project_inactive_desc": "Esta aplicación ha sido desactivada temporalmente por el administrador del espacio de trabajo."
+    "project_inactive_desc": "Esta aplicação foi temporariamente desativada pelo administrador do workspace."
   },
   "runtime": {
     "dashboard": "Dashboard",
@@ -386,47 +387,47 @@
     },
     "logic": {
       "title": "¿Cuál es la lógica de su caso de uso?",
-      "subtitle": "Defina el comportamiento principal de esta pantalla en MetaBuilder.",
+      "subtitle": "Defina o comportamento principal desta tela no MetaBuilder.",
       "types": {
         "pesquisa": {
           "title": "Solo Búsqueda",
-          "desc": "Enfocado en búsqueda y visualización de datos."
+          "desc": "Enfocado en búsqueda e visualização de dados."
         },
         "pesquisa_cadastro": {
           "title": "Búsqueda + Registro",
-          "desc": "Flujo completo: búsqueda, listado y formulario."
+          "desc": "Fluxo completo: busca, listagem e formulário."
         },
         "cadastro": {
           "title": "Solo Registro",
-          "desc": "Formulario directo para inserción de datos."
+          "desc": "Formulario direto para inserção de dados."
         },
         "mapa_mental": {
           "title": "Mapa Mental",
-          "desc": "Visualización jerárquica y conexiones entre datos."
+          "desc": "Visualización hierárquica e conexões entre dados."
         },
         "kanban": {
           "title": "Kanban",
-          "desc": "Gestión de flujo de trabajo por colunas y estados."
+          "desc": "Gestão de fluxo de trabalho por colunas e estados."
         },
         "personalizado": {
           "title": "Personalizado",
-          "desc": "Lógica personalizada y flujos de trabajo únicos."
+          "desc": "Lógica personalizada e flujos de trabalho únicos."
         }
       },
       "screen_name": "Nombre de la Pantalla",
       "screen_name_placeholder": "Ej: Gestión de Contratos",
       "slug_label": "URL Amigable (Slug)",
       "slug_placeholder": "contratos",
-      "enable_args": "Habilitar Argumentos (Filtros de búsqueda en URL)"
+      "enable_args": "Habilitar Argumentos (Filtros de pesquisa na URL)"
     },
     "tables": {
       "title": "¿Qué tablas componen este caso?",
-      "subtitle": "Puede seleccionar una o más tablas. La lógica de Join se configurará a continuación.",
+      "subtitle": "Pode selecionar uma ou mais tabelas. A lógica de Join será configurada a seguir.",
       "selected_warning": "Ha seleccionado {count} tablas. En el siguiente paso, definiremos las relaciones (Joins) entre ellas."
     },
     "layout": {
       "title": "Diseñe el diseño de la pantalla",
-      "subtitle": "Organice los campos en zonas específicas. Um campo puede estar en más de una zona.",
+      "subtitle": "Organize os campos em zonas específicas. Um campo pode estar em mais de uma zona.",
       "available_fields": "Campos Disponibles",
       "relationships": "Relaciones",
       "relationships_desc": "Ha seleccionado múltiples tablas. Defina cómo se conectan (Joins).",
@@ -436,8 +437,8 @@
       "mindmap": {
         "config_title": "Configuración del Mapa Mental",
         "central_field": "Campo Central (Nodo Raíz)",
-        "select_central": "Seleccione el campo central...",
-        "central_desc": "Este campo será la raíz de su mapa mental. Los campos seleccionados en la Zona 02 formarán los siguientes niveles."
+        "select_central": "Seleccione o campo central...",
+        "central_desc": "Este campo será a raíz do seu mapa mental. Os campos selecionados na Zona 02 formarão os próximos níveis."
       },
       "zones": {
         "filter": "Filtro",
@@ -445,7 +446,7 @@
         "form": "Formulario",
         "kanban_card": "Campos del Card",
         "card": "Card",
-        "mindmap_nodes": "Campos del Mapa (Niveles)",
+        "mindmap_nodes": "Campos do Mapa (Níveis)",
         "node": "Nodo",
         "zone_01": "Zona 01",
         "zone_02": "Zona 02",
@@ -462,8 +463,8 @@
       },
       "drawer": {
         "title": "Propiedades",
-        "label_config": "Configuración de Etiqueta",
-        "content_config": "Configuración de Contenido",
+        "label_config": "Configuração de Etiqueta",
+        "content_config": "Configuração de Contenido",
         "display_text": "Texto de Visualización",
         "font": "Fuente",
         "font_default": "Inter (Predeterminado)",
@@ -479,32 +480,139 @@
     },
     "actions": {
       "title": "Consulta y Acciones Finales",
-      "subtitle": "Configure cómo se recuperarán los datos y qué botones estarán disponibles.",
+      "subtitle": "Configure como os dados serão recuperados e quais botões estarão disponíveis.",
       "data_strategy": "Estratégia de Datos",
       "dynamic_query": {
-        "title": "Consulta Dinámica (Automática)",
-        "desc": "MetaBuilder genera los Joins y Selects basado en las relaciones de las tablas."
+        "title": "Consulta Dinâmica (Automática)",
+        "desc": "O MetaBuilder gera os Joins e Selects baseado nas relações das tabelas."
       },
       "raw_sql": {
         "title": "SQL Manual (Raw SQL)",
         "desc": "Usted escribe el SQL puro para mayor control y rendimiento."
       },
-      "interface_buttons": "Botones de la Interfaz"
-    },
-    "buttons": {
-      "prev": "Paso Anterior",
-      "next": "Próximo Paso",
-      "finish": "Finalizar",
-      "update": "Actualizar",
-      "saving": "Guardando...",
-      "updating": "Actualizando...",
-      "success_save": "¡Guardado con éxito!",
-      "error_save": "Error al guardar el caso de uso: ",
+      "interface_buttons": "Botones de la Interfaz",
+      "sql_editor": "SQL Editor",
       "validation": {
         "grid_required": "Seleccione al menos un campo para el listado (Grid).",
         "filter_required": "Ha habilitado argumentos. Seleccione al menos un campo de Filtro.",
         "form_required": "Seleccione al menos un campo para el Formulario.",
         "name_slug_required": "Por favor, complete el nombre y el slug del caso de uso."
+      }
+    }
+  },
+  "marketing_v2": {
+    "navbar": {
+      "speed": "Agilidad",
+      "integration": "Integración",
+      "branding": "Whitelabel",
+      "security": "Seguridad",
+      "zero_trust": "Zero-Trust"
+    },
+    "hero": {
+      "badge": "El motor de software del futuro",
+      "title": "Construye",
+      "enterprise": "Enterprise",
+      "subtitle": "Apps en Segundos.",
+      "desc": "Acelere su entrega técnica con MetaBuilderPRO. Conecte bases de datos heredadas, use IA para generar interfaces premium y gestione múltiples proyectos en una única plataforma whitelabel."
+    },
+    "home": {
+      "bento_title": "Un motor completo para",
+      "bento_highlight": "desarrolladores y empresas.",
+      "bento_desc": "Olvídese del boilerplate. Concéntrese en lo que importa: la lógica de negocio de su cliente.",
+      "bridge_title": "No migre sus datos.",
+      "bridge_subtitle": "Solo dales vida.",
+      "bridge_desc": "MetaBuilderPRO se conecta a su base de datos SQL actual y genera una interfaz administrativa completa en minutos, sin tocar una línea de su estructura actual.",
+      "bridge_cta_demo": "Ver Demostración",
+      "bridge_cta_docs": "Ver documentación",
+      "zero_trust_title": "Privacidad primero.",
+      "zero_trust_highlight": "Siempre.",
+      "zero_trust_desc": "A diferencia de otras herramientas, MetaBuilderPRO no se conecta a su base de datos. Envía comandos cifrados a su túnel local, que procesa la información.",
+      "zero_trust_encrypted": "Datos cifrados",
+      "zero_trust_ports": "Cero puertos abiertos",
+      "wizard_title": "Wizard de Caso de Uso",
+      "wizard_desc": "No pierda tiempo dibujando cuadrículas y formularios uno por uno. Nuestro asistente inteligente crea flujos completos de CRUD, Maestro-Detalle e Dashboards basados en la semántica de su base de datos.",
+      "whitelabel_title": "Whitelabel Runtime",
+      "whitelabel_desc": "MetaBuilderPRO desaparece para que su marca brille. Favicons dinámicos, URLs personalizadas y temas específicos para cada proyecto que aloje en la plataforma.",
+      "cta_title": "¿Listo para el siguiente nivel?",
+      "cta_desc": "Acelere su entrega técnica y deleite a sus clientes con interfaces premium.",
+      "cta_start": "Empezar ahora gratis",
+      "cta_plans": "Ver planes Enterprise"
+    },
+    "features": {
+      "speed": {
+        "title": "Desarrolle. a la velocidad del pensamiento.",
+        "desc": "MetaBuilderPRO fue diseñado para eliminar las tareas repetitivas del desarrollo web.",
+        "stats_title": "Estimación de tiempo",
+        "vs_traditional": "MetaBuilderPRO vs Tradicional",
+        "hours": "Horas",
+        "minutes": "Minutos",
+        "stats_traditional": "CRUD Tradicional (Código Manual)",
+        "stats_metabuilder": "MetaBuilderPRO Wizard",
+        "item1_title": "Wizard de Caso de Uso",
+        "item1_desc": "Configure formularios, grids y filtros respondiendo preguntas simples.",
+        "item2_title": "Generación de Esquema IA",
+        "item2_desc": "Nuestra IA analiza su base de datos y sugiere automáticamente las mejores configuraciones.",
+        "item3_title": "Despliegue instantáneo",
+        "item3_desc": "Los cambios se reflejan inmediatamente en el entorno de runtime.",
+        "footer_title": "Deje de programar lo básico.",
+        "footer_cta": "Probar Wizard gratis"
+      },
+      "integration": {
+        "title": "Donde sus datos. ya están.",
+        "desc": "No gaste recursos en migraciones arriesgadas. Capa de interfaz ultra moderna sobre sus bases SQL.",
+        "console_title": "Consola de Conexión",
+        "item1_title": "Preserve su lógica",
+        "item1_desc": "Siga usando sus Procedures, Triggers y Views nativas.",
+        "item2_title": "Seguridad transparente",
+        "item2_desc": "Sus datos nunca salen de su infraestructura local.",
+        "supported_engines": "Compatible con los principales motores de bases de datos del mercado."
+      },
+      "branding": {
+        "title": "Su marca. sus reglas.",
+        "desc": "Whitelabel total. Cada proyecto com su propia identidad visual dinámica.",
+        "primary_action": "Botón de Acción Primária",
+        "customize_now": "Personalizar Ahora",
+        "item1_title": "Logos y Favicons",
+        "item1_desc": "Cada proyecto inyecta su propio favicon y logo en tiempo real.",
+        "item2_title": "Tipografía personalizada",
+        "item2_desc": "Defina familias de fuentes específicas para cada marca.",
+        "item3_title": "Temas adaptativos",
+        "item3_desc": "Soporte nativo para Light y Dark mode por proyecto.",
+        "footer_title": "No somos una plantilla.",
+        "footer_subtitle": "Somos una plataforma de branding.",
+        "footer_cta": "Empezar configuración visual"
+      },
+      "zero_trust": {
+        "title": "Arquitectura. Zero-Trust Bridge.",
+        "desc": "Conecte su interfaz en la nube a su base de datos local sin exponer puertos de red.",
+        "cloud_app": "App en la Nube",
+        "tunnel_binary": "Binário del Túnel",
+        "tunnel_status_msg": "# Túnel establecido vía WebSocket Seguro",
+        "item1_title": "Ejecutable nativo",
+        "item1_desc": "Binarios optimizados para Windows y Linux. Ejecute donde esté su base de datos.",
+        "item2_title": "Ciego por diseño",
+        "item2_desc": "El ejecutable local es el único que posee la contraseña de la base de datos.",
+        "item3_title": "Rendimiento en tiempo real",
+        "item3_desc": "WebSockets para garantizar una latência mínima e una experiencia fluida.",
+        "it_summary": "Resumen para el Gerente de TI",
+        "it_item1": "No requiere apertura de puertos de entrada (Inbound).",
+        "it_item2": "Conexión TLS 1.3 de extremo a extremo.",
+        "it_item3": "Las credenciales nunca salen de la infraestructura del cliente.",
+        "it_item4": "Auditable: los comandos SQL pasan por el túnel local.",
+        "cta": "Activar seguridad Enterprise"
+      },
+      "security": {
+        "title": "Seguridad. Inquebrantable.",
+        "desc": "Protección total para los datos de sus clientes. Elija entre múltiples estrategias de autenticación y asegúrese de que solo quienes deban, accedan a lo que pueden.",
+        "auth_title": "Autenticación Personalizable",
+        "auth_desc": "Soporte para BCrypt, MD5, SHA256 y más.",
+        "item1_title": "Criptografía de Vanguardia",
+        "item1_desc": "Toda la comunicación entre el Runtime y su base de datos está protegida por capas de cifrado TLS.",
+        "item2_title": "Cumplimiento LGPD/GDPR",
+        "item2_desc": "Herramientas integradas para la gestión de cookies, términos de uso y políticas de privacidad.",
+        "footer_title": "¿Listo para proteger sus datos?",
+        "footer_desc": "Implemente seguridad de nivel bancario en sus sistemas en pocos clics.",
+        "footer_cta": "Activar Seguridad Enterprise"
       }
     }
   }

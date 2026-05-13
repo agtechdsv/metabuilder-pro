@@ -1,5 +1,4 @@
 {
-
   "agtech": {
     "title": "A engenharia por trás do MetaBuilderPRO",
     "lab": "AGTECH INNOVATION LAB",
@@ -75,7 +74,8 @@
     "success": "Salvo com sucesso!",
     "enterprise": "Enterprise",
     "logged_in_as": "Usuário Logado",
-    "all": "Todos"
+    "all": "Todos",
+    "back_to_home": "Voltar para a Home"
   },
   "hero": {
     "badge": "Mecanismo de Metadados Next-Gen",
@@ -494,22 +494,128 @@
         "desc": "Você escreve o SQL puro para maior controle e performance."
       },
       "interface_buttons": "Botões da Interface",
-      "sql_editor": "SQL Editor"
-    },
-    "buttons": {
-      "prev": "Passo Anterior",
-      "next": "Próximo Passo",
-      "finish": "Finalizar",
-      "update": "Atualizar",
-      "saving": "Salvando...",
-      "updating": "Atualizando...",
-      "success_save": "Salvo com sucesso!",
-      "error_save": "Erro ao salvar caso de uso: ",
+      "sql_editor": "SQL Editor",
       "validation": {
         "grid_required": "Selecione pelo menos um campo para a Listagem (Grid).",
         "filter_required": "Você habilitou argumentos. Selecione pelo menos um campo de Filtro.",
         "form_required": "Selecione pelo menos um campo para o Formulário.",
         "name_slug_required": "Por favor, preencha o nome e o slug do caso de uso."
+      }
+    }
+  },
+  "marketing_v2": {
+    "navbar": {
+      "speed": "Agilidade",
+      "integration": "Integração",
+      "branding": "Whitelabel",
+      "security": "Segurança",
+      "zero_trust": "Zero-Trust"
+    },
+    "hero": {
+      "badge": "A Engine de Software do Futuro",
+      "title": "Construa",
+      "enterprise": "Enterprise",
+      "subtitle": "Apps em Segundos.",
+      "desc": "Acelere sua entrega técnica com o MetaBuilderPRO. Conecte bancos legados, use IA para gerar interfaces premium e gerencie múltiplos projetos em uma única plataforma whitelabel."
+    },
+    "home": {
+      "bento_title": "Uma engine completa para",
+      "bento_highlight": "desenvolvedores e empresas.",
+      "bento_desc": "Esqueça o boilerplate. Foque no que importa: a lógica de negócio do seu cliente.",
+      "bridge_title": "Não migre seus dados.",
+      "bridge_subtitle": "Apenas dê vida a eles.",
+      "bridge_desc": "O MetaBuilderPRO se conecta ao seu banco de dados SQL atual e gera uma interface administrativa completa em minutos, sem mexer em uma linha da sua estrutura atual.",
+      "bridge_cta_demo": "Ver Demonstração",
+      "bridge_cta_docs": "Ver Documentação",
+      "zero_trust_title": "Privacidade em primeiro lugar.",
+      "zero_trust_highlight": "Sempre.",
+      "zero_trust_desc": "Diferente de outras ferramentas, o MetaBuilderPRO não conecta no seu banco. Ele envia comandos criptografados para o seu túnel local, que processa a informação.",
+      "zero_trust_encrypted": "Dados Encriptados",
+      "zero_trust_ports": "Zero Portas Abertas",
+      "wizard_title": "Wizard de Casos de Uso",
+      "wizard_desc": "Não perca tempo desenhando grids e formulários um a um. Nosso assistente inteligente cria fluxos completos de CRUD, Master-Detail e Dashboards baseados na semântica do seu banco de dados.",
+      "whitelabel_title": "Runtime Whitelabel",
+      "whitelabel_desc": "O MetaBuilderPRO desaparece para que sua marca brilhe. Favicons dinâmicos, URLs customizadas e temas específicos para cada projeto que você hospedar na plataforma.",
+      "cta_title": "Pronto para o Próximo Nível?",
+      "cta_desc": "Acelere sua entrega técnica e encante seus clientes com interfaces premium.",
+      "cta_start": "Começar Agora Grátis",
+      "cta_plans": "Ver Planos Enterprise"
+    },
+    "features": {
+      "speed": {
+        "title": "Desenvolva. na velocidade do pensamento.",
+        "desc": "O MetaBuilderPRO foi projetado para eliminar as tarefas repetitivas do desenvolvimento web.",
+        "stats_title": "Estimativa de Tempo",
+        "vs_traditional": "MetaBuilderPRO vs Tradicional",
+        "hours": "Horas",
+        "minutes": "Minutos",
+        "stats_traditional": "CRUD Tradicional (Código Manual)",
+        "stats_metabuilder": "MetaBuilderPRO Wizard",
+        "item1_title": "Wizard de Use Case",
+        "item1_desc": "Configure formulários, grids e filtros respondendo a perguntas simples.",
+        "item2_title": "Geração de Esquema IA",
+        "item2_desc": "Nossa IA analisa seu banco de dados e sugere automaticamente as melhores configurações.",
+        "item3_title": "Deploy Instantâneo",
+        "item3_desc": "As alterações refletem imediatamente no ambiente de runtime.",
+        "footer_title": "Pare de codar o básico.",
+        "footer_cta": "Experimentar Wizard Gratuitamente"
+      },
+      "integration": {
+        "title": "Onde seus dados. já estão.",
+        "desc": "Não gaste recursos em migrações arriscadas. Camada de interface ultra-moderna sobre seus bancos SQL.",
+        "console_title": "Console de Conexão",
+        "item1_title": "Preserve sua Lógica",
+        "item1_desc": "Continue usando suas Procedures, Triggers e Views nativas.",
+        "item2_title": "Segurança Transparente",
+        "item2_desc": "Seus dados nunca saem da sua infraestrutura local.",
+        "supported_engines": "Compatível com os principais motores de banco de dados do mercado."
+      },
+      "branding": {
+        "title": "Sua Marca. Suas Regras.",
+        "desc": "Whitelabel total. Cada projeto com sua própria identidade visual dinâmica.",
+        "primary_action": "Botão de Ação Primária",
+        "customize_now": "Personalize Agora",
+        "item1_title": "Logos e Favicons",
+        "item1_desc": "Cada projeto injeta seu próprio favicon e logo em tempo real.",
+        "item2_title": "Tipografia Customizada",
+        "item2_desc": "Defina famílias de fontes específicas para cada marca.",
+        "item3_title": "Temas Adaptativos",
+        "item3_desc": "Suporte nativo a Light e Dark mode por projeto.",
+        "footer_title": "Não somos um template.",
+        "footer_subtitle": "Somos uma plataforma de branding.",
+        "footer_cta": "Começar Configuração Visual"
+      },
+      "zero_trust": {
+        "title": "Arquitetura. Zero-Trust Bridge.",
+        "desc": "Conecte sua interface na nuvem ao seu banco de dados local sem expor portas de rede.",
+        "cloud_app": "App na Nuvem",
+        "tunnel_binary": "Binário do Túnel",
+        "tunnel_status_msg": "# Túnel estabelecido via WebSocket Seguro",
+        "item1_title": "Executável Nativo",
+        "item1_desc": "Binários otimizados para Windows e Linux. Rode onde seu banco está.",
+        "item2_title": "Cego por Design",
+        "item2_desc": "O executável local é o único que possui a senha do banco.",
+        "item3_title": "Performance Realtime",
+        "item3_desc": "WebSockets para garantir latência mínima e experiência fluida.",
+        "it_summary": "Resumo para o Gestor de TI",
+        "it_item1": "Não requer abertura de portas de entrada (Inbound).",
+        "it_item2": "Conexão TLS 1.3 ponta-a-ponta.",
+        "it_item3": "As credenciais nunca saem da infra do cliente.",
+        "it_item4": "Auditável: comandos SQL passam pelo túnel local.",
+        "cta": "Ativar Segurança Enterprise"
+      },
+      "security": {
+        "title": "Segurança. Inabalável.",
+        "desc": "Proteção total para os dados dos seus clientes. Escolha entre múltiplas estratégias de autenticação e garanta que apenas quem deve, acesse o que pode.",
+        "auth_title": "Autenticação Customizável",
+        "auth_desc": "Suporte a BCrypt, MD5, SHA256 e mais.",
+        "item1_title": "Criptografia de Ponta",
+        "item1_desc": "Toda a comunicação entre o Runtime e sua base de dados é protegida por camadas de criptografia TLS.",
+        "item2_title": "Conformidade LGPD/GDPR",
+        "item2_desc": "Ferramentas integradas para gestão de cookies, termos de uso e políticas de privacidade.",
+        "footer_title": "Pronto para proteger seus dados?",
+        "footer_desc": "Implemente segurança de nível bancário em seus sistemas em poucos cliques.",
+        "footer_cta": "Ativar Segurança Enterprise"
       }
     }
   }
