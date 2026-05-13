@@ -49,17 +49,17 @@ export function LegalModal({ isOpen, onClose, title, children }: LegalModalProps
           (() => {
             const parts = title.split(/ de /i)
             return (
-              <span className="text-white font-bold">
-                {parts[0]} de <span className="text-indigo-400">{parts[1]}</span>
+              <span className="text-neutral-900 dark:text-white font-bold">
+                {parts[0]} de <span className="text-indigo-600 dark:text-indigo-400">{parts[1]}</span>
               </span>
             )
           })()
         ) : (
-          <span className="text-white font-bold">{title}</span>
+          <span className="text-neutral-900 dark:text-white font-bold">{title}</span>
         )}
         <span className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase mt-1 flex items-center gap-2">
-          <span className="bg-neutral-800 px-2 py-0.5 rounded border border-neutral-700">Documento Oficial</span>
-          <span className="text-indigo-500">V2.0</span>
+          <span className="bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-700">Documento Oficial</span>
+          <span className="text-indigo-600 dark:text-indigo-500">V2.0</span>
         </span>
       </span>
     )
@@ -84,10 +84,10 @@ export function LegalModal({ isOpen, onClose, title, children }: LegalModalProps
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-2xl max-h-[90vh] bg-[#0A0A0F] border border-white/10 rounded-3xl shadow-2xl overflow-hidden transition-all pointer-events-auto flex flex-col"
+              className="relative w-full max-w-2xl max-h-[90vh] bg-white dark:bg-[#0A0A0F] border border-neutral-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden transition-all pointer-events-auto flex flex-col"
             >
               {/* Header */}
-              <div className="p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-b from-white/5 to-transparent">
+              <div className="p-8 border-b border-neutral-100 dark:border-white/5 flex justify-between items-center bg-gradient-to-b from-neutral-50 dark:from-white/5 to-transparent">
                 <div className="flex items-center gap-6">
                   <div className="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center border border-indigo-500/20 shadow-inner">
                     {getIcon()}
@@ -98,28 +98,28 @@ export function LegalModal({ isOpen, onClose, title, children }: LegalModalProps
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-12 h-12 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-400 hover:text-white transition-all flex items-center justify-center group"
+                  className="w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/10 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-all flex items-center justify-center group"
                 >
                   <X className="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" />
                 </button>
               </div>
 
               {/* Content */}
-              <div className="flex-1 overflow-y-auto p-8 md:p-10 custom-scrollbar bg-gradient-to-b from-transparent via-transparent to-black/20">
-                <div className="prose prose-invert max-w-none prose-p:text-neutral-400 prose-p:leading-relaxed prose-strong:text-white prose-li:text-neutral-400">
+              <div className="flex-1 overflow-y-auto p-8 md:p-10 custom-scrollbar bg-gradient-to-b from-transparent via-transparent to-neutral-100/20 dark:to-black/20">
+                <div className="prose dark:prose-invert max-w-none prose-p:text-neutral-600 dark:prose-p:text-neutral-400 prose-p:leading-relaxed prose-strong:text-neutral-900 dark:prose-strong:text-white prose-li:text-neutral-600 dark:prose-li:text-neutral-400">
                   {children}
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="p-8 border-t border-white/5 flex items-center justify-between bg-black/40">
+              <div className="p-8 border-t border-neutral-100 dark:border-white/5 flex items-center justify-between bg-neutral-50 dark:bg-black/40">
                 <div className="flex items-center gap-4 group">
-                  <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center border border-white/5 group-hover:border-indigo-500/50 transition-colors">
-                    <Shield className="w-5 h-5 text-neutral-500 group-hover:text-indigo-400 transition-colors" />
+                  <div className="w-10 h-10 bg-neutral-100 dark:bg-neutral-900 rounded-xl flex items-center justify-center border border-neutral-200 dark:border-white/5 group-hover:border-indigo-500/50 transition-colors">
+                    <Shield className="w-5 h-5 text-neutral-400 dark:text-neutral-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">MetaBuilder Pro Security</span>
-                    <span className="text-[10px] font-medium text-neutral-600">Compliance & Proteção de Dados</span>
+                    <span className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">MetaBuilder Pro Security</span>
+                    <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-600">Compliance & Proteção de Dados</span>
                   </div>
                 </div>
                 <button

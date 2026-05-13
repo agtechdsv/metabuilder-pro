@@ -9,15 +9,15 @@ export function AgTechContent() {
   return (
     <div className="space-y-12">
       <div className="space-y-6">
-        <p className="text-sm text-neutral-400 leading-relaxed">
-          A <span className="text-white font-bold">AGTech</span> é um laboratório de inovação e engenharia de software focado no desenvolvimento de <span className="text-indigo-400 font-bold">MetadataTechs</span> de alta performance.
+        <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
+          A <span className="text-neutral-900 dark:text-white font-bold">AGTech</span> é um laboratório de inovação e engenharia de software focado no desenvolvimento de <span className="text-indigo-600 dark:text-indigo-400 font-bold">MetadataTechs</span> de alta performance.
         </p>
         
-        <p className="text-sm text-neutral-400 leading-relaxed">
+        <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
           Nossa missão é construir a infraestrutura tecnológica invisível que permite aos grandes projetos operarem com máxima eficiência, segurança e inteligência de dados.
         </p>
         
-        <p className="text-sm text-neutral-400 leading-relaxed">
+        <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
           Combinamos arquiteturas robustas com um design centrado na experiência do usuário para entregar ferramentas que realmente transformam a rotina tecnológica.
         </p>
       </div>
