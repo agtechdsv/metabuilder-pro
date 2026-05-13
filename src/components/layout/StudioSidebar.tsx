@@ -2,7 +2,7 @@
 
 import { 
   Box, 
-  LayoutDashboard, 
+  LayoutDashboard,
   Database, 
   ShieldCheck, 
   Settings2 
@@ -63,7 +63,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps
               href={link.href} 
               className={`p-3 rounded-xl transition-all border group relative flex justify-center ${
                 isActive 
-                  ? 'bg-indigo-50 dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 border-indigo-500/20' 
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 border-indigo-500' 
                   : 'text-neutral-400 hover:text-indigo-600 dark:hover:text-white border-transparent'
               }`}
             >

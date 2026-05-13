@@ -19,6 +19,9 @@ import { useRouter } from 'next/navigation'
 import { Drawer } from '@/components/ui/Drawer'
 import { Modal } from '@/components/ui/Modal'
 import { useI18n } from '@/i18n/I18nContext'
+import { IconPicker } from '@/components/studio/IconPicker'
+import { DynamicIcon } from '@/components/runtime/DynamicIcon'
+import { cn } from '@/lib/utils'
 
 interface Project {
   id: string
@@ -46,6 +49,7 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [showIconPicker, setShowIconPicker] = useState(false)
 
   const supabase = createClient()
   const router = useRouter()
@@ -220,12 +224,10 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
               <div className="flex flex-col h-full gap-4">
                 <div className="flex items-start justify-between">
                   <Link href={`/admin/${workspaceSlug}/${project.slug}/studio`} className="space-y-3 flex-1">
-                    <div className="p-3 bg-neutral-100 dark:bg-neutral-800 rounded-2xl w-fit group-hover:bg-indigo-500/10 transition-colors overflow-hidden flex items-center justify-center min-w-[48px] min-h-[48px]">
-                      {project.icon ? (
-                        <div className="w-6 h-6 flex items-center justify-center text-neutral-400 group-hover:text-indigo-500" dangerouslySetInnerHTML={{ __html: project.icon }} />
-                      ) : (
-                        <Database className="w-6 h-6 text-neutral-400 group-hover:text-indigo-500" />
-                      )}
+                    <div className="p-3 bg-neutral-100 dark:bg-neutral-800 rounded-2xl w-fit group-hover:bg-indigo-500/10 transition-colors flex items-center justify-center min-w-[48px] min-h-[48px]">
+                      <div className="text-neutral-400 group-hover:text-indigo-500 transition-colors">
+                        <DynamicIcon icon={project.icon || 'Box'} size={24} />
+                      </div>
                     </div>
                     <div>
                       <h4 className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-white transition-colors">{project.name}</h4>
@@ -358,16 +360,30 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-4">
               <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">{t('dashboard.projects.project_icon')}</label>
-              <textarea
-                value={formData.icon}
-                onChange={e => setFormData({ ...formData, icon: e.target.value })}
-                placeholder={t('dashboard.projects.icon_placeholder')}
-                rows={4}
-                className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-mono focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white resize-none"
-              />
-              <p className="text-[10px] text-neutral-500 dark:text-neutral-600">{t('dashboard.projects.icon_hint')}</p>
+              <div className="flex items-center gap-4 p-4 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl">
+                <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0">
+                  <DynamicIcon icon={formData.icon || 'Box'} size={24} />
+                </div>
+                <div className="flex-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowIconPicker(true)}
+                    className="px-4 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all"
+                  >
+                    {t('dashboard.projects.change_icon')}
+                  </button>
+                </div>
+              </div>
+
+              {showIconPicker && (
+                <IconPicker 
+                  currentIcon={formData.icon || 'Box'}
+                  onSelect={(icon) => setFormData({ ...formData, icon })}
+                  onClose={() => setShowIconPicker(false)}
+                />
+              )}
             </div>
 
             {selectedProject && (

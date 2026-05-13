@@ -340,7 +340,6 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
         buttons_config: config.buttons_config,
         view_type: 'advanced_use_case',
         model_id: config.selected_models[0], // Define a primeira tabela como modelo principal
-        layout_config: { ...config.layout_config, is_active: true }
       }
 
       // Tenta encontrar por slug primeiro

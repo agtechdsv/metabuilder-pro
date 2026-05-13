@@ -129,7 +129,8 @@
       "desc_placeholder": "Ex: Sales management and funnel system.",
       "project_icon": "Icon (SVG)",
       "icon_placeholder": "Paste <svg> code here...",
-      "icon_hint": "Enter an SVG code to customize the project icon.",
+      "icon_hint": "Insert SVG code to customize the project icon.",
+      "change_icon": "Change Icon",
       "status_active": "Active",
       "status_inactive": "Inactive",
       "toggle_active": "Activate",
@@ -333,6 +334,7 @@
     "project_inactive_desc": "This application has been temporarily disabled by the workspace administrator."
   },
   "runtime": {
+    "dashboard": "Dashboard",
     "search": "Search",
     "clear": "Clear",
     "filter_placeholder": "Filter by {field}...",

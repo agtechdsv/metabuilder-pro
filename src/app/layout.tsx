@@ -15,6 +15,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "MetaBuilderPRO | The Dynamic Metadata Engine",
   description: "Generate dynamic database-driven CRUD applications without physical file generation.",
+  icons: {
+    icon: [
+      {
+        url: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="%234f46e5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>',
+        type: 'image/svg+xml',
+      },
+    ],
+  },
 };
 import { preinit } from "react-dom";
 import { Providers } from "@/components/Providers";

@@ -22,10 +22,13 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
+import { IconPicker } from './IconPicker'
+import { DynamicIcon } from '@/components/runtime/DynamicIcon'
 
 interface MenuItem {
   id: string
   label: string
+  description?: string
   icon: string
   type: 'view' | 'link' | 'folder'
   target: string
@@ -39,17 +42,6 @@ interface MenuBuilderProps {
   onSave: (menu: MenuItem[]) => Promise<void>
 }
 
-const AVAILABLE_ICONS = [
-  { id: 'Layout', icon: Layout },
-  { id: 'Layers', icon: Layers },
-  { id: 'Box', icon: Box },
-  { id: 'Database', icon: Database },
-  { id: 'Settings', icon: Settings },
-  { id: 'Search', icon: Search },
-  { id: 'Globe', icon: Globe },
-  { id: 'Link', icon: LinkIcon }
-]
-
 export function MenuBuilder({ project, views, onSave }: MenuBuilderProps) {
   const { t } = useI18n()
   const [menu, setMenu] = useState<MenuItem[]>(project.navigation || [])
@@ -61,6 +53,7 @@ export function MenuBuilder({ project, views, onSave }: MenuBuilderProps) {
     const newItem: MenuItem = {
       id: newId,
       label: '', 
+      description: '',
       icon: type === 'folder' ? 'Layers' : 'Layout',
       type,
       target: '',
@@ -185,8 +178,8 @@ export function MenuBuilder({ project, views, onSave }: MenuBuilderProps) {
 function MenuNode({ item, views, onUpdate, onRemove, onAddChild, lastAddedId }: any) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [showAddMenu, setShowAddMenu] = useState(false)
+  const [showIconPicker, setShowIconPicker] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const IconComp = AVAILABLE_ICONS.find(i => i.id === item.icon)?.icon || Layout
 
   useEffect(() => {
     if (lastAddedId === item.id && inputRef.current) {
@@ -205,19 +198,39 @@ function MenuNode({ item, views, onUpdate, onRemove, onAddChild, lastAddedId }: 
         <GripVertical className="w-4 h-4 text-neutral-300 cursor-grab active:cursor-grabbing shrink-0" />
 
         <div className="flex items-center gap-3 shrink-0">
-          <div className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-neutral-500">
-            <IconComp className="w-4 h-4" />
-          </div>
+          <button 
+            onClick={() => setShowIconPicker(true)}
+            className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-neutral-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all group/icon"
+            title="Alterar Ícone"
+          >
+            <DynamicIcon icon={item.icon} size={16} className="group-hover/icon:scale-110 transition-transform" />
+          </button>
         </div>
 
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-          <input
-            ref={inputRef}
-            value={item.label}
-            onChange={e => onUpdate(item.id, { label: e.target.value })}
-            placeholder={item.type === 'folder' ? 'Nome do Menu...' : 'Nome do Menu...'}
-            className="bg-transparent border-b border-transparent focus:border-indigo-500 outline-none text-sm font-bold text-neutral-900 dark:text-white"
+        {showIconPicker && (
+          <IconPicker 
+            currentIcon={item.icon}
+            onSelect={(icon) => onUpdate(item.id, { icon })}
+            onClose={() => setShowIconPicker(false)}
           />
+        )}
+
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+          <div className="flex flex-col gap-1">
+            <input
+              ref={inputRef}
+              value={item.label}
+              onChange={e => onUpdate(item.id, { label: e.target.value })}
+              placeholder={item.type === 'folder' ? 'Nome do Menu...' : 'Nome do Menu...'}
+              className="bg-transparent border-b border-transparent focus:border-indigo-500 outline-none text-sm font-bold text-neutral-900 dark:text-white"
+            />
+            <input
+              value={item.description || ''}
+              onChange={e => onUpdate(item.id, { description: e.target.value })}
+              placeholder="Descrição curta..."
+              className="bg-transparent border-b border-transparent focus:border-indigo-500 outline-none text-[9px] font-medium text-neutral-400"
+            />
+          </div>
 
           {item.type === 'view' && (
             <select
