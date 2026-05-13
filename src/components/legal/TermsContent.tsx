@@ -28,7 +28,7 @@ export function TermsContent() {
 
   return (
     <div className="space-y-10">
-      <p className="text-neutral-400 text-sm leading-relaxed">
+      <p className="text-neutral-600 dark:text-neutral-400 text-sm leading-relaxed">
         {t('terms.item1_desc').split('.')[0]}. {t('terms.item3_desc').split('.')[0]}.
       </p>
 
@@ -36,26 +36,26 @@ export function TermsContent() {
         {sections.map((section, idx) => (
           <div key={idx} className="relative pl-12 group">
             {/* Number Circle */}
-            <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-black shadow-[0_0_20px_rgba(99,102,241,0.1)] group-hover:scale-110 transition-transform">
+            <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-xs font-black shadow-[0_0_20px_rgba(99,102,241,0.1)] group-hover:scale-110 transition-transform">
               {idx + 1}
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-white font-black text-sm uppercase tracking-widest">
+              <h3 className="text-neutral-900 dark:text-white font-black text-sm uppercase tracking-widest">
                 {section.title}
               </h3>
               
               {section.warning ? (
-                <div className="p-5 rounded-2xl bg-amber-500/5 border border-amber-500/20 relative overflow-hidden group/box">
+                <div className="p-5 rounded-2xl bg-amber-500/5 border border-amber-500/20 dark:border-amber-500/10 relative overflow-hidden group/box">
                   <div className="flex gap-4 items-start relative">
-                    <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-amber-200/80 italic leading-relaxed">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber-900 dark:text-amber-200/80 italic leading-relaxed">
                       {section.content}
                     </p>
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-neutral-400 leading-relaxed">
+                <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
                   {section.content}
                 </p>
               )}

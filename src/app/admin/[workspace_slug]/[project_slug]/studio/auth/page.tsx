@@ -347,8 +347,10 @@ export default function AuthSettingsPage() {
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
                       >
                         <option value="">Selecione o campo...</option>
-                        {models.find(m => m.db_table_name === authConfig.db_table_name)?.ui_components?.filter((c:any) => c.zone === 'grid').map((f: any) => (
-                          <option key={f.id} value={f.db_column_name}>{f.db_column_name}</option>
+                        {fields.map((f: any) => (
+                          <option key={f.id} value={f.name || f.db_column_name}>
+                            {f.label || f.name || f.db_column_name}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -360,8 +362,10 @@ export default function AuthSettingsPage() {
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
                       >
                         <option value="">Selecione o campo...</option>
-                        {models.find(m => m.db_table_name === authConfig.db_table_name)?.ui_components?.filter((c:any) => c.zone === 'grid').map((f: any) => (
-                          <option key={f.id} value={f.db_column_name}>{f.db_column_name}</option>
+                        {fields.map((f: any) => (
+                          <option key={f.id} value={f.name || f.db_column_name}>
+                            {f.label || f.name || f.db_column_name}
+                          </option>
                         ))}
                       </select>
                     </div>
