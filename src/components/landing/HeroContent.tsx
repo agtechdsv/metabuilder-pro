@@ -1,6 +1,7 @@
 'use client'
 
-import { Database, ShieldCheck, Layers } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Database, ShieldCheck, Layers, Zap } from 'lucide-react'
 import { HeroActions } from '@/components/landing/HeroActions'
 import { useI18n } from '@/i18n/I18nContext'
 
@@ -30,39 +31,53 @@ export function HeroContent({ user }: HeroContentProps) {
   ]
 
   return (
-    <div className="z-10 max-w-5xl w-full flex flex-col gap-12 mt-12">
-      <div className="flex flex-col gap-6 text-center md:text-left max-w-3xl">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] uppercase tracking-wider font-bold w-fit self-center md:self-start">
-          <ShieldCheck className="w-3.5 h-3.5" />
-          {t('hero.badge')}
-        </div>
+    <div className="z-10 max-w-7xl w-full flex flex-col items-center gap-20 py-20">
+      <div className="flex flex-col gap-10 text-center items-center max-w-4xl">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 dark:text-indigo-400 text-[11px] uppercase tracking-widest font-black"
+        >
+          <Zap className="w-4 h-4 fill-indigo-500" />
+          A Engine de Software do Futuro
+        </motion.div>
         
-        <h1 className="text-5xl md:text-8xl font-extrabold tracking-tighter leading-[1] py-2 text-black dark:text-white transition-colors">
-          {t('hero.title_part1')} <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500">
-            {t('hero.title_part2')}
-          </span>
+        <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-[1.1] text-black dark:text-white transition-colors">
+          Construa Apps <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500">
+            Enterprise
+          </span> <br/>
+          em Segundos.
         </h1>
         
-        <p className="text-lg md:text-xl text-neutral-600 dark:text-neutral-400 leading-relaxed max-w-2xl transition-colors">
-          {t('hero.subtitle')}
+        <p className="text-xl md:text-2xl text-neutral-600 dark:text-neutral-400 leading-relaxed max-w-3xl font-medium">
+          Acelere sua entrega técnica com o MetaBuilderPRO. Conecte bancos legados, use IA para gerar interfaces premium e gerencie múltiplos projetos em uma única plataforma whitelabel.
         </p>
 
         <HeroActions user={user} />
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mt-12">
-        {features.map((feature, i) => (
-          <div key={i} className="group p-8 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] bg-neutral-100/50 dark:bg-neutral-900/40 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/40 hover:border-neutral-300 dark:hover:border-neutral-700 transition-all duration-500 backdrop-blur-sm relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <div className="mb-6 p-4 bg-white dark:bg-neutral-950 rounded-2xl w-fit border border-neutral-200 dark:border-neutral-800 group-hover:border-neutral-300 dark:group-hover:border-neutral-700 group-hover:scale-110 transition-all duration-500 shadow-inner">
-              {feature.icon}
-            </div>
-            <h3 className="text-xl font-bold mb-3 text-neutral-900 dark:text-neutral-100 group-hover:text-black dark:group-hover:text-white transition-colors">{feature.title}</h3>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed group-hover:text-neutral-700 dark:group-hover:text-neutral-300 transition-colors">{feature.desc}</p>
-          </div>
-        ))}
-      </div>
+      {/* Visual Showcase / Mockup */}
+      <motion.div 
+        initial={{ opacity: 0, y: 40, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 0.2, duration: 0.8 }}
+        className="relative w-full aspect-video max-w-6xl rounded-[3rem] overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-3xl bg-neutral-100 dark:bg-neutral-900"
+      >
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10 pointer-events-none"></div>
+        <img 
+          src="/metabuilder_showcase_mockup.png" 
+          alt="MetaBuilderPRO Interface" 
+          className="w-full h-full object-cover"
+        />
+        {/* Decorative elements over image */}
+        <div className="absolute top-10 left-10 z-20 flex gap-4">
+           <div className="px-4 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+             Runtime Online
+           </div>
+        </div>
+      </motion.div>
     </div>
   )
 }
