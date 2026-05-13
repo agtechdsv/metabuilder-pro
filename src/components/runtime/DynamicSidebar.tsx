@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { 
@@ -8,16 +8,11 @@ import {
   Layers, 
   Box, 
   Settings, 
-  Database, 
-  Search, 
-  Globe,
-  Link as LinkIcon,
-  LogOut,
-  PanelLeftClose,
-  PanelLeftOpen,
-  ChevronRight
+  LogOut
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { motion, AnimatePresence } from 'framer-motion'
+import { DynamicIcon } from './DynamicIcon'
 
 interface MenuItem {
   id: string
@@ -34,35 +29,26 @@ interface DynamicSidebarProps {
   workspaceSlug: string
   projectSlug: string
   navigation: MenuItem[]
+  isCollapsed: boolean
+  setIsCollapsed: (val: boolean) => void
 }
 
-const ICON_MAP: Record<string, any> = {
-  Layout,
-  Layers,
-  Box,
-  Settings,
-  Database,
-  Search,
-  Globe,
-  Link: LinkIcon
-}
 
-export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation = [] }: DynamicSidebarProps) {
+
+export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation = [], isCollapsed, setIsCollapsed }: DynamicSidebarProps) {
+  const projectIcon = project.icon || 'Box'
   const pathname = usePathname()
   const router = useRouter()
-  const [isCollapsed, setIsCollapsed] = useState(false)
   const [expandedFolders, setExpandedFolders] = useState<string[]>([])
 
   const toggleFolder = (id: string) => {
     setExpandedFolders(prev => 
       prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
     )
-    // Ao clicar na pasta, navega para o dashboard dela
     router.push(`/${workspaceSlug}/${projectSlug}/dashboard/${id}`)
   }
 
   const renderMenuItem = (item: MenuItem, isChild = false) => {
-    const Icon = ICON_MAP[item.icon] || Layout
     const isActive = item.type === 'view' 
       ? pathname.includes(`/${workspaceSlug}/${projectSlug}/${item.target}`)
       : pathname.includes(`/dashboard/${item.id}`)
@@ -83,21 +69,41 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
               isCollapsed && "justify-center px-0"
             )}
           >
-            <Icon className={cn("w-5 h-5 shrink-0", isCollapsed && "w-6 h-6")} />
-            {!isCollapsed && <span className="flex-1 text-sm font-bold text-left truncate">{item.label}</span>}
+            <DynamicIcon 
+              icon={item.icon} 
+              className={cn("w-5 h-5 shrink-0", isCollapsed && "w-6 h-6 transition-all duration-500")} 
+              size={isCollapsed ? 24 : 20}
+            />
             
-            {/* Tooltip no colapsado */}
+            <AnimatePresence mode="wait">
+              {!isCollapsed && (
+                <motion.span 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="flex-1 text-sm font-bold text-left truncate"
+                >
+                  {item.label}
+                </motion.span>
+              )}
+            </AnimatePresence>
+            
             {isCollapsed && (
-              <div className="absolute left-full ml-4 px-3 py-2 bg-neutral-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[1000] shadow-xl">
+              <div className="absolute left-full ml-4 px-3 py-2 bg-neutral-900 text-white text-[10px] font-bold capitalize tracking-widest rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap z-[1000] shadow-xl translate-x-2 group-hover:translate-x-0">
                 {item.label}
+                <div className="absolute right-full top-1/2 -translate-y-1/2 border-8 border-transparent border-r-neutral-900" />
               </div>
             )}
           </button>
           
           {!isCollapsed && isExpanded && item.children && (
-            <div className="ml-4 pl-4 border-l border-neutral-200 dark:border-neutral-800 space-y-1 animate-in fade-in slide-in-from-top-2 duration-300">
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              className="ml-4 pl-4 border-l border-neutral-200 dark:border-neutral-800 space-y-1 overflow-hidden"
+            >
               {item.children.map(child => renderMenuItem(child, true))}
-            </div>
+            </motion.div>
           )}
         </div>
       )
@@ -120,16 +126,33 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
           isCollapsed && "justify-center px-0"
         )}
       >
-        <Icon className={cn("w-5 h-5 shrink-0", isCollapsed && "w-6 h-6")} />
-        {!isCollapsed && <span className="text-sm font-bold truncate">{item.label}</span>}
+        <DynamicIcon 
+          icon={item.icon} 
+          className={cn("w-5 h-5 shrink-0", isCollapsed && "w-6 h-6 transition-all duration-500")} 
+          size={isCollapsed ? 24 : 20}
+        />
+        
+        <AnimatePresence mode="wait">
+          {!isCollapsed && (
+            <motion.span 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              className="text-sm font-bold truncate"
+            >
+              {item.label}
+            </motion.span>
+          )}
+        </AnimatePresence>
         
         {isActive && !isCollapsed && (
           <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
         )}
         
         {isCollapsed && (
-          <div className="absolute left-full ml-4 px-3 py-2 bg-neutral-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[1000] shadow-xl">
+          <div className="absolute left-full ml-4 px-3 py-2 bg-neutral-900 text-white text-[10px] font-bold capitalize tracking-widest rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap z-[1000] shadow-xl translate-x-2 group-hover:translate-x-0">
             {item.label}
+            <div className="absolute right-full top-1/2 -translate-y-1/2 border-8 border-transparent border-r-neutral-900" />
           </div>
         )}
       </Link>
@@ -137,42 +160,56 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
   }
 
   return (
-    <aside 
+    <motion.aside 
+      animate={{ width: isCollapsed ? 80 : 288 }}
+      transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
       className={cn(
-        "sticky top-0 h-screen bg-white/80 dark:bg-black/40 backdrop-blur-xl border-r border-neutral-200/50 dark:border-white/5 transition-all duration-500 z-[100] flex flex-col shrink-0",
-        isCollapsed ? "w-24" : "w-72"
+        "sticky top-0 h-screen bg-white/80 dark:bg-black/40 backdrop-blur-xl border-r border-neutral-200/50 dark:border-white/5 z-[100] flex flex-col shrink-0 transition-all",
+        isCollapsed ? "overflow-visible" : "overflow-hidden"
       )}
     >
-      {/* Header */}
-      <div className="p-6 flex items-center justify-between">
-        {!isCollapsed && (
-          <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500">
-            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-              <Box className="w-5 h-5" />
-            </div>
-            <div className="flex flex-col">
-               <span className="text-xs font-black uppercase tracking-widest text-neutral-900 dark:text-white leading-none">
-                 {project.name}
-               </span>
-               <span className="text-[8px] font-black uppercase tracking-[0.2em] text-indigo-500 opacity-70 mt-0.5">
-                 MetaBuilder PRO
-               </span>
-            </div>
-          </div>
-        )}
-        <button 
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className={cn(
-            "p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:text-indigo-600 transition-all",
-            isCollapsed && "mx-auto"
-          )}
+      {/* Sidebar Header - Aligned with Global Header */}
+      <div className="h-16 flex items-center px-6 border-b border-neutral-200/50 dark:border-white/5 shrink-0">
+        <Link 
+          href={`/${workspaceSlug}/${projectSlug}/dashboard`}
+          className="flex items-center gap-3 group relative"
         >
-          {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-        </button>
+          <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0 group-hover:scale-110 transition-transform">
+            <DynamicIcon icon={projectIcon} size={18} />
+          </div>
+          
+          {isCollapsed && (
+            <div className="absolute left-full ml-4 px-3 py-2 bg-neutral-900 text-white text-[10px] font-bold capitalize tracking-widest rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap z-[1000] shadow-xl translate-x-2 group-hover:translate-x-0">
+              Dashboard
+              <div className="absolute right-full top-1/2 -translate-y-1/2 border-8 border-transparent border-r-neutral-900" />
+            </div>
+          )}
+
+          <AnimatePresence>
+            {!isCollapsed && (
+              <motion.div 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="flex flex-col truncate"
+              >
+                 <span className="text-[10px] font-black uppercase tracking-widest text-neutral-900 dark:text-white leading-none truncate">
+                   {project.name}
+                 </span>
+                 <span className="text-[7px] font-black uppercase tracking-[0.2em] text-indigo-500 opacity-70 mt-0.5">
+                   MetaBuilder PRO
+                 </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Link>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-2 custom-scrollbar">
+      <nav className={cn(
+        "flex-1 px-4 py-6 space-y-2 custom-scrollbar",
+        isCollapsed ? "overflow-visible" : "overflow-y-auto"
+      )}>
         {navigation.length > 0 ? (
           navigation.map(item => renderMenuItem(item))
         ) : (
@@ -192,12 +229,21 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-black text-white shrink-0">
              U
            </div>
-           {!isCollapsed && (
-             <div className="flex flex-col flex-1 min-w-0">
-               <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">Usuário Cliente</span>
-               <span className="text-[9px] text-neutral-400 truncate">Sair do Sistema</span>
-             </div>
-           )}
+           
+           <AnimatePresence>
+             {!isCollapsed && (
+               <motion.div 
+                 initial={{ opacity: 0, width: 0 }}
+                 animate={{ opacity: 1, width: 'auto' }}
+                 exit={{ opacity: 0, width: 0 }}
+                 className="flex flex-col flex-1 min-w-0 overflow-hidden"
+               >
+                 <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">Usuário Cliente</span>
+                 <span className="text-[9px] text-neutral-400 truncate">Sair do Sistema</span>
+               </motion.div>
+             )}
+           </AnimatePresence>
+
            {!isCollapsed && (
              <button className="p-1.5 text-neutral-400 hover:text-red-500">
                <LogOut className="w-4 h-4" />
@@ -205,6 +251,6 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
            )}
         </div>
       </div>
-    </aside>
+    </motion.aside>
   )
 }

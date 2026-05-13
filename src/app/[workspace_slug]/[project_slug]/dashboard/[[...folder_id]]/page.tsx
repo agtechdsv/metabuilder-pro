@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { notFound } from 'next/navigation'
 import { DynamicDashboard } from '@/components/runtime/DynamicDashboard'
+import { findBreadcrumbPath } from '@/lib/navigation-utils'
 
 interface WorkspacePageProps {
   params: Promise<{
@@ -38,7 +39,8 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
 
   let displayItems = []
   let title = project.name
-  let subtitle = 'Dashboard Principal'
+  let subtitle = project.description || 'Dashboard Principal'
+  let icon = ''
 
   if (activeFolderId) {
     // Busca a pasta recursivamente
@@ -59,11 +61,17 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
     // Filtra apenas itens que devem mostrar dashboard
     displayItems = (folder.children || []).filter((item: any) => item.show_dashboard !== false)
     title = folder.label
-    subtitle = `Explorando ${folder.label}`
+    subtitle = folder.description || `Explorando ${folder.label}`
+    icon = folder.icon
   } else {
-    // Dashboard Raiz
     displayItems = navigation.filter((item: any) => item.show_dashboard !== false)
+    icon = project.icon || 'Box'
   }
+
+  const baseUrl = `/${workspace_slug}/${project_slug}`
+  const breadcrumbs = activeFolderId 
+    ? findBreadcrumbPath(navigation, activeFolderId, [], baseUrl) || []
+    : []
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -73,7 +81,10 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
         projectSlug={project_slug}
         title={title}
         subtitle={subtitle}
+        icon={icon}
+        breadcrumbs={breadcrumbs}
       />
     </div>
   )
+
 }

@@ -17,7 +17,8 @@ import {
   PowerOff,
   AlertCircle,
   Shield,
-  ExternalLink
+  ExternalLink,
+  LayoutGrid
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState, useTransition, useEffect } from 'react'
@@ -33,6 +34,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { MenuBuilder } from '@/components/studio/MenuBuilder'
+import { BrandingConfig } from '@/components/studio/BrandingConfig'
 
 interface StudioDashboardClientProps {
   workspace: any
@@ -61,7 +63,7 @@ export function StudioDashboardClient({
   const { toast } = useToast()
   const [isPending, startTransition] = useTransition()
 
-  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'navigation'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'navigation' | 'branding'>('list')
   const [viewToEdit, setViewToEdit] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [viewToDelete, setViewToDelete] = useState<any>(null)
@@ -131,6 +133,22 @@ export function StudioDashboardClient({
     }
   }
 
+  const handleSaveBranding = async (data: any) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update(data)
+        .eq('id', project.id)
+
+      if (error) throw error
+
+      toast('Identidade visual salva com sucesso!', 'success')
+      router.refresh()
+    } catch (err: any) {
+      toast('Erro ao salvar identidade: ' + err.message, 'error')
+    }
+  }
+
   return (
     <>
       <Breadcrumbs
@@ -146,7 +164,7 @@ export function StudioDashboardClient({
           <div className="flex items-center justify-between mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 rotate-3">
-                <Layers className="w-6 h-6" />
+                <LayoutDashboard className="w-6 h-6" />
               </div>
               <div>
                 <h2 className="text-2xl font-black tracking-tight text-neutral-900 dark:text-white">
@@ -174,6 +192,15 @@ export function StudioDashboardClient({
                 )}
                >
                  Navegação
+               </button>
+               <button 
+                onClick={() => setViewMode('branding')}
+                className={cn(
+                  "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                  viewMode === 'branding' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
+                )}
+               >
+                 Identidade
                </button>
             </div>
 
@@ -258,6 +285,13 @@ export function StudioDashboardClient({
               project={project}
               views={views}
               onSave={handleSaveNavigation}
+            />
+          </div>
+        ) : viewMode === 'branding' ? (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <BrandingConfig 
+              project={project}
+              onSave={handleSaveBranding}
             />
           </div>
         ) : (

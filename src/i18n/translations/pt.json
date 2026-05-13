@@ -130,6 +130,7 @@
       "project_icon": "Ícone (SVG)",
       "icon_placeholder": "Cole aqui o código <svg>...",
       "icon_hint": "Insira um código SVG para personalizar o ícone do projeto.",
+      "change_icon": "Alterar Ícone",
       "status_active": "Ativo",
       "status_inactive": "Inativo",
       "toggle_active": "Ativar",
@@ -337,6 +338,7 @@
     "project_inactive_desc": "Este aplicativo foi temporariamente desativado pelo administrador do workspace."
   },
   "runtime": {
+    "dashboard": "Dashboard",
     "search": "Pesquisar",
     "clear": "Limpar",
     "filter_placeholder": "Filtrar por {field}...",

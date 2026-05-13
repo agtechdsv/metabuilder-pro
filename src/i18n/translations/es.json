@@ -129,7 +129,8 @@
       "desc_placeholder": "Ej: Sistema de gestión de ventas y embudo.",
       "project_icon": "Icono (SVG)",
       "icon_placeholder": "Pegue el código <svg> aquí...",
-      "icon_hint": "Inserte un código SVG para personalizar el icono del proyecto.",
+      "icon_hint": "Inserte el código SVG para personalizar el icono del proyecto.",
+      "change_icon": "Cambiar Icono",
       "status_active": "Activo",
       "status_inactive": "Inactivo",
       "toggle_active": "Activar",
@@ -333,6 +334,7 @@
     "project_inactive_desc": "Esta aplicación ha sido desactivada temporalmente por el administrador del espacio de trabajo."
   },
   "runtime": {
+    "dashboard": "Dashboard",
     "search": "Buscar",
     "clear": "Limpiar",
     "filter_placeholder": "Filtrar por {field}...",

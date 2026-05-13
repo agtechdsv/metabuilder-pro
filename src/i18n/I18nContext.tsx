@@ -12,7 +12,7 @@ type Translations = typeof pt
 interface I18nContextType {
   language: Language
   setLanguage: (lang: Language) => void
-  t: (path: string) => string
+  t: (path: string, defaultValue?: string) => string
 }
 
 const translations: Record<Language, any> = { pt, en, es }
@@ -51,13 +51,13 @@ export function I18nProvider({
     router.refresh()
   }
 
-  const t = (path: string): string => {
+  const t = (path: string, defaultValue?: string): string => {
     const keys = path.split('.')
     let current: any = translations[language]
     
     for (const key of keys) {
-      if (current[key] === undefined) {
-        return path // Retorna a chave se não encontrar
+      if (!current || current[key] === undefined) {
+        return defaultValue || path // Retorna default ou a chave se não encontrar
       }
       current = current[key]
     }

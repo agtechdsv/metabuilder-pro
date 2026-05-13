@@ -8,6 +8,8 @@ import { getLocale } from '@/i18n/get-locale'
 import { HeaderActions } from '@/components/layout/HeaderActions'
 import ViewContainer from '@/components/runtime/ViewContainer'
 import { RuntimeHeader } from '@/components/runtime/RuntimeHeader'
+import { findBreadcrumbPath, findNavigationItem } from '@/lib/navigation-utils'
+import { RuntimeBreadcrumbs } from '@/components/runtime/RuntimeBreadcrumbs'
 
 interface PageProps {
   params: Promise<{
@@ -44,10 +46,10 @@ export default async function SlugPage({ params }: PageProps) {
     notFound()
   }
 
-  // 2. Resolve o Projeto pelo Slug e Workspace ID
+  // 2. Resolve o Projeto pelo Slug e Workspace ID (incluindo navegação)
   const { data: project, error: projectError } = await supabase
     .from('projects')
-    .select('id, name')
+    .select('id, name, navigation')
     .eq('slug', project_slug)
     .eq('workspace_id', workspace.id)
     .single()
@@ -56,6 +58,13 @@ export default async function SlugPage({ params }: PageProps) {
     console.error('Project not found:', project_slug)
     notFound()
   }
+
+  const navigation = project.navigation || []
+  const baseUrl = `/${workspace_slug}/${project_slug}`
+  const breadcrumbs = findBreadcrumbPath(navigation, view_slug, [], baseUrl) || [{ label: view_slug, href: '#' }]
+  const navItem = findNavigationItem(navigation, view_slug)
+  const navDescription = navItem?.description
+  const navIcon = navItem?.icon
 
   // 3. Resolve a View (Caso de Uso) ou faz fallback para o Model (Tabela Bruta)
   let viewName = ''
@@ -221,13 +230,15 @@ export default async function SlugPage({ params }: PageProps) {
           masterModelId={view.layout_config?.master_model_id}
           detailDisplayMode={view.layout_config?.detail_display_mode}
           actionInterfaceType={view.layout_config?.action_interface_type}
-          baseUrl={`/${workspace_slug}/${project_slug}/dashboard`}
+          baseUrl={`${baseUrl}/dashboard`}
+          breadcrumbs={breadcrumbs}
+          description={navDescription}
+          icon={navIcon}
         />
       </TranslationProvider>
     )
   } else {
-    // FALLBACK: Se não existe uma View com esse slug, 
-    // buscamos o Model bruto e seus campos originais.
+    // FALLBACK
     const { data: model, error: modelError } = await supabase
       .from('models')
       .select('*, fields(*)')
@@ -253,11 +264,13 @@ export default async function SlugPage({ params }: PageProps) {
           <RuntimeHeader 
             viewName={viewName}
             icon={<Table className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />}
-            breadcrumbs={[{ label: viewName }]}
-            baseUrl={`/${workspace_slug}/${project_slug}/dashboard`}
+            breadcrumbs={[]}
+            baseUrl={`${baseUrl}/dashboard`}
           />
 
-          <main className="max-w-7xl mx-auto px-6 py-8">
+          <main className="max-w-7xl mx-auto px-6 py-2">
+            <RuntimeBreadcrumbs breadcrumbs={breadcrumbs} baseUrl={`${baseUrl}/dashboard`} />
+            
             <ViewContainer 
               projectId={project.id}
               modelName={modelName}
@@ -271,4 +284,5 @@ export default async function SlugPage({ params }: PageProps) {
       </TranslationProvider>
     )
   }
+
 }

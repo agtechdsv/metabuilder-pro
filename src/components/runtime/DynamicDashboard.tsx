@@ -1,25 +1,20 @@
 'use client'
 
 import { 
-  Layout, 
-  Layers, 
-  Box, 
-  Settings, 
-  Database, 
-  Search, 
-  Globe,
-  Link as LinkIcon,
   ChevronRight,
   ArrowRight
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { DynamicIcon } from './DynamicIcon'
 
 import { RuntimeHeader } from './RuntimeHeader'
+import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
 
 interface MenuItem {
   id: string
   label: string
+  description?: string
   icon: string
   type: 'view' | 'link' | 'folder'
   target: string
@@ -33,34 +28,26 @@ interface DynamicDashboardProps {
   projectSlug: string
   title: string
   subtitle?: string
+  icon?: string
+  breadcrumbs?: { label: string; href: string }[]
 }
 
-const ICON_MAP: Record<string, any> = {
-  Layout,
-  Layers,
-  Box,
-  Settings,
-  Database,
-  Search,
-  Globe,
-  Link: LinkIcon
-}
 
-export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, subtitle }: DynamicDashboardProps) {
-  const isSubFolder = subtitle?.includes('Explorando')
 
+export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, subtitle, icon }: DynamicDashboardProps) {
   return (
-    <div className="flex-1 flex flex-col min-h-screen bg-slate-50 dark:bg-[#050505]">
+    <div className="space-y-6">
       <RuntimeHeader 
         viewName={title}
-        breadcrumbs={isSubFolder ? [{ label: title }] : []}
-        baseUrl={`/${workspaceSlug}/${projectSlug}/dashboard`}
+        subtitle={subtitle}
+        icon={icon}
       />
 
-      <div className="p-10 space-y-10 animate-in fade-in duration-700">
+      <div className="px-10 py-2 space-y-6 animate-in fade-in duration-700">
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+
         {items.map((item) => {
-          const Icon = ICON_MAP[item.icon] || Layout
           const isFolder = item.type === 'folder'
           const href = isFolder 
             ? `/${workspaceSlug}/${projectSlug}/dashboard/${item.id}`
@@ -80,7 +67,7 @@ export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, sub
               
               <div className="relative z-10 flex flex-col h-full gap-6">
                 <div className="w-14 h-14 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center text-neutral-400 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-sm">
-                  <Icon className="w-7 h-7" />
+                  <DynamicIcon icon={item.icon} size={28} />
                 </div>
 
                 <div className="space-y-2">
@@ -90,6 +77,11 @@ export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, sub
                   <p className="text-xs text-neutral-500 dark:text-neutral-500 font-medium uppercase tracking-widest">
                     {isFolder ? 'Menu / Pasta' : item.type === 'view' ? 'Caso de Uso' : 'Link Externo'}
                   </p>
+                  {item.description && (
+                    <p className="text-[10px] text-neutral-400 dark:text-neutral-500 line-clamp-1 italic mt-1">
+                      {item.description}
+                    </p>
+                  )}
                 </div>
 
                 <div className="mt-auto flex items-center justify-between pt-4 border-t border-neutral-100 dark:border-neutral-800/50">

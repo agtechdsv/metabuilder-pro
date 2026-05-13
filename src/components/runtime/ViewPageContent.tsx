@@ -41,7 +41,12 @@ interface ViewPageContentProps {
   detailDisplayMode?: 'tabs' | 'sections'
   actionInterfaceType?: 'drawer' | 'modal' | 'page'
   baseUrl?: string
+  breadcrumbs?: { label: string; href: string }[]
+  description?: string
+  icon?: string
 }
+
+import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
 
 export default function ViewPageContent({
   workspace,
@@ -66,8 +71,12 @@ export default function ViewPageContent({
   masterModelId,
   detailDisplayMode,
   actionInterfaceType = 'drawer',
-  baseUrl
+  baseUrl,
+  breadcrumbs = [],
+  description,
+  icon
 }: ViewPageContentProps) {
+
   const { t } = useI18n()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -482,13 +491,12 @@ export default function ViewPageContent({
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#050505] text-neutral-900 dark:text-neutral-200 transition-colors duration-300">
+    <div className="space-y-6">
       {/* Header com Branding Dinâmico */}
       <RuntimeHeader 
         viewName={viewName}
-        icon={<Table className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />}
-        breadcrumbs={[{ label: viewName }]}
-        baseUrl={baseUrl}
+        subtitle={description}
+        icon={icon}
         actions={canAdd && (
           <button 
             onClick={handleOpenAdd}
@@ -500,8 +508,10 @@ export default function ViewPageContent({
         )}
       />
 
-      <main className="max-w-7xl mx-auto px-6 pt-4 pb-8">
+      <main className="px-10 py-2 pb-8">
+
         {isPage && isPageVisible ? (
+
           <RecordForm 
             mode={drawerMode}
             fields={formFields}
