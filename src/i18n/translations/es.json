@@ -1,8 +1,5 @@
 {
-  "common": {
-    "cancel": "Cancelar",
-    "confirm": "Confirmar"
-  },
+
   "agtech": {
     "title": "La ingeniería detrás de MetaBuilderPRO",
     "lab": "AGTECH INNOVATION LAB",
@@ -72,11 +69,13 @@
     "profile": "Mi Perfil",
     "logout": "Cerrar Sesión",
     "cancel": "Cancelar",
+    "confirm": "Confirmar",
     "save": "Guardar Cambios",
     "loading": "Cargando...",
     "success": "¡Guardado con éxito!",
     "enterprise": "Enterprise",
-    "logged_in_as": "Usuario Conectado"
+    "logged_in_as": "Usuario Conectado",
+    "all": "Todos"
   },
   "hero": {
     "badge": "Motor de Metadatos de Próxima Generación",
@@ -263,6 +262,7 @@
           "crud_table": "Tabla CRUD",
           "kanban_soon": "Kanban (Próximamente)",
           "preview_view": "Previsualizar Pantalla",
+          "configure_view": "Editar Registro",
           "db_fields": "Campos de la Base de Datos",
           "db_fields_desc": "Personalice las etiquetas y la visibilidad de los campos en la tabla {table}.",
           "fields_detected": "campos detectados",
@@ -366,7 +366,11 @@
       "new_item": "Nuevo Item",
       "record_id": "Registro #{id}",
       "input_placeholder": "Ingrese el valor para {field}..."
-    }
+    },
+    "master_details": {
+      "main_data": "Datos Principales"
+    },
+    "back_to_list": "Volver a la Lista"
   },
   "wizard": {
     "title": "Use Case Builder",
@@ -427,12 +431,20 @@
       "select_table": "Seleccionar Tabla...",
       "select_field": "Seleccionar Campo...",
       "add_relationship": "Añadir Relación",
+      "mindmap": {
+        "config_title": "Configuración del Mapa Mental",
+        "central_field": "Campo Central (Nodo Raíz)",
+        "select_central": "Seleccione el campo central...",
+        "central_desc": "Este campo será la raíz de su mapa mental. Los campos seleccionados en la Zona 02 formarán los siguientes niveles."
+      },
       "zones": {
         "filter": "Filtro",
         "grid": "Grid",
         "form": "Formulario",
         "kanban_card": "Campos del Card",
         "card": "Card",
+        "mindmap_nodes": "Campos del Mapa (Niveles)",
+        "node": "Nodo",
         "zone_01": "Zona 01",
         "zone_02": "Zona 02",
         "zone_03": "Zona 03"

@@ -5,6 +5,9 @@ import DynamicGrid from '@/components/DynamicGrid'
 import ViewPageContent from '@/components/runtime/ViewPageContent'
 import { TranslationProvider } from '@/i18n/TranslationProvider'
 import { getLocale } from '@/i18n/get-locale'
+import { HeaderActions } from '@/components/layout/HeaderActions'
+import ViewContainer from '@/components/runtime/ViewContainer'
+import { RuntimeHeader } from '@/components/runtime/RuntimeHeader'
 
 interface PageProps {
   params: Promise<{
@@ -90,12 +93,23 @@ export default async function SlugPage({ params }: PageProps) {
     const { data: allModels } = await supabase.from('models').select('id, display_name, db_table_name').eq('project_id', project.id)
     const dictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.display_name }), {}) || {}
 
-    const resolveDbColName = (field: any) => {
-      let dbColName = field.db_column_name
+    const resolveSqlExpression = (field: any) => {
+      const dbColName = field.db_column_name
       if (field.model_id && field.model_id !== view.model_id) {
         const joinedTable = allModels?.find(m => m.id === field.model_id)?.db_table_name
         if (joinedTable) {
-          dbColName = `${joinedTable}.${dbColName}`
+          return `${joinedTable}.${dbColName} AS "${joinedTable}.${dbColName}"`
+        }
+      }
+      return dbColName
+    }
+
+    const resolveResultKey = (field: any) => {
+      const dbColName = field.db_column_name
+      if (field.model_id && field.model_id !== view.model_id) {
+        const joinedTable = allModels?.find(m => m.id === field.model_id)?.db_table_name
+        if (joinedTable) {
+          return `${joinedTable}.${dbColName}`
         }
       }
       return dbColName
@@ -107,8 +121,11 @@ export default async function SlugPage({ params }: PageProps) {
       .sort((a: any, b: any) => a.order_index - b.order_index)
       .map((c: any) => ({
         id: c.field.id,
+        model_id: c.field.model_id,
+        model_name: dictionary[c.field.model_id],
         display_name: c.label || c.field.display_name || c.field.db_column_name,
-        db_column_name: resolveDbColName(c.field),
+        db_column_name: resolveResultKey(c.field),
+        sql_expression: resolveSqlExpression(c.field),
         is_primary_key: c.field.is_primary_key,
         data_type: c.field.data_type,
         config: c.config
@@ -120,8 +137,11 @@ export default async function SlugPage({ params }: PageProps) {
       .sort((a: any, b: any) => a.order_index - b.order_index)
       .map((c: any) => ({
         id: c.field.id,
+        model_id: c.field.model_id,
+        model_name: dictionary[c.field.model_id],
         display_name: c.label || c.field.display_name || c.field.db_column_name,
-        db_column_name: resolveDbColName(c.field),
+        db_column_name: resolveResultKey(c.field),
+        sql_expression: resolveSqlExpression(c.field),
         data_type: c.field.data_type,
         is_primary_key: c.field.is_primary_key,
         config: c.config
@@ -132,8 +152,11 @@ export default async function SlugPage({ params }: PageProps) {
       .filter((c: any) => c.is_visible && c.config?.zones?.includes('filter'))
       .map((c: any) => ({
         id: c.field.id,
+        model_id: c.field.model_id,
+        model_name: dictionary[c.field.model_id],
         display_name: c.label || c.field.display_name || c.field.db_column_name,
-        db_column_name: resolveDbColName(c.field),
+        db_column_name: resolveResultKey(c.field),
+        sql_expression: resolveSqlExpression(c.field),
         data_type: c.field.data_type,
         config: c.config
       }))
@@ -162,7 +185,7 @@ export default async function SlugPage({ params }: PageProps) {
         displayFields.push({
           id: groupFieldData.id,
           display_name: groupFieldData.display_name || groupFieldData.db_column_name,
-          db_column_name: resolveDbColName(groupFieldData),
+          db_column_name: resolveResultKey(groupFieldData),
           data_type: groupFieldData.data_type,
           config: {},
           hidden: true
@@ -192,8 +215,13 @@ export default async function SlugPage({ params }: PageProps) {
           primaryKeyName={primaryKeyName}
           logicType={view.logic_type}
           kanbanGroupField={view.layout_config?.kanban_group_field}
+          mindmapCentralField={view.layout_config?.mindmap_central_field}
           dictionary={dictionary}
           joins={view.layout_config?.joins || []}
+          masterModelId={view.layout_config?.master_model_id}
+          detailDisplayMode={view.layout_config?.detail_display_mode}
+          actionInterfaceType={view.layout_config?.action_interface_type}
+          baseUrl={`/${workspace_slug}/${project_slug}/dashboard`}
         />
       </TranslationProvider>
     )
@@ -222,21 +250,12 @@ export default async function SlugPage({ params }: PageProps) {
     return (
       <TranslationProvider locale={locale}>
         <div className="min-h-screen bg-white dark:bg-[#050505] text-neutral-900 dark:text-neutral-200 transition-colors duration-300">
-          <header className="border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/50 sticky top-0 z-10 backdrop-blur-md">
-            <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
-                  <Table className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-neutral-900 dark:text-white capitalize tracking-tight">
-                    {viewName}
-                  </h1>
-                </div>
-              </div>
-              <HeaderActions />
-            </div>
-          </header>
+          <RuntimeHeader 
+            viewName={viewName}
+            icon={<Table className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />}
+            breadcrumbs={[{ label: viewName }]}
+            baseUrl={`/${workspace_slug}/${project_slug}/dashboard`}
+          />
 
           <main className="max-w-7xl mx-auto px-6 py-8">
             <ViewContainer 

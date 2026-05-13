@@ -1,0 +1,447 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Loader2, Save, Eye, Pencil, Plus, Trash2, ArrowLeft, Check } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n/I18nContext'
+import { createClient } from '@/utils/supabase/client'
+
+interface RecordFormProps {
+  mode: 'create' | 'edit' | 'view'
+  fields: any[]
+  initialData?: any
+  onSave: (data: any) => Promise<void>
+  onCancel: () => void
+  isLoading?: boolean
+  logicType?: string
+  masterModelId?: string
+  detailDisplayMode?: 'tabs' | 'sections'
+  isPageMode?: boolean
+  onEditDetail?: (detail: any) => void
+  onDeleteDetail?: (detail: any) => void
+  onAddDetail?: (tableName: string) => void
+}
+
+export default function RecordForm({ 
+  mode, 
+  fields, 
+  initialData, 
+  onSave,
+  onCancel,
+  isLoading = false,
+  logicType,
+  masterModelId,
+  detailDisplayMode = 'tabs',
+  isPageMode = false,
+  onEditDetail,
+  onDeleteDetail,
+  onAddDetail
+}: RecordFormProps) {
+  const { t } = useI18n()
+  const [formData, setFormData] = useState<any>(initialData || {})
+  const [activeTab, setActiveTab] = useState<'master' | string>('master')
+  const [relationalOptions, setRelationalOptions] = useState<Record<string, any[]>>({})
+
+  useEffect(() => {
+    const fetchAllRelational = async () => {
+      const supabase = createClient()
+      const newOptions: Record<string, any[]> = {}
+      
+      for (const field of fields) {
+        // Tenta pegar a config específica de formulário, senão usa a global
+        const config = field.config?.form_config || field.config
+        const comp = config?.component
+        if (comp?.type && ['select', 'radio', 'checkbox'].includes(comp.type) && comp.options_type === 'relational' && comp.rel_table) {
+          try {
+            const { data } = await supabase
+              .from(comp.rel_table)
+              .select(`${comp.rel_label}, ${comp.rel_value}`)
+            
+            if (data) {
+              newOptions[field.id] = data.map(item => ({
+                label: item[comp.rel_label],
+                value: item[comp.rel_value]
+              }))
+            }
+          } catch (err) {
+            console.error(`Error fetching relational options for field ${field.id}:`, err)
+          }
+        }
+      }
+      setRelationalOptions(newOptions)
+    }
+    
+    if (fields.length > 0) {
+      fetchAllRelational()
+    }
+  }, [fields])
+
+  const parseFixedOptions = (str: string) => {
+    if (!str) return []
+    return str.split(',').map(pair => {
+      if (!pair.includes(':')) return { label: pair.trim(), value: pair.trim() }
+      const [label, value] = pair.split(':').map(s => s.trim())
+      return { label: label || value, value: value || label }
+    })
+  }
+
+  const masterFields = logicType === 'master_detail' 
+    ? fields.filter(f => !f.model_id || String(f.model_id) === String(masterModelId))
+    : fields
+
+  const detailFields = logicType === 'master_detail'
+    ? fields.filter(f => f.model_id && String(f.model_id) !== String(masterModelId))
+    : []
+
+  const detailTables = Array.from(new Set(detailFields.map(f => f.model_name || 'Details')))
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSave(formData)
+  }
+
+  useEffect(() => {
+    setFormData(initialData || {})
+  }, [initialData])
+
+  const titles = {
+    create: t('runtime.new_record'),
+    edit: t('dashboard.projects.studio.config.configure_view'),
+    view: t('runtime.view')
+  }
+
+  const icons = {
+    create: <Plus className="w-5 h-5 text-indigo-500" />,
+    edit: <Pencil className="w-5 h-5 text-indigo-500" />,
+    view: <Eye className="w-5 h-5 text-indigo-500" />
+  }
+
+  const renderField = (field: any) => {
+    if (!field) return null;
+    const zoneConfig = field.config?.form_config || field.config || {}
+    const comp = zoneConfig.component || { type: 'text' }
+    const fieldType = comp.type || 'text'
+    const width = comp.width || '100%'
+
+    const value = (() => {
+      if (formData[field.db_column_name] !== undefined && formData[field.db_column_name] !== null) {
+        return formData[field.db_column_name]
+      }
+      const baseName = field.db_column_name.split('.').pop()
+      if (baseName && formData[baseName] !== undefined && formData[baseName] !== null) {
+        return formData[baseName]
+      }
+      return ''
+    })()
+
+    const handleChange = (val: any) => {
+      const baseName = field.db_column_name.split('.').pop()
+      setFormData({ 
+        ...formData, 
+        [field.db_column_name]: val,
+        ...(baseName ? { [baseName]: val } : {})
+      })
+    }
+
+    const inputStyle = {
+      fontFamily: field.config?.content?.font,
+      fontSize: field.config?.content?.size,
+      color: field.config?.content?.color,
+    }
+
+    const commonClasses = cn(
+      "w-full px-5 py-3.5 bg-neutral-50 dark:bg-neutral-900 border rounded-2xl text-sm outline-none transition-all shadow-sm",
+      mode === 'view' 
+        ? "border-transparent bg-neutral-100/50 dark:bg-neutral-900/50 cursor-default opacity-80" 
+        : "border-neutral-200 dark:border-neutral-800 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 group-hover:border-neutral-300 dark:group-hover:border-neutral-700",
+      !zoneConfig.content?.color && "text-neutral-900 dark:text-neutral-300"
+    )
+
+    const options = comp.options_type === 'relational' 
+      ? (relationalOptions[field.id] || [])
+      : parseFixedOptions(comp.fixed_options)
+
+    const isDisabled = mode === 'view' || field.is_primary_key
+
+    return (
+      <div key={field.id} className="space-y-2" style={{ width: width }}>
+        <label 
+          style={{
+            fontFamily: zoneConfig.label?.font,
+            fontSize: zoneConfig.label?.size,
+            color: zoneConfig.label?.color,
+          }}
+          className={cn(
+            "text-[10px] font-black tracking-widest ml-1",
+            !zoneConfig.label?.color && "text-neutral-400",
+            !zoneConfig.label?.font && "uppercase"
+          )}
+        >
+          {zoneConfig.label?.text || field.display_name}
+          {field.is_primary_key && <span className="ml-2 text-indigo-500"># PK</span>}
+          {zoneConfig.content?.required && <span className="ml-1 text-red-500">*</span>}
+        </label>
+        
+        <div className="relative group">
+          {fieldType === 'textarea' ? (
+            <textarea
+              disabled={isDisabled}
+              required={zoneConfig.content?.required}
+              value={value}
+              onChange={e => handleChange(e.target.value)}
+              rows={comp.rows || 3}
+              style={inputStyle}
+              className={cn(commonClasses, "resize-none")}
+              placeholder={mode === 'view' ? '' : t('runtime.record_drawer.input_placeholder').replace('{field}', field.display_name)}
+            />
+          ) : fieldType === 'select' ? (
+            <select
+              disabled={isDisabled}
+              required={zoneConfig.content?.required}
+              value={value}
+              onChange={e => handleChange(e.target.value)}
+              style={inputStyle}
+              className={commonClasses}
+            >
+              <option value="">{t('common.select', 'Selecione...')}</option>
+              {options.map((opt: any, i: number) => (
+                <option key={i} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          ) : fieldType === 'radio' ? (
+            <div className="flex flex-wrap gap-4 p-4 bg-neutral-50/50 dark:bg-neutral-950/30 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+              {options.map((opt: any, i: number) => (
+                <label key={i} className="flex items-center gap-2 cursor-pointer group/opt">
+                  <div 
+                    onClick={() => !isDisabled && handleChange(opt.value)}
+                    className={cn(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                      String(value) === String(opt.value) ? 'border-indigo-600 bg-indigo-600' : 'border-neutral-300 dark:border-neutral-700'
+                    )}
+                  >
+                    {String(value) === String(opt.value) && <div className="w-2 h-2 bg-white rounded-full" />}
+                  </div>
+                  <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 group-hover/opt:text-indigo-600 transition-colors">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          ) : fieldType === 'checkbox' ? (
+            <div className="flex flex-wrap gap-4 p-4 bg-neutral-50/50 dark:bg-neutral-950/30 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+              {options.map((opt: any, i: number) => {
+                const checked = Array.isArray(value) ? value.includes(opt.value) : String(value).split(',').includes(String(opt.value))
+                return (
+                  <label key={i} className="flex items-center gap-2 cursor-pointer group/opt">
+                    <div 
+                      onClick={() => {
+                        if (isDisabled) return
+                        const currentArr = Array.isArray(value) ? value : (value ? String(value).split(',') : [])
+                        const nextArr = currentArr.includes(String(opt.value)) 
+                          ? currentArr.filter(v => v !== String(opt.value))
+                          : [...currentArr, String(opt.value)]
+                        handleChange(nextArr.join(','))
+                      }}
+                      className={cn(
+                        "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
+                        checked ? 'border-indigo-600 bg-indigo-600' : 'border-neutral-300 dark:border-neutral-700'
+                      )}
+                    >
+                      {checked && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                    <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 group-hover/opt:text-indigo-600 transition-colors">{opt.label}</span>
+                  </label>
+                )
+              })}
+            </div>
+          ) : fieldType === 'switch' ? (
+            <div 
+              onClick={() => !isDisabled && handleChange(!value)}
+              className={cn(
+                "w-12 h-6 rounded-full p-1 cursor-pointer transition-all relative",
+                value ? 'bg-indigo-600' : 'bg-neutral-200 dark:bg-neutral-800'
+              )}
+            >
+              <div className={cn(
+                "w-4 h-4 bg-white rounded-full shadow-sm transition-all absolute top-1",
+                value ? 'left-7' : 'left-1'
+              )} />
+            </div>
+          ) : (
+            <input 
+              type={fieldType === 'number' ? 'number' : fieldType === 'date' ? 'date' : 'text'}
+              disabled={isDisabled}
+              required={field.config?.content?.required}
+              value={value}
+              onChange={e => handleChange(e.target.value)}
+              style={inputStyle}
+              className={commonClasses}
+              placeholder={mode === 'view' ? '' : t('runtime.record_drawer.input_placeholder').replace('{field}', field.display_name)}
+            />
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  const renderDetailSection = (tableName: string) => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">Registros Relacionados: {tableName}</h4>
+        <button 
+          type="button" 
+          onClick={() => onAddDetail?.(tableName)}
+          className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-all"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+      
+      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+        {(initialData?._details || [])
+          .filter((d: any) => d.model_name === tableName)
+          .map((detail: any, idx: number) => (
+          <div key={idx} className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex items-center justify-between group animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200">
+                {detail.display_name || detail.name || detail.label || `Item #${idx + 1}`}
+              </span>
+              <span className="text-[9px] text-neutral-400 font-medium uppercase tracking-wider">{tableName} Record</span>
+            </div>
+            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button 
+                type="button" 
+                onClick={() => onEditDetail?.(detail)}
+                className="p-1.5 hover:bg-white dark:hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-indigo-600 shadow-sm transition-all"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+              <button 
+                type="button" 
+                onClick={() => onDeleteDetail?.(detail)}
+                className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-neutral-400 hover:text-red-600 shadow-sm transition-all"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        ))}
+        {(!(initialData?._details || []).some((d: any) => d.model_name === tableName)) && (
+          <div className="py-12 text-center border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-3xl">
+            <p className="text-xs text-neutral-400 italic">Nenhum registro de {tableName} encontrado.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  return (
+    <div className={cn("flex flex-col", isPageMode ? "bg-white dark:bg-neutral-900/50 p-8 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-xl" : "h-full")}>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
+            {icons[mode]}
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-neutral-900 dark:text-white">{titles[mode]}</h3>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
+              {mode === 'create' ? t('runtime.record_drawer.new_item') : t('runtime.record_drawer.record_id').replace('{id}', initialData?.id || 'N/A')}
+            </p>
+          </div>
+        </div>
+        
+        {isPageMode && (
+          <button 
+            onClick={onCancel}
+            className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all"
+          >
+            <ArrowLeft className="w-4 h-4" /> {t('runtime.back_to_list', 'Voltar para Lista')}
+          </button>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
+        {logicType === 'master_detail' && detailDisplayMode === 'tabs' && detailTables.length > 0 && (
+          <div className="flex items-center gap-2 border-b border-neutral-100 dark:border-neutral-800 mb-6">
+            <button
+              type="button"
+              onClick={() => setActiveTab('master')}
+              className={cn(
+                "px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all border-b-2",
+                activeTab === 'master' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600'
+              )}
+            >
+              {t('runtime.master_details.main_data', 'Dados Principais')}
+            </button>
+            {detailTables.map(tableName => (
+              <button
+                key={tableName}
+                type="button"
+                onClick={() => setActiveTab(tableName)}
+                className={cn(
+                  "px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all border-b-2",
+                  activeTab === tableName ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600'
+                )}
+              >
+                {tableName}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className={cn("flex-1 space-y-12", isPageMode ? "" : "overflow-y-auto custom-scrollbar pr-2")}>
+          {(detailDisplayMode === 'sections' || activeTab === 'master') && (
+            <div className="space-y-6">
+              {detailDisplayMode === 'sections' && logicType === 'master_detail' && (
+                <div className="flex items-center gap-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-800 dark:text-neutral-200">
+                    {t('runtime.master_details.main_data', 'Dados Principais')}
+                  </h3>
+                </div>
+              )}
+              <div className={cn("grid gap-6", isPageMode ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
+                {masterFields.map(field => renderField(field))}
+              </div>
+            </div>
+          )}
+
+          {logicType === 'master_detail' && detailDisplayMode === 'sections' && detailTables.map(tableName => (
+            <div key={tableName} className="pt-4 space-y-6">
+              <div className="flex items-center gap-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-800 dark:text-neutral-200">
+                  {tableName}
+                </h3>
+              </div>
+              {renderDetailSection(tableName)}
+            </div>
+          ))}
+
+          {logicType === 'master_detail' && detailDisplayMode === 'tabs' && activeTab !== 'master' && (
+            renderDetailSection(activeTab)
+          )}
+        </div>
+
+        <div className="pt-8 mt-auto border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-end gap-3 bg-white dark:bg-neutral-950 sticky bottom-0">
+          <button 
+            type="button"
+            onClick={onCancel}
+            className="px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
+          >
+            {mode === 'view' ? t('runtime.close') : t('common.cancel')}
+          </button>
+          
+          {mode !== 'view' && (
+            <button 
+              type="submit"
+              disabled={isLoading}
+              className="flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
+            >
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {isLoading ? t('runtime.saving') : t('common.save')}
+            </button>
+          )}
+        </div>
+      </form>
+    </div>
+  )
+}

@@ -214,6 +214,9 @@ function KanbanCard({ id, item, fields, isOverlay, onView, onEdit, onDelete }: a
   const subField = fields[1]
   const otherFields = fields.slice(2, 5)
 
+  const mainZoneConfig = mainField?.config?.grid_config || mainField?.config || {}
+  const subZoneConfig = subField?.config?.grid_config || subField?.config || {}
+
   return (
     <motion.div
       ref={setNodeRef}
@@ -222,48 +225,89 @@ function KanbanCard({ id, item, fields, isOverlay, onView, onEdit, onDelete }: a
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
+      {...attributes}
+      {...listeners}
       className={cn(
-        "group bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:border-indigo-500/30 transition-all cursor-grab active:cursor-grabbing relative overflow-hidden min-h-[140px] flex flex-col justify-between",
+        "group bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:border-indigo-500/30 transition-all cursor-grab active:cursor-grabbing relative overflow-hidden min-h-[140px] flex flex-col justify-between select-none",
         isOverlay && "shadow-2xl border-indigo-500 ring-2 ring-indigo-500/20 rotate-2 scale-105 z-50"
       )}
     >
-      {/* Drag Handle Overlay for better UX */}
-      <div {...attributes} {...listeners} className="absolute top-0 left-0 right-0 h-8 z-10"></div>
-
       <div className="flex flex-col gap-3">
         <div className="flex justify-between items-start">
           <div className="flex flex-col gap-0.5">
             <h4 
               style={{
-                fontFamily: mainField?.config?.content?.font,
-                fontSize: mainField?.config?.content?.size || '12px',
-                color: mainField?.config?.content?.color,
+                fontFamily: mainZoneConfig.content?.font,
+                fontSize: mainZoneConfig.content?.size || '12px',
+                color: mainZoneConfig.content?.color,
               }}
               className="font-bold text-neutral-900 dark:text-white leading-tight"
             >
               {getNestedValue(item, mainField?.db_column_name) || 'Untitled'}
             </h4>
             {subField && (
-              <span className="text-[10px] text-neutral-400 font-medium truncate max-w-[180px]">
+              <span 
+                style={{
+                  fontFamily: subZoneConfig.content?.font,
+                  fontSize: subZoneConfig.content?.size || '10px',
+                  color: subZoneConfig.content?.color || undefined,
+                }}
+                className={cn(
+                  "text-[10px] font-medium truncate max-w-[180px]",
+                  !subZoneConfig.content?.color && "text-neutral-400"
+                )}
+              >
                 {getNestedValue(item, subField.db_column_name)}
               </span>
             )}
           </div>
-          <div className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-neutral-100 dark:hover:bg-neutral-800" onClick={() => onView?.(item)}>
+          <div 
+             className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-neutral-100 dark:hover:bg-neutral-800 relative z-20 cursor-pointer" 
+             onPointerDown={(e) => e.stopPropagation()}
+             onClick={(e) => {
+               e.stopPropagation()
+               onView?.(item)
+             }}
+          >
              <MoreVertical className="w-3.5 h-3.5 text-neutral-400" />
           </div>
         </div>
 
         {/* Tags / Info */}
         <div className="flex flex-wrap gap-2">
-          {otherFields.map((f: any) => (
-            <div key={f.id} className="flex items-center gap-1.5 px-2 py-1 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg border border-neutral-100 dark:border-neutral-800">
-               <span className="text-[8px] font-black uppercase text-neutral-400 tracking-tighter">{f.display_name}:</span>
-               <span className="text-[9px] font-bold text-neutral-600 dark:text-neutral-300">
-                 {getNestedValue(item, f.db_column_name)}
-               </span>
-            </div>
-          ))}
+          {otherFields.map((f: any) => {
+            const fZoneConfig = f.config?.grid_config || f.config || {}
+            return (
+              <div key={f.id} className="flex items-center gap-1.5 px-2 py-1 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg border border-neutral-100 dark:border-neutral-800">
+                 <span 
+                  style={{
+                    fontFamily: fZoneConfig.label?.font,
+                    fontSize: fZoneConfig.label?.size || '8px',
+                    color: fZoneConfig.label?.color,
+                  }}
+                  className={cn(
+                    "text-[8px] font-black uppercase tracking-tighter",
+                    !fZoneConfig.label?.color && "text-neutral-400"
+                  )}
+                 >
+                   {fZoneConfig.label?.text || f.display_name}:
+                 </span>
+                 <span 
+                  style={{
+                    fontFamily: fZoneConfig.content?.font,
+                    fontSize: fZoneConfig.content?.size || '9px',
+                    color: fZoneConfig.content?.color,
+                  }}
+                  className={cn(
+                    "text-[9px] font-bold",
+                    !fZoneConfig.content?.color && "text-neutral-600 dark:text-neutral-300"
+                  )}
+                 >
+                   {getNestedValue(item, f.db_column_name)}
+                 </span>
+              </div>
+            )
+          })}
         </div>
 
         {/* Footer info (Static mockup icons for premium look) */}

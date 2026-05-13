@@ -4,6 +4,7 @@ import { HeaderActions } from '@/components/layout/HeaderActions'
 import { getLocale } from '@/i18n/get-locale'
 import { getTranslations } from '@/i18n/get-translations'
 import { LoginPortalThemeWrapper } from '@/components/auth/LoginPortalThemeWrapper'
+import { TranslationProvider } from '@/i18n/TranslationProvider'
 
 export default async function LoginPage({ params }: any) {
   const { workspace_slug, project_slug } = await params
@@ -41,7 +42,9 @@ export default async function LoginPage({ params }: any) {
     .eq('project_id', project.id)
     .single()
 
-  const ui = config?.ui_config as any || {}
+  const visual = config?.ui_config as any || {}
+  const auth = config as any || {}
+  const allowSignup = visual.allow_signup || false
   
   // 3. Verificar se o projeto está inativo
   if (!project.is_active) {
@@ -60,110 +63,132 @@ export default async function LoginPage({ params }: any) {
     )
   }
 
-  const theme = ui.theme || 'dark'
-  const title = ui.title || `Acessar ${project.name}`
-  const subtitle = ui.subtitle || 'Insira suas credenciais para continuar.'
-  const userLabel = ui.usertitle || 'Usuário'
-  const userPlaceholder = ui.userplaceholder || 'seu@email.com'
-  const passLabel = ui.passtitle || 'Senha'
-  const passPlaceholder = ui.passplaceholder || '••••••••'
-  const buttonText = ui.button_text || 'Entrar no Sistema'
-  const buttonColor = ui.button_color || '#4F46E5'
-  const isDark = theme === 'dark'
+  const theme = visual.theme || 'dark'
+  const title = visual.welcome_title || `Acessar ${project.name}`
+  const subtitle = visual.welcome_desc || 'Insira suas credenciais para continuar.'
+  const userLabel = visual.email_label || 'Usuário'
+  const userPlaceholder = visual.email_placeholder || 'seu@email.com'
+  const passLabel = visual.password_label || 'Senha'
+  const passPlaceholder = visual.password_placeholder || '••••••••'
+  const buttonText = visual.button_text || 'Entrar no Sistema'
+  const buttonColor = visual.button_color || '#4F46E5'
 
   return (
-    <LoginPortalThemeWrapper theme={theme as 'light' | 'dark'}>
-      <div className={`min-h-screen flex flex-col transition-colors duration-500 ${isDark ? 'dark bg-[#050505]' : 'bg-neutral-100'}`}>
-        <header className="p-6 flex justify-between items-center relative z-10">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors overflow-hidden ${isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'}`}>
-              {ui.brand_icon ? (
-                <div dangerouslySetInnerHTML={{ __html: ui.brand_icon }} className="w-6 h-6" />
-              ) : (
-                <LayoutTemplate className={`w-6 h-6 ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`} />
-              )}
+    <TranslationProvider locale={locale}>
+      <LoginPortalThemeWrapper theme={theme}>
+        <div className="min-h-screen flex flex-col transition-colors duration-500 bg-neutral-50 dark:bg-[#050505]">
+          <header className="p-6 flex justify-between items-center relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center border transition-colors overflow-hidden bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
+                {visual.brand_icon || visual.icon_svg ? (
+                  <div dangerouslySetInnerHTML={{ __html: visual.brand_icon || visual.icon_svg }} className="w-6 h-6" />
+                ) : (
+                  <LayoutTemplate className="w-6 h-6 text-neutral-400 dark:text-neutral-500" />
+                )}
+              </div>
+              <span className="text-sm font-bold tracking-tight text-neutral-900 dark:text-white">
+                {project.name}
+              </span>
             </div>
-            <span className={`text-sm font-bold tracking-tight ${isDark ? 'text-white' : 'text-neutral-900'}`}>
-              {project.name}
-            </span>
-          </div>
 
-          <HeaderActions hideUser />
-        </header>
+            <HeaderActions hideUser hideTheme={theme !== 'auto'} />
+          </header>
 
-        <main className="flex-1 flex flex-col items-center justify-center p-6 relative">
-          {/* Background effects */}
-          {isDark && (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <main className="flex-1 flex flex-col items-center justify-center p-6 relative">
+            {/* Background effects - Visible only in dark mode via CSS */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-0 dark:opacity-100 transition-opacity duration-1000">
               <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 blur-[120px] rounded-full" />
               <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 blur-[120px] rounded-full" />
             </div>
-          )}
 
-          <div className={`w-full max-w-sm rounded-[2.5rem] p-10 md:p-12 shadow-2xl transition-all duration-500 border relative z-10 ${isDark ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}>
-            <div className="mb-10">
-              <h2 className={`text-3xl font-bold mb-3 tracking-tight transition-colors ${isDark ? 'text-white' : 'text-neutral-900'}`}>
-                {title}
-              </h2>
-              <p className={`text-sm leading-relaxed transition-colors ${isDark ? 'text-neutral-500' : 'text-neutral-600'}`}>
-                {subtitle}
-              </p>
-            </div>
-
-            <form className="space-y-5">
-              <div className="space-y-2">
-                <label className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${isDark ? 'text-neutral-500' : 'text-neutral-600'}`}>
-                  {userLabel}
-                </label>
-                <input 
-                  type="text" 
-                  placeholder={userPlaceholder}
-                  className={`w-full h-12 rounded-xl border transition-all outline-none px-4 text-sm ${isDark ? 'bg-neutral-950 border-neutral-800 text-white focus:border-neutral-600' : 'bg-neutral-50 border-neutral-200 text-neutral-900 focus:border-neutral-400'}`}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${isDark ? 'text-neutral-500' : 'text-neutral-600'}`}>
-                    {passLabel}
-                  </label>
-                  <button type="button" className={`text-[10px] font-bold uppercase tracking-widest transition-colors hover:underline ${isDark ? 'text-neutral-600' : 'text-neutral-400'}`}>
-                    {t('app.forgot_password')}
-                  </button>
+            <div className="w-full max-w-sm rounded-[2.5rem] p-10 md:p-12 shadow-2xl transition-all duration-500 border relative z-10 bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800">
+              {/* Icon inside the card */}
+              <div className="mb-8 flex justify-center">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-500/5 dark:bg-indigo-500/10 flex items-center justify-center border border-indigo-500/10 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+                  {visual.brand_icon || visual.icon_svg ? (
+                    <div dangerouslySetInnerHTML={{ __html: visual.brand_icon || visual.icon_svg }} className="w-10 h-10 [&>svg]:w-full [&>svg]:h-full" />
+                  ) : (
+                    <LayoutTemplate className="w-8 h-8" />
+                  )}
                 </div>
-                <input 
-                  type="password" 
-                  placeholder={passPlaceholder}
-                  className={`w-full h-12 rounded-xl border transition-all outline-none px-4 text-sm ${isDark ? 'bg-neutral-950 border-neutral-800 text-white focus:border-neutral-600' : 'bg-neutral-50 border-neutral-200 text-neutral-900 focus:border-neutral-400'}`}
-                />
               </div>
 
-              <button 
-                type="submit"
-                className="w-full h-14 rounded-xl text-white text-sm font-bold mt-4 transition-all hover:opacity-90 active:scale-[0.98] shadow-lg"
-                style={{ 
-                  backgroundColor: buttonColor,
-                  boxShadow: `0 10px 25px -5px ${buttonColor}40`
-                }}
-              >
-                {buttonText}
-              </button>
-            </form>
+              <div className="mb-10 text-center">
+                <h2 className="text-3xl font-bold mb-3 tracking-tight transition-colors text-neutral-900 dark:text-white">
+                  {title}
+                </h2>
+                <p className="text-sm leading-relaxed transition-colors text-neutral-600 dark:text-neutral-500">
+                  {subtitle}
+                </p>
+              </div>
 
-            <div className="mt-12 text-center">
-              <p className={`text-[10px] font-bold uppercase tracking-widest ${isDark ? 'text-neutral-700' : 'text-neutral-300'}`}>
-                {t('app.powered_by')}
-              </p>
+              <form className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">
+                    {userLabel}
+                  </label>
+                  <input 
+                    type="email" 
+                    placeholder={userPlaceholder}
+                    className="w-full h-12 px-5 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 outline-none focus:border-indigo-500 dark:focus:border-indigo-500 transition-all text-sm font-medium"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center px-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                      {passLabel}
+                    </label>
+                    <a href="#" className="text-[9px] font-bold text-indigo-600 hover:text-indigo-500 uppercase tracking-tighter">
+                      Esqueceu a senha?
+                    </a>
+                  </div>
+                  <input 
+                    type="password" 
+                    placeholder={passPlaceholder}
+                    className="w-full h-12 px-5 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 outline-none focus:border-indigo-500 dark:focus:border-indigo-500 transition-all text-sm font-medium"
+                  />
+                </div>
+
+                <button 
+                  type="submit"
+                  className="w-full h-14 rounded-2xl text-white text-xs font-bold uppercase tracking-widest transition-all hover:brightness-110 active:scale-[0.98] shadow-xl"
+                  style={{ 
+                    backgroundColor: buttonColor,
+                    boxShadow: `0 10px 30px -10px ${buttonColor}66`
+                  }}
+                >
+                  {buttonText}
+                </button>
+              </form>
+
+              {allowSignup && (
+                <div className="mt-8 text-center">
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">
+                    Não tem uma conta? <a href="#" className="text-indigo-600 hover:underline">Criar conta</a>
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-10 flex flex-col items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-px bg-neutral-100 dark:bg-neutral-800" />
+                  <span className="text-[9px] font-black text-neutral-300 dark:text-neutral-700 uppercase tracking-widest">
+                    Powered by MetaBuilder
+                  </span>
+                  <div className="w-8 h-px bg-neutral-100 dark:bg-neutral-800" />
+                </div>
+              </div>
             </div>
-          </div>
-        </main>
+          </main>
 
-        <footer className="p-8 text-center">
-          <p className={`text-xs ${isDark ? 'text-neutral-700' : 'text-neutral-400'}`}>
-            &copy; {new Date().getFullYear()} AGTech Innovation Lab. All rights reserved.
-          </p>
-        </footer>
-      </div>
-    </LoginPortalThemeWrapper>
+          <footer className="p-8 text-center">
+            <p className="text-[10px] font-medium text-neutral-400 dark:text-neutral-600">
+              © 2026 AGTech Innovation Lab. All rights reserved.
+            </p>
+          </footer>
+        </div>
+      </LoginPortalThemeWrapper>
+    </TranslationProvider>
   )
 }

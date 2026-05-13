@@ -22,12 +22,17 @@ interface ViewContainerProps {
   logicType?: string
   primaryKeyName?: string
   kanbanGroupField?: string
+  mindmapCentralField?: string
+  masterModelId?: string
+  detailDisplayMode?: 'tabs' | 'sections'
   dictionary?: any
   joins?: any[]
+  actionInterfaceType?: 'drawer' | 'modal'
 }
 
 import DynamicCardList from './DynamicCardList'
 import DynamicKanban from './DynamicKanban'
+import DynamicMindMap from './DynamicMindMap'
 import { useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Loader2 } from 'lucide-react'
@@ -60,14 +65,64 @@ export default function ViewContainer({
   logicType,
   primaryKeyName = 'id',
   kanbanGroupField,
+  mindmapCentralField,
+  masterModelId,
+  detailDisplayMode = 'tabs',
   dictionary = {},
-  joins = []
+  joins = [],
+  actionInterfaceType = 'drawer'
 }: ViewContainerProps) {
-  const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban'>(
-    logicType === 'kanban' ? 'kanban' : (displayType === 'both' ? defaultView : (displayType as any))
+  const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban' | 'mapa_mental'>(
+    logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'kanban' ? 'kanban' : (displayType === 'both' ? defaultView : (displayType as any))
   )
   const [searchQuery, setSearchQuery] = useState('')
   const [filterValues, setFilterValues] = useState<Record<string, string>>({})
+  const [relationalOptions, setRelationalOptions] = useState<Record<string, any[]>>({})
+
+  // Busca opções relacionais para os campos de filtro
+  useEffect(() => {
+    const fetchAllRelational = async () => {
+      const supabase = createClient()
+      const newOptions: Record<string, any[]> = {}
+      
+      for (const field of filterFields) {
+        // Tenta pegar a config específica de filtro, senão usa a global
+        const config = field.config?.filter_config || field.config
+        const comp = config?.component
+        if (comp?.type && ['select', 'radio', 'checkbox'].includes(comp.type) && comp.options_type === 'relational' && comp.rel_table) {
+          try {
+            console.log(`[MetaBuilder] Fetching filter options for ${field.display_name} from ${comp.rel_table}`)
+            const { data } = await supabase
+              .from(comp.rel_table)
+              .select(`${comp.rel_label}, ${comp.rel_value}`)
+            
+            if (data) {
+              newOptions[field.id] = data.map(item => ({
+                label: item[comp.rel_label],
+                value: item[comp.rel_value]
+              }))
+            }
+          } catch (err) {
+            console.error(`Error fetching relational options for filter field ${field.id}:`, err)
+          }
+        }
+      }
+      setRelationalOptions(newOptions)
+    }
+    
+    if (filterFields.length > 0) {
+      fetchAllRelational()
+    }
+  }, [filterFields])
+
+  const parseFixedOptions = (str: string) => {
+    if (!str) return []
+    return str.split(',').map(pair => {
+      if (!pair.includes(':')) return { label: pair.trim(), value: pair.trim() }
+      const [label, value] = pair.split(':').map(s => s.trim())
+      return { label: label || value, value: value || label }
+    })
+  }
 
   const canSearch = buttonsConfig.find((b: any) => b.id === 'search')?.visible === true
   const canClear = buttonsConfig.find((b: any) => b.id === 'clear')?.visible === true
@@ -131,10 +186,26 @@ export default function ViewContainer({
       .on('broadcast', { event: `query_result_${queryId}` }, (payload) => {
         console.log(`[MetaBuilder] Resposta recebida para ${queryId}`, payload)
         if (payload.payload.success) {
-          const resultData = payload.payload.data.map((row: any) => ({
+          let resultData = payload.payload.data.map((row: any) => ({
             ...row,
             _key: crypto.randomUUID()
           }))
+
+          // Lógica de Agrupamento para Mestre-Detalhe
+          if (logicType === 'master_detail') {
+            const grouped: Record<string, any> = {}
+            resultData.forEach((row: any) => {
+              const pkValue = String(row[primaryKeyName] || row.id || row.ID)
+              if (!grouped[pkValue]) {
+                grouped[pkValue] = { ...row, _details: [] }
+              }
+              // Se houver dados de JOIN (campos da tabela detalhe), adiciona ao array _details
+              // Identificamos campos de detalhe por não pertencerem à tabela mestre (simplificado aqui)
+              grouped[pkValue]._details.push(row)
+            })
+            resultData = Object.values(grouped)
+          }
+
           setData(resultData)
           // Salva no cache se for uma busca sem filtros (carga inicial)
           if (!Object.keys(currentFilters).length) {
@@ -148,11 +219,23 @@ export default function ViewContainer({
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
+          // Build raw SQL query with aliases to avoid column name shadowing (e.g. multiple 'name' columns)
+          // We must also build the JOINs manually if we provide a raw query
+          const buildJoinsSql = (joinsList: any[]) => {
+            if (!joinsList || joinsList.length === 0) return ''
+            return joinsList.map(j => `LEFT JOIN ${j.toTable} ON ${j.table}.${j.on} = ${j.toTable}.${j.toOn}`).join(' ')
+          }
+          
+          const columns = displayFields.map(f => f.sql_expression || f.db_column_name).join(', ')
+          const rawQuery = `SELECT ${columns} FROM ${modelName} ${buildJoinsSql(joins)}`
+
           const payload: any = {
             queryId: queryId,
             table: modelName,
             tableName: modelName,
             action: 'select',
+            query: rawQuery,
+            sql: rawQuery,
             token: 'test-token',
             joins: joins
           }
@@ -192,13 +275,12 @@ export default function ViewContainer({
     const actualPrimaryKey = movedItem[primaryKeyName] || movedItem.id || movedItem.ID
 
     // 2. Otimismo: Atualiza localmente o estado
+    const groupFieldDef = displayFields.find(f => f.id === kanbanGroupField) || displayFields.find(f => f.db_column_name === 'status') || { db_column_name: 'status' }
+    const groupFieldName = groupFieldDef.db_column_name
+    
     setData(prev => prev.map(item => {
       const itemId = String(item._key || item.id || item.ID || item[primaryKeyName])
       if (itemId === recordId) {
-        // Pega o nome da coluna de agrupamento do layout_config se disponível
-        // Mas aqui no ViewContainer o fields já contém o groupField no layout_config da view original
-        // Vamos assumir que a coluna de agrupamento é a definida na view
-        const groupFieldName = displayFields.find(f => f.config?.kanban_group_field)?.db_column_name || 'status'
         return { ...item, [groupFieldName]: newValue }
       }
       return item
@@ -211,8 +293,6 @@ export default function ViewContainer({
 
     channel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
-        const groupFieldName = displayFields.find(f => f.config?.kanban_group_field)?.db_column_name || 'status'
-        
         const rawQuery = `UPDATE ${modelName} SET ${groupFieldName} = '${String(newValue).replace(/'/g, "''")}' WHERE ${primaryKeyName} = '${String(actualPrimaryKey).replace(/'/g, "''")}'`
         
         const payload: any = {
@@ -290,12 +370,11 @@ export default function ViewContainer({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Toolbar - Minimalist, only showing view toggles if both are available */}
-      <div className="flex flex-col md:flex-row md:items-center justify-end gap-6">
-        <div className="flex items-center gap-4">
-          {/* View Toggles (Only if displayType is 'both') */}
-          {displayType === 'both' && (
+      {displayType === 'both' && (
+        <div className="flex flex-col md:flex-row md:items-center justify-end gap-6">
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800">
               {/* Se o padrão for card, o card vem primeiro. Se for list, a list vem primeiro. */}
               {defaultView === 'card' ? (
@@ -342,51 +421,87 @@ export default function ViewContainer({
                 </>
               )}
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Dynamic Filter Arguments Bar with integrated Search Button */}
       {filterFields.length > 0 && (
         <div className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
           <div className="flex flex-col lg:flex-row items-end gap-6">
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full">
-              {filterFields.map(field => (
-                <div key={field.id} className="flex flex-col gap-1.5">
-                  <label 
-                    style={{
-                      fontFamily: field.config?.label?.font,
-                      fontSize: field.config?.label?.size,
-                      color: field.config?.label?.color,
-                    }}
-                    className={cn(
-                      "text-[10px] font-black tracking-widest ml-1",
-                      !field.config?.label?.color && "text-neutral-400",
-                      !field.config?.label?.font && "uppercase" // Mantém uppercase apenas se for o padrão do sistema
-                    )}
-                  >
-                    {field.display_name}
-                  </label>
-                  <div className="relative group">
-                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" />
-                    <input 
-                      type="text" 
-                      placeholder={t('runtime.filter_placeholder').replace('{field}', field.display_name)}
-                      value={filterValues[field.db_column_name] || ''}
-                      onChange={e => setFilterValues({ ...filterValues, [field.db_column_name]: e.target.value })}
+               {filterFields.map(field => {
+                 const zoneConfig = field.config?.filter_config || field.config || {}
+                 
+                 return (
+                  <div key={field.id} className="flex flex-col gap-1.5">
+                    <label 
                       style={{
+                        fontFamily: zoneConfig.label?.font,
+                        fontSize: zoneConfig.label?.size,
+                        color: zoneConfig.label?.color,
+                      }}
+                      className={cn(
+                        "text-[10px] font-black tracking-widest ml-1",
+                        !zoneConfig.label?.color && "text-neutral-400",
+                        !zoneConfig.label?.font && "uppercase" // Mantém uppercase apenas se for o padrão do sistema
+                      )}
+                    >
+                      {zoneConfig.label?.text || field.display_name}
+                    </label>
+                    <div className="relative group">
+                      {(() => {
+                        const comp = zoneConfig.component || { type: 'text' }
+                        const fieldType = comp.type || 'text'
+                      const options = comp.options_type === 'relational' 
+                        ? (relationalOptions[field.id] || [])
+                        : parseFixedOptions(comp.fixed_options)
+                      
+                      const commonClasses = cn(
+                        "w-full py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all shadow-sm",
+                        !field.config?.content?.color && "text-neutral-900 dark:text-neutral-300",
+                        fieldType === 'select' ? "px-4" : "pl-9 pr-4"
+                      )
+
+                      const style = {
                         fontFamily: field.config?.content?.font,
                         fontSize: field.config?.content?.size,
                         color: field.config?.content?.color,
-                      }}
-                      className={cn(
-                        "w-full pl-9 pr-4 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all shadow-sm",
-                        !field.config?.content?.color && "text-neutral-900 dark:text-neutral-300"
-                      )}
-                    />
+                      }
+
+                      if (fieldType === 'select') {
+                        return (
+                          <select
+                            value={filterValues[field.db_column_name] || ''}
+                            onChange={e => setFilterValues({ ...filterValues, [field.db_column_name]: e.target.value })}
+                            style={style}
+                            className={commonClasses}
+                          >
+                            <option value="">{t('common.all', 'Todos')}</option>
+                            {options.map((opt: any, i: number) => (
+                              <option key={i} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        )
+                      }
+
+                      return (
+                        <>
+                          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" />
+                          <input 
+                            type={fieldType === 'number' ? 'number' : fieldType === 'date' ? 'date' : 'text'}
+                            placeholder={t('runtime.filter_placeholder').replace('{field}', field.display_name)}
+                            value={filterValues[field.db_column_name] || ''}
+                            onChange={e => setFilterValues({ ...filterValues, [field.db_column_name]: e.target.value })}
+                            style={style}
+                            className={commonClasses}
+                          />
+                        </>
+                        )
+                      })()}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )})}
             </div>
             
             <div className="flex items-center gap-3 mb-[1px]">
@@ -533,6 +648,17 @@ export default function ViewContainer({
           onView={onView}
           onEdit={onEdit}
           onDelete={onDelete}
+        />
+      ) : viewMode === 'mapa_mental' ? (
+        <DynamicMindMap 
+          data={data}
+          fields={displayFields}
+          centralFieldId={mindmapCentralField}
+          onView={onView}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          primaryKeyName={primaryKeyName}
+          dictionary={dictionary}
         />
       ) : (
         <div className="space-y-6">

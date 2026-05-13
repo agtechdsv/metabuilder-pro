@@ -1,8 +1,5 @@
 {
-  "common": {
-    "cancel": "Cancelar",
-    "confirm": "Confirmar"
-  },
+
   "agtech": {
     "title": "A engenharia por trás do MetaBuilderPRO",
     "lab": "AGTECH INNOVATION LAB",
@@ -72,11 +69,13 @@
     "profile": "Meu Perfil",
     "logout": "Sair do sistema",
     "cancel": "Cancelar",
+    "confirm": "Confirmar",
     "save": "Salvar Alterações",
     "loading": "Carregando...",
     "success": "Salvo com sucesso!",
     "enterprise": "Enterprise",
-    "logged_in_as": "Usuário Logado"
+    "logged_in_as": "Usuário Logado",
+    "all": "Todos"
   },
   "hero": {
     "badge": "Mecanismo de Metadados Next-Gen",
@@ -194,7 +193,11 @@
         "auth": {
           "title": "Configurar Login",
           "strategy_tab": "Estratégia de Autenticação",
+          "strategy_desc": "Defina como seus usuários irão se autenticar no sistema.",
           "visual_tab": "Personalização Visual",
+          "users_tab": "Gestão de Usuários",
+          "allow_signup": "Permitir Auto-cadastro",
+          "allow_signup_desc": "Habilita o link 'Criar conta' no portal de login.",
           "managed_title": "Managed Auth",
           "managed_desc": "MetaBuilder gerencia os usuários em uma base de dados isolada. Rápido e fácil.",
           "database_title": "Via Banco de Dados Legado",
@@ -263,6 +266,7 @@
           "crud_table": "Tabela CRUD",
           "kanban_soon": "Kanban (Em breve)",
           "preview_view": "Visualizar Tela",
+          "configure_view": "Editar Registro",
           "db_fields": "Campos do Banco de Dados",
           "db_fields_desc": "Personalize os labels e a visibilidade dos campos da tabela {table}.",
           "fields_detected": "campos detectados",
@@ -366,7 +370,11 @@
       "new_item": "Novo Item",
       "record_id": "Registro #{id}",
       "input_placeholder": "Digite o valor para {field}..."
-    }
+    },
+    "master_details": {
+      "main_data": "Dados Principais"
+    },
+    "back_to_list": "Voltar para Lista"
   },
   "wizard": {
     "title": "Use Case Builder",
@@ -427,12 +435,20 @@
       "select_table": "Selecione a Tabela...",
       "select_field": "Selecione o Campo...",
       "add_relationship": "Adicionar Relacionamento",
+      "mindmap": {
+        "config_title": "Configuração do Mapa Mental",
+        "central_field": "Campo Central (Nó Raiz)",
+        "select_central": "Selecione o campo central...",
+        "central_desc": "Este campo será a raiz do seu mapa mental. Os campos selecionados na Zona 02 formarão os próximos níveis."
+      },
       "zones": {
         "filter": "Filtro",
         "grid": "Grid",
         "form": "Formulário",
         "kanban_card": "Campos do Card",
         "card": "Card",
+        "mindmap_nodes": "Campos do Mapa (Níveis)",
+        "node": "Nó",
         "zone_01": "Zona 01",
         "zone_02": "Zona 02",
         "zone_03": "Zona 03"

@@ -21,6 +21,7 @@ export default function DynamicGrid({
   onDelete
 }: DynamicGridProps) {
   const canView = buttonsConfig.find((b: any) => b.id === 'view')?.visible === true
+  const canEdit = buttonsConfig.find((b: any) => b.id === 'edit')?.visible === true
   const canDelete = buttonsConfig.find((b: any) => b.id === 'delete')?.visible === true
 
   const getNestedValue = (obj: any, path: string) => {
@@ -53,18 +54,20 @@ export default function DynamicGrid({
               ? JSON.stringify(rawVal) 
               : String(rawVal ?? '')
             
+            const zoneConfig = field.config?.grid_config || field.config || {}
+            
             return (
               <td 
                 key={field.id} 
                 title={val}
                 style={{
-                  fontFamily: field.config?.content?.font,
-                  fontSize: field.config?.content?.size,
-                  color: field.config?.content?.color,
+                  fontFamily: zoneConfig.content?.font,
+                  fontSize: zoneConfig.content?.size,
+                  color: zoneConfig.content?.color,
                 }}
                 className={cn(
                   "px-6 py-4 whitespace-nowrap text-sm font-medium transition-colors max-w-[300px] truncate cursor-help",
-                  !field.config?.content?.color && "text-neutral-900 dark:text-neutral-300",
+                  !zoneConfig.content?.color && "text-neutral-900 dark:text-neutral-300",
                   rowIndex % 2 === 0 ? "bg-white dark:bg-neutral-900" : "bg-neutral-100/90 dark:bg-neutral-800"
                 )}
               >
