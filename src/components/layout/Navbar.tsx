@@ -29,14 +29,24 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
     <>
       <header className={`fixed top-0 left-0 right-0 w-full border-b border-neutral-200 dark:border-neutral-900 bg-white/70 dark:bg-black/70 backdrop-blur-xl z-50 transition-all duration-300 ${isStudio ? 'pl-20' : ''}`}>
         <div className="w-full px-10 h-16 flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-3 group transition-all">
-            <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-sm">
-              <LayoutDashboard className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-            </div>
-            <h1 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
-              MetaBuilder<span className="text-indigo-500">PRO</span>
-            </h1>
-          </Link>
+          <div className="flex items-center gap-8">
+            <Link href="/" className="flex items-center gap-3 group transition-all">
+              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-sm">
+                <LayoutDashboard className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <h1 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
+                MetaBuilder<span className="text-indigo-500">PRO</span>
+              </h1>
+            </Link>
+
+            <nav className="hidden lg:flex items-center gap-6">
+              <Link href="/features/speed" className="text-[11px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">Agilidade</Link>
+              <Link href="/features/integration" className="text-[11px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">Integração</Link>
+              <Link href="/features/branding" className="text-[11px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">Whitelabel</Link>
+              <Link href="/features/security" className="text-[11px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">Segurança</Link>
+              <Link href="/features/zero-trust" className="text-[11px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 transition-colors border-l border-neutral-200 dark:border-neutral-800 pl-6">Zero-Trust</Link>
+            </nav>
+          </div>
           
           <div className="flex items-center gap-3 md:gap-4">
             <HeaderActions user={user} profile={profile} />
