@@ -388,6 +388,21 @@
       "layout": "Campos & Layout",
       "actions": "Ações & Query"
     },
+    "buttons": {
+      "prev": "Voltar",
+      "next": "Próximo",
+      "update": "Atualizar",
+      "finish": "Finalizar",
+      "saving": "Salvando...",
+      "updating": "Atualizando...",
+      "error_save": "Erro ao salvar: ",
+      "validation": {
+        "name_slug_required": "Nome e slug são obrigatórios.",
+        "grid_required": "Selecione campos para a listagem.",
+        "form_required": "Selecione campos para o formulário.",
+        "filter_required": "Selecione campos para o filtro."
+      }
+    },
     "logic": {
       "title": "Qual a lógica do seu caso de uso?",
       "subtitle": "Defina o comportamento principal desta tela no MetaBuilder.",
@@ -415,6 +430,10 @@
         "personalizado": {
           "title": "Personalizado",
           "desc": "Lógica customizada e fluxos de trabalho únicos."
+        },
+        "master_detail": {
+          "title": "Mestre-Detalhe",
+          "desc": "Explorador relacional profundo com abas e agrupamentos de dados."
         }
       },
       "screen_name": "Nome da Tela",
@@ -437,6 +456,16 @@
       "select_table": "Selecione a Tabela...",
       "select_field": "Selecione o Campo...",
       "add_relationship": "Adicionar Relacionamento",
+      "kanban": {
+        "title": "Configuração do Kanban",
+        "group_field": "Campo de Agrupamento (Colunas)",
+        "group_placeholder": "Selecione um campo para definir as colunas...",
+        "group_desc": "Este campo determinará as colunas do Kanban (ex: Status, Etapa)."
+      },
+      "master_detail": {
+        "title": "Configuração Mestre-Detalhe",
+        "subtitle": "Defina a hierarquia e o estilo de navegação dos dados."
+      },
       "mindmap": {
         "config_title": "Configuração do Mapa Mental",
         "central_field": "Campo Central (Nó Raiz)",

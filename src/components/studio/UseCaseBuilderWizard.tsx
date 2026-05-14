@@ -62,6 +62,7 @@ import {
   useSortable
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { motion, useDragControls } from 'framer-motion'
 
 interface UseCaseBuilderWizardProps {
   initialData?: any
@@ -444,7 +445,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
   )
 
   return (
-    <div className="flex flex-col animate-in fade-in duration-500 pb-32">
+    <div className="flex flex-col pb-32">
 
       {/* Header Interno do Builder (Imagem 2) */}
       <div className="flex flex-col gap-8">
@@ -574,7 +575,7 @@ function StepLogic({ config, setConfig }: any) {
     { id: 'cadastro', title: t('wizard.logic.types.cadastro.title'), desc: t('wizard.logic.types.cadastro.desc'), icon: Layout },
     { id: 'mapa_mental', title: t('wizard.logic.types.mapa_mental.title'), desc: t('wizard.logic.types.mapa_mental.desc'), icon: Share2 },
     { id: 'kanban', title: t('wizard.logic.types.kanban.title'), desc: t('wizard.logic.types.kanban.desc'), icon: Columns },
-    { id: 'master_detail', title: 'Mestre-Detalhe', desc: 'Explorador relacional profundo com abas e agrupamentos de dados.', icon: Layers },
+    { id: 'master_detail', title: t('wizard.logic.types.master_detail.title'), desc: t('wizard.logic.types.master_detail.desc'), icon: Layers },
     { id: 'personalizado', title: t('wizard.logic.types.personalizado.title'), desc: t('wizard.logic.types.personalizado.desc'), icon: Settings }
   ]
 
@@ -725,6 +726,7 @@ function StepLayout({ config, setConfig, models }: any) {
   const [editingFieldZone, setEditingFieldZone] = useState<string | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const dragControls = useDragControls()
 
   // Sensores e Handlers para Drag & Drop
   const sensors = useSensors(
@@ -829,7 +831,7 @@ function StepLayout({ config, setConfig, models }: any) {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
           <h2 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white">{t('wizard.layout.title')}</h2>
@@ -885,10 +887,24 @@ function StepLayout({ config, setConfig, models }: any) {
 
 
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="md:col-span-1 bg-neutral-50/50 dark:bg-neutral-900/30 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 flex flex-col h-[600px]">
-          <div className="p-5 border-b border-neutral-200 dark:border-neutral-800">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.available_fields')}</h3>
+      <div className="flex flex-col xl:flex-row gap-10 items-start relative">
+        {/* Sidebar Wrapper - Preserves layout space while allowing fixed positioning */}
+        <div className="w-full xl:w-80 shrink-0">
+          <motion.div 
+            drag
+            dragControls={dragControls}
+            dragListener={false}
+            dragMomentum={false}
+            className="bg-white dark:bg-neutral-900 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 flex flex-col xl:fixed xl:w-80 xl:h-[600px] xl:top-24 z-30 shadow-2xl shadow-indigo-500/10 overflow-hidden ring-1 ring-black/5 transition-colors duration-500 resize both min-w-[280px] min-h-[400px] max-w-[500px] max-h-[85vh]"
+          >
+          <div 
+            onPointerDown={(e) => dragControls.start(e)}
+            className="p-5 border-b border-neutral-200 dark:border-neutral-800 cursor-grab active:cursor-grabbing hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors group flex items-center justify-between"
+          >
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 group-hover:text-indigo-500 transition-colors">{t('wizard.layout.available_fields')}</h3>
+            <div className="flex gap-0.5">
+              {[1,2,3].map(i => <div key={i} className="w-1 h-1 rounded-full bg-neutral-300 dark:bg-neutral-700 group-hover:bg-indigo-400"></div>)}
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-8 custom-scrollbar">
             {selectedModelsData.map((m: any) => (
@@ -945,10 +961,11 @@ function StepLayout({ config, setConfig, models }: any) {
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
+      </div>
 
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <div className="md:col-span-3 space-y-6">
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <div className="flex-1 space-y-8 w-full">
           {/* ZONA: KANBAN CONFIG */}
           {config.logic_type === 'kanban' && (
             <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
@@ -957,12 +974,12 @@ function StepLayout({ config, setConfig, models }: any) {
                   <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
                     <Columns className="w-4 h-4" />
                   </div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Kanban Configuration</h4>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.kanban.title')}</h4>
                 </div>
               </div>
               
               <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Grouping Field (Columns)</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.kanban.group_field')}</label>
                 <select
                   value={config.layout_config.kanban_group_field || ''}
                   onChange={e => setConfig({
@@ -971,14 +988,14 @@ function StepLayout({ config, setConfig, models }: any) {
                   })}
                   className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                 >
-                  <option value="">Select a field to define columns...</option>
+                  <option value="">{t('wizard.layout.kanban.group_placeholder')}</option>
                   {selectedModelsData.flatMap((m: any) => m.fields).map((f: any) => (
                     <option key={f.id} value={f.id}>
                       {getFieldName(f.id)} ({f.data_type})
                     </option>
                   ))}
                 </select>
-                <p className="text-[10px] text-neutral-400 font-medium italic ml-1">This field will determine the Kanban columns (e.g., Status, Stage).</p>
+                <p className="text-[10px] text-neutral-400 font-medium italic ml-1">{t('wizard.layout.kanban.group_desc')}</p>
               </div>
             </div>
           )}
@@ -991,8 +1008,8 @@ function StepLayout({ config, setConfig, models }: any) {
                   <Layers className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Master-Detail Configuration</h4>
-                  <p className="text-[10px] text-neutral-400 font-medium mt-1">Defina a hierarquia e o estilo de navegação dos dados.</p>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.master_detail.title')}</h4>
+                  <p className="text-[10px] text-neutral-400 font-medium mt-1">{t('wizard.layout.master_detail.subtitle')}</p>
                 </div>
               </div>
 
@@ -1362,8 +1379,8 @@ function StepLayout({ config, setConfig, models }: any) {
             </div>
           )}
         </div>
-        </DndContext>
-      </div>
+      </DndContext>
+    </div>
 
       <Drawer
         isOpen={isDrawerOpen}
