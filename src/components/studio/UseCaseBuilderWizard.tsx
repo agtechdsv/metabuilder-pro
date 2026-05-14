@@ -576,11 +576,11 @@ function StepLogic({ config, setConfig }: any) {
   const { t } = useI18n()
   const types = [
     { id: 'pesquisa', title: t('wizard.logic.types.pesquisa.title'), desc: t('wizard.logic.types.pesquisa.desc'), icon: Layout },
-    { id: 'pesquisa_cadastro', title: t('wizard.logic.types.pesquisa_cadastro.title'), desc: t('wizard.logic.types.pesquisa_cadastro.desc'), icon: Layout },
     { id: 'cadastro', title: t('wizard.logic.types.cadastro.title'), desc: t('wizard.logic.types.cadastro.desc'), icon: Layout },
-    { id: 'mapa_mental', title: t('wizard.logic.types.mapa_mental.title'), desc: t('wizard.logic.types.mapa_mental.desc'), icon: Share2 },
-    { id: 'kanban', title: t('wizard.logic.types.kanban.title'), desc: t('wizard.logic.types.kanban.desc'), icon: Columns },
+    { id: 'pesquisa_cadastro', title: t('wizard.logic.types.pesquisa_cadastro.title'), desc: t('wizard.logic.types.pesquisa_cadastro.desc'), icon: Layout },
     { id: 'master_detail', title: t('wizard.logic.types.master_detail.title'), desc: t('wizard.logic.types.master_detail.desc'), icon: Layers },
+    { id: 'kanban', title: t('wizard.logic.types.kanban.title'), desc: t('wizard.logic.types.kanban.desc'), icon: Columns },
+    { id: 'mapa_mental', title: t('wizard.logic.types.mapa_mental.title'), desc: t('wizard.logic.types.mapa_mental.desc'), icon: Share2 },
     { id: 'personalizado', title: t('wizard.logic.types.personalizado.title'), desc: t('wizard.logic.types.personalizado.desc'), icon: Settings }
   ]
 
@@ -760,7 +760,7 @@ function StepLayout({ config, setConfig, models }: any) {
       let targetZone: 'filter_fields' | 'grid_fields' | 'form_fields' | null = null
       if (overIdStr === 'droppable-filter' || overIdStr.startsWith('filter-')) targetZone = 'filter_fields'
       else if (overIdStr === 'droppable-grid' || overIdStr.startsWith('grid-')) targetZone = 'grid_fields'
-      else if (overIdStr === 'droppable-form' || overIdStr.startsWith('form-')) targetZone = 'form_fields'
+      else if (overIdStr === 'droppable-form' || overIdStr.startsWith('form-') || overIdStr.startsWith('droppable-form-')) targetZone = 'form_fields'
 
       if (targetZone) {
         if (isTable) {
@@ -843,7 +843,14 @@ function StepLayout({ config, setConfig, models }: any) {
     })
   }
 
-  const selectedModelsData = models.filter((m: any) => config.selected_models.includes(m.id))
+  const selectedModelsData = models
+    .filter((m: any) => config.selected_models.includes(m.id))
+    .sort((a: any, b: any) => {
+      const masterId = (config.layout_config as any).master_model_id
+      if (a.id === masterId) return -1
+      if (b.id === masterId) return 1
+      return 0
+    })
 
   const toggleField = (fieldId: string, zone: 'filter_fields' | 'grid_fields' | 'form_fields') => {
     const currentFields = [...config.layout_config[zone]]
@@ -1397,7 +1404,7 @@ function StepLayout({ config, setConfig, models }: any) {
 
           {/* ZONA: FORM */}
           {(config.logic_type.includes('cadastro') || config.logic_type === 'master_detail') && (
-            <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
+            <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <h4 className="text-[9px] font-black uppercase text-amber-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_03')}: {t('wizard.layout.zones.form')}</h4>
                 <div className="flex items-center gap-2">
@@ -1413,38 +1420,98 @@ function StepLayout({ config, setConfig, models }: any) {
                   )}
                 </div>
               </div>
-              <DroppableZone id="droppable-form" className="grid grid-cols-7 gap-3 min-h-[100px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-start">
-                {config.layout_config.form_fields.length === 0 ? (
-                  <p className="text-xs text-neutral-400 font-medium w-full text-center italic">{t('wizard.layout.subtitle')}</p>
+
+              <div className="space-y-6">
+                {selectedModelsData.length <= 1 ? (
+                  <DroppableZone id="droppable-form" className="grid grid-cols-7 gap-3 min-h-[100px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-start">
+                    {config.layout_config.form_fields.length === 0 ? (
+                      <p className="text-xs text-neutral-400 font-medium w-full text-center italic">{t('wizard.layout.subtitle')}</p>
+                    ) : (
+                      <SortableContext items={config.layout_config.form_fields.map((id: string) => `form-${id}`)} strategy={rectSortingStrategy}>
+                        {config.layout_config.form_fields.map((id: string) => (
+                          <SortableFieldChip
+                            key={`form-${id}`}
+                            id={`form-${id}`}
+                            itemValue={id}
+                            toggleField={toggleField}
+                            zoneType="form"
+                            onEdit={() => { setEditingFieldId(id); setEditingFieldZone('form'); setIsDrawerOpen(true); }}
+                          >
+                            <span
+                              style={{
+                                fontFamily: getFieldMeta(id, 'form').label?.font,
+                                fontSize: getFieldMeta(id, 'form').label?.size,
+                                color: getFieldMeta(id, 'form').label?.color || undefined
+                              }}
+                              className={cn(
+                                "text-[10px] font-black tracking-wider",
+                                !getFieldMeta(id, 'form').label?.font && "uppercase"
+                              )}
+                            >
+                              {getFieldMeta(id, 'form').label?.text || getFieldName(id)}
+                            </span>
+                          </SortableFieldChip>
+                        ))}
+                      </SortableContext>
+                    )}
+                  </DroppableZone>
                 ) : (
-                  <SortableContext items={config.layout_config.form_fields.map((id: string) => `form-${id}`)} strategy={rectSortingStrategy}>
-                    {config.layout_config.form_fields.map((id: string) => (
-                      <SortableFieldChip
-                        key={`form-${id}`}
-                        id={`form-${id}`}
-                        itemValue={id}
-                        toggleField={toggleField}
-                        zoneType="form"
-                        onEdit={() => { setEditingFieldId(id); setEditingFieldZone('form'); setIsDrawerOpen(true); }}
-                      >
-                        <span
-                          style={{
-                            fontFamily: getFieldMeta(id, 'form').label?.font,
-                            fontSize: getFieldMeta(id, 'form').label?.size,
-                            color: getFieldMeta(id, 'form').label?.color || undefined
-                          }}
-                          className={cn(
-                            "text-[10px] font-black tracking-wider",
-                            !getFieldMeta(id, 'form').label?.font && "uppercase"
-                          )}
-                        >
-                          {getFieldMeta(id, 'form').label?.text || getFieldName(id)}
-                        </span>
-                      </SortableFieldChip>
-                    ))}
-                  </SortableContext>
+                  <div className="space-y-8">
+                    {selectedModelsData.map((model: any, idx: number) => {
+                      const isMaster = idx === 0;
+                      const fieldsOfThisModel = config.layout_config.form_fields.filter((fid: string) => 
+                        model.fields.some((f: any) => f.id === fid)
+                      );
+
+                      return (
+                        <div key={model.id} className="space-y-3">
+                          <div className="flex items-center gap-2 ml-1">
+                            <div className={cn("w-1 h-3 rounded-full", isMaster ? "bg-amber-600" : "bg-amber-400")}></div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
+                              {isMaster ? `Principal: ${model.display_name || model.db_table_name}` : `Aba ${idx}: ${model.display_name || model.db_table_name}`}
+                            </span>
+                          </div>
+                          <DroppableZone 
+                            id={`droppable-form-${model.id}`} 
+                            className="grid grid-cols-7 gap-3 min-h-[100px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-start"
+                          >
+                            {fieldsOfThisModel.length === 0 ? (
+                              <p className="text-xs text-neutral-400 font-medium w-full text-center italic">Arraste campos de "{model.display_name || model.db_table_name}" para cá</p>
+                            ) : (
+                              <SortableContext items={fieldsOfThisModel.map((id: string) => `form-${id}`)} strategy={rectSortingStrategy}>
+                                {fieldsOfThisModel.map((id: string) => (
+                                  <SortableFieldChip
+                                    key={`form-${id}`}
+                                    id={`form-${id}`}
+                                    itemValue={id}
+                                    toggleField={toggleField}
+                                    zoneType="form"
+                                    onEdit={() => { setEditingFieldId(id); setEditingFieldZone('form'); setIsDrawerOpen(true); }}
+                                  >
+                                    <span
+                                      style={{
+                                        fontFamily: getFieldMeta(id, 'form').label?.font,
+                                        fontSize: getFieldMeta(id, 'form').label?.size,
+                                        color: getFieldMeta(id, 'form').label?.color || undefined
+                                      }}
+                                      className={cn(
+                                        "text-[10px] font-black tracking-wider",
+                                        !getFieldMeta(id, 'form').label?.font && "uppercase"
+                                      )}
+                                    >
+                                      {getFieldMeta(id, 'form').label?.text || getFieldName(id)}
+                                    </span>
+                                  </SortableFieldChip>
+                                ))}
+                              </SortableContext>
+                            )}
+                          </DroppableZone>
+                        </div>
+                      )
+                    })}
+                  </div>
                 )}
-              </DroppableZone>
+              </div>
             </div>
           )}
           </div>
@@ -1925,13 +1992,13 @@ function DraggableFieldCard({ field }: { field: any }) {
       {...listeners}
       {...attributes}
       className={cn(
-        "p-4 bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-2xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-indigo-200 dark:hover:border-indigo-800/50 hover:shadow-md transition-all",
+        "py-2.5 px-4 bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-2xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-indigo-200 dark:hover:border-indigo-800/50 hover:shadow-md transition-all",
         isDragging && "opacity-20 grayscale"
       )}
     >
-      <div className="flex items-center justify-between">
-        <span className="font-bold text-neutral-700 dark:text-neutral-200">{field.display_name || field.db_column_name}</span>
-        <span className="text-[9px] font-black font-mono text-neutral-400 bg-neutral-100 dark:bg-neutral-900 px-2 py-0.5 rounded-md">{field.data_type}</span>
+      <div className="flex items-center justify-between w-full">
+        <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200">{field.display_name || field.db_column_name}</span>
+        <span className="text-[8px] font-black font-mono text-neutral-400 bg-neutral-100 dark:bg-neutral-900 px-2 py-0.5 rounded-md opacity-60 uppercase">{field.data_type}</span>
       </div>
     </div>
   )
