@@ -7,6 +7,8 @@ import {
   Save,
   ChevronRight,
   ChevronLeft,
+  ChevronUp,
+  ChevronDown,
   Settings2,
   Database,
   Layout,
@@ -50,7 +52,9 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent
+  DragEndEvent,
+  useDraggable,
+  useDroppable
 } from '@dnd-kit/core'
 import {
   arrayMove,
@@ -722,10 +726,12 @@ function StepTables({ config, setConfig, models }: any) {
 
 function StepLayout({ config, setConfig, models }: any) {
   const { t } = useI18n()
+  const { toast } = useToast()
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null)
   const [editingFieldZone, setEditingFieldZone] = useState<string | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [collapsedTables, setCollapsedTables] = useState<Record<string, boolean>>({})
   const dragControls = useDragControls()
 
   // Sensores e Handlers para Drag & Drop
@@ -736,10 +742,80 @@ function StepLayout({ config, setConfig, models }: any) {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
-    if (!over || active.id === over.id) return
+    if (!over) return
 
     const activeIdStr = String(active.id)
     const overIdStr = String(over.id)
+
+    // Case 1: Dragging from Available Fields (Sidebar) to a Zone
+    if (activeIdStr.startsWith('source-') || activeIdStr.startsWith('table-source-')) {
+      const isTable = activeIdStr.startsWith('table-source-')
+      const id = activeIdStr.replace(isTable ? 'table-source-' : 'source-', '')
+      
+      let targetZone: 'filter_fields' | 'grid_fields' | 'form_fields' | null = null
+      if (overIdStr === 'droppable-filter' || overIdStr.startsWith('filter-')) targetZone = 'filter_fields'
+      else if (overIdStr === 'droppable-grid' || overIdStr.startsWith('grid-')) targetZone = 'grid_fields'
+      else if (overIdStr === 'droppable-form' || overIdStr.startsWith('form-')) targetZone = 'form_fields'
+
+      if (targetZone) {
+        if (isTable) {
+          const model = models.find((m: any) => m.id === id)
+          if (!model) return
+
+          const fieldIdsToAdd = model.fields.map((f: any) => f.id)
+          const currentFields = [...config.layout_config[targetZone]]
+          const newFields = [...currentFields]
+          let addedCount = 0
+
+          fieldIdsToAdd.forEach((fid: string) => {
+            if (!newFields.includes(fid)) {
+              // Validations
+              if (targetZone === 'filter_fields' && (!config.has_arguments || config.logic_type === 'cadastro')) return
+              if (targetZone === 'form_fields' && config.logic_type === 'pesquisa') return
+              newFields.push(fid)
+              addedCount++
+            }
+          })
+
+          if (addedCount > 0) {
+            setConfig({
+              ...config,
+              layout_config: {
+                ...config.layout_config,
+                [targetZone]: newFields
+              }
+            })
+            toast(`${addedCount} campos da tabela "${model.display_name || model.db_table_name}" adicionados com sucesso!`, 'success')
+          } else {
+            toast(t('common.info', 'Todos os campos desta tabela já estão nesta zona.'), 'info')
+          }
+        } else {
+          const fieldId = id
+          const currentFields = [...config.layout_config[targetZone]]
+          if (!currentFields.includes(fieldId)) {
+            // Logic validations
+            if (targetZone === 'filter_fields' && (!config.has_arguments || config.logic_type === 'cadastro')) return
+            if (targetZone === 'form_fields' && config.logic_type === 'pesquisa') return
+
+            currentFields.push(fieldId)
+            setConfig({
+              ...config,
+              layout_config: {
+                ...config.layout_config,
+                [targetZone]: currentFields
+              }
+            })
+            toast(t('common.success', 'Campo adicionado com sucesso!'), 'success')
+          } else {
+            toast(t('common.info', 'Este campo já está nesta zona.'), 'info')
+          }
+        }
+      }
+      return
+    }
+
+    // Case 2: Reordering within a Zone
+    if (active.id === over.id) return
 
     const isFilter = activeIdStr.startsWith('filter-')
     const isGrid = activeIdStr.startsWith('grid-')
@@ -789,7 +865,11 @@ function StepLayout({ config, setConfig, models }: any) {
   const getFieldName = (id: string) => {
     for (const m of models) {
       const f = m.fields.find((f: any) => f.id === id)
-      if (f) return `${m.db_table_name}.${f.db_column_name}`
+      if (f) {
+        const tableName = m.display_name || m.db_table_name
+        const fieldName = f.display_name || f.db_column_name
+        return `${tableName}.${fieldName}`
+      }
     }
     return id
   }
@@ -802,7 +882,7 @@ function StepLayout({ config, setConfig, models }: any) {
     if (meta) return meta
 
     return {
-      label: { text: getFieldName(fid).split('.').pop(), font: 'Inter', size: '9px', color: '' },
+      label: { text: getFieldName(fid), font: 'Inter', size: '9px', color: '' },
       content: { font: 'Inter', size: '12px', color: '', mask: '', required: false },
       component: { type: 'text', rows: 3, width: '100%', options_type: 'fixed', fixed_options: '', rel_table: '', rel_label: '', rel_value: '' }
     }
@@ -832,16 +912,16 @@ function StepLayout({ config, setConfig, models }: any) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between xl:pr-96">
         <div className="space-y-2">
           <h2 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white">{t('wizard.layout.title')}</h2>
           <p className="text-neutral-500 dark:text-neutral-400 text-sm">{t('wizard.layout.subtitle')}</p>
         </div>
         <button
           onClick={() => setShowResetConfirm(true)}
-          className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all border border-red-200 dark:border-red-900/50 shadow-sm active:scale-95"
+          className="flex items-center gap-3 px-8 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-red-500 bg-white dark:bg-neutral-900 border-2 border-red-100 dark:border-red-900/30 rounded-2xl shadow-xl shadow-red-500/5 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all hover:scale-105 active:scale-95 group shrink-0"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
+          <RotateCcw className="w-4 h-4 transition-transform group-hover:rotate-[-180deg] duration-700" />
           {t('wizard.layout.reset_formatting')}
         </button>
       </div>
@@ -887,84 +967,51 @@ function StepLayout({ config, setConfig, models }: any) {
 
 
 
-      <div className="flex flex-col xl:flex-row gap-10 items-start relative">
-        {/* Sidebar Wrapper - Preserves layout space while allowing fixed positioning */}
-        <div className="w-full xl:w-80 shrink-0">
-          <motion.div 
-            drag
-            dragControls={dragControls}
-            dragListener={false}
-            dragMomentum={false}
-            className="bg-white dark:bg-neutral-900 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 flex flex-col xl:fixed xl:w-80 xl:h-[600px] xl:top-24 z-30 shadow-2xl shadow-indigo-500/10 overflow-hidden ring-1 ring-black/5 transition-colors duration-500 resize both min-w-[280px] min-h-[400px] max-w-[500px] max-h-[85vh]"
-          >
-          <div 
-            onPointerDown={(e) => dragControls.start(e)}
-            className="p-5 border-b border-neutral-200 dark:border-neutral-800 cursor-grab active:cursor-grabbing hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors group flex items-center justify-between"
-          >
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 group-hover:text-indigo-500 transition-colors">{t('wizard.layout.available_fields')}</h3>
-            <div className="flex gap-0.5">
-              {[1,2,3].map(i => <div key={i} className="w-1 h-1 rounded-full bg-neutral-300 dark:bg-neutral-700 group-hover:bg-indigo-400"></div>)}
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-8 custom-scrollbar">
-            {selectedModelsData.map((m: any) => (
-              <div key={m.id} className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-1.5 h-4 bg-indigo-500 rounded-full"></div>
-                  <span className="text-[11px] font-black text-neutral-900 dark:text-white uppercase tracking-[0.15em]">{m.display_name || m.db_table_name}</span>
-                </div>
-                <div className="grid grid-cols-1 gap-3">
-                  {m.fields.map((f: any) => (
-                    <div key={f.id} className="group p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl text-xs flex flex-col gap-4 hover:border-indigo-500/50 transition-all shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-neutral-700 dark:text-neutral-200">{f.display_name || f.db_column_name}</span>
-                        <span className="text-[9px] font-black font-mono text-neutral-400 bg-neutral-100 dark:bg-neutral-900 px-2 py-0.5 rounded-md">{f.data_type}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          disabled={!config.has_arguments || config.logic_type === 'cadastro'}
-                          onClick={() => toggleField(f.id, 'filter_fields')}
-                          className={cn(
-                            "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all",
-                            config.layout_config.filter_fields.includes(f.id) ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200',
-                            (!config.has_arguments || config.logic_type === 'cadastro') && "opacity-20 cursor-not-allowed grayscale"
-                          )}
-                        >
-                          {t('wizard.layout.zones.filter')}
-                        </button>
-                        <button
-                          onClick={() => toggleField(f.id, 'grid_fields')}
-                          className={cn(
-                            "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all",
-                            config.layout_config.grid_fields.includes(f.id) ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200'
-                          )}
-                        >
-                          {config.logic_type === 'kanban' ? t('wizard.layout.zones.card', 'Card') : config.logic_type === 'mapa_mental' ? t('wizard.layout.zones.node', 'Nó') : t('wizard.layout.zones.grid')}
-                        </button>
-                        {config.logic_type !== 'kanban' && config.logic_type !== 'mapa_mental' && (
-                          <button
-                            disabled={config.logic_type === 'pesquisa'}
-                            onClick={() => toggleField(f.id, 'form_fields')}
-                            className={cn(
-                              "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all",
-                              config.layout_config.form_fields.includes(f.id) ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/20' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:bg-neutral-200',
-                              config.logic_type === 'pesquisa' && "opacity-20 cursor-not-allowed grayscale"
-                            )}
-                          >
-                            {t('wizard.layout.zones.form')}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      </div>
-
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <div className="flex flex-col xl:flex-row-reverse gap-10 relative">
+          {/* Sidebar Wrapper - Preserves layout space while allowing fixed positioning */}
+          <div className="w-full xl:w-80 shrink-0">
+            <motion.div 
+              drag
+              dragControls={dragControls}
+              dragListener={false}
+              dragMomentum={false}
+              className="bg-white dark:bg-neutral-900 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 flex flex-col xl:fixed xl:w-80 xl:h-[600px] xl:top-64 xl:right-12 z-30 shadow-2xl shadow-indigo-500/10 overflow-hidden ring-1 ring-black/5 transition-colors duration-500 resize both min-w-[280px] min-h-[400px] max-w-[500px]"
+            >
+            <div 
+              onPointerDown={(e) => dragControls.start(e)}
+              className="p-5 border-b border-neutral-200 dark:border-neutral-800 cursor-grab active:cursor-grabbing hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors group flex items-center justify-between"
+            >
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 group-hover:text-indigo-500 transition-colors">{t('wizard.layout.available_fields')}</h3>
+              <div className="flex gap-0.5">
+                {[1,2,3].map(i => <div key={i} className="w-1 h-1 rounded-full bg-neutral-300 dark:bg-neutral-700 group-hover:bg-indigo-400"></div>)}
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              {selectedModelsData.map((m: any) => {
+                const isCollapsed = collapsedTables[m.id]
+                return (
+                  <div key={m.id} className="relative">
+                    <DraggableTableHeader 
+                      model={m} 
+                      isCollapsed={isCollapsed} 
+                      onToggle={() => setCollapsedTables(prev => ({ ...prev, [m.id]: !isCollapsed }))} 
+                    />
+                    
+                    {!isCollapsed && (
+                      <div className="p-4 grid grid-cols-1 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                        {m.fields.map((f: any) => (
+                          <DraggableFieldCard key={f.id} field={f} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </motion.div>
+        </div>
+
         <div className="flex-1 space-y-8 w-full">
           {/* ZONA: KANBAN CONFIG */}
           {config.logic_type === 'kanban' && (
@@ -1217,9 +1264,20 @@ function StepLayout({ config, setConfig, models }: any) {
             <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
               <div className="flex items-center justify-between">
                 <h4 className="text-[9px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_01')}: {t('wizard.layout.zones.filter')}</h4>
-                <span className="px-3 py-1 bg-indigo-500/10 text-indigo-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.filter_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 bg-indigo-500/10 text-indigo-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.filter_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
+                  {config.layout_config.filter_fields.length > 0 && (
+                    <button
+                      onClick={() => setConfig({ ...config, layout_config: { ...config.layout_config, filter_fields: [] } })}
+                      className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                      title={t('common.clear_all', 'Limpar Tudo')}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-3 min-h-[80px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-center">
+              <DroppableZone id="droppable-filter" className="flex flex-wrap gap-3 min-h-[80px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-center">
                 {config.layout_config.filter_fields.length === 0 ? (
                   <p className="text-xs text-neutral-400 font-medium w-full text-center italic">{t('wizard.layout.subtitle')}</p>
                 ) : (
@@ -1249,7 +1307,7 @@ function StepLayout({ config, setConfig, models }: any) {
                     ))}
                   </SortableContext>
                 )}
-              </div>
+              </DroppableZone>
             </div>
           )}
 
@@ -1286,10 +1344,21 @@ function StepLayout({ config, setConfig, models }: any) {
                   </div>
                 )}
               </div>
-              <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.grid_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.grid_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
+                {config.layout_config.grid_fields.length > 0 && (
+                  <button
+                    onClick={() => setConfig({ ...config, layout_config: { ...config.layout_config, grid_fields: [] } })}
+                    className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                    title={t('common.clear_all', 'Limpar Tudo')}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="min-h-[100px] p-4 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[1.5rem]">
+            <DroppableZone id="droppable-grid" className="min-h-[100px] p-4 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[1.5rem]">
               {config.layout_config.grid_fields.length === 0 ? (
                 <div className="h-full flex items-center justify-center italic text-xs text-neutral-400 font-medium">{t('wizard.layout.subtitle')}</div>
               ) : (
@@ -1331,7 +1400,7 @@ function StepLayout({ config, setConfig, models }: any) {
                   </table>
                 </div>
               )}
-            </div>
+            </DroppableZone>
           </div>
 
           {/* ZONA: FORM */}
@@ -1339,9 +1408,20 @@ function StepLayout({ config, setConfig, models }: any) {
             <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
               <div className="flex items-center justify-between">
                 <h4 className="text-[9px] font-black uppercase text-amber-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_03')}: {t('wizard.layout.zones.form')}</h4>
-                <span className="px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.form_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.form_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
+                  {config.layout_config.form_fields.length > 0 && (
+                    <button
+                      onClick={() => setConfig({ ...config, layout_config: { ...config.layout_config, form_fields: [] } })}
+                      className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                      title={t('common.clear_all', 'Limpar Tudo')}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="min-h-[100px] p-4 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[1.5rem]">
+              <DroppableZone id="droppable-form" className="min-h-[100px] p-4 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[1.5rem]">
                 {config.layout_config.form_fields.length === 0 ? (
                   <div className="h-full flex items-center justify-center italic text-xs text-neutral-400 font-medium">{t('wizard.layout.subtitle')}</div>
                 ) : (
@@ -1375,12 +1455,13 @@ function StepLayout({ config, setConfig, models }: any) {
                     </div>
                   </SortableContext>
                 )}
-              </div>
+              </DroppableZone>
             </div>
           )}
+          </div>
         </div>
       </DndContext>
-    </div>
+
 
       <Drawer
         isOpen={isDrawerOpen}
@@ -1813,6 +1894,84 @@ function StepActions({ config, setConfig }: any) {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function DraggableFieldCard({ field }: { field: any }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `source-${field.id}`,
+    data: { fieldId: field.id }
+  })
+
+  const style = transform ? {
+    transform: CSS.Translate.toString(transform),
+  } : undefined
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      {...listeners} 
+      {...attributes}
+      className={cn(
+        "group p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl text-xs flex flex-col gap-2 hover:border-indigo-500/50 transition-all shadow-sm cursor-grab active:cursor-grabbing select-none",
+        isDragging && "opacity-50 ring-2 ring-indigo-500 z-50 shadow-2xl scale-105"
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <span className="font-bold text-neutral-700 dark:text-neutral-200">{field.display_name || field.db_column_name}</span>
+        <span className="text-[9px] font-black font-mono text-neutral-400 bg-neutral-100 dark:bg-neutral-900 px-2 py-0.5 rounded-md">{field.data_type}</span>
+      </div>
+    </div>
+  )
+}
+
+function DroppableZone({ id, children, className }: any) {
+  const { isOver, setNodeRef } = useDroppable({ id })
+  return (
+    <div ref={setNodeRef} className={cn(className, isOver && "ring-4 ring-indigo-500/30 bg-indigo-500/5 border-indigo-300 dark:border-indigo-700")}>
+      {children}
+    </div>
+  )
+}
+
+function DraggableTableHeader({ model, isCollapsed, onToggle }: any) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `table-source-${model.id}`,
+    data: { tableId: model.id, isTable: true }
+  })
+
+  const style = transform ? {
+    transform: CSS.Translate.toString(transform),
+  } : undefined
+
+  return (
+    <div 
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={(e) => {
+        // Se estiver arrastando, não ativa o toggle
+        if (isDragging) return;
+        onToggle();
+      }}
+      className={cn(
+        "sticky top-0 z-20 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md px-5 py-4 flex items-center justify-between cursor-pointer group/header border-b border-neutral-100 dark:border-neutral-800/50 shadow-sm transition-all",
+        isDragging && "opacity-50 ring-2 ring-indigo-500 z-50 shadow-2xl scale-105"
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <div className="w-1.5 h-4 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)]"></div>
+        <div className="flex flex-col">
+          <span className="text-[11px] font-black text-neutral-900 dark:text-white uppercase tracking-[0.15em]">{model.display_name || model.db_table_name}</span>
+          <span className="text-[8px] font-bold text-indigo-500/0 group-hover:text-indigo-500 transition-all uppercase tracking-widest leading-none mt-1">Arraste para add tudo</span>
+        </div>
+      </div>
+      <div className="p-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-400 group-hover/header:text-indigo-500 group-hover/header:bg-indigo-50 dark:group-hover/header:bg-indigo-500/10 transition-all">
+        {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
       </div>
     </div>
   )
