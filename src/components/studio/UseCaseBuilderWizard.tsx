@@ -47,14 +47,15 @@ import { Drawer } from '@/components/ui/Drawer'
 import { Modal } from '@/components/ui/Modal'
 import {
   DndContext,
-  closestCenter,
+  rectIntersection,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   DragEndEvent,
   useDraggable,
-  useDroppable
+  useDroppable,
+  DragOverlay
 } from '@dnd-kit/core'
 import {
   arrayMove,
@@ -730,24 +731,28 @@ function StepLayout({ config, setConfig, models }: any) {
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null)
   const [editingFieldZone, setEditingFieldZone] = useState<string | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [activeId, setActiveId] = useState<string | null>(null)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [collapsedTables, setCollapsedTables] = useState<Record<string, boolean>>({})
   const dragControls = useDragControls()
 
-  // Sensores e Handlers para Drag & Drop
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragStart = (event: any) => {
+    setActiveId(String(event.active.id))
+  }
+
+  const handleDragEnd = (event: any) => {
     const { active, over } = event
+    setActiveId(null)
     if (!over) return
 
     const activeIdStr = String(active.id)
     const overIdStr = String(over.id)
 
-    // Case 1: Dragging from Available Fields (Sidebar) to a Zone
     if (activeIdStr.startsWith('source-') || activeIdStr.startsWith('table-source-')) {
       const isTable = activeIdStr.startsWith('table-source-')
       const id = activeIdStr.replace(isTable ? 'table-source-' : 'source-', '')
@@ -769,7 +774,6 @@ function StepLayout({ config, setConfig, models }: any) {
 
           fieldIdsToAdd.forEach((fid: string) => {
             if (!newFields.includes(fid)) {
-              // Validations
               if (targetZone === 'filter_fields' && (!config.has_arguments || config.logic_type === 'cadastro')) return
               if (targetZone === 'form_fields' && config.logic_type === 'pesquisa') return
               newFields.push(fid)
@@ -793,7 +797,6 @@ function StepLayout({ config, setConfig, models }: any) {
           const fieldId = id
           const currentFields = [...config.layout_config[targetZone]]
           if (!currentFields.includes(fieldId)) {
-            // Logic validations
             if (targetZone === 'filter_fields' && (!config.has_arguments || config.logic_type === 'cadastro')) return
             if (targetZone === 'form_fields' && config.logic_type === 'pesquisa') return
 
@@ -814,7 +817,6 @@ function StepLayout({ config, setConfig, models }: any) {
       return
     }
 
-    // Case 2: Reordering within a Zone
     if (active.id === over.id) return
 
     const isFilter = activeIdStr.startsWith('filter-')
@@ -874,7 +876,6 @@ function StepLayout({ config, setConfig, models }: any) {
     return id
   }
 
-  // Chave de metadados: tenta "zona-fieldId", senão usa apenas "fieldId" (fallback global)
   const getFieldMeta = (fid: string, zone?: string | null) => {
     const specificKey = zone ? `${zone}-${fid}` : null
     const meta = (specificKey ? config.layout_config.fields_metadata[specificKey] : null) || config.layout_config.fields_metadata[fid]
@@ -895,7 +896,6 @@ function StepLayout({ config, setConfig, models }: any) {
     const newMeta = { ...currentFieldMeta }
     newMeta[section] = { ...newMeta[section], [key]: value }
 
-    // Salva sempre com o prefixo da zona para garantir independência
     const metaKey = editingFieldZone ? `${editingFieldZone}-${editingFieldId}` : editingFieldId
 
     setConfig({
@@ -965,11 +965,13 @@ function StepLayout({ config, setConfig, models }: any) {
         </div>
       </Modal>
 
-
-
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext 
+        sensors={sensors} 
+        collisionDetection={rectIntersection} 
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
         <div className="flex flex-col xl:flex-row-reverse gap-10 relative">
-          {/* Sidebar Wrapper - Preserves layout space while allowing fixed positioning */}
           <div className="w-full xl:w-80 shrink-0">
             <motion.div 
               drag
@@ -1277,17 +1279,18 @@ function StepLayout({ config, setConfig, models }: any) {
                   )}
                 </div>
               </div>
-              <DroppableZone id="droppable-filter" className="flex flex-wrap gap-3 min-h-[80px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-center">
+              <DroppableZone id="droppable-filter" className="grid grid-cols-7 gap-3 min-h-[80px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-start">
                 {config.layout_config.filter_fields.length === 0 ? (
                   <p className="text-xs text-neutral-400 font-medium w-full text-center italic">{t('wizard.layout.subtitle')}</p>
                 ) : (
                   <SortableContext items={config.layout_config.filter_fields.map((id: string) => `filter-${id}`)} strategy={rectSortingStrategy}>
                     {config.layout_config.filter_fields.map((id: string) => (
-                      <SortableFilterItem
+                      <SortableFieldChip
                         key={`filter-${id}`}
                         id={`filter-${id}`}
                         itemValue={id}
                         toggleField={toggleField}
+                        zoneType="filter"
                         onEdit={() => { setEditingFieldId(id); setEditingFieldZone('filter'); setIsDrawerOpen(true); }}
                       >
                         <span
@@ -1303,7 +1306,7 @@ function StepLayout({ config, setConfig, models }: any) {
                         >
                           {getFieldMeta(id, 'filter').label?.text || getFieldName(id)}
                         </span>
-                      </SortableFilterItem>
+                      </SortableFieldChip>
                     ))}
                   </SortableContext>
                 )}
@@ -1358,47 +1361,36 @@ function StepLayout({ config, setConfig, models }: any) {
               </div>
             </div>
 
-            <DroppableZone id="droppable-grid" className="min-h-[100px] p-4 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[1.5rem]">
+            <DroppableZone id="droppable-grid" className="grid grid-cols-7 gap-3 min-h-[100px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-start">
               {config.layout_config.grid_fields.length === 0 ? (
-                <div className="h-full flex items-center justify-center italic text-xs text-neutral-400 font-medium">{t('wizard.layout.subtitle')}</div>
+                <p className="text-xs text-neutral-400 font-medium w-full text-center italic">{t('wizard.layout.subtitle')}</p>
               ) : (
-                <div className="w-full overflow-hidden rounded-[1.2rem] border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm">
-                  <table className="w-full text-[10px] text-left">
-                    <thead className="bg-neutral-50 dark:bg-neutral-800/50 font-black uppercase text-neutral-400 tracking-wider">
-                      <tr>
-                        <th className="px-4 py-3">{t('wizard.layout.table.field')}</th>
-                        <th className="px-4 py-3 w-10 text-center">{t('wizard.layout.table.action')}</th>
-                      </tr>
-                    </thead>
-                    <SortableContext items={config.layout_config.grid_fields.map((id: string) => `grid-${id}`)} strategy={verticalListSortingStrategy}>
-                      <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                        {config.layout_config.grid_fields.map((id: string) => (
-                          <SortableGridRow
-                            key={`grid-${id}`}
-                            id={`grid-${id}`}
-                            itemValue={id}
-                            toggleField={toggleField}
-                            onEdit={() => { setEditingFieldId(id); setEditingFieldZone('grid'); setIsDrawerOpen(true); }}
-                          >
-                            <span
-                              style={{
-                                fontFamily: getFieldMeta(id, 'grid').label?.font,
-                                fontSize: getFieldMeta(id, 'grid').label?.size,
-                                color: getFieldMeta(id, 'grid').label?.color || undefined
-                              }}
-                              className={cn(
-                                !getFieldMeta(id, 'grid').label?.color && "text-neutral-700 dark:text-neutral-200",
-                                !getFieldMeta(id, 'grid').label?.font && "capitalize"
-                              )}
-                            >
-                              {getFieldMeta(id, 'grid').label?.text || getFieldName(id)}
-                            </span>
-                          </SortableGridRow>
-                        ))}
-                      </tbody>
-                    </SortableContext>
-                  </table>
-                </div>
+                <SortableContext items={config.layout_config.grid_fields.map((id: string) => `grid-${id}`)} strategy={rectSortingStrategy}>
+                  {config.layout_config.grid_fields.map((id: string) => (
+                    <SortableFieldChip
+                      key={`grid-${id}`}
+                      id={`grid-${id}`}
+                      itemValue={id}
+                      toggleField={toggleField}
+                      zoneType="grid"
+                      onEdit={() => { setEditingFieldId(id); setEditingFieldZone('grid'); setIsDrawerOpen(true); }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: getFieldMeta(id, 'grid').label?.font,
+                          fontSize: getFieldMeta(id, 'grid').label?.size,
+                          color: getFieldMeta(id, 'grid').label?.color || undefined
+                        }}
+                        className={cn(
+                          "text-[10px] font-black tracking-wider",
+                          !getFieldMeta(id, 'grid').label?.font && "uppercase"
+                        )}
+                      >
+                        {getFieldMeta(id, 'grid').label?.text || getFieldName(id)}
+                      </span>
+                    </SortableFieldChip>
+                  ))}
+                </SortableContext>
               )}
             </DroppableZone>
           </div>
@@ -1421,38 +1413,35 @@ function StepLayout({ config, setConfig, models }: any) {
                   )}
                 </div>
               </div>
-              <DroppableZone id="droppable-form" className="min-h-[100px] p-4 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[1.5rem]">
+              <DroppableZone id="droppable-form" className="grid grid-cols-7 gap-3 min-h-[100px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-start">
                 {config.layout_config.form_fields.length === 0 ? (
-                  <div className="h-full flex items-center justify-center italic text-xs text-neutral-400 font-medium">{t('wizard.layout.subtitle')}</div>
+                  <p className="text-xs text-neutral-400 font-medium w-full text-center italic">{t('wizard.layout.subtitle')}</p>
                 ) : (
                   <SortableContext items={config.layout_config.form_fields.map((id: string) => `form-${id}`)} strategy={rectSortingStrategy}>
-                    <div className="grid grid-cols-2 gap-4 w-full">
-                      {config.layout_config.form_fields.map((id: string) => (
-                        <SortableFormCard
-                          key={`form-${id}`}
-                          id={`form-${id}`}
-                          itemValue={id}
-                          toggleField={toggleField}
-                          labelTitle={t('wizard.layout.zones.form')}
-                          onEdit={() => { setEditingFieldId(id); setEditingFieldZone('form'); setIsDrawerOpen(true); }}
+                    {config.layout_config.form_fields.map((id: string) => (
+                      <SortableFieldChip
+                        key={`form-${id}`}
+                        id={`form-${id}`}
+                        itemValue={id}
+                        toggleField={toggleField}
+                        zoneType="form"
+                        onEdit={() => { setEditingFieldId(id); setEditingFieldZone('form'); setIsDrawerOpen(true); }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: getFieldMeta(id, 'form').label?.font,
+                            fontSize: getFieldMeta(id, 'form').label?.size,
+                            color: getFieldMeta(id, 'form').label?.color || undefined
+                          }}
+                          className={cn(
+                            "text-[10px] font-black tracking-wider",
+                            !getFieldMeta(id, 'form').label?.font && "uppercase"
+                          )}
                         >
-                          <span 
-                            style={{
-                              fontFamily: getFieldMeta(id, 'form').label?.font,
-                              fontSize: getFieldMeta(id, 'form').label?.size,
-                              color: getFieldMeta(id, 'form').label?.color || undefined
-                            }}
-                            className={cn(
-                              "text-[10px] font-black",
-                              !getFieldMeta(id, 'form').label?.color && "text-neutral-800 dark:text-neutral-200",
-                              !getFieldMeta(id, 'form').label?.font && "uppercase tracking-wider"
-                            )}
-                          >
-                            {getFieldMeta(id, 'form').label?.text || getFieldName(id)}
-                          </span>
-                        </SortableFormCard>
-                      ))}
-                    </div>
+                          {getFieldMeta(id, 'form').label?.text || getFieldName(id)}
+                        </span>
+                      </SortableFieldChip>
+                    ))}
                   </SortableContext>
                 )}
               </DroppableZone>
@@ -1460,8 +1449,36 @@ function StepLayout({ config, setConfig, models }: any) {
           )}
           </div>
         </div>
-      </DndContext>
 
+        <DragOverlay zIndex={1000}>
+          {activeId ? (
+            activeId.startsWith('table-source-') ? (
+              <div className="bg-white dark:bg-neutral-900 rounded-2xl border-2 border-indigo-500 p-4 shadow-2xl opacity-90 scale-105 flex items-center justify-between w-80">
+                <div className="flex items-center gap-3">
+                  <div className="w-1.5 h-4 bg-indigo-500 rounded-full"></div>
+                  <span className="text-[11px] font-black text-neutral-900 dark:text-white uppercase tracking-[0.15em]">
+                    {models.find((m: any) => m.id === activeId.replace('table-source-', ''))?.display_name || 'Tabela'}
+                  </span>
+                </div>
+              </div>
+            ) : activeId.startsWith('source-') ? (
+              <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl border-2 border-indigo-500 shadow-2xl opacity-90 scale-105 flex items-center justify-between w-72">
+                <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200">
+                  {(() => {
+                    const fid = activeId.replace('source-', '')
+                    for (const m of models) {
+                      const f = m.fields.find((f: any) => f.id === fid)
+                      if (f) return f.display_name || f.db_column_name
+                    }
+                    return 'Campo'
+                  })()}
+                </span>
+                <Plus className="w-3.5 h-3.5 text-indigo-500" />
+              </div>
+            ) : null
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       <Drawer
         isOpen={isDrawerOpen}
@@ -1470,7 +1487,6 @@ function StepLayout({ config, setConfig, models }: any) {
       >
         {currentFieldMeta && (
           <div className="space-y-10 pb-20">
-            {/* Seção de Label */}
             <div className="space-y-6">
               <div className="flex items-center gap-3">
                 <div className="w-1 h-4 bg-indigo-600 rounded-full"></div>
@@ -1535,7 +1551,6 @@ function StepLayout({ config, setConfig, models }: any) {
               </div>
             </div>
 
-            {/* Seção de Conteúdo */}
             <div className="space-y-6 pt-6 border-t border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-3">
                 <div className="w-1 h-4 bg-emerald-600 rounded-full"></div>
@@ -1614,7 +1629,6 @@ function StepLayout({ config, setConfig, models }: any) {
               </div>
             </div>
 
-            {/* Seção de Componente */}
             <div className="space-y-6 pt-6 border-t border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-3">
                 <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
@@ -1900,24 +1914,19 @@ function StepActions({ config, setConfig }: any) {
 }
 
 function DraggableFieldCard({ field }: { field: any }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `source-${field.id}`,
     data: { fieldId: field.id }
   })
 
-  const style = transform ? {
-    transform: CSS.Translate.toString(transform),
-  } : undefined
-
   return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
-      {...listeners} 
+    <div
+      ref={setNodeRef}
+      {...listeners}
       {...attributes}
       className={cn(
-        "group p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl text-xs flex flex-col gap-2 hover:border-indigo-500/50 transition-all shadow-sm cursor-grab active:cursor-grabbing select-none",
-        isDragging && "opacity-50 ring-2 ring-indigo-500 z-50 shadow-2xl scale-105"
+        "p-4 bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-2xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-indigo-200 dark:hover:border-indigo-800/50 hover:shadow-md transition-all",
+        isDragging && "opacity-20 grayscale"
       )}
     >
       <div className="flex items-center justify-between">
@@ -1929,28 +1938,33 @@ function DraggableFieldCard({ field }: { field: any }) {
 }
 
 function DroppableZone({ id, children, className }: any) {
-  const { isOver, setNodeRef } = useDroppable({ id })
+  const { setNodeRef, isOver } = useDroppable({ id })
   return (
-    <div ref={setNodeRef} className={cn(className, isOver && "ring-4 ring-indigo-500/30 bg-indigo-500/5 border-indigo-300 dark:border-indigo-700")}>
+    <div 
+      ref={setNodeRef} 
+      className={cn(
+        className, 
+        "transition-all duration-300 relative",
+        isOver && "bg-indigo-100/50 dark:bg-indigo-900/30 border-indigo-500 border-solid scale-[1.02] shadow-[0_0_40px_rgba(99,102,241,0.15)] ring-4 ring-indigo-500/10"
+      )}
+    >
+      {isOver && (
+        <div className="absolute inset-0 bg-indigo-500/5 pointer-events-none rounded-[inherit] animate-pulse"></div>
+      )}
       {children}
     </div>
   )
 }
 
 function DraggableTableHeader({ model, isCollapsed, onToggle }: any) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `table-source-${model.id}`,
     data: { tableId: model.id, isTable: true }
   })
 
-  const style = transform ? {
-    transform: CSS.Translate.toString(transform),
-  } : undefined
-
   return (
     <div 
       ref={setNodeRef}
-      style={style}
       {...attributes}
       {...listeners}
       onClick={(e) => {
@@ -1960,7 +1974,7 @@ function DraggableTableHeader({ model, isCollapsed, onToggle }: any) {
       }}
       className={cn(
         "sticky top-0 z-20 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md px-5 py-4 flex items-center justify-between cursor-pointer group/header border-b border-neutral-100 dark:border-neutral-800/50 shadow-sm transition-all",
-        isDragging && "opacity-50 ring-2 ring-indigo-500 z-50 shadow-2xl scale-105"
+        isDragging && "opacity-20 grayscale"
       )}
     >
       <div className="flex items-center gap-3">
@@ -1977,14 +1991,22 @@ function DraggableTableHeader({ model, isCollapsed, onToggle }: any) {
   )
 }
 
-function SortableFilterItem({ id, itemValue, toggleField, onEdit, children }: any) {
+function SortableFieldChip({ id, itemValue, toggleField, onEdit, children, zoneType }: any) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style = { 
     transform: CSS.Transform.toString(transform), 
     transition,
     ...(isDragging ? { opacity: 0.5, zIndex: 50, position: 'relative' } : {})
   }
-  
+
+  const colorClasses = {
+    filter: 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20',
+    grid: 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20',
+    form: 'bg-amber-600 hover:bg-amber-500 shadow-amber-500/20'
+  }
+
+  const activeColor = colorClasses[zoneType as keyof typeof colorClasses] || colorClasses.filter
+
   return (
     <div
       ref={setNodeRef}
@@ -1992,78 +2014,19 @@ function SortableFilterItem({ id, itemValue, toggleField, onEdit, children }: an
       {...attributes}
       {...listeners}
       onClick={onEdit}
-      className="flex items-center gap-3 px-4 py-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20 group cursor-pointer hover:bg-indigo-500 transition-all select-none"
+      className={cn(
+        "flex items-center justify-between gap-2 px-3 py-2 text-white rounded-xl shadow-lg group cursor-pointer transition-all select-none w-full min-w-0",
+        activeColor
+      )}
     >
-      {children}
-      <Trash2
-        className="w-3.5 h-3.5 cursor-pointer hover:text-red-300 transition-colors"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => { e.stopPropagation(); toggleField(itemValue, 'filter_fields'); }}
-      />
-    </div>
-  )
-}
-
-function SortableGridRow({ id, itemValue, toggleField, onEdit, children }: any) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
-  const style = { 
-    transform: CSS.Transform.toString(transform), 
-    transition,
-    ...(isDragging ? { position: 'relative', zIndex: 50, display: 'flex', width: '100%', background: 'var(--tw-bg-opacity, 1)' } : {})
-  }
-  
-  return (
-    <tr
-      ref={setNodeRef}
-      style={style as any}
-      {...attributes}
-      {...listeners}
-      className="group hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors cursor-grab active:cursor-grabbing select-none"
-    >
-      <td onClick={onEdit} className="px-4 py-2.5 font-bold text-neutral-700 dark:text-neutral-200">
+      <div className="flex-1 min-w-0 truncate">
         {children}
-      </td>
-      <td className="px-4 py-2.5 text-center">
-        <button 
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); toggleField(itemValue, 'grid_fields'); }} 
-          className="p-1.5 hover:bg-red-500/10 hover:text-red-500 rounded-lg text-neutral-400 transition-all"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      </td>
-    </tr>
-  )
-}
-
-function SortableFormCard({ id, itemValue, toggleField, onEdit, children, labelTitle }: any) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
-  const style = { 
-    transform: CSS.Transform.toString(transform), 
-    transition,
-    ...(isDragging ? { opacity: 0.5, zIndex: 50, position: 'relative' } : {})
-  }
-  
-  return (
-    <div
-      ref={setNodeRef}
-      style={style as any}
-      {...attributes}
-      {...listeners}
-      onClick={onEdit}
-      className="p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex items-center justify-between group shadow-sm hover:border-indigo-500/30 transition-all cursor-grab active:cursor-grabbing select-none"
-    >
-      <div className="flex flex-col gap-1">
-        {children}
-        <span className="text-[8px] font-black text-amber-500 uppercase tracking-[0.2em]">{labelTitle} Input</span>
       </div>
-      <button 
+      <Trash2
+        className="w-3.5 h-3.5 flex-shrink-0 cursor-pointer hover:text-red-200 transition-colors"
         onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => { e.stopPropagation(); toggleField(itemValue, 'form_fields'); }} 
-        className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-500 rounded-lg text-neutral-400 transition-all"
-      >
-        <Trash2 className="w-4 h-4" />
-      </button>
+        onClick={(e) => { e.stopPropagation(); toggleField(itemValue, `${zoneType}_fields`); }}
+      />
     </div>
   )
 }
