@@ -384,6 +384,21 @@
       "layout": "Fields & Layout",
       "actions": "Actions & Query"
     },
+    "buttons": {
+      "prev": "Back",
+      "next": "Next",
+      "update": "Update",
+      "finish": "Finish",
+      "saving": "Saving...",
+      "updating": "Updating...",
+      "error_save": "Error saving: ",
+      "validation": {
+        "name_slug_required": "Name and slug are required.",
+        "grid_required": "Select fields for the grid.",
+        "form_required": "Select fields for the form.",
+        "filter_required": "Select fields for the filter."
+      }
+    },
     "logic": {
       "title": "What is the logic of your use case?",
       "subtitle": "Define the main behavior of this screen in MetaBuilder.",
@@ -411,6 +426,10 @@
         "personalizado": {
           "title": "Custom",
           "desc": "Custom logic and unique workflows."
+        },
+        "master_detail": {
+          "title": "Master-Detail",
+          "desc": "Deep relational explorer with tabs and data groupings."
         }
       },
       "screen_name": "Screen Name",
@@ -433,6 +452,16 @@
       "select_table": "Select Table...",
       "select_field": "Select Field...",
       "add_relationship": "Add Relationship",
+      "kanban": {
+        "title": "Kanban Configuration",
+        "group_field": "Grouping Field (Columns)",
+        "group_placeholder": "Select a field to define columns...",
+        "group_desc": "This field will determine the Kanban columns (e.g., Status, Stage)."
+      },
+      "master_detail": {
+        "title": "Master-Detail Configuration",
+        "subtitle": "Define the hierarchy and navigation style of the data."
+      },
       "mindmap": {
         "config_title": "Mind Map Configuration",
         "central_field": "Central Field (Root Node)",

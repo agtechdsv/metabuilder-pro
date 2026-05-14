@@ -280,7 +280,7 @@ export function StudioDashboardClient({
             onSaveSuccess={refreshData}
           />
         ) : viewMode === 'navigation' ? (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="">
             <MenuBuilder 
               project={project}
               views={views}
@@ -288,14 +288,14 @@ export function StudioDashboardClient({
             />
           </div>
         ) : viewMode === 'branding' ? (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="">
             <BrandingConfig 
               project={project}
               onSave={handleSaveBranding}
             />
           </div>
         ) : (
-          <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <section className="space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800/50 pb-4">
               <h3 className="text-xl font-black flex items-center gap-3 text-neutral-900 dark:text-white tracking-tight">
                 <Layers className="w-6 h-6 text-indigo-600 dark:text-indigo-500" />
