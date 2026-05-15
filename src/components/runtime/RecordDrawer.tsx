@@ -11,10 +11,17 @@ interface RecordDrawerProps {
   isLoading?: boolean
   logicType?: string
   masterModelId?: string
+  masterModelName?: string
   detailDisplayMode?: 'tabs' | 'sections'
   onEditDetail?: (detail: any) => void
   onDeleteDetail?: (detail: any) => void
   onAddDetail?: (tableName: string) => void
+  joins?: any[]
+  dictionary?: Record<string, string>
+  initialTab?: string
+  onTabChange?: (tab: string) => void
+  zIndex?: number
+  detailsInlineTypes?: Record<string, boolean>
 }
 
 export default function RecordDrawer({ 
@@ -27,13 +34,20 @@ export default function RecordDrawer({
   isLoading = false,
   logicType,
   masterModelId,
+  masterModelName,
   detailDisplayMode = 'tabs',
   onEditDetail,
   onDeleteDetail,
-  onAddDetail
+  onAddDetail,
+  joins = [],
+  dictionary = {},
+  initialTab,
+  onTabChange,
+  zIndex,
+  detailsInlineTypes
 }: RecordDrawerProps) {
   return (
-    <Drawer isOpen={isOpen} onClose={onClose} title="">
+    <Drawer isOpen={isOpen} onClose={onClose} title="" zIndex={zIndex}>
       <RecordForm 
         mode={mode}
         fields={fields}
@@ -43,10 +57,16 @@ export default function RecordDrawer({
         isLoading={isLoading}
         logicType={logicType}
         masterModelId={masterModelId}
+        masterModelName={masterModelName}
         detailDisplayMode={detailDisplayMode}
         onEditDetail={onEditDetail}
         onDeleteDetail={onDeleteDetail}
         onAddDetail={onAddDetail}
+        joins={joins}
+        dictionary={dictionary}
+        detailsInlineTypes={detailsInlineTypes}
+        initialTab={initialTab}
+        onTabChange={onTabChange}
       />
     </Drawer>
   )

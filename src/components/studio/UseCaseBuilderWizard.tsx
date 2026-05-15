@@ -87,6 +87,42 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [models, setModels] = useState<any[]>([])
+  const [relations, setRelations] = useState<any[]>([])
+
+  // Configuração da View sendo criada
+  const [config, setConfig] = useState({
+    name: '',
+    slug: '',
+    logic_type: 'pesquisa_cadastro',
+    has_arguments: true,
+    selected_models: [] as string[],
+    tables_config: [] as any[],
+    query_type: 'dynamic',
+    custom_query: '',
+    layout_config: {
+      filter_fields: [] as string[],
+      grid_fields: [] as string[],
+      form_fields: [] as string[],
+      grouping_type: 'sections',
+      display_type: 'list',
+      default_view: 'list',
+      kanban_group_field: '',
+      master_model_id: '',
+      detail_display_mode: 'tabs',
+      mindmap_central_field: '',
+      action_interface_type: 'drawer',
+      joins: [] as any[],
+      fields_metadata: {} as Record<string, any>
+    },
+    buttons_config: [
+      { id: 'search', label: t('runtime.search'), labelKey: 'runtime.search', icon: 'search', action: 'search', visible: true },
+      { id: 'clear', label: t('runtime.clear'), labelKey: 'runtime.clear', icon: 'refresh-ccw', action: 'clear', visible: true },
+      { id: 'view', label: t('runtime.view'), labelKey: 'runtime.view', icon: 'search', action: 'view', visible: true },
+      { id: 'add', label: t('runtime.new_record'), labelKey: 'runtime.new_record', icon: 'plus', action: 'create', visible: true },
+      { id: 'edit', label: t('runtime.edit'), labelKey: 'runtime.edit', icon: 'pencil', action: 'pencil', action_key: 'update', visible: true },
+      { id: 'delete', label: t('runtime.delete'), labelKey: 'runtime.delete', icon: 'trash', action_key: 'delete', visible: true }
+    ]
+  })
 
   // Helpers de modo edição
   const isEditMode = !!initialData
@@ -94,6 +130,86 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
 
   // Popula os dados iniciais se estiver em modo edição
   const [isInitialized, setIsInitialized] = useState(false)
+
+  useEffect(() => {
+    const loadData = async () => {
+      // 1. Primeiro buscamos o ID do projeto atual pelo slug
+      const { data: project } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('slug', project_slug)
+        .single()
+
+      if (!project) return
+
+      // 2. Buscamos apenas os modelos deste projeto
+      const { data: modelsData } = await supabase
+        .from('models')
+        .select('*, fields(*)')
+        .eq('project_id', project.id)
+        .order('db_table_name')
+
+      if (modelsData) setModels(modelsData)
+
+      // 3. Buscamos apenas as relações deste projeto
+      const { data: relsData } = await supabase
+        .from('relations')
+        .select('*')
+        .eq('project_id', project.id)
+      
+      if (relsData) setRelations(relsData)
+
+      setIsLoading(false)
+    }
+    loadData()
+  }, [supabase, project_slug])
+
+  // Brinde UX: Sugestão automática de Joins baseada na tabela 'relations' (vinda do tunnel)
+  useEffect(() => {
+    // Se estiver em modo edição ou se já houver joins configurados, não sobrescrevemos
+    // ou se não houver modelos suficientes selecionados
+    if (initialData || config.layout_config.joins.length > 0 || config.selected_models.length <= 1) return
+
+    if (currentStep === 3 && relations.length > 0) {
+      const autoJoins: any[] = []
+      
+      // Filtra relações onde AMBOS os modelos estão selecionados no Wizard
+      const relevantRelations = relations.filter(rel => 
+        config.selected_models.includes(rel.from_model_id) && 
+        config.selected_models.includes(rel.to_model_id)
+      )
+
+      relevantRelations.forEach(rel => {
+        const fromModel = models.find(m => m.id === rel.from_model_id)
+        const toModel = models.find(m => m.id === rel.to_model_id)
+        const fromField = fromModel?.fields.find((f: any) => f.id === rel.from_field_id)
+        const toField = toModel?.fields.find((f: any) => f.id === rel.to_field_id)
+
+        if (fromModel && toModel && fromField && toField) {
+          // No MetaBuilder, convencionamos Mestre (Pai) -> Detalhe (Filho)
+          // No banco: fromModel(B).fromField(a_id) -> toModel(A).toField(id)
+          // Na UI: A.id -> B.a_id
+          autoJoins.push({
+            from: toModel.db_table_name,
+            localKey: toField.db_column_name,
+            to: fromModel.db_table_name,
+            foreignKey: fromField.db_column_name
+          })
+        }
+      })
+
+      if (autoJoins.length > 0) {
+        setConfig(prev => ({
+          ...prev,
+          layout_config: {
+            ...prev.layout_config,
+            joins: autoJoins
+          }
+        }))
+        toast(`Sugerimos ${autoJoins.length} relacionamentos baseados no seu banco de dados!`, 'info')
+      }
+    }
+  }, [currentStep, relations, config.selected_models, initialData, models])
 
   useEffect(() => {
     if (initialData && !isInitialized) {
@@ -119,7 +235,9 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
           mindmap_central_field: initialData.layout_config?.mindmap_central_field || '',
           action_interface_type: initialData.layout_config?.action_interface_type || 'drawer',
           joins: initialData.layout_config?.joins || [],
-          fields_metadata: initialData.layout_config?.fields_metadata || {}
+          fields_metadata: initialData.layout_config?.fields_metadata || {},
+          details_interface_types: initialData.layout_config?.details_interface_types || {},
+          details_inline_types: initialData.layout_config?.details_inline_types || {}
         },
         buttons_config: (() => {
           const defaults = [
@@ -142,39 +260,6 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
     }
   }, [initialData, isInitialized])
 
-  // Configuração da View sendo criada
-  const [config, setConfig] = useState({
-    name: '',
-    slug: '',
-    logic_type: 'pesquisa_cadastro',
-    has_arguments: true,
-    selected_models: [] as string[],
-    tables_config: [] as any[],
-    query_type: 'dynamic',
-    custom_query: '',
-    layout_config: {
-      filter_fields: [] as string[],
-      grid_fields: [] as string[],
-      form_fields: [] as string[],
-      grouping_type: 'sections',
-      display_type: 'list',
-      default_view: 'list',
-      kanban_group_field: '',
-      master_model_id: '',
-      detail_display_mode: 'tabs',
-      mindmap_central_field: '',
-      action_interface_type: 'drawer',
-      fields_metadata: {} as Record<string, any>
-    },
-    buttons_config: [
-      { id: 'search', label: t('runtime.search'), labelKey: 'runtime.search', icon: 'search', action: 'search', visible: true },
-      { id: 'clear', label: t('runtime.clear'), labelKey: 'runtime.clear', icon: 'refresh-ccw', action: 'clear', visible: true },
-      { id: 'view', label: t('runtime.view'), labelKey: 'runtime.view', icon: 'search', action: 'view', visible: true },
-      { id: 'add', label: t('runtime.new_record'), labelKey: 'runtime.new_record', icon: 'plus', action: 'create', visible: true },
-      { id: 'edit', label: t('runtime.edit'), labelKey: 'runtime.edit', icon: 'pencil', action: 'pencil', action_key: 'update', visible: true },
-      { id: 'delete', label: t('runtime.delete'), labelKey: 'runtime.delete', icon: 'trash', action_key: 'delete', visible: true }
-    ]
-  })
   // Sugestão automática de botões baseado na lógica selecionada
   useEffect(() => {
     // Se estivermos em modo edição (initialData presente), NUNCA rodamos a sugestão automática
@@ -186,6 +271,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       const isPesquisa = config.logic_type === 'pesquisa'
       const isCadastro = config.logic_type === 'cadastro'
       const isBoth = config.logic_type === 'pesquisa_cadastro'
+      const isMasterDetail = config.logic_type === 'master_detail'
       const hasArgs = config.has_arguments
 
       let searchVis = false
@@ -197,8 +283,9 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       if (isPesquisa) {
         searchVis = hasArgs
         viewVis = true
-      } else if (isBoth) {
-        searchVis = hasArgs
+      } else if (isBoth || isMasterDetail) {
+        // Para Mestre-Detalhe ou Pesquisa+Cadastro, mostramos todos por padrão (UX solicitada)
+        searchVis = true
         viewVis = true
         addVis = true
         editVis = true
@@ -843,14 +930,185 @@ function StepLayout({ config, setConfig, models }: any) {
     })
   }
 
-  const selectedModelsData = models
-    .filter((m: any) => config.selected_models.includes(m.id))
-    .sort((a: any, b: any) => {
-      const masterId = (config.layout_config as any).master_model_id
-      if (a.id === masterId) return -1
-      if (b.id === masterId) return 1
-      return 0
+  const relationalTree = (() => {
+    const masterId = config.layout_config.master_model_id || config.selected_models[0]
+    const masterModel = models.find((m: any) => m.id === masterId)
+    if (!masterModel) return []
+
+    const joins = config.layout_config.joins || []
+    const visited = new Set<string>([masterModel.db_table_name])
+
+    const getNode = (model: any): any => {
+      const children: any[] = []
+      joins.forEach((j: any) => {
+        if (j.from === model.db_table_name && !visited.has(j.to)) {
+          const childModel = models.find((m: any) => m.db_table_name === j.to)
+          if (childModel) {
+            visited.add(j.to)
+            children.push(getNode(childModel))
+          }
+        }
+      })
+      return { ...model, children }
+    }
+
+    const tree = [getNode(masterModel)]
+    models.filter((m: any) => config.selected_models.includes(m.id) && !visited.has(m.db_table_name)).forEach((m: any) => {
+       visited.add(m.db_table_name)
+       tree.push(getNode(m))
     })
+    return tree
+  })()
+
+  const flattenTree = (nodes: any[]): any[] => {
+    let flat: any[] = []
+    nodes.forEach(node => {
+      flat.push(node)
+      if (node.children) flat = flat.concat(flattenTree(node.children))
+    })
+    return flat
+  }
+  const orderedModels = flattenTree(relationalTree)
+
+  const renderModelZone = (model: any, depth: number = 0, index: number = 0) => {
+    const isMaster = depth === 0 && index === 0
+    const fieldsOfThisModel = config.layout_config.form_fields.filter((fid: string) => 
+      model.fields.some((f: any) => f.id === fid)
+    )
+
+    return (
+      <div key={`${model.id}-${depth}-${index}`} className={cn("space-y-4", depth > 0 && "ml-8 border-l-2 border-dashed border-amber-200 dark:border-amber-900/30 pl-6 pb-4")}>
+        <div className="flex items-center justify-between ml-1 pr-6">
+          <div className="flex items-center gap-2">
+            <div className={cn("w-1.5 h-4 rounded-full shadow-sm", isMaster ? "bg-amber-600" : "bg-amber-400")}></div>
+            <span className="text-[11px] font-black uppercase tracking-widest text-neutral-600 dark:text-neutral-400">
+              {isMaster ? `Mestre: ${model.display_name || model.db_table_name}` : 
+               depth === 1 ? `Detalhe: ${model.display_name || model.db_table_name}` :
+               `Sub-Detalhe: ${model.display_name || model.db_table_name}`}
+            </span>
+          </div>
+
+          {!isMaster && (
+            <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
+                {[
+                  { id: 'modal', label: 'Modal', icon: Maximize2 },
+                  { id: 'drawer', label: 'Drawer', icon: Layout }
+                ].map(opt => {
+                  const currentType = (config.layout_config as any).details_interface_types?.[model.id] || 'modal'
+                  const isActive = currentType === opt.id
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => {
+                        const currentTypes = (config.layout_config as any).details_interface_types || {}
+                        setConfig({
+                          ...config,
+                          layout_config: {
+                            ...config.layout_config,
+                            details_interface_types: {
+                              ...currentTypes,
+                              [model.id]: opt.id
+                            }
+                          }
+                        })
+                      }}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all",
+                        isActive
+                          ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/20'
+                          : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
+                      )}
+                    >
+                      <opt.icon className="w-2.5 h-2.5" />
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+
+            <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800 ml-2">
+              <button
+                onClick={() => {
+                  const currentInlines = (config.layout_config as any).details_inline_types || {}
+                  const isCurrentlyInline = currentInlines[model.id] !== false // Default true
+                  
+                  setConfig({
+                    ...config,
+                    layout_config: {
+                      ...config.layout_config,
+                      details_inline_types: {
+                        ...currentInlines,
+                        [model.id]: !isCurrentlyInline
+                      }
+                    }
+                  })
+                }}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all",
+                  ((config.layout_config as any).details_inline_types?.[model.id] !== false)
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                    : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
+                )}
+              >
+                <div className={cn(
+                  "w-1 h-1 rounded-full",
+                  ((config.layout_config as any).details_inline_types?.[model.id] !== false) ? "bg-white" : "bg-neutral-400"
+                )} />
+                Na lista
+              </button>
+            </div>
+          </div>
+        )}
+        </div>
+
+        <DroppableZone 
+          id={`droppable-form-${model.id}`} 
+          className="grid grid-cols-7 gap-3 min-h-[100px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] items-start transition-all hover:bg-neutral-100/50 dark:hover:bg-neutral-900/40"
+        >
+          {fieldsOfThisModel.length === 0 ? (
+            <div className="col-span-7 flex flex-col items-center justify-center py-4 space-y-2 opacity-50">
+               <Plus className="w-4 h-4 text-neutral-400" />
+               <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Arraste campos de "{model.display_name || model.db_table_name}" para cá</p>
+            </div>
+          ) : (
+            <SortableContext items={fieldsOfThisModel.map((id: string) => `form-${id}`)} strategy={rectSortingStrategy}>
+              {fieldsOfThisModel.map((id: string) => (
+                <SortableFieldChip
+                  key={`form-${id}`}
+                  id={`form-${id}`}
+                  itemValue={id}
+                  toggleField={toggleField}
+                  zoneType="form"
+                  onEdit={() => { setEditingFieldId(id); setEditingFieldZone('form'); setIsDrawerOpen(true); }}
+                >
+                   <span
+                    style={{
+                      fontFamily: getFieldMeta(id, 'form').label?.font,
+                      fontSize: getFieldMeta(id, 'form').label?.size,
+                      color: getFieldMeta(id, 'form').label?.color || undefined
+                    }}
+                    className={cn(
+                      "text-[10px] font-black tracking-wider",
+                      !getFieldMeta(id, 'form').label?.font && "uppercase"
+                    )}
+                  >
+                    {getFieldMeta(id, 'form').label?.text || getFieldName(id)}
+                  </span>
+                </SortableFieldChip>
+              ))}
+            </SortableContext>
+          )}
+        </DroppableZone>
+
+        {model.children && model.children.length > 0 && (
+          <div className="space-y-6 pt-2">
+            {model.children.map((child: any, cIdx: number) => renderModelZone(child, depth + 1, cIdx))}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   const toggleField = (fieldId: string, zone: 'filter_fields' | 'grid_fields' | 'form_fields') => {
     const currentFields = [...config.layout_config[zone]]
@@ -997,20 +1255,48 @@ function StepLayout({ config, setConfig, models }: any) {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto custom-scrollbar">
-              {selectedModelsData.map((m: any) => {
+              {orderedModels.map((m: any) => {
                 const isCollapsed = collapsedTables[m.id]
                 return (
-                  <div key={m.id} className="relative">
-                    <DraggableTableHeader 
-                      model={m} 
-                      isCollapsed={isCollapsed} 
-                      onToggle={() => setCollapsedTables(prev => ({ ...prev, [m.id]: !isCollapsed }))} 
-                    />
+                  <div key={`sidebar-table-${m.id}`} className="border-b border-neutral-100 dark:border-neutral-800/50 last:border-0">
+                    <button
+                      onClick={() => setCollapsedTables(prev => ({ ...prev, [m.id]: !prev[m.id] }))}
+                      className="w-full p-4 flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-all group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-1 h-4 rounded-full transition-all",
+                          isCollapsed ? "bg-neutral-300" : "bg-indigo-500"
+                        )}></div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-700 dark:text-neutral-300">
+                          {m.display_name || m.db_table_name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[9px] font-black text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full">{m.fields.length}</span>
+                        {isCollapsed ? <ChevronDown className="w-3.5 h-3.5 text-neutral-400" /> : <ChevronUp className="w-3.5 h-3.5 text-indigo-500" />}
+                      </div>
+                    </button>
                     
                     {!isCollapsed && (
-                      <div className="p-4 grid grid-cols-1 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="p-4 pt-0 grid grid-cols-1 gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <DraggableItem id={`table-source-${m.id}`} className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 p-2.5 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-indigo-300 transition-all">
+                           <div className="flex items-center gap-2">
+                             <Table className="w-3 h-3 text-indigo-500" />
+                             <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Adicionar Tabela</span>
+                           </div>
+                           <Plus className="w-3 h-3 text-indigo-400 group-hover:scale-125 transition-transform" />
+                        </DraggableItem>
+
+                        <div className="h-px bg-neutral-100 dark:bg-neutral-800 my-1"></div>
+
                         {m.fields.map((f: any) => (
-                          <DraggableFieldCard key={f.id} field={f} />
+                          <DraggableItem key={`source-${f.id}`} id={`source-${f.id}`} className="bg-neutral-50 dark:bg-neutral-950/50 border border-neutral-100 dark:border-neutral-800/50 p-2.5 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-indigo-200 dark:hover:border-indigo-900/50 transition-all">
+                            <span className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 truncate pr-2">
+                              {f.display_name || f.db_column_name}
+                            </span>
+                            <Plus className="w-3 h-3 text-neutral-300 group-hover:text-indigo-500 group-hover:scale-125 transition-all" />
+                          </DraggableItem>
                         ))}
                       </div>
                     )}
@@ -1018,10 +1304,10 @@ function StepLayout({ config, setConfig, models }: any) {
                 )
               })}
             </div>
-          </motion.div>
-        </div>
-
-        <div className="flex-1 space-y-8 w-full">
+            </motion.div>
+          </div>
+          
+          <div className="flex-1 space-y-10 min-w-0">
           {/* ZONA: KANBAN CONFIG */}
           {config.logic_type === 'kanban' && (
             <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
@@ -1045,8 +1331,8 @@ function StepLayout({ config, setConfig, models }: any) {
                   className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                 >
                   <option value="">{t('wizard.layout.kanban.group_placeholder')}</option>
-                  {selectedModelsData.flatMap((m: any) => m.fields).map((f: any) => (
-                    <option key={f.id} value={f.id}>
+                  {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                    <option key={`opt-kanban-${f.id}`} value={f.id}>
                       {getFieldName(f.id)} ({f.data_type})
                     </option>
                   ))}
@@ -1081,7 +1367,7 @@ function StepLayout({ config, setConfig, models }: any) {
                     className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                   >
                     <option value="">Selecione a tabela principal...</option>
-                    {selectedModelsData.map((m: any) => (
+                    {models.filter(m => config.selected_models.includes(m.id)).map((m: any) => (
                       <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>
                     ))}
                   </select>
@@ -1144,7 +1430,7 @@ function StepLayout({ config, setConfig, models }: any) {
                   className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-purple-600 outline-none transition-all shadow-sm text-sm font-bold"
                 >
                   <option value="">{t('wizard.layout.mindmap.select_central', 'Selecione o campo central...')}</option>
-                  {selectedModelsData.flatMap((m: any) => m.fields).map((f: any) => (
+                  {relationalTree.flatMap((m: any) => m.fields).map((f: any) => (
                     <option key={f.id} value={f.id}>
                       {getFieldName(f.id)} ({f.data_type})
                     </option>
@@ -1155,22 +1441,22 @@ function StepLayout({ config, setConfig, models }: any) {
             </div>
           )}
 
-          {/* RELATIONSHIPS CARD */}
-          {selectedModelsData.length > 1 && (
-            <div className="bg-indigo-50/50 dark:bg-indigo-900/10 rounded-[2rem] border border-indigo-200 dark:border-indigo-800/50 p-6 flex flex-col gap-4">
+          {/* ZONA: RELACIONAMENTOS (APENAS PARA MESTRE-DETALHE) */}
+          {config.logic_type === 'master_detail' && (
+            <div className="p-4 bg-indigo-50/30 dark:bg-indigo-900/5 border border-indigo-100 dark:border-indigo-900/20 rounded-[2rem] space-y-6">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-indigo-600 text-white">
-                  <Link className="w-5 h-5" />
+                <div className="p-2 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-600/20">
+                  <Link className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-900 dark:text-white uppercase tracking-widest">{t('wizard.layout.relationships')}</h3>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">{t('wizard.layout.relationships_desc', 'You selected multiple tables. Define how they connect to each other.')}</p>
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">{t('wizard.layout.relationships')}</h4>
+                  <p className="text-[9px] text-neutral-500 font-medium">{t('wizard.layout.relationships_desc')}</p>
                 </div>
               </div>
-              
-              <div className="space-y-3 mt-2">
+
+              <div className="space-y-3">
                 {(config.layout_config.joins || []).map((join: any, index: number) => (
-                  <div key={index} className="flex items-center gap-3 p-3 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
+                  <div key={index} className="flex flex-wrap items-center gap-3 p-4 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-100 dark:border-neutral-800 shadow-sm group animate-in zoom-in-95 duration-300">
                     {/* FROM TABLE */}
                     <select
                       value={join.from}
@@ -1183,11 +1469,11 @@ function StepLayout({ config, setConfig, models }: any) {
                       className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
                     >
                       <option value="">{t('wizard.layout.select_table', 'Select Table...')}</option>
-                      {selectedModelsData.map((m: any) => (
+                      {models.filter(m => config.selected_models.includes(m.id)).map((m: any) => (
                         <option key={m.id} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>
                       ))}
                     </select>
-                    
+
                     {/* FROM KEY */}
                     <select
                       value={join.localKey}
@@ -1199,7 +1485,7 @@ function StepLayout({ config, setConfig, models }: any) {
                       className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
                     >
                       <option value="">{t('wizard.layout.select_field', 'Select Field...')}</option>
-                      {selectedModelsData.find((m: any) => m.db_table_name === join.from)?.fields.map((f: any) => (
+                      {models.find((m: any) => m.db_table_name === join.from)?.fields.map((f: any) => (
                         <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
                       ))}
                     </select>
@@ -1220,7 +1506,7 @@ function StepLayout({ config, setConfig, models }: any) {
                       className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
                     >
                       <option value="">{t('wizard.layout.select_table', 'Select Table...')}</option>
-                      {selectedModelsData.map((m: any) => (
+                      {models.filter(m => config.selected_models.includes(m.id)).map((m: any) => (
                         <option key={m.id} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>
                       ))}
                     </select>
@@ -1236,7 +1522,7 @@ function StepLayout({ config, setConfig, models }: any) {
                       className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
                     >
                       <option value="">{t('wizard.layout.select_field', 'Select Field...')}</option>
-                      {selectedModelsData.find((m: any) => m.db_table_name === join.to)?.fields.map((f: any) => (
+                      {models.find((m: any) => m.db_table_name === join.to)?.fields.map((f: any) => (
                         <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
                       ))}
                     </select>
@@ -1402,7 +1688,7 @@ function StepLayout({ config, setConfig, models }: any) {
             </DroppableZone>
           </div>
 
-          {/* ZONA: FORM */}
+          {/* ZONA: FORMULÁRIO (RECURSIVO) */}
           {(config.logic_type.includes('cadastro') || config.logic_type === 'master_detail') && (
             <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
@@ -1421,96 +1707,8 @@ function StepLayout({ config, setConfig, models }: any) {
                 </div>
               </div>
 
-              <div className="space-y-6">
-                {selectedModelsData.length <= 1 ? (
-                  <DroppableZone id="droppable-form" className="grid grid-cols-7 gap-3 min-h-[100px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-start">
-                    {config.layout_config.form_fields.length === 0 ? (
-                      <p className="text-xs text-neutral-400 font-medium w-full text-center italic">{t('wizard.layout.subtitle')}</p>
-                    ) : (
-                      <SortableContext items={config.layout_config.form_fields.map((id: string) => `form-${id}`)} strategy={rectSortingStrategy}>
-                        {config.layout_config.form_fields.map((id: string) => (
-                          <SortableFieldChip
-                            key={`form-${id}`}
-                            id={`form-${id}`}
-                            itemValue={id}
-                            toggleField={toggleField}
-                            zoneType="form"
-                            onEdit={() => { setEditingFieldId(id); setEditingFieldZone('form'); setIsDrawerOpen(true); }}
-                          >
-                            <span
-                              style={{
-                                fontFamily: getFieldMeta(id, 'form').label?.font,
-                                fontSize: getFieldMeta(id, 'form').label?.size,
-                                color: getFieldMeta(id, 'form').label?.color || undefined
-                              }}
-                              className={cn(
-                                "text-[10px] font-black tracking-wider",
-                                !getFieldMeta(id, 'form').label?.font && "uppercase"
-                              )}
-                            >
-                              {getFieldMeta(id, 'form').label?.text || getFieldName(id)}
-                            </span>
-                          </SortableFieldChip>
-                        ))}
-                      </SortableContext>
-                    )}
-                  </DroppableZone>
-                ) : (
-                  <div className="space-y-8">
-                    {selectedModelsData.map((model: any, idx: number) => {
-                      const isMaster = idx === 0;
-                      const fieldsOfThisModel = config.layout_config.form_fields.filter((fid: string) => 
-                        model.fields.some((f: any) => f.id === fid)
-                      );
-
-                      return (
-                        <div key={model.id} className="space-y-3">
-                          <div className="flex items-center gap-2 ml-1">
-                            <div className={cn("w-1 h-3 rounded-full", isMaster ? "bg-amber-600" : "bg-amber-400")}></div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
-                              {isMaster ? `Principal: ${model.display_name || model.db_table_name}` : `Aba ${idx}: ${model.display_name || model.db_table_name}`}
-                            </span>
-                          </div>
-                          <DroppableZone 
-                            id={`droppable-form-${model.id}`} 
-                            className="grid grid-cols-7 gap-3 min-h-[100px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-start"
-                          >
-                            {fieldsOfThisModel.length === 0 ? (
-                              <p className="text-xs text-neutral-400 font-medium w-full text-center italic">Arraste campos de "{model.display_name || model.db_table_name}" para cá</p>
-                            ) : (
-                              <SortableContext items={fieldsOfThisModel.map((id: string) => `form-${id}`)} strategy={rectSortingStrategy}>
-                                {fieldsOfThisModel.map((id: string) => (
-                                  <SortableFieldChip
-                                    key={`form-${id}`}
-                                    id={`form-${id}`}
-                                    itemValue={id}
-                                    toggleField={toggleField}
-                                    zoneType="form"
-                                    onEdit={() => { setEditingFieldId(id); setEditingFieldZone('form'); setIsDrawerOpen(true); }}
-                                  >
-                                    <span
-                                      style={{
-                                        fontFamily: getFieldMeta(id, 'form').label?.font,
-                                        fontSize: getFieldMeta(id, 'form').label?.size,
-                                        color: getFieldMeta(id, 'form').label?.color || undefined
-                                      }}
-                                      className={cn(
-                                        "text-[10px] font-black tracking-wider",
-                                        !getFieldMeta(id, 'form').label?.font && "uppercase"
-                                      )}
-                                    >
-                                      {getFieldMeta(id, 'form').label?.text || getFieldName(id)}
-                                    </span>
-                                  </SortableFieldChip>
-                                ))}
-                              </SortableContext>
-                            )}
-                          </DroppableZone>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
+              <div className="space-y-6 pt-2">
+                {relationalTree.map((node: any, nIdx: number) => renderModelZone(node, 0, nIdx))}
               </div>
             </div>
           )}
@@ -2094,6 +2292,23 @@ function SortableFieldChip({ id, itemValue, toggleField, onEdit, children, zoneT
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => { e.stopPropagation(); toggleField(itemValue, `${zoneType}_fields`); }}
       />
+    </div>
+  )
+}
+
+function DraggableItem({ id, children, className }: any) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: id
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={cn(className, isDragging && "opacity-20 grayscale")}
+    >
+      {children}
     </div>
   )
 }

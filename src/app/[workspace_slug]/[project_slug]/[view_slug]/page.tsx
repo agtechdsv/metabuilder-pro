@@ -101,6 +101,7 @@ export default async function SlugPage({ params }: PageProps) {
     
     const { data: allModels } = await supabase.from('models').select('id, display_name, db_table_name').eq('project_id', project.id)
     const dictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.display_name }), {}) || {}
+    const tableDictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.db_table_name }), {}) || {}
 
     const resolveSqlExpression = (field: any) => {
       const dbColName = field.db_column_name
@@ -131,7 +132,7 @@ export default async function SlugPage({ params }: PageProps) {
       .map((c: any) => ({
         id: c.field.id,
         model_id: c.field.model_id,
-        model_name: dictionary[c.field.model_id],
+        model_name: tableDictionary[c.field.model_id],
         display_name: c.label || c.field.display_name || c.field.db_column_name,
         db_column_name: resolveResultKey(c.field),
         sql_expression: resolveSqlExpression(c.field),
@@ -147,7 +148,7 @@ export default async function SlugPage({ params }: PageProps) {
       .map((c: any) => ({
         id: c.field.id,
         model_id: c.field.model_id,
-        model_name: dictionary[c.field.model_id],
+        model_name: tableDictionary[c.field.model_id],
         display_name: c.label || c.field.display_name || c.field.db_column_name,
         db_column_name: resolveResultKey(c.field),
         sql_expression: resolveSqlExpression(c.field),
@@ -162,7 +163,7 @@ export default async function SlugPage({ params }: PageProps) {
       .map((c: any) => ({
         id: c.field.id,
         model_id: c.field.model_id,
-        model_name: dictionary[c.field.model_id],
+        model_name: tableDictionary[c.field.model_id],
         display_name: c.label || c.field.display_name || c.field.db_column_name,
         db_column_name: resolveResultKey(c.field),
         sql_expression: resolveSqlExpression(c.field),
@@ -209,7 +210,7 @@ export default async function SlugPage({ params }: PageProps) {
       <TranslationProvider locale={locale}>
         <ViewPageContent 
           workspace={workspace}
-          project={project}
+          project={{ ...project, models: allModels }}
           viewName={viewName}
           modelName={modelName}
           displayFields={displayFields}
@@ -229,6 +230,8 @@ export default async function SlugPage({ params }: PageProps) {
           joins={view.layout_config?.joins || []}
           masterModelId={view.layout_config?.master_model_id}
           detailDisplayMode={view.layout_config?.detail_display_mode}
+          detailsInterfaceTypes={view.layout_config?.details_interface_types}
+          detailsInlineTypes={view.layout_config?.details_inline_types}
           actionInterfaceType={view.layout_config?.action_interface_type}
           baseUrl={`${baseUrl}/dashboard`}
           breadcrumbs={breadcrumbs}
