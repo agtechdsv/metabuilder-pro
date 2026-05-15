@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, Save, Eye, Pencil, Plus, Trash2, ArrowLeft, Check } from 'lucide-react'
+import { Loader2, Save, Eye, Pencil, Plus, Trash2, ArrowLeft, Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
@@ -15,11 +15,17 @@ interface RecordFormProps {
   isLoading?: boolean
   logicType?: string
   masterModelId?: string
+  masterModelName?: string
   detailDisplayMode?: 'tabs' | 'sections'
   isPageMode?: boolean
   onEditDetail?: (detail: any) => void
   onDeleteDetail?: (detail: any) => void
-  onAddDetail?: (tableName: string) => void
+  onAddDetail?: (tableName: string, parentId?: any) => void
+  joins?: any[]
+  dictionary?: Record<string, string>
+  initialTab?: string
+  onTabChange?: (tab: string) => void
+  detailsInlineTypes?: Record<string, boolean>
 }
 
 export default function RecordForm({ 
@@ -31,16 +37,23 @@ export default function RecordForm({
   isLoading = false,
   logicType,
   masterModelId,
+  masterModelName,
   detailDisplayMode = 'tabs',
   isPageMode = false,
   onEditDetail,
   onDeleteDetail,
-  onAddDetail
+  onAddDetail,
+  joins = [],
+  dictionary = {},
+  initialTab = 'master',
+  onTabChange,
+  detailsInlineTypes = {}
 }: RecordFormProps) {
   const { t } = useI18n()
   const [formData, setFormData] = useState<any>(initialData || {})
-  const [activeTab, setActiveTab] = useState<'master' | string>('master')
+  const [activeTab, setActiveTab] = useState<'master' | string>(initialTab)
   const [relationalOptions, setRelationalOptions] = useState<Record<string, any[]>>({})
+  const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     const fetchAllRelational = async () => {
@@ -85,15 +98,41 @@ export default function RecordForm({
     })
   }
 
-  const masterFields = logicType === 'master_detail' 
-    ? fields.filter(f => !f.model_id || String(f.model_id) === String(masterModelId))
-    : fields
+  // Identifica quem é o mestre atual (pode ser o ID ou o Nome da tabela)
+  const currentMasterId = masterModelId || fields.find(f => f.model_name?.toLowerCase() === masterModelName?.toLowerCase())?.model_id
 
-  const detailFields = logicType === 'master_detail'
-    ? fields.filter(f => f.model_id && String(f.model_id) !== String(masterModelId))
+  const masterFields = logicType === 'master_detail' 
+    ? fields.filter(f => {
+        const isMaster = !f.model_id || 
+                        (currentMasterId && String(f.model_id) === String(currentMasterId)) || 
+                        (masterModelName && f.model_name?.toLowerCase() === masterModelName?.toLowerCase())
+        
+        if (!isMaster) return false
+        // Se estivermos em um modal de detalhe, mostramos todos os campos dele
+        return (!!masterModelName || f.zone === 3 || f.zone === '3')
+      })
+    : fields.filter(f => f.zone === 3 || f.zone === '3')
+
+  const detailFields = logicType === 'master_detail' 
+    ? fields.filter(f => {
+        const isMaster = (currentMasterId && String(f.model_id) === String(currentMasterId)) || 
+                        (masterModelName && f.model_name?.toLowerCase() === masterModelName?.toLowerCase())
+        return f.model_id && !isMaster
+      })
     : []
 
-  const detailTables = Array.from(new Set(detailFields.map(f => f.model_name || 'Details')))
+  // FILTRAGEM HIERÁRQUICA: 
+  // Só mostramos como aba as tabelas que são FILHAS DIRETAS do mestre atual no array de JOINS
+  const detailTables = Array.from(new Set(
+    detailFields
+      .filter(f => {
+        // Se não houver joins, mostra tudo (fallback)
+        if (!joins || joins.length === 0) return true
+        // Verifica se existe um join de masterModelName -> f.model_name
+        return joins.some(j => (j.from?.toLowerCase() === masterModelName?.toLowerCase()) && j.to?.toLowerCase() === f.model_name?.toLowerCase())
+      })
+      .map(f => f.model_name || 'Details')
+  ))
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -164,7 +203,7 @@ export default function RecordForm({
     const isDisabled = mode === 'view' || field.is_primary_key
 
     return (
-      <div key={field.id} className="space-y-2" style={{ width: width }}>
+      <div className="space-y-2" style={{ width: width }}>
         <label 
           style={{
             fontFamily: zoneConfig.label?.font,
@@ -282,56 +321,275 @@ export default function RecordForm({
     )
   }
 
-  const renderDetailSection = (tableName: string) => (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">Registros Relacionados: {tableName}</h4>
-        <button 
-          type="button" 
-          onClick={() => onAddDetail?.(tableName)}
-          className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
-      </div>
-      
-      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-        {(initialData?._details || [])
-          .filter((d: any) => d.model_name === tableName)
-          .map((detail: any, idx: number) => (
-          <div key={idx} className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex items-center justify-between group animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200">
-                {detail.display_name || detail.name || detail.label || `Item #${idx + 1}`}
-              </span>
-              <span className="text-[9px] text-neutral-400 font-medium uppercase tracking-wider">{tableName} Record</span>
-            </div>
-            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button 
-                type="button" 
-                onClick={() => onEditDetail?.(detail)}
-                className="p-1.5 hover:bg-white dark:hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-indigo-600 shadow-sm transition-all"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-              <button 
-                type="button" 
-                onClick={() => onDeleteDetail?.(detail)}
-                className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-neutral-400 hover:text-red-600 shadow-sm transition-all"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
+  const renderDetailSection = (tableName: string, parentData: any = formData) => {
+    const modelId = fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
+    const displayLabel = dictionary[modelId || ''] || tableName
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">Registros Relacionados: {displayLabel}</h4>
+            
+            {/* Botão Expande/Recolhe Tudo */}
+            {detailsInlineTypes[modelId || ''] !== false && (parentData?._details || []).some((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase()) && (
+              <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentDetails = (parentData?._details || []).filter((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase())
+                    const pkField = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase()).find(f => f.is_primary_key) || { db_column_name: 'id' }
+                    const pkCol = pkField.db_column_name.split('.').pop() || 'id'
+                    
+                    const newState = { ...expandedDetails }
+                    currentDetails.forEach((d: any, idx: number) => {
+                      const dPk = d[pkCol] || d[pkCol.toUpperCase()] || d.id || d.ID || `idx-${idx}`
+                      const key = `detail-${tableName}-${dPk}`
+                      newState[key] = true
+                    })
+                    setExpandedDetails(newState)
+                  }}
+                  title={t('common.expand_all', 'Expandir Tudo')}
+                  className="p-1 hover:bg-white dark:hover:bg-neutral-800 rounded text-neutral-400 hover:text-indigo-600 transition-all"
+                >
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentDetails = (parentData?._details || []).filter((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase())
+                    const pkField = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase()).find(f => f.is_primary_key) || { db_column_name: 'id' }
+                    const pkCol = pkField.db_column_name.split('.').pop() || 'id'
+                    
+                    const newState = { ...expandedDetails }
+                    currentDetails.forEach((d: any, idx: number) => {
+                      const dPk = d[pkCol] || d[pkCol.toUpperCase()] || d.id || d.ID || `idx-${idx}`
+                      const key = `detail-${tableName}-${dPk}`
+                      newState[key] = false
+                    })
+                    setExpandedDetails(newState)
+                  }}
+                  title={t('common.collapse_all', 'Recolher Tudo')}
+                  className="p-1 hover:bg-white dark:hover:bg-neutral-800 rounded text-neutral-400 hover:text-indigo-600 transition-all"
+                >
+                  <ChevronUp className="w-3 h-3" />
+                </button>
+              </div>
+            )}
           </div>
-        ))}
-        {(!(initialData?._details || []).some((d: any) => d.model_name === tableName)) && (
+          
+          <button 
+            type="button" 
+            onClick={() => onAddDetail?.(tableName, parentData.id || parentData.ID)}
+            className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+      
+      <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+        {(() => {
+              const seenIds = new Set();
+              const detailsToRender = (parentData?._details || [])
+                .filter((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase());
+
+              return detailsToRender.map((detail: any, idx: number) => {
+                  const pkField = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase()).find(f => f.is_primary_key) || { db_column_name: 'id' };
+                  const pkCol = pkField.db_column_name.split('.').pop() || 'id';
+                  const detailIdValue = detail[pkCol] || detail[pkCol.toUpperCase()] || detail.id || detail.ID || `idx-${idx}`;
+                  const uniqueKey = `detail-${tableName}-${detailIdValue}`;
+                  
+                  if (seenIds.has(uniqueKey)) return null;
+                  seenIds.add(uniqueKey);
+                  
+                  return (
+                    <div key={uniqueKey} className={cn("flex flex-col gap-2 p-1 rounded-3xl transition-all duration-300", expandedDetails[uniqueKey] ? "bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-500/20" : "")}>
+                      <div className={cn(
+                        "p-4 border rounded-2xl flex items-center justify-between group animate-in fade-in slide-in-from-top-2 duration-300 transition-all",
+                        expandedDetails[uniqueKey] 
+                          ? "bg-white dark:bg-neutral-900 border-indigo-200 dark:border-indigo-800 shadow-lg shadow-indigo-500/5" 
+                          : "bg-neutral-50 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-800"
+                      )}>
+                        <div className="flex flex-col gap-1">
+                        <span className={cn(
+                          "text-xs font-bold transition-colors",
+                          expandedDetails[uniqueKey] ? "text-indigo-600 dark:text-indigo-400" : "text-neutral-700 dark:text-neutral-200"
+                        )}>
+                          {detail.display_name || detail.name || detail.label || `Item #${idx + 1}`}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Botão de Cortina (Na Lista) */}
+                        {detailsInlineTypes[modelId || ''] !== false && (
+                          <button 
+                            type="button" 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              setExpandedDetails(prev => ({
+                                ...prev,
+                                [uniqueKey]: !prev[uniqueKey]
+                              }));
+                            }}
+                            className={cn(
+                              "p-1.5 rounded-lg shadow-sm transition-all",
+                              expandedDetails[uniqueKey]
+                                ? "bg-indigo-600 text-white"
+                                : "hover:bg-white dark:hover:bg-neutral-800 text-neutral-400 hover:text-indigo-600"
+                            )}
+                          >
+                            <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-300", expandedDetails[uniqueKey] && "rotate-180")} />
+                          </button>
+                        )}
+                        <button 
+                          type="button" 
+                          onClick={(e) => { e.stopPropagation(); onEditDetail?.(detail); }}
+                          className="p-1.5 hover:bg-white dark:hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-indigo-600 shadow-sm transition-all"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={(e) => { e.stopPropagation(); onDeleteDetail?.(detail); }}
+                          className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-neutral-400 hover:text-red-600 shadow-sm transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Efeito Cortina (Edição In-place) */}
+                    {expandedDetails[uniqueKey] && (
+                      <div className="p-6 bg-white dark:bg-neutral-950 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 animate-in slide-in-from-top-2 duration-300 space-y-8 shadow-inner">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {(() => {
+                            const detailFieldsForThisModel = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase());
+                            return detailFieldsForThisModel.map(field => (
+                              <div key={field.id} className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                                  {field.display_name}
+                                </label>
+                                {(() => {
+                                  const baseCol = field.db_column_name.split('.').pop() || field.db_column_name;
+                                  const value = detail[baseCol] || detail[baseCol.toUpperCase()] || detail[field.db_column_name] || '';
+                                  
+                                  const handleInlineChange = (newVal: any) => {
+                                    // Se parentData for o formData principal, atualizamos o topo
+                                    if (parentData === formData) {
+                                      const newDetails = (formData._details || []).map((d: any) => {
+                                        const dPk = d[pkCol] || d[pkCol.toUpperCase()] || d.id || d.ID || `idx-${idx}`;
+                                        if (dPk === detailIdValue && d.model_name === tableName) {
+                                          return { ...d, [baseCol]: newVal };
+                                        }
+                                        return d;
+                                      });
+                                      setFormData({ ...formData, _details: newDetails });
+                                    } else {
+                                      // Se parentData for um registro de detalhe, atualizamos dentro dele (recursivo)
+                                      const newParentDetails = (parentData._details || []).map((d: any) => {
+                                        const dPk = d[pkCol] || d[pkCol.toUpperCase()] || d.id || d.ID || `idx-${idx}`;
+                                        if (dPk === detailIdValue && d.model_name === tableName) {
+                                          return { ...d, [baseCol]: newVal };
+                                        }
+                                        return d;
+                                      });
+                                      
+                                      // Agora precisamos atualizar este parentData dentro do formData._details original
+                                      const updatedParentData = { ...parentData, _details: newParentDetails };
+                                      const newTopDetails = (formData._details || []).map((td: any) => {
+                                        // Encontrar o parentData original. Precisamos do seu PK.
+                                        // Como não temos o nome da tabela do pai aqui, assumimos que id/ID resolvem ou comparamos o objeto todo
+                                        if (td === parentData || (td.id && td.id === parentData.id) || (td.ID && td.ID === parentData.ID)) {
+                                          return updatedParentData;
+                                        }
+                                        return td;
+                                      });
+                                      setFormData({ ...formData, _details: newTopDetails });
+                                    }
+                                  };
+
+                                  const fieldConfig = field.config?.form_config || field.config || {};
+                                  const type = fieldConfig.component?.type || 'text';
+
+                                  if (type === 'textarea') {
+                                    return (
+                                      <textarea
+                                        value={value}
+                                        onChange={(e) => handleInlineChange(e.target.value)}
+                                        className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+                                        rows={3}
+                                      />
+                                    );
+                                  }
+
+                                  if (['select', 'radio'].includes(type)) {
+                                    const options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
+                                    return (
+                                      <select
+                                        value={value}
+                                        onChange={(e) => handleInlineChange(e.target.value)}
+                                        className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+                                      >
+                                        <option value="">Selecione...</option>
+                                        {options.map((opt: any) => (
+                                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                      </select>
+                                    );
+                                  }
+
+                                  return (
+                                    <input
+                                      type={type === 'number' ? 'number' : 'text'}
+                                      value={value}
+                                      onChange={(e) => handleInlineChange(e.target.value)}
+                                      className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+                                    />
+                                  );
+                                })()}
+                              </div>
+                            ));
+                          })()}
+                        </div>
+
+                        {/* SUB-DETALHES RECURSIVOS NA CORTINA */}
+                        {(() => {
+                          const subTables = Array.from(new Set(
+                            fields
+                              .filter(f => joins.some(j => j.from?.toLowerCase() === tableName.toLowerCase() && j.to?.toLowerCase() === f.model_name?.toLowerCase()))
+                              .map(f => f.model_name)
+                          ));
+
+                          if (subTables.length > 0) {
+                            return (
+                              <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800 space-y-6">
+                                {subTables.map(st => (
+                                  <div key={st} className="pl-4 border-l-2 border-indigo-100 dark:border-indigo-900/30">
+                                    {renderDetailSection(st, detail)}
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                  );
+                });
+            })()}
+        {(!(parentData?._details || []).some((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase())) && (
           <div className="py-12 text-center border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-3xl">
-            <p className="text-xs text-neutral-400 italic">Nenhum registro de {tableName} encontrado.</p>
+            <p className="text-xs text-neutral-400 italic">Nenhum registro de {(() => {
+              const modelId = fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
+              return dictionary[modelId || ''] || tableName
+            })()} encontrado.</p>
           </div>
         )}
       </div>
     </div>
-  )
+    )
+  }
 
   return (
     <div className={cn("flex flex-col", isPageMode ? "bg-white dark:bg-neutral-900/50 p-8 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-xl" : "h-full")}>
@@ -363,7 +621,10 @@ export default function RecordForm({
           <div className="flex items-center gap-2 border-b border-neutral-100 dark:border-neutral-800 mb-6">
             <button
               type="button"
-              onClick={() => setActiveTab('master')}
+              onClick={() => {
+                setActiveTab('master')
+                onTabChange?.('master')
+              }}
               className={cn(
                 "px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all border-b-2",
                 activeTab === 'master' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600'
@@ -371,19 +632,26 @@ export default function RecordForm({
             >
               {t('runtime.master_details.main_data', 'Dados Principais')}
             </button>
-            {detailTables.map(tableName => (
-              <button
-                key={tableName}
-                type="button"
-                onClick={() => setActiveTab(tableName)}
-                className={cn(
-                  "px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all border-b-2",
-                  activeTab === tableName ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600'
-                )}
-              >
-                {tableName}
-              </button>
-            ))}
+            {detailTables.map(tableName => {
+              const modelId = fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
+              const displayLabel = dictionary[modelId || ''] || tableName
+              return (
+                <button
+                  key={tableName}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(tableName)
+                    onTabChange?.(tableName)
+                  }}
+                  className={cn(
+                    "px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all border-b-2",
+                    activeTab === tableName ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600'
+                  )}
+                >
+                  {displayLabel}
+                </button>
+              )
+            })}
           </div>
         )}
 
@@ -399,7 +667,14 @@ export default function RecordForm({
                 </div>
               )}
               <div className={cn("grid gap-6", isPageMode ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
-                {masterFields.map(field => renderField(field))}
+                {(() => {
+                  const seenFields = new Set();
+                  return masterFields.map(field => {
+                    if (seenFields.has(field.id)) return null;
+                    seenFields.add(field.id);
+                    return <div key={field.id}>{renderField(field)}</div>;
+                  });
+                })()}
               </div>
             </div>
           )}
@@ -409,7 +684,10 @@ export default function RecordForm({
               <div className="flex items-center gap-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-800 dark:text-neutral-200">
-                  {tableName}
+                  {(() => {
+                    const modelId = fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
+                    return dictionary[modelId || ''] || tableName
+                  })()}
                 </h3>
               </div>
               {renderDetailSection(tableName)}
@@ -444,4 +722,13 @@ export default function RecordForm({
       </form>
     </div>
   )
+}
+
+function parseFixedOptions(optionsString: string) {
+  if (!optionsString) return [];
+  if (Array.isArray(optionsString)) return optionsString;
+  return String(optionsString).split(',').map(opt => {
+    const [label, value] = opt.split(':');
+    return { label: (label || '').trim(), value: (value || label || '').trim() };
+  });
 }

@@ -75,7 +75,8 @@
     "enterprise": "Enterprise",
     "logged_in_as": "Usuário Logado",
     "all": "Todos",
-    "back_to_home": "Voltar para a Home"
+    "back_to_home": "Voltar para a Home",
+    "runtime_online": "RUNTIME ONLINE"
   },
   "hero": {
     "badge": "Mecanismo de Metadados Next-Gen",

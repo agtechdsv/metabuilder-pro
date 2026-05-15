@@ -8,9 +8,10 @@ interface DrawerProps {
   onClose: () => void
   title: string
   children: React.ReactNode
+  zIndex?: number
 }
 
-export function Drawer({ isOpen, onClose, title, children }: DrawerProps) {
+export function Drawer({ isOpen, onClose, title, children, zIndex = 100 }: DrawerProps) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -29,15 +30,15 @@ export function Drawer({ isOpen, onClose, title, children }: DrawerProps) {
 
   return (
     <>
-      {/* Backdrop */}
       <div 
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        style={{ zIndex }}
         onClick={onClose}
       />
 
-      {/* Drawer */}
       <div 
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-white dark:bg-neutral-950 border-l border-neutral-200 dark:border-neutral-800 z-[101] shadow-2xl transition-transform duration-500 ease-in-out transform ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-white dark:bg-neutral-950 border-l border-neutral-200 dark:border-neutral-800 shadow-2xl transition-transform duration-500 ease-in-out transform ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{ zIndex: zIndex + 1 }}
       >
         <div className="flex flex-col h-full">
           {/* Header */}

@@ -11,9 +11,10 @@ interface ModalProps {
   description?: string
   children: React.ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl'
+  zIndex?: number
 }
 
-export function Modal({ isOpen, onClose, title, description, children, size = 'md' }: ModalProps) {
+export function Modal({ isOpen, onClose, title, description, children, size = 'md', zIndex = 200 }: ModalProps) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -31,7 +32,10 @@ export function Modal({ isOpen, onClose, title, description, children, size = 'm
   if (!mounted || !isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+    <div 
+      className="fixed inset-0 flex items-center justify-center p-4"
+      style={{ zIndex }}
+    >
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300"

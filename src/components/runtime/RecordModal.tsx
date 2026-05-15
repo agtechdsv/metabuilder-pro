@@ -11,10 +11,17 @@ interface RecordModalProps {
   isLoading?: boolean
   logicType?: string
   masterModelId?: string
+  masterModelName?: string
   detailDisplayMode?: 'tabs' | 'sections'
   onEditDetail?: (detail: any) => void
   onDeleteDetail?: (detail: any) => void
   onAddDetail?: (tableName: string) => void
+  joins?: any[]
+  dictionary?: Record<string, string>
+  initialTab?: string
+  onTabChange?: (tab: string) => void
+  zIndex?: number
+  detailsInlineTypes?: Record<string, boolean>
 }
 
 export default function RecordModal({ 
@@ -27,10 +34,17 @@ export default function RecordModal({
   isLoading = false,
   logicType,
   masterModelId,
+  masterModelName,
   detailDisplayMode = 'tabs',
   onEditDetail,
   onDeleteDetail,
-  onAddDetail
+  onAddDetail,
+  joins = [],
+  dictionary = {},
+  initialTab,
+  onTabChange,
+  zIndex,
+  detailsInlineTypes
 }: RecordModalProps) {
   return (
     <Modal 
@@ -38,6 +52,7 @@ export default function RecordModal({
       onClose={onClose} 
       title=""
       size={logicType === 'master_detail' ? '2xl' : 'xl'}
+      zIndex={zIndex}
     >
       <RecordForm 
         mode={mode}
@@ -48,10 +63,16 @@ export default function RecordModal({
         isLoading={isLoading}
         logicType={logicType}
         masterModelId={masterModelId}
+        masterModelName={masterModelName}
         detailDisplayMode={detailDisplayMode}
         onEditDetail={onEditDetail}
         onDeleteDetail={onDeleteDetail}
         onAddDetail={onAddDetail}
+        joins={joins}
+        dictionary={dictionary}
+        detailsInlineTypes={detailsInlineTypes}
+        initialTab={initialTab}
+        onTabChange={onTabChange}
       />
     </Modal>
   )

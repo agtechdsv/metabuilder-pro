@@ -75,7 +75,8 @@
     "enterprise": "Enterprise",
     "logged_in_as": "Logged User",
     "all": "All",
-    "back_to_home": "Back to Home"
+    "back_to_home": "Back to Home",
+    "runtime_online": "RUNTIME ONLINE"
   },
   "hero": {
     "badge": "Next-Gen Metadata Engine",
