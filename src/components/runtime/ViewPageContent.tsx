@@ -349,24 +349,33 @@ export default function ViewPageContent({
       const pkField = fields.find(f => f.is_primary_key) || { db_column_name: 'id' }
       const detailPkName = pkField.db_column_name.split('.').pop() || 'id'
       
-      // Internal-only keys that must never be sent to the DB.
-      // Also exclude table-prefixed keys (e.g. 'models.name') — RecordForm writes both
-      // 'models.name' and 'name' on change; only the base key is valid in a SQL SET clause.
+      // Blacklist: same rules as handleSave.
+      // Must also skip object values (joined relations) and _key (React internal)
+      // or the entire UPDATE will fail on PostgreSQL.
       const INTERNAL_KEYS = new Set(['_details', 'model_name', 'display_model_name'])
 
       let rawQuery = ''
       const sanitizedData: any = {}
       for (const [k, v] of Object.entries(formData)) {
+        const lowKey = k.toLowerCase()
         if (
-          INTERNAL_KEYS.has(k) ||
-          k.includes('.') ||                              // skip table-prefixed keys
-          k.toLowerCase() === detailPkName.toLowerCase() ||
+          INTERNAL_KEYS.has(lowKey) ||
+          k.startsWith('_') ||                            // skip _key, _details, etc.
+          k.includes('.') ||                             // skip table-prefixed keys
+          lowKey === detailPkName.toLowerCase() ||
+          lowKey === 'created_at' ||
+          lowKey === 'updated_at' ||
           v === null ||
-          v === undefined
+          v === undefined ||
+          typeof v === 'object'                          // skip objects/arrays (joined relations)
         ) continue
 
         sanitizedData[k] = String(v)
       }
+
+      console.log(`[MetaBuilder:handleSaveDetail] RAW formData keys:`, Object.keys(formData))
+      console.log(`[MetaBuilder:handleSaveDetail] action=${action} table=${tableName} pk=${detailPkName}`)
+      console.log(`[MetaBuilder:handleSaveDetail] sanitizedData:`, sanitizedData)
 
       // Se for inclusão, garantir que a FK para o mestre esteja correta
       if (action === 'create' && logicType === 'master_detail' && joins) {
@@ -397,7 +406,7 @@ export default function ViewPageContent({
         rawQuery = `INSERT INTO ${tableName} (${keys}) VALUES (${values})`
       }
 
-      console.log(`[MetaBuilder:Detail] ${action} on ${tableName}`, { sanitizedData, rawQuery, dPkValue })
+      console.log(`[MetaBuilder:handleSaveDetail] rawQuery:`, rawQuery)
 
       channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
@@ -466,31 +475,67 @@ export default function ViewPageContent({
       })
 
       setTimeout(async () => {
-        supabase.removeChannel(channel)
-        
-        // Recarrega os sub-detalhes do detalhe corrente (ex: Models dentro do Project drawer)
-        if (selectedDetail) {
-          const freshSubDetails = await fetchDetails(selectedDetail, selectedDetail.model_name || currentDetailTable)
-          setSelectedDetail((prev: any) => prev ? { ...prev, _details: freshSubDetails } : prev)
+        // Captura snapshot estável ANTES de qualquer setState
+        const currentDetail = selectedDetail
+        const parentHistory = [...detailHistory]
+
+        // 1. Busca dados frescos do PAI (o que está "atrás" no histórico)
+        let freshParentRecord: any = null
+        if (parentHistory.length > 0) {
+          const lastIdx = parentHistory.length - 1
+          const pRec = parentHistory[lastIdx].record
+          const pTab = parentHistory[lastIdx].tableName
+          if (pRec && pTab) {
+            const freshDetails = await fetchDetails(pRec, pTab)
+            freshParentRecord = { ...pRec, _details: freshDetails }
+          }
         }
-        
-        // Recarrega os detalhes do mestre (ex: Projects na lista do Master drawer)
+
+        // 2. Recarrega o MESTRE
         if (selectedRow) {
-          const updatedDetails = await fetchDetails(selectedRow, modelName)
-          setSelectedRow({ ...selectedRow, _details: updatedDetails })
+          const upMasterDetails = await fetchDetails(selectedRow, modelName)
+          setSelectedRow((prev: any) => prev ? { ...prev, _details: upMasterDetails } : prev)
         }
-        
-        // Recarrega a lista principal
+
+        // 3. Navega de volta manualmente com dados JA FRESCOS
+        // (Não usa handleCloseDetail() porque ele lê estado stale do closure)
+        if (parentHistory.length > 0) {
+          const last = parentHistory[parentHistory.length - 1]
+          const newHistory = parentHistory.slice(0, -1)
+          const recordToShow = freshParentRecord || last.record
+
+          setDetailHistory(newHistory)
+          setSelectedDetail(recordToShow)
+          setCurrentDetailTable(last.tableName)
+          setDetailFieldsToRender(last.fields)
+          setActiveTabForDetail(last.activeTab || 'master')
+          setDetailModalMode('edit')
+
+          const model = (project as any)?.models?.find((m: any) => m.db_table_name.toLowerCase() === last.tableName?.toLowerCase())
+          const interfaceType = detailsInterfaceTypes?.[model?.id || ''] || (project.ui_config as any)?.details_interface_types?.[model?.id || ''] || 'modal'
+
+          // Fecha a interface ATUAL e abre a interface CORRETA do pai.
+          // Crítico: sem fechar a que está aberta, o conteúdo da modal vai parar dentro do drawer.
+          if (interfaceType === 'drawer') {
+            setIsDetailModalOpen(false)
+            setIsDetailDrawerOpen(true)
+          } else {
+            setIsDetailDrawerOpen(false)
+            setIsDetailModalOpen(true)
+          }
+        } else {
+          setIsDetailModalOpen(false)
+          setIsDetailDrawerOpen(false)
+        }
+
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem(`metabuilder_cache_${project.id}:${modelName}`)
         }
-        setRefreshKey(prev => prev + 1)
-        
-        // Incrementa a key do detail modal/drawer para forçar remount com dados frescos
+
         setDetailRefreshKey(prev => prev + 1)
-        
-        handleCloseDetail()
+        setRefreshKey(prev => prev + 1)
         setIsProcessing(false)
+        supabase.removeChannel(channel)
       }, 1500)
 
     } catch (error) {
@@ -569,22 +614,24 @@ export default function ViewPageContent({
             filters[pkName] = String(pkValue)
           }
 
-          // Whitelist: only include fields explicitly configured in the Studio.
-          // This prevents sending system columns (created_at, etc.) that PostgreSQL may reject.
-          // We match BOTH full db_column_name ('projects.name') AND base name ('name') because
-          // RecordForm stores edited values under both keys.
+          // Blacklist: exclude internal keys, system columns, PK, objects, and arrays.
+          // The bug was: joined fields (e.g. 'projects') and React internals ('_key') 
+          // were slipping through as '[object Object]', breaking the entire SQL query.
           const MASTER_INTERNAL = new Set(['_details', 'model_name', 'display_model_name'])
-          const masterFormFields = formFields.filter(f =>
-            !f.model_id || String(f.model_id) === String(masterModelId)
-          )
           const sanitizedData: any = {}
           for (const [k, v] of Object.entries(formData)) {
-            if (MASTER_INTERNAL.has(k) || k.includes('.') || k.toLowerCase() === pkName.toLowerCase() || v === null || v === undefined) continue
-            const isConfiguredField = masterFormFields.some(f => {
-              const base = f.db_column_name.split('.').pop() || f.db_column_name
-              return f.db_column_name === k || base === k
-            })
-            if (!isConfiguredField) continue
+            const lowKey = k.toLowerCase()
+            if (
+              MASTER_INTERNAL.has(lowKey) ||
+              k.startsWith('_') ||           // skip _key, _details, etc.
+              k.includes('.') ||             // skip table-prefixed duplicates
+              lowKey === pkName.toLowerCase() ||
+              lowKey === 'created_at' ||
+              lowKey === 'updated_at' ||
+              v === undefined || v === null ||
+              typeof v === 'object'           // skip objects and arrays (joined relations)
+            ) continue
+
             sanitizedData[k] = String(v)
           }
 
@@ -603,7 +650,10 @@ export default function ViewPageContent({
             rawQuery = `INSERT INTO ${modelName} (${keys}) VALUES (${values})`
           }
 
-          console.log(`[MetaBuilder] ${action} on ${modelName}`, { pkValue, sanitizedData, rawQuery })
+          console.log(`[MetaBuilder:handleSave] RAW formData keys:`, Object.keys(formData))
+          console.log(`[MetaBuilder:handleSave] action=${action} table=${modelName} pkName=${pkName} pkValue=${pkValue}`)
+          console.log(`[MetaBuilder:handleSave] sanitizedData:`, sanitizedData)
+          console.log(`[MetaBuilder:handleSave] rawQuery:`, rawQuery)
 
           const payload: any = {
             queryId,
@@ -964,14 +1014,14 @@ export default function ViewPageContent({
 
         return interfaceType === 'modal' ? (
           <RecordModal 
-            key={`history-modal-${idx}-${item.record?.id}`}
+            key={`history-modal-${idx}-${item.record?.id}-${detailRefreshKey}`}
             isOpen={true}
             zIndex={200 + (idx + 1) * 100}
             {...historyProps}
           />
         ) : (
           <RecordDrawer 
-            key={`history-drawer-${idx}-${item.record?.id}`}
+            key={`history-drawer-${idx}-${item.record?.id}-${detailRefreshKey}`}
             isOpen={true}
             zIndex={200 + (idx + 1) * 100}
             {...historyProps}
