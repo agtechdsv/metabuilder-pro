@@ -54,6 +54,40 @@ export default function RecordForm({
   const [activeTab, setActiveTab] = useState<'master' | string>(initialTab)
   const [relationalOptions, setRelationalOptions] = useState<Record<string, any[]>>({})
   const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({})
+  const [loadingSubDetails, setLoadingSubDetails] = useState<Record<string, boolean>>({})
+
+  // Busca sub-detalhes de um registro sob demanda (lazy loading)
+  // chamado ao expandir a cortina de um detalhe pela primeira vez
+  const fetchSubDetailsForRecord = async (detail: any, tableName: string, pkCol: string, pkValue: any) => {
+    const subJoins = joins.filter(j => j.from?.toLowerCase() === tableName?.toLowerCase())
+    if (subJoins.length === 0) return
+
+    const supabaseClient = createClient()
+    const allSubDetails: any[] = []
+
+    for (const join of subJoins) {
+      if (!pkValue) continue
+      const { data } = await supabaseClient
+        .from(join.to)
+        .select('*')
+        .eq(join.foreignKey, String(pkValue))
+      if (data) {
+        allSubDetails.push(...data.map((d: any) => ({ ...d, model_name: join.to })))
+      }
+    }
+
+    // Injeta os sub-detalhes no registro correto dentro de formData._details
+    setFormData((prev: any) => {
+      const newDetails = (prev._details || []).map((d: any) => {
+        const dPk = d[pkCol] || d[pkCol.toUpperCase()] || d.id || d.ID
+        if (String(dPk) === String(pkValue) && d.model_name?.toLowerCase() === tableName.toLowerCase()) {
+          return { ...d, _details: allSubDetails }
+        }
+        return d
+      })
+      return { ...prev, _details: newDetails }
+    })
+  }
 
   useEffect(() => {
     const fetchAllRelational = async () => {
@@ -136,6 +170,7 @@ export default function RecordForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('[RecordForm] handleSubmit - formData keys:', Object.keys(formData), '| formData:', JSON.stringify(formData).slice(0, 500))
     onSave(formData)
   }
 
@@ -193,7 +228,7 @@ export default function RecordForm({
       mode === 'view' 
         ? "border-transparent bg-neutral-100/50 dark:bg-neutral-900/50 cursor-default opacity-80" 
         : "border-neutral-200 dark:border-neutral-800 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 group-hover:border-neutral-300 dark:group-hover:border-neutral-700",
-      !zoneConfig.content?.color && "text-neutral-900 dark:text-neutral-300"
+      !zoneConfig.content?.color && "text-neutral-900 dark:text-white"
     )
 
     const options = comp.options_type === 'relational' 
@@ -336,11 +371,12 @@ export default function RecordForm({
               <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     const currentDetails = (parentData?._details || []).filter((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase())
                     const pkField = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase()).find(f => f.is_primary_key) || { db_column_name: 'id' }
                     const pkCol = pkField.db_column_name.split('.').pop() || 'id'
                     
+                    // 1. Expande todos imediatamente
                     const newState = { ...expandedDetails }
                     currentDetails.forEach((d: any, idx: number) => {
                       const dPk = d[pkCol] || d[pkCol.toUpperCase()] || d.id || d.ID || `idx-${idx}`
@@ -348,6 +384,21 @@ export default function RecordForm({
                       newState[key] = true
                     })
                     setExpandedDetails(newState)
+                    
+                    // 2. Lazy load sub-detalhes para todos que ainda não têm
+                    const fetches = currentDetails
+                      .filter((d: any) => !d._details || d._details.length === 0)
+                      .map((d: any, idx: number) => {
+                        const dPk = d[pkCol] || d[pkCol.toUpperCase()] || d.id || d.ID || `idx-${idx}`
+                        const key = `detail-${tableName}-${dPk}`
+                        if (!loadingSubDetails[key]) {
+                          setLoadingSubDetails(prev => ({ ...prev, [key]: true }))
+                          return fetchSubDetailsForRecord(d, tableName, pkCol, dPk)
+                            .finally(() => setLoadingSubDetails(prev => ({ ...prev, [key]: false })))
+                        }
+                        return Promise.resolve()
+                      })
+                    await Promise.all(fetches)
                   }}
                   title={t('common.expand_all', 'Expandir Tudo')}
                   className="p-1 hover:bg-white dark:hover:bg-neutral-800 rounded text-neutral-400 hover:text-indigo-600 transition-all"
@@ -387,7 +438,7 @@ export default function RecordForm({
           </button>
         </div>
       
-      <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+      <div className="space-y-1.5 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
         {(() => {
               const seenIds = new Set();
               const detailsToRender = (parentData?._details || [])
@@ -403,9 +454,9 @@ export default function RecordForm({
                   seenIds.add(uniqueKey);
                   
                   return (
-                    <div key={uniqueKey} className={cn("flex flex-col gap-2 p-1 rounded-3xl transition-all duration-300", expandedDetails[uniqueKey] ? "bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-500/20" : "")}>
+                    <div key={uniqueKey} className={cn("flex flex-col gap-1 rounded-2xl transition-all duration-300", expandedDetails[uniqueKey] ? "bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-500/20 p-0.5" : "")}>
                       <div className={cn(
-                        "p-4 border rounded-2xl flex items-center justify-between group animate-in fade-in slide-in-from-top-2 duration-300 transition-all",
+                        "py-2.5 px-3 border rounded-xl flex items-center justify-between group animate-in fade-in slide-in-from-top-2 duration-300 transition-all",
                         expandedDetails[uniqueKey] 
                           ? "bg-white dark:bg-neutral-900 border-indigo-200 dark:border-indigo-800 shadow-lg shadow-indigo-500/5" 
                           : "bg-neutral-50 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-800"
@@ -418,39 +469,51 @@ export default function RecordForm({
                           {detail.display_name || detail.name || detail.label || `Item #${idx + 1}`}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-2 transition-all">
                         {/* Botão de Cortina (Na Lista) */}
                         {detailsInlineTypes[modelId || ''] !== false && (
                           <button 
                             type="button" 
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
+                            onClick={async (e) => { 
+                              e.stopPropagation();
+                              const willExpand = !expandedDetails[uniqueKey]
                               setExpandedDetails(prev => ({
                                 ...prev,
-                                [uniqueKey]: !prev[uniqueKey]
+                                [uniqueKey]: willExpand
                               }));
+                              // Lazy load sub-detalhes ao expandir pela primeira vez
+                              if (willExpand && !loadingSubDetails[uniqueKey] && (!detail._details || detail._details.length === 0)) {
+                                setLoadingSubDetails(prev => ({ ...prev, [uniqueKey]: true }))
+                                await fetchSubDetailsForRecord(detail, tableName, pkCol, detailIdValue)
+                                setLoadingSubDetails(prev => ({ ...prev, [uniqueKey]: false }))
+                              }
                             }}
                             className={cn(
                               "p-1.5 rounded-lg shadow-sm transition-all",
-                              expandedDetails[uniqueKey]
+                              loadingSubDetails[uniqueKey]
+                                ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 animate-pulse cursor-wait"
+                                : expandedDetails[uniqueKey]
                                 ? "bg-indigo-600 text-white"
-                                : "hover:bg-white dark:hover:bg-neutral-800 text-neutral-400 hover:text-indigo-600"
+                                : "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
                             )}
                           >
-                            <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-300", expandedDetails[uniqueKey] && "rotate-180")} />
+                            {loadingSubDetails[uniqueKey] 
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-300", expandedDetails[uniqueKey] && "rotate-180")} />
+                            }
                           </button>
                         )}
                         <button 
                           type="button" 
                           onClick={(e) => { e.stopPropagation(); onEditDetail?.(detail); }}
-                          className="p-1.5 hover:bg-white dark:hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-indigo-600 shadow-sm transition-all"
+                          className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-500 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/40 shadow-sm transition-all"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button 
                           type="button" 
                           onClick={(e) => { e.stopPropagation(); onDeleteDetail?.(detail); }}
-                          className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-neutral-400 hover:text-red-600 shadow-sm transition-all"
+                          className="p-1.5 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40 shadow-sm transition-all"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -515,7 +578,7 @@ export default function RecordForm({
                                       <textarea
                                         value={value}
                                         onChange={(e) => handleInlineChange(e.target.value)}
-                                        className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+                                        className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
                                         rows={3}
                                       />
                                     );
@@ -527,7 +590,7 @@ export default function RecordForm({
                                       <select
                                         value={value}
                                         onChange={(e) => handleInlineChange(e.target.value)}
-                                        className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+                                        className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
                                       >
                                         <option value="">Selecione...</option>
                                         {options.map((opt: any) => (
@@ -542,7 +605,7 @@ export default function RecordForm({
                                       type={type === 'number' ? 'number' : 'text'}
                                       value={value}
                                       onChange={(e) => handleInlineChange(e.target.value)}
-                                      className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+                                      className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
                                     />
                                   );
                                 })()}
