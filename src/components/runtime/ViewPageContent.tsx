@@ -1,7 +1,16 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Table, Plus, LayoutGrid } from 'lucide-react'
+import { 
+  Table, 
+  Plus, 
+  LayoutGrid, 
+  Pencil, 
+  Trash2, 
+  Maximize2, 
+  Layout, 
+  Database 
+} from 'lucide-react'
 import { HeaderActions } from '@/components/layout/HeaderActions'
 import RecordDrawer from './RecordDrawer'
 import RecordModal from './RecordModal'
@@ -12,6 +21,9 @@ import { useI18n } from '@/i18n/I18nContext'
 
 import RecordForm from './RecordForm'
 import { RuntimeHeader } from './RuntimeHeader'
+import AnalyticsDashboard from './AnalyticsDashboard'
+import { Modal } from '@/components/ui/Modal'
+import { useToast } from '@/components/ui/Toast'
 
 // Importamos o ViewContainer sem SSR para evitar o "piscar" do loader
 // e conflitos de hidratação com o sessionStorage
@@ -46,6 +58,10 @@ interface ViewPageContentProps {
   breadcrumbs?: { label: string; href: string }[]
   description?: string
   icon?: string
+  analyticsConfig?: {
+    widgets: any[]
+    allow_runtime_edit: boolean
+  }
 }
 
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
@@ -78,7 +94,8 @@ export default function ViewPageContent({
   baseUrl,
   breadcrumbs = [],
   description,
-  icon
+  icon,
+  analyticsConfig: initialAnalyticsConfig
 }: ViewPageContentProps) {
 
   // Garante que todas as listas de campos sejam únicas por ID
@@ -134,6 +151,91 @@ export default function ViewPageContent({
   const [detailHistory, setDetailHistory] = useState<any[]>([])
   const [activeTabForDetail, setActiveTabForDetail] = useState<string>('master')
   const [detailRefreshKey, setDetailRefreshKey] = useState(0)
+
+  const { toast } = useToast()
+  const [localAnalyticsConfig, setLocalAnalyticsConfig] = useState(initialAnalyticsConfig)
+  const [editingWidget, setEditingWidget] = useState<any>(null)
+  const [isWidgetModalOpen, setIsWidgetModalOpen] = useState(false)
+  const [globalFilterValues, setGlobalFilterValues] = useState<Record<string, string>>({})
+
+  const handleAddWidgetRuntime = () => {
+    setEditingWidget({
+      id: Math.random().toString(36).substr(2, 9),
+      title: 'Novo Widget',
+      type: 'kpi',
+      model_id: project.models?.[0]?.id || '',
+      field: '',
+      calc: 'COUNT',
+      group_by: '',
+      width: 'half'
+    })
+    setIsWidgetModalOpen(true)
+  }
+
+  const handleEditWidgetRuntime = (widget: any) => {
+    setEditingWidget(widget)
+    setIsWidgetModalOpen(true)
+  }
+
+  const handleSaveWidgetRuntime = async (updatedWidget: any) => {
+    const currentConfig = localAnalyticsConfig || initialAnalyticsConfig || { widgets: [], allow_runtime_edit: true }
+    const currentWidgets = currentConfig.widgets || []
+    const exists = currentWidgets.find((w: any) => w.id === updatedWidget.id)
+    
+    let newWidgets
+    if (exists) {
+      newWidgets = currentWidgets.map((w: any) => w.id === updatedWidget.id ? updatedWidget : w)
+    } else {
+      newWidgets = [...currentWidgets, updatedWidget]
+    }
+
+    const newConfig = { ...currentConfig, widgets: newWidgets }
+    setLocalAnalyticsConfig(newConfig)
+    setIsWidgetModalOpen(false)
+    setEditingWidget(null)
+
+    // Persistir no banco
+    try {
+      // Primeiro buscamos a view atual para não sobrescrever outros campos do layout_config
+      const { data: viewData } = await supabase.from('ui_views').select('layout_config').eq('id', viewId).single()
+      const updatedLayoutConfig = { ...viewData?.layout_config, analytics_config: newConfig }
+      
+      const { error } = await supabase
+        .from('ui_views')
+        .update({ layout_config: updatedLayoutConfig })
+        .eq('id', viewId)
+      
+      if (error) throw error
+      toast('Dashboard atualizado com sucesso!', 'success')
+    } catch (err: any) {
+      console.error('Error persisting dashboard:', err)
+      toast('Erro ao salvar dashboard: ' + err.message, 'error')
+    }
+  }
+
+  const handleDeleteWidgetRuntime = async (id: string) => {
+    const currentConfig = localAnalyticsConfig || initialAnalyticsConfig || { widgets: [], allow_runtime_edit: true }
+    const newWidgets = (currentConfig.widgets || []).filter((w: any) => w.id !== id)
+    const newConfig = { ...currentConfig, widgets: newWidgets }
+    
+    setLocalAnalyticsConfig(newConfig)
+
+    try {
+      const { data: viewData } = await supabase.from('ui_views').select('layout_config').eq('id', viewId).single()
+      const updatedLayoutConfig = { ...viewData?.layout_config, analytics_config: newConfig }
+      
+      const { error } = await supabase
+        .from('ui_views')
+        .update({ layout_config: updatedLayoutConfig })
+        .eq('id', viewId)
+      
+      if (error) throw error
+      toast('Indicador removido.', 'info')
+    } catch (err: any) {
+      console.error('Error deleting widget:', err)
+      toast('Erro ao remover indicador.', 'error')
+    }
+  }
 
   const isModal = actionInterfaceType === 'modal'
   const isPage = actionInterfaceType === 'page'
@@ -883,10 +985,8 @@ export default function ViewPageContent({
         )}
       />
 
-      <main className="px-10 py-2 pb-8">
-
+      <main className="px-10 py-6 pb-8 space-y-8">
         {isPage && isPageVisible ? (
-
           <RecordForm 
             mode={drawerMode}
             fields={formFields}
@@ -905,28 +1005,44 @@ export default function ViewPageContent({
             joins={joins}
           />
         ) : (
-          <ViewContainer 
-            key={refreshKey}
-            projectId={project.id}
-            modelName={modelName}
-            displayFields={cleanDisplayFields}
-            filterFields={cleanFilterFields}
-            formFields={cleanFormFields}
-            displayType={displayType}
-            defaultView={defaultView}
-            buttonsConfig={buttonsConfig}
-            locale={locale}
-            onView={handleOpenView}
-            onEdit={handleOpenEdit}
-            onDelete={handleOpenDelete}
-            logicType={logicType}
-            primaryKeyName={primaryKeyName}
-            dictionary={dictionary}
-            joins={joins}
-            masterModelId={masterModelId}
-            detailDisplayMode={detailDisplayMode}
-            actionInterfaceType={actionInterfaceType}
-          />
+          <>
+            {(logicType === 'analytics' || (localAnalyticsConfig?.widgets?.length ?? initialAnalyticsConfig?.widgets?.length ?? 0) > 0) && (
+              <AnalyticsDashboard 
+                config={localAnalyticsConfig || initialAnalyticsConfig || { widgets: [], allow_runtime_edit: true }}
+                project={project}
+                joins={joins}
+                filters={globalFilterValues}
+                onEditWidget={handleEditWidgetRuntime}
+                onAddWidget={handleAddWidgetRuntime}
+                onDeleteWidget={handleDeleteWidgetRuntime}
+              />
+            )}
+
+            <ViewContainer 
+              key={refreshKey}
+              projectId={project.id}
+              modelName={modelName}
+              displayFields={cleanDisplayFields}
+              filterFields={cleanFilterFields}
+              formFields={cleanFormFields}
+              displayType={displayType}
+              defaultView={defaultView}
+              buttonsConfig={buttonsConfig}
+              locale={locale}
+              onView={handleOpenView}
+              onEdit={handleOpenEdit}
+              onDelete={handleOpenDelete}
+              logicType={logicType}
+              primaryKeyName={primaryKeyName}
+              dictionary={dictionary}
+              joins={joins}
+              masterModelId={masterModelId}
+              detailDisplayMode={detailDisplayMode}
+              actionInterfaceType={actionInterfaceType}
+              externalFilters={globalFilterValues}
+              onFiltersChange={setGlobalFilterValues}
+            />
+          </>
         )}
       </main>
 
@@ -988,7 +1104,7 @@ export default function ViewPageContent({
         recordName={selectedRow?.name || selectedRow?.titulo || selectedRow?.id}
       />
 
-      {/* Renderização de níveis anteriores do histórico (para ficarem visíveis no fundo) */}
+      {/* Renderização de níveis anteriores do histórico */}
       {detailHistory.map((item, idx) => {
         const model = (project as any)?.models?.find((m: any) => m.db_table_name.toLowerCase() === item.tableName?.toLowerCase())
         const interfaceType = detailsInterfaceTypes?.[model?.id || ''] || (project.ui_config as any)?.details_interface_types?.[model?.id || ''] || 'modal'
@@ -1005,7 +1121,6 @@ export default function ViewPageContent({
           detailsInlineTypes: detailsInlineTypes,
           initialTab: item.activeTab,
           onClose: () => {
-            // Se fechar um nível do fundo, voltamos para ele (remove os níveis acima)
             const levelsToRemove = detailHistory.length - idx
             let newHistory = [...detailHistory]
             for(let i=0; i < levelsToRemove; i++) handleCloseDetail()
@@ -1013,25 +1128,15 @@ export default function ViewPageContent({
         }
 
         return interfaceType === 'modal' ? (
-          <RecordModal 
-            key={`history-modal-${idx}-${item.record?.id}-${detailRefreshKey}`}
-            isOpen={true}
-            zIndex={200 + (idx + 1) * 100}
-            {...historyProps}
-          />
+          <RecordModal key={`history-modal-${idx}`} isOpen={true} zIndex={200 + (idx + 1) * 100} {...historyProps} />
         ) : (
-          <RecordDrawer 
-            key={`history-drawer-${idx}-${item.record?.id}-${detailRefreshKey}`}
-            isOpen={true}
-            zIndex={200 + (idx + 1) * 100}
-            {...historyProps}
-          />
+          <RecordDrawer key={`history-drawer-${idx}`} isOpen={true} zIndex={200 + (idx + 1) * 100} {...historyProps} />
         )
       })}
 
       {/* Modal de Edição de Detalhe (Nível Atual) */}
       <RecordModal 
-        key={`detail-modal-${currentDetailTable}-${selectedDetail?.id ?? detailHistory.length}-${detailRefreshKey}`}
+        key={`detail-modal-${currentDetailTable}-${selectedDetail?.id ?? detailHistory.length}`}
         isOpen={isDetailModalOpen}
         onClose={handleCloseDetail}
         zIndex={200 + (detailHistory.length + 1) * 100}
@@ -1052,9 +1157,8 @@ export default function ViewPageContent({
         onTabChange={setActiveTabForDetail}
       />
 
-      {/* Drawer de Edição de Detalhe */}
       <RecordDrawer 
-        key={`detail-drawer-${currentDetailTable}-${selectedDetail?.id ?? detailHistory.length}-${detailRefreshKey}`}
+        key={`detail-drawer-${currentDetailTable}-${selectedDetail?.id ?? detailHistory.length}`}
         isOpen={isDetailDrawerOpen}
         onClose={handleCloseDetail}
         zIndex={200 + (detailHistory.length + 1) * 100}
@@ -1075,17 +1179,145 @@ export default function ViewPageContent({
         onTabChange={setActiveTabForDetail}
       />
 
-      {/* Modal de Confirmação de Exclusão de Detalhe */}
       <DeleteConfirmModal 
         isOpen={isDetailDeleteModalOpen}
-        onClose={() => {
-          setIsDetailDeleteModalOpen(false)
-          setItemToDelete(null)
-        }}
+        onClose={() => { setIsDetailDeleteModalOpen(false); setItemToDelete(null); }}
         onConfirm={handleConfirmDeleteDetail}
         isLoading={isProcessing}
-        recordName={itemToDelete?.display_name || itemToDelete?.name || itemToDelete?.id}
+        recordName={itemToDelete?.name || itemToDelete?.id}
       />
+
+      {/* Widget Editor Modal - Runtime */}
+      <Modal
+        isOpen={isWidgetModalOpen}
+        onClose={() => setIsWidgetModalOpen(false)}
+        title="Configurar Indicador"
+      >
+        <div className="space-y-6">
+          <div className="space-y-3">
+             <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Título do Indicador</label>
+             <input 
+               type="text" 
+               value={editingWidget?.title || ''} 
+               onChange={e => setEditingWidget({...editingWidget, title: e.target.value})}
+               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold text-neutral-900 dark:text-white"
+               placeholder="Ex: Total de Vendas"
+             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
+               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tipo de Gráfico</label>
+               <select 
+                 value={editingWidget?.type || 'kpi'} 
+                 onChange={e => setEditingWidget({...editingWidget, type: e.target.value})}
+                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
+               >
+                 <option value="kpi">KPI (Número)</option>
+                 <option value="bar">Barras</option>
+                 <option value="pie">Pizza</option>
+                 <option value="line">Linha</option>
+               </select>
+            </div>
+            <div className="space-y-3">
+               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tabela Fonte</label>
+               <select 
+                 value={editingWidget?.model_id || ''} 
+                 onChange={e => setEditingWidget({...editingWidget, model_id: e.target.value})}
+                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
+               >
+                 <option value="">Selecione...</option>
+                 {project.models?.map((m: any) => (
+                   <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>
+                 ))}
+               </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-3">
+               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Operação</label>
+               <select 
+                 value={editingWidget?.calc || 'COUNT'} 
+                 onChange={e => setEditingWidget({...editingWidget, calc: e.target.value})}
+                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
+               >
+                 <option value="COUNT">Contagem</option>
+                 <option value="SUM">Soma</option>
+                 <option value="AVG">Média</option>
+                 <option value="MIN">Mínimo</option>
+                 <option value="MAX">Máximo</option>
+               </select>
+            </div>
+            <div className="space-y-3">
+               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Campo do Valor</label>
+               <select 
+                 value={editingWidget?.field || ''} 
+                 onChange={e => setEditingWidget({...editingWidget, field: e.target.value})}
+                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
+               >
+                 <option value="">(Toda a Tabela)</option>
+                 {project.models?.find((m: any) => String(m.id) === String(editingWidget?.model_id))?.fields.map((f: any) => (
+                   <option key={f.id} value={f.id}>{f.display_name || f.db_column_name}</option>
+                 ))}
+               </select>
+            </div>
+          </div>
+
+          {editingWidget?.type !== 'kpi' && (
+            <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Agrupar por (Dimensão)</label>
+               <select 
+                 value={editingWidget?.group_by || ''} 
+                 onChange={e => setEditingWidget({...editingWidget, group_by: e.target.value})}
+                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
+               >
+                 <option value="">Selecione...</option>
+                 <optgroup label="Tabela Principal">
+                   {project.models?.find((m: any) => String(m.id) === String(editingWidget?.model_id))?.fields?.map((f: any) => (
+                     <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                   ))}
+                 </optgroup>
+                 {(joins || []).map((join: any, idx: number) => {
+                    // Get the primary model name by ID or by the name itself (fallback)
+                    const primaryModel = project.models?.find((m: any) => 
+                      String(m.id) === String(editingWidget?.model_id) || 
+                      m.db_table_name?.toLowerCase() === String(editingWidget?.model_id).toLowerCase()
+                    )
+                    const primaryModelName = primaryModel?.db_table_name?.toLowerCase()
+                    
+                    // Normalize join table names
+                    const jFrom = join.from?.toLowerCase()
+                    const jTo = join.to?.toLowerCase()
+                    
+                    // Determine which table is the "related" one
+                    const relTableName = jFrom === primaryModelName ? join.to : join.from
+                    
+                    // If the related table is the primary table itself, skip it
+                    if (!relTableName || relTableName.toLowerCase() === primaryModelName) return null
+                    
+                    const relModel = project.models?.find((m: any) => 
+                      m.db_table_name?.toLowerCase() === relTableName.toLowerCase()
+                    )
+                   if (!relModel) return null
+                   return (
+                     <optgroup key={join.id || idx} label={`Relacionada: ${relModel.display_name || relModel.db_table_name}`}>
+                       {relModel.fields?.map((f: any) => (
+                         <option key={f.id} value={`${relTableName}.${f.db_column_name}`}>{f.display_name || f.db_column_name}</option>
+                       ))}
+                     </optgroup>
+                   )
+                 })}
+               </select>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800">
+             <button onClick={() => setIsWidgetModalOpen(false)} className="flex-1 px-4 py-3.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all">Cancelar</button>
+             <button onClick={() => handleSaveWidgetRuntime(editingWidget)} className="flex-1 px-4 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95">Salvar Dashboard</button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

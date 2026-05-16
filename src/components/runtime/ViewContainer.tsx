@@ -28,6 +28,8 @@ interface ViewContainerProps {
   dictionary?: any
   joins?: any[]
   actionInterfaceType?: 'drawer' | 'modal'
+  externalFilters?: Record<string, string>
+  onFiltersChange?: (filters: Record<string, string>) => void
 }
 
 import DynamicCardList from './DynamicCardList'
@@ -70,13 +72,22 @@ export default function ViewContainer({
   detailDisplayMode = 'tabs',
   dictionary = {},
   joins = [],
-  actionInterfaceType = 'drawer'
+  actionInterfaceType = 'drawer',
+  externalFilters = {},
+  onFiltersChange
 }: ViewContainerProps) {
   const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban' | 'mapa_mental'>(
     logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'kanban' ? 'kanban' : (displayType === 'both' ? defaultView : (displayType as any))
   )
   const [searchQuery, setSearchQuery] = useState('')
-  const [filterValues, setFilterValues] = useState<Record<string, string>>({})
+  const filterValues = externalFilters
+  const setFilterValues = (newVal: any) => {
+    if (typeof newVal === 'function') {
+      onFiltersChange?.(newVal(filterValues))
+    } else {
+      onFiltersChange?.(newVal)
+    }
+  }
   const [relationalOptions, setRelationalOptions] = useState<Record<string, any[]>>({})
 
   // Busca opções relacionais para os campos de filtro
