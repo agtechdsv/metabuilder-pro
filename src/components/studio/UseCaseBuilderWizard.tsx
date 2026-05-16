@@ -23,6 +23,7 @@ import {
   RefreshCcw,
   Table,
   GripVertical,
+  ArrowRightLeft,
   ArrowRight,
   Type,
   Palette,
@@ -42,6 +43,7 @@ import { useParams } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { JoinsEditor } from './JoinsEditor'
 import { cn } from '@/lib/utils'
 import { Drawer } from '@/components/ui/Drawer'
 import { Modal } from '@/components/ui/Modal'
@@ -112,7 +114,11 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       mindmap_central_field: '',
       action_interface_type: 'drawer',
       joins: [] as any[],
-      fields_metadata: {} as Record<string, any>
+      fields_metadata: {} as Record<string, any>,
+      analytics_config: {
+        widgets: [] as any[],
+        allow_runtime_edit: true
+      }
     },
     buttons_config: [
       { id: 'search', label: t('runtime.search'), labelKey: 'runtime.search', icon: 'search', action: 'search', visible: true },
@@ -236,6 +242,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
           action_interface_type: initialData.layout_config?.action_interface_type || 'drawer',
           joins: initialData.layout_config?.joins || [],
           fields_metadata: initialData.layout_config?.fields_metadata || {},
+          analytics_config: initialData.layout_config?.analytics_config || { widgets: [], allow_runtime_edit: true },
           details_interface_types: initialData.layout_config?.details_interface_types || {},
           details_inline_types: initialData.layout_config?.details_inline_types || {}
         },
@@ -348,10 +355,10 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
 
   const steps = [
     { id: 1, title: t('wizard.steps.logic'), icon: <Settings2 className="w-4 h-4" /> },
-    { id: 2, title: t('wizard.steps.tables'), icon: <Database className="w-4 h-4" /> },
+    { id: 2, title: t('wizard.steps.tables'), icon: <Database className="w-4 h-4" />, hidden: config.logic_type === 'analytics' },
     { id: 3, title: t('wizard.steps.layout'), icon: <Layout className="w-4 h-4" /> },
     { id: 4, title: t('wizard.steps.actions'), icon: <MousePointer2 className="w-4 h-4" /> }
-  ]
+  ].filter(s => !s.hidden)
 
   const isStepValid = (step: number) => {
     if (step === 1) return !!(config.name && config.slug)
@@ -403,6 +410,10 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
         if (logic_type === 'master_detail' && !(layout_config as any).master_model_id) toast("Please select the Master Table.", 'error')
       }
       return
+    }
+
+    if (currentStep === 1 && config.logic_type === 'analytics' && config.selected_models.length === 0 && models.length > 0) {
+      setConfig(prev => ({ ...prev, selected_models: [models[0].id] }))
     }
 
     setCurrentStep(prev => Math.min(prev + 1, steps.length))
@@ -573,22 +584,22 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
                 <div
                   className={cn(
                     "flex items-center gap-3 transition-all",
-                    currentStep >= step.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-400'
+                    currentStep >= idx + 1 ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-400'
                   )}
                 >
                   <div className={cn(
                     "w-8 h-8 rounded-xl border-2 flex items-center justify-center font-black text-[10px] transition-all shadow-sm",
-                    currentStep === step.id ? 'border-indigo-600 bg-indigo-600 text-white rotate-3 shadow-indigo-500/20' :
-                      currentStep > step.id ? 'border-indigo-600 bg-indigo-600/10' : 'border-neutral-200 dark:border-neutral-800'
+                    currentStep === idx + 1 ? 'border-indigo-600 bg-indigo-600 text-white rotate-3 shadow-indigo-500/20' :
+                      currentStep > idx + 1 ? 'border-indigo-600 bg-indigo-600/10' : 'border-neutral-200 dark:border-neutral-800'
                   )}>
-                    {currentStep > step.id ? <CheckCircle2 className="w-5 h-5" /> : step.id}
+                    {currentStep > idx + 1 ? <CheckCircle2 className="w-5 h-5" /> : idx + 1}
                   </div>
                   <span className="text-[9px] font-black uppercase tracking-[0.15em] hidden sm:block">{step.title}</span>
                 </div>
                 {idx < steps.length - 1 && (
                   <div className={cn(
                     "flex-1 mx-6 h-px transition-colors",
-                    currentStep > step.id ? 'bg-indigo-600/30' : 'bg-neutral-200 dark:bg-neutral-800'
+                    currentStep > idx + 1 ? 'bg-indigo-600/30' : 'bg-neutral-200 dark:bg-neutral-800'
                   )}></div>
                 )}
               </div>
@@ -599,16 +610,16 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
 
       {/* Content Area */}
       <div className="mt-6 min-h-[500px]">
-        {currentStep === 1 && (
+        {steps[currentStep - 1]?.id === 1 && (
           <StepLogic config={config} setConfig={setConfig} />
         )}
-        {currentStep === 2 && (
+        {steps[currentStep - 1]?.id === 2 && (
           <StepTables config={config} setConfig={setConfig} models={models} />
         )}
-        {currentStep === 3 && (
+        {steps[currentStep - 1]?.id === 3 && (
           <StepLayout config={config} setConfig={setConfig} models={models} />
         )}
-        {currentStep === 4 && (
+        {steps[currentStep - 1]?.id === 4 && (
           <StepActions config={config} setConfig={setConfig} />
         )}
       </div>
@@ -636,7 +647,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
               "flex items-center gap-2 px-8 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl",
               currentStep === steps.length
                 ? "text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                : !isStepValid(currentStep)
+                : (currentStep === 1 && config.logic_type === 'analytics' ? false : !isStepValid(steps[currentStep-1].id))
                   ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed opacity-50"
                   : "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-neutral-900/10 dark:shadow-white/5"
             )}
@@ -668,6 +679,7 @@ function StepLogic({ config, setConfig }: any) {
     { id: 'master_detail', title: t('wizard.logic.types.master_detail.title'), desc: t('wizard.logic.types.master_detail.desc'), icon: Layers },
     { id: 'kanban', title: t('wizard.logic.types.kanban.title'), desc: t('wizard.logic.types.kanban.desc'), icon: Columns },
     { id: 'mapa_mental', title: t('wizard.logic.types.mapa_mental.title'), desc: t('wizard.logic.types.mapa_mental.desc'), icon: Share2 },
+    { id: 'analytics', title: t('wizard.logic.types.analytics.title', 'Dashboard (BI)'), desc: t('wizard.logic.types.analytics.desc', 'Indicadores de desempenho, gráficos e KPIs.'), icon: Layout },
     { id: 'personalizado', title: t('wizard.logic.types.personalizado.title'), desc: t('wizard.logic.types.personalizado.desc'), icon: Settings }
   ]
 
@@ -821,7 +833,59 @@ function StepLayout({ config, setConfig, models }: any) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [collapsedTables, setCollapsedTables] = useState<Record<string, boolean>>({})
+  const [fieldSearchTerm, setFieldSearchTerm] = useState('')
   const dragControls = useDragControls()
+  
+  const [editingWidget, setEditingWidget] = useState<any>(null)
+  const [isWidgetModalOpen, setIsWidgetModalOpen] = useState(false)
+
+  const handleAddWidget = () => {
+    setEditingWidget({
+      id: Math.random().toString(36).substr(2, 9),
+      title: 'Novo Widget',
+      type: 'kpi',
+      model_id: config.selected_models[0] || '',
+      field: '',
+      calc: 'COUNT',
+      group_by: '',
+      width: 'half',
+      joins: []
+    })
+    setIsWidgetModalOpen(true)
+  }
+
+  const handleSaveWidget = (updatedWidget: any) => {
+    const currentWidgets = config.layout_config.analytics_config?.widgets || []
+    const exists = currentWidgets.find((w: any) => w.id === updatedWidget.id)
+    
+    let newWidgets
+    if (exists) {
+      newWidgets = currentWidgets.map((w: any) => w.id === updatedWidget.id ? updatedWidget : w)
+    } else {
+      newWidgets = [...currentWidgets, updatedWidget]
+    }
+
+    setConfig({
+      ...config,
+      layout_config: {
+        ...config.layout_config,
+        analytics_config: { ...config.layout_config.analytics_config, widgets: newWidgets }
+      }
+    })
+    setIsWidgetModalOpen(false)
+    setEditingWidget(null)
+  }
+
+  const handleDeleteWidget = (id: string) => {
+    const newWidgets = (config.layout_config.analytics_config?.widgets || []).filter((w: any) => w.id !== id)
+    setConfig({
+      ...config,
+      layout_config: {
+        ...config.layout_config,
+        analytics_config: { ...config.layout_config.analytics_config, widgets: newWidgets }
+      }
+    })
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -968,7 +1032,7 @@ function StepLayout({ config, setConfig, models }: any) {
     })
     return flat
   }
-  const orderedModels = flattenTree(relationalTree)
+  const orderedModels = config.logic_type === 'analytics' ? models : flattenTree(relationalTree)
 
   const renderModelZone = (model: any, depth: number = 0, index: number = 0) => {
     const isMaster = depth === 0 && index === 0
@@ -1254,9 +1318,36 @@ function StepLayout({ config, setConfig, models }: any) {
                 {[1,2,3].map(i => <div key={i} className="w-1 h-1 rounded-full bg-neutral-300 dark:bg-neutral-700 group-hover:bg-indigo-400"></div>)}
               </div>
             </div>
+            
+            {/* Filtro de Campos */}
+            <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-950/50 border-b border-neutral-100 dark:border-neutral-800">
+              <div className="relative group">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-all" />
+                <input 
+                  type="text"
+                  placeholder="Pesquisar tabelas ou campos..."
+                  value={fieldSearchTerm}
+                  onChange={e => setFieldSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all shadow-sm"
+                />
+              </div>
+            </div>
+
             <div className="flex-1 overflow-y-auto custom-scrollbar">
-              {orderedModels.map((m: any) => {
-                const isCollapsed = collapsedTables[m.id]
+              {orderedModels
+                .filter((m: any) => {
+                  if (!fieldSearchTerm) return true
+                  const term = fieldSearchTerm.toLowerCase()
+                  const tableMatch = (m.display_name || m.db_table_name || '').toLowerCase().includes(term)
+                  const fieldMatch = m.fields.some((f: any) => (f.display_name || f.db_column_name || '').toLowerCase().includes(term))
+                  return tableMatch || fieldMatch
+                })
+                .map((m: any) => {
+                  const isCollapsed = collapsedTables[m.id]
+                  // Se houver busca e a tabela der match via campo, forçamos a expansão para mostrar os campos
+                  const forceExpand = fieldSearchTerm && m.fields.some((f: any) => (f.display_name || f.db_column_name || '').toLowerCase().includes(fieldSearchTerm.toLowerCase()))
+                  const actuallyCollapsed = isCollapsed && !forceExpand
+
                 return (
                   <div key={`sidebar-table-${m.id}`} className="border-b border-neutral-100 dark:border-neutral-800/50 last:border-0">
                     <button
@@ -1266,7 +1357,7 @@ function StepLayout({ config, setConfig, models }: any) {
                       <div className="flex items-center gap-3">
                         <div className={cn(
                           "w-1 h-4 rounded-full transition-all",
-                          isCollapsed ? "bg-neutral-300" : "bg-indigo-500"
+                          actuallyCollapsed ? "bg-neutral-300" : "bg-indigo-500"
                         )}></div>
                         <span className="text-[10px] font-black uppercase tracking-widest text-neutral-700 dark:text-neutral-300">
                           {m.display_name || m.db_table_name}
@@ -1274,11 +1365,11 @@ function StepLayout({ config, setConfig, models }: any) {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-[9px] font-black text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full">{m.fields.length}</span>
-                        {isCollapsed ? <ChevronDown className="w-3.5 h-3.5 text-neutral-400" /> : <ChevronUp className="w-3.5 h-3.5 text-indigo-500" />}
+                        {actuallyCollapsed ? <ChevronDown className="w-3.5 h-3.5 text-neutral-400" /> : <ChevronUp className="w-3.5 h-3.5 text-indigo-500" />}
                       </div>
                     </button>
                     
-                    {!isCollapsed && (
+                    {!actuallyCollapsed && (
                       <div className="p-4 pt-0 grid grid-cols-1 gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
                         <DraggableItem id={`table-source-${m.id}`} className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 p-2.5 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-indigo-300 transition-all">
                            <div className="flex items-center gap-2">
@@ -1290,7 +1381,13 @@ function StepLayout({ config, setConfig, models }: any) {
 
                         <div className="h-px bg-neutral-100 dark:bg-neutral-800 my-1"></div>
 
-                        {m.fields.map((f: any) => (
+                        {m.fields
+                          .filter((f: any) => {
+                             if (!fieldSearchTerm) return true
+                             const term = fieldSearchTerm.toLowerCase()
+                             return (f.display_name || f.db_column_name || '').toLowerCase().includes(term) || (m.display_name || m.db_table_name || '').toLowerCase().includes(term)
+                          })
+                          .map((f: any) => (
                           <DraggableItem key={`source-${f.id}`} id={`source-${f.id}`} className="bg-neutral-50 dark:bg-neutral-950/50 border border-neutral-100 dark:border-neutral-800/50 p-2.5 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-indigo-200 dark:hover:border-indigo-900/50 transition-all">
                             <span className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 truncate pr-2">
                               {f.display_name || f.db_column_name}
@@ -1407,7 +1504,81 @@ function StepLayout({ config, setConfig, models }: any) {
             </div>
           )}
 
-          {/* ZONA: MIND MAP CONFIG */}
+          {/* ZONA: ANALYTICS (BI) CONFIG */}
+          {config.logic_type === 'analytics' && (
+            <div className="p-6 bg-indigo-50/30 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 rounded-[2rem] space-y-6 shadow-sm animate-in zoom-in-95 duration-500">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
+                    <Layers className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Painel de Indicadores (BI)</h4>
+                    <p className="text-[10px] text-neutral-400 font-medium mt-1">Configure os widgets e gráficos do seu dashboard.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+                   <button 
+                     onClick={() => setConfig({
+                       ...config,
+                       layout_config: {
+                         ...config.layout_config,
+                         analytics_config: { ...config.layout_config.analytics_config, allow_runtime_edit: !config.layout_config.analytics_config.allow_runtime_edit }
+                       }
+                     })}
+                     className={cn(
+                       "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                       config.layout_config.analytics_config.allow_runtime_edit ? "bg-indigo-600 text-white shadow-md" : "text-neutral-400 hover:text-neutral-600"
+                     )}
+                   >
+                     Edição no Runtime: {config.layout_config.analytics_config.allow_runtime_edit ? 'ON' : 'OFF'}
+                   </button>
+                </div>
+              </div>
+
+              {/* Seção de Relacionamentos (JOINS) - USANDO COMPONENTE PADRÃO */}
+              {config.logic_type !== 'analytics' && (
+                <JoinsEditor 
+                  joins={config.layout_config.joins || []}
+                  models={models.filter(m => config.selected_models.includes(m.id))}
+                  onUpdate={(newJoins) => setConfig({
+                    ...config,
+                    layout_config: { ...config.layout_config, joins: newJoins }
+                  })}
+                  t={t}
+                />
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(config.layout_config.analytics_config?.widgets || []).map((widget: any, idx: number) => (
+                  <div key={widget.id || idx} className="p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex items-center justify-between group shadow-sm hover:border-indigo-300 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-neutral-50 dark:bg-neutral-800 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                         {widget.type === 'kpi' ? <Maximize2 className="w-5 h-5" /> : <Layout className="w-5 h-5" />}
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-bold text-neutral-900 dark:text-white">{widget.title}</h5>
+                        <p className="text-[9px] text-neutral-400 uppercase font-black">{widget.type} • {widget.calc} ({getFieldName(widget.field) || 'Toda Tabela'})</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                       <button onClick={() => { setEditingWidget(widget); setIsWidgetModalOpen(true); }} className="p-2 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all"><Pencil className="w-3.5 h-3.5" /></button>
+                       <button onClick={() => handleDeleteWidget(widget.id)} className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </div>
+                  </div>
+                ))}
+                
+                <button 
+                  onClick={handleAddWidget}
+                  className="p-8 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-3 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-all group"
+                >
+                  <Plus className="w-6 h-6 group-hover:scale-125 transition-transform" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Adicionar Widget de BI</span>
+                </button>
+              </div>
+            </div>
+          )}
           {config.logic_type === 'mapa_mental' && (
             <div className="p-4 bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-[1.5rem] space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
@@ -1441,121 +1612,21 @@ function StepLayout({ config, setConfig, models }: any) {
             </div>
           )}
 
-          {/* ZONA: RELACIONAMENTOS (APENAS PARA MESTRE-DETALHE) */}
+          {/* ZONA: RELACIONAMENTOS (APENAS PARA MESTRE-DETALHE) - USANDO COMPONENTE PADRÃO */}
           {config.logic_type === 'master_detail' && (
-            <div className="p-4 bg-indigo-50/30 dark:bg-indigo-900/5 border border-indigo-100 dark:border-indigo-900/20 rounded-[2rem] space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-600/20">
-                  <Link className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">{t('wizard.layout.relationships')}</h4>
-                  <p className="text-[9px] text-neutral-500 font-medium">{t('wizard.layout.relationships_desc')}</p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {(config.layout_config.joins || []).map((join: any, index: number) => (
-                  <div key={index} className="flex flex-wrap items-center gap-3 p-4 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-100 dark:border-neutral-800 shadow-sm group animate-in zoom-in-95 duration-300">
-                    {/* FROM TABLE */}
-                    <select
-                      value={join.from}
-                      onChange={e => {
-                        const newJoins = [...(config.layout_config.joins || [])]
-                        newJoins[index].from = e.target.value
-                        newJoins[index].localKey = ''
-                        setConfig({ ...config, layout_config: { ...config.layout_config, joins: newJoins } })
-                      }}
-                      className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
-                    >
-                      <option value="">{t('wizard.layout.select_table', 'Select Table...')}</option>
-                      {models.filter(m => config.selected_models.includes(m.id)).map((m: any) => (
-                        <option key={m.id} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>
-                      ))}
-                    </select>
-
-                    {/* FROM KEY */}
-                    <select
-                      value={join.localKey}
-                      onChange={e => {
-                        const newJoins = [...(config.layout_config.joins || [])]
-                        newJoins[index].localKey = e.target.value
-                        setConfig({ ...config, layout_config: { ...config.layout_config, joins: newJoins } })
-                      }}
-                      className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
-                    >
-                      <option value="">{t('wizard.layout.select_field', 'Select Field...')}</option>
-                      {models.find((m: any) => m.db_table_name === join.from)?.fields.map((f: any) => (
-                        <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                      ))}
-                    </select>
-
-                    <div className="px-2 text-neutral-400">
-                      <ArrowRight className="w-4 h-4" />
-                    </div>
-
-                    {/* TO TABLE */}
-                    <select
-                      value={join.to}
-                      onChange={e => {
-                        const newJoins = [...(config.layout_config.joins || [])]
-                        newJoins[index].to = e.target.value
-                        newJoins[index].foreignKey = ''
-                        setConfig({ ...config, layout_config: { ...config.layout_config, joins: newJoins } })
-                      }}
-                      className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
-                    >
-                      <option value="">{t('wizard.layout.select_table', 'Select Table...')}</option>
-                      {models.filter(m => config.selected_models.includes(m.id)).map((m: any) => (
-                        <option key={m.id} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>
-                      ))}
-                    </select>
-
-                    {/* TO KEY */}
-                    <select
-                      value={join.foreignKey}
-                      onChange={e => {
-                        const newJoins = [...(config.layout_config.joins || [])]
-                        newJoins[index].foreignKey = e.target.value
-                        setConfig({ ...config, layout_config: { ...config.layout_config, joins: newJoins } })
-                      }}
-                      className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
-                    >
-                      <option value="">{t('wizard.layout.select_field', 'Select Field...')}</option>
-                      {models.find((m: any) => m.db_table_name === join.to)?.fields.map((f: any) => (
-                        <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                      ))}
-                    </select>
-
-                    <button
-                      onClick={() => {
-                        const newJoins = [...(config.layout_config.joins || [])]
-                        newJoins.splice(index, 1)
-                        setConfig({ ...config, layout_config: { ...config.layout_config, joins: newJoins } })
-                      }}
-                      className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-
-                <button
-                  onClick={() => {
-                    const newJoins = [...(config.layout_config.joins || []), { from: '', localKey: '', to: '', foreignKey: '' }]
-                    setConfig({ ...config, layout_config: { ...config.layout_config, joins: newJoins } })
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold uppercase tracking-widest transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  {t('wizard.layout.add_relationship', 'Add Relationship')}
-                </button>
-              </div>
-            </div>
+            <JoinsEditor 
+              joins={config.layout_config.joins || []}
+              models={models.filter(m => config.selected_models.includes(m.id))}
+              onUpdate={(newJoins) => setConfig({
+                ...config,
+                layout_config: { ...config.layout_config, joins: newJoins }
+              })}
+              t={t}
+            />
           )}
 
           {/* ZONA: FILTROS */}
-          {(config.logic_type.includes('pesquisa') || config.logic_type === 'kanban' || config.logic_type === 'mapa_mental' || config.logic_type === 'master_detail') && (
+          {(config.logic_type.includes('pesquisa') || config.logic_type === 'kanban' || config.logic_type === 'mapa_mental' || config.logic_type === 'master_detail' || config.logic_type === 'analytics') && (
             <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
               <div className="flex items-center justify-between">
                 <h4 className="text-[9px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_01')}: {t('wizard.layout.zones.filter')}</h4>
@@ -2025,6 +2096,157 @@ function StepLayout({ config, setConfig, models }: any) {
           </div>
         )}
       </Drawer>
+
+      {/* Widget Editor Modal */}
+      <Modal
+        isOpen={isWidgetModalOpen}
+        onClose={() => setIsWidgetModalOpen(false)}
+        title="Configurar Widget de BI"
+      >
+        <div className="space-y-6">
+          <div className="space-y-3">
+             <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Título do Widget</label>
+             <input 
+               type="text" 
+               value={editingWidget?.title || ''} 
+               onChange={e => setEditingWidget({...editingWidget, title: e.target.value})}
+               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold text-neutral-900 dark:text-white"
+               placeholder="Ex: Total de Vendas"
+             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
+               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tipo de Gráfico</label>
+               <select 
+                 value={editingWidget?.type || 'kpi'} 
+                 onChange={e => setEditingWidget({...editingWidget, type: e.target.value})}
+                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
+               >
+                 <option value="kpi">KPI (Número)</option>
+                 <option value="bar">Gráfico de Barras</option>
+                 <option value="pie">Gráfico de Pizza</option>
+                 <option value="line">Gráfico de Linha</option>
+               </select>
+            </div>
+            <div className="space-y-3">
+               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tabela Fonte</label>
+               <select 
+                 value={editingWidget?.model_id || ''} 
+                 onChange={e => setEditingWidget({...editingWidget, model_id: e.target.value})}
+                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
+               >
+                 <option value="">Selecione...</option>
+                 {models.map((m: any) => (
+                   <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>
+                 ))}
+               </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-3">
+               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Cálculo / Operação</label>
+               <select 
+                 value={editingWidget?.calc || 'COUNT'} 
+                 onChange={e => setEditingWidget({...editingWidget, calc: e.target.value})}
+                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
+               >
+                 <option value="COUNT">Contagem (COUNT)</option>
+                 <option value="SUM">Soma (SUM)</option>
+                 <option value="AVG">Média (AVG)</option>
+                 <option value="MIN">Mínimo (MIN)</option>
+                 <option value="MAX">Máximo (MAX)</option>
+               </select>
+            </div>
+            <div className="space-y-3">
+               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Campo do Valor</label>
+               <select 
+                 value={editingWidget?.field || ''} 
+                 onChange={e => setEditingWidget({...editingWidget, field: e.target.value})}
+                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
+               >
+                 <option value="">(Toda a Tabela)</option>
+                 {models.find((m: any) => m.id === editingWidget?.model_id)?.fields.map((f: any) => (
+                   <option key={f.id} value={f.id}>{f.display_name || f.db_column_name}</option>
+                 ))}
+               </select>
+            </div>
+          </div>
+
+          {editingWidget?.type !== 'kpi' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+               <div className="space-y-3">
+                 <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Relacionamentos (JOINS Locais)</label>
+                 <JoinsEditor 
+                   joins={editingWidget?.joins || []}
+                   models={models}
+                   onUpdate={(newJoins) => setEditingWidget({...editingWidget, joins: newJoins})}
+                   t={t}
+                 />
+                 <p className="text-[9px] text-neutral-400 font-medium italic px-2">Defina aqui como as tabelas se conectam para esta análise.</p>
+               </div>
+
+               <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Agrupar por (Dimensão)</label>
+                  <select 
+                    value={editingWidget?.group_by || ''} 
+                    onChange={e => setEditingWidget({...editingWidget, group_by: e.target.value})}
+                    className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
+                  >
+                    <option value="">Selecione o campo de agrupamento...</option>
+                    <optgroup label="Tabela Principal">
+                      {models.find((m: any) => m.id === editingWidget?.model_id)?.fields?.map((f: any) => (
+                        <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                      ))}
+                    </optgroup>
+                    
+                    {/* Joins Locais do Widget */}
+                    {(editingWidget?.joins || []).map((join: any, idx: number) => {
+                      const primaryModel = models.find((m: any) => String(m.id) === String(editingWidget?.model_id))
+                      const primaryModelName = primaryModel?.db_table_name?.toLowerCase()
+                      const jFrom = join.from?.toLowerCase()
+                      const relTableName = jFrom === primaryModelName ? join.to : join.from
+                      if (!relTableName || relTableName.toLowerCase() === primaryModelName) return null
+                      const relModel = models.find((m: any) => m.db_table_name?.toLowerCase() === relTableName.toLowerCase())
+                      if (!relModel) return null
+                      return (
+                        <optgroup key={`local-${idx}`} label={`Relacionada (Local): ${relModel.display_name || relModel.db_table_name}`}>
+                          {relModel.fields?.map((f: any) => (
+                            <option key={f.id} value={`${relTableName}.${f.db_column_name}`}>{f.display_name || f.db_column_name}</option>
+                          ))}
+                        </optgroup>
+                      )
+                    })}
+
+                    {/* Fallback para Joins Globais */}
+                    {(config.layout_config.joins || []).map((join: any, idx: number) => {
+                      const primaryModel = models.find((m: any) => String(m.id) === String(editingWidget?.model_id))
+                      const primaryModelName = primaryModel?.db_table_name?.toLowerCase()
+                      const jFrom = join.from?.toLowerCase()
+                      const relTableName = jFrom === primaryModelName ? join.to : join.from
+                      if (!relTableName || relTableName.toLowerCase() === primaryModelName) return null
+                      const relModel = models.find((m: any) => m.db_table_name?.toLowerCase() === relTableName.toLowerCase())
+                      if (!relModel) return null
+                      return (
+                        <optgroup key={`global-${idx}`} label={`Relacionada (Global): ${relModel.display_name || relModel.db_table_name}`}>
+                          {relModel.fields?.map((f: any) => (
+                            <option key={f.id} value={`${relTableName}.${f.db_column_name}`}>{f.display_name || f.db_column_name}</option>
+                          ))}
+                        </optgroup>
+                      )
+                    })}
+                  </select>
+               </div>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800">
+             <button onClick={() => setIsWidgetModalOpen(false)} className="flex-1 px-4 py-3.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all">Cancelar</button>
+             <button onClick={() => handleSaveWidget(editingWidget)} className="flex-1 px-4 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95">Salvar Widget</button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

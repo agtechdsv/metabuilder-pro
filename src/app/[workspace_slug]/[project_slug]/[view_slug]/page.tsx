@@ -99,7 +99,7 @@ export default async function SlugPage({ params }: PageProps) {
     
     const allComponents = view.ui_components || []
     
-    const { data: allModels } = await supabase.from('models').select('id, display_name, db_table_name').eq('project_id', project.id)
+    const { data: allModels } = await supabase.from('models').select('id, display_name, db_table_name, fields(*)').eq('project_id', project.id)
     const dictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.display_name }), {}) || {}
     const tableDictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.db_table_name }), {}) || {}
 
@@ -233,6 +233,7 @@ export default async function SlugPage({ params }: PageProps) {
           detailsInterfaceTypes={view.layout_config?.details_interface_types}
           detailsInlineTypes={view.layout_config?.details_inline_types}
           actionInterfaceType={view.layout_config?.action_interface_type}
+          analyticsConfig={view.layout_config?.analytics_config}
           baseUrl={`${baseUrl}/dashboard`}
           breadcrumbs={breadcrumbs}
           description={navDescription}
