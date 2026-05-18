@@ -40,7 +40,8 @@ import {
   Layers,
   Activity,
   Gauge,
-  BarChart3
+  BarChart3,
+  Calendar
 } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
@@ -122,6 +123,14 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       analytics_config: {
         widgets: [] as any[],
         allow_runtime_edit: true
+      },
+      details_interface_types: {} as Record<string, 'modal' | 'drawer'>,
+      details_inline_types: {} as Record<string, boolean>,
+      scheduler_config: {
+        title_field: '',
+        start_date_field: '',
+        end_date_field: '',
+        color_field: ''
       }
     },
     buttons_config: [
@@ -248,7 +257,13 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
           fields_metadata: initialData.layout_config?.fields_metadata || {},
           analytics_config: initialData.layout_config?.analytics_config || { widgets: [], allow_runtime_edit: true },
           details_interface_types: initialData.layout_config?.details_interface_types || {},
-          details_inline_types: initialData.layout_config?.details_inline_types || {}
+          details_inline_types: initialData.layout_config?.details_inline_types || {},
+          scheduler_config: initialData.layout_config?.scheduler_config || {
+            title_field: '',
+            start_date_field: '',
+            end_date_field: '',
+            color_field: ''
+          }
         },
         buttons_config: (() => {
           const defaults = [
@@ -408,6 +423,9 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       if (logic_type === 'kanban') {
         return !!layout_config.kanban_group_field && hasGrid
       }
+      if (logic_type === 'scheduler') {
+        return !!((layout_config as any).scheduler_config?.title_field && (layout_config as any).scheduler_config?.start_date_field) && hasGrid
+      }
       if (logic_type === 'mapa_mental') {
         return !!(layout_config as any).mindmap_central_field && hasGrid
       }
@@ -433,6 +451,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
         if (!layout_config.form_fields.length && (logic_type === 'cadastro' || logic_type === 'pesquisa_cadastro' || logic_type === 'master_detail')) toast(t('wizard.buttons.validation.form_required'), 'error')
         if (has_arguments && !layout_config.filter_fields.length && logic_type.includes('pesquisa')) toast(t('wizard.buttons.validation.filter_required'), 'error')
         if (logic_type === 'kanban' && !layout_config.kanban_group_field) toast("Please select a grouping field for Kanban.", 'error')
+        if (logic_type === 'scheduler' && (!(layout_config as any).scheduler_config?.title_field || !(layout_config as any).scheduler_config?.start_date_field)) toast("Por favor, selecione os campos de título e data de início para o Calendário.", 'error')
         if (logic_type === 'mapa_mental' && !(layout_config as any).mindmap_central_field) toast("Please select a central field for Mind Map.", 'error')
         if (logic_type === 'master_detail' && !(layout_config as any).master_model_id) toast("Please select the Master Table.", 'error')
       }
@@ -527,6 +546,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
             field_id: fid,
             component_type: zone, // Usa a primeira zona como tipo inicial
             label: metadata.label?.text || '',
+            is_visible: true,
             config: {
               zones: [zone],
               [`${zone}_config`]: metadata, // Armazena a config específica da zona
@@ -707,6 +727,7 @@ function StepLogic({ config, setConfig }: any) {
     { id: 'kanban', title: t('wizard.logic.types.kanban.title'), desc: t('wizard.logic.types.kanban.desc'), icon: Columns },
     { id: 'mapa_mental', title: t('wizard.logic.types.mapa_mental.title'), desc: t('wizard.logic.types.mapa_mental.desc'), icon: Share2 },
     { id: 'analytics', title: t('wizard.logic.types.analytics.title', 'Dashboard (BI)'), desc: t('wizard.logic.types.analytics.desc', 'Indicadores de desempenho, gráficos e KPIs.'), icon: Layout },
+    { id: 'scheduler', title: t('wizard.logic.types.scheduler.title', 'Agenda / Calendário'), desc: t('wizard.logic.types.scheduler.desc', 'Agendamentos, prazos, compromissos e tarefas em calendário.'), icon: Calendar },
     { id: 'personalizado', title: t('wizard.logic.types.personalizado.title'), desc: t('wizard.logic.types.personalizado.desc'), icon: Settings }
   ]
 
@@ -1490,6 +1511,110 @@ function StepLayout({ config, setConfig, models }: any) {
             </div>
           )}
 
+          {/* ZONA: SCHEDULER CONFIG */}
+          {config.logic_type === 'scheduler' && (
+            <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
+                    <Calendar className="w-4 h-4" />
+                  </div>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Configuração do Calendário</h4>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo do Título</label>
+                  <select
+                    value={config.layout_config.scheduler_config?.title_field || ''}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        scheduler_config: { ...config.layout_config.scheduler_config, title_field: e.target.value }
+                      }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="">Selecione o campo de título...</option>
+                    {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                      <option key={`opt-sched-title-${f.id}`} value={f.id}>
+                        {getFieldName(f.id)} ({f.data_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Data de Início</label>
+                  <select
+                    value={config.layout_config.scheduler_config?.start_date_field || ''}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        scheduler_config: { ...config.layout_config.scheduler_config, start_date_field: e.target.value }
+                      }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="">Selecione o campo de data de início...</option>
+                    {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
+                      <option key={`opt-sched-start-${f.id}`} value={f.id}>
+                        {getFieldName(f.id)} ({f.data_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Data de Fim (Opcional)</label>
+                  <select
+                    value={config.layout_config.scheduler_config?.end_date_field || ''}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        scheduler_config: { ...config.layout_config.scheduler_config, end_date_field: e.target.value }
+                      }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="">Nenhum (Evento de data única)</option>
+                    {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
+                      <option key={`opt-sched-end-${f.id}`} value={f.id}>
+                        {getFieldName(f.id)} ({f.data_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Cor/Categoria (Opcional)</label>
+                  <select
+                    value={config.layout_config.scheduler_config?.color_field || ''}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        scheduler_config: { ...config.layout_config.scheduler_config, color_field: e.target.value }
+                      }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="">Nenhum (Cor padrão indigo)</option>
+                    {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                      <option key={`opt-sched-color-${f.id}`} value={f.id}>
+                        {getFieldName(f.id)} ({f.data_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ZONA: MASTER-DETAIL CONFIG */}
           {config.logic_type === 'master_detail' && (
             <div className="p-6 bg-slate-50/50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800 rounded-[2rem] space-y-6 shadow-sm">
@@ -1515,7 +1640,7 @@ function StepLayout({ config, setConfig, models }: any) {
                     className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                   >
                     <option value="">Selecione a tabela principal...</option>
-                    {models.filter(m => config.selected_models.includes(m.id)).map((m: any) => (
+                    {models.filter((m: any) => config.selected_models.includes(m.id)).map((m: any) => (
                       <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>
                     ))}
                   </select>
@@ -1649,7 +1774,7 @@ function StepLayout({ config, setConfig, models }: any) {
           <JoinsEditor 
             joins={config.layout_config.joins || []}
             // Para Analytics, permitimos relacionar qualquer tabela do projeto. Para outros, apenas as selecionadas.
-            models={config.logic_type === 'analytics' ? models : models.filter(m => config.selected_models.includes(m.id))}
+            models={config.logic_type === 'analytics' ? models : models.filter((m: any) => config.selected_models.includes(m.id))}
             onUpdate={(newJoins) => setConfig({
               ...config,
               layout_config: { ...config.layout_config, joins: newJoins }
@@ -1658,7 +1783,13 @@ function StepLayout({ config, setConfig, models }: any) {
           />
 
           {/* ZONA: FILTROS */}
-          {(config.logic_type.includes('pesquisa') || config.logic_type === 'kanban' || config.logic_type === 'mapa_mental' || config.logic_type === 'master_detail' || config.logic_type === 'analytics') && (
+          {(config.logic_type.includes('pesquisa') || 
+            config.logic_type === 'kanban' || 
+            config.logic_type === 'mapa_mental' || 
+            config.logic_type === 'master_detail' || 
+            config.logic_type === 'scheduler' || 
+            config.logic_type === 'personalizado' || 
+            config.logic_type === 'analytics') && (
             <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
               <div className="flex items-center justify-between">
                 <h4 className="text-[9px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_01')}: {t('wizard.layout.zones.filter')}</h4>
@@ -1792,7 +1923,12 @@ function StepLayout({ config, setConfig, models }: any) {
           </div>
 
           {/* ZONA: FORMULÁRIO (RECURSIVO) */}
-          {(config.logic_type.includes('cadastro') || config.logic_type === 'master_detail') && (
+          {(config.logic_type.includes('cadastro') || 
+            config.logic_type === 'master_detail' || 
+            config.logic_type === 'kanban' || 
+            config.logic_type === 'scheduler' || 
+            config.logic_type === 'mapa_mental' || 
+            config.logic_type === 'personalizado') && (
             <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <h4 className="text-[9px] font-black uppercase text-amber-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_03')}: {t('wizard.layout.zones.form')}</h4>

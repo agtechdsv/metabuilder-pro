@@ -16,6 +16,7 @@ interface ViewContainerProps {
   defaultView?: 'list' | 'card'
   buttonsConfig: any[]
   locale: string
+  onAdd?: (initialData?: any) => void
   onView?: (row: any) => void
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
@@ -23,12 +24,13 @@ interface ViewContainerProps {
   primaryKeyName?: string
   kanbanGroupField?: string
   mindmapCentralField?: string
+  schedulerConfig?: any
   masterModelId?: string
   detailDisplayMode?: 'tabs' | 'sections'
   dictionary?: any
   joins?: any[]
   project?: any
-  actionInterfaceType?: 'drawer' | 'modal'
+  actionInterfaceType?: 'drawer' | 'modal' | 'page'
   externalFilters?: Record<string, string>
   onFiltersChange?: (filters: Record<string, string>) => void
   tunnelChannel?: any
@@ -38,6 +40,7 @@ interface ViewContainerProps {
 import DynamicCardList from './DynamicCardList'
 import DynamicKanban from './DynamicKanban'
 import DynamicMindMap from './DynamicMindMap'
+import DynamicScheduler from './DynamicScheduler'
 import { createClient } from '@/utils/supabase/client'
 import { Loader2 } from 'lucide-react'
 
@@ -63,6 +66,7 @@ export default function ViewContainer({
   buttonsConfig = [],
   formFields = [],
   locale,
+  onAdd,
   onView,
   onEdit,
   onDelete,
@@ -70,6 +74,7 @@ export default function ViewContainer({
   primaryKeyName = 'id',
   kanbanGroupField,
   mindmapCentralField,
+  schedulerConfig,
   masterModelId,
   detailDisplayMode = 'tabs',
   dictionary = {},
@@ -81,8 +86,8 @@ export default function ViewContainer({
   tunnelChannel,
   isTunnelReady
 }: ViewContainerProps) {
-  const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban' | 'mapa_mental'>(
-    logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'kanban' ? 'kanban' : (displayType === 'both' ? defaultView : (displayType as any))
+  const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban' | 'mapa_mental' | 'scheduler'>(
+    logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'kanban' ? 'kanban' : logicType === 'scheduler' ? 'scheduler' : (displayType === 'both' ? defaultView : (displayType as any))
   )
   const [searchQuery, setSearchQuery] = useState('')
   const filterValues = externalFilters
@@ -403,33 +408,49 @@ export default function ViewContainer({
     const cleanPrimaryKeyName = primaryKeyName.split('.').pop() || 'id'
     const actualPrimaryKey = movedItem[primaryKeyName] || movedItem[cleanPrimaryKeyName] || movedItem.id || movedItem.ID
 
-    // 2. Otimismo: Atualiza localmente o estado
-    const groupFieldDef = displayFields.find(f => f.id === kanbanGroupField) || displayFields.find(f => f.db_column_name === 'status') || { db_column_name: 'status' }
-    const groupFieldName = groupFieldDef.db_column_name
-    const cleanGroupFieldName = groupFieldName.split('.').pop() || 'status'
-    
+    // 2. Determinar quais colunas atualizar
+    let updates: Record<string, any> = {}
+    if (newValue && typeof newValue === 'object') {
+      updates = newValue
+    } else {
+      const groupFieldDef = displayFields.find(f => f.id === kanbanGroupField) || displayFields.find(f => f.db_column_name === 'status') || { db_column_name: 'status' }
+      const groupFieldName = groupFieldDef.db_column_name
+      const cleanGroupFieldName = groupFieldName.split('.').pop() || 'status'
+      updates = { [cleanGroupFieldName]: newValue }
+    }
+
+    // 3. Otimismo: Atualiza localmente o estado
     setData(prev => prev.map(item => {
       const itemId = String(item._key || item.id || item.ID || item[primaryKeyName] || item[cleanPrimaryKeyName])
       if (itemId === recordId) {
-        return { 
-          ...item, 
-          [groupFieldName]: newValue,
-          [cleanGroupFieldName]: newValue
+        const updatedItem = { ...item }
+        for (const [col, val] of Object.entries(updates)) {
+          updatedItem[col] = val
+          const fullField = displayFields.find(f => f.db_column_name.endsWith(col))?.db_column_name
+          if (fullField) {
+            updatedItem[fullField] = val
+          }
         }
+        return updatedItem
       }
       return item
     }))
 
-    // 3. Dispara o Update via Tunnel
-    const queryId = crypto.randomUUID()
-    const rawQuery = `UPDATE ${modelName} SET ${cleanGroupFieldName} = '${String(newValue).replace(/'/g, "''")}' WHERE ${cleanPrimaryKeyName} = '${String(actualPrimaryKey).replace(/'/g, "''")}'`
+    // 4. Constrói a Query SQL Dinâmica
+    const setStatements = Object.entries(updates).map(([col, val]) => {
+      const cleanVal = val === null ? 'NULL' : `'${String(val).replace(/'/g, "''")}'`
+      return `${col} = ${cleanVal}`
+    }).join(', ')
+
+    const rawQuery = `UPDATE ${modelName} SET ${setStatements} WHERE ${cleanPrimaryKeyName} = '${String(actualPrimaryKey).replace(/'/g, "''")}'`
     
+    const queryId = crypto.randomUUID()
     const payload: any = {
       queryId,
       table: modelName,
       tableName: modelName,
       action: 'update',
-      data: { [cleanGroupFieldName]: newValue },
+      data: updates,
       query: rawQuery,
       sql: rawQuery,
       idColumn: cleanPrimaryKeyName,
@@ -438,7 +459,7 @@ export default function ViewContainer({
     }
 
     if (tunnelChannel && isTunnelReady) {
-      console.log(`[MetaBuilder] 📡 Enviando atualização do Kanban via Canal Compartilhado:`, payload)
+      console.log(`[MetaBuilder] 📡 Enviando atualização de movimento via Canal Compartilhado:`, payload)
       tunnelChannel.send({
         type: 'broadcast',
         event: 'sql_query',
@@ -807,6 +828,18 @@ export default function ViewContainer({
           onView={onView}
           onEdit={onEdit}
           onDelete={onDelete}
+        />
+      ) : viewMode === 'scheduler' ? (
+        <DynamicScheduler 
+          data={data}
+          fields={displayFields}
+          schedulerConfig={schedulerConfig || {}}
+          onMove={handleMove}
+          onAdd={onAdd}
+          onView={onView}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          dictionary={dictionary}
         />
       ) : viewMode === 'mapa_mental' ? (
         <DynamicMindMap 

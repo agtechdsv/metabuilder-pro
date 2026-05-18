@@ -48,6 +48,7 @@ interface ViewPageContentProps {
   logicType?: string
   kanbanGroupField?: string
   mindmapCentralField?: string
+  schedulerConfig?: any
   dictionary?: any
   joins?: any[]
   masterModelId?: string
@@ -85,6 +86,7 @@ export default function ViewPageContent({
   logicType,
   kanbanGroupField,
   mindmapCentralField,
+  schedulerConfig,
   dictionary = {},
   joins = [],
   masterModelId,
@@ -324,9 +326,9 @@ export default function ViewPageContent({
   
   const isOpen = isModal ? isModalOpen : (isPage ? isPageVisible : isDrawerOpen)
 
-  const handleOpenAdd = () => {
+  const handleOpenAdd = (initialData: any = {}) => {
     setDrawerMode('create')
-    setSelectedRow({})
+    setSelectedRow(initialData)
     setOpen(true)
   }
 
@@ -1118,6 +1120,7 @@ export default function ViewPageContent({
               primaryKeyName={primaryKeyName}
               kanbanGroupField={kanbanGroupField}
               mindmapCentralField={mindmapCentralField}
+              schedulerConfig={schedulerConfig}
               masterModelId={masterModelId}
               detailDisplayMode={detailDisplayMode}
               dictionary={dictionary}
@@ -1127,6 +1130,7 @@ export default function ViewPageContent({
               onFiltersChange={setGlobalFilterValues}
               tunnelChannel={tunnelChannel}
               isTunnelReady={isTunnelReady}
+              onAdd={handleOpenAdd}
               onView={handleOpenView}
               onEdit={handleOpenEdit}
               onDelete={handleOpenDelete}
@@ -1209,6 +1213,7 @@ export default function ViewPageContent({
           dictionary: dictionary,
           detailsInlineTypes: detailsInlineTypes,
           initialTab: item.activeTab,
+          onSave: async () => {},
           onClose: () => {
             const levelsToRemove = detailHistory.length - idx
             let newHistory = [...detailHistory]
