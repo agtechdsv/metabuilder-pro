@@ -37,7 +37,10 @@ import {
   Terminal,
   RotateCcw,
   Link,
-  Layers
+  Layers,
+  Activity,
+  Gauge,
+  BarChart3
 } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
@@ -47,6 +50,7 @@ import { JoinsEditor } from './JoinsEditor'
 import { cn } from '@/lib/utils'
 import { Drawer } from '@/components/ui/Drawer'
 import { Modal } from '@/components/ui/Modal'
+import { BIWidgetEditor as BIWidgetConfigEditor } from '@/components/shared/BIWidgetEditor'
 import {
   DndContext,
   rectIntersection,
@@ -339,6 +343,29 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       setConfig(prev => ({ ...prev, layout_config: newLayout }))
     }
   }, [config.logic_type, config.has_arguments])
+
+  // Auto-descoberta de tabelas para Analytics (BI)
+  useEffect(() => {
+    if (config.logic_type !== 'analytics') return
+
+    const widgetModels = (config.layout_config.analytics_config?.widgets || []).map((w: any) => w.model_id)
+    const joinModels = (config.layout_config.joins || []).flatMap((j: any) => {
+      const fromModel = models.find(m => m.db_table_name === j.from)
+      const toModel = models.find(m => m.db_table_name === j.to)
+      return [fromModel?.id, toModel?.id].filter(Boolean)
+    })
+
+    const allInvolved = Array.from(new Set([...widgetModels, ...joinModels])).filter(Boolean) as string[]
+    
+    // Só atualizamos se houver mudança real para evitar loops de renderização
+    if (JSON.stringify([...allInvolved].sort()) !== JSON.stringify([...config.selected_models].sort())) {
+      setConfig(prev => ({
+        ...prev,
+        selected_models: allInvolved,
+        tables_config: allInvolved
+      }))
+    }
+  }, [config.layout_config.analytics_config.widgets, config.layout_config.joins, config.logic_type, models])
 
   useEffect(() => {
     const loadModels = async () => {
@@ -848,7 +875,7 @@ function StepLayout({ config, setConfig, models }: any) {
       field: '',
       calc: 'COUNT',
       group_by: '',
-      width: 'half',
+      width: 'third',
       joins: []
     })
     setIsWidgetModalOpen(true)
@@ -969,6 +996,30 @@ function StepLayout({ config, setConfig, models }: any) {
     }
 
     if (active.id === over.id) return
+
+    const isWidget = activeIdStr.startsWith('widget-')
+
+    if (isWidget) {
+      const activeId = activeIdStr.replace('widget-', '')
+      const overId = overIdStr.replace('widget-', '')
+      setConfig((prev: any) => {
+        const widgets = [...(prev.layout_config.analytics_config?.widgets || [])]
+        const oldIndex = widgets.findIndex(w => w.id === activeId)
+        const newIndex = widgets.findIndex(w => w.id === overId)
+        if (oldIndex === -1 || newIndex === -1) return prev
+        return {
+          ...prev,
+          layout_config: {
+            ...prev.layout_config,
+            analytics_config: {
+              ...prev.layout_config.analytics_config,
+              widgets: arrayMove(widgets, oldIndex, newIndex)
+            }
+          }
+        }
+      })
+      return
+    }
 
     const isFilter = activeIdStr.startsWith('filter-')
     const isGrid = activeIdStr.startsWith('grid-')
@@ -1537,37 +1588,18 @@ function StepLayout({ config, setConfig, models }: any) {
                 </div>
               </div>
 
-              {/* Seção de Relacionamentos (JOINS) - USANDO COMPONENTE PADRÃO */}
-              {config.logic_type !== 'analytics' && (
-                <JoinsEditor 
-                  joins={config.layout_config.joins || []}
-                  models={models.filter(m => config.selected_models.includes(m.id))}
-                  onUpdate={(newJoins) => setConfig({
-                    ...config,
-                    layout_config: { ...config.layout_config, joins: newJoins }
-                  })}
-                  t={t}
-                />
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(config.layout_config.analytics_config?.widgets || []).map((widget: any, idx: number) => (
-                  <div key={widget.id || idx} className="p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex items-center justify-between group shadow-sm hover:border-indigo-300 transition-all">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-neutral-50 dark:bg-neutral-800 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                         {widget.type === 'kpi' ? <Maximize2 className="w-5 h-5" /> : <Layout className="w-5 h-5" />}
-                      </div>
-                      <div>
-                        <h5 className="text-xs font-bold text-neutral-900 dark:text-white">{widget.title}</h5>
-                        <p className="text-[9px] text-neutral-400 uppercase font-black">{widget.type} • {widget.calc} ({getFieldName(widget.field) || 'Toda Tabela'})</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                       <button onClick={() => { setEditingWidget(widget); setIsWidgetModalOpen(true); }} className="p-2 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all"><Pencil className="w-3.5 h-3.5" /></button>
-                       <button onClick={() => handleDeleteWidget(widget.id)} className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
-                    </div>
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <SortableContext items={(config.layout_config.analytics_config?.widgets || []).map((w: any) => `widget-${w.id}`)} strategy={rectSortingStrategy}>
+                  {(config.layout_config.analytics_config?.widgets || []).map((widget: any) => (
+                    <SortableWidgetCard 
+                      key={`widget-${widget.id}`} 
+                      widget={widget} 
+                      onEdit={() => { setEditingWidget(widget); setIsWidgetModalOpen(true); }}
+                      onDelete={() => handleDeleteWidget(widget.id)}
+                      getFieldName={getFieldName}
+                    />
+                  ))}
+                </SortableContext>
                 
                 <button 
                   onClick={handleAddWidget}
@@ -1612,18 +1644,18 @@ function StepLayout({ config, setConfig, models }: any) {
             </div>
           )}
 
-          {/* ZONA: RELACIONAMENTOS (APENAS PARA MESTRE-DETALHE) - USANDO COMPONENTE PADRÃO */}
-          {config.logic_type === 'master_detail' && (
-            <JoinsEditor 
-              joins={config.layout_config.joins || []}
-              models={models.filter(m => config.selected_models.includes(m.id))}
-              onUpdate={(newJoins) => setConfig({
-                ...config,
-                layout_config: { ...config.layout_config, joins: newJoins }
-              })}
-              t={t}
-            />
-          )}
+
+          {/* Seção Global de Relacionamentos (JOINS) - Posicionada estrategicamente antes das Zonas de Dados */}
+          <JoinsEditor 
+            joins={config.layout_config.joins || []}
+            // Para Analytics, permitimos relacionar qualquer tabela do projeto. Para outros, apenas as selecionadas.
+            models={config.logic_type === 'analytics' ? models : models.filter(m => config.selected_models.includes(m.id))}
+            onUpdate={(newJoins) => setConfig({
+              ...config,
+              layout_config: { ...config.layout_config, joins: newJoins }
+            })}
+            t={t}
+          />
 
           {/* ZONA: FILTROS */}
           {(config.logic_type.includes('pesquisa') || config.logic_type === 'kanban' || config.logic_type === 'mapa_mental' || config.logic_type === 'master_detail' || config.logic_type === 'analytics') && (
@@ -2104,142 +2136,14 @@ function StepLayout({ config, setConfig, models }: any) {
         title="Configurar Widget de BI"
       >
         <div className="space-y-6">
-          <div className="space-y-3">
-             <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Título do Widget</label>
-             <input 
-               type="text" 
-               value={editingWidget?.title || ''} 
-               onChange={e => setEditingWidget({...editingWidget, title: e.target.value})}
-               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold text-neutral-900 dark:text-white"
-               placeholder="Ex: Total de Vendas"
-             />
-          </div>
+          <BIWidgetConfigEditor 
+            editingWidget={editingWidget}
+            setEditingWidget={setEditingWidget}
+            models={models}
+            joins={config.layout_config.joins || []}
+            t={t}
+          />
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-3">
-               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tipo de Gráfico</label>
-               <select 
-                 value={editingWidget?.type || 'kpi'} 
-                 onChange={e => setEditingWidget({...editingWidget, type: e.target.value})}
-                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
-               >
-                 <option value="kpi">KPI (Número)</option>
-                 <option value="bar">Gráfico de Barras</option>
-                 <option value="pie">Gráfico de Pizza</option>
-                 <option value="line">Gráfico de Linha</option>
-               </select>
-            </div>
-            <div className="space-y-3">
-               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tabela Fonte</label>
-               <select 
-                 value={editingWidget?.model_id || ''} 
-                 onChange={e => setEditingWidget({...editingWidget, model_id: e.target.value})}
-                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
-               >
-                 <option value="">Selecione...</option>
-                 {models.map((m: any) => (
-                   <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>
-                 ))}
-               </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-3">
-               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Cálculo / Operação</label>
-               <select 
-                 value={editingWidget?.calc || 'COUNT'} 
-                 onChange={e => setEditingWidget({...editingWidget, calc: e.target.value})}
-                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
-               >
-                 <option value="COUNT">Contagem (COUNT)</option>
-                 <option value="SUM">Soma (SUM)</option>
-                 <option value="AVG">Média (AVG)</option>
-                 <option value="MIN">Mínimo (MIN)</option>
-                 <option value="MAX">Máximo (MAX)</option>
-               </select>
-            </div>
-            <div className="space-y-3">
-               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Campo do Valor</label>
-               <select 
-                 value={editingWidget?.field || ''} 
-                 onChange={e => setEditingWidget({...editingWidget, field: e.target.value})}
-                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
-               >
-                 <option value="">(Toda a Tabela)</option>
-                 {models.find((m: any) => m.id === editingWidget?.model_id)?.fields.map((f: any) => (
-                   <option key={f.id} value={f.id}>{f.display_name || f.db_column_name}</option>
-                 ))}
-               </select>
-            </div>
-          </div>
-
-          {editingWidget?.type !== 'kpi' && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-               <div className="space-y-3">
-                 <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Relacionamentos (JOINS Locais)</label>
-                 <JoinsEditor 
-                   joins={editingWidget?.joins || []}
-                   models={models}
-                   onUpdate={(newJoins) => setEditingWidget({...editingWidget, joins: newJoins})}
-                   t={t}
-                 />
-                 <p className="text-[9px] text-neutral-400 font-medium italic px-2">Defina aqui como as tabelas se conectam para esta análise.</p>
-               </div>
-
-               <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Agrupar por (Dimensão)</label>
-                  <select 
-                    value={editingWidget?.group_by || ''} 
-                    onChange={e => setEditingWidget({...editingWidget, group_by: e.target.value})}
-                    className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
-                  >
-                    <option value="">Selecione o campo de agrupamento...</option>
-                    <optgroup label="Tabela Principal">
-                      {models.find((m: any) => m.id === editingWidget?.model_id)?.fields?.map((f: any) => (
-                        <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                      ))}
-                    </optgroup>
-                    
-                    {/* Joins Locais do Widget */}
-                    {(editingWidget?.joins || []).map((join: any, idx: number) => {
-                      const primaryModel = models.find((m: any) => String(m.id) === String(editingWidget?.model_id))
-                      const primaryModelName = primaryModel?.db_table_name?.toLowerCase()
-                      const jFrom = join.from?.toLowerCase()
-                      const relTableName = jFrom === primaryModelName ? join.to : join.from
-                      if (!relTableName || relTableName.toLowerCase() === primaryModelName) return null
-                      const relModel = models.find((m: any) => m.db_table_name?.toLowerCase() === relTableName.toLowerCase())
-                      if (!relModel) return null
-                      return (
-                        <optgroup key={`local-${idx}`} label={`Relacionada (Local): ${relModel.display_name || relModel.db_table_name}`}>
-                          {relModel.fields?.map((f: any) => (
-                            <option key={f.id} value={`${relTableName}.${f.db_column_name}`}>{f.display_name || f.db_column_name}</option>
-                          ))}
-                        </optgroup>
-                      )
-                    })}
-
-                    {/* Fallback para Joins Globais */}
-                    {(config.layout_config.joins || []).map((join: any, idx: number) => {
-                      const primaryModel = models.find((m: any) => String(m.id) === String(editingWidget?.model_id))
-                      const primaryModelName = primaryModel?.db_table_name?.toLowerCase()
-                      const jFrom = join.from?.toLowerCase()
-                      const relTableName = jFrom === primaryModelName ? join.to : join.from
-                      if (!relTableName || relTableName.toLowerCase() === primaryModelName) return null
-                      const relModel = models.find((m: any) => m.db_table_name?.toLowerCase() === relTableName.toLowerCase())
-                      if (!relModel) return null
-                      return (
-                        <optgroup key={`global-${idx}`} label={`Relacionada (Global): ${relModel.display_name || relModel.db_table_name}`}>
-                          {relModel.fields?.map((f: any) => (
-                            <option key={f.id} value={`${relTableName}.${f.db_column_name}`}>{f.display_name || f.db_column_name}</option>
-                          ))}
-                        </optgroup>
-                      )
-                    })}
-                  </select>
-               </div>
-            </div>
-          )}
 
           <div className="flex gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800">
              <button onClick={() => setIsWidgetModalOpen(false)} className="flex-1 px-4 py-3.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all">Cancelar</button>
@@ -2514,6 +2418,41 @@ function SortableFieldChip({ id, itemValue, toggleField, onEdit, children, zoneT
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => { e.stopPropagation(); toggleField(itemValue, `${zoneType}_fields`); }}
       />
+    </div>
+  )
+}
+
+function SortableWidgetCard({ widget, onEdit, onDelete, getFieldName }: any) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: `widget-${widget.id}` })
+  const style = { 
+    transform: CSS.Transform.toString(transform), 
+    transition,
+    zIndex: isDragging ? 50 : 'auto',
+    opacity: isDragging ? 0.5 : 1
+  }
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      className="p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] flex items-center justify-between group shadow-sm hover:border-indigo-300 transition-all relative overflow-hidden"
+    >
+      <div className="flex items-center gap-3 relative z-10">
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1.5 text-neutral-300 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all">
+          <GripVertical className="w-4 h-4" />
+        </div>
+        <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/50 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+          {widget.type === 'kpi' ? <Activity className="w-5 h-5" /> : widget.type === 'gauge' ? <Gauge className="w-5 h-5" /> : <BarChart3 className="w-5 h-5" />}
+        </div>
+        <div>
+          <h5 className="text-xs font-black uppercase tracking-tight text-neutral-900 dark:text-white">{widget.title}</h5>
+          <p className="text-[9px] text-neutral-400 uppercase font-black tracking-widest">{widget.type} • {widget.calc} ({getFieldName(widget.field) || 'Toda Tabela'})</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all relative z-10">
+        <button onClick={onEdit} className="p-2 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all"><Pencil className="w-3.5 h-3.5" /></button>
+        <button onClick={onDelete} className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+      </div>
     </div>
   )
 }

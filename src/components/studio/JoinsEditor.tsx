@@ -30,9 +30,9 @@ export const JoinsEditor = ({ joins, models, onUpdate, t }: JoinsEditorProps) =>
   }
 
   return (
-    <div className="p-4 bg-indigo-50/30 dark:bg-indigo-900/5 border border-indigo-100 dark:border-indigo-900/20 rounded-[2rem] space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-600/20">
+    <div className="p-3 bg-indigo-50/30 dark:bg-indigo-900/5 border border-indigo-100 dark:border-indigo-900/20 rounded-[1.5rem] space-y-4">
+      <div className="flex items-center gap-2">
+        <div className="p-1.5 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/20">
           <Link className="w-4 h-4 text-white" />
         </div>
         <div>
@@ -41,14 +41,14 @@ export const JoinsEditor = ({ joins, models, onUpdate, t }: JoinsEditorProps) =>
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {(joins || []).map((join: any, index: number) => (
-          <div key={index} className="flex flex-wrap items-center gap-3 p-4 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-100 dark:border-neutral-800 shadow-sm group animate-in zoom-in-95 duration-300">
+          <div key={index} className="flex flex-wrap items-center gap-2 p-2 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 shadow-sm group animate-in zoom-in-95 duration-300">
             {/* FROM TABLE */}
             <select
               value={join.from}
               onChange={e => handleUpdate(index, 'from', e.target.value)}
-              className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+              className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none"
             >
               <option value="">{t('wizard.layout.select_table', 'Select Table...')}</option>
               {models.map((m: any) => (
@@ -60,7 +60,7 @@ export const JoinsEditor = ({ joins, models, onUpdate, t }: JoinsEditorProps) =>
             <select
               value={join.localKey}
               onChange={e => handleUpdate(index, 'localKey', e.target.value)}
-              className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+              className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none"
             >
               <option value="">{t('wizard.layout.select_field', 'Select Field...')}</option>
               {models.find((m: any) => m.db_table_name === join.from)?.fields.map((f: any) => (
@@ -76,7 +76,7 @@ export const JoinsEditor = ({ joins, models, onUpdate, t }: JoinsEditorProps) =>
             <select
               value={join.to}
               onChange={e => handleUpdate(index, 'to', e.target.value)}
-              className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+              className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none"
             >
               <option value="">{t('wizard.layout.select_table', 'Select Table...')}</option>
               {models.map((m: any) => (
@@ -88,7 +88,7 @@ export const JoinsEditor = ({ joins, models, onUpdate, t }: JoinsEditorProps) =>
             <select
               value={join.foreignKey}
               onChange={e => handleUpdate(index, 'foreignKey', e.target.value)}
-              className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+              className="flex-1 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none"
             >
               <option value="">{t('wizard.layout.select_field', 'Select Field...')}</option>
               {models.find((m: any) => m.db_table_name === join.to)?.fields.map((f: any) => (
@@ -107,7 +107,7 @@ export const JoinsEditor = ({ joins, models, onUpdate, t }: JoinsEditorProps) =>
 
         <button
           onClick={handleAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold uppercase tracking-widest transition-all"
+          className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
         >
           <Plus className="w-4 h-4" />
           {t('wizard.layout.add_relationship', 'Add Relationship')}

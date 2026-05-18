@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { LayoutGrid, List, Search, Filter, Plus, Pencil, Trash2, RefreshCcw, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import DynamicGrid from '@/components/DynamicGrid'
@@ -27,15 +27,17 @@ interface ViewContainerProps {
   detailDisplayMode?: 'tabs' | 'sections'
   dictionary?: any
   joins?: any[]
+  project?: any
   actionInterfaceType?: 'drawer' | 'modal'
   externalFilters?: Record<string, string>
   onFiltersChange?: (filters: Record<string, string>) => void
+  tunnelChannel?: any
+  isTunnelReady?: boolean
 }
 
 import DynamicCardList from './DynamicCardList'
 import DynamicKanban from './DynamicKanban'
 import DynamicMindMap from './DynamicMindMap'
-import { useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Loader2 } from 'lucide-react'
 
@@ -72,9 +74,12 @@ export default function ViewContainer({
   detailDisplayMode = 'tabs',
   dictionary = {},
   joins = [],
+  project,
   actionInterfaceType = 'drawer',
   externalFilters = {},
-  onFiltersChange
+  onFiltersChange,
+  tunnelChannel,
+  isTunnelReady
 }: ViewContainerProps) {
   const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban' | 'mapa_mental'>(
     logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'kanban' ? 'kanban' : (displayType === 'both' ? defaultView : (displayType as any))
@@ -169,75 +174,185 @@ export default function ViewContainer({
 
   const supabase = createClient()
 
+  // 1. Refs e Hooks de topo (Regras do React)
+  const activeQueriesRef = useRef<Set<string>>(new Set())
+  const currentFiltersRef = useRef<any>({})
+  
+  useEffect(() => {
+    currentFiltersRef.current = externalFilters
+  }, [externalFilters])
+
+  // Listener centralizado usando o canal do PAI
+  useEffect(() => {
+    if (!tunnelChannel || !isTunnelReady) return
+    
+    console.log(`[MetaBuilder] 📡 Configurando listener da Lista no canal compartilhado.`)
+    
+    const handleSqlResult = (payload: any) => {
+      const qId = payload.payload?.queryId
+      if (!qId || !activeQueriesRef.current.has(qId)) return
+
+      console.log(`[MetaBuilder] Resposta recebida na Lista para ${qId}`)
+      
+      if (payload.payload.success) {
+        let resultData = payload.payload.data.map((row: any) => ({
+          ...row,
+          _key: crypto.randomUUID()
+        }))
+
+        if (logicType === 'master_detail') {
+          const grouped: Record<string, any> = {}
+          resultData.forEach((row: any) => {
+            const pkValue = String(row[primaryKeyName] || row.id || row.ID)
+            if (!grouped[pkValue]) {
+              grouped[pkValue] = { ...row, _details: [] }
+            }
+            grouped[pkValue]._details.push(row)
+          })
+          resultData = Object.values(grouped)
+        }
+
+        setData(resultData)
+        const cacheKey = `${projectId}:${modelName}`
+        if (!Object.keys(currentFiltersRef.current || {}).length) {
+          setCachedData(cacheKey, resultData)
+        }
+      } else {
+        setError(payload.payload.error)
+      }
+      setIsLoading(false)
+      activeQueriesRef.current.delete(qId)
+    }
+
+    tunnelChannel.on('broadcast', { event: 'sql_result' }, handleSqlResult)
+
+    return () => {
+      const bindings = tunnelChannel.bindings?.broadcast
+      if (Array.isArray(bindings)) {
+        const binding = bindings.find((b: any) => b.callback === handleSqlResult)
+        if (binding) {
+          if (tunnelChannel.channelAdapter) {
+            tunnelChannel.channelAdapter.off('broadcast', binding.ref)
+          }
+          tunnelChannel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleSqlResult)
+        }
+      }
+    }
+  }, [tunnelChannel, isTunnelReady])
+
   const fetchData = async (currentFilters: any = {}, forceRefresh: boolean = false) => {
+    if (!tunnelChannel || !isTunnelReady) {
+      console.warn(`[MetaBuilder] Busca ignorada: canal do túnel não está pronto ainda.`)
+      return
+    }
+
     const cacheKey = `${projectId}:${modelName}`
     const cached = getCachedData(cacheKey)
 
-    // Se não for um refresh forçado e já tivermos dados no cache, não busca de novo
     if (!forceRefresh && cached && !Object.keys(currentFilters).length) {
       setData(cached)
       setIsLoading(false)
       return
     }
 
-    // 1. Gera um ID único para esta requisição e limpa estados anteriores
     const queryId = crypto.randomUUID()
-    const channelName = `tunnel:${projectId}`
+    activeQueriesRef.current.add(queryId)
     
-    // Se não temos cache, mostramos o loader. Se temos, buscamos em background
     if (!cached) setIsLoading(true)
     setError(null)
     
-    console.log(`[MetaBuilder] Iniciando busca ${queryId}...`, { table: modelName, filters: currentFilters })
+    console.log(`[MetaBuilder] Solicitando dados via Túnel (${queryId})...`, { table: modelName })
     
+    const channelName = `tunnel:${projectId}`
     const channel = supabase.channel(channelName)
 
-    // 2. Se inscreve para ouvir a resposta do Agente
-    channel
-      .on('broadcast', { event: `query_result_${queryId}` }, (payload) => {
-        console.log(`[MetaBuilder] Resposta recebida para ${queryId}`, payload)
-        if (payload.payload.success) {
-          let resultData = payload.payload.data.map((row: any) => ({
-            ...row,
-            _key: crypto.randomUUID()
-          }))
-
-          // Lógica de Agrupamento para Mestre-Detalhe
-          if (logicType === 'master_detail') {
-            const grouped: Record<string, any> = {}
-            resultData.forEach((row: any) => {
-              const pkValue = String(row[primaryKeyName] || row.id || row.ID)
-              if (!grouped[pkValue]) {
-                grouped[pkValue] = { ...row, _details: [] }
-              }
-              // Se houver dados de JOIN (campos da tabela detalhe), adiciona ao array _details
-              // Identificamos campos de detalhe por não pertencerem à tabela mestre (simplificado aqui)
-              grouped[pkValue]._details.push(row)
-            })
-            resultData = Object.values(grouped)
-          }
-
-          setData(resultData)
-          // Salva no cache se for uma busca sem filtros (carga inicial)
-          if (!Object.keys(currentFilters).length) {
-            setCachedData(cacheKey, resultData)
-          }
-        } else {
-          setError(payload.payload.error)
-        }
-        setIsLoading(false)
-        supabase.removeChannel(channel) // Limpa após receber
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
+    // Aguarda um momento para o canal estar pronto e envia
+    setTimeout(() => {
           // Build raw SQL query with aliases to avoid column name shadowing (e.g. multiple 'name' columns)
           // We must also build the JOINs manually if we provide a raw query
           const buildJoinsSql = (joinsList: any[]) => {
             if (!joinsList || joinsList.length === 0) return ''
-            return joinsList.map(j => `LEFT JOIN ${j.toTable} ON ${j.table}.${j.on} = ${j.toTable}.${j.toOn}`).join(' ')
+            
+            // Resolvemos os joins caso venham como IDs do Wizard
+            const resolvedJoins = joinsList.map(j => {
+              if (j.toTable && j.table) return j
+              
+              if (project?.models) {
+                const fromModel = project.models?.find((m: any) => String(m.id) === String(j.from))
+                const toModel = project.models?.find((m: any) => String(m.id) === String(j.to))
+                const fromTable = fromModel?.db_table_name
+                const toTable = toModel?.db_table_name
+                
+                const localField = fromModel?.fields?.find((f: any) => String(f.id) === String(j.local_field))
+                const foreignField = toModel?.fields?.find((f: any) => String(f.id) === String(j.foreign_field))
+                
+                if (!fromTable || !toTable || !localField || !foreignField) return null
+                
+                return {
+                  table: fromTable,
+                  toTable: toTable,
+                  on: localField.db_column_name,
+                  toOn: foreignField.db_column_name
+                }
+              }
+              return null
+            }).filter(Boolean)
+
+            if (resolvedJoins.length === 0) return ''
+
+            // Mapeamos para garantir que o JOIN seja sempre "OUTRA_TABELA ON TABELA_EXISTENTE.col = OUTRA_TABELA.col"
+            const joinedTables = new Set([modelName.toLowerCase()])
+            const sqlParts: string[] = []
+            
+            // Tentamos encaixar cada join no que já temos na query
+            let changed = true
+            const remaining = [...resolvedJoins]
+            while (changed && remaining.length > 0) {
+              changed = false
+              for (let i = 0; i < remaining.length; i++) {
+                const j = remaining[i]
+                const fromT = j.table.toLowerCase()
+                const toT = j.toTable.toLowerCase()
+                
+                let targetTable = ''
+                let existingTable = ''
+                let localOn = ''
+                let foreignOn = ''
+
+                if (joinedTables.has(fromT) && !joinedTables.has(toT)) {
+                  targetTable = j.toTable
+                  existingTable = j.table
+                  localOn = j.on
+                  foreignOn = j.toOn
+                } else if (joinedTables.has(toT) && !joinedTables.has(fromT)) {
+                  targetTable = j.table
+                  existingTable = j.toTable
+                  localOn = j.toOn
+                  foreignOn = j.on
+                }
+
+                if (targetTable) {
+                  sqlParts.push(`LEFT JOIN ${targetTable} ON ${existingTable}.${localOn} = ${targetTable}.${foreignOn}`)
+                  joinedTables.add(targetTable.toLowerCase())
+                  remaining.splice(i, 1)
+                  changed = true
+                  break
+                }
+              }
+            }
+
+            return sqlParts.join(' ')
           }
           
-          const columns = displayFields.map(f => f.sql_expression || f.db_column_name).join(', ')
+          const columns = displayFields.map(f => {
+            const expr = f.sql_expression || f.db_column_name
+            // Se tiver um ponto (tabela.coluna), cria um alias usando o mesmo nome entre aspas
+            // Isso garante que o JSON de resposta tenha a chave exata que o frontend espera (ex: "fields.display_name")
+            if (expr.includes('.') && !expr.includes(' AS ') && !expr.includes(' as ')) {
+              return `${expr} AS "${expr}"`
+            }
+            return expr
+          }).join(', ')
           const rawQuery = `SELECT ${columns} FROM ${modelName} ${buildJoinsSql(joins)}`
 
           const payload: any = {
@@ -257,7 +372,9 @@ export default function ViewContainer({
 
           // Pequeno delay para garantir que o canal de broadcast esteja "quente"
           setTimeout(() => {
-            channel.send({
+            if (!tunnelChannel || !isTunnelReady) return
+            
+            tunnelChannel.send({
               type: 'broadcast',
               event: 'sql_query',
               payload
@@ -275,9 +392,8 @@ export default function ViewContainer({
               return prev
             })
           }, 10000)
-        }
-      })
-  }
+      }, 100)
+    }
 
   const handleMove = async (recordId: string, newValue: any) => {
     // 1. Descobrir o valor real da chave primária para enviar ao DB
@@ -331,16 +447,32 @@ export default function ViewContainer({
     })
   }
 
+  const isFirstRender = useRef(true)
+
   useEffect(() => {
-    // Só faz o fetch inicial se não houver cache para esta tabela
-    const cacheKey = `${projectId}:${modelName}`
-    const cached = getCachedData(cacheKey)
-    if (!cached) {
-      fetchData()
-    } else {
-      setIsLoading(false)
+    if (!isTunnelReady) return
+
+    // Na primeira renderização, se tiver cache e nenhum filtro ativo, usa o cache
+    if (isFirstRender.current) {
+      const cacheKey = `${projectId}:${modelName}`
+      const cached = getCachedData(cacheKey)
+      const hasActiveFilters = Object.values(externalFilters).some(v => v !== undefined && v !== '')
+      if (cached && !hasActiveFilters) {
+        setData(cached)
+        setIsLoading(false)
+        isFirstRender.current = false
+        return
+      }
     }
-  }, [projectId, modelName])
+
+    const handler = setTimeout(() => {
+      console.log(`[MetaBuilder] Buscando dados frescos com filtros...`, externalFilters)
+      fetchData(externalFilters, true)
+      isFirstRender.current = false
+    }, isFirstRender.current ? 50 : 400) // Debounce apenas nas digitações subsequentes
+
+    return () => clearTimeout(handler)
+  }, [projectId, modelName, isTunnelReady, externalFilters])
 
   const handleSearch = () => {
     fetchData(filterValues, true) // Busca sempre força o refresh

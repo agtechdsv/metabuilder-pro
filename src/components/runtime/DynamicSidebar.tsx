@@ -8,7 +8,8 @@ import {
   Layers, 
   Box, 
   Settings, 
-  LogOut
+  LogOut,
+  ChevronRight
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -41,10 +42,14 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
   const router = useRouter()
   const [expandedFolders, setExpandedFolders] = useState<string[]>([])
 
-  const toggleFolder = (id: string) => {
+  const toggleExpand = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
     setExpandedFolders(prev => 
       prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
     )
+  }
+
+  const navigateToFolder = (id: string) => {
     router.push(`/${workspaceSlug}/${projectSlug}/dashboard/${id}`)
   }
 
@@ -60,7 +65,7 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
       return (
         <div key={item.id} className="space-y-1">
           <button
-            onClick={() => toggleFolder(item.id)}
+            onClick={() => navigateToFolder(item.id)}
             className={cn(
               "w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group relative",
               isActive 
@@ -74,17 +79,28 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
               className={cn("w-5 h-5 shrink-0", isCollapsed && "w-6 h-6 transition-all duration-500")} 
               size={isCollapsed ? 24 : 20}
             />
-            
             <AnimatePresence mode="wait">
               {!isCollapsed && (
-                <motion.span 
+                <motion.div 
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
-                  className="flex-1 text-sm font-bold text-left truncate"
+                  className="flex-1 flex items-center justify-between"
                 >
-                  {item.label}
-                </motion.span>
+                  <span className="text-sm font-bold truncate">
+                    {item.label}
+                  </span>
+                  
+                  <div 
+                    onClick={(e) => toggleExpand(e, item.id)}
+                    className="p-1 hover:bg-white/20 dark:hover:bg-black/20 rounded-lg transition-all"
+                  >
+                    <ChevronRight className={cn(
+                      "w-4 h-4 transition-transform duration-300",
+                      isExpanded && "rotate-90"
+                    )} />
+                  </div>
+                </motion.div>
               )}
             </AnimatePresence>
             

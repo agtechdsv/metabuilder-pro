@@ -13,7 +13,7 @@ interface Breadcrumb {
 interface RuntimeHeaderProps {
   viewName: string
   subtitle?: string
-  icon?: string
+  icon?: any
   actions?: React.ReactNode
 }
 
