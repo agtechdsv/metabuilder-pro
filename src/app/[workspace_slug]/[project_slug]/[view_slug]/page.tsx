@@ -133,7 +133,7 @@ export default async function SlugPage({ params }: PageProps) {
     
     // Transforma os componentes em fields para o Grid (Zona Grid)
     displayFields = allComponents
-      .filter((c: any) => c.is_visible && (c.config?.zones?.includes('grid') || !c.config?.zones))
+      .filter((c: any) => c.is_visible !== false && (c.config?.zones?.includes('grid') || !c.config?.zones))
       .sort((a: any, b: any) => a.order_index - b.order_index)
       .map((c: any) => ({
         id: c.field.id,
@@ -149,7 +149,7 @@ export default async function SlugPage({ params }: PageProps) {
 
     // Extrai os campos do Formulário (Zona Form)
     const formFields = allComponents
-      .filter((c: any) => c.is_visible && c.config?.zones?.includes('form'))
+      .filter((c: any) => c.is_visible !== false && c.config?.zones?.includes('form'))
       .sort((a: any, b: any) => a.order_index - b.order_index)
       .map((c: any) => ({
         id: c.field.id,
@@ -160,12 +160,13 @@ export default async function SlugPage({ params }: PageProps) {
         sql_expression: resolveSqlExpression(c.field),
         data_type: c.field.data_type,
         is_primary_key: c.field.is_primary_key,
-        config: c.config
+        config: c.config,
+        zone: 3
       }))
 
     // Extrai os campos de Filtro (Zona Filter)
     const filterFields = allComponents
-      .filter((c: any) => c.is_visible && c.config?.zones?.includes('filter'))
+      .filter((c: any) => c.is_visible !== false && c.config?.zones?.includes('filter'))
       .map((c: any) => ({
         id: c.field.id,
         model_id: c.field.model_id,
@@ -209,6 +210,43 @@ export default async function SlugPage({ params }: PageProps) {
       }
     }
 
+    // Garante que os campos do Scheduler estejam presentes nos metadados de consulta
+    if (view.logic_type === 'scheduler' && view.layout_config?.scheduler_config) {
+      const sched = view.layout_config.scheduler_config
+      const schedulerFieldIds = [
+        sched.title_field,
+        sched.start_date_field,
+        sched.end_date_field,
+        sched.color_field
+      ].filter(Boolean)
+
+      for (const fieldId of schedulerFieldIds) {
+        if (!displayFields.find(f => f.id === fieldId)) {
+          let fieldData = allComponents.find((c: any) => c.field?.id === fieldId)?.field
+          
+          if (!fieldData && view.model?.fields) {
+            fieldData = view.model.fields.find((f: any) => f.id === fieldId)
+          }
+
+          if (!fieldData) {
+            const { data: remoteField } = await supabase.from('fields').select('*').eq('id', fieldId).single()
+            if (remoteField) fieldData = remoteField
+          }
+
+          if (fieldData) {
+            displayFields.push({
+              id: fieldData.id,
+              display_name: fieldData.display_name || fieldData.db_column_name,
+              db_column_name: resolveResultKey(fieldData),
+              data_type: fieldData.data_type,
+              config: {},
+              hidden: true
+            })
+          }
+        }
+      }
+    }
+
     const buttonsConfig = view.buttons_config || []
     const canAdd = buttonsConfig.find((b: any) => b.id === 'add')?.visible !== false
 
@@ -232,6 +270,7 @@ export default async function SlugPage({ params }: PageProps) {
           logicType={view.logic_type}
           kanbanGroupField={view.layout_config?.kanban_group_field}
           mindmapCentralField={view.layout_config?.mindmap_central_field}
+          schedulerConfig={view.layout_config?.scheduler_config}
           dictionary={dictionary}
           joins={view.layout_config?.joins || []}
           masterModelId={view.layout_config?.master_model_id}
@@ -273,9 +312,7 @@ export default async function SlugPage({ params }: PageProps) {
         <div className="min-h-screen bg-white dark:bg-[#050505] text-neutral-900 dark:text-neutral-200 transition-colors duration-300">
           <RuntimeHeader 
             viewName={viewName}
-            icon={<Table className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />}
-            breadcrumbs={[]}
-            baseUrl={`${baseUrl}/dashboard`}
+            icon="Table"
           />
 
           <main className="max-w-7xl mx-auto px-6 py-2">
@@ -286,6 +323,8 @@ export default async function SlugPage({ params }: PageProps) {
               modelName={modelName}
               displayFields={displayFields}
               filterFields={[]}
+              formFields={[]}
+              buttonsConfig={[]}
               displayType="list"
               locale={locale}
             />

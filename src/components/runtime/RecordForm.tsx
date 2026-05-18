@@ -143,9 +143,9 @@ export default function RecordForm({
         
         if (!isMaster) return false
         // Se estivermos em um modal de detalhe, mostramos todos os campos dele
-        return (!!masterModelName || f.zone === 3 || f.zone === '3')
+        return (!!masterModelName || f.zone === 3 || f.zone === '3' || f.zone === undefined || f.zone === null)
       })
-    : fields.filter(f => f.zone === 3 || f.zone === '3')
+    : fields.filter(f => f.zone === 3 || f.zone === '3' || f.zone === undefined || f.zone === null)
 
   const detailFields = logicType === 'master_detail' 
     ? fields.filter(f => {
