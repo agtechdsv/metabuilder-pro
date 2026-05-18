@@ -62,6 +62,7 @@ interface AnalyticsDashboardProps {
   onEditWidget?: (widget: Widget) => void
   onAddWidget?: () => void
   onDeleteWidget?: (id: string) => void
+  onSaveLayout?: (newWidgets: Widget[]) => void
   tunnelChannel?: any
   isTunnelReady?: boolean
 }
@@ -76,6 +77,7 @@ export default function AnalyticsDashboard({
   onEditWidget, 
   onAddWidget, 
   onDeleteWidget,
+  onSaveLayout,
   tunnelChannel,
   isTunnelReady
 }: AnalyticsDashboardProps) {
@@ -637,7 +639,15 @@ export default function AnalyticsDashboard({
     <div className="space-y-6 animate-in fade-in duration-700 relative">
       <div className="flex justify-between items-center px-2">
         <h2 className="text-sm font-black uppercase tracking-[0.2em] text-neutral-400">Indicadores de Desempenho</h2>
-        <button onClick={() => setIsEditMode(!isEditMode)} className={cn("flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all", isEditMode ? "bg-indigo-600 text-white shadow-xl shadow-indigo-500/40 scale-105" : "bg-white dark:bg-neutral-900 text-neutral-500 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50")}>
+        <button 
+          onClick={() => {
+            if (isEditMode && onSaveLayout) {
+              onSaveLayout(localWidgets)
+            }
+            setIsEditMode(!isEditMode)
+          }} 
+          className={cn("flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all", isEditMode ? "bg-indigo-600 text-white shadow-xl shadow-indigo-500/40 scale-105" : "bg-white dark:bg-neutral-900 text-neutral-500 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50")}
+        >
           {isEditMode ? <Save className="w-3.5 h-3.5" /> : <MousePointer2 className="w-3.5 h-3.5" />}
           {isEditMode ? 'Salvar Layout' : 'Organizar Dashboard'}
         </button>

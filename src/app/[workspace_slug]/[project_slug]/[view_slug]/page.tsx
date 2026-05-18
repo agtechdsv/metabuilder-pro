@@ -34,25 +34,29 @@ export default async function SlugPage({ params }: PageProps) {
 
   const locale = await getLocale()
 
-  // 1. Resolve o Workspace pelo Slug
-  const { data: workspace, error: workspaceError } = await supabase
+  // 1. Resolve o Workspace pelo Slug (Defensivo com limit(1))
+  const { data: workspaces, error: workspaceError } = await supabase
     .from('workspaces')
     .select('id, name')
     .eq('slug', workspace_slug)
-    .single()
+    .limit(1)
+
+  const workspace = workspaces?.[0]
 
   if (workspaceError || !workspace) {
     console.error('Workspace not found:', workspace_slug)
     notFound()
   }
 
-  // 2. Resolve o Projeto pelo Slug e Workspace ID (incluindo navegação)
-  const { data: project, error: projectError } = await supabase
+  // 2. Resolve o Projeto pelo Slug e Workspace ID (Defensivo com limit(1))
+  const { data: projects, error: projectError } = await supabase
     .from('projects')
     .select('id, name, navigation')
     .eq('slug', project_slug)
     .eq('workspace_id', workspace.id)
-    .single()
+    .limit(1)
+
+  const project = projects?.[0]
 
   if (projectError || !project) {
     console.error('Project not found:', project_slug)
@@ -74,7 +78,7 @@ export default async function SlugPage({ params }: PageProps) {
   let displayType: 'list' | 'card' | 'both' = 'list'
 
   // Tenta buscar na tabela de Views customizadas, trazendo os componentes e os fields relacionados
-  const { data: view, error: viewError } = await supabase
+  const { data: views, error: viewError } = await supabase
     .from('ui_views')
     .select(`
       *, 
@@ -89,7 +93,9 @@ export default async function SlugPage({ params }: PageProps) {
     `)
     .eq('slug', view_slug)
     .eq('project_id', project.id)
-    .single()
+    .limit(1)
+
+  const view = views?.[0]
 
   if (view && !viewError && view.layout_config?.is_active !== false) {
     viewName = view.name
