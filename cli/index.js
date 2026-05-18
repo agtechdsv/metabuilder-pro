@@ -216,24 +216,44 @@ async function startTunnel(projectId, secretToken, connectionString, configSupab
         }
 
         // Envia o resultado de volta para o cliente (Next.js)
+        const responsePayload = {
+          queryId,
+          success: true,
+          data: result.rows
+        };
+
+        // Evento Genérico (para o Dashboard BI)
+        await channel.send({
+          type: 'broadcast',
+          event: 'sql_result',
+          payload: responsePayload
+        });
+
+        // Evento Específico (para compatibilidade com a Grade/Grid)
         await channel.send({
           type: 'broadcast',
           event: `query_result_${queryId}`,
-          payload: {
-            success: true,
-            data: result.rows
-          }
+          payload: responsePayload
         });
 
       } catch (err) {
         console.log(chalk.red(`[ ERRO ] Falha na query:`), err.message);
+        const errorPayload = {
+          queryId,
+          success: false,
+          error: err.message
+        };
+
+        await channel.send({
+          type: 'broadcast',
+          event: 'sql_result',
+          payload: errorPayload
+        });
+
         await channel.send({
           type: 'broadcast',
           event: `query_result_${queryId}`,
-          payload: {
-            success: false,
-            error: err.message
-          }
+          payload: errorPayload
         });
       }
     })

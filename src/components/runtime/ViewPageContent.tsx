@@ -22,6 +22,7 @@ import { useI18n } from '@/i18n/I18nContext'
 import RecordForm from './RecordForm'
 import { RuntimeHeader } from './RuntimeHeader'
 import AnalyticsDashboard from './AnalyticsDashboard'
+import { BIWidgetEditor as BIWidgetConfigEditor } from '@/components/shared/BIWidgetEditor'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 
@@ -158,6 +159,35 @@ export default function ViewPageContent({
   const [isWidgetModalOpen, setIsWidgetModalOpen] = useState(false)
   const [globalFilterValues, setGlobalFilterValues] = useState<Record<string, string>>({})
 
+  // --- GESTÃO CENTRALIZADA DO TÚNEL SEGURO ---
+  const supabase = createClient()
+  const [tunnelChannel, setTunnelChannel] = useState<any>(null)
+  const [isTunnelReady, setIsTunnelReady] = useState(false)
+
+  useEffect(() => {
+    if (!project?.id) return
+
+    const channelName = `tunnel:${project.id}`
+    const channel = supabase.channel(channelName)
+    
+    console.log(`[MetaBuilder] 📡 Abrindo Túnel Centralizado: ${channelName}`)
+    
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log(`[MetaBuilder] ✅ Túnel Centralizado PRONTO.`)
+        setTunnelChannel(channel)
+        setIsTunnelReady(true)
+      }
+    })
+
+    return () => {
+      console.log(`[MetaBuilder] 🔌 Fechando Túnel Centralizado.`)
+      channel.unsubscribe()
+      setTunnelChannel(null)
+      setIsTunnelReady(false)
+    }
+  }, [project?.id])
+
   const handleAddWidgetRuntime = () => {
     setEditingWidget({
       id: Math.random().toString(36).substr(2, 9),
@@ -199,10 +229,22 @@ export default function ViewPageContent({
       // Primeiro buscamos a view atual para não sobrescrever outros campos do layout_config
       const { data: viewData } = await supabase.from('ui_views').select('layout_config').eq('id', viewId).single()
       const updatedLayoutConfig = { ...viewData?.layout_config, analytics_config: newConfig }
-      
+
+      // Auto-Discovery: Atualiza tables_config baseado nos widgets do BI para garantir carregamento correto
+      const widgetModels = (newWidgets || []).map((w: any) => w.model_id)
+      const joinModels = (viewData?.layout_config?.joins || []).flatMap((j: any) => {
+        const fromModel = project.models?.find((m: any) => m.db_table_name === j.from)
+        const toModel = project.models?.find((m: any) => m.db_table_name === j.to)
+        return [fromModel?.id, toModel?.id].filter(Boolean)
+      })
+      const allInvolved = Array.from(new Set([...widgetModels, ...joinModels])).filter(Boolean)
+
       const { error } = await supabase
         .from('ui_views')
-        .update({ layout_config: updatedLayoutConfig })
+        .update({ 
+          layout_config: updatedLayoutConfig,
+          tables_config: allInvolved // Sincroniza as tabelas necessárias
+        })
         .eq('id', viewId)
       
       if (error) throw error
@@ -224,9 +266,21 @@ export default function ViewPageContent({
       const { data: viewData } = await supabase.from('ui_views').select('layout_config').eq('id', viewId).single()
       const updatedLayoutConfig = { ...viewData?.layout_config, analytics_config: newConfig }
       
+      // Auto-Discovery também na deleção para manter limpo
+      const widgetModels = (newWidgets || []).map((w: any) => w.model_id)
+      const joinModels = (updatedLayoutConfig.joins || []).flatMap((j: any) => {
+        const fromModel = project.models?.find((m: any) => m.db_table_name === j.from)
+        const toModel = project.models?.find((m: any) => m.db_table_name === j.to)
+        return [fromModel?.id, toModel?.id].filter(Boolean)
+      })
+      const allInvolved = Array.from(new Set([...widgetModels, ...joinModels])).filter(Boolean)
+
       const { error } = await supabase
         .from('ui_views')
-        .update({ layout_config: updatedLayoutConfig })
+        .update({ 
+          layout_config: updatedLayoutConfig,
+          tables_config: allInvolved
+        })
         .eq('id', viewId)
       
       if (error) throw error
@@ -247,8 +301,6 @@ export default function ViewPageContent({
   }
   
   const isOpen = isModal ? isModalOpen : (isPage ? isPageVisible : isDrawerOpen)
-
-  const supabase = createClient()
 
   const handleOpenAdd = () => {
     setDrawerMode('create')
@@ -989,7 +1041,7 @@ export default function ViewPageContent({
         {isPage && isPageVisible ? (
           <RecordForm 
             mode={drawerMode}
-            fields={formFields}
+            fields={cleanFormFields}
             initialData={selectedRow}
             onSave={handleSave}
             onCancel={() => setIsPageVisible(false)}
@@ -1003,6 +1055,10 @@ export default function ViewPageContent({
             onDeleteDetail={handleDeleteDetail}
             onAddDetail={handleOpenAddDetail}
             joins={joins}
+            dictionary={dictionary}
+            detailsInlineTypes={detailsInlineTypes}
+            initialTab={activeTabForDetail}
+            onTabChange={setActiveTabForDetail}
           />
         ) : (
           <>
@@ -1015,32 +1071,39 @@ export default function ViewPageContent({
                 onEditWidget={handleEditWidgetRuntime}
                 onAddWidget={handleAddWidgetRuntime}
                 onDeleteWidget={handleDeleteWidgetRuntime}
+                tunnelChannel={tunnelChannel}
+                isTunnelReady={isTunnelReady}
               />
             )}
 
             <ViewContainer 
               key={refreshKey}
               projectId={project.id}
+              project={project}
               modelName={modelName}
-              displayFields={cleanDisplayFields}
-              filterFields={cleanFilterFields}
-              formFields={cleanFormFields}
+              displayFields={displayFields}
+              filterFields={filterFields}
+              formFields={formFields}
               displayType={displayType}
               defaultView={defaultView}
               buttonsConfig={buttonsConfig}
               locale={locale}
-              onView={handleOpenView}
-              onEdit={handleOpenEdit}
-              onDelete={handleOpenDelete}
               logicType={logicType}
               primaryKeyName={primaryKeyName}
-              dictionary={dictionary}
-              joins={joins}
+              kanbanGroupField={kanbanGroupField}
+              mindmapCentralField={mindmapCentralField}
               masterModelId={masterModelId}
               detailDisplayMode={detailDisplayMode}
+              dictionary={dictionary}
+              joins={joins}
               actionInterfaceType={actionInterfaceType}
               externalFilters={globalFilterValues}
               onFiltersChange={setGlobalFilterValues}
+              tunnelChannel={tunnelChannel}
+              isTunnelReady={isTunnelReady}
+              onView={handleOpenView}
+              onEdit={handleOpenEdit}
+              onDelete={handleOpenDelete}
             />
           </>
         )}
@@ -1194,123 +1257,14 @@ export default function ViewPageContent({
         title="Configurar Indicador"
       >
         <div className="space-y-6">
-          <div className="space-y-3">
-             <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Título do Indicador</label>
-             <input 
-               type="text" 
-               value={editingWidget?.title || ''} 
-               onChange={e => setEditingWidget({...editingWidget, title: e.target.value})}
-               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold text-neutral-900 dark:text-white"
-               placeholder="Ex: Total de Vendas"
-             />
-          </div>
+          <BIWidgetConfigEditor 
+            editingWidget={editingWidget}
+            setEditingWidget={setEditingWidget}
+            models={project.models}
+            joins={joins || []}
+            t={t}
+          />
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-3">
-               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tipo de Gráfico</label>
-               <select 
-                 value={editingWidget?.type || 'kpi'} 
-                 onChange={e => setEditingWidget({...editingWidget, type: e.target.value})}
-                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
-               >
-                 <option value="kpi">KPI (Número)</option>
-                 <option value="bar">Barras</option>
-                 <option value="pie">Pizza</option>
-                 <option value="line">Linha</option>
-               </select>
-            </div>
-            <div className="space-y-3">
-               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tabela Fonte</label>
-               <select 
-                 value={editingWidget?.model_id || ''} 
-                 onChange={e => setEditingWidget({...editingWidget, model_id: e.target.value})}
-                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
-               >
-                 <option value="">Selecione...</option>
-                 {project.models?.map((m: any) => (
-                   <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>
-                 ))}
-               </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-3">
-               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Operação</label>
-               <select 
-                 value={editingWidget?.calc || 'COUNT'} 
-                 onChange={e => setEditingWidget({...editingWidget, calc: e.target.value})}
-                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
-               >
-                 <option value="COUNT">Contagem</option>
-                 <option value="SUM">Soma</option>
-                 <option value="AVG">Média</option>
-                 <option value="MIN">Mínimo</option>
-                 <option value="MAX">Máximo</option>
-               </select>
-            </div>
-            <div className="space-y-3">
-               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Campo do Valor</label>
-               <select 
-                 value={editingWidget?.field || ''} 
-                 onChange={e => setEditingWidget({...editingWidget, field: e.target.value})}
-                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
-               >
-                 <option value="">(Toda a Tabela)</option>
-                 {project.models?.find((m: any) => String(m.id) === String(editingWidget?.model_id))?.fields.map((f: any) => (
-                   <option key={f.id} value={f.id}>{f.display_name || f.db_column_name}</option>
-                 ))}
-               </select>
-            </div>
-          </div>
-
-          {editingWidget?.type !== 'kpi' && (
-            <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Agrupar por (Dimensão)</label>
-               <select 
-                 value={editingWidget?.group_by || ''} 
-                 onChange={e => setEditingWidget({...editingWidget, group_by: e.target.value})}
-                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
-               >
-                 <option value="">Selecione...</option>
-                 <optgroup label="Tabela Principal">
-                   {project.models?.find((m: any) => String(m.id) === String(editingWidget?.model_id))?.fields?.map((f: any) => (
-                     <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                   ))}
-                 </optgroup>
-                 {(joins || []).map((join: any, idx: number) => {
-                    // Get the primary model name by ID or by the name itself (fallback)
-                    const primaryModel = project.models?.find((m: any) => 
-                      String(m.id) === String(editingWidget?.model_id) || 
-                      m.db_table_name?.toLowerCase() === String(editingWidget?.model_id).toLowerCase()
-                    )
-                    const primaryModelName = primaryModel?.db_table_name?.toLowerCase()
-                    
-                    // Normalize join table names
-                    const jFrom = join.from?.toLowerCase()
-                    const jTo = join.to?.toLowerCase()
-                    
-                    // Determine which table is the "related" one
-                    const relTableName = jFrom === primaryModelName ? join.to : join.from
-                    
-                    // If the related table is the primary table itself, skip it
-                    if (!relTableName || relTableName.toLowerCase() === primaryModelName) return null
-                    
-                    const relModel = project.models?.find((m: any) => 
-                      m.db_table_name?.toLowerCase() === relTableName.toLowerCase()
-                    )
-                   if (!relModel) return null
-                   return (
-                     <optgroup key={join.id || idx} label={`Relacionada: ${relModel.display_name || relModel.db_table_name}`}>
-                       {relModel.fields?.map((f: any) => (
-                         <option key={f.id} value={`${relTableName}.${f.db_column_name}`}>{f.display_name || f.db_column_name}</option>
-                       ))}
-                     </optgroup>
-                   )
-                 })}
-               </select>
-            </div>
-          )}
 
           <div className="flex gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800">
              <button onClick={() => setIsWidgetModalOpen(false)} className="flex-1 px-4 py-3.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all">Cancelar</button>

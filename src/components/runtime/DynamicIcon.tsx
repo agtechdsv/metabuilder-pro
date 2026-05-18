@@ -5,12 +5,17 @@ import * as LucideIcons from 'lucide-react'
 import { LucideProps } from 'lucide-react'
 
 interface DynamicIconProps extends LucideProps {
-  icon: string
+  icon: any
   className?: string
 }
 
 export function DynamicIcon({ icon, className, ...props }: DynamicIconProps) {
   if (!icon) return <LucideIcons.HelpCircle className={className} {...props} />
+
+  // Se o ícone não for uma string (pode ser um JSX/Elemento React), renderiza direto
+  if (typeof icon !== 'string') {
+    return <>{icon}</>
+  }
 
   // Verifica se é um SVG bruto
   if (icon.trim().startsWith('<svg')) {
