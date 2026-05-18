@@ -25,6 +25,7 @@ import AnalyticsDashboard from './AnalyticsDashboard'
 import { BIWidgetEditor as BIWidgetConfigEditor } from '@/components/shared/BIWidgetEditor'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
+import { ExportDropdown, ActiveDownloadsWidget } from './ExportControls'
 
 // Importamos o ViewContainer sem SSR para evitar o "piscar" do loader
 // e conflitos de hidratação com o sessionStorage
@@ -34,6 +35,7 @@ interface ViewPageContentProps {
   workspace: any
   project: any
   viewName: string
+  canExport?: boolean
   modelName: string
   displayFields: any[]
   filterFields: any[]
@@ -81,6 +83,7 @@ export default function ViewPageContent({
   buttonsConfig,
   locale,
   canAdd,
+  canExport = true,
   viewId,
   primaryKeyName,
   logicType,
@@ -122,12 +125,23 @@ export default function ViewPageContent({
 
   const cleanFormFields = useMemo(() => {
     const seen = new Set()
-    return formFields.filter(f => {
+    const filtered = formFields.filter(f => {
       if (!f?.id || seen.has(f.id)) return false
       seen.add(f.id)
       return true
     })
-  }, [formFields])
+    
+    // Se a lista de campos do formulário estiver vazia (como no Kanban sem Zona 3
+    // ou no modo Fallback/Model direto), caímos de volta para os campos de exibição (grid/list)
+    // para garantir que a janela modal/drawer exiba os campos e funcione corretamente.
+    if (filtered.length === 0) {
+      return cleanDisplayFields.map(f => ({
+        ...f,
+        zone: 3
+      }))
+    }
+    return filtered
+  }, [formFields, cleanDisplayFields])
 
   const detailFields = useMemo(() => 
     cleanFormFields.filter(f => f.model_id && String(f.model_id) !== String(masterModelId)),
@@ -189,6 +203,55 @@ export default function ViewPageContent({
       setIsTunnelReady(false)
     }
   }, [project?.id])
+
+  // --- REAL-TIME DOWNLOAD PROGRESS LISTENER ---
+  const [activeDownloads, setActiveDownloads] = useState<any[]>([])
+
+  const handleRemoveDownload = (jobId: string) => {
+    setActiveDownloads(prev => prev.filter(d => d.jobId !== jobId))
+  }
+
+  useEffect(() => {
+    if (!tunnelChannel || !isTunnelReady) return
+
+    const handleDownloadProgress = (payload: any) => {
+      const job = payload.payload
+      if (!job || !job.jobId) return
+
+      console.log('[MetaBuilder] Live download progress event:', job)
+
+      setActiveDownloads(prev => {
+        // Automatically hide completed/failed jobs after 10 seconds
+        if (job.status === 'completed' || job.status === 'failed') {
+          setTimeout(() => {
+            setActiveDownloads(current => current.filter(d => d.jobId !== job.jobId))
+          }, 10000)
+        }
+
+        const exists = prev.some(d => d.jobId === job.jobId)
+        if (exists) {
+          return prev.map(d => d.jobId === job.jobId ? job : d)
+        } else {
+          return [...prev, job]
+        }
+      })
+    }
+
+    tunnelChannel.on('broadcast', { event: 'download_progress' }, handleDownloadProgress)
+
+    return () => {
+      const bindings = tunnelChannel.bindings?.broadcast
+      if (Array.isArray(bindings)) {
+        const binding = bindings.find((b: any) => b.callback === handleDownloadProgress)
+        if (binding) {
+          if (tunnelChannel.channelAdapter) {
+            tunnelChannel.channelAdapter.off('broadcast', binding.ref)
+          }
+          tunnelChannel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleDownloadProgress)
+        }
+      }
+    }
+  }, [tunnelChannel, isTunnelReady])
 
   const handleAddWidgetRuntime = () => {
     setEditingWidget({
@@ -352,7 +415,7 @@ export default function ViewPageContent({
 
         console.log(`[MetaBuilder] Fetching details from ${join.to} where ${join.foreignKey} = ${localValue}`)
         
-        const { data: detailData, error } = await supabase
+        const { data: detailData, error } = await (supabase as any)
           .from(join.to)
           .select('*')
           .eq(join.foreignKey, localValue)
@@ -368,7 +431,7 @@ export default function ViewPageContent({
 
           console.log(`[MetaBuilder] Found ${detailData.length} records in ${join.to}. Friendly Name: ${friendlyName}`)
 
-          allDetails.push(...detailData.map(d => ({ 
+          allDetails.push(...detailData.map((d: any) => ({ 
             ...d, 
             model_name: join.to, // Mantém o nome original do banco para lógica de campos
             display_model_name: friendlyName // Novo campo para exibição na UI
@@ -1053,14 +1116,29 @@ export default function ViewPageContent({
         viewName={viewName}
         subtitle={description}
         icon={icon}
-        actions={canAdd && (
-          <button 
-            onClick={handleOpenAdd}
-            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full transition-all font-bold text-xs shadow-[0_0_20px_rgba(79,70,229,0.3)] active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            {t('runtime.new_record')}
-          </button>
+        actions={(
+          <div className="flex items-center gap-3">
+            {logicType !== 'analytics' && project.theme_config?.enable_downloads !== false && canExport && (
+              <ExportDropdown 
+                projectId={project.id}
+                workspaceSlug={workspace.slug}
+                viewName={viewName}
+                modelName={modelName}
+                displayFields={cleanDisplayFields}
+                joins={joins}
+                filters={globalFilterValues}
+              />
+            )}
+            {canAdd && (
+              <button 
+                onClick={handleOpenAdd}
+                className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full transition-all font-bold text-xs shadow-[0_0_20px_rgba(79,70,229,0.3)] active:scale-95"
+              >
+                <Plus className="w-4 h-4" />
+                {t('runtime.new_record')}
+              </button>
+            )}
+          </div>
         )}
       />
 
@@ -1303,6 +1381,15 @@ export default function ViewPageContent({
           </div>
         </div>
       </Modal>
+
+      {project.theme_config?.enable_downloads !== false && canExport && (
+        <ActiveDownloadsWidget 
+          downloads={activeDownloads} 
+          onRemove={handleRemoveDownload} 
+          workspaceSlug={workspace?.slug}
+          projectSlug={project?.slug}
+        />
+      )}
     </div>
   )
 }

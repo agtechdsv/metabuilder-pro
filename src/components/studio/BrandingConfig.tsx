@@ -16,12 +16,21 @@ export function BrandingConfig({ project, onSave }: BrandingConfigProps) {
   const [description, setDescription] = useState(project.description || '')
   const [icon, setIcon] = useState(project.icon || 'Box')
   const [showIconPicker, setShowIconPicker] = useState(false)
+  const [enableDownloads, setEnableDownloads] = useState(project.theme_config?.enable_downloads !== false)
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      await onSave({ name, description, icon })
+      await onSave({ 
+        name, 
+        description, 
+        icon,
+        theme_config: {
+          ...(project.theme_config || {}),
+          enable_downloads: enableDownloads
+        }
+      })
     } finally {
       setIsSaving(false)
     }
@@ -111,6 +120,34 @@ export function BrandingConfig({ project, onSave }: BrandingConfigProps) {
                    <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400">Preview na Sidebar</span>
                 </div>
              </div>
+          </div>
+
+          {/* Configuração de Recursos Globais */}
+          <div className="space-y-4 pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
+            <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Recursos Globais do Projeto</label>
+            <div className="flex items-center justify-between p-6 bg-neutral-50 dark:bg-black/20 rounded-[2rem] border border-neutral-100 dark:border-neutral-800">
+              <div className="space-y-1">
+                <p className="text-sm font-black text-neutral-900 dark:text-white uppercase tracking-tight">Central de Downloads (Exportações Assíncronas)</p>
+                <p className="text-[10px] text-neutral-400 font-medium leading-relaxed max-w-xl">
+                  Habilita a exportação de dados em segundo plano (XLSX, CSV, JSON) com notificações de progresso em tempo real e um gerenciador de downloads.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEnableDownloads(!enableDownloads)}
+                className={cn(
+                  "w-14 h-8 rounded-full transition-all relative flex items-center shrink-0 border border-neutral-200 dark:border-neutral-800",
+                  enableDownloads ? "bg-indigo-600 border-indigo-600" : "bg-neutral-200 dark:bg-neutral-800"
+                )}
+              >
+                <div 
+                  className={cn(
+                    "w-6 h-6 bg-white rounded-full transition-all shadow-md absolute",
+                    enableDownloads ? "right-1" : "left-1"
+                  )} 
+                />
+              </button>
+            </div>
           </div>
 
         </div>

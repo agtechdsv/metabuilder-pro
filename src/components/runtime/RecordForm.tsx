@@ -67,7 +67,7 @@ export default function RecordForm({
 
     for (const join of subJoins) {
       if (!pkValue) continue
-      const { data } = await supabaseClient
+      const { data } = await (supabaseClient as any)
         .from(join.to)
         .select('*')
         .eq(join.foreignKey, String(pkValue))

@@ -1,6 +1,8 @@
 import { CustomThemeProvider } from '../CustomThemeProvider'
 import React from 'react'
 
+type Theme = 'light' | 'dark'
+
 export function LoginPortalThemeWrapper({ 
   children, 
   theme 
@@ -13,9 +15,8 @@ export function LoginPortalThemeWrapper({
   return (
     <CustomThemeProvider 
       attribute="class" 
-      defaultTheme={isFixed ? theme : 'system'}
-      enableSystem={!isFixed}
-      forcedTheme={isFixed ? theme : undefined}
+      defaultTheme={isFixed ? (theme as Theme) : 'dark'}
+      forcedTheme={isFixed ? (theme as Theme) : undefined}
     >
       {children}
     </CustomThemeProvider>

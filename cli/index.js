@@ -174,10 +174,11 @@ async function startTunnel(projectId, secretToken, connectionString, configSupab
                }
             });
           }
-          
-          sql = `SELECT ${selectCols} FROM "${safeTable}"${joinClause}${whereClause} LIMIT 100`;
+          const limit = payload.payload.limit ? parseInt(payload.payload.limit) : 100;
+          const offset = payload.payload.offset ? parseInt(payload.payload.offset) : 0;
+          sql = `SELECT ${selectCols} FROM "${safeTable}"${joinClause}${whereClause} LIMIT ${limit} OFFSET ${offset}`;
           result = await pgClient.query(sql, params);
-          console.log(chalk.green(`[ OK ] SELECT: Retornou ${result.rows.length} linhas.`));
+          console.log(chalk.green(`[ OK ] SELECT: Retornou ${result.rows.length} linhas (Limit: ${limit}, Offset: ${offset}).`));
         } 
         else if (action === 'insert') {
           const data = payload.payload.data; // { coluna: "valor" }

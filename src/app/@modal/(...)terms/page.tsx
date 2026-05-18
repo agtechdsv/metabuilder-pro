@@ -1,1 +1,1 @@
-﻿import { Modal } from "@/components/ui/Modal"; import { TermsContent } from "@/components/legal/TermsContent"; export default function TermsModal() { return ( <Modal title="Termos de Serviço" type="terms"> <TermsContent /> </Modal> ); }
+import { Modal } from "@/components/ui/Modal"; import { TermsContent } from "@/components/legal/TermsContent"; export default function TermsModal() { return ( <Modal isOpen={true} onClose={() => { window.history.back() }} title="Termos de Serviço"> <TermsContent /> </Modal> ); }

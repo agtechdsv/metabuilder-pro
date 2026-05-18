@@ -14,7 +14,9 @@ import {
   Plus,
   Trash2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Pencil,
+  Download
 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
@@ -60,7 +62,8 @@ export default function UseCaseBuilder() {
     buttons_config: [
       { id: 'add', label: t('dashboard.projects.studio.wizard.buttons.add'), icon: 'plus', action: 'create', visible: true },
       { id: 'edit', label: t('dashboard.projects.studio.wizard.buttons.edit'), icon: 'edit', action: 'update', visible: true },
-      { id: 'delete', label: t('dashboard.projects.studio.wizard.buttons.delete'), icon: 'trash', action: 'delete', visible: true }
+      { id: 'delete', label: t('dashboard.projects.studio.wizard.buttons.delete'), icon: 'trash', action: 'delete', visible: true },
+      { id: 'export', label: 'Exportar Dados', icon: 'download', action: 'export', visible: true }
     ]
   })
 
@@ -247,6 +250,7 @@ export default function UseCaseBuilder() {
 // --- SUB-COMPONENTES DE PASSOS ---
 
 function StepLogic({ config, setConfig }: any) {
+  const { t } = useI18n()
   const types = [
     { id: 'pesquisa', title: t('dashboard.projects.studio.builder.logic_research_only'), desc: t('dashboard.projects.studio.builder.logic_research_only_desc') },
     { id: 'pesquisa_cadastro', title: t('dashboard.projects.studio.builder.logic_research_registration'), desc: t('dashboard.projects.studio.builder.logic_research_registration_desc') },
@@ -321,6 +325,7 @@ function StepLogic({ config, setConfig }: any) {
 }
 
 function StepTables({ config, setConfig, models }: any) {
+  const { t } = useI18n()
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="space-y-2">
@@ -364,6 +369,7 @@ function StepTables({ config, setConfig, models }: any) {
 }
 
 function StepLayout({ config, setConfig, models }: any) {
+  const { t } = useI18n()
   const selectedModelsData = models.filter((m: any) => config.selected_models.includes(m.id))
 
   const toggleField = (fieldId: string, zone: 'filter_fields' | 'grid_fields' | 'form_fields') => {
@@ -543,6 +549,7 @@ function StepLayout({ config, setConfig, models }: any) {
 }
 
 function StepActions({ config, setConfig }: any) {
+  const { t } = useI18n()
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="space-y-2">
@@ -587,13 +594,28 @@ function StepActions({ config, setConfig }: any) {
               <div key={btn.id} className="flex items-center justify-between p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-neutral-500">
-                    <Plus className="w-4 h-4" />
+                    {btn.icon === 'plus' && <Plus className="w-4 h-4" />}
+                    {btn.icon === 'edit' && <Pencil className="w-4 h-4" />}
+                    {btn.icon === 'trash' && <Trash2 className="w-4 h-4" />}
+                    {btn.icon === 'download' && <Download className="w-4 h-4" />}
                   </div>
                   <span className="text-sm font-bold">{btn.label}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-[10px] font-black text-neutral-400 uppercase tracking-tighter">{btn.action}</span>
-                  <input type="checkbox" checked={btn.visible} onChange={() => { }} className="w-4 h-4 accent-indigo-600" />
+                  <input 
+                    type="checkbox" 
+                    checked={btn.visible} 
+                    onChange={() => {
+                      setConfig({
+                        ...config,
+                        buttons_config: config.buttons_config.map((b: any) =>
+                          b.id === btn.id ? { ...b, visible: !b.visible } : b
+                        )
+                      })
+                    }} 
+                    className="w-4 h-4 accent-indigo-600 cursor-pointer" 
+                  />
                 </div>
               </div>
             ))}

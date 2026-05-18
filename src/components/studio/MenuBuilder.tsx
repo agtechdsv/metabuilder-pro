@@ -237,12 +237,16 @@ function MenuNode({ item, views, onUpdate, onRemove, onAddChild, lastAddedId }: 
               value={item.target}
               onChange={e => {
                 const selectedSlug = e.target.value
-                const selectedView = views.find(v => v.slug === selectedSlug)
+                const selectedView = views.find((v: any) => v.slug === selectedSlug)
                 const updates: any = { target: selectedSlug }
                 
                 // Se o label estiver vazio, sugere o nome do caso de uso
-                if (!item.label && selectedView) {
-                  updates.label = selectedView.name
+                if (!item.label) {
+                  if (selectedSlug === 'downloads') {
+                    updates.label = 'Central de Downloads'
+                  } else if (selectedView) {
+                    updates.label = selectedView.name
+                  }
                 }
                 
                 onUpdate(item.id, updates)
@@ -250,6 +254,7 @@ function MenuNode({ item, views, onUpdate, onRemove, onAddChild, lastAddedId }: 
               className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-1.5 text-xs font-bold outline-none"
             >
               <option value="">Selecionar Caso de Uso...</option>
+              <option value="downloads">📁 Central de Downloads (Utilitário)</option>
               {views.map((v: any) => (
                 <option key={v.id} value={v.slug}>{v.name}</option>
               ))}
