@@ -43,3 +43,8 @@ node_modules
 
 # scratch / temporary scripts
 /scratch/
+
+# project-specific local scripts and tests
+/cli/run_migration.js
+/cli/run_scheduler_migration.js
+/supabase/agenda_compromissos_test.sql

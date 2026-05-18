@@ -37,7 +37,7 @@ export default async function SlugPage({ params }: PageProps) {
   // 1. Resolve o Workspace pelo Slug (Defensivo com limit(1))
   const { data: workspaces, error: workspaceError } = await supabase
     .from('workspaces')
-    .select('id, name')
+    .select('id, name, slug')
     .eq('slug', workspace_slug)
     .limit(1)
 
@@ -51,7 +51,7 @@ export default async function SlugPage({ params }: PageProps) {
   // 2. Resolve o Projeto pelo Slug e Workspace ID (Defensivo com limit(1))
   const { data: projects, error: projectError } = await supabase
     .from('projects')
-    .select('id, name, navigation')
+    .select('id, name, slug, navigation')
     .eq('slug', project_slug)
     .eq('workspace_id', workspace.id)
     .limit(1)
@@ -98,16 +98,16 @@ export default async function SlugPage({ params }: PageProps) {
   const view = views?.[0]
 
   if (view && !viewError && view.layout_config?.is_active !== false) {
+    const { data: allModels } = await supabase.from('models').select('id, display_name, db_table_name, fields(*)').eq('project_id', project.id)
+    const dictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.display_name }), {}) || {}
+    const tableDictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.db_table_name }), {}) || {}
+
     viewName = view.name
-    modelName = view.model?.db_table_name || ''
+    modelName = tableDictionary[view.model_id] || view.model?.db_table_name || ''
     modelId = view.model_id
     displayType = view.layout_config?.display_type || 'list'
     
     const allComponents = view.ui_components || []
-    
-    const { data: allModels } = await supabase.from('models').select('id, display_name, db_table_name, fields(*)').eq('project_id', project.id)
-    const dictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.display_name }), {}) || {}
-    const tableDictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.db_table_name }), {}) || {}
 
     const resolveSqlExpression = (field: any) => {
       const dbColName = field.db_column_name
@@ -249,12 +249,14 @@ export default async function SlugPage({ params }: PageProps) {
 
     const buttonsConfig = view.buttons_config || []
     const canAdd = buttonsConfig.find((b: any) => b.id === 'add')?.visible !== false
+    const canExport = buttonsConfig.find((b: any) => b.id === 'export')?.visible !== false
 
     return (
       <TranslationProvider locale={locale}>
         <ViewPageContent 
           workspace={workspace}
           project={{ ...project, models: allModels }}
+          canExport={canExport}
           viewName={viewName}
           modelName={modelName}
           displayFields={displayFields}

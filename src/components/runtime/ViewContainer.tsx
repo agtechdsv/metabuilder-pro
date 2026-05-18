@@ -181,6 +181,7 @@ export default function ViewContainer({
 
   // 1. Refs e Hooks de topo (Regras do React)
   const activeQueriesRef = useRef<Set<string>>(new Set())
+  const queryConfigsRef = useRef<Map<string, { append: boolean }>>(new Map())
   const currentFiltersRef = useRef<any>({})
   
   useEffect(() => {
@@ -199,6 +200,10 @@ export default function ViewContainer({
 
       console.log(`[MetaBuilder] Resposta recebida na Lista para ${qId}`)
       
+      const config = queryConfigsRef.current.get(qId)
+      const shouldAppend = config?.append || false
+      queryConfigsRef.current.delete(qId)
+
       if (payload.payload.success) {
         let resultData = payload.payload.data.map((row: any) => ({
           ...row,
@@ -217,10 +222,18 @@ export default function ViewContainer({
           resultData = Object.values(grouped)
         }
 
-        setData(resultData)
-        const cacheKey = `${projectId}:${modelName}`
-        if (!Object.keys(currentFiltersRef.current || {}).length) {
-          setCachedData(cacheKey, resultData)
+        if (shouldAppend) {
+          setData(prev => {
+            const existingIds = new Set(prev.map(row => String(row[primaryKeyName] || row.id || row.ID)))
+            const newRows = resultData.filter((row: any) => !existingIds.has(String(row[primaryKeyName] || row.id || row.ID)))
+            return [...prev, ...newRows]
+          })
+        } else {
+          setData(resultData)
+          const cacheKey = `${projectId}:${modelName}`
+          if (!Object.keys(currentFiltersRef.current || {}).length) {
+            setCachedData(cacheKey, resultData)
+          }
         }
       } else {
         setError(payload.payload.error)
@@ -245,7 +258,7 @@ export default function ViewContainer({
     }
   }, [tunnelChannel, isTunnelReady])
 
-  const fetchData = async (currentFilters: any = {}, forceRefresh: boolean = false) => {
+  const fetchData = async (currentFilters: any = {}, forceRefresh: boolean = false, append: boolean = false) => {
     if (!tunnelChannel || !isTunnelReady) {
       console.warn(`[MetaBuilder] Busca ignorada: canal do túnel não está pronto ainda.`)
       return
@@ -254,16 +267,17 @@ export default function ViewContainer({
     const cacheKey = `${projectId}:${modelName}`
     const cached = getCachedData(cacheKey)
 
-    if (!forceRefresh && cached && !Object.keys(currentFilters).length) {
+    if (!forceRefresh && !append && cached && !Object.keys(currentFilters).length) {
       setData(cached)
       setIsLoading(false)
       return
     }
 
     const queryId = crypto.randomUUID()
+    queryConfigsRef.current.set(queryId, { append })
     activeQueriesRef.current.add(queryId)
     
-    if (!cached) setIsLoading(true)
+    if (!cached || append) setIsLoading(true)
     setError(null)
     
     console.log(`[MetaBuilder] Solicitando dados via Túnel (${queryId})...`, { table: modelName })
@@ -368,7 +382,9 @@ export default function ViewContainer({
             query: rawQuery,
             sql: rawQuery,
             token: 'test-token',
-            joins: joins
+            joins: joins,
+            limit: 100,
+            offset: append ? data.length : 0
           }
 
           if (currentFilters && Object.keys(currentFilters).length > 0) {
@@ -740,7 +756,7 @@ export default function ViewContainer({
                         {field.display_name}
                         {field.is_primary_key && <span className="text-indigo-500" title={t('runtime.primary_key')}>🔑</span>}
                         <div className="opacity-0 group-hover/th:opacity-100 transition-opacity">
-                          {sortConfig?.key === field.db_column_name ? (
+                          {sortConfig && sortConfig.key === field.db_column_name ? (
                             sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
                           ) : <ArrowUpDown className="w-3 h-3" />}
                         </div>
@@ -784,6 +800,16 @@ export default function ViewContainer({
               </select>
               <span className="mx-2 opacity-20">|</span>
               <span className="opacity-60">{t('runtime.total')}: <span className="text-neutral-900 dark:text-white">{data.length}</span></span>
+              {data.length >= 100 && (data.length % 100 === 0) && (
+                <button
+                  onClick={() => fetchData(externalFilters, false, true)}
+                  disabled={isLoading}
+                  className="ml-4 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCcw className="w-3 h-3" />}
+                  {t('runtime.load_more', 'Carregar mais 100')}
+                </button>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -819,16 +845,30 @@ export default function ViewContainer({
           </div>
         </div>
       ) : viewMode === 'kanban' ? (
-        <DynamicKanban 
-          data={data}
-          fields={displayFields}
-          groupField={displayFields.find(f => f.id === kanbanGroupField) || displayFields.find(f => f.db_column_name === 'status') || { db_column_name: 'status' }}
-          dictionary={dictionary}
-          onMove={handleMove}
-          onView={onView}
-          onEdit={onEdit}
-          onDelete={onDelete}
-        />
+        <div className="space-y-6">
+          <DynamicKanban 
+            data={data}
+            fields={displayFields}
+            groupField={displayFields.find(f => f.id === kanbanGroupField) || displayFields.find(f => f.db_column_name === 'status') || { db_column_name: 'status' }}
+            dictionary={dictionary}
+            onMove={handleMove}
+            onView={onView}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+          {data.length >= 100 && (data.length % 100 === 0) && (
+            <div className="flex justify-center pt-2">
+              <button
+                onClick={() => fetchData(externalFilters, false, true)}
+                disabled={isLoading}
+                className="flex items-center gap-2 px-8 py-3 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black rounded-full text-[11px] font-black uppercase tracking-widest transition-all shadow-xl disabled:opacity-50"
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCcw className="w-4 h-4" />}
+                {t('runtime.load_more_records', 'Carregar Próximos 100 Registros')} (Total: {data.length})
+              </button>
+            </div>
+          )}
+        </div>
       ) : viewMode === 'scheduler' ? (
         <DynamicScheduler 
           data={data}
@@ -872,8 +912,21 @@ export default function ViewContainer({
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <div className="bg-white dark:bg-neutral-900 px-6 py-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-[11px] font-black uppercase tracking-[0.2em] text-neutral-400">
-              {t('runtime.page')} <span className="text-indigo-600">{currentPage}</span> {t('runtime.of')} {totalPages || 1}
+            <div className="flex items-center gap-3 bg-white dark:bg-neutral-900 px-6 py-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-[11px] font-black uppercase tracking-[0.2em] text-neutral-400">
+              <span>{t('runtime.page')} <span className="text-indigo-600">{currentPage}</span> {t('runtime.of')} {totalPages || 1}</span>
+              {data.length >= 100 && (data.length % 100 === 0) && (
+                <>
+                  <span className="mx-1 opacity-20">|</span>
+                  <button
+                    onClick={() => fetchData(externalFilters, false, true)}
+                    disabled={isLoading}
+                    className="text-indigo-600 dark:text-indigo-400 hover:opacity-80 transition-all disabled:opacity-50 flex items-center gap-1 font-black"
+                  >
+                    {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCcw className="w-3.5 h-3.5" />}
+                    {t('runtime.more', 'Mais')}
+                  </button>
+                </>
+              )}
             </div>
             <button 
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}

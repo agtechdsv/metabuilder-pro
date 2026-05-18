@@ -23,7 +23,7 @@ export default async function ProjectDashboard({ params }: ProjectDashboardProps
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', user.id)
+    .eq('id', user?.id)
     .single()
 
   // 1. Resolve Workspace
@@ -40,7 +40,7 @@ export default async function ProjectDashboard({ params }: ProjectDashboardProps
     .from('projects')
     .select('*')
     .eq('slug', project_slug)
-    .eq('workspace_id', workspace.id)
+    .eq('workspace_id', workspace?.id)
     .single()
 
   if (!project) notFound()
@@ -60,7 +60,7 @@ export default async function ProjectDashboard({ params }: ProjectDashboardProps
       views={views || []}
       workspace_slug={workspace_slug}
       project_slug={project_slug}
-      user={user}
+      user={user!}
     />
   )
 }

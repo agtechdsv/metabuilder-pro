@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, LineChart, Line, Legend, BarChart3 as BarChartIcon 
+  PieChart, Pie, Cell, LineChart, Line, Legend 
 } from 'recharts'
 import { 
   TrendingUp, Users, DollarSign, Activity, Loader2, 
@@ -41,7 +41,7 @@ interface Widget {
   field_id?: string
   calc: 'COUNT' | 'SUM' | 'AVG' | 'MIN' | 'MAX'
   group_by?: string
-  width: 'full' | 'half' | 'third'
+  width: 'full' | 'half' | 'third' | 'quarter'
   joins?: any[]
   gauge_min?: number
   gauge_max?: number

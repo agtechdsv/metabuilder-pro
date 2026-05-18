@@ -41,7 +41,8 @@ import {
   Activity,
   Gauge,
   BarChart3,
-  Calendar
+  Calendar,
+  Download
 } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
@@ -139,7 +140,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       { id: 'view', label: t('runtime.view'), labelKey: 'runtime.view', icon: 'search', action: 'view', visible: true },
       { id: 'add', label: t('runtime.new_record'), labelKey: 'runtime.new_record', icon: 'plus', action: 'create', visible: true },
       { id: 'edit', label: t('runtime.edit'), labelKey: 'runtime.edit', icon: 'pencil', action: 'pencil', action_key: 'update', visible: true },
-      { id: 'delete', label: t('runtime.delete'), labelKey: 'runtime.delete', icon: 'trash', action_key: 'delete', visible: true }
+      { id: 'delete', label: t('runtime.delete'), labelKey: 'runtime.delete', icon: 'trash', action_key: 'delete', visible: true },
+      { id: 'export', label: 'Exportar Dados', labelKey: 'runtime.export', icon: 'download', action: 'export', visible: true }
     ]
   })
 
@@ -272,13 +274,14 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
             { id: 'view', label: t('runtime.view'), labelKey: 'runtime.view', icon: 'search', action: 'view', visible: true },
             { id: 'add', label: t('runtime.new_record'), labelKey: 'runtime.new_record', icon: 'plus', action: 'create', visible: true },
             { id: 'edit', label: t('runtime.edit'), labelKey: 'runtime.edit', icon: 'pencil', action: 'pencil', action_key: 'update', visible: true },
-            { id: 'delete', label: t('runtime.delete'), labelKey: 'runtime.delete', icon: 'trash', action_key: 'delete', visible: true }
+            { id: 'delete', label: t('runtime.delete'), labelKey: 'runtime.delete', icon: 'trash', action_key: 'delete', visible: true },
+            { id: 'export', label: 'Exportar Dados', labelKey: 'runtime.export', icon: 'download', action: 'export', visible: true }
           ]
           if (!initialData.buttons_config) return defaults
           // Merge: Keep existing visible states, but ensure all default IDs exist
           return defaults.map(def => {
             const existing = initialData.buttons_config.find((b: any) => b.id === def.id)
-            return existing ? { ...def, ...existing } : { ...def, visible: false }
+            return existing ? { ...def, ...existing } : { ...def, visible: def.id === 'export' ? true : false }
           })
         })()
       })
@@ -2318,7 +2321,7 @@ function StepActions({ config, setConfig }: any) {
       <div className="space-y-6">
         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.interface_buttons')}</label>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {config.buttons_config.map((btn: any) => (
+          {config.buttons_config.filter((b: any) => b.id !== 'export').map((btn: any) => (
             <button
               key={btn.id}
               onClick={() => {
@@ -2387,6 +2390,50 @@ function StepActions({ config, setConfig }: any) {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="space-y-6">
+        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Exportação de Dados</label>
+        <button
+          type="button"
+          onClick={() => {
+            const isExportVisible = config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false;
+            setConfig({
+              ...config,
+              buttons_config: config.buttons_config.map((b: any) => 
+                b.id === 'export' ? { ...b, visible: !isExportVisible } : b
+              )
+            });
+          }}
+          className={cn(
+            "w-full p-6 rounded-[2rem] border-2 text-left transition-all relative group overflow-hidden flex items-center justify-between",
+            (config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false)
+              ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10'
+              : 'border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/30'
+          )}
+        >
+          <div className="flex items-center gap-4">
+            <div className={cn(
+              "p-3 rounded-2xl transition-all",
+              (config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false) ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
+            )}>
+              <Download className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-base text-neutral-900 dark:text-white">Exportação de Dados (Background)</h4>
+              <p className="text-[10px] text-neutral-400 mt-1 leading-relaxed">Permite que os usuários exportem os dados desta tela em formatos Excel (XLSX), CSV e JSON com processamento assíncrono.</p>
+            </div>
+          </div>
+          <div className={cn(
+            "w-12 h-6 rounded-full p-1 transition-all relative cursor-pointer flex items-center",
+            (config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false) ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-700'
+          )}>
+            <div className={cn(
+              "w-4 h-4 bg-white rounded-full transition-all shadow-md transform",
+              (config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false) ? 'translate-x-6' : 'translate-x-0'
+            )} />
+          </div>
+        </button>
       </div>
 
       <div className="h-px bg-neutral-100 dark:bg-neutral-800/50 w-full"></div>

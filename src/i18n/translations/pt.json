@@ -340,6 +340,7 @@
   },
   "runtime": {
     "dashboard": "Dashboard",
+    "export": "Exportar Dados",
     "search": "Pesquisar",
     "clear": "Limpar",
     "filter_placeholder": "Filtrar por {field}...",

@@ -72,7 +72,7 @@ export default function AuthSettingsPage() {
     login_tooltip: t('dashboard.projects.studio.auth.default_tooltip')
   })
 
-  const [activeTab, setActiveTab] = useState<'visual' | 'strategy'>('strategy')
+  const [activeTab, setActiveTab] = useState<'visual' | 'strategy' | 'users'>('strategy')
 
   const supabase = createClient()
   const { toast } = useToast()
