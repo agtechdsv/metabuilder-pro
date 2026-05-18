@@ -8,15 +8,18 @@ export async function generateMetadata({ params }: { params: Promise<{ project_s
   const { project_slug, workspace_slug } = await params
   const supabase = await createClient()
   
-  const { data: workspace } = await supabase.from('workspaces').select('id').eq('slug', workspace_slug).single()
+  const { data: workspaces } = await supabase.from('workspaces').select('id').eq('slug', workspace_slug).limit(1)
+  const workspace = workspaces?.[0]
   if (!workspace) return {}
 
-  const { data: project } = await supabase
+  const { data: projects } = await supabase
     .from('projects')
     .select('name, icon')
     .eq('slug', project_slug)
     .eq('workspace_id', workspace.id)
-    .single()
+    .limit(1)
+
+  const project = projects?.[0]
 
   if (!project) return {}
 
@@ -63,21 +66,25 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   const supabase = await createClient()
 
   // 1. Resolve Workspace
-  const { data: workspace, error: workspaceError } = await supabase
+  const { data: workspaces, error: workspaceError } = await supabase
     .from('workspaces')
     .select('id, name')
     .eq('slug', workspace_slug)
-    .single()
+    .limit(1)
+
+  const workspace = workspaces?.[0]
 
   if (workspaceError || !workspace) notFound()
 
   // 2. Resolve Project (incluindo navegação)
-  const { data: project, error: projectError } = await supabase
+  const { data: projects, error: projectError } = await supabase
     .from('projects')
     .select('*')
     .eq('slug', project_slug)
     .eq('workspace_id', workspace.id)
-    .single()
+    .limit(1)
+
+  const project = projects?.[0]
 
   if (projectError || !project) notFound()
 

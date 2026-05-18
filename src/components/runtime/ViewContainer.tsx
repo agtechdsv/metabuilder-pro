@@ -399,52 +399,68 @@ export default function ViewContainer({
     // 1. Descobrir o valor real da chave primária para enviar ao DB
     const movedItem = data.find(item => String(item._key || item.id || item.ID || item[primaryKeyName]) === recordId)
     if (!movedItem) return
-    const actualPrimaryKey = movedItem[primaryKeyName] || movedItem.id || movedItem.ID
+    
+    const cleanPrimaryKeyName = primaryKeyName.split('.').pop() || 'id'
+    const actualPrimaryKey = movedItem[primaryKeyName] || movedItem[cleanPrimaryKeyName] || movedItem.id || movedItem.ID
 
     // 2. Otimismo: Atualiza localmente o estado
     const groupFieldDef = displayFields.find(f => f.id === kanbanGroupField) || displayFields.find(f => f.db_column_name === 'status') || { db_column_name: 'status' }
     const groupFieldName = groupFieldDef.db_column_name
+    const cleanGroupFieldName = groupFieldName.split('.').pop() || 'status'
     
     setData(prev => prev.map(item => {
-      const itemId = String(item._key || item.id || item.ID || item[primaryKeyName])
+      const itemId = String(item._key || item.id || item.ID || item[primaryKeyName] || item[cleanPrimaryKeyName])
       if (itemId === recordId) {
-        return { ...item, [groupFieldName]: newValue }
+        return { 
+          ...item, 
+          [groupFieldName]: newValue,
+          [cleanGroupFieldName]: newValue
+        }
       }
       return item
     }))
 
     // 3. Dispara o Update via Tunnel
     const queryId = crypto.randomUUID()
-    const channelName = `tunnel:${projectId}`
-    const channel = supabase.channel(channelName)
+    const rawQuery = `UPDATE ${modelName} SET ${cleanGroupFieldName} = '${String(newValue).replace(/'/g, "''")}' WHERE ${cleanPrimaryKeyName} = '${String(actualPrimaryKey).replace(/'/g, "''")}'`
+    
+    const payload: any = {
+      queryId,
+      table: modelName,
+      tableName: modelName,
+      action: 'update',
+      data: { [cleanGroupFieldName]: newValue },
+      query: rawQuery,
+      sql: rawQuery,
+      idColumn: cleanPrimaryKeyName,
+      idValue: actualPrimaryKey,
+      token: 'test-token'
+    }
 
-    channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        const rawQuery = `UPDATE ${modelName} SET ${groupFieldName} = '${String(newValue).replace(/'/g, "''")}' WHERE ${primaryKeyName} = '${String(actualPrimaryKey).replace(/'/g, "''")}'`
-        
-        const payload: any = {
-          queryId,
-          table: modelName,
-          tableName: modelName,
-          action: 'update',
-          data: { [groupFieldName]: newValue },
-          query: rawQuery,
-          sql: rawQuery,
-          idColumn: primaryKeyName,
-          idValue: actualPrimaryKey,
-          token: 'test-token'
+    if (tunnelChannel && isTunnelReady) {
+      console.log(`[MetaBuilder] 📡 Enviando atualização do Kanban via Canal Compartilhado:`, payload)
+      tunnelChannel.send({
+        type: 'broadcast',
+        event: 'sql_query',
+        payload
+      })
+    } else {
+      console.log(`[MetaBuilder] ⚠️ Canal compartilhado não pronto. Usando canal temporário.`)
+      const channelName = `tunnel:${projectId}`
+      const channel = supabase.channel(channelName)
+
+      channel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          channel.send({
+            type: 'broadcast',
+            event: 'sql_query',
+            payload
+          })
+          // Limpa canal após um tempo
+          setTimeout(() => supabase.removeChannel(channel), 2000)
         }
-
-        channel.send({
-          type: 'broadcast',
-          event: 'sql_query',
-          payload
-        })
-        
-        // Limpa canal após um tempo
-        setTimeout(() => supabase.removeChannel(channel), 2000)
-      }
-    })
+      })
+    }
   }
 
   const isFirstRender = useRef(true)

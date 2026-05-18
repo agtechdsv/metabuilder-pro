@@ -255,6 +255,28 @@ export default function ViewPageContent({
     }
   }
 
+  const handleSaveDashboardLayout = async (newWidgets: any[]) => {
+    const currentConfig = localAnalyticsConfig || initialAnalyticsConfig || { widgets: [], allow_runtime_edit: true }
+    const newConfig = { ...currentConfig, widgets: newWidgets }
+    setLocalAnalyticsConfig(newConfig)
+
+    try {
+      const { data: viewData } = await supabase.from('ui_views').select('layout_config').eq('id', viewId).single()
+      const updatedLayoutConfig = { ...viewData?.layout_config, analytics_config: newConfig }
+
+      const { error } = await supabase
+        .from('ui_views')
+        .update({ layout_config: updatedLayoutConfig })
+        .eq('id', viewId)
+      
+      if (error) throw error
+      toast('Layout do dashboard salvo com sucesso!', 'success')
+    } catch (err: any) {
+      console.error('Error saving dashboard layout:', err)
+      toast('Erro ao salvar ordem do dashboard: ' + err.message, 'error')
+    }
+  }
+
   const handleDeleteWidgetRuntime = async (id: string) => {
     const currentConfig = localAnalyticsConfig || initialAnalyticsConfig || { widgets: [], allow_runtime_edit: true }
     const newWidgets = (currentConfig.widgets || []).filter((w: any) => w.id !== id)
@@ -759,13 +781,14 @@ export default function ViewPageContent({
       channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           const pkName = primaryKeyName
+          const cleanPkName = pkName.split('.').pop() || 'id'
           
           // Case-insensitive PK value resolution
-          const pkValue = formData[pkName] ?? formData[pkName.toUpperCase()] ?? formData[pkName.toLowerCase()]
+          const pkValue = formData[pkName] ?? formData[cleanPkName] ?? formData[pkName.toUpperCase()] ?? formData[pkName.toLowerCase()] ?? formData.id ?? formData.ID
           
           const filters: any = {}
           if (action === 'update' && pkValue !== undefined && pkValue !== null) {
-            filters[pkName] = String(pkValue)
+            filters[cleanPkName] = String(pkValue)
           }
 
           // Blacklist: exclude internal keys, system columns, PK, objects, and arrays.
@@ -780,6 +803,7 @@ export default function ViewPageContent({
               k.startsWith('_') ||           // skip _key, _details, etc.
               k.includes('.') ||             // skip table-prefixed duplicates
               lowKey === pkName.toLowerCase() ||
+              lowKey === cleanPkName.toLowerCase() ||
               lowKey === 'created_at' ||
               lowKey === 'updated_at' ||
               v === undefined || v === null ||
@@ -795,7 +819,7 @@ export default function ViewPageContent({
             const setClause = Object.entries(sanitizedData)
               .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
               .join(', ')
-            rawQuery = `UPDATE ${modelName} SET ${setClause} WHERE ${pkName} = '${String(pkValue).replace(/'/g, "''")}'`
+            rawQuery = `UPDATE ${modelName} SET ${setClause} WHERE ${cleanPkName} = '${String(pkValue).replace(/'/g, "''")}'`
           } else if (action === 'insert' && Object.keys(sanitizedData).length > 0) {
             const keys = Object.keys(sanitizedData).join(', ')
             const values = Object.values(sanitizedData)
@@ -805,7 +829,7 @@ export default function ViewPageContent({
           }
 
           console.log(`[MetaBuilder:handleSave] RAW formData keys:`, Object.keys(formData))
-          console.log(`[MetaBuilder:handleSave] action=${action} table=${modelName} pkName=${pkName} pkValue=${pkValue}`)
+          console.log(`[MetaBuilder:handleSave] action=${action} table=${modelName} pkName=${pkName} cleanPkName=${cleanPkName} pkValue=${pkValue}`)
           console.log(`[MetaBuilder:handleSave] sanitizedData:`, sanitizedData)
           console.log(`[MetaBuilder:handleSave] rawQuery:`, rawQuery)
 
@@ -818,7 +842,7 @@ export default function ViewPageContent({
             record: sanitizedData, 
             query: rawQuery, 
             sql: rawQuery, 
-            idColumn: pkName,   // EXATAMENTE o que o Agente CLI espera
+            idColumn: cleanPkName,   // EXATAMENTE o que o Agente CLI espera
             idValue: pkValue,   // EXATAMENTE o que o Agente CLI espera
             token: 'test-token'
           }
@@ -966,20 +990,21 @@ export default function ViewPageContent({
       channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           const pkName = primaryKeyName
+          const cleanPkName = pkName.split('.').pop() || 'id'
 
           const filters: any = {}
-          let pkValue = selectedRow[pkName]
+          let pkValue = selectedRow[pkName] ?? selectedRow[cleanPkName] ?? selectedRow.id ?? selectedRow.ID
 
           if (pkValue !== undefined && pkValue !== null) {
-            filters[pkName] = String(pkValue)
+            filters[cleanPkName] = String(pkValue)
           }
 
           let rawQuery = ''
           if (pkValue !== undefined && pkValue !== null) {
-            rawQuery = `DELETE FROM ${modelName} WHERE ${pkName} = '${String(pkValue).replace(/'/g, "''")}'`
+            rawQuery = `DELETE FROM ${modelName} WHERE ${cleanPkName} = '${String(pkValue).replace(/'/g, "''")}'`
           }
 
-          console.log(`[MetaBuilder] Executing delete on ${modelName}`, { filters, pkName, pkValue, rawQuery })
+          console.log(`[MetaBuilder] Executing delete on ${modelName}`, { filters, pkName, cleanPkName, pkValue, rawQuery })
 
           const payload: any = {
             queryId,
@@ -988,7 +1013,7 @@ export default function ViewPageContent({
             action: 'delete',
             query: rawQuery,
             sql: rawQuery,
-            idColumn: pkName,
+            idColumn: cleanPkName,
             idValue: pkValue,
             token: 'test-token'
           }
@@ -1071,6 +1096,7 @@ export default function ViewPageContent({
                 onEditWidget={handleEditWidgetRuntime}
                 onAddWidget={handleAddWidgetRuntime}
                 onDeleteWidget={handleDeleteWidgetRuntime}
+                onSaveLayout={handleSaveDashboardLayout}
                 tunnelChannel={tunnelChannel}
                 isTunnelReady={isTunnelReady}
               />
