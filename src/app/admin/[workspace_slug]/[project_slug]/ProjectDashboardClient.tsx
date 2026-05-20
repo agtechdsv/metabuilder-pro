@@ -12,6 +12,7 @@ import { UseCaseManager } from '@/components/workspace/UseCaseManager'
 import { useI18n } from '@/i18n/I18nContext'
 
 import { HeaderActions } from '@/components/layout/HeaderActions'
+import { useToast } from '@/components/ui/Toast'
 
 interface ProjectDashboardClientProps {
   workspace: any
@@ -26,8 +27,20 @@ interface ProjectDashboardClientProps {
 export function ProjectDashboardClient({ workspace, project, profile, views, workspace_slug, project_slug, user }: ProjectDashboardClientProps) {
   const { t } = useI18n()
 
+  const { toast } = useToast()
+
   const copyProjectId = () => {
     navigator.clipboard.writeText(project.id)
+    toast("ID do Projeto copiado!", 'success')
+  }
+
+  const copySecretToken = () => {
+    if (project.secret_token) {
+      navigator.clipboard.writeText(project.secret_token)
+      toast("Token Secreto copiado!", 'success')
+    } else {
+      toast("Nenhum token secreto disponível.", 'error')
+    }
   }
 
   return (
@@ -105,9 +118,11 @@ export function ProjectDashboardClient({ workspace, project, profile, views, wor
                 <div className="p-4 bg-neutral-50 dark:bg-black/40 rounded-2xl border border-neutral-200 dark:border-neutral-800">
                   <span className="text-xs text-neutral-500 dark:text-neutral-400 block mb-2">{t('dashboard.projects.secret_token')}</span>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono text-neutral-400">••••••••••••••••</span>
+                    <span className="text-[10px] font-mono text-neutral-400 truncate max-w-[120px]" title={project.secret_token || ''}>
+                      {project.secret_token ? `${project.secret_token.substring(0, 8)}...` : 'N/A'}
+                    </span>
                     <button 
-                      onClick={copyProjectId}
+                      onClick={copySecretToken}
                       className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors"
                     >
                       {t('dashboard.projects.copy')}

@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { DynamicDashboard } from '@/components/runtime/DynamicDashboard'
 import { findBreadcrumbPath } from '@/lib/navigation-utils'
@@ -13,7 +13,10 @@ interface WorkspacePageProps {
 
 export default async function WorkspacePage({ params }: WorkspacePageProps) {
   const { workspace_slug, project_slug, folder_id } = await params
-  const supabase = await createClient()
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
   // 1. Resolve Workspace
   const { data: workspace } = await supabase

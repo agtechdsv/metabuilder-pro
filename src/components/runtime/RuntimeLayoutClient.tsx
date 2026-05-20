@@ -23,6 +23,7 @@ export function RuntimeLayoutClient({
 }: RuntimeLayoutClientProps) {
   const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const iconRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -91,6 +92,35 @@ export function RuntimeLayoutClient({
     }
   }, [project.name, project.icon])
   const isLoginPage = pathname?.endsWith('/login')
+
+  useEffect(() => {
+    const sessionCookieName = `client_session_${project.id}`
+    const hasSession = document.cookie.split('; ').some(row => row.trim().startsWith(`${sessionCookieName}=`))
+
+    if (isLoginPage) {
+      if (hasSession) {
+        window.location.href = `/${workspaceSlug}/${projectSlug}`
+      } else {
+        setIsCheckingAuth(false)
+      }
+    } else {
+      if (!hasSession) {
+        window.location.href = `/${workspaceSlug}/${projectSlug}/login`
+      } else {
+        setIsCheckingAuth(false)
+      }
+    }
+  }, [isLoginPage, project.id, workspaceSlug, projectSlug])
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#050505] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </div>
+    )
+  }
 
   if (isLoginPage) {
     return (

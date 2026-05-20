@@ -73,6 +73,7 @@ export default function RecordModal({
         detailsInlineTypes={detailsInlineTypes}
         initialTab={initialTab}
         onTabChange={onTabChange}
+        footerBgClass="bg-white dark:bg-neutral-900"
       />
     </Modal>
   )

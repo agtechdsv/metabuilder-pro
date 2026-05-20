@@ -6,6 +6,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 interface LoginFormProps {
   error?: string
@@ -23,6 +24,68 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
 
   const emailInputRef = useRef<HTMLInputElement>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
+
+  // Listener para capturar o Magic Link / Convite na URL (Hash Fragment) ou sessão já existente
+  useEffect(() => {
+    const supabase = createClient()
+    
+    const navigateToDashboard = () => {
+      let redirectTo = '/workspace'
+      if (typeof window !== 'undefined') {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        const searchParams = new URLSearchParams(window.location.search)
+        const redirectParam = hashParams.get('redirect_to') || searchParams.get('redirect_to')
+        if (redirectParam) {
+          try {
+            // Garante que pegamos só o pathname para navegação interna
+            redirectTo = new URL(redirectParam).pathname
+          } catch {
+            redirectTo = redirectParam.startsWith('/') ? redirectParam : '/workspace'
+          }
+        }
+      }
+      // Usar window.location.href em vez de router.push garante um "hard reload"
+      // Isso força o navegador a enviar os cookies (recém-criados pelo Supabase)
+      // para o servidor. Se usarmos router.push, o Next.js pode fazer um soft-navigation
+      // antes do cookie estar pronto, causando um redirect fantasma de volta pro /login.
+      window.location.href = redirectTo
+    }
+
+    // Verifica imediatamente se já tem sessão (ex: refresh na página)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        navigateToDashboard()
+      }
+    })
+
+    // Se o Supabase falhar em ler o Hash automaticamente, nós forçamos:
+    if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+      const access_token = hashParams.get('access_token')
+      const refresh_token = hashParams.get('refresh_token')
+      
+      if (access_token && refresh_token) {
+        supabase.auth.setSession({ access_token, refresh_token }).then(({ data, error }) => {
+          if (!error && data.session) {
+            navigateToDashboard()
+          }
+        })
+      }
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Usamos apenas "if (session)" porque links de convite ou magic links podem
+      // disparar eventos como 'PASSWORD_RECOVERY' ou apenas 'INITIAL_SESSION'.
+      if (session) {
+        navigateToDashboard()
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [router])
 
   useEffect(() => {
     const timer = setTimeout(() => {

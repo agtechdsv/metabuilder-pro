@@ -241,7 +241,7 @@ export function StudioDashboardClient({
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium uppercase tracking-widest">{t('dashboard.projects.studio.stats.custom_views')}</p>
             </div>
 
-            <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-2 shadow-sm dark:shadow-none transition-all group/stat relative overflow-hidden">
+            <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 shadow-sm dark:shadow-none transition-all group/stat relative overflow-hidden">
               <div className="flex items-center justify-between relative z-10">
                 <div className="p-2 bg-orange-500/10 rounded-xl text-orange-600 dark:text-orange-500">
                   <Clock className="w-5 h-5" />
@@ -251,19 +251,47 @@ export function StudioDashboardClient({
                   <span className="text-[9px] font-black text-green-600 dark:text-green-500 uppercase tracking-widest">{t('dashboard.projects.studio.stats.now')}</span>
                 </div>
               </div>
-              <div className="space-y-1 relative z-10">
+              <div className="space-y-2 relative z-10">
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium leading-tight uppercase tracking-widest">{t('dashboard.projects.studio.agent_status')}</p>
-                <div className="flex items-center justify-between pt-0.5">
-                  <code className="text-[8px] text-neutral-400 font-mono bg-neutral-100 dark:bg-black/40 px-1.5 py-0.5 rounded truncate max-w-[100px]">{project.id}</code>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(project.id)
-                      toast(t('dashboard.projects.studio.token_copied'), 'success')
-                    }}
-                    className="text-[8px] font-black text-indigo-600 dark:text-indigo-400 uppercase hover:underline"
-                  >
-                    {t('dashboard.projects.studio.copy_token')}
-                  </button>
+                
+                {/* Linha 1: ID do Projeto */}
+                <div className="flex items-center justify-between pt-1 border-t border-neutral-100 dark:border-neutral-800/50 pt-2">
+                  <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">ID Projeto:</span>
+                  <div className="flex items-center gap-2">
+                    <code className="text-[8px] text-neutral-400 font-mono bg-neutral-100 dark:bg-black/40 px-1.5 py-0.5 rounded truncate max-w-[80px]" title={project.id}>{project.id}</code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(project.id)
+                        toast("ID do Projeto copiado!", 'success')
+                      }}
+                      className="text-[8px] font-black text-indigo-600 dark:text-indigo-400 uppercase hover:underline"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                </div>
+
+                {/* Linha 2: Token Secreto */}
+                <div className="flex items-center justify-between pt-1 border-t border-neutral-100 dark:border-neutral-800/50 pt-2">
+                  <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">Token Secreto:</span>
+                  <div className="flex items-center gap-2">
+                    <code className="text-[8px] text-neutral-400 font-mono bg-neutral-100 dark:bg-black/40 px-1.5 py-0.5 rounded truncate max-w-[80px]" title={project.secret_token || ''}>
+                      {project.secret_token ? `${project.secret_token.substring(0, 8)}...` : 'N/A'}
+                    </code>
+                    <button
+                      onClick={() => {
+                        if (project.secret_token) {
+                          navigator.clipboard.writeText(project.secret_token)
+                          toast("Token Secreto copiado!", 'success')
+                        } else {
+                          toast("Nenhum token disponível.", 'error')
+                        }
+                      }}
+                      className="text-[8px] font-black text-indigo-600 dark:text-indigo-400 uppercase hover:underline"
+                    >
+                      Copiar
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

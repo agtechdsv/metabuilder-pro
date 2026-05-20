@@ -15,7 +15,8 @@ import {
   Minimize2,
   Maximize2,
   ExternalLink,
-  File
+  File,
+  Activity
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
@@ -28,6 +29,8 @@ interface ExportDropdownProps {
   displayFields: any[]
   joins: any[]
   filters: Record<string, string>
+  exportFormats?: string[]
+  selectedRecord?: any
 }
 
 export function ExportDropdown({
@@ -37,7 +40,9 @@ export function ExportDropdown({
   modelName,
   displayFields,
   joins,
-  filters
+  filters,
+  exportFormats = ['xlsx', 'csv', 'json'],
+  selectedRecord
 }: ExportDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isInitializing, setIsInitializing] = useState(false)
@@ -55,8 +60,28 @@ export function ExportDropdown({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleExport = async (fileType: 'xlsx' | 'csv' | 'json' | 'pdf') => {
+  const handleExport = async (fileType: 'xlsx' | 'csv' | 'json' | 'pdf' | 'ofx') => {
     setIsOpen(false)
+
+    // LOCAL JSON EXPORT (Full Tree) when editing a record
+    if (selectedRecord && fileType === 'json') {
+      try {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selectedRecord, null, 2))
+        const downloadAnchorNode = document.createElement('a')
+        downloadAnchorNode.setAttribute("href", dataStr)
+        const cleanName = viewName.toLowerCase().replace(/[^a-z0-9]/g, '_')
+        const recId = selectedRecord.id || selectedRecord.ID || 'record'
+        downloadAnchorNode.setAttribute("download", `${cleanName}_${recId}.json`)
+        document.body.appendChild(downloadAnchorNode)
+        downloadAnchorNode.click()
+        downloadAnchorNode.remove()
+        toast('Árvore JSON do registro exportada com sucesso!', 'success')
+      } catch (err) {
+        toast('Erro ao exportar JSON da árvore de dados.', 'error')
+      }
+      return
+    }
+
     setIsInitializing(true)
 
     try {
@@ -74,6 +99,15 @@ export function ExportDropdown({
 
       console.log('[Export] Triggering background export for type:', fileType)
 
+      // Se estiver editando um registro específico, forçar o filtro no ID para o export do background (PDF, Excel, etc)
+      let finalFilters = { ...filters }
+      if (selectedRecord) {
+        const pkName = selectedRecord.id ? 'id' : selectedRecord.ID ? 'ID' : null
+        if (pkName) {
+           finalFilters[pkName] = String(selectedRecord[pkName])
+        }
+      }
+
       const response = await fetch('/api/export', {
         method: 'POST',
         headers: {
@@ -88,7 +122,7 @@ export function ExportDropdown({
           fileType,
           columnsList,
           joins,
-          filters
+          filters: finalFilters
         })
       })
 
@@ -138,57 +172,80 @@ export function ExportDropdown({
               </span>
             </div>
             
-            <button
-              onClick={() => handleExport('xlsx')}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-all"
-            >
-              <div className="p-1.5 bg-emerald-100 dark:bg-emerald-950/40 rounded-lg text-emerald-600 dark:text-emerald-400">
-                <FileSpreadsheet className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col">
-                <span>Planilha Excel (.xlsx)</span>
-                <span className="text-[9px] font-medium text-neutral-400">Ideal para relatórios e análises</span>
-              </div>
-            </button>
+            {exportFormats.includes('xlsx') && (
+              <button
+                onClick={() => handleExport('xlsx')}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-all"
+              >
+                <div className="p-1.5 bg-emerald-100 dark:bg-emerald-950/40 rounded-lg text-emerald-600 dark:text-emerald-400">
+                  <FileSpreadsheet className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col">
+                  <span>Planilha Excel (.xlsx)</span>
+                  <span className="text-[9px] font-medium text-neutral-400">Ideal para relatórios e análises</span>
+                </div>
+              </button>
+            )}
 
-            <button
-              onClick={() => handleExport('csv')}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-all"
-            >
-              <div className="p-1.5 bg-blue-100 dark:bg-blue-950/40 rounded-lg text-blue-600 dark:text-blue-400">
-                <FileText className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col">
-                <span>Arquivo CSV (.csv)</span>
-                <span className="text-[9px] font-medium text-neutral-400">Ideal para sistemas e integrações</span>
-              </div>
-            </button>
+            {exportFormats.includes('csv') && (
+              <button
+                onClick={() => handleExport('csv')}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-all"
+              >
+                <div className="p-1.5 bg-blue-100 dark:bg-blue-950/40 rounded-lg text-blue-600 dark:text-blue-400">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col">
+                  <span>Arquivo CSV (.csv)</span>
+                  <span className="text-[9px] font-medium text-neutral-400">Ideal para sistemas e integrações</span>
+                </div>
+              </button>
+            )}
 
-            <button
-              onClick={() => handleExport('json')}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-all"
-            >
-              <div className="p-1.5 bg-amber-100 dark:bg-amber-950/40 rounded-lg text-amber-600 dark:text-amber-400">
-                <FileJson className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col">
-                <span>Formato JSON (.json)</span>
-                <span className="text-[9px] font-medium text-neutral-400">Exportação de dados estruturados</span>
-              </div>
-            </button>
+            {exportFormats.includes('json') && (
+              <button
+                onClick={() => handleExport('json')}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-all"
+              >
+                <div className="p-1.5 bg-amber-100 dark:bg-amber-950/40 rounded-lg text-amber-600 dark:text-amber-400">
+                  <FileJson className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col">
+                  <span>Formato JSON (.json)</span>
+                  <span className="text-[9px] font-medium text-neutral-400">Exportação de dados estruturados</span>
+                </div>
+              </button>
+            )}
 
-            <button
-              onClick={() => handleExport('pdf')}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-all"
-            >
-              <div className="p-1.5 bg-red-100 dark:bg-red-950/40 rounded-lg text-red-600 dark:text-red-400">
-                <File className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col">
-                <span>Documento PDF (.pdf)</span>
-                <span className="text-[9px] font-medium text-neutral-400">Ideal para impressão e compartilhamento</span>
-              </div>
-            </button>
+            {exportFormats.includes('pdf') && (
+              <button
+                onClick={() => handleExport('pdf')}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-all"
+              >
+                <div className="p-1.5 bg-red-100 dark:bg-red-950/40 rounded-lg text-red-600 dark:text-red-400">
+                  <File className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col">
+                  <span>Documento PDF (.pdf)</span>
+                  <span className="text-[9px] font-medium text-neutral-400">Ideal para impressão e compartilhamento</span>
+                </div>
+              </button>
+            )}
+
+            {exportFormats.includes('ofx') && (
+              <button
+                onClick={() => handleExport('ofx')}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-all"
+              >
+                <div className="p-1.5 bg-blue-100 dark:bg-blue-950/40 rounded-lg text-blue-600 dark:text-blue-400">
+                  <Activity className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col">
+                  <span>Arquivo OFX (.ofx)</span>
+                  <span className="text-[9px] font-medium text-neutral-400">Padrão para sistemas financeiros</span>
+                </div>
+              </button>
+            )}
           </div>
         </div>
       )}

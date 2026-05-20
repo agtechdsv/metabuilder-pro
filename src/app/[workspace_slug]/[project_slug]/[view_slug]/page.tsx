@@ -51,7 +51,7 @@ export default async function SlugPage({ params }: PageProps) {
   // 2. Resolve o Projeto pelo Slug e Workspace ID (Defensivo com limit(1))
   const { data: projects, error: projectError } = await supabase
     .from('projects')
-    .select('id, name, slug, navigation')
+    .select('id, name, slug, navigation, secret_token')
     .eq('slug', project_slug)
     .eq('workspace_id', workspace.id)
     .limit(1)
@@ -281,6 +281,7 @@ export default async function SlugPage({ params }: PageProps) {
           detailsInlineTypes={view.layout_config?.details_inline_types}
           actionInterfaceType={view.layout_config?.action_interface_type}
           analyticsConfig={view.layout_config?.analytics_config}
+          exportFormats={view.layout_config?.export_formats}
           baseUrl={`${baseUrl}/dashboard`}
           breadcrumbs={breadcrumbs}
           description={navDescription}

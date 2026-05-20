@@ -2,8 +2,13 @@
   "connections": [
     {
       "projectId": "f9a5f29d-a19b-4778-9778-fed7e7bcbcaa",
-      "secretToken": "test-token",
+      "secretToken": "79d3560517e7248e00bfa5664e4079810330f82dfbc5ab787b51f859983c864e",
       "connectionString": "postgresql://postgres.chmstvtepzmjhpyxjjam:Goeta815617%40@aws-1-sa-east-1.pooler.supabase.com:6543/postgres"
+    },
+	{
+      "projectId": "14a9bfcf-18bd-48ae-a2dc-4bc5f0694b44",
+      "secretToken": "a532fc0d99f73c5de0296f6d04b80fb0be24f9987e27d04d8b246eb388521cb5",
+      "connectionString": "postgresql://build_flow:build_flow@localhost:5432/build_flow"
     }
   ],
   "supabaseUrl": "https://chmstvtepzmjhpyxjjam.supabase.co",
