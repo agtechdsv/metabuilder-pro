@@ -209,6 +209,8 @@ export default function ViewContainer({
           ...row,
           _key: crypto.randomUUID()
         }))
+        console.log('[MetaBuilder Debug] First row keys:', resultData[0] ? Object.keys(resultData[0]) : 'no rows')
+        console.log('[MetaBuilder Debug] First row data:', resultData[0])
 
         if (logicType === 'master_detail') {
           const grouped: Record<string, any> = {}
@@ -296,14 +298,24 @@ export default function ViewContainer({
             const resolvedJoins = joinsList.map(j => {
               if (j.toTable && j.table) return j
               
+              // Se já vier da versão nova do Wizard (JoinsEditor) que salva db_table_name e db_column_name
+              if (j.localKey && j.foreignKey) {
+                return {
+                  table: j.from,
+                  toTable: j.to,
+                  on: j.localKey,
+                  toOn: j.foreignKey
+                }
+              }
+              
               if (project?.models) {
-                const fromModel = project.models?.find((m: any) => String(m.id) === String(j.from))
-                const toModel = project.models?.find((m: any) => String(m.id) === String(j.to))
+                const fromModel = project.models?.find((m: any) => String(m.id) === String(j.from) || m.db_table_name === j.from)
+                const toModel = project.models?.find((m: any) => String(m.id) === String(j.to) || m.db_table_name === j.to)
                 const fromTable = fromModel?.db_table_name
                 const toTable = toModel?.db_table_name
                 
-                const localField = fromModel?.fields?.find((f: any) => String(f.id) === String(j.local_field))
-                const foreignField = toModel?.fields?.find((f: any) => String(f.id) === String(j.foreign_field))
+                const localField = fromModel?.fields?.find((f: any) => String(f.id) === String(j.local_field) || f.db_column_name === j.local_field)
+                const foreignField = toModel?.fields?.find((f: any) => String(f.id) === String(j.foreign_field) || f.db_column_name === j.foreign_field)
                 
                 if (!fromTable || !toTable || !localField || !foreignField) return null
                 
@@ -317,61 +329,231 @@ export default function ViewContainer({
               return null
             }).filter(Boolean)
 
-            if (resolvedJoins.length === 0) return ''
+            // Coleta todas as tabelas requeridas por filtros e colunas selecionadas
+            const requiredTables = new Set<string>();
+            if (currentFilters) {
+              Object.keys(currentFilters).forEach(key => {
+                if (key.includes('.')) requiredTables.add(key.split('.')[0]);
+              });
+            }
+            if (displayFields) {
+               displayFields.forEach(f => {
+                 const col = f.sql_expression || f.db_column_name;
+                 if (col && col.includes('.')) {
+                    requiredTables.add(col.split('.')[0]);
+                 }
+               });
+            }
 
-            // Mapeamos para garantir que o JOIN seja sempre "OUTRA_TABELA ON TABELA_EXISTENTE.col = OUTRA_TABELA.col"
-            const joinedTables = new Set([modelName.toLowerCase()])
-            const sqlParts: string[] = []
-            
-            // Tentamos encaixar cada join no que já temos na query
-            let changed = true
-            const remaining = [...resolvedJoins]
-            while (changed && remaining.length > 0) {
-              changed = false
-              for (let i = 0; i < remaining.length; i++) {
-                const j = remaining[i]
-                const fromT = j.table.toLowerCase()
-                const toT = j.toTable.toLowerCase()
+            // Auto-detect missing joins required by filters and select (multi-hop graph resolution)
+            if (requiredTables.size > 0 && project?.models) {
+              const findRelation = (modelA: any, modelB: any) => {
+                if (!modelA || !modelB) return null;
+                const modelBNameSingular = modelB.db_table_name.endsWith('s') ? modelB.db_table_name.slice(0, -1) : modelB.db_table_name;
+                const modelBNameShort = modelBNameSingular.slice(0, -2);
+                const modelBParts = modelB.db_table_name.split('_');
                 
-                let targetTable = ''
-                let existingTable = ''
-                let localOn = ''
-                let foreignOn = ''
-
-                if (joinedTables.has(fromT) && !joinedTables.has(toT)) {
-                  targetTable = j.toTable
-                  existingTable = j.table
-                  localOn = j.on
-                  foreignOn = j.toOn
-                } else if (joinedTables.has(toT) && !joinedTables.has(fromT)) {
-                  targetTable = j.table
-                  existingTable = j.toTable
-                  localOn = j.toOn
-                  foreignOn = j.on
+                // Priority 1: Explicit rel_table configuration
+                let fkField = modelA.fields?.find((f: any) => {
+                  const rel = f.config?.rel_table || '';
+                  return rel !== '' && (rel === modelB.db_table_name || rel + 's' === modelB.db_table_name || modelB.db_table_name.includes(rel) || rel.includes(modelBNameSingular));
+                });
+                if (fkField) {
+                  return { table: modelA.db_table_name, toTable: modelB.db_table_name, on: fkField.db_column_name, toOn: 'id' };
                 }
+                
+                // Priority 2: Field name matches pattern and ends with _id
+                fkField = modelA.fields?.find((f: any) => {
+                  const col = (f.db_column_name || '').toLowerCase();
+                  if (!col.endsWith('_id')) return false;
+                  
+                  if (col.includes(modelBNameSingular.toLowerCase()) || col.includes(modelBNameShort.toLowerCase())) return true;
+                  
+                  // Try matching first part of snake_case table name (pedidos_compra -> pedido_id)
+                  if (modelBParts.length > 1) {
+                     const firstPartSingular = modelBParts[0].endsWith('s') ? modelBParts[0].slice(0, -1) : modelBParts[0];
+                     if (col.includes(firstPartSingular.toLowerCase())) return true;
+                  }
+                  
+                  return false;
+                });
+                if (fkField) {
+                  return { table: modelA.db_table_name, toTable: modelB.db_table_name, on: fkField.db_column_name, toOn: 'id' };
+                }
+                return null;
+              };
 
-                if (targetTable) {
-                  sqlParts.push(`LEFT JOIN ${targetTable} ON ${existingTable}.${localOn} = ${targetTable}.${foreignOn}`)
-                  joinedTables.add(targetTable.toLowerCase())
-                  remaining.splice(i, 1)
-                  changed = true
-                  break
+              // Start dependency resolution
+              const tablesToJoin = Array.from(requiredTables).filter(t => t !== modelName);
+              const currentlyJoined = new Set<string>([modelName.toLowerCase()]);
+              let changed = true;
+
+              while (changed && tablesToJoin.length > 0) {
+                changed = false;
+                for (let i = 0; i < tablesToJoin.length; i++) {
+                  const reqTable = tablesToJoin[i];
+                  const relModel = project.models.find((m: any) => m.db_table_name === reqTable);
+                  if (!relModel) continue;
+
+                  let foundRelation: any = null;
+                  for (const joinedTable of currentlyJoined) {
+                    const joinedModel = project.models.find((m: any) => m.db_table_name === joinedTable);
+                    if (!joinedModel) continue;
+
+                    // Check both directions:
+                    // 1. joinedModel -> relModel (foreign key in joinedModel pointing to relModel)
+                    foundRelation = findRelation(joinedModel, relModel);
+                    if (foundRelation) break;
+
+                    // 2. relModel -> joinedModel (foreign key in relModel pointing to joinedModel)
+                    foundRelation = findRelation(relModel, joinedModel);
+                    if (foundRelation) break;
+                  }
+
+                  if (foundRelation) {
+                    const isDuplicate = resolvedJoins.some((rj: any) =>
+                      (rj.table === foundRelation.table && rj.toTable === foundRelation.toTable) ||
+                      (rj.table === foundRelation.toTable && rj.toTable === foundRelation.table)
+                    );
+                    if (!isDuplicate) {
+                      resolvedJoins.push(foundRelation);
+                    }
+                    currentlyJoined.add(reqTable.toLowerCase());
+                    tablesToJoin.splice(i, 1);
+                    changed = true;
+                    break;
+                  }
                 }
               }
             }
-
-            return sqlParts.join(' ')
-          }
-          
-          const columns = displayFields.map(f => {
-            const expr = f.sql_expression || f.db_column_name
-            // Se tiver um ponto (tabela.coluna), cria um alias usando o mesmo nome entre aspas
-            // Isso garante que o JSON de resposta tenha a chave exata que o frontend espera (ex: "fields.display_name")
-            if (expr.includes('.') && !expr.includes(' AS ') && !expr.includes(' as ')) {
-              return `${expr} AS "${expr}"`
+  
+              if (resolvedJoins.length === 0) return ''
+  
+              // Mapeamos para garantir que o JOIN seja sempre "OUTRA_TABELA ON TABELA_EXISTENTE.col = OUTRA_TABELA.col"
+              const joinedTables = new Set([modelName.toLowerCase()])
+              const sqlParts: string[] = []
+              
+              // Tentamos encaixar cada join no que já temos na query
+              let changed = true
+              const remaining = [...resolvedJoins]
+              while (changed && remaining.length > 0) {
+                changed = false
+                for (let i = 0; i < remaining.length; i++) {
+                  const j = remaining[i]
+                  const fromT = j.table.toLowerCase()
+                  const toT = j.toTable.toLowerCase()
+                  
+                  let targetTable = ''
+                  let existingTable = ''
+                  let localOn = ''
+                  let foreignOn = ''
+  
+                  if (joinedTables.has(fromT) && !joinedTables.has(toT)) {
+                    targetTable = j.toTable
+                    existingTable = j.table
+                    localOn = j.on
+                    foreignOn = j.toOn
+                  } else if (joinedTables.has(toT) && !joinedTables.has(fromT)) {
+                    targetTable = j.table
+                    existingTable = j.toTable
+                    localOn = j.toOn
+                    foreignOn = j.on
+                  }
+  
+                  if (targetTable) {
+                    sqlParts.push(`LEFT JOIN "${targetTable}" ON "${existingTable}"."${localOn}" = "${targetTable}"."${foreignOn}"`)
+                    joinedTables.add(targetTable.toLowerCase())
+                    remaining.splice(i, 1)
+                    changed = true
+                    break
+                  }
+                }
+              }
+              return sqlParts.join(' ')
             }
-            return expr
-          }).join(', ')
+            
+            const selectExprs: string[] = []
+            const seenExprs = new Set<string>()
+
+            const addSelectExpr = (expr: string, alias?: string) => {
+              const key = alias || expr
+              if (seenExprs.has(key.toLowerCase())) return
+              seenExprs.add(key.toLowerCase())
+              
+              const hasAlias = expr.toLowerCase().includes(' as ')
+              
+              let finalExpr = expr
+              if (!expr.includes('.') && !hasAlias) {
+                finalExpr = `"${modelName}"."${expr}"`
+              }
+              
+              if (alias && !hasAlias) {
+                selectExprs.push(`${finalExpr} AS "${alias}"`)
+              } else if (expr.includes('.') && !hasAlias) {
+                selectExprs.push(`${finalExpr} AS "${expr}"`)
+              } else if (!expr.includes('.') && !hasAlias) {
+                selectExprs.push(finalExpr)
+              } else {
+                selectExprs.push(finalExpr)
+              }
+            }
+
+            // 1. Sempre selecionar a Chave Primaria
+            const cleanPk = primaryKeyName.split('.').pop() || 'id'
+            if (primaryKeyName.includes('.')) {
+              addSelectExpr(primaryKeyName, primaryKeyName)
+            } else {
+              addSelectExpr(`"${modelName}"."${cleanPk}"`, cleanPk)
+            }
+
+            // 2. Selecionar displayFields
+            if (displayFields && displayFields.length > 0) {
+              displayFields.forEach(f => {
+                if (!f) return
+                const expr = f.sql_expression || f.db_column_name
+                if (expr) {
+                  addSelectExpr(expr, f.db_column_name)
+                }
+              })
+            }
+
+            // 3. Selecionar formFields (tabela principal ou joins)
+            if (formFields && formFields.length > 0) {
+              formFields.forEach(f => {
+                if (!f) return
+                const isMasterModel = !f.model_name || f.model_name.toLowerCase() === modelName.toLowerCase()
+                const isJoinedModel = joins && joins.some((j: any) => {
+                  const toTable = j.toTable || j.to
+                  return toTable && f.model_name && toTable.toLowerCase() === f.model_name.toLowerCase()
+                })
+                if (isMasterModel || isJoinedModel) {
+                  const expr = f.sql_expression || f.db_column_name
+                  if (expr) {
+                    addSelectExpr(expr, f.db_column_name)
+                  }
+                }
+              })
+            }
+
+            // 4. Selecionar filterFields (tabela principal ou joins)
+            if (filterFields && filterFields.length > 0) {
+              filterFields.forEach(f => {
+                if (!f) return
+                const isMasterModel = !f.model_name || f.model_name.toLowerCase() === modelName.toLowerCase()
+                const isJoinedModel = joins && joins.some((j: any) => {
+                  const toTable = j.toTable || j.to
+                  return toTable && f.model_name && toTable.toLowerCase() === f.model_name.toLowerCase()
+                })
+                if (isMasterModel || isJoinedModel) {
+                  const expr = f.sql_expression || f.db_column_name
+                  if (expr) {
+                    addSelectExpr(expr, f.db_column_name)
+                  }
+                }
+              })
+            }
+
+            const columns = selectExprs.length > 0 ? selectExprs.join(', ') : '*'
           const rawQuery = `SELECT ${columns} FROM ${modelName} ${buildJoinsSql(joins)}`
 
           const payload: any = {
@@ -381,7 +563,7 @@ export default function ViewContainer({
             action: 'select',
             query: rawQuery,
             sql: rawQuery,
-            token: 'test-token',
+            token: project?.secret_token || 'test-token',
             joins: joins,
             limit: 100,
             offset: append ? data.length : 0
@@ -407,7 +589,7 @@ export default function ViewContainer({
             setIsLoading(prev => {
               if (prev) {
                 console.warn(`[MetaBuilder] Timeout na requisição ${queryId}`)
-                setError(t('dashboard.projects.studio.config.saved_error') || 'Timeout')
+                setError('Tempo limite excedido na requisição. Verifique sua conexão ou a configuração da tabela.')
                 return false
               }
               return prev
@@ -471,7 +653,7 @@ export default function ViewContainer({
       sql: rawQuery,
       idColumn: cleanPrimaryKeyName,
       idValue: actualPrimaryKey,
-      token: 'test-token'
+      token: project?.secret_token || 'test-token'
     }
 
     if (tunnelChannel && isTunnelReady) {

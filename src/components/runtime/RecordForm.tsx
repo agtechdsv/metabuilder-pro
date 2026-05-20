@@ -6,6 +6,44 @@ import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
 
+// Helper para obter valores de forma insensível a maiúsculas/minúsculas e tolerante a prefixos
+const getCaseInsensitiveValue = (data: any, path: string) => {
+  if (!data || !path) return undefined
+  
+  // 1. Tentar busca exata no caminho
+  if (data[path] !== undefined && data[path] !== null) {
+    return data[path]
+  }
+  
+  // 2. Tentar busca exata no baseName (ex: "data_inicio" de "agenda_compromissos.data_inicio")
+  const baseName = path.split('.').pop()
+  if (baseName && data[baseName] !== undefined && data[baseName] !== null) {
+    return data[baseName]
+  }
+
+  // 3. Busca case-insensitive
+  const lowerPath = path.toLowerCase()
+  const lowerBase = baseName ? baseName.toLowerCase() : ''
+  
+  for (const key of Object.keys(data)) {
+    const lowerKey = key.toLowerCase()
+    if (lowerKey === lowerPath) {
+      return data[key]
+    }
+    if (lowerBase && lowerKey === lowerBase) {
+      return data[key]
+    }
+    
+    // Tratar se a chave no data for "tabela.coluna" e o lowerBase/lowerPath bater com o final dela
+    const keyBase = key.split('.').pop()?.toLowerCase()
+    if (keyBase && (keyBase === lowerPath || (lowerBase && keyBase === lowerBase))) {
+      return data[key]
+    }
+  }
+
+  return undefined
+}
+
 interface RecordFormProps {
   mode: 'create' | 'edit' | 'view'
   fields: any[]
@@ -26,6 +64,7 @@ interface RecordFormProps {
   initialTab?: string
   onTabChange?: (tab: string) => void
   detailsInlineTypes?: Record<string, boolean>
+  footerBgClass?: string
 }
 
 export default function RecordForm({ 
@@ -47,7 +86,8 @@ export default function RecordForm({
   dictionary = {},
   initialTab = 'master',
   onTabChange,
-  detailsInlineTypes = {}
+  detailsInlineTypes = {},
+  footerBgClass = "bg-white dark:bg-neutral-950"
 }: RecordFormProps) {
   const { t } = useI18n()
   const [formData, setFormData] = useState<any>(initialData || {})
@@ -197,24 +237,52 @@ export default function RecordForm({
     const fieldType = comp.type || 'text'
     const width = comp.width || '100%'
 
-    const value = (() => {
-      if (formData[field.db_column_name] !== undefined && formData[field.db_column_name] !== null) {
-        return formData[field.db_column_name]
+    let rawValue = getCaseInsensitiveValue(formData, field.db_column_name) ?? ''
+    let value = rawValue
+
+    if (value && (typeof value === 'string' || value instanceof Date)) {
+      const dateStr = value instanceof Date ? value.toISOString() : String(value)
+      if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+        if (fieldType === 'date') {
+          value = dateStr.substring(0, 10)
+        } else if (fieldType === 'datetime-local' || fieldType === 'datetime') {
+          value = dateStr.replace(' ', 'T').substring(0, 16)
+        } else if (fieldType === 'time') {
+          const timeMatch = dateStr.match(/(\d{2}:\d{2}(:\d{2})?)/)
+          if (timeMatch) {
+            value = timeMatch[1]
+          }
+        }
       }
-      const baseName = field.db_column_name.split('.').pop()
-      if (baseName && formData[baseName] !== undefined && formData[baseName] !== null) {
-        return formData[baseName]
-      }
-      return ''
-    })()
+    }
 
     const handleChange = (val: any) => {
-      const baseName = field.db_column_name.split('.').pop()
-      setFormData({ 
-        ...formData, 
-        [field.db_column_name]: val,
-        ...(baseName ? { [baseName]: val } : {})
-      })
+      const dbCol = field.db_column_name
+      const baseName = dbCol.split('.').pop()
+      
+      const newFormData = { ...formData }
+      
+      newFormData[dbCol] = val
+      if (baseName) {
+        newFormData[baseName] = val
+      }
+      
+      // Atualizar chaves case-insensitive correspondentes
+      const lowerCol = dbCol.toLowerCase()
+      const lowerBase = baseName ? baseName.toLowerCase() : ''
+      
+      for (const key of Object.keys(formData)) {
+        const lowerKey = key.toLowerCase()
+        if (lowerKey === lowerCol || (lowerBase && lowerKey === lowerBase)) {
+          newFormData[key] = val
+        }
+        const keyBase = key.split('.').pop()?.toLowerCase()
+        if (keyBase && (keyBase === lowerCol || (lowerBase && keyBase === lowerBase))) {
+          newFormData[key] = val
+        }
+      }
+      
+      setFormData(newFormData)
     }
 
     const inputStyle = {
@@ -341,7 +409,12 @@ export default function RecordForm({
             </div>
           ) : (
             <input 
-              type={fieldType === 'number' ? 'number' : fieldType === 'date' ? 'date' : 'text'}
+              type={
+                fieldType === 'number' ? 'number' :
+                fieldType === 'date' ? 'date' :
+                (fieldType === 'datetime-local' || fieldType === 'datetime') ? 'datetime-local' :
+                fieldType === 'time' ? 'time' : 'text'
+              }
               disabled={isDisabled}
               required={field.config?.content?.required}
               value={value}
@@ -762,7 +835,10 @@ export default function RecordForm({
           )}
         </div>
 
-        <div className="pt-8 mt-auto border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-end gap-3 bg-white dark:bg-neutral-950 sticky bottom-0">
+        <div className={cn(
+          "pt-8 mt-auto border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-end gap-3 sticky bottom-0",
+          footerBgClass
+        )}>
           <button 
             type="button"
             onClick={onCancel}

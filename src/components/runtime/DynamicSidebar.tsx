@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { 
@@ -41,6 +41,32 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
   const pathname = usePathname()
   const router = useRouter()
   const [expandedFolders, setExpandedFolders] = useState<string[]>([])
+  const [clientUser, setClientUser] = useState<any>(null)
+
+  useEffect(() => {
+    const sessionCookieName = `client_session_${project.id}`
+    const cookieValue = document.cookie
+      .split('; ')
+      .find(row => row.trim().startsWith(`${sessionCookieName}=`))
+    if (cookieValue) {
+      try {
+        const userData = JSON.parse(decodeURIComponent(cookieValue.split('=')[1]))
+        setClientUser(userData)
+      } catch (e) {
+        console.error(e)
+      }
+    }
+  }, [project.id])
+
+  const handleLogout = () => {
+    const sessionCookieName = `client_session_${project.id}`
+    document.cookie = `${sessionCookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
+    window.location.href = `/${workspaceSlug}/${projectSlug}/login`
+  }
+
+  const displayName = clientUser?.nome || clientUser?.name || clientUser?.email || 'Usuário Cliente'
+  const displayEmail = clientUser?.email || 'Sair do Sistema'
+  const avatarLetter = displayName.charAt(0).toUpperCase()
 
   const toggleExpand = (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
@@ -243,25 +269,34 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
           isCollapsed && "justify-center p-2"
         )}>
            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-black text-white shrink-0">
-             U
+             {avatarLetter}
            </div>
            
            <AnimatePresence>
              {!isCollapsed && (
-               <motion.div 
-                 initial={{ opacity: 0, width: 0 }}
-                 animate={{ opacity: 1, width: 'auto' }}
-                 exit={{ opacity: 0, width: 0 }}
-                 className="flex flex-col flex-1 min-w-0 overflow-hidden"
-               >
-                 <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">Usuário Cliente</span>
-                 <span className="text-[9px] text-neutral-400 truncate">Sair do Sistema</span>
-               </motion.div>
+                <motion.div 
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: 'auto' }}
+                  exit={{ opacity: 0, width: 0 }}
+                  className="flex flex-col flex-1 min-w-0 overflow-hidden"
+                >
+                  <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">{displayName}</span>
+                  <button 
+                    onClick={handleLogout}
+                    className="text-[9px] text-neutral-400 hover:text-red-500 text-left transition-colors truncate"
+                  >
+                    {clientUser ? 'Sair do Sistema' : 'Entrar'}
+                  </button>
+                </motion.div>
              )}
            </AnimatePresence>
 
            {!isCollapsed && (
-             <button className="p-1.5 text-neutral-400 hover:text-red-500">
+             <button 
+               onClick={handleLogout}
+               title="Sair do Sistema"
+               className="p-1.5 text-neutral-400 hover:text-red-500 transition-colors"
+             >
                <LogOut className="w-4 h-4" />
              </button>
            )}

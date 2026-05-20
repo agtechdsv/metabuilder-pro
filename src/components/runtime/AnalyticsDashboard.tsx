@@ -294,7 +294,7 @@ export default function AnalyticsDashboard({
           sql,
           table: tableName,
           filters, // Envia filtros para que o CLI aplique a cláusula WHERE
-          token: 'test-token',
+          token: project?.secret_token || 'test-token',
           projectId: project.id
         }
       })

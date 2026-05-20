@@ -24,16 +24,18 @@ export async function POST(request: Request) {
     }
 
     // 1. Validar Token e Projeto
-    // ATENÇÃO: Removi a checagem do secret_token para você poder testar, 
-    // já que a sua tabela original não tinha essa coluna.
     const { data: project, error: projectError } = await supabase
       .from('projects')
-      .select('id')
+      .select('id, secret_token')
       .eq('id', projectId)
       .single()
 
     if (projectError || !project) {
-      return NextResponse.json({ error: 'Token inválido ou projeto não encontrado' }, { status: 403 })
+      return NextResponse.json({ error: 'Token secreto inválido ou projeto não encontrado' }, { status: 403 })
+    }
+
+    if (project.secret_token && project.secret_token !== secretToken) {
+      return NextResponse.json({ error: 'Token secreto inválido' }, { status: 403 })
     }
 
     // 2. Mapas de memória para resolver as chaves estrangeiras depois

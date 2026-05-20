@@ -14,7 +14,10 @@ CREATE TABLE public.projects (
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage their own projects" 
     ON public.projects FOR ALL 
-    USING (auth.uid() = owner_id);
+    USING (
+        auth.uid() = owner_id OR 
+        (workspace_id IS NOT NULL AND public.is_workspace_member(workspace_id))
+    );
 
 -- 2. Tabela de Metadados das Tabelas
 CREATE TABLE public.tables_metadata (

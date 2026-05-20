@@ -126,8 +126,10 @@ CREATE POLICY "Users can access their own workspaces"
 CREATE POLICY "Users can access projects of their workspaces"
     ON public.projects FOR ALL
     USING (
-        workspace_id IN (
-            SELECT id FROM public.workspaces WHERE owner_id = auth.uid()
+        public.is_workspace_member(workspace_id) OR
+        EXISTS (
+            SELECT 1 FROM public.workspaces 
+            WHERE id = workspace_id AND owner_id = auth.uid()
         )
     );
 

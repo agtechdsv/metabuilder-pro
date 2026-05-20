@@ -11,7 +11,8 @@ import {
   Activity,
   Layers,
   Power,
-  PowerOff
+  PowerOff,
+  Settings
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -194,12 +195,20 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
             </p>
           </div>
 
-          <button
-            onClick={() => openDrawer()}
-            className="flex items-center gap-2 px-7 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)] whitespace-nowrap text-sm"
-          >
-            <Plus className="w-5 h-5" /> {t('dashboard.projects.new_project')}
-          </button>
+          <div className="flex items-center gap-3">
+            <Link 
+              href={`/admin/${workspaceSlug}/settings`}
+              className="flex items-center gap-2 px-7 py-3 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all shadow-sm text-sm border border-neutral-200 dark:border-neutral-700"
+            >
+              <Settings className="w-5 h-5" /> Equipe & Configurações
+            </Link>
+            <button
+              onClick={() => openDrawer()}
+              className="flex items-center gap-2 px-7 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)] whitespace-nowrap text-sm"
+            >
+              <Plus className="w-5 h-5" /> {t('dashboard.projects.new_project')}
+            </button>
+          </div>
         </div>
       </div>
 

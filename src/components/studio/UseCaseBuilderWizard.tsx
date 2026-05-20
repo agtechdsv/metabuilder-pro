@@ -127,6 +127,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       },
       details_interface_types: {} as Record<string, 'modal' | 'drawer'>,
       details_inline_types: {} as Record<string, boolean>,
+      export_formats: ['xlsx', 'csv', 'json'],
       scheduler_config: {
         title_field: '',
         start_date_field: '',
@@ -260,6 +261,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
           analytics_config: initialData.layout_config?.analytics_config || { widgets: [], allow_runtime_edit: true },
           details_interface_types: initialData.layout_config?.details_interface_types || {},
           details_inline_types: initialData.layout_config?.details_inline_types || {},
+          export_formats: initialData.layout_config?.export_formats || ['xlsx', 'csv', 'json'],
           scheduler_config: initialData.layout_config?.scheduler_config || {
             title_field: '',
             start_date_field: '',
@@ -2394,46 +2396,87 @@ function StepActions({ config, setConfig }: any) {
 
       <div className="space-y-6">
         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Exportação de Dados</label>
-        <button
-          type="button"
-          onClick={() => {
-            const isExportVisible = config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false;
-            setConfig({
-              ...config,
-              buttons_config: config.buttons_config.map((b: any) => 
-                b.id === 'export' ? { ...b, visible: !isExportVisible } : b
-              )
-            });
-          }}
-          className={cn(
-            "w-full p-6 rounded-[2rem] border-2 text-left transition-all relative group overflow-hidden flex items-center justify-between",
-            (config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false)
-              ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10'
-              : 'border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/30'
-          )}
-        >
-          <div className="flex items-center gap-4">
+        
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={() => {
+              const isExportVisible = config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false;
+              setConfig({
+                ...config,
+                buttons_config: config.buttons_config.map((b: any) => 
+                  b.id === 'export' ? { ...b, visible: !isExportVisible } : b
+                )
+              });
+            }}
+            className={cn(
+              "w-full p-6 rounded-[2rem] border-2 text-left transition-all relative group overflow-hidden flex items-center justify-between",
+              (config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false)
+                ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10'
+                : 'border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/30'
+            )}
+          >
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "p-3 rounded-2xl transition-all",
+                (config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false) ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
+              )}>
+                <Download className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-base text-neutral-900 dark:text-white">Exportação de Dados (Background)</h4>
+                <p className="text-[10px] text-neutral-400 mt-1 leading-relaxed">Permite que os usuários exportem os dados desta tela com processamento assíncrono.</p>
+              </div>
+            </div>
             <div className={cn(
-              "p-3 rounded-2xl transition-all",
-              (config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false) ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
+              "w-12 h-6 rounded-full p-1 transition-all relative cursor-pointer flex items-center",
+              (config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false) ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-700'
             )}>
-              <Download className="w-5 h-5" />
+              <div className={cn(
+                "w-4 h-4 bg-white rounded-full transition-all shadow-md transform",
+                (config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false) ? 'translate-x-6' : 'translate-x-0'
+              )} />
             </div>
-            <div>
-              <h4 className="font-bold text-base text-neutral-900 dark:text-white">Exportação de Dados (Background)</h4>
-              <p className="text-[10px] text-neutral-400 mt-1 leading-relaxed">Permite que os usuários exportem os dados desta tela em formatos Excel (XLSX), CSV e JSON com processamento assíncrono.</p>
+          </button>
+
+          {(config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false) && (
+            <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-4 animate-in slide-in-from-top-4 fade-in duration-300">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Formatos Permitidos</label>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {[
+                  { id: 'xlsx', label: 'Excel (XLSX)', icon: Table, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-500/10', border: 'border-emerald-200 dark:border-emerald-500/20' },
+                  { id: 'csv', label: 'CSV', icon: Table, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-500/10', border: 'border-indigo-200 dark:border-indigo-500/20' },
+                  { id: 'json', label: 'JSON', icon: Database, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-500/10', border: 'border-amber-200 dark:border-amber-500/20' },
+                  { id: 'pdf', label: 'PDF', icon: Layout, color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-500/10', border: 'border-red-200 dark:border-red-500/20' },
+                  { id: 'ofx', label: 'OFX (Finance)', icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-500/10', border: 'border-blue-200 dark:border-blue-500/20' }
+                ].map(fmt => {
+                  const isSelected = (config.layout_config.export_formats || ['xlsx', 'csv', 'json']).includes(fmt.id);
+                  return (
+                    <button
+                      key={fmt.id}
+                      type="button"
+                      onClick={() => {
+                        const current = config.layout_config.export_formats || ['xlsx', 'csv', 'json'];
+                        const next = isSelected ? current.filter((f: string) => f !== fmt.id) : [...current, fmt.id];
+                        setConfig({
+                          ...config,
+                          layout_config: { ...config.layout_config, export_formats: next }
+                        });
+                      }}
+                      className={cn(
+                        "p-3 rounded-2xl border transition-all flex flex-col items-center gap-2 text-center",
+                        isSelected ? cn(fmt.border, fmt.bg) : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 bg-transparent opacity-50 grayscale"
+                      )}
+                    >
+                      <fmt.icon className={cn("w-5 h-5", isSelected ? fmt.color : "text-neutral-400")} />
+                      <span className={cn("text-[9px] font-black uppercase tracking-wider", isSelected ? fmt.color : "text-neutral-500")}>{fmt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-          <div className={cn(
-            "w-12 h-6 rounded-full p-1 transition-all relative cursor-pointer flex items-center",
-            (config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false) ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-700'
-          )}>
-            <div className={cn(
-              "w-4 h-4 bg-white rounded-full transition-all shadow-md transform",
-              (config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false) ? 'translate-x-6' : 'translate-x-0'
-            )} />
-          </div>
-        </button>
+          )}
+        </div>
       </div>
 
       <div className="h-px bg-neutral-100 dark:bg-neutral-800/50 w-full"></div>

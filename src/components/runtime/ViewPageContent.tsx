@@ -66,6 +66,7 @@ interface ViewPageContentProps {
     widgets: any[]
     allow_runtime_edit: boolean
   }
+  exportFormats?: string[]
 }
 
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
@@ -101,6 +102,7 @@ export default function ViewPageContent({
   breadcrumbs = [],
   description,
   icon,
+  exportFormats = ['xlsx', 'csv', 'json'],
   analyticsConfig: initialAnalyticsConfig
 }: ViewPageContentProps) {
 
@@ -909,7 +911,7 @@ export default function ViewPageContent({
             sql: rawQuery, 
             idColumn: cleanPkName,   // EXATAMENTE o que o Agente CLI espera
             idValue: pkValue,   // EXATAMENTE o que o Agente CLI espera
-            token: 'test-token'
+            token: project?.secret_token || 'test-token'
           }
 
           if (Object.keys(filters).length > 0) {
@@ -1080,7 +1082,7 @@ export default function ViewPageContent({
             sql: rawQuery,
             idColumn: cleanPkName,
             idValue: pkValue,
-            token: 'test-token'
+            token: project?.secret_token || 'test-token'
           }
 
           if (Object.keys(filters).length > 0) {
@@ -1127,6 +1129,8 @@ export default function ViewPageContent({
                 displayFields={cleanDisplayFields}
                 joins={joins}
                 filters={globalFilterValues}
+                exportFormats={exportFormats}
+                selectedRecord={(isPageVisible || isModalOpen || isDrawerOpen) ? selectedRow : null}
               />
             )}
             {canAdd && (

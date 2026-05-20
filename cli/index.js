@@ -6,10 +6,29 @@ const inquirer = require('inquirer');
 const chalk = require('chalk');
 const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 // Configurações do Supabase lidas do ambiente ou perguntadas depois
 let SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 let SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+function formatAxiosError(error) {
+  let errorMsg = error.message;
+  if (error.code === 'ECONNREFUSED') {
+    return `Conexão recusada em ${error.config?.url || 'localhost:3000'}. O servidor MetaBuilderPRO está rodando?`;
+  }
+  if (error.response) {
+    if (typeof error.response.data === 'string') {
+      errorMsg = error.response.data;
+    } else if (error.response.data && error.response.data.error) {
+      errorMsg = error.response.data.error;
+    } else {
+      errorMsg = JSON.stringify(error.response.data);
+    }
+  }
+  return errorMsg || error.code || 'Erro de conexão desconhecido';
+}
 
 // Função 1: Introspecção
 async function introspectPostgres(connectionString) {
@@ -111,18 +130,16 @@ async function startTunnel(projectId, secretToken, connectionString, configSupab
       const { queryId, table, action, token } = payload.payload;
 
       // Segurança: Verifica se o comando veio com o token correto do projeto
-      // Para testes do MVP, desativei essa checagem de token para não ter erro.
-      /*
       if (token !== secretToken) {
-        console.log(chalk.red(`[ BLOQUEADO ] Comando recebido com token inválido.`));
+        console.log(chalk.red(`[ BLOQUEADO ] Comando recebido com token inválido para o projeto ${projectId}.`));
+        console.log(chalk.gray(`  Recebido: "${token ? token.substring(0, 6) + '...' : 'null'}" | Configurado: "${secretToken ? secretToken.substring(0, 6) + '...' : 'null'}"`));
         return;
       }
-      */
 
-      console.log(chalk.yellow(`[ EXEC ] Comando Recebido: Buscar dados da tabela '${table}'`));
+      console.log(chalk.yellow(`[ EXEC ] Comando Recebido: ${action === 'validate_login' ? 'Validar Login' : `Buscar dados da tabela '${table}'`}`));
 
       try {
-        const safeTable = table.replace(/[^a-zA-Z0-9_]/g, ''); // Sanitização de nome de tabela
+        const safeTable = table ? table.replace(/[^a-zA-Z0-9_]/g, '') : '';
         let sql = '';
         let params = [];
         let result;
@@ -131,6 +148,7 @@ async function startTunnel(projectId, secretToken, connectionString, configSupab
           const filters = payload.payload.filters;
           const joins = payload.payload.joins || [];
           let whereClause = '';
+          const rawQueryStr = (payload.payload.query || '').toLowerCase();
           
           if (filters && Object.keys(filters).length > 0) {
             const conditions = [];
@@ -147,9 +165,19 @@ async function startTunnel(projectId, secretToken, connectionString, configSupab
                   columnPart = key.replace(/[^a-zA-Z0-9_]/g, '');
                 }
                 
-                conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) ILIKE $${i}`);
-                params.push(`%${value}%`);
-                i++;
+                // Segurança: só adiciona o filtro se a tabela for a principal, ou se estiver explicitamente nos joins ou na query bruta
+                const isJoinedStr = rawQueryStr.includes(`join "${tablePart.toLowerCase()}"`) || rawQueryStr.includes(`join ${tablePart.toLowerCase()}`);
+                const isJoinedCli = (joins || []).some((j) => {
+                   return j.to === tablePart || j.from === tablePart || j.toTable === tablePart || j.table === tablePart;
+                });
+                
+                if (tablePart === safeTable || isJoinedStr || isJoinedCli) {
+                  conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) ILIKE $${i}`);
+                  params.push(`%${value}%`);
+                  i++;
+                } else {
+                  console.log(chalk.yellow(`[ AVISO ] Filtro na tabela estrangeira '${tablePart}' ignorado pois ela não tem JOIN na query atual.`));
+                }
               }
             }
             if (conditions.length > 0) {
@@ -157,29 +185,128 @@ async function startTunnel(projectId, secretToken, connectionString, configSupab
             }
           }
 
-          let selectCols = `"${safeTable}".*`;
-          let joinClause = '';
-
-          if (joins && joins.length > 0) {
-            joins.forEach(j => {
-               if(j.from && j.to && j.localKey && j.foreignKey) {
-                  const safeFrom = j.from.replace(/[^a-zA-Z0-9_]/g, '');
-                  const safeTo = j.to.replace(/[^a-zA-Z0-9_]/g, '');
-                  const safeLocal = j.localKey.replace(/[^a-zA-Z0-9_]/g, '');
-                  const safeForeign = j.foreignKey.replace(/[^a-zA-Z0-9_]/g, '');
-                  
-                  // Retorna toda a linha da tabela joinada como um objeto JSON aninhado
-                  selectCols += `, row_to_json("${safeTo}".*) AS "${safeTo}"`;
-                  joinClause += ` LEFT JOIN "${safeTo}" ON "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}"`;
-               }
-            });
-          }
           const limit = payload.payload.limit ? parseInt(payload.payload.limit) : 100;
           const offset = payload.payload.offset ? parseInt(payload.payload.offset) : 0;
-          sql = `SELECT ${selectCols} FROM "${safeTable}"${joinClause}${whereClause} LIMIT ${limit} OFFSET ${offset}`;
+          
+          // Se o frontend enviar uma query SQL bruta (que já tem joins e colunas resolvidas), usa ela
+          if (payload.payload.query) {
+            sql = payload.payload.query;
+            if (whereClause) {
+               // Insere o whereClause ou usa AND se já existir WHERE
+               sql += (sql.toLowerCase().includes(' where ') ? ' AND ' + conditions.join(' AND ') : whereClause);
+            }
+            sql += ` LIMIT ${limit} OFFSET ${offset}`;
+          } else {
+            let selectCols = `"${safeTable}".*`;
+            let joinClause = '';
+
+            if (joins && joins.length > 0) {
+              joins.forEach(j => {
+                 if(j.from && j.to && j.localKey && j.foreignKey) {
+                    const safeFrom = j.from.replace(/[^a-zA-Z0-9_]/g, '');
+                    const safeTo = j.to.replace(/[^a-zA-Z0-9_]/g, '');
+                    const safeLocal = j.localKey.replace(/[^a-zA-Z0-9_]/g, '');
+                    const safeForeign = j.foreignKey.replace(/[^a-zA-Z0-9_]/g, '');
+                    
+                    selectCols += `, row_to_json("${safeTo}".*) AS "${safeTo}"`;
+                    joinClause += ` LEFT JOIN "${safeTo}" ON "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}"`;
+                 }
+              });
+            }
+            sql = `SELECT ${selectCols} FROM "${safeTable}"${joinClause}${whereClause} LIMIT ${limit} OFFSET ${offset}`;
+          }
+          
+          console.log(chalk.gray(`[ SQL ] Executando: ${sql}`));
           result = await pgClient.query(sql, params);
           console.log(chalk.green(`[ OK ] SELECT: Retornou ${result.rows.length} linhas (Limit: ${limit}, Offset: ${offset}).`));
-        } 
+        }
+        else if (action === 'validate_login') {
+          const { config, credentials } = payload.payload;
+          if (!config) {
+            throw new Error('Configuração de autenticação não encontrada para o projeto.');
+          }
+          const { db_table_name, db_email_column, db_password_column, db_password_hash_type } = config;
+          const { email, password } = credentials || {};
+
+          if (!db_table_name || !db_email_column || !db_password_column) {
+            throw new Error('Mapeamento do banco legado incompleto. Configure a tabela e colunas de e-mail/senha no Studio.');
+          }
+
+          const safeTable = db_table_name.replace(/[^a-zA-Z0-9_]/g, '');
+          const safeEmailCol = db_email_column.replace(/[^a-zA-Z0-9_]/g, '');
+          const safePasswordCol = db_password_column.replace(/[^a-zA-Z0-9_]/g, '');
+
+          sql = `SELECT * FROM "${safeTable}" WHERE "${safeEmailCol}" = $1`;
+          params = [email];
+          
+          console.log(chalk.gray(`[ SQL ] Buscando usuário: ${sql}`));
+          const selectResult = await pgClient.query(sql, params);
+          
+          if (selectResult.rows.length === 0) {
+            throw new Error('Usuário não encontrado');
+          }
+
+          const userRow = selectResult.rows[0];
+          const dbPassword = userRow[safePasswordCol];
+          let isMatch = false;
+
+          if (db_password_hash_type === 'plain') {
+            isMatch = (password === dbPassword);
+          } else if (db_password_hash_type === 'md5') {
+            const hash = crypto.createHash('md5').update(password).digest('hex');
+            isMatch = (hash === dbPassword);
+          } else if (db_password_hash_type === 'sha256') {
+            const hash = crypto.createHash('sha256').update(password).digest('hex');
+            isMatch = (hash === dbPassword);
+          } else if (db_password_hash_type === 'bcrypt') {
+            isMatch = bcrypt.compareSync(password, dbPassword);
+          } else {
+            throw new Error(`Tipo de hash não suportado: ${db_password_hash_type}`);
+          }
+
+          if (!isMatch) {
+            throw new Error('Senha incorreta');
+          }
+
+          const userObj = { ...userRow };
+          delete userObj[safePasswordCol];
+          
+          result = { rows: [userObj] };
+          console.log(chalk.green(`[ OK ] LOGIN: Usuário '${email}' autenticado com sucesso.`));
+        }
+        else if (action === 'get_users') {
+          const { config, limit = 100, offset = 0 } = payload.payload;
+          if (!config) {
+            throw new Error('Configuração de autenticação não encontrada para o projeto.');
+          }
+          const { db_table_name, db_email_column, db_password_column } = config;
+
+          if (!db_table_name || !db_email_column) {
+            throw new Error('Mapeamento do banco legado incompleto.');
+          }
+
+          const safeTable = db_table_name.replace(/[^a-zA-Z0-9_]/g, '');
+          const safeEmailCol = db_email_column.replace(/[^a-zA-Z0-9_]/g, '');
+
+          sql = `SELECT * FROM "${safeTable}" ORDER BY "${safeEmailCol}" ASC LIMIT $1 OFFSET $2`;
+          params = [limit, offset];
+          
+          console.log(chalk.gray(`[ SQL ] Buscando usuários: ${sql}`));
+          const selectResult = await pgClient.query(sql, params);
+          
+          let safeRows = selectResult.rows;
+          if (db_password_column) {
+             const safePasswordCol = db_password_column.replace(/[^a-zA-Z0-9_]/g, '');
+             safeRows = safeRows.map(row => {
+               const userObj = { ...row };
+               delete userObj[safePasswordCol];
+               return userObj;
+             });
+          }
+
+          result = { rows: safeRows };
+          console.log(chalk.green(`[ OK ] GET_USERS: Retornou ${safeRows.length} usuários.`));
+        }
         else if (action === 'insert') {
           const data = payload.payload.data; // { coluna: "valor" }
           const keys = Object.keys(data).map(k => `"${k.replace(/[^a-zA-Z0-9_]/g, '')}"`);
@@ -329,7 +456,8 @@ async function run() {
           });
           console.log(chalk.green.bold(`✅ Projeto ${conn.projectId} sincronizado com sucesso!`));
         } catch (error) {
-          console.error(chalk.red.bold(`❌ Falha no projeto ${conn.projectId}:`), error.response ? error.response.data : error.message);
+          const errorMsg = formatAxiosError(error);
+          console.error(chalk.red.bold(`❌ Falha no projeto ${conn.projectId}:`), errorMsg);
         }
       }
       console.log(chalk.yellow('\nProcesso de Sincronização finalizado.'));
@@ -372,7 +500,8 @@ async function run() {
         });
         console.log(chalk.green.bold('\n✅ Sincronização concluída com sucesso!'));
       } catch (error) {
-        console.error(chalk.red.bold('\n❌ Falha ao enviar dados para a API.'), error.response ? error.response.data : error.message);
+        const errorMsg = formatAxiosError(error);
+        console.error(chalk.red.bold('\n❌ Falha ao enviar dados para a API.'), errorMsg);
       }
       process.exit(0);
     } else if (mode === 'tunnel') {

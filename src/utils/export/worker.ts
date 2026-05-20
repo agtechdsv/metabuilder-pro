@@ -93,7 +93,7 @@ export async function executeExportBackground(params: {
   workspaceSlug: string
   viewName: string
   modelName: string
-  fileType: 'xlsx' | 'csv' | 'json' | 'pdf'
+  fileType: 'xlsx' | 'csv' | 'json' | 'pdf' | 'ofx'
   columnsList: string[]
   joins: any[]
   filters: Record<string, string>
@@ -189,7 +189,7 @@ export async function executeExportBackground(params: {
       }
     }
 
-    const rawSql = `SELECT ${selectCols} FROM "${safeTable}"${joinClause}${whereClause} LIMIT 100000`
+    const rawSql = `SELECT DISTINCT ${selectCols} FROM "${safeTable}"${joinClause}${whereClause} LIMIT 100000`
     console.log('[Export Worker] Executing query:', rawSql, 'Params:', sqlParams)
 
     // 3. Run database query (progress 40%)
@@ -421,6 +421,81 @@ export async function executeExportBackground(params: {
 
       const pdfArrayBuffer = doc.output('arraybuffer')
       buffer = Buffer.from(pdfArrayBuffer)
+    } else if (fileType === 'ofx') {
+      mimeType = 'application/x-ofx'
+      
+      // Generic best-effort OFX generator
+      let ofxContent = `OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+SECURITY:NONE
+ENCODING:USASCII
+CHARSET:1252
+COMPRESSION:NONE
+OLDFILEUID:NONE
+NEWFILEUID:NONE
+
+<OFX>
+  <BANKMSGSRSV1>
+    <STMTTRNRS>
+      <TRNUID>${jobId}
+      <STATUS><CODE>0<SEVERITY>INFO</STATUS>
+      <STMTRS>
+        <CURDEF>BRL
+        <BANKACCTFROM>
+          <BANKID>000
+          <ACCTID>00000
+          <ACCTTYPE>CHECKING
+        </BANKACCTFROM>
+        <BANKTRANLIST>
+`
+      rows.forEach((row, index) => {
+        // Try to find reasonable columns for amount, date, and memo
+        const lowerKeys = Object.keys(row).reduce((acc: any, k) => {
+          acc[k.toLowerCase()] = { key: k, val: row[k] }
+          return acc
+        }, {})
+
+        let trnAmt = 0
+        let dtPosted = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14)
+        let memo = 'Exported Transaction'
+
+        for (const [lk, item] of Object.entries(lowerKeys)) {
+          const { key, val } = item as any
+          if (val === null || val === undefined) continue
+          
+          if ((lk.includes('valor') || lk.includes('amount') || lk.includes('preco') || lk.includes('price')) && !isNaN(Number(val))) {
+            trnAmt = Number(val)
+          } else if ((lk.includes('data') || lk.includes('date') || lk.includes('criado')) && !isNaN(Date.parse(String(val)))) {
+            dtPosted = new Date(String(val)).toISOString().replace(/[^0-9]/g, '').slice(0, 14)
+          } else if (lk.includes('desc') || lk.includes('memo') || lk.includes('nome') || lk.includes('name')) {
+            memo = String(val).substring(0, 255) // OFX memo length limit
+          }
+        }
+
+        const trnType = trnAmt >= 0 ? 'CREDIT' : 'DEBIT'
+
+        ofxContent += `          <STMTTRN>
+            <TRNTYPE>${trnType}
+            <DTPOSTED>${dtPosted}
+            <TRNAMT>${trnAmt.toFixed(2)}
+            <FITID>${row.id || index}
+            <MEMO>${memo.replace(/[<>]/g, '')}
+          </STMTTRN>
+`
+      })
+
+      ofxContent += `        </BANKTRANLIST>
+        <LEDGERBAL>
+          <BALAMT>0.00
+          <DTASOF>${new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14)}
+        </LEDGERBAL>
+      </STMTRS>
+    </STMTTRNRS>
+  </BANKMSGSRSV1>
+</OFX>`
+
+      buffer = Buffer.from(ofxContent, 'utf-8')
     } else {
       // JSON
       mimeType = 'application/json'

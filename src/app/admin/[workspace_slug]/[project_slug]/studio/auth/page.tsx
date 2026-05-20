@@ -44,6 +44,15 @@ export default function AuthSettingsPage() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   
+  const [legacyUsers, setLegacyUsers] = useState<any[]>([])
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false)
+  const [roles, setRoles] = useState<any[]>([])
+  const [userRoles, setUserRoles] = useState<any[]>([])
+  const [uiViews, setUiViews] = useState<any[]>([])
+  const [rolePermissions, setRolePermissions] = useState<any[]>([])
+  const [isCreatingRole, setIsCreatingRole] = useState(false)
+  const [newRoleName, setNewRoleName] = useState('')
+  
   const [authConfig, setAuthConfig] = useState({
     auth_type: 'managed',
     db_table_name: '',
@@ -73,6 +82,7 @@ export default function AuthSettingsPage() {
   })
 
   const [activeTab, setActiveTab] = useState<'visual' | 'strategy' | 'users'>('strategy')
+  const [usersSubTab, setUsersSubTab] = useState<'list' | 'permissions'>('list')
 
   const supabase = createClient()
   const { toast } = useToast()
@@ -128,6 +138,11 @@ export default function AuthSettingsPage() {
           .eq('project_id', proj.id)
         
         if (modelsData) setModels(modelsData)
+
+        // Load UI Views for Permissions Mapping
+        const { data: viewsData, error: viewsError } = await supabase.from('ui_views').select('id, name, slug').eq('project_id', proj.id)
+        if (viewsError) console.error("Error fetching views:", viewsError)
+        if (viewsData) setUiViews(viewsData)
       }
 
       // Fetch User & Profile for Navbar
@@ -147,6 +162,114 @@ export default function AuthSettingsPage() {
 
     loadData()
   }, [project_slug, workspace_slug, supabase])
+
+  useEffect(() => {
+    if (activeTab === 'users' && project && authConfig.db_table_name) {
+      const loadLegacyUsers = async () => {
+        setIsLoadingUsers(true)
+        const queryId = crypto.randomUUID()
+        const channelName = `tunnel:${project.id}`
+        const channel = supabase.channel(channelName)
+        let isFinished = false
+        const cleanup = () => { isFinished = true; supabase.removeChannel(channel) }
+
+        channel.on('broadcast', { event: `query_result_${queryId}` }, (payload: any) => {
+          if (isFinished) return
+          cleanup()
+          const { success, data, error } = payload.payload
+          if (success && data) {
+            setLegacyUsers(data)
+          } else {
+            toast('Erro ao buscar usuários: ' + error, 'error')
+          }
+          setIsLoadingUsers(false)
+        })
+
+        channel.subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await channel.send({
+              type: 'broadcast', event: 'sql_query',
+              payload: { queryId, token: project.secret_token, action: 'get_users', config: authConfig, limit: 50, offset: 0 }
+            })
+          }
+        })
+
+        setTimeout(() => {
+          if (!isFinished) {
+            cleanup()
+            setIsLoadingUsers(false)
+            toast('Túnel CLI offline. Ligue o MetaBuilder CLI.', 'error')
+          }
+        }, 5000)
+
+        // Carregar as roles criadas no Supabase para este projeto
+        const { data: dbRoles } = await supabase.from('project_roles').select('*').eq('project_id', project.id)
+        if (dbRoles) {
+          setRoles(dbRoles)
+          if (dbRoles.length > 0) {
+            const { data: dbRolePerms } = await supabase.from('project_role_permissions').select('*').in('role_id', dbRoles.map(r => r.id))
+            if (dbRolePerms) setRolePermissions(dbRolePerms)
+          }
+        }
+        const { data: dbUserRoles } = await supabase.from('project_user_roles').select('*').eq('project_id', project.id)
+        if (dbUserRoles) setUserRoles(dbUserRoles)
+      }
+      loadLegacyUsers()
+    }
+  }, [activeTab, project, authConfig, supabase, toast])
+
+  const handleAssignRole = async (externalUserId: string, roleId: string) => {
+    const { error } = await supabase
+      .from('project_user_roles')
+      .upsert({
+        project_id: project.id,
+        external_user_id: externalUserId.toString(),
+        role_id: roleId
+      }, { onConflict: 'project_id, external_user_id' })
+      
+    if (!error) {
+      toast('Grupo atualizado com sucesso!', 'success')
+      const { data: dbUserRoles } = await supabase.from('project_user_roles').select('*').eq('project_id', project.id)
+      if (dbUserRoles) setUserRoles(dbUserRoles)
+    } else {
+      toast('Erro ao atualizar grupo: ' + error.message, 'error')
+    }
+  }
+
+  const handleTogglePermission = async (roleId: string, viewId: string) => {
+    const existing = rolePermissions.find(rp => rp.role_id === roleId && rp.view_id === viewId)
+    
+    if (existing) {
+      // Toggle off (delete)
+      const { error } = await supabase.from('project_role_permissions').delete().eq('id', existing.id)
+      if (!error) setRolePermissions(prev => prev.filter(rp => rp.id !== existing.id))
+    } else {
+      // Toggle on (insert)
+      const { data, error } = await supabase.from('project_role_permissions').insert({
+        role_id: roleId,
+        view_id: viewId,
+        can_read: true
+      }).select().single()
+      if (!error && data) setRolePermissions(prev => [...prev, data])
+    }
+  }
+
+  const handleCreateRole = async () => {
+    if (!newRoleName) return
+    const { error } = await supabase.from('project_roles').insert({
+      project_id: project.id,
+      name: newRoleName
+    })
+    if (!error) {
+      toast('Grupo criado com sucesso!', 'success')
+      setNewRoleName('')
+      setIsCreatingRole(false)
+      const { data: dbRoles } = await supabase.from('project_roles').select('*').eq('project_id', project.id)
+      if (dbRoles) setRoles(dbRoles)
+    } else {
+      toast('Erro ao criar grupo: ' + error.message, 'error')
+    }
+  }
 
   const handleSave = async () => {
     if (!project) return
@@ -706,65 +829,178 @@ export default function AuthSettingsPage() {
         ) : (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
             <div className="flex items-center justify-between">
-              <div className="relative w-full max-w-md">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                <input 
-                  type="text" 
-                  placeholder="Buscar usuários..."
-                  className="w-full h-12 pl-12 pr-4 rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 outline-none focus:border-indigo-500 text-sm font-medium transition-all"
-                />
+              <div className="flex items-center gap-2 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+                <button 
+                  onClick={() => setUsersSubTab('list')}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${usersSubTab === 'list' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+                >
+                  Lista de Usuários
+                </button>
+                <button 
+                  onClick={() => setUsersSubTab('permissions')}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${usersSubTab === 'permissions' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+                >
+                  Permissões de Telas
+                </button>
               </div>
-              <button className="flex items-center gap-2 px-6 h-12 bg-indigo-600 text-white rounded-2xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
-                <UserPlus className="w-4 h-4" />
-                Novo Usuário
-              </button>
+
+              {usersSubTab === 'list' && (
+                <div className="flex gap-4 items-center w-full max-w-md justify-end">
+                  <div className="relative w-full max-w-[240px]">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Buscar..."
+                      className="w-full h-11 pl-12 pr-4 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 outline-none focus:border-indigo-500 text-sm font-medium transition-all"
+                    />
+                  </div>
+                  <button onClick={() => setIsCreatingRole(true)} className="flex items-center gap-2 px-6 h-11 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95 whitespace-nowrap">
+                    <ShieldCheck className="w-4 h-4" />
+                    Criar Grupo
+                  </button>
+                </div>
+              )}
             </div>
 
-            <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-sm">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Usuário</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">E-mail</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Status</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                  <tr className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 font-bold">
-                          JD
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 transition-colors">João Dantas</p>
-                          <p className="text-[10px] text-neutral-500">Registrado em 12/05/2026</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-neutral-400">
-                      joao.dantas@empresa.com
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="px-3 py-1 bg-green-500/10 text-green-500 text-[9px] font-black uppercase tracking-widest rounded-full border border-green-500/20">
-                        Ativo
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button className="p-2 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition-colors">
-                        <MoreHorizontal className="w-4 h-4 text-neutral-400" />
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-              
-              <div className="p-12 text-center border-t border-neutral-100 dark:border-neutral-800">
-                <Users className="w-12 h-12 text-neutral-200 dark:text-neutral-800 mx-auto mb-4" />
-                <p className="text-sm font-medium text-neutral-500">Seus usuários aparecerão aqui assim que se cadastrarem ou forem convidados.</p>
+            {isCreatingRole && (
+              <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-6 flex gap-4 items-end animate-in fade-in slide-in-from-top-4">
+                <div className="flex-1 space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Nome do Grupo de Acesso</label>
+                  <input 
+                    type="text" 
+                    value={newRoleName}
+                    onChange={(e) => setNewRoleName(e.target.value)}
+                    placeholder="Ex: Vendedores, Gerentes, Administradores..."
+                    className="w-full h-12 px-4 rounded-xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 outline-none focus:border-indigo-500 text-sm font-medium"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setIsCreatingRole(false)} className="px-6 h-12 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-xl text-xs font-bold hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all">Cancelar</button>
+                  <button onClick={handleCreateRole} className="px-6 h-12 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20">Salvar Grupo</button>
+                </div>
               </div>
-            </div>
+            )}
+
+            {usersSubTab === 'list' ? (
+              <div className="space-y-4 animate-in fade-in duration-300">
+                <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-sm">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Usuário</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">E-mail</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Grupo</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                      {isLoadingUsers ? (
+                        <tr><td colSpan={4} className="p-8 text-center"><div className="animate-spin w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full mx-auto" /></td></tr>
+                      ) : legacyUsers.length > 0 ? (
+                        legacyUsers.map((u, i) => (
+                          <tr key={i} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors group">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 font-bold uppercase">
+                                  {(u[authConfig.db_email_column] || 'US').substring(0, 2)}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 transition-colors">{u.nome || u.name || 'Usuário ' + u.id}</p>
+                                  <p className="text-[10px] text-neutral-500">ID Local: {u.id || '-'}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                              {u[authConfig.db_email_column]}
+                            </td>
+                            <td className="px-6 py-4">
+                              <select 
+                                value={userRoles.find(ur => ur.external_user_id === u.id?.toString())?.role_id || ''}
+                                onChange={(e) => handleAssignRole(u.id, e.target.value)}
+                                className="text-[11px] font-bold text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 outline-none w-36"
+                              >
+                                <option value="" disabled>Selecione um grupo</option>
+                                {roles.map(r => (
+                                  <option key={r.id} value={r.id}>{r.name}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <button className="p-2 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition-colors">
+                                <MoreHorizontal className="w-4 h-4 text-neutral-400" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="p-12 text-center">
+                            <Users className="w-12 h-12 text-neutral-200 dark:text-neutral-800 mx-auto mb-4" />
+                            <p className="text-sm font-medium text-neutral-500">Nenhum usuário encontrado no banco legado ou CLI offline.</p>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 animate-in fade-in duration-300">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-600">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Permissões de Telas por Grupo</h3>
+                    <p className="text-[10px] text-neutral-500">Marque quais telas cada grupo pode visualizar no menu lateral do sistema.</p>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-x-auto shadow-sm">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 min-w-[200px]">Tela / View</th>
+                        {roles.map(role => (
+                          <th key={role.id} className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-center min-w-[120px]">
+                            {role.name}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                      {uiViews.length > 0 ? uiViews.map(view => (
+                        <tr key={view.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <p className="text-sm font-bold text-neutral-900 dark:text-white">{view.name}</p>
+                            <p className="text-[10px] text-neutral-500">/{view.slug}</p>
+                          </td>
+                          {roles.map(role => {
+                            const hasAccess = rolePermissions.some(rp => rp.role_id === role.id && rp.view_id === view.id)
+                            return (
+                              <td key={role.id} className="px-6 py-4 text-center">
+                                <button 
+                                  onClick={() => handleTogglePermission(role.id, view.id)}
+                                  className={`w-12 h-6 rounded-full transition-all relative inline-block align-middle ${hasAccess ? 'bg-indigo-600' : 'bg-neutral-200 dark:bg-neutral-800'}`}
+                                >
+                                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${hasAccess ? 'left-7' : 'left-1'}`} />
+                                </button>
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      )) : (
+                        <tr>
+                          <td colSpan={roles.length + 1} className="p-8 text-center text-sm font-medium text-neutral-500">
+                            Nenhuma tela (UI View) encontrada no projeto.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
