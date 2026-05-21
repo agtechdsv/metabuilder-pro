@@ -380,7 +380,10 @@
     "master_details": {
       "main_data": "Dados Principais"
     },
-    "back_to_list": "Voltar para Lista"
+    "back_to_list": "Voltar para Lista",
+    "create_success": "Registro criado com sucesso!",
+    "update_success": "Registro atualizado com sucesso!",
+    "delete_success": "Registro excluído com sucesso!"
   },
   "wizard": {
     "title": "Use Case Builder",

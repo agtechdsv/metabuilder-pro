@@ -321,15 +321,58 @@ async function startTunnel(projectId, secretToken, connectionString, configSupab
         else if (action === 'update') {
           const { idColumn, idValue, data } = payload.payload;
           const safeIdCol = idColumn.replace(/[^a-zA-Z0-9_]/g, '');
-          
-          const keys = Object.keys(data).map(k => `"${k.replace(/[^a-zA-Z0-9_]/g, '')}"`);
-          const values = Object.values(data);
-          const setClause = keys.map((key, i) => `${key} = $${i + 1}`).join(', ');
-          
-          sql = `UPDATE "${safeTable}" SET ${setClause} WHERE "${safeIdCol}" = $${values.length + 1} RETURNING *`;
-          params = [...values, idValue];
-          result = await pgClient.query(sql, params);
-          console.log(chalk.green(`[ OK ] UPDATE: 1 linha atualizada.`));
+
+          // Detecta e remove colunas GENERATED ALWAYS AS antes de executar o UPDATE.
+          // Faz até 5 tentativas removendo automaticamente a coluna rejeitada pelo Postgres.
+          let currentData = { ...data };
+          let updateResult = null;
+          let updateAttempts = 0;
+          const MAX_UPDATE_RETRIES = 5;
+
+          while (updateAttempts < MAX_UPDATE_RETRIES) {
+            updateAttempts++;
+            const colNames = Object.keys(currentData);
+
+            if (colNames.length === 0) {
+              console.log(chalk.yellow(`[ AVISO ] Nenhuma coluna atualizável restante para '${safeTable}'. UPDATE ignorado.`));
+              result = { rows: [] };
+              break;
+            }
+
+            const keys = colNames.map(k => `"${k.replace(/[^a-zA-Z0-9_]/g, '')}"`);
+            const values = Object.values(currentData);
+            const setClause = keys.map((key, i) => `${key} = $${i + 1}`).join(', ');
+
+            sql = `UPDATE "${safeTable}" SET ${setClause} WHERE "${safeIdCol}" = $${values.length + 1} RETURNING *`;
+            params = [...values, idValue];
+
+            try {
+              updateResult = await pgClient.query(sql, params);
+              result = updateResult;
+              console.log(chalk.green(`[ OK ] UPDATE: 1 linha atualizada.`));
+              break; // Sucesso — sai do loop
+            } catch (updateErr) {
+              const errMsg = updateErr.message || '';
+              // Detecta erro de coluna gerada: 'column "col" can only be updated to DEFAULT'
+              // ou versão PT: 'a coluna "col" só pode ser atualizada para DEFAULT'
+              const genColMatch = errMsg.match(/["\u201c\u201d]([^"\u201c\u201d]+)["\u201c\u201d]/);
+              const isGenColError = errMsg.includes('DEFAULT') && genColMatch;
+
+              if (isGenColError) {
+                const genColName = genColMatch[1];
+                console.log(chalk.yellow(`[ AVISO ] Coluna "${genColName}" é GENERATED — removendo e repetindo UPDATE (tentativa ${updateAttempts})...`));
+                delete currentData[genColName];
+                // Continua para a próxima tentativa
+              } else {
+                // Erro não relacionado a coluna gerada — relança para o catch externo
+                throw updateErr;
+              }
+            }
+          }
+
+          if (!result) {
+            throw new Error(`Não foi possível executar o UPDATE após ${MAX_UPDATE_RETRIES} tentativas.`);
+          }
         }
         else if (action === 'delete') {
           const { idColumn, idValue } = payload.payload;

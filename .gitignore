@@ -48,3 +48,22 @@ node_modules
 /cli/run_migration.js
 /cli/run_scheduler_migration.js
 /supabase/agenda_compromissos_test.sql
+
+# Temporary diagnostic & utility scripts
+/apply_rls_fix.js
+/check.js
+/check_itens.js
+/check_joins.js
+/check_models.js
+/cli/fix-members.js
+/cli/query_project.js
+/cli/test_sync.js
+/cli/test_view.js
+/db_agenda_check.js
+/print_components.js
+/print_fields.js
+/scratch_alter_download_jobs.js
+/scratch_policy.js
+/scratch_query.js
+/simulate_fields.js
+

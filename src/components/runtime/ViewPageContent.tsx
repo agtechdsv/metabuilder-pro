@@ -885,11 +885,23 @@ export default function ViewPageContent({
         return false
       }
 
-      await sendWithRetry()
+      const saveSucceeded = await sendWithRetry()
 
       // After save confirmed (or timed out), refresh UI
       // Captura snapshot estável ANTES de qualquer setState
       const parentHistory = [...detailHistory]
+
+      // Aguarda um tick para garantir que o banco já processou o commit antes de re-buscar
+      // (evita race condition onde fetchDetails retorna os dados ANTIGOS ainda não sobrescritos).
+      if (saveSucceeded) {
+        toast(
+          detailModalMode === 'create'
+            ? t('runtime.create_success', 'Registro criado com sucesso!')
+            : t('runtime.update_success', 'Registro atualizado com sucesso!'),
+          'success'
+        )
+        await new Promise(resolve => setTimeout(resolve, 300))
+      }
 
       // 1. Busca dados frescos do PAI (o que está "atrás" no histórico)
       let freshParentRecord: any = null
@@ -904,9 +916,10 @@ export default function ViewPageContent({
       }
 
       // 2. Recarrega o MESTRE
+      let freshMasterDetails: any[] = []
       if (selectedRow) {
-        const upMasterDetails = await fetchDetails(selectedRow, modelName)
-        setSelectedRow((prev: any) => prev ? { ...prev, _details: upMasterDetails } : prev)
+        freshMasterDetails = await fetchDetails(selectedRow, modelName)
+        setSelectedRow((prev: any) => prev ? { ...prev, _details: freshMasterDetails } : prev)
       }
 
       // 3. Navega de volta manualmente com dados JA FRESCOS
@@ -936,8 +949,10 @@ export default function ViewPageContent({
           setIsDetailModalOpen(true)
         }
       } else {
+        // Sem histórico de pai: fecha a modal/drawer de detalhe retornando ao registro mestre.
         setIsDetailModalOpen(false)
         setIsDetailDrawerOpen(false)
+        setSelectedDetail(null)
       }
 
       if (typeof window !== 'undefined') {
@@ -1008,6 +1023,7 @@ export default function ViewPageContent({
           setSelectedRow({ ...selectedRow, _details: updatedDetails })
         }
         setIsProcessing(false)
+        toast(t('runtime.delete_success', 'Registro excluído com sucesso!'), 'success')
       }, 1500)
     } catch (error) {
       console.error('Error deleting detail:', error)
@@ -1242,6 +1258,13 @@ export default function ViewPageContent({
           setSelectedRow(null)
           setRefreshKey(prev => prev + 1)
         }
+
+        toast(
+          drawerMode === 'create'
+            ? t('runtime.create_success', 'Registro criado com sucesso!')
+            : t('runtime.update_success', 'Registro atualizado com sucesso!'),
+          'success'
+        )
       }, 1500)
 
     } catch (error) {
@@ -1317,6 +1340,7 @@ export default function ViewPageContent({
           supabase.removeChannel(channel)
         }
         setRefreshKey(prev => prev + 1)
+        toast(t('runtime.delete_success', 'Registro excluído com sucesso!'), 'success')
       }, 1500)
     } catch (error) {
       console.error('Error deleting:', error)

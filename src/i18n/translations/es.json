@@ -374,9 +374,12 @@
       "input_placeholder": "Ingrese el valor para {field}..."
     },
     "master_details": {
-      "main_data": "Datos Principales"
+      "main_data": "Datos Principais"
     },
-    "back_to_list": "Volver a la Lista"
+    "back_to_list": "Voltar a la Lista",
+    "create_success": "¡Registro creado con éxito!",
+    "update_success": "¡Registro actualizado con éxito!",
+    "delete_success": "¡Registro eliminado con éxito!"
   },
   "wizard": {
     "title": "Use Case Builder",

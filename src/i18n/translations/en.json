@@ -376,7 +376,10 @@
     "master_details": {
       "main_data": "Main Data"
     },
-    "back_to_list": "Back to List"
+    "back_to_list": "Back to List",
+    "create_success": "Record created successfully!",
+    "update_success": "Record updated successfully!",
+    "delete_success": "Record deleted successfully!"
   },
   "wizard": {
     "title": "Use Case Builder",
