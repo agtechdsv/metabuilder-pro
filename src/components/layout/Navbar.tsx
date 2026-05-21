@@ -45,6 +45,7 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
                 <Link href="/features/integration" className="text-[11px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.integration')}</Link>
                 <Link href="/features/branding" className="text-[11px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.branding')}</Link>
                 <Link href="/features/security" className="text-[11px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.security')}</Link>
+                <Link href="/features/use-cases" className="text-[11px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.use_cases')}</Link>
                 <Link href="/features/zero-trust" className="text-[11px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 transition-colors border-l border-neutral-200 dark:border-neutral-800 pl-6">{t('marketing_v2.navbar.zero_trust')}</Link>
               </nav>
             )}

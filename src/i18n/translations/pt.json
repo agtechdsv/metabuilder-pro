@@ -208,8 +208,12 @@
           "database_desc": "O Agente CLI valida o login comparando com SUA tabela de usuários sincronizada.",
           "ldap_title": "LDAP / AD",
           "ldap_desc": "Integração corporativa nativa. Validação via Active Directory do cliente.",
+          "none_title": "Sem Autenticação",
+          "none_desc": "Os desenvolvedores podem querer deixar marcado enquanto não subiram a app. Não exige login.",
           "managed_ready": "Banco de Dados de Usuários Pronto!",
           "managed_ready_desc": "Criaremos automaticamente a tabela e as APIs de login e registro. Nenhuma configuração extra necessária.",
+          "none_ready": "Autenticação Desabilitada!",
+          "none_ready_desc": "O acesso a todas as visualizações, pastas e painéis será público e direto.",
           "table_mapping": "Mapeamento de Tabelas",
           "user_table": "Tabela de Usuários",
           "select_table": "Selecione a tabela...",
@@ -545,6 +549,7 @@
       "integration": "Integração",
       "branding": "Whitelabel",
       "security": "Segurança",
+      "use_cases": "Lógicas",
       "zero_trust": "Zero-Trust"
     },
     "hero": {
@@ -652,6 +657,136 @@
         "footer_title": "Pronto para proteger seus dados?",
         "footer_desc": "Implemente segurança de nível bancário em seus sistemas em poucos cliques.",
         "footer_cta": "Ativar Segurança Enterprise"
+      },
+      "use_cases": {
+        "desc": "Gere telas CRUD, Kanban, Mapas Mentais e Agendas dinamicamente baseadas nas relações SQL."
+      }
+    },
+    "use_cases_page": {
+      "badge": "Lógicas de Negócio Dinâmicas",
+      "title": "Lógicas de Negócio.",
+      "title_highlight": "O cérebro do MetaBuilderPRO.",
+      "desc": "Veja como a engine analisa a semântica do seu banco de dados para instanciar interfaces premium dinâmicas e funcionais sem gerar arquivos físicos.",
+      "interactive_title": "Modelos Comportamentais Suportados",
+      "interactive_desc": "Selecione uma das lógicas abaixo para ver como a interface se comporta no Runtime e como os dados são processados.",
+      "what_is": "O que é",
+      "engine_behavior": "Comportamento da Engine",
+      "practical_example": "Exemplo Prático",
+      "mapped_components": "Componentes Gerados",
+      "interactive_hint": "Clique nos elementos do Simulador Runtime acima para ver a lógica em ação! Em alguns componentes você deve clicar, arrastar e soltar para vê-lo funcionando na prática. ",
+      "mockups": {
+        "search": "Buscar...",
+        "search_btn": "Filtrar",
+        "add_btn": "Adicionar Registro",
+        "name": "Nome",
+        "email": "E-mail",
+        "status": "Status",
+        "actions": "Ações",
+        "details": "Ver Detalhes",
+        "save": "Salvar Registro",
+        "cancel": "Cancelar",
+        "delete_confirm_title": "Excluir Registro?",
+        "delete_confirm_desc": "Tem certeza que deseja remover este registro? Esta ação não pode ser desfeita.",
+        "delete_confirm_yes": "Confirmar",
+        "delete_confirm_no": "Cancelar",
+        "order_title": "Visualização de Pedido #3492",
+        "tab_items": "Itens do Pedido",
+        "tab_payments": "Pagamentos",
+        "tab_logs": "Histórico",
+        "item_name": "Produto",
+        "qty": "Qtd",
+        "price": "Preço",
+        "to_do": "A Fazer",
+        "in_progress": "Em Progresso",
+        "done": "Concluído",
+        "central_node": "Empresa (Raíz)",
+        "node_finance": "Financeiro",
+        "node_sales": "Vendas",
+        "node_hr": "RH",
+        "node_billing": "Faturamento",
+        "node_treasury": "Tesouraria",
+        "node_crm": "CRM Vendas",
+        "node_pipeline": "Funil Vendas",
+        "node_recruitment": "Recrutamento",
+        "node_payroll": "Folha de Pagto",
+        "sql_editor_title": "Custom SQL Query Editor",
+        "sql_placeholder": "SELECT p.id, p.name, count(o.id) FROM products p LEFT JOIN orders o ON p.id = o.product_id GROUP BY p.id",
+        "run_query": "Executar Query",
+        "query_result": "Resultado da Query (Personalizado)"
+      },
+      "items": {
+        "cadastro": {
+          "title": "Apenas Cadastro",
+          "desc": "Formulário direto para inserção rápida de dados, sem listar registros existentes.",
+          "what_is": "Um layout de entrada pura, otimizado para formulários públicos de contato, captação de leads ou novos cadastros de usuários.",
+          "behavior": "A engine ignora requisições de listagem (Select) e foca em validações de campos e operações de inserção (Insert) imediatas.",
+          "example": "Formulário de 'Fale Conosco', Landing Page de inscrições ou telas de Pesquisa de Opinião.",
+          "components": "Inputs dinâmicos, validação de campos obrigatórios, máscaras de dados e botão de submissão."
+        },
+        "pesquisa": {
+          "title": "Apenas Pesquisa",
+          "desc": "Interface focada exclusivamente em buscas e relatórios de dados de modo somente-leitura.",
+          "what_is": "Uma tela focada em exibição de relatórios e busca filtrada. Sem botões de edição ou de criação de registros.",
+          "behavior": "A engine roda consultas otimizadas e impede operações de escrita (Insert/Update/Delete) para garantir a segurança dos dados.",
+          "example": "Consulta de notas fiscais emitidas, relatório de logs de acesso ou painel de visualização de auditoria.",
+          "components": "Filtros rápidos, busca global, tabela de listagem paginada e exportador Excel/PDF."
+        },
+        "pesquisa_cadastro": {
+          "title": "Pesquisa + Cadastro",
+          "desc": "O fluxo CRUD padrão. Listagem inteligente combinada com formulário de edição completo.",
+          "what_is": "O modelo clássico de painel administrativo: busca por registros existentes e botões de ação para criar, editar ou excluir dados.",
+          "behavior": "Gerenciamento de estado complexo unindo filtros de consulta em tempo real e formulário dinâmico em Drawer lateral.",
+          "example": "Cadastro de Clientes, Gestão de Produtos ou controle de Estoque.",
+          "components": "Barra de filtros, grid dinâmico com ordenação, Drawer lateral para cadastro/edição, e modal de exclusão."
+        },
+        "master_detail": {
+          "title": "Mestre-Detalhe",
+          "desc": "Explorador de dados relacionais avançado com sub-tabelas e abas vinculadas.",
+          "what_is": "Visualizador hierárquico em que um registro mestre possui diversos registros dependentes (ex: Fatura e seus Itens).",
+          "behavior": "Realiza consultas aninhadas (Joins/sub-selects) e organiza as tabelas filhas em abas vinculadas por chaves estrangeiras (FK).",
+          "example": "Visualização de Pedidos com itens comprados, Perfil de Cliente com histórico de atendimentos e abas de faturas.",
+          "components": "Abas dinâmicas, tabelas aninhadas, sincronização de exclusão em cascata e visualizador detalhado."
+        },
+        "kanban": {
+          "title": "Kanban",
+          "desc": "Painel visual de cartões organizados por colunas com base em status ou prioridades.",
+          "what_is": "Ideal para acompanhar fluxos de trabalho visuais e estágios de processos de maneira intuitiva.",
+          "behavior": "Agrupa os dados por uma coluna específica (ex: status) e atualiza o banco de dados instantaneamente via drag-and-drop.",
+          "example": "Funil de Vendas (CRM), Gestão de Tarefas (Projetos) ou controle de pedidos em preparação.",
+          "components": "Colunas dinâmicas, cartões (cards) personalizáveis com metadados e suporte a arrastar-e-soltar."
+        },
+        "mapa_mental": {
+          "title": "Mapa Mental",
+          "desc": "Diagrama de árvore de nós para visualizar hierarquias organizacionais ou de dados.",
+          "what_is": "Uma forma geométrica e interativa de explorar relações de dados em cascata (nó pai e nós filhos).",
+          "behavior": "Processa dados relacionais recursivos e renderiza uma árvore hierárquica dinâmica usando SVG e transições animadas.",
+          "example": "Organograma corporativo, árvore genealógica ou categorias de produtos de múltiplos níveis.",
+          "components": "SVG interativo, nós colapsáveis, busca de elementos no mapa e linhas de conexão dinâmicas."
+        },
+        "dashboard": {
+          "title": "Dashboard (BI)",
+          "desc": "Indicadores de desempenho, gráficos e KPIs.",
+          "what_is": "Um painel visual dinâmico consolidando métricas chaves de negócios diretamente dos dados do banco.",
+          "behavior": "Executa consultas de agregação complexas (Group By, Sum, Avg) e alimenta componentes visuais de alta performance.",
+          "example": "Painel de faturamento mensal, monitor de servidores ativos ou funil de vendas do CRM.",
+          "components": "Cards de KPI com percentual de variação, gráficos de linha/barra interativos e filtros de período."
+        },
+        "agenda": {
+          "title": "Agenda / Calendário",
+          "desc": "Agendamentos, prazos, compromissos e tarefas em calendário.",
+          "what_is": "Organizador de tarefas e eventos estruturados em grade temporal mensal, semanal ou diária.",
+          "behavior": "Sincroniza registros com campos de data/hora no banco de dados, recalculando faixas de horário e alertas.",
+          "example": "Calendário de consultas médicas, cronograma de entregas de projetos ou agendamentos de salas de reunião.",
+          "components": "Visualização em grade (Grade Mensal/Semanal), cards de evento interativos com drag-and-drop e modal de novo agendamento."
+        },
+        "personalizado": {
+          "title": "Personalizado",
+          "desc": "Controle total da query e do layout, ideal para fluxos complexos fora do padrão.",
+          "what_is": "Para cenários em que o assistente automático não basta. Permite programar SQL puro e definir layouts manuais.",
+          "behavior": "A engine ignora a geração automática de consultas e passa a executar a query SQL manual especificada pelo desenvolvedor.",
+          "example": "Painel analítico com consultas aggregadas pesadas ou fluxos com integrações de APIs adicionais.",
+          "components": "Editor SQL com realce de sintaxe, layout de exibição livre e criação de botões virtuais para rotas."
+        }
       }
     }
   }

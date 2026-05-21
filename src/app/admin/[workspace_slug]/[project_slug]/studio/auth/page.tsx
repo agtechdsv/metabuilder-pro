@@ -21,7 +21,8 @@ import {
   Mail,
   MoreHorizontal,
   UserPlus,
-  Trash2
+  Trash2,
+  Unlock
 } from 'lucide-react'
 import { Navbar } from '@/components/layout/Navbar'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
@@ -462,7 +463,7 @@ export default function AuthSettingsPage() {
         </div>
         {activeTab === 'strategy' ? (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <button 
                 onClick={() => setAuthConfig({...authConfig, auth_type: 'managed'})}
                 className={`p-6 border-2 rounded-[2rem] text-left transition-all group relative overflow-hidden ${authConfig.auth_type === 'managed' ? 'border-indigo-600 bg-indigo-600/5 shadow-2xl shadow-indigo-500/10' : 'bg-white dark:bg-neutral-900/30 border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700'}`}
@@ -495,6 +496,17 @@ export default function AuthSettingsPage() {
                 <h3 className="font-bold text-lg mb-2 text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.ldap_title')}</h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">{t('dashboard.projects.studio.auth.ldap_desc')}</p>
               </button>
+
+              <button 
+                onClick={() => setAuthConfig({...authConfig, auth_type: 'none'})}
+                className={`p-6 border-2 rounded-[2rem] text-left transition-all group relative overflow-hidden ${authConfig.auth_type === 'none' ? 'border-indigo-600 bg-indigo-600/5 shadow-2xl shadow-indigo-500/10' : 'bg-white dark:bg-neutral-900/30 border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700'}`}
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-all shadow-sm ${authConfig.auth_type === 'none' ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'}`}>
+                  <Unlock className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-lg mb-2 text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.none_title')}</h3>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">{t('dashboard.projects.studio.auth.none_desc')}</p>
+              </button>
             </div>
 
             <div className="bg-neutral-50 dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 p-6 rounded-[2rem] space-y-6">
@@ -522,6 +534,16 @@ export default function AuthSettingsPage() {
                   <div>
                     <h3 className="text-2xl font-black text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.managed_ready')}</h3>
                     <p className="text-neutral-500 dark:text-neutral-400 max-w-md mt-2">{t('dashboard.projects.studio.auth.managed_ready_desc')}</p>
+                  </div>
+                </div>
+              )}
+
+              {authConfig.auth_type === 'none' && (
+                <div className="flex flex-col items-center justify-center text-center space-y-4 py-8 animate-in fade-in duration-300">
+                  <Unlock className="w-20 h-20 text-amber-500/30" />
+                  <div>
+                    <h3 className="text-2xl font-black text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.none_ready')}</h3>
+                    <p className="text-neutral-500 dark:text-neutral-400 max-w-md mt-2">{t('dashboard.projects.studio.auth.none_ready_desc')}</p>
                   </div>
                 </div>
               )}

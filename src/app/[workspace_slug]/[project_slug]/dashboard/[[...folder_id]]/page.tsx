@@ -35,7 +35,13 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
   const { workspace_slug, project_slug, folder_id } = await params
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: { persistSession: false },
+      global: {
+        fetch: (url, options) => fetch(url, { ...options, cache: 'no-store' }),
+      },
+    }
   )
 
   // 1. Resolve Workspace
@@ -72,41 +78,56 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
     })
   }
 
+  // 4. Resolve project_auth_config
+  const { data: authConfig } = await supabase
+    .from('project_auth_config')
+    .select('auth_type')
+    .eq('project_id', project.id)
+    .maybeSingle()
+
+  const isNoAuth = authConfig?.auth_type === 'none'
+
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get(`client_session_${project.id}`)?.value
 
-  if (!sessionCookie) {
+  if (!sessionCookie && !isNoAuth) {
     redirect(`/${workspace_slug}/${project_slug}/login`)
   }
 
   let allowedViewIds: string[] | null = null
-  try {
-    const clientUser = JSON.parse(decodeURIComponent(sessionCookie))
-    
-    // Busca o papel do usuário no projeto
-    const { data: userRole } = await supabase
-      .from('project_user_roles')
-      .select('role_id')
-      .eq('project_id', project.id)
-      .eq('external_user_id', clientUser.id?.toString())
-      .single()
-    
-    if (userRole?.role_id) {
-      // Busca as permissões explicitamente desabilitadas deste papel (can_read = false)
-      const { data: deniedPermissions } = await supabase
-        .from('project_role_permissions')
-        .select('view_id')
-        .eq('role_id', userRole.role_id)
-        .eq('can_read', false)
+  if (isNoAuth) {
+    allowedViewIds = null // null means all views allowed by default
+  } else if (sessionCookie) {
+    try {
+      const clientUser = JSON.parse(decodeURIComponent(sessionCookie))
       
-      const deniedViewIds = deniedPermissions ? deniedPermissions.map(p => p.view_id) : []
-      const allViewIds = getAllViewIds(rawNavigation, viewSlugToIdMap)
-      allowedViewIds = allViewIds.filter(id => !deniedViewIds.includes(id))
-    } else {
+      // Busca o papel do usuário no projeto
+      const { data: userRole } = await supabase
+        .from('project_user_roles')
+        .select('role_id')
+        .eq('project_id', project.id)
+        .eq('external_user_id', clientUser.id?.toString())
+        .single()
+      
+      if (userRole?.role_id) {
+        // Busca as permissões explicitamente desabilitadas deste papel (can_read = false)
+        const { data: deniedPermissions } = await supabase
+          .from('project_role_permissions')
+          .select('view_id')
+          .eq('role_id', userRole.role_id)
+          .eq('can_read', false)
+        
+        const deniedViewIds = deniedPermissions ? deniedPermissions.map(p => p.view_id) : []
+        const allViewIds = getAllViewIds(rawNavigation, viewSlugToIdMap)
+        allowedViewIds = allViewIds.filter(id => !deniedViewIds.includes(id))
+      } else {
+        allowedViewIds = []
+      }
+    } catch (e) {
+      console.error('Erro ao ler sessão no dashboard', e)
       allowedViewIds = []
     }
-  } catch (e) {
-    console.error('Erro ao ler sessão no dashboard', e)
+  } else {
     allowedViewIds = []
   }
 

@@ -8,7 +8,13 @@ export async function generateMetadata({ params }: { params: Promise<{ project_s
   const { project_slug, workspace_slug } = await params
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: { persistSession: false },
+      global: {
+        fetch: (url, options) => fetch(url, { ...options, cache: 'no-store' }),
+      },
+    }
   )
   
   const { data: workspaces } = await supabase.from('workspaces').select('id').eq('slug', workspace_slug).limit(1)
@@ -87,7 +93,13 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   const { workspace_slug, project_slug } = await params
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: { persistSession: false },
+      global: {
+        fetch: (url, options) => fetch(url, { ...options, cache: 'no-store' }),
+      },
+    }
   )
 
   // 1. Resolve Workspace
@@ -129,13 +141,24 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
     })
   }
 
+  // 4. Check if auth is disabled
+  const { data: authConfig } = await supabase
+    .from('project_auth_config')
+    .select('auth_type')
+    .eq('project_id', project.id)
+    .maybeSingle()
+
+  const isNoAuth = authConfig?.auth_type === 'none'
+
   const cookieStore = await cookies()
   const locale = cookieStore.get('app-language')?.value || 'pt'
   const sessionCookie = cookieStore.get(`client_session_${project.id}`)?.value
 
   let allowedViewIds: string[] | null = null
 
-  if (sessionCookie) {
+  if (isNoAuth) {
+    allowedViewIds = null // null means all views allowed by default
+  } else if (sessionCookie) {
     try {
       const clientUser = JSON.parse(decodeURIComponent(sessionCookie))
       
@@ -200,6 +223,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
         workspaceSlug={workspace_slug}
         projectSlug={project_slug}
         navigation={navigation}
+        isNoAuth={isNoAuth}
       >
         {children}
       </RuntimeLayoutClient>

@@ -13,7 +13,7 @@ const dbConnectionString = "postgresql://postgres.chmstvtepzmjhpyxjjam:Goeta8156
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: { persistSession: false },
   realtime: {
-    transport: ws
+    transport: ws as any
   }
 })
 const dbPool = new Pool({ connectionString: dbConnectionString })

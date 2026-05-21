@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
 
@@ -28,6 +28,12 @@ export function MarketingSections() {
       href: "/features/branding"
     },
     {
+      icon: <Layers className="w-6 h-6 text-pink-400" />,
+      title: t('marketing_v2.navbar.use_cases'),
+      desc: t('marketing_v2.features.use_cases.desc'),
+      href: "/features/use-cases"
+    },
+    {
       icon: <ShieldCheck className="w-6 h-6 text-emerald-400" />,
       title: t('marketing_v2.navbar.zero_trust'),
       desc: t('marketing_v2.features.zero_trust.desc'),
@@ -50,7 +56,7 @@ export function MarketingSections() {
         </p>
       </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           {features.map((feature, i) => (
             <Link key={i} href={feature.href} className="group p-8 rounded-[2.5rem] bg-neutral-100/50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 hover:border-indigo-500/50 transition-all duration-500 flex flex-col justify-between">
               <div>

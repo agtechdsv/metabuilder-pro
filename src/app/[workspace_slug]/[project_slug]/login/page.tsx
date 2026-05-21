@@ -3,6 +3,7 @@ import { AlertCircle, ShieldAlert } from 'lucide-react'
 import { getLocale } from '@/i18n/get-locale'
 import { getTranslations } from '@/i18n/get-translations'
 import { LoginPortalClient } from '@/components/auth/LoginPortalClient'
+import { redirect } from 'next/navigation'
 
 export default async function LoginPage({ params }: any) {
   const { workspace_slug, project_slug } = await params
@@ -11,7 +12,13 @@ export default async function LoginPage({ params }: any) {
   
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: { persistSession: false },
+      global: {
+        fetch: (url, options) => fetch(url, { ...options, cache: 'no-store' }),
+      },
+    }
   )
 
   // 1. Verificar se o projeto existe e está ativo
@@ -46,6 +53,10 @@ export default async function LoginPage({ params }: any) {
   const visual = config?.ui_config as any || {}
   const auth = config as any || {}
   const allowSignup = visual.allow_signup || false
+  
+  if (auth.auth_type === 'none') {
+    redirect(`/${workspace_slug}/${project_slug}`)
+  }
   
   // 3. Verificar se o projeto está inativo
   if (!project.is_active) {

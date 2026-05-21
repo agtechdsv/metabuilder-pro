@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/utils/supabase/server'
-import { cookies, notFound } from 'next/headers'
+import { cookies } from 'next/headers'
+import { notFound } from 'next/navigation'
 import { AlertCircle } from 'lucide-react'
 import { DownloadsManagerClient } from '@/components/runtime/DownloadsManagerClient'
 

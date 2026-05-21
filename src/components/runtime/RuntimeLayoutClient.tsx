@@ -12,6 +12,7 @@ interface RuntimeLayoutClientProps {
   workspaceSlug: string
   projectSlug: string
   navigation: any[]
+  isNoAuth?: boolean
 }
 
 export function RuntimeLayoutClient({ 
@@ -19,7 +20,8 @@ export function RuntimeLayoutClient({
   project, 
   workspaceSlug, 
   projectSlug, 
-  navigation 
+  navigation,
+  isNoAuth = false
 }: RuntimeLayoutClientProps) {
   const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -98,19 +100,19 @@ export function RuntimeLayoutClient({
     const hasSession = document.cookie.split('; ').some(row => row.trim().startsWith(`${sessionCookieName}=`))
 
     if (isLoginPage) {
-      if (hasSession) {
+      if (hasSession || isNoAuth) {
         window.location.href = `/${workspaceSlug}/${projectSlug}`
       } else {
         setIsCheckingAuth(false)
       }
     } else {
-      if (!hasSession) {
+      if (!hasSession && !isNoAuth) {
         window.location.href = `/${workspaceSlug}/${projectSlug}/login`
       } else {
         setIsCheckingAuth(false)
       }
     }
-  }, [isLoginPage, project.id, workspaceSlug, projectSlug])
+  }, [isLoginPage, project.id, workspaceSlug, projectSlug, isNoAuth])
 
   if (isCheckingAuth) {
     return (

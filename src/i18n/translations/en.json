@@ -197,15 +197,23 @@
         "auth": {
           "title": "Configure Login",
           "strategy_tab": "Authentication Strategy",
+          "strategy_desc": "Define how your users will authenticate in the system.",
           "visual_tab": "Visual Customization",
+          "users_tab": "User Management",
+          "allow_signup": "Allow Self-Registration",
+          "allow_signup_desc": "Enables the 'Create account' link on the login portal.",
           "managed_title": "Managed Auth",
           "managed_desc": "MetaBuilder manages users in an isolated database. Fast and easy.",
           "database_title": "Via Legacy Database",
           "database_desc": "The CLI Agent validates login against YOUR synchronized users table.",
           "ldap_title": "LDAP / AD",
           "ldap_desc": "Native corporate integration. Validation via client's Active Directory.",
+          "none_title": "No Authentication",
+          "none_desc": "Developers may want to keep this enabled before deploying the app. Does not require login.",
           "managed_ready": "User Database Ready!",
           "managed_ready_desc": "We will automatically create the table and login/registration APIs. No additional configuration is required.",
+          "none_ready": "Authentication Disabled!",
+          "none_ready_desc": "Access to all views, folders, and dashboards will be public and direct.",
           "table_mapping": "Tables Mapping",
           "user_table": "Users Table",
           "select_table": "Select table...",
@@ -541,6 +549,7 @@
       "integration": "Integration",
       "branding": "Whitelabel",
       "security": "Security",
+      "use_cases": "Logics",
       "zero_trust": "Zero-Trust"
     },
     "hero": {
@@ -648,6 +657,136 @@
         "footer_title": "Ready to protect your data?",
         "footer_desc": "Implement bank-level security in your systems in just a few clicks.",
         "footer_cta": "Activate Enterprise Security"
+      },
+      "use_cases": {
+        "desc": "Generate CRUD screens, Kanban, Mind Maps, and Calendars dynamically based on SQL relations."
+      }
+    },
+    "use_cases_page": {
+      "badge": "Dynamic Business Logics",
+      "title": "Business Logics.",
+      "title_highlight": "The brain of MetaBuilderPRO.",
+      "desc": "See how the engine analyzes your database semantics to instantiate premium, dynamic, and functional interfaces without generating physical files.",
+      "interactive_title": "Supported Behavioral Models",
+      "interactive_desc": "Select one of the logics below to see how the interface behaves in the Runtime and how data is processed.",
+      "what_is": "What is it",
+      "engine_behavior": "Engine Behavior",
+      "practical_example": "Practical Example",
+      "mapped_components": "Generated Components",
+      "interactive_hint": "Click the elements in the Runtime Simulator above to see the logic in action! In some components, you need to click, drag and drop to see it work in practice.",
+      "mockups": {
+        "search": "Search...",
+        "search_btn": "Filter",
+        "add_btn": "Add Record",
+        "name": "Name",
+        "email": "Email",
+        "status": "Status",
+        "actions": "Actions",
+        "details": "View Details",
+        "save": "Save Record",
+        "cancel": "Cancel",
+        "delete_confirm_title": "Delete Record?",
+        "delete_confirm_desc": "Are you sure you want to remove this record? This action cannot be undone.",
+        "delete_confirm_yes": "Confirm",
+        "delete_confirm_no": "Cancel",
+        "order_title": "Order View #3492",
+        "tab_items": "Order Items",
+        "tab_payments": "Payments",
+        "tab_logs": "History Logs",
+        "item_name": "Product",
+        "qty": "Qty",
+        "price": "Price",
+        "to_do": "To Do",
+        "in_progress": "In Progress",
+        "done": "Done",
+        "central_node": "Company (Root)",
+        "node_finance": "Finance",
+        "node_sales": "Sales",
+        "node_hr": "HR",
+        "node_billing": "Billing",
+        "node_treasury": "Treasury",
+        "node_crm": "Sales CRM",
+        "node_pipeline": "Sales Pipeline",
+        "node_recruitment": "Recruitment",
+        "node_payroll": "Payroll",
+        "sql_editor_title": "Custom SQL Query Editor",
+        "sql_placeholder": "SELECT p.id, p.name, count(o.id) FROM products p LEFT JOIN orders o ON p.id = o.product_id GROUP BY p.id",
+        "run_query": "Execute Query",
+        "query_result": "Query Result (Custom)"
+      },
+      "items": {
+        "cadastro": {
+          "title": "Registration Only",
+          "desc": "Direct form for fast data insertion, without showing existing records.",
+          "what_is": "An input-only layout, optimized for public contact forms, lead captures, or user registrations.",
+          "behavior": "The engine ignores listing (Select) operations and focuses entirely on validation rules and instant insertions (Insert).",
+          "example": "Contact us forms, registration landing pages, or customer feedback surveys.",
+          "components": "Dynamic inputs, validation checks, input masks, and a submit action button."
+        },
+        "pesquisa": {
+          "title": "Search Only",
+          "desc": "Interface focused exclusively on data searching and reporting in a read-only fashion.",
+          "what_is": "A query-focused page for reporting and filtered searches. Action buttons for creating or editing records are disabled.",
+          "behavior": "The engine runs optimized database reads (Select) and blocks any write/edit actions (Insert/Update/Delete) for security.",
+          "example": "Tax receipt queries, access history logs, or system audit trailing views.",
+          "components": "Quick filter pills, global search box, paginated listing grid, and Excel/PDF exporter."
+        },
+        "pesquisa_cadastro": {
+          "title": "Search + Registration",
+          "desc": "The standard CRUD flow. Intelligent listing combined with a complete editing form.",
+          "what_is": "The classic admin dashboard: search for existing records and action buttons to create, edit, or delete data.",
+          "behavior": "Complex state management connecting live query filters and dynamic editing forms in a side drawer.",
+          "example": "Customer directory, product catalog, or inventory control.",
+          "components": "Filter bar, sorting grid columns, side Drawer for edit/create forms, and deletion confirmation dialog."
+        },
+        "master_detail": {
+          "title": "Master-Detail",
+          "desc": "Advanced relational explorer showing primary records and linked child tables.",
+          "what_is": "A hierarchical view where a main parent record contains several dependent child records (e.g., Invoice and Invoice Items).",
+          "behavior": "Performs nested relationship queries (Joins/sub-selects) and renders child tables in tabs synced via foreign keys.",
+          "example": "Order detail views with bought items, client profiles with linked services, and invoice tabs.",
+          "components": "Dynamic tabs, child record grids, cascade deletion synchronization, and detail card drawers."
+        },
+        "kanban": {
+          "title": "Kanban",
+          "desc": "A visual card board organized by columns based on stages or statuses.",
+          "what_is": "Ideal for workflow tracking and process pipeline visualization in an intuitive graphical layout.",
+          "behavior": "Groups data by a status field and updates records in real-time in the database upon drag-and-drop actions.",
+          "example": "Sales Funnel (CRM), Task boards (Project Management), or order preparation queues.",
+          "components": "Stage columns, customizable metadata cards, and drag-and-drop column handling."
+        },
+        "mapa_mental": {
+          "title": "Mind Map",
+          "desc": "Tree node chart to visually inspect organizational chart hierarchies.",
+          "what_is": "A geometric and interactive way to explore cascading relationships of parent and child records.",
+          "behavior": "Processes recursive relational data trees and renders interactive graphs using SVG and clean animations.",
+          "example": "Corporate org charts, family trees, or multi-level product categories.",
+          "components": "Interactive SVG nodes, expandable/collapsible nodes, tree searching, and dynamic branches."
+        },
+        "dashboard": {
+          "title": "Dashboard (BI)",
+          "desc": "Key performance indicators, interactive charts, and business KPIs.",
+          "what_is": "A dynamic visual panel consolidating key business metrics directly from database records.",
+          "behavior": "Executes complex aggregation queries (Group By, Sum, Avg) and populates high-performance visual chart components.",
+          "example": "Monthly revenue dashboard, active servers monitor, or CRM sales pipeline.",
+          "components": "KPI indicator cards with variation percentages, interactive line/bar charts, and date range filters."
+        },
+        "agenda": {
+          "title": "Schedule / Calendar",
+          "desc": "Schedules, deadlines, appointments, and tasks in a calendar view.",
+          "what_is": "A task and event organizer structured into dynamic monthly, weekly, or daily time grids.",
+          "behavior": "Synchronizes records with date/time fields in the database, recalculating time blocks and alert notifications.",
+          "example": "Doctor appointment schedules, project delivery timelines, or meeting room bookings.",
+          "components": "Grid view layouts (Monthly/Weekly/Daily), interactive event cards with drag-and-drop, and new booking dialog."
+        },
+        "personalizado": {
+          "title": "Custom",
+          "desc": "Complete query and layout control, perfect for custom logic beyond standards.",
+          "what_is": "For advanced scenarios where automated wizards are not enough. Write raw SQL queries and design custom layouts.",
+          "behavior": "The engine bypasses automatic SQL generators and executes raw database queries specified by the programmer.",
+          "example": "Analytical dashboards with complex SQL aggregations or pages integrating external REST APIs.",
+          "components": "SQL editor with syntax highlighting, freeform UI templates, and custom route buttons."
+        }
       }
     }
   }

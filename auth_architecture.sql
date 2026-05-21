@@ -1,7 +1,7 @@
 -- 1. Tabela de Configuração de Autenticação por Projeto
 CREATE TABLE IF NOT EXISTS public.project_auth_config (
     project_id UUID PRIMARY KEY REFERENCES public.projects(id) ON DELETE CASCADE,
-    auth_type TEXT NOT NULL DEFAULT 'managed' CHECK (auth_type IN ('managed', 'database', 'ldap', 'sso')),
+    auth_type TEXT NOT NULL DEFAULT 'managed' CHECK (auth_type IN ('managed', 'database', 'ldap', 'sso', 'none')),
     
     -- Configurações para auth_type = 'database' (Validação via Agente CLI)
     db_table_name TEXT,

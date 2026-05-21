@@ -30,7 +30,13 @@ export default async function SlugPage({ params }: PageProps) {
   // Usamos a Service Role para resolver os slugs e metadados com bypass de RLS
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: { persistSession: false },
+      global: {
+        fetch: (url, options) => fetch(url, { ...options, cache: 'no-store' }),
+      },
+    }
   )
 
   const locale = await getLocale()
@@ -100,46 +106,56 @@ export default async function SlugPage({ params }: PageProps) {
 
   // RBAC Permission Check
   if (view) {
+    const { data: authConfig } = await supabase
+      .from('project_auth_config')
+      .select('auth_type')
+      .eq('project_id', project.id)
+      .maybeSingle()
+
+    const isNoAuth = authConfig?.auth_type === 'none'
+
     const cookieStore = await cookies()
     const sessionCookie = cookieStore.get(`client_session_${project.id}`)?.value
 
-    if (!sessionCookie) {
+    if (!sessionCookie && !isNoAuth) {
       redirect(`/${workspace_slug}/${project_slug}/login`)
     }
 
     let allowed = true
-    try {
-      const clientUser = JSON.parse(decodeURIComponent(sessionCookie))
-      
-      // 1. Busca o papel do usuário no projeto
-      const { data: userRole } = await supabase
-        .from('project_user_roles')
-        .select('role_id')
-        .eq('project_id', project.id)
-        .eq('external_user_id', clientUser.id?.toString())
-        .single()
-      
-      if (userRole?.role_id) {
-        // 2. Busca se essa view está explicitamente desabilitada para este papel
-        const { data: deniedPermission } = await supabase
-          .from('project_role_permissions')
-          .select('id')
-          .eq('role_id', userRole.role_id)
-          .eq('view_id', view.id)
-          .eq('can_read', false)
-          .limit(1)
-          .maybeSingle()
+    if (!isNoAuth) {
+      try {
+        const clientUser = JSON.parse(decodeURIComponent(sessionCookie || ''))
         
-        if (deniedPermission) {
+        // 1. Busca o papel do usuário no projeto
+        const { data: userRole } = await supabase
+          .from('project_user_roles')
+          .select('role_id')
+          .eq('project_id', project.id)
+          .eq('external_user_id', clientUser.id?.toString())
+          .single()
+        
+        if (userRole?.role_id) {
+          // 2. Busca se essa view está explicitamente desabilitada para este papel
+          const { data: deniedPermission } = await supabase
+            .from('project_role_permissions')
+            .select('id')
+            .eq('role_id', userRole.role_id)
+            .eq('view_id', view.id)
+            .eq('can_read', false)
+            .limit(1)
+            .maybeSingle()
+          
+          if (deniedPermission) {
+            allowed = false
+          }
+        } else {
+          // Sem papel = sem acesso
           allowed = false
         }
-      } else {
-        // Sem papel = sem acesso
+      } catch (e) {
+        console.error('Erro ao verificar permissão do usuário:', e)
         allowed = false
       }
-    } catch (e) {
-      console.error('Erro ao verificar permissão do usuário:', e)
-      allowed = false
     }
 
     if (!allowed) {

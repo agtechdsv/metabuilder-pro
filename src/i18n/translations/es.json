@@ -197,15 +197,23 @@
         "auth": {
           "title": "Configurar Inicio de Sesión",
           "strategy_tab": "Estrategia de Autenticación",
+          "strategy_desc": "Defina cómo se autenticarán sus usuarios en el sistema.",
           "visual_tab": "Personalización Visual",
+          "users_tab": "Gestión de Usuarios",
+          "allow_signup": "Permitir Auto-registro",
+          "allow_signup_desc": "Habilita el enlace 'Crear cuenta' en el portal de inicio de sesión.",
           "managed_title": "Managed Auth",
           "managed_desc": "MetaBuilder gestiona los usuarios en una base de datos aislada. Rápido e fácil.",
           "database_title": "Vía Base de Datos Legada",
           "database_desc": "O Agente CLI valida o login comparando com SUA tabela de usuários sincronizada.",
           "ldap_title": "LDAP / AD",
-          "ldap_desc": "Integración corporativa nativa. Validação via Active Directory do cliente.",
+          "ldap_desc": "Integración corporativa nativa. Validação via Active Directory del cliente.",
+          "none_title": "Sin Autenticación",
+          "none_desc": "Los desarrolladores pueden querer dejarlo marcado mientras no hayan subido la aplicación. No requiere inicio de sesión.",
           "managed_ready": "¡Base de Datos de Usuarios Lista!",
-          "managed_ready_desc": "Crearemos automáticamente la tabla y as APIs de inicio de sesión e registro. Nenhuma configuração extra necessária.",
+          "managed_ready_desc": "Crearemos automáticamente la tabla y las APIs de inicio de sesión y registro. No se requiere configuración adicional.",
+          "none_ready": "¡Autenticación Desactivada!",
+          "none_ready_desc": "El acceso a todas las vistas, carpetas y paneles será público y directo.",
           "table_mapping": "Mapeo de Tablas",
           "user_table": "Tabla de Usuarios",
           "select_table": "Selecione a tabela...",
@@ -541,6 +549,7 @@
       "integration": "Integración",
       "branding": "Whitelabel",
       "security": "Seguridad",
+      "use_cases": "Lógicas",
       "zero_trust": "Zero-Trust"
     },
     "hero": {
@@ -648,6 +657,136 @@
         "footer_title": "¿Listo para proteger sus datos?",
         "footer_desc": "Implemente seguridad de nivel bancario en sus sistemas en pocos clics.",
         "footer_cta": "Activar Seguridad Enterprise"
+      },
+      "use_cases": {
+        "desc": "Genere pantallas CRUD, Kanban, Mapas Mentales y Agendas dinámicamente basadas en relaciones SQL."
+      }
+    },
+    "use_cases_page": {
+      "badge": "Lógicas de Negocio Dinámicas",
+      "title": "Lógicas de Negocio.",
+      "title_highlight": "El cerebro de MetaBuilderPRO.",
+      "desc": "Vea cómo el motor analiza la semántica de su base de datos para instanciar interfaces premium dinámicas y funcionales sin generar archivos físicos.",
+      "interactive_title": "Modelos de Comportamiento Soportados",
+      "interactive_desc": "Seleccione una de las lógicas a continuación para ver cómo se comporta la interfaz en el Runtime y cómo se procesan los datos.",
+      "what_is": "Qué es",
+      "engine_behavior": "Comportamiento del Motor",
+      "practical_example": "Ejemplo Práctico",
+      "mapped_components": "Componentes Generados",
+      "interactive_hint": "¡Haga clic en los elementos del Simulador Runtime arriba para ver la lógica en acción! En algunos componentes debe hacer clic, arrastrar y soltar para verlo funcionar en la práctica.",
+      "mockups": {
+        "search": "Buscar...",
+        "search_btn": "Filtrar",
+        "add_btn": "Agregar Registro",
+        "name": "Nombre",
+        "email": "E-mail",
+        "status": "Estado",
+        "actions": "Acciones",
+        "details": "Ver Detalles",
+        "save": "Guardar Registro",
+        "cancel": "Cancelar",
+        "delete_confirm_title": "¿Eliminar Registro?",
+        "delete_confirm_desc": "¿Está seguro de que desea eliminar este registro? Esta acción no se puede deshacer.",
+        "delete_confirm_yes": "Confirmar",
+        "delete_confirm_no": "Cancelar",
+        "order_title": "Visualización de Pedido #3492",
+        "tab_items": "Artículos del Pedido",
+        "tab_payments": "Pagos",
+        "tab_logs": "Historial",
+        "item_name": "Producto",
+        "qty": "Cant",
+        "price": "Precio",
+        "to_do": "Por Hacer",
+        "in_progress": "En Progreso",
+        "done": "Completado",
+        "central_node": "Empresa (Raíz)",
+        "node_finance": "Finanzas",
+        "node_sales": "Ventas",
+        "node_hr": "RH",
+        "node_billing": "Facturación",
+        "node_treasury": "Tesorería",
+        "node_crm": "CRM Ventas",
+        "node_pipeline": "Embudo Ventas",
+        "node_recruitment": "Reclutamiento",
+        "node_payroll": "Nómina",
+        "sql_editor_title": "Custom SQL Query Editor",
+        "sql_placeholder": "SELECT p.id, p.name, count(o.id) FROM products p LEFT JOIN orders o ON p.id = o.product_id GROUP BY p.id",
+        "run_query": "Ejecutar Consulta",
+        "query_result": "Resultado de Consulta (Personalizado)"
+      },
+      "items": {
+        "cadastro": {
+          "title": "Solo Registro",
+          "desc": "Formulario directo para la inserción rápida de datos, sin enumerar los registros existentes.",
+          "what_is": "Un diseño puramente de entrada, optimizado para formularios públicos de contacto, captación de leads o nuevos registros de usuarios.",
+          "behavior": "El motor ignora las operaciones de listado (Select) y se enfoca en validaciones y operaciones de inserción (Insert) directas.",
+          "example": "Formularios de contacto, páginas de registro de eventos o encuestas de satisfacción.",
+          "components": "Campos de entrada dinámicos, validación de obligatoriedad, máscaras de entrada y botón de envío."
+        },
+        "pesquisa": {
+          "title": "Solo Búsqueda",
+          "desc": "Interfaz enfocada exclusivamente en consultas e informes de datos de forma de solo lectura.",
+          "what_is": "Una página diseñada para emitir informes y filtros rápidos de consulta. Los botones de editar o crear están deshabilitados.",
+          "behavior": "El motor ejecuta consultas de solo lectura optimizadas (Select) y previene cualquier acción de escritura (Insert/Update/Delete).",
+          "example": "Consultas de facturas emitidas, registro de logs de auditoría o paneles de solo lectura.",
+          "components": "Filtros rápidos, caja de búsqueda global, cuadrícula paginada y exportador de datos Excel/PDF."
+        },
+        "pesquisa_cadastro": {
+          "title": "Búsqueda + Registro",
+          "desc": "El flujo CRUD estándar. Listado inteligente combinado con formulario completo de edición.",
+          "what_is": "El clásico panel administrativo: búsqueda de registros existentes y botones de acción para crear, editar o eliminar registros.",
+          "behavior": "Gestión de estado compleja que une filtros de consulta en tiempo real y formulario dinámico en Drawer lateral.",
+          "example": "Directorio de clientes, catálogo de productos o control de inventarios.",
+          "components": "Barra de filtros, cuadrícula dinámica con ordenación, Drawer para creación/edición y diálogo de borrado."
+        },
+        "master_detail": {
+          "title": "Maestro-Detalle",
+          "desc": "Explorador de datos relacionales avanzado con subtablas y pestañas integradas.",
+          "what_is": "Una vista jerárquica en la que un registro principal posee múltiples registros dependientes (ej: Pedido e Items de Pedido).",
+          "behavior": "Realiza consultas anidadas (Joins/sub-selects) y organiza las tablas dependientes en pestañas enlazadas mediante claves foráneas (FK).",
+          "example": "Vistas de pedido con ítems comprados, perfiles de clientes con contactos y abas de facturas vinculadas.",
+          "components": "Pestañas dinámicas, cuadrículas de detalles, borrado en cascada y tarjetas de detalles."
+        },
+        "kanban": {
+          "title": "Kanban",
+          "desc": "Tablero visual de tarjetas organizadas en columnas según estados o etapas de trabajo.",
+          "what_is": "Ideal para realizar el seguimiento visual de flujos de trabajo y pipelines de procesos de forma gráfica.",
+          "behavior": "Agrupa datos por un campo de estado y esta actualiza registros inmediatamente en la base de datos tras arrastrar y soltar.",
+          "example": "Embudo de Ventas (CRM), tableros de tareas (Gestión de Proyectos) o colas de pedidos.",
+          "components": "Columnas de etapas, tarjetas (cards) con metadados configurables y soporte nativo para arrastrar y soltar."
+        },
+        "mapa_mental": {
+          "title": "Mapa Mental",
+          "desc": "Diagrama de nodos en árbol para explorar relaciones jerárquicas u organigramas.",
+          "what_is": "Una forma geométrica e interactiva de explorar relaciones de dependencia en cascada directamente desde los datos.",
+          "behavior": "Procesa árboles recursivos de registros de base de datos y dibuja un grafo interactivo usando SVG y animaciones fluidas.",
+          "example": "Organigramas empresariales, árboles genealógicos o jerarquías de categorías de productos.",
+          "components": "Nodos interactivos SVG expansibles, caja de búsqueda de nodos y líneas de enlace animadas."
+        },
+        "dashboard": {
+          "title": "Dashboard (BI)",
+          "desc": "Indicadores de rendimiento, gráficos interactivos y KPIs.",
+          "what_is": "Un panel visual dinámico que consolida métricas clave de negocio directamente desde la base de datos.",
+          "behavior": "Ejecuta consultas de agregación complejas (Group By, Sum, Avg) y alimenta componentes visuales de alto rendimiento.",
+          "example": "Panel de ingresos mensuales, monitor de servidores activos o embudo de ventas del CRM.",
+          "components": "Tarjetas de KPI con variación porcentual, gráficos interactivos de líneas/barras y filtros de fechas."
+        },
+        "agenda": {
+          "title": "Agenda / Calendario",
+          "desc": "Programación, plazos, citas y tareas en un calendario.",
+          "what_is": "Organizador de tareas y eventos estructurado en cuadrículas temporales mensuales, semanales o diarias.",
+          "behavior": "Sincroniza registros con campos de fecha/hora en la base de datos, recalculando bloques horarios y alertas.",
+          "example": "Calendario de citas médicas, cronogramas de entrega de proyectos o reservas de salas de reuniones.",
+          "components": "Vista en cuadrícula (Mensual/Semanal/Diaria), tarjetas de eventos interactivas con drag-and-drop y diálogo de reserva."
+        },
+        "personalizado": {
+          "title": "Personalizado",
+          "desc": "Control absoluto sobre la consulta SQL y el diseño de la interfaz.",
+          "what_is": "Para escenarios avanzados donde las plantillas automáticas no bastan. Permite programar SQL puro y configurar botones virtuales.",
+          "behavior": "El motor omite la generación de SQL automática y procesa la consulta Raw SQL escrita por el programador.",
+          "example": "Paneles analíticos complejos con agregaciones pesadas o flujos que llaman a APIs externas.",
+          "components": "Editor SQL con resaltado de código, plantillas UI personalizadas y definición de botones de acción."
+        }
       }
     }
   }
