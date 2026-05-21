@@ -417,13 +417,93 @@ export default function ViewPageContent({
 
         console.log(`[MetaBuilder] Fetching details from ${join.to} where ${join.foreignKey} = ${localValue}`)
         
-        const { data: detailData, error } = await (supabase as any)
-          .from(join.to)
-          .select('*')
-          .eq(join.foreignKey, localValue)
+        const queryId = crypto.randomUUID()
+        const rawQuery = `SELECT * FROM "${join.to}" WHERE "${join.foreignKey}" = '${String(localValue).replace(/'/g, "''")}'`
+        
+        let detailData: any[] = []
+        try {
+          detailData = await new Promise<any[]>((resolve, reject) => {
+            const isTemporary = !tunnelChannel || !isTunnelReady
+            const channelName = `tunnel:${project.id}`
+            const channel = isTemporary ? supabase.channel(channelName) : tunnelChannel
+            let resolved = false
 
-        if (error) {
-          console.error(`[MetaBuilder] Error fetching details from ${join.to}:`, error)
+            const handleResult = (payload: any) => {
+              if (payload.payload?.queryId === queryId) {
+                resolved = true
+                cleanup()
+                if (payload.payload.success) {
+                  resolve(payload.payload.data || [])
+                } else {
+                  reject(new Error(payload.payload.error || 'Error fetching details'))
+                }
+              }
+            }
+
+            const cleanup = () => {
+              try {
+                const bindings = channel.bindings?.broadcast
+                if (Array.isArray(bindings)) {
+                  const cleanBindings = bindings.filter((b: any) => {
+                    const match = b.callback === handleResult
+                    if (match && channel.channelAdapter) {
+                      channel.channelAdapter.off('broadcast', b.ref)
+                    }
+                    return !match
+                  })
+                  channel.bindings.broadcast = cleanBindings
+                }
+
+                if (isTemporary) {
+                  channel.unsubscribe()
+                  supabase.removeChannel(channel)
+                }
+              } catch (err) {
+                console.error('[MetaBuilder] Error cleaning up channel in fetchDetails:', err)
+              }
+            }
+
+            channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
+            channel.on('broadcast', { event: 'sql_result' }, handleResult)
+
+            const sendPayload = {
+              type: 'broadcast',
+              event: 'sql_query',
+              payload: {
+                queryId,
+                table: join.to,
+                action: 'select',
+                query: rawQuery,
+                sql: rawQuery,
+                token: project?.secret_token || 'test-token',
+                joins: [],
+                limit: 100,
+                offset: 0
+              }
+            }
+
+            if (isTemporary) {
+              channel.subscribe((status: string) => {
+                if (status === 'SUBSCRIBED') {
+                  channel.send(sendPayload)
+                }
+              })
+            } else {
+              channel.send(sendPayload)
+            }
+
+            // Timeout fallback
+            setTimeout(() => {
+              if (!resolved) {
+                resolved = true
+                cleanup()
+                console.warn(`[MetaBuilder] Timeout fetching details for queryId ${queryId}`)
+                resolve([])
+              }
+            }, 8000)
+          })
+        } catch (err) {
+          console.error(`[MetaBuilder] Error fetching details from ${join.to} via tunnel:`, err)
           continue
         }
 
@@ -582,8 +662,8 @@ export default function ViewPageContent({
   const handleSaveDetail = async (formData: any) => {
     setIsProcessing(true)
     const queryId = crypto.randomUUID()
-    const channelName = `tunnel:${project.id}`
-    const channel = supabase.channel(channelName)
+    const isTemporary = !tunnelChannel || !isTunnelReady
+    const channel = isTemporary ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
 
     try {
       const action = detailModalMode
@@ -591,7 +671,14 @@ export default function ViewPageContent({
       const fields = detailFields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())
       const pkField = fields.find(f => f.is_primary_key) || { db_column_name: 'id' }
       const detailPkName = pkField.db_column_name.split('.').pop() || 'id'
-      
+
+      // Resolve PK value from selectedDetail using multiple strategies
+      const dPkValue = selectedDetail?.[detailPkName] 
+        ?? selectedDetail?.[detailPkName.toUpperCase()] 
+        ?? selectedDetail?.['id'] 
+        ?? selectedDetail?.['ID']
+        ?? Object.entries(selectedDetail || {}).find(([k]) => k.toLowerCase() === detailPkName.toLowerCase())?.[1]
+
       // Blacklist: same rules as handleSave.
       // Must also skip object values (joined relations) and _key (React internal)
       // or the entire UPDATE will fail on PostgreSQL.
@@ -617,8 +704,11 @@ export default function ViewPageContent({
       }
 
       console.log(`[MetaBuilder:handleSaveDetail] RAW formData keys:`, Object.keys(formData))
-      console.log(`[MetaBuilder:handleSaveDetail] action=${action} table=${tableName} pk=${detailPkName}`)
+      console.log(`[MetaBuilder:handleSaveDetail] action=${action} table=${tableName} pk=${detailPkName} pkValue=${dPkValue}`)
+      console.log(`[MetaBuilder:handleSaveDetail] fields for table (${fields.length}):`, fields.map(f => f.db_column_name))
+      console.log(`[MetaBuilder:handleSaveDetail] selectedDetail keys:`, Object.keys(selectedDetail || {}))
       console.log(`[MetaBuilder:handleSaveDetail] sanitizedData:`, sanitizedData)
+
 
       // Se for inclusão, garantir que a FK para o mestre esteja correta
       if (action === 'create' && logicType === 'master_detail' && joins) {
@@ -629,13 +719,29 @@ export default function ViewPageContent({
         }
       }
 
-      const dPkValue = selectedDetail[detailPkName] || selectedDetail[detailPkName.toUpperCase()] || selectedDetail['id'] || selectedDetail['ID']
-
       if (action === 'edit') {
         if (Object.keys(sanitizedData).length === 0) {
-          // Nothing to update — likely no fields were changed
-          setIsProcessing(false)
-          return
+          // Nothing to update — use all non-pk, non-internal fields from formData as fallback
+          console.warn(`[MetaBuilder:handleSaveDetail] sanitizedData empty for table=${tableName}. Attempting fallback with all formData fields.`)
+          for (const [k, v] of Object.entries(formData)) {
+            const lowKey = k.toLowerCase()
+            if (
+              k.startsWith('_') ||
+              k.includes('.') ||
+              lowKey === detailPkName.toLowerCase() ||
+              lowKey === 'created_at' ||
+              lowKey === 'updated_at' ||
+              v === null ||
+              v === undefined ||
+              typeof v === 'object'
+            ) continue
+            sanitizedData[k] = String(v)
+          }
+          if (Object.keys(sanitizedData).length === 0) {
+            console.warn(`[MetaBuilder:handleSaveDetail] Fallback sanitizedData also empty — nothing to save.`)
+            setIsProcessing(false)
+            return
+          }
         }
         const setClause = Object.entries(sanitizedData)
           .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
@@ -649,137 +755,199 @@ export default function ViewPageContent({
         rawQuery = `INSERT INTO ${tableName} (${keys}) VALUES (${values})`
       }
 
-      console.log(`[MetaBuilder:handleSaveDetail] rawQuery:`, rawQuery)
+      // Helper: parse column name from PostgreSQL generated-column error
+      // PT: 'a coluna "col" só pode ser atualizada para DEFAULT'
+      // EN: 'column "col" can only be updated to DEFAULT'
+      const parseGeneratedColError = (err: string): string | null => {
+        const m = err?.match(/[""]([^"""]+)["""]/)
+        return m ? m[1] : null
+      }
 
-      channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          channel.send({
-            type: 'broadcast',
-            event: 'sql_query',
-            payload: {
-              queryId,
-              table: tableName,
-              action: action === 'edit' ? 'update' : 'insert',
-              data: sanitizedData,
-              sql: rawQuery,
-              idColumn: detailPkName,
-              idValue: dPkValue
-            }
-          })
+      // Session-level cache of known generated/computed columns per table
+      const GENERATED_COLS_KEY = `__mb_gen_cols_${tableName}`
+      const cachedGenCols: string[] = JSON.parse(sessionStorage.getItem(GENERATED_COLS_KEY) || '[]')
+      // Remove known generated columns upfront
+      for (const gc of cachedGenCols) {
+        delete sanitizedData[gc]
+      }
 
-          // Batch save modified sub-details if any (for nested levels)
-          if (formData._details && formData._details.length > 0) {
-            for (const subDetail of formData._details) {
-              const sdTableName = subDetail.model_name
-              if (!sdTableName) continue
+      // Send with automatic retry when PostgreSQL rejects a generated column
+      const sendWithRetry = async (): Promise<boolean> => {
+        let currentData = { ...sanitizedData }
+        let attempts = 0
+        const MAX_RETRIES = 5
 
-              const sdFields = detailFields.filter(f => f.model_name?.toLowerCase() === sdTableName.toLowerCase())
-              const sPkField = sdFields.find(f => f.is_primary_key) || { db_column_name: 'id' }
-              const sdPkName = sPkField.db_column_name.split('.').pop() || 'id'
-              const sdPkValue = subDetail[sdPkName] || subDetail[sdPkName.toUpperCase()] || subDetail['id'] || subDetail['ID']
+        while (attempts < MAX_RETRIES) {
+          attempts++
+          if (Object.keys(currentData).length === 0) {
+            console.warn(`[MetaBuilder:handleSaveDetail] No updateable columns left after filtering generated columns.`)
+            return false
+          }
 
-              if (sdPkValue) {
-                const sanitizedSD: any = {}
-                for (const [k, v] of Object.entries(subDetail)) {
-                  if (
-                    INTERNAL_KEYS.has(k) ||
-                    k.includes('.') ||                            // skip table-prefixed keys
-                    k.toLowerCase() === sdPkName.toLowerCase() ||
-                    v === null ||
-                    v === undefined
-                  ) continue
-                  sanitizedSD[k] = String(v)
-                }
+          // Rebuild rawQuery with current data
+          const setClause = Object.entries(currentData)
+            .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
+            .join(', ')
+          const currentQuery = action === 'edit'
+            ? `UPDATE ${tableName} SET ${setClause} WHERE ${detailPkName} = '${String(dPkValue).replace(/'/g, "''")}'`
+            : rawQuery
 
-                if (Object.keys(sanitizedSD).length > 0) {
-                  const setClause = Object.entries(sanitizedSD)
-                    .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
-                    .join(', ')
-                  const sdQuery = `UPDATE ${sdTableName} SET ${setClause} WHERE ${sdPkName} = '${String(sdPkValue).replace(/'/g, "''")}'`
+          const attemptQueryId = attempts === 1 ? queryId : crypto.randomUUID()
 
-                  channel.send({
-                    type: 'broadcast',
-                    event: 'sql_query',
-                    payload: {
-                      queryId: crypto.randomUUID(),
-                      table: sdTableName,
-                      action: 'update',
-                      data: sanitizedSD,
-                      sql: sdQuery,
-                      idColumn: sdPkName,
-                      idValue: sdPkValue
-                    }
-                  })
-                }
+          const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
+            const isTemp = !tunnelChannel || !isTunnelReady
+            const ch = isTemp ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
+            let settled = false
+
+            const handleResult = (payload: any) => {
+              if (payload.payload?.queryId === attemptQueryId) {
+                settled = true
+                cleanup()
+                resolve({ success: payload.payload.success, error: payload.payload.error })
               }
             }
+
+            const cleanup = () => {
+              try {
+                const bindings = ch.bindings?.broadcast
+                if (Array.isArray(bindings)) {
+                  ch.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult)
+                }
+                if (isTemp) { ch.unsubscribe(); supabase.removeChannel(ch) }
+              } catch (_) {}
+            }
+
+            ch.on('broadcast', { event: `query_result_${attemptQueryId}` }, handleResult)
+            ch.on('broadcast', { event: 'sql_result' }, handleResult)
+
+            const doSend = () => {
+              console.log(`[MetaBuilder:handleSaveDetail] Attempt ${attempts}: sending ${action} on ${tableName} with cols:`, Object.keys(currentData))
+              ch.send({
+                type: 'broadcast',
+                event: 'sql_query',
+                payload: {
+                  queryId: attemptQueryId,
+                  table: tableName,
+                  action: action === 'edit' ? 'update' : 'insert',
+                  data: currentData,
+                  sql: currentQuery,
+                  idColumn: detailPkName,
+                  idValue: dPkValue,
+                  token: project?.secret_token || 'test-token'
+                }
+              }).then(() => {
+                console.log(`[MetaBuilder:handleSaveDetail] channel.send() resolved (attempt ${attempts})`)
+              }).catch((err: any) => {
+                console.error(`[MetaBuilder:handleSaveDetail] channel.send() error:`, err)
+              })
+            }
+
+            if (isTemp) {
+              ch.subscribe((status: string) => { if (status === 'SUBSCRIBED') doSend() })
+            } else {
+              doSend()
+            }
+
+            setTimeout(() => {
+              if (!settled) {
+                settled = true
+                cleanup()
+                resolve({ success: false, error: 'Timeout' })
+              }
+            }, 9000)
+          })
+
+          if (result.success) {
+            console.log(`[MetaBuilder:handleSaveDetail] CLI confirmed save ✅ (attempt ${attempts})`)
+            return true
           }
-        }
-      })
 
-      setTimeout(async () => {
-        // Captura snapshot estável ANTES de qualquer setState
-        const currentDetail = selectedDetail
-        const parentHistory = [...detailHistory]
-
-        // 1. Busca dados frescos do PAI (o que está "atrás" no histórico)
-        let freshParentRecord: any = null
-        if (parentHistory.length > 0) {
-          const lastIdx = parentHistory.length - 1
-          const pRec = parentHistory[lastIdx].record
-          const pTab = parentHistory[lastIdx].tableName
-          if (pRec && pTab) {
-            const freshDetails = await fetchDetails(pRec, pTab)
-            freshParentRecord = { ...pRec, _details: freshDetails }
+          // Check if this is a generated-column error and retry
+          const genCol = parseGeneratedColError(result.error || '')
+          if (genCol && result.error?.includes('DEFAULT')) {
+            console.warn(`[MetaBuilder:handleSaveDetail] Column "${genCol}" is generated — removing and retrying...`)
+            // Cache this column so future saves skip it immediately
+            if (!cachedGenCols.includes(genCol)) {
+              cachedGenCols.push(genCol)
+              sessionStorage.setItem(GENERATED_COLS_KEY, JSON.stringify(cachedGenCols))
+            }
+            delete currentData[genCol]
+            continue
           }
+
+          // Non-retryable error
+          console.error(`[MetaBuilder:handleSaveDetail] CLI error (attempt ${attempts}):`, result.error)
+          toast(result.error || 'Erro ao salvar', 'error')
+          return false
         }
 
-        // 2. Recarrega o MESTRE
-        if (selectedRow) {
-          const upMasterDetails = await fetchDetails(selectedRow, modelName)
-          setSelectedRow((prev: any) => prev ? { ...prev, _details: upMasterDetails } : prev)
+        toast('Não foi possível salvar após múltiplas tentativas.', 'error')
+        return false
+      }
+
+      await sendWithRetry()
+
+      // After save confirmed (or timed out), refresh UI
+      // Captura snapshot estável ANTES de qualquer setState
+      const parentHistory = [...detailHistory]
+
+      // 1. Busca dados frescos do PAI (o que está "atrás" no histórico)
+      let freshParentRecord: any = null
+      if (parentHistory.length > 0) {
+        const lastIdx = parentHistory.length - 1
+        const pRec = parentHistory[lastIdx].record
+        const pTab = parentHistory[lastIdx].tableName
+        if (pRec && pTab) {
+          const freshDetails = await fetchDetails(pRec, pTab)
+          freshParentRecord = { ...pRec, _details: freshDetails }
         }
+      }
 
-        // 3. Navega de volta manualmente com dados JA FRESCOS
-        // (Não usa handleCloseDetail() porque ele lê estado stale do closure)
-        if (parentHistory.length > 0) {
-          const last = parentHistory[parentHistory.length - 1]
-          const newHistory = parentHistory.slice(0, -1)
-          const recordToShow = freshParentRecord || last.record
+      // 2. Recarrega o MESTRE
+      if (selectedRow) {
+        const upMasterDetails = await fetchDetails(selectedRow, modelName)
+        setSelectedRow((prev: any) => prev ? { ...prev, _details: upMasterDetails } : prev)
+      }
 
-          setDetailHistory(newHistory)
-          setSelectedDetail(recordToShow)
-          setCurrentDetailTable(last.tableName)
-          setDetailFieldsToRender(last.fields)
-          setActiveTabForDetail(last.activeTab || 'master')
-          setDetailModalMode('edit')
+      // 3. Navega de volta manualmente com dados JA FRESCOS
+      // (Não usa handleCloseDetail() porque ele lê estado stale do closure)
+      if (parentHistory.length > 0) {
+        const last = parentHistory[parentHistory.length - 1]
+        const newHistory = parentHistory.slice(0, -1)
+        const recordToShow = freshParentRecord || last.record
 
-          const model = (project as any)?.models?.find((m: any) => m.db_table_name.toLowerCase() === last.tableName?.toLowerCase())
-          const interfaceType = detailsInterfaceTypes?.[model?.id || ''] || (project.ui_config as any)?.details_interface_types?.[model?.id || ''] || 'modal'
+        setDetailHistory(newHistory)
+        setSelectedDetail(recordToShow)
+        setCurrentDetailTable(last.tableName)
+        setDetailFieldsToRender(last.fields)
+        setActiveTabForDetail(last.activeTab || 'master')
+        setDetailModalMode('edit')
 
-          // Fecha a interface ATUAL e abre a interface CORRETA do pai.
-          // Crítico: sem fechar a que está aberta, o conteúdo da modal vai parar dentro do drawer.
-          if (interfaceType === 'drawer') {
-            setIsDetailModalOpen(false)
-            setIsDetailDrawerOpen(true)
-          } else {
-            setIsDetailDrawerOpen(false)
-            setIsDetailModalOpen(true)
-          }
-        } else {
+        const model = (project as any)?.models?.find((m: any) => m.db_table_name.toLowerCase() === last.tableName?.toLowerCase())
+        const interfaceType = detailsInterfaceTypes?.[model?.id || ''] || (project.ui_config as any)?.details_interface_types?.[model?.id || ''] || 'modal'
+
+        // Fecha a interface ATUAL e abre a interface CORRETA do pai.
+        // Crítico: sem fechar a que está aberta, o conteúdo da modal vai parar dentro do drawer.
+        if (interfaceType === 'drawer') {
           setIsDetailModalOpen(false)
+          setIsDetailDrawerOpen(true)
+        } else {
           setIsDetailDrawerOpen(false)
+          setIsDetailModalOpen(true)
         }
+      } else {
+        setIsDetailModalOpen(false)
+        setIsDetailDrawerOpen(false)
+      }
 
-        if (typeof window !== 'undefined') {
-          sessionStorage.removeItem(`metabuilder_cache_${project.id}:${modelName}`)
-        }
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem(`metabuilder_cache_${project.id}:${modelName}`)
+      }
 
-        setDetailRefreshKey(prev => prev + 1)
-        setRefreshKey(prev => prev + 1)
-        setIsProcessing(false)
-        supabase.removeChannel(channel)
-      }, 1500)
+      setDetailRefreshKey(prev => prev + 1)
+      setRefreshKey(prev => prev + 1)
+      setIsProcessing(false)
+
 
     } catch (error) {
       console.error('Error saving detail:', error)
@@ -790,8 +958,8 @@ export default function ViewPageContent({
   const handleConfirmDeleteDetail = async () => {
     setIsProcessing(true)
     const queryId = crypto.randomUUID()
-    const channelName = `tunnel:${project.id}`
-    const channel = supabase.channel(channelName)
+    const isTemporary = !tunnelChannel || !isTunnelReady
+    const channel = isTemporary ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
 
     try {
       const tableName = itemToDelete.model_name
@@ -802,27 +970,38 @@ export default function ViewPageContent({
       
       const rawQuery = `DELETE FROM ${tableName} WHERE ${detailPkName} = '${String(pkValue).replace(/'/g, "''")}'`
 
-      channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          channel.send({
-            type: 'broadcast',
-            event: 'sql_query',
-            payload: {
-              queryId,
-              table: tableName,
-              action: 'delete',
-              sql: rawQuery,
-              idColumn: detailPkName,
-              idValue: pkValue
-            }
-          })
-        }
-      })
+      const sendDelete = () => {
+        channel.send({
+          type: 'broadcast',
+          event: 'sql_query',
+          payload: {
+            queryId,
+            table: tableName,
+            action: 'delete',
+            sql: rawQuery,
+            idColumn: detailPkName,
+            idValue: pkValue,
+            token: project?.secret_token || 'test-token'
+          }
+        })
+      }
+
+      if (isTemporary) {
+        channel.subscribe((status: string) => {
+          if (status === 'SUBSCRIBED') {
+            sendDelete()
+          }
+        })
+      } else {
+        sendDelete()
+      }
 
       setTimeout(async () => {
         setIsDetailDeleteModalOpen(false)
         setItemToDelete(null)
-        supabase.removeChannel(channel)
+        if (isTemporary) {
+          supabase.removeChannel(channel)
+        }
         
         if (selectedRow) {
           const updatedDetails = await fetchDetails(selectedRow, modelName)
@@ -839,180 +1018,186 @@ export default function ViewPageContent({
   const handleSave = async (formData: any) => {
     setIsProcessing(true)
     const queryId = crypto.randomUUID()
-    const channelName = `tunnel:${project.id}`
-    const channel = supabase.channel(channelName)
+    const isTemporary = !tunnelChannel || !isTunnelReady
+    const channel = isTemporary ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
 
     try {
       const action = drawerMode === 'create' ? 'insert' : 'update'
       
-      channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          const pkName = primaryKeyName
-          const cleanPkName = pkName.split('.').pop() || 'id'
-          
-          // Case-insensitive PK value resolution
-          const pkValue = formData[pkName] ?? formData[cleanPkName] ?? formData[pkName.toUpperCase()] ?? formData[pkName.toLowerCase()] ?? formData.id ?? formData.ID
-          
-          const filters: any = {}
-          if (action === 'update' && pkValue !== undefined && pkValue !== null) {
-            filters[cleanPkName] = String(pkValue)
-          }
+      const sendSave = () => {
+        const pkName = primaryKeyName
+        const cleanPkName = pkName.split('.').pop() || 'id'
+        
+        // Case-insensitive PK value resolution
+        const pkValue = formData[pkName] ?? formData[cleanPkName] ?? formData[pkName.toUpperCase()] ?? formData[pkName.toLowerCase()] ?? formData.id ?? formData.ID
+        
+        const filters: any = {}
+        if (action === 'update' && pkValue !== undefined && pkValue !== null) {
+          filters[cleanPkName] = String(pkValue)
+        }
 
-          // Blacklist: exclude internal keys, system columns, PK, objects, and arrays.
-          // The bug was: joined fields (e.g. 'projects') and React internals ('_key') 
-          // were slipping through as '[object Object]', breaking the entire SQL query.
-          const MASTER_INTERNAL = new Set(['_details', 'model_name', 'display_model_name'])
-          const sanitizedData: any = {}
-          for (const [k, v] of Object.entries(formData)) {
-            const lowKey = k.toLowerCase()
-            if (
-              MASTER_INTERNAL.has(lowKey) ||
-              k.startsWith('_') ||           // skip _key, _details, etc.
-              k.includes('.') ||             // skip table-prefixed duplicates
-              lowKey === pkName.toLowerCase() ||
-              lowKey === cleanPkName.toLowerCase() ||
-              lowKey === 'created_at' ||
-              lowKey === 'updated_at' ||
-              v === undefined || v === null ||
-              typeof v === 'object'           // skip objects and arrays (joined relations)
-            ) continue
+        // Blacklist: exclude internal keys, system columns, PK, objects, and arrays.
+        const MASTER_INTERNAL = new Set(['_details', 'model_name', 'display_model_name'])
+        const sanitizedData: any = {}
+        for (const [k, v] of Object.entries(formData)) {
+          const lowKey = k.toLowerCase()
+          if (
+            MASTER_INTERNAL.has(lowKey) ||
+            k.startsWith('_') ||           // skip _key, _details, etc.
+            k.includes('.') ||             // skip table-prefixed duplicates
+            lowKey === pkName.toLowerCase() ||
+            lowKey === cleanPkName.toLowerCase() ||
+            lowKey === 'created_at' ||
+            lowKey === 'updated_at' ||
+            v === undefined || v === null ||
+            typeof v === 'object'           // skip objects and arrays (joined relations)
+          ) continue
 
-            sanitizedData[k] = String(v)
-          }
+          sanitizedData[k] = String(v)
+        }
 
-          // RAW SQL Builder
-          let rawQuery = ''
-          if (action === 'update' && pkValue && Object.keys(sanitizedData).length > 0) {
-            const setClause = Object.entries(sanitizedData)
-              .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
-              .join(', ')
-            rawQuery = `UPDATE ${modelName} SET ${setClause} WHERE ${cleanPkName} = '${String(pkValue).replace(/'/g, "''")}'`
-          } else if (action === 'insert' && Object.keys(sanitizedData).length > 0) {
-            const keys = Object.keys(sanitizedData).join(', ')
-            const values = Object.values(sanitizedData)
-              .map(v => `'${String(v).replace(/'/g, "''")}'`)
-              .join(', ')
-            rawQuery = `INSERT INTO ${modelName} (${keys}) VALUES (${values})`
-          }
+        // RAW SQL Builder
+        let rawQuery = ''
+        if (action === 'update' && pkValue && Object.keys(sanitizedData).length > 0) {
+          const setClause = Object.entries(sanitizedData)
+            .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
+            .join(', ')
+          rawQuery = `UPDATE ${modelName} SET ${setClause} WHERE ${cleanPkName} = '${String(pkValue).replace(/'/g, "''")}'`
+        } else if (action === 'insert' && Object.keys(sanitizedData).length > 0) {
+          const keys = Object.keys(sanitizedData).join(', ')
+          const values = Object.values(sanitizedData)
+            .map(v => `'${String(v).replace(/'/g, "''")}'`)
+            .join(', ')
+          rawQuery = `INSERT INTO ${modelName} (${keys}) VALUES (${values})`
+        }
 
-          console.log(`[MetaBuilder:handleSave] RAW formData keys:`, Object.keys(formData))
-          console.log(`[MetaBuilder:handleSave] action=${action} table=${modelName} pkName=${pkName} cleanPkName=${cleanPkName} pkValue=${pkValue}`)
-          console.log(`[MetaBuilder:handleSave] sanitizedData:`, sanitizedData)
-          console.log(`[MetaBuilder:handleSave] rawQuery:`, rawQuery)
+        console.log(`[MetaBuilder:handleSave] RAW formData keys:`, Object.keys(formData))
+        console.log(`[MetaBuilder:handleSave] action=${action} table=${modelName} pkName=${pkName} cleanPkName=${cleanPkName} pkValue=${pkValue}`)
+        console.log(`[MetaBuilder:handleSave] sanitizedData:`, sanitizedData)
+        console.log(`[MetaBuilder:handleSave] rawQuery:`, rawQuery)
 
-          const payload: any = {
-            queryId,
-            table: modelName,
-            tableName: modelName, 
-            action,
-            data: sanitizedData,
-            record: sanitizedData, 
-            query: rawQuery, 
-            sql: rawQuery, 
-            idColumn: cleanPkName,   // EXATAMENTE o que o Agente CLI espera
-            idValue: pkValue,   // EXATAMENTE o que o Agente CLI espera
-            token: project?.secret_token || 'test-token'
-          }
+        const payload: any = {
+          queryId,
+          table: modelName,
+          tableName: modelName, 
+          action,
+          data: sanitizedData,
+          record: sanitizedData, 
+          query: rawQuery, 
+          sql: rawQuery, 
+          idColumn: cleanPkName,   // EXATAMENTE o que o Agente CLI espera
+          idValue: pkValue,   // EXATAMENTE o que o Agente CLI espera
+          token: project?.secret_token || 'test-token'
+        }
 
-          if (Object.keys(filters).length > 0) {
-            payload.filters = filters
-            payload.where = filters
-            payload.id = filters[pkName]
-          }
+        if (action === 'update' && Object.keys(filters).length > 0) {
+          payload.filters = filters
+          payload.where = filters
+          payload.id = filters[pkName]
+        }
 
-          channel.send({
-            type: 'broadcast',
-            event: 'sql_query',
-            payload
-          })
+        channel.send({
+          type: 'broadcast',
+          event: 'sql_query',
+          payload
+        })
 
-          // Batch save modified details if any
-          if (formData._details && formData._details.length > 0) {
-            for (const detail of formData._details) {
-              const detailTableName = detail.model_name
-              if (!detailTableName) continue
-              
-              const dFields = detailFields.filter(f => f.model_name?.toLowerCase() === detailTableName.toLowerCase())
-              const pkField = dFields.find(f => f.is_primary_key) || { db_column_name: 'id' }
-              const dPkName = pkField.db_column_name.split('.').pop() || 'id'
-              const dPkValue = detail[dPkName] || detail[dPkName.toUpperCase()] || detail['id'] || detail['ID']
-              
-              if (dPkValue) {
-                const sanitizedDetail: any = {}
-                for (const [k, v] of Object.entries(detail)) {
-                  const isMatch = dFields.some(f => {
-                    const bCol = f.db_column_name.split('.').pop() || f.db_column_name
-                    return f.db_column_name.toLowerCase() === k.toLowerCase() || bCol.toLowerCase() === k.toLowerCase()
-                  })
-                  if (isMatch && k.toLowerCase() !== dPkName.toLowerCase() && k.toLowerCase() !== 'id') {
-                    sanitizedDetail[k] = String(v)
+        // Batch save modified details if any
+        if (formData._details && formData._details.length > 0) {
+          for (const detail of formData._details) {
+            const detailTableName = detail.model_name
+            if (!detailTableName) continue
+            
+            const dFields = detailFields.filter(f => f.model_name?.toLowerCase() === detailTableName.toLowerCase())
+            const pkField = dFields.find(f => f.is_primary_key) || { db_column_name: 'id' }
+            const dPkName = pkField.db_column_name.split('.').pop() || 'id'
+            const dPkValue = detail[dPkName] || detail[dPkName.toUpperCase()] || detail['id'] || detail['ID']
+            
+            if (dPkValue) {
+              const sanitizedDetail: any = {}
+              for (const [k, v] of Object.entries(detail)) {
+                if (v === null || v === undefined) continue
+                const isMatch = dFields.some(f => {
+                  const bCol = f.db_column_name.split('.').pop() || f.db_column_name
+                  return f.db_column_name.toLowerCase() === k.toLowerCase() || bCol.toLowerCase() === k.toLowerCase()
+                })
+                if (isMatch && k.toLowerCase() !== dPkName.toLowerCase() && k.toLowerCase() !== 'id') {
+                  sanitizedDetail[k] = String(v)
+                }
+              }
+
+              console.log(`[MetaBuilder:handleSave] Saving detail: table=${detailTableName} pk=${dPkName}=${dPkValue} fields=`, Object.keys(sanitizedDetail))
+
+              // Strip known generated/computed columns (cached from prior save attempts)
+              const genColsKey = `__mb_gen_cols_${detailTableName}`
+              const genCols: string[] = JSON.parse(sessionStorage.getItem(genColsKey) || '[]')
+              for (const gc of genCols) { delete sanitizedDetail[gc] }
+
+              if (Object.keys(sanitizedDetail).length > 0) {
+                const setClause = Object.entries(sanitizedDetail)
+                  .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
+                  .join(', ')
+                const detailQuery = `UPDATE ${detailTableName} SET ${setClause} WHERE ${dPkName} = '${String(dPkValue).replace(/'/g, "''")}'`
+                
+                channel.send({
+                  type: 'broadcast',
+                  event: 'sql_query',
+                  payload: {
+                    queryId: crypto.randomUUID(),
+                    table: detailTableName,
+                    action: 'update',
+                    data: sanitizedDetail,
+                    sql: detailQuery,
+                    idColumn: dPkName,
+                    idValue: dPkValue,
+                    token: project?.secret_token || 'test-token'
                   }
-                }
+                })
+              }
 
-                if (Object.keys(sanitizedDetail).length > 0) {
-                  const setClause = Object.entries(sanitizedDetail)
-                    .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
-                    .join(', ')
-                  const detailQuery = `UPDATE ${detailTableName} SET ${setClause} WHERE ${dPkName} = '${String(dPkValue).replace(/'/g, "''")}'`
-                  
-                  channel.send({
-                    type: 'broadcast',
-                    event: 'sql_query',
-                    payload: {
-                      queryId: crypto.randomUUID(),
-                      table: detailTableName,
-                      action: 'update',
-                      data: sanitizedDetail,
-                      sql: detailQuery,
-                      idColumn: dPkName,
-                      idValue: dPkValue
+              // SUB-DETAILS (Recursividade manual para o 3º nível)
+              if (detail._details && detail._details.length > 0) {
+                for (const subDetail of detail._details) {
+                  const subTableName = subDetail.model_name
+                  if (!subTableName) continue
+
+                  const sdFields = detailFields.filter(f => f.model_name?.toLowerCase() === subTableName.toLowerCase())
+                  const sPkField = sdFields.find(f => f.is_primary_key) || { db_column_name: 'id' }
+                  const sPkName = sPkField.db_column_name.split('.').pop() || 'id'
+                  const sPkValue = subDetail[sPkName] || subDetail[sPkName.toUpperCase()] || subDetail['id'] || subDetail['ID']
+
+                  if (sPkValue) {
+                    const sanitizedSub: any = {}
+                    for (const [sk, sv] of Object.entries(subDetail)) {
+                      const isMatch = sdFields.some(f => {
+                        const bCol = f.db_column_name.split('.').pop() || f.db_column_name
+                        return f.db_column_name.toLowerCase() === sk.toLowerCase() || bCol.toLowerCase() === sk.toLowerCase()
+                      })
+                      if (isMatch && sk.toLowerCase() !== sPkName.toLowerCase() && sk.toLowerCase() !== 'id') {
+                        sanitizedSub[sk] = String(sv)
+                      }
                     }
-                  })
-                }
 
-                // SUB-DETAILS (Recursividade manual para o 3º nível)
-                if (detail._details && detail._details.length > 0) {
-                  for (const subDetail of detail._details) {
-                    const subTableName = subDetail.model_name
-                    if (!subTableName) continue
-
-                    const sdFields = detailFields.filter(f => f.model_name?.toLowerCase() === subTableName.toLowerCase())
-                    const sPkField = sdFields.find(f => f.is_primary_key) || { db_column_name: 'id' }
-                    const sPkName = sPkField.db_column_name.split('.').pop() || 'id'
-                    const sPkValue = subDetail[sPkName] || subDetail[sPkName.toUpperCase()] || subDetail['id'] || subDetail['ID']
-
-                    if (sPkValue) {
-                      const sanitizedSub: any = {}
-                      for (const [sk, sv] of Object.entries(subDetail)) {
-                        const isMatch = sdFields.some(f => {
-                          const bCol = f.db_column_name.split('.').pop() || f.db_column_name
-                          return f.db_column_name.toLowerCase() === sk.toLowerCase() || bCol.toLowerCase() === sk.toLowerCase()
-                        })
-                        if (isMatch && sk.toLowerCase() !== sPkName.toLowerCase() && sk.toLowerCase() !== 'id') {
-                          sanitizedSub[sk] = String(sv)
+                    if (Object.keys(sanitizedSub).length > 0) {
+                      const subSetClause = Object.entries(sanitizedSub)
+                        .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
+                        .join(', ')
+                      const subQuery = `UPDATE ${subTableName} SET ${subSetClause} WHERE ${sPkName} = '${String(sPkValue).replace(/'/g, "''")}'`
+                      
+                      channel.send({
+                        type: 'broadcast',
+                        event: 'sql_query',
+                        payload: {
+                          queryId: crypto.randomUUID(),
+                          table: subTableName,
+                          action: 'update',
+                          data: sanitizedSub,
+                          sql: subQuery,
+                          idColumn: sPkName,
+                          idValue: sPkValue,
+                          token: project?.secret_token || 'test-token'
                         }
-                      }
-
-                      if (Object.keys(sanitizedSub).length > 0) {
-                        const subSetClause = Object.entries(sanitizedSub)
-                          .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
-                          .join(', ')
-                        const subQuery = `UPDATE ${subTableName} SET ${subSetClause} WHERE ${sPkName} = '${String(sPkValue).replace(/'/g, "''")}'`
-                        
-                        channel.send({
-                          type: 'broadcast',
-                          event: 'sql_query',
-                          payload: {
-                            queryId: crypto.randomUUID(),
-                            table: subTableName,
-                            action: 'update',
-                            data: sanitizedSub,
-                            sql: subQuery,
-                            idColumn: sPkName,
-                            idValue: sPkValue
-                          }
-                        })
-                      }
+                      })
                     }
                   }
                 }
@@ -1020,25 +1205,43 @@ export default function ViewPageContent({
             }
           }
         }
-      })
+      }
 
-      // Ouvir confirmação (opcional, ou apenas assumir sucesso e recarregar)
-      setTimeout(() => {
-        if (isPage) setIsPageVisible(false)
-        else setOpen(false)
-        
+      if (isTemporary) {
+        channel.subscribe((status: string) => {
+          if (status === 'SUBSCRIBED') {
+            sendSave()
+          }
+        })
+      } else {
+        sendSave()
+      }
+
+      // Post-save: refresh data and optionally close
+      setTimeout(async () => {
         setIsProcessing(false)
-        supabase.removeChannel(channel)
-        
+        if (isTemporary) {
+          supabase.removeChannel(channel)
+        }
+
         // Limpar cache para forçar refresh real
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem(`metabuilder_cache_${project.id}:${modelName}`)
         }
-        
-        setRefreshKey(prev => prev + 1)
-        
-        // Limpar seleção para garantir refresh limpo
-        if (!isPage) setSelectedRow(null)
+
+        if (isPage) {
+          // Em modo página: recarrega os detalhes e atualiza os campos do mestre
+          // Usa o formData salvo para atualizar os campos do mestre imediatamente,
+          // sem precisar de uma query adicional ao banco.
+          const freshDetails = await fetchDetails(selectedRow, modelName)
+          setSelectedRow((prev: any) => prev ? { ...prev, ...formData, _details: freshDetails } : prev)
+          setRefreshKey(prev => prev + 1)
+        } else {
+          // Em modo modal/drawer: fecha e retorna para a lista
+          setOpen(false)
+          setSelectedRow(null)
+          setRefreshKey(prev => prev + 1)
+        }
       }, 1500)
 
     } catch (error) {
@@ -1050,59 +1253,69 @@ export default function ViewPageContent({
   const handleDelete = async () => {
     setIsProcessing(true)
     const queryId = crypto.randomUUID()
-    const channelName = `tunnel:${project.id}`
-    const channel = supabase.channel(channelName)
+    const isTemporary = !tunnelChannel || !isTunnelReady
+    const channel = isTemporary ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
 
     try {
-      channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          const pkName = primaryKeyName
-          const cleanPkName = pkName.split('.').pop() || 'id'
+      const pkName = primaryKeyName
+      const cleanPkName = pkName.split('.').pop() || 'id'
 
-          const filters: any = {}
-          let pkValue = selectedRow[pkName] ?? selectedRow[cleanPkName] ?? selectedRow.id ?? selectedRow.ID
+      const filters: any = {}
+      let pkValue = selectedRow[pkName] ?? selectedRow[cleanPkName] ?? selectedRow.id ?? selectedRow.ID
 
-          if (pkValue !== undefined && pkValue !== null) {
-            filters[cleanPkName] = String(pkValue)
+      if (pkValue !== undefined && pkValue !== null) {
+        filters[cleanPkName] = String(pkValue)
+      }
+
+      let rawQuery = ''
+      if (pkValue !== undefined && pkValue !== null) {
+        rawQuery = `DELETE FROM ${modelName} WHERE ${cleanPkName} = '${String(pkValue).replace(/'/g, "''")}'`
+      }
+
+      console.log(`[MetaBuilder] Executing delete on ${modelName}`, { filters, pkName, cleanPkName, pkValue, rawQuery })
+
+      const payload: any = {
+        queryId,
+        table: modelName,
+        tableName: modelName,
+        action: 'delete',
+        query: rawQuery,
+        sql: rawQuery,
+        idColumn: cleanPkName,
+        idValue: pkValue,
+        token: project?.secret_token || 'test-token'
+      }
+
+      if (Object.keys(filters).length > 0) {
+        payload.filters = filters
+        payload.where = filters
+        payload.id = filters[pkName]
+      }
+
+      const sendDelete = () => {
+        channel.send({
+          type: 'broadcast',
+          event: 'sql_query',
+          payload
+        })
+      }
+
+      if (isTemporary) {
+        channel.subscribe((status: string) => {
+          if (status === 'SUBSCRIBED') {
+            sendDelete()
           }
-
-          let rawQuery = ''
-          if (pkValue !== undefined && pkValue !== null) {
-            rawQuery = `DELETE FROM ${modelName} WHERE ${cleanPkName} = '${String(pkValue).replace(/'/g, "''")}'`
-          }
-
-          console.log(`[MetaBuilder] Executing delete on ${modelName}`, { filters, pkName, cleanPkName, pkValue, rawQuery })
-
-          const payload: any = {
-            queryId,
-            table: modelName,
-            tableName: modelName,
-            action: 'delete',
-            query: rawQuery,
-            sql: rawQuery,
-            idColumn: cleanPkName,
-            idValue: pkValue,
-            token: project?.secret_token || 'test-token'
-          }
-
-          if (Object.keys(filters).length > 0) {
-            payload.filters = filters
-            payload.where = filters
-            payload.id = filters[pkName]
-          }
-
-          channel.send({
-            type: 'broadcast',
-            event: 'sql_query',
-            payload
-          })
-        }
-      })
+        })
+      } else {
+        sendDelete()
+      }
 
       setTimeout(() => {
         setIsDeleteModalOpen(false)
         setIsProcessing(false)
-        supabase.removeChannel(channel)
+        if (isTemporary) {
+          supabase.removeChannel(channel)
+        }
         setRefreshKey(prev => prev + 1)
       }, 1500)
     } catch (error) {
@@ -1168,6 +1381,10 @@ export default function ViewPageContent({
             detailsInlineTypes={detailsInlineTypes}
             initialTab={activeTabForDetail}
             onTabChange={setActiveTabForDetail}
+            projectId={project.id}
+            secretToken={project.secret_token}
+            tunnelChannel={tunnelChannel}
+            isTunnelReady={isTunnelReady}
           />
         ) : (
           <>
@@ -1244,6 +1461,10 @@ export default function ViewPageContent({
           detailsInlineTypes={detailsInlineTypes}
           initialTab={activeTabForDetail}
           onTabChange={setActiveTabForDetail}
+          projectId={project.id}
+          secretToken={project.secret_token}
+          tunnelChannel={tunnelChannel}
+          isTunnelReady={isTunnelReady}
         />
       ) : (
         <RecordDrawer 
@@ -1268,6 +1489,10 @@ export default function ViewPageContent({
           detailsInlineTypes={detailsInlineTypes}
           initialTab={activeTabForDetail}
           onTabChange={setActiveTabForDetail}
+          projectId={project.id}
+          secretToken={project.secret_token}
+          tunnelChannel={tunnelChannel}
+          isTunnelReady={isTunnelReady}
         />
       )}
 
@@ -1300,7 +1525,11 @@ export default function ViewPageContent({
             const levelsToRemove = detailHistory.length - idx
             let newHistory = [...detailHistory]
             for(let i=0; i < levelsToRemove; i++) handleCloseDetail()
-          }
+          },
+          projectId: project.id,
+          secretToken: project.secret_token,
+          tunnelChannel: tunnelChannel,
+          isTunnelReady: isTunnelReady
         }
 
         return interfaceType === 'modal' ? (
@@ -1331,6 +1560,10 @@ export default function ViewPageContent({
         detailsInlineTypes={detailsInlineTypes}
         initialTab={activeTabForDetail}
         onTabChange={setActiveTabForDetail}
+        projectId={project.id}
+        secretToken={project.secret_token}
+        tunnelChannel={tunnelChannel}
+        isTunnelReady={isTunnelReady}
       />
 
       <RecordDrawer 
@@ -1353,6 +1586,10 @@ export default function ViewPageContent({
         detailsInlineTypes={detailsInlineTypes}
         initialTab={activeTabForDetail}
         onTabChange={setActiveTabForDetail}
+        projectId={project.id}
+        secretToken={project.secret_token}
+        tunnelChannel={tunnelChannel}
+        isTunnelReady={isTunnelReady}
       />
 
       <DeleteConfirmModal 

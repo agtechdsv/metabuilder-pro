@@ -65,6 +65,10 @@ interface RecordFormProps {
   onTabChange?: (tab: string) => void
   detailsInlineTypes?: Record<string, boolean>
   footerBgClass?: string
+  projectId?: string
+  secretToken?: string
+  tunnelChannel?: any
+  isTunnelReady?: boolean
 }
 
 export default function RecordForm({ 
@@ -87,7 +91,11 @@ export default function RecordForm({
   initialTab = 'master',
   onTabChange,
   detailsInlineTypes = {},
-  footerBgClass = "bg-white dark:bg-neutral-950"
+  footerBgClass = "bg-white dark:bg-neutral-950",
+  projectId,
+  secretToken = 'test-token',
+  tunnelChannel,
+  isTunnelReady
 }: RecordFormProps) {
   const { t } = useI18n()
   const [formData, setFormData] = useState<any>(initialData || {})
@@ -107,10 +115,111 @@ export default function RecordForm({
 
     for (const join of subJoins) {
       if (!pkValue) continue
-      const { data } = await (supabaseClient as any)
-        .from(join.to)
-        .select('*')
-        .eq(join.foreignKey, String(pkValue))
+      
+      let data: any[] = []
+      
+      if (projectId) {
+        // Query via the secure data tunnel
+        const queryId = crypto.randomUUID()
+        const rawQuery = `SELECT * FROM "${join.to}" WHERE "${join.foreignKey}" = '${String(pkValue).replace(/'/g, "''")}'`
+        
+        console.log(`[MetaBuilder] RecordForm fetching sub-details from ${join.to} via tunnel where ${join.foreignKey} = ${pkValue}`)
+        
+        try {
+          data = await new Promise<any[]>((resolve, reject) => {
+            const isTemporary = !tunnelChannel || !isTunnelReady
+            const channelName = `tunnel:${projectId}`
+            const channel = isTemporary ? supabaseClient.channel(channelName) : tunnelChannel
+            let resolved = false
+
+            const handleResult = (payload: any) => {
+              if (payload.payload?.queryId === queryId) {
+                resolved = true
+                cleanup()
+                if (payload.payload.success) {
+                  resolve(payload.payload.data || [])
+                } else {
+                  reject(new Error(payload.payload.error || 'Error fetching sub-details'))
+                }
+              }
+            }
+
+            const cleanup = () => {
+              try {
+                const bindings = channel.bindings?.broadcast
+                if (Array.isArray(bindings)) {
+                  const cleanBindings = bindings.filter((b: any) => {
+                    const match = b.callback === handleResult
+                    if (match && channel.channelAdapter) {
+                      channel.channelAdapter.off('broadcast', b.ref)
+                    }
+                    return !match
+                  })
+                  channel.bindings.broadcast = cleanBindings
+                }
+
+                if (isTemporary) {
+                  channel.unsubscribe()
+                  supabaseClient.removeChannel(channel)
+                }
+              } catch (err) {
+                console.error('[MetaBuilder] Error cleaning up channel in RecordForm:', err)
+              }
+            }
+
+            channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
+            channel.on('broadcast', { event: 'sql_result' }, handleResult)
+
+            const sendPayload = {
+              type: 'broadcast',
+              event: 'sql_query',
+              payload: {
+                queryId,
+                table: join.to,
+                action: 'select',
+                query: rawQuery,
+                sql: rawQuery,
+                token: secretToken,
+                joins: [],
+                limit: 100,
+                offset: 0
+              }
+            }
+
+            if (isTemporary) {
+              channel.subscribe((status: string) => {
+                if (status === 'SUBSCRIBED') {
+                  channel.send(sendPayload)
+                }
+              })
+            } else {
+              channel.send(sendPayload)
+            }
+
+            // Timeout fallback
+            setTimeout(() => {
+              if (!resolved) {
+                resolved = true
+                cleanup()
+                console.warn(`[MetaBuilder] Timeout fetching sub-details in RecordForm for queryId ${queryId}`)
+                resolve([])
+              }
+            }, 8000)
+          })
+        } catch (err) {
+          console.error(`[MetaBuilder] Error fetching sub-details from ${join.to} via tunnel:`, err)
+        }
+      } else {
+        // Fallback to direct supabase query
+        const { data: directData } = await (supabaseClient as any)
+          .from(join.to)
+          .select('*')
+          .eq(join.foreignKey, String(pkValue))
+        if (directData) {
+          data = directData
+        }
+      }
+
       if (data) {
         allSubDetails.push(...data.map((d: any) => ({ ...d, model_name: join.to })))
       }

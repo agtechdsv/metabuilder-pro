@@ -85,10 +85,35 @@ export function ExportDropdown({
     setIsInitializing(true)
 
     try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      // 1. Resolve logged-in user ID (check custom client session first, then fallback to Supabase admin/dev auth)
+      const sessionCookieName = `client_session_${projectId}`
+      const cookieRow = document.cookie
+        .split('; ')
+        .find(row => row.trim().startsWith(`${sessionCookieName}=`))
       
-      if (!user) {
+      let userId: string | null = null
+      
+      if (cookieRow) {
+        try {
+          const cookieVal = cookieRow.split('=')[1]
+          const parsed = JSON.parse(decodeURIComponent(cookieVal))
+          if (parsed && parsed.id) {
+            userId = parsed.id.toString()
+          }
+        } catch (e) {
+          console.error('[Export] Error parsing client session cookie:', e)
+        }
+      }
+
+      if (!userId) {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          userId = user.id
+        }
+      }
+      
+      if (!userId) {
         toast('Você precisa estar logado para realizar exportações.', 'error')
         setIsInitializing(false)
         return
@@ -115,7 +140,7 @@ export function ExportDropdown({
         },
         body: JSON.stringify({
           projectId,
-          userId: user.id,
+          userId: userId,
           workspaceSlug,
           viewName,
           modelName,

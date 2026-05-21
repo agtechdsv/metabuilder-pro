@@ -22,6 +22,10 @@ interface RecordModalProps {
   onTabChange?: (tab: string) => void
   zIndex?: number
   detailsInlineTypes?: Record<string, boolean>
+  projectId?: string
+  secretToken?: string
+  tunnelChannel?: any
+  isTunnelReady?: boolean
 }
 
 export default function RecordModal({ 
@@ -44,7 +48,11 @@ export default function RecordModal({
   initialTab,
   onTabChange,
   zIndex,
-  detailsInlineTypes
+  detailsInlineTypes,
+  projectId,
+  secretToken,
+  tunnelChannel,
+  isTunnelReady
 }: RecordModalProps) {
   return (
     <Modal 
@@ -74,6 +82,10 @@ export default function RecordModal({
         initialTab={initialTab}
         onTabChange={onTabChange}
         footerBgClass="bg-white dark:bg-neutral-900"
+        projectId={projectId}
+        secretToken={secretToken}
+        tunnelChannel={tunnelChannel}
+        isTunnelReady={isTunnelReady}
       />
     </Modal>
   )

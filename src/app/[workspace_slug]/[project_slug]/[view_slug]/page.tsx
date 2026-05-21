@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { Table, LayoutGrid, Plus, Search, Filter } from 'lucide-react'
 import DynamicGrid from '@/components/DynamicGrid'
 import ViewPageContent from '@/components/runtime/ViewPageContent'
@@ -96,6 +97,77 @@ export default async function SlugPage({ params }: PageProps) {
     .limit(1)
 
   const view = views?.[0]
+
+  // RBAC Permission Check
+  if (view) {
+    const cookieStore = await cookies()
+    const sessionCookie = cookieStore.get(`client_session_${project.id}`)?.value
+
+    if (!sessionCookie) {
+      redirect(`/${workspace_slug}/${project_slug}/login`)
+    }
+
+    let allowed = true
+    try {
+      const clientUser = JSON.parse(decodeURIComponent(sessionCookie))
+      
+      // 1. Busca o papel do usuário no projeto
+      const { data: userRole } = await supabase
+        .from('project_user_roles')
+        .select('role_id')
+        .eq('project_id', project.id)
+        .eq('external_user_id', clientUser.id?.toString())
+        .single()
+      
+      if (userRole?.role_id) {
+        // 2. Busca se essa view está explicitamente desabilitada para este papel
+        const { data: deniedPermission } = await supabase
+          .from('project_role_permissions')
+          .select('id')
+          .eq('role_id', userRole.role_id)
+          .eq('view_id', view.id)
+          .eq('can_read', false)
+          .limit(1)
+          .maybeSingle()
+        
+        if (deniedPermission) {
+          allowed = false
+        }
+      } else {
+        // Sem papel = sem acesso
+        allowed = false
+      }
+    } catch (e) {
+      console.error('Erro ao verificar permissão do usuário:', e)
+      allowed = false
+    }
+
+    if (!allowed) {
+      return (
+        <TranslationProvider locale={locale}>
+          <div className="min-h-screen bg-neutral-50 dark:bg-[#050505] flex flex-col items-center justify-center p-6 text-center">
+            <div className="w-20 h-20 rounded-[2.5rem] bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center mb-6 shadow-lg shadow-red-500/5">
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m0-8V5m0 16a9 9 0 110-18 9 9 0 010 18z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-2 tracking-tight">
+              Acesso Negado
+            </h2>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mb-8 leading-relaxed font-bold">
+              Você não possui permissões necessárias para visualizar este caso de uso.
+            </p>
+            <a
+              href={`/${workspace_slug}/${project_slug}`}
+              className="px-6 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.98] shadow-lg shadow-indigo-500/20 flex items-center justify-center"
+            >
+              Voltar ao início
+            </a>
+          </div>
+        </TranslationProvider>
+      )
+    }
+  }
 
   if (view && !viewError && view.layout_config?.is_active !== false) {
     const { data: allModels } = await supabase.from('models').select('id, display_name, db_table_name, fields(*)').eq('project_id', project.id)
