@@ -22,6 +22,10 @@ interface RecordDrawerProps {
   onTabChange?: (tab: string) => void
   zIndex?: number
   detailsInlineTypes?: Record<string, boolean>
+  projectId?: string
+  secretToken?: string
+  tunnelChannel?: any
+  isTunnelReady?: boolean
 }
 
 export default function RecordDrawer({ 
@@ -44,7 +48,11 @@ export default function RecordDrawer({
   initialTab,
   onTabChange,
   zIndex,
-  detailsInlineTypes
+  detailsInlineTypes,
+  projectId,
+  secretToken,
+  tunnelChannel,
+  isTunnelReady
 }: RecordDrawerProps) {
   return (
     <Drawer isOpen={isOpen} onClose={onClose} title="" zIndex={zIndex}>
@@ -67,6 +75,10 @@ export default function RecordDrawer({
         detailsInlineTypes={detailsInlineTypes}
         initialTab={initialTab}
         onTabChange={onTabChange}
+        projectId={projectId}
+        secretToken={secretToken}
+        tunnelChannel={tunnelChannel}
+        isTunnelReady={isTunnelReady}
       />
     </Drawer>
   )

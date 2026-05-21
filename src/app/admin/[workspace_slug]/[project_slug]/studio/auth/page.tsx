@@ -140,9 +140,51 @@ export default function AuthSettingsPage() {
         if (modelsData) setModels(modelsData)
 
         // Load UI Views for Permissions Mapping
-        const { data: viewsData, error: viewsError } = await supabase.from('ui_views').select('id, name, slug').eq('project_id', proj.id)
-        if (viewsError) console.error("Error fetching views:", viewsError)
-        if (viewsData) setUiViews(viewsData)
+        let viewsData: any[] = []
+        const { data: dbViews, error: viewsError } = await supabase
+          .from('ui_views')
+          .select('id, name, slug')
+          .eq('project_id', proj.id)
+
+        if (viewsError) {
+          console.error("Error fetching views:", viewsError)
+        }
+
+        if (dbViews) {
+          viewsData = [...dbViews]
+          // Verifica se "Central de Downloads" com o slug "downloads" já existe
+          const hasDownloads = dbViews.some(v => v.slug === 'downloads')
+          if (!hasDownloads) {
+            // Obtém um model_id dummy do projeto para satisfazer a constraint NOT NULL
+            const dummyModelId = modelsData && modelsData.length > 0 ? modelsData[0].id : null
+
+            if (dummyModelId) {
+              // Cria a view "Central de Downloads" automaticamente para o projeto
+              const { data: newView, error: insertError } = await supabase
+                .from('ui_views')
+                .insert({
+                  project_id: proj.id,
+                  model_id: dummyModelId,
+                  name: 'Central de Downloads',
+                  slug: 'downloads',
+                  logic_type: 'personalizado',
+                  view_type: 'advanced_use_case',
+                  layout_config: { is_active: true }
+                })
+                .select('id, name, slug')
+                .single()
+              
+              if (newView && !insertError) {
+                viewsData.push(newView)
+              } else if (insertError) {
+                console.error("Error inserting default downloads view:", insertError)
+              }
+            } else {
+              console.warn("Cannot insert default downloads view because project has no models/tables yet.")
+            }
+          }
+        }
+        setUiViews(viewsData)
       }
 
       // Fetch User & Profile for Navbar
@@ -164,45 +206,9 @@ export default function AuthSettingsPage() {
   }, [project_slug, workspace_slug, supabase])
 
   useEffect(() => {
-    if (activeTab === 'users' && project && authConfig.db_table_name) {
-      const loadLegacyUsers = async () => {
-        setIsLoadingUsers(true)
-        const queryId = crypto.randomUUID()
-        const channelName = `tunnel:${project.id}`
-        const channel = supabase.channel(channelName)
-        let isFinished = false
-        const cleanup = () => { isFinished = true; supabase.removeChannel(channel) }
-
-        channel.on('broadcast', { event: `query_result_${queryId}` }, (payload: any) => {
-          if (isFinished) return
-          cleanup()
-          const { success, data, error } = payload.payload
-          if (success && data) {
-            setLegacyUsers(data)
-          } else {
-            toast('Erro ao buscar usuários: ' + error, 'error')
-          }
-          setIsLoadingUsers(false)
-        })
-
-        channel.subscribe(async (status) => {
-          if (status === 'SUBSCRIBED') {
-            await channel.send({
-              type: 'broadcast', event: 'sql_query',
-              payload: { queryId, token: project.secret_token, action: 'get_users', config: authConfig, limit: 50, offset: 0 }
-            })
-          }
-        })
-
-        setTimeout(() => {
-          if (!isFinished) {
-            cleanup()
-            setIsLoadingUsers(false)
-            toast('Túnel CLI offline. Ligue o MetaBuilder CLI.', 'error')
-          }
-        }, 5000)
-
-        // Carregar as roles criadas no Supabase para este projeto
+    if (activeTab === 'users' && project) {
+      const loadRolesAndPermissions = async () => {
+        // Carregar as roles criadas no Supabase para este projeto (independente do banco legado)
         const { data: dbRoles } = await supabase.from('project_roles').select('*').eq('project_id', project.id)
         if (dbRoles) {
           setRoles(dbRoles)
@@ -214,7 +220,48 @@ export default function AuthSettingsPage() {
         const { data: dbUserRoles } = await supabase.from('project_user_roles').select('*').eq('project_id', project.id)
         if (dbUserRoles) setUserRoles(dbUserRoles)
       }
-      loadLegacyUsers()
+      loadRolesAndPermissions()
+
+      if (authConfig.db_table_name) {
+        const loadLegacyUsers = async () => {
+          setIsLoadingUsers(true)
+          const queryId = crypto.randomUUID()
+          const channelName = `tunnel:${project.id}`
+          const channel = supabase.channel(channelName)
+          let isFinished = false
+          const cleanup = () => { isFinished = true; supabase.removeChannel(channel) }
+
+          channel.on('broadcast', { event: `query_result_${queryId}` }, (payload: any) => {
+            if (isFinished) return
+            cleanup()
+            const { success, data, error } = payload.payload
+            if (success && data) {
+              setLegacyUsers(data)
+            } else {
+              toast('Erro ao buscar usuários: ' + error, 'error')
+            }
+            setIsLoadingUsers(false)
+          })
+
+          channel.subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+              await channel.send({
+                type: 'broadcast', event: 'sql_query',
+                payload: { queryId, token: project.secret_token, action: 'get_users', config: authConfig, limit: 50, offset: 0 }
+              })
+            }
+          })
+
+          setTimeout(() => {
+            if (!isFinished) {
+              cleanup()
+              setIsLoadingUsers(false)
+              toast('Túnel CLI offline. Ligue o MetaBuilder CLI.', 'error')
+            }
+          }, 5000)
+        }
+        loadLegacyUsers()
+      }
     }
   }, [activeTab, project, authConfig, supabase, toast])
 
@@ -239,18 +286,52 @@ export default function AuthSettingsPage() {
   const handleTogglePermission = async (roleId: string, viewId: string) => {
     const existing = rolePermissions.find(rp => rp.role_id === roleId && rp.view_id === viewId)
     
-    if (existing) {
-      // Toggle off (delete)
-      const { error } = await supabase.from('project_role_permissions').delete().eq('id', existing.id)
-      if (!error) setRolePermissions(prev => prev.filter(rp => rp.id !== existing.id))
-    } else {
-      // Toggle on (insert)
-      const { data, error } = await supabase.from('project_role_permissions').insert({
-        role_id: roleId,
-        view_id: viewId,
-        can_read: true
-      }).select().single()
-      if (!error && data) setRolePermissions(prev => [...prev, data])
+    try {
+      if (existing) {
+        if (existing.can_read === false) {
+          // Toggle on (delete block record, so it defaults to true)
+          const { error } = await supabase.from('project_role_permissions').delete().eq('id', existing.id)
+          if (error) {
+            console.error('Error toggling permission on:', error)
+            toast('Erro ao conceder permissão: ' + error.message, 'error')
+          } else {
+            setRolePermissions(prev => prev.filter(rp => rp.id !== existing.id))
+            toast('Permissão concedida com sucesso!', 'success')
+          }
+        } else {
+          // Toggle off (update existing record to can_read = false)
+          const { data, error } = await supabase
+            .from('project_role_permissions')
+            .update({ can_read: false })
+            .eq('id', existing.id)
+            .select()
+            .single()
+          if (error) {
+            console.error('Error toggling permission off:', error)
+            toast('Erro ao remover permissão: ' + error.message, 'error')
+          } else if (data) {
+            setRolePermissions(prev => prev.map(rp => rp.id === existing.id ? data : rp))
+            toast('Permissão removida com sucesso!', 'success')
+          }
+        }
+      } else {
+        // Toggle off (insert record with can_read = false)
+        const { data, error } = await supabase.from('project_role_permissions').insert({
+          role_id: roleId,
+          view_id: viewId,
+          can_read: false
+        }).select().single()
+        if (error) {
+          console.error('Error toggling permission off:', error)
+          toast('Erro ao remover permissão: ' + error.message, 'error')
+        } else if (data) {
+          setRolePermissions(prev => [...prev, data])
+          toast('Permissão removida com sucesso!', 'success')
+        }
+      }
+    } catch (err: any) {
+      console.error('Unexpected permission toggle error:', err)
+      toast('Erro inesperado: ' + (err?.message || err), 'error')
     }
   }
 
@@ -976,7 +1057,8 @@ export default function AuthSettingsPage() {
                             <p className="text-[10px] text-neutral-500">/{view.slug}</p>
                           </td>
                           {roles.map(role => {
-                            const hasAccess = rolePermissions.some(rp => rp.role_id === role.id && rp.view_id === view.id)
+                            const permission = rolePermissions.find(rp => rp.role_id === role.id && rp.view_id === view.id)
+                            const hasAccess = !permission || permission.can_read !== false
                             return (
                               <td key={role.id} className="px-6 py-4 text-center">
                                 <button 

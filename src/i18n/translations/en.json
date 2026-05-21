@@ -70,6 +70,8 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "save": "Save Changes",
+    "saving": "Saving...",
+    "saved": "Saved!",
     "loading": "Loading...",
     "success": "Saved successfully!",
     "enterprise": "Enterprise",

@@ -56,6 +56,25 @@ export async function generateMetadata({ params }: { params: Promise<{ project_s
 }
 import { cookies } from 'next/headers'
 
+const getAllViewIds = (items: any[], slugToIdMap: Map<string, string>): string[] => {
+  const ids: string[] = []
+  const traverse = (list: any[]) => {
+    for (const item of list) {
+      if (item.type === 'view') {
+        const resolvedId = item.view_id || (item.target ? slugToIdMap.get(item.target.toLowerCase()) : null)
+        if (resolvedId) {
+          ids.push(resolvedId)
+        }
+      }
+      if (item.children) {
+        traverse(item.children)
+      }
+    }
+  }
+  traverse(items)
+  return ids
+}
+
 interface ProjectLayoutProps {
   children: React.ReactNode
   params: Promise<{
@@ -97,6 +116,19 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   // Se o projeto não tiver navegação, vamos garantir que seja um array vazio
   const rawNavigation = project.navigation || []
 
+  // 3. Busca todas as views do projeto para mapeamento de slug -> view_id
+  const { data: uiViews } = await supabase
+    .from('ui_views')
+    .select('id, slug')
+    .eq('project_id', project.id)
+
+  const viewSlugToIdMap = new Map<string, string>()
+  if (uiViews) {
+    uiViews.forEach(v => {
+      if (v.slug) viewSlugToIdMap.set(v.slug.toLowerCase(), v.id)
+    })
+  }
+
   const cookieStore = await cookies()
   const locale = cookieStore.get('app-language')?.value || 'pt'
   const sessionCookie = cookieStore.get(`client_session_${project.id}`)?.value
@@ -116,16 +148,16 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
         .single()
       
       if (userRole?.role_id) {
-        // 2. Busca as permissões deste papel
-        const { data: permissions } = await supabase
+        // 2. Busca as permissões explicitamente desabilitadas deste papel (can_read = false)
+        const { data: deniedPermissions } = await supabase
           .from('project_role_permissions')
           .select('view_id')
           .eq('role_id', userRole.role_id)
-          .eq('can_read', true)
+          .eq('can_read', false)
         
-        if (permissions) {
-          allowedViewIds = permissions.map(p => p.view_id)
-        }
+        const deniedViewIds = deniedPermissions ? deniedPermissions.map(p => p.view_id) : []
+        const allViewIds = getAllViewIds(rawNavigation, viewSlugToIdMap)
+        allowedViewIds = allViewIds.filter(id => !deniedViewIds.includes(id))
       } else {
         // Se não tem grupo, array vazio = acesso a nada
         allowedViewIds = []
@@ -138,8 +170,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
     allowedViewIds = [] // Sem sessão = acesso a nada
   }
 
-  // Se for array nulo (ex: deu erro ou a configuração de Auth tá desligada), passa tudo.
-  // Mas como estamos implementando Zero Trust, vamos assumir que o filtro deve aplicar:
+  // Filtra itens de navegação com base no RBAC (blacklist-based / default allow)
   const filterNavigation = (items: any[]): any[] => {
     if (!allowedViewIds) return items
     
@@ -147,14 +178,17 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
       // Se for pasta, filtra os filhos recursivamente
       if (item.type === 'folder' && item.children) {
         const filteredChildren = filterNavigation(item.children)
+        // Se a pasta não tem nenhum filho visível restante, oculta a própria pasta
+        if (filteredChildren.length === 0) return null
         return { ...item, children: filteredChildren }
       }
       // Se for view, verifica se está no array de permissões
-      if (item.type === 'view' && item.view_id) {
-        if (!allowedViewIds.includes(item.view_id)) return null
+      if (item.type === 'view') {
+        const resolvedId = item.view_id || (item.target ? viewSlugToIdMap.get(item.target.toLowerCase()) : null)
+        if (resolvedId && !allowedViewIds.includes(resolvedId)) return null
       }
       return item
-    }).filter(Boolean) // Remove os nulos (views negadas) e pastas vazias (opcional)
+    }).filter(Boolean) // Remove os nulos (views negadas e pastas vazias)
   }
 
   const navigation = filterNavigation(rawNavigation)

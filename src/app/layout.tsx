@@ -48,7 +48,10 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head />
-      <body className="min-h-full flex flex-col bg-white dark:bg-black text-black dark:text-white transition-colors duration-300">
+      <body 
+        className="min-h-full flex flex-col bg-white dark:bg-black text-black dark:text-white transition-colors duration-300"
+        suppressHydrationWarning
+      >
         <Providers initialLocale={locale as any}>
           {children}
           {modal}

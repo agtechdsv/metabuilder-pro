@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { Pool } from 'pg'
 import * as xlsx from 'xlsx'
 import { jsPDF } from 'jspdf'
+import ws from 'ws'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -9,7 +10,12 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 // Connection string to our Supabase PostgreSQL DB
 const dbConnectionString = "postgresql://postgres.chmstvtepzmjhpyxjjam:Goeta815617%40@aws-1-sa-east-1.pooler.supabase.com:6543/postgres"
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: { persistSession: false },
+  realtime: {
+    transport: ws
+  }
+})
 const dbPool = new Pool({ connectionString: dbConnectionString })
 
 /**
@@ -81,6 +87,86 @@ async function broadcastProgress(projectId: string, payload: {
   } catch (err) {
     console.error('[Export Worker] Failed to broadcast progress over tunnel:', err)
   }
+}
+
+/**
+ * Executes a PostgreSQL query over the secure real-time broadcast tunnel.
+ */
+async function queryViaTunnel(projectId: string, secretToken: string, payload: {
+  table: string
+  action: 'select'
+  query: string
+  joins: any[]
+  filters?: Record<string, string>
+  limit?: number
+}): Promise<any[]> {
+  const queryId = Math.random().toString(36).substring(2, 15) + '_' + Date.now()
+  const channelName = `tunnel:${projectId}`
+  const channel = supabase.channel(channelName)
+
+  return new Promise<any[]>((resolve, reject) => {
+    let resolved = false
+
+    // Timeout de 25 segundos
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true
+        supabase.removeChannel(channel)
+        reject(new Error('Timeout esperando resposta do banco de dados local via túnel.'))
+      }
+    }, 25000)
+
+    const handleResult = (payloadEvent: any) => {
+      const res = payloadEvent.payload
+      if (res && res.queryId === queryId) {
+        if (!resolved) {
+          resolved = true
+          clearTimeout(timeout)
+          supabase.removeChannel(channel)
+          if (res.success) {
+            resolve(res.data || [])
+          } else {
+            reject(new Error(res.error || 'Falha na execução da query via túnel.'))
+          }
+        }
+      }
+    }
+
+    channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
+    channel.on('broadcast', { event: 'sql_result' }, handleResult)
+
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        // Pequeno atraso para garantir aquecimento do canal
+        await new Promise(r => setTimeout(r, 200))
+        
+        channel.send({
+          type: 'broadcast',
+          event: 'sql_query',
+          payload: {
+            queryId,
+            table: payload.table,
+            tableName: payload.table,
+            action: 'select',
+            query: payload.query,
+            sql: payload.query,
+            joins: payload.joins,
+            filters: payload.filters,
+            limit: payload.limit || 100000,
+            offset: 0,
+            token: secretToken
+          }
+        }).catch(err => {
+          if (!resolved) {
+            resolved = true
+            clearTimeout(timeout)
+            supabase.removeChannel(channel)
+            reject(err)
+          }
+        })
+      }
+    })
+  })
 }
 
 /**
@@ -189,7 +275,7 @@ export async function executeExportBackground(params: {
       }
     }
 
-    const rawSql = `SELECT DISTINCT ${selectCols} FROM "${safeTable}"${joinClause}${whereClause} LIMIT 100000`
+    const rawSql = `SELECT DISTINCT ${selectCols} FROM "${safeTable}"${joinClause}${whereClause}`
     console.log('[Export Worker] Executing query:', rawSql, 'Params:', sqlParams)
 
     // 3. Run database query (progress 40%)
@@ -199,10 +285,35 @@ export async function executeExportBackground(params: {
     )
     await broadcastProgress(projectId, { jobId, progress: 40, status: 'processing', viewName })
 
-    const result = await client.query(rawSql, sqlParams)
-    const rows = result.rows
-    const recordCount = rows.length
+    let rows: any[] = []
+    try {
+      console.log('[Export Worker] Attempting to query via database tunnel for project:', projectId)
+      const { data: projectData, error: projError } = await supabase
+        .from('projects')
+        .select('secret_token')
+        .eq('id', projectId)
+        .single()
 
+      if (projError || !projectData) {
+        throw new Error(`Project secret token not found: ${projError?.message}`)
+      }
+
+      rows = await queryViaTunnel(projectId, projectData.secret_token, {
+        table: safeTable,
+        action: 'select',
+        query: rawSql,
+        joins: joins,
+        filters: filters,
+        limit: 100000
+      })
+      console.log(`[Export Worker] Successfully queried ${rows.length} rows via database tunnel.`)
+    } catch (tunnelErr: any) {
+      console.warn('[Export Worker] Tunnel query failed or timed out, falling back to direct DB connection:', tunnelErr.message)
+      const result = await client.query(`${rawSql} LIMIT 100000`, sqlParams)
+      rows = result.rows
+    }
+
+    const recordCount = rows.length
     console.log(`[Export Worker] Query returned ${recordCount} records. Processing file format...`)
 
     // 4. Format files (progress 70%)
