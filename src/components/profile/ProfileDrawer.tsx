@@ -169,6 +169,9 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
       const result = await updateProfile(data)
       if (result.success) {
         onUpdate(formData)
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('profile-updated', { detail: formData }))
+        }
         setIsSuccess(true)
         setTimeout(() => setIsSuccess(false), 3000)
       }

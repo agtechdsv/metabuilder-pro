@@ -7,7 +7,7 @@ import { CheckoutClient } from '@/components/checkout/CheckoutClient'
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ planId?: string; workspace_slug?: string }>
+  searchParams: Promise<{ planId?: string; workspace_slug?: string; cycle?: string }>
 }) {
   const supabase = await createClient()
 
@@ -16,12 +16,14 @@ export default async function CheckoutPage({
   const resolvedSearchParams = await searchParams
   const planId = resolvedSearchParams.planId
   const workspaceSlug = resolvedSearchParams.workspace_slug
+  const cycle = resolvedSearchParams.cycle
 
   if (!user) {
     let redirectUrl = '/login?redirect_to=/checkout'
     const params = new URLSearchParams()
     if (planId) params.set('planId', planId)
     if (workspaceSlug) params.set('workspace_slug', workspaceSlug)
+    if (cycle) params.set('cycle', cycle)
     const queryString = params.toString()
     if (queryString) {
       redirectUrl = `/login?redirect_to=/checkout?${queryString}`
@@ -57,6 +59,7 @@ export default async function CheckoutPage({
         <CheckoutClient 
           plans={plans || []} 
           initialPlanId={planId} 
+          initialCycle={cycle as any}
           workspaceSlug={workspaceSlug}
           user={user}
           profile={profile}

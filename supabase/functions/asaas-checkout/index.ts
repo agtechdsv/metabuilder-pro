@@ -101,8 +101,8 @@ serve(async (req) => {
     }
 
     // Get Asaas config
-    const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY");
-    const ASAAS_URL = Deno.env.get("ASAAS_URL") || "https://api.asaas.com/v3";
+    const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY")?.trim();
+    const ASAAS_URL = Deno.env.get("ASAAS_URL")?.trim() || "https://api.asaas.com/v3";
 
     if (!ASAAS_API_KEY) {
       return new Response(
@@ -191,7 +191,8 @@ serve(async (req) => {
     const nextDueDate = d.toISOString().split("T")[0];
 
     // External reference structure
-    const externalReference = `ws_${workspaceId}_pl_${planId}_cy_${cycle}_t_${Date.now()}`;
+    const cycleCode = cycle === "monthly" ? "mo" : cycle === "quarterly" ? "qu" : cycle === "semiannual" ? "se" : "ye";
+    const externalReference = `w_${workspaceId}_p_${planId}_c_${cycleCode}_${Date.now()}`;
 
     // Setup card details if applicable
     let creditCardPayload = {};

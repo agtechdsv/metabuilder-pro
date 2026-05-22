@@ -9,8 +9,8 @@ serve(async (req) => {
 
   try {
     // 1. Verify Authentication Token from Asaas header
-    const tokenHeader = req.headers.get("asaas-access-token");
-    const localToken = Deno.env.get("ASAAS_WEBHOOK_TOKEN");
+    const tokenHeader = req.headers.get("asaas-access-token")?.trim();
+    const localToken = Deno.env.get("ASAAS_WEBHOOK_TOKEN")?.trim();
 
     if (!tokenHeader || tokenHeader !== localToken) {
       console.warn("Unauthorized webhook request. Token header:", tokenHeader);
@@ -27,7 +27,7 @@ serve(async (req) => {
 
     // Extract externalReference from payment or subscription
     const externalReference = payment?.externalReference || subscription?.externalReference;
-    if (!externalReference || !externalReference.startsWith("ws_")) {
+    if (!externalReference || (!externalReference.startsWith("ws_") && !externalReference.startsWith("w_"))) {
       console.log(`Webhook ignored: no valid external reference (${externalReference})`);
       return new Response(JSON.stringify({ success: true, message: "Ignored (no reference)" }), {
         status: 200,
@@ -35,11 +35,19 @@ serve(async (req) => {
       });
     }
 
-    // Parse externalReference: ws_[workspaceId]_pl_[planId]_cy_[cycle]_t_[timestamp]
+    // Parse externalReference: 
+    // Legacy: ws_[workspaceId]_pl_[planId]_cy_[cycle]_t_[timestamp]
+    // Shortened: w_[workspaceId]_p_[planId]_c_[cycleCode]_[timestamp]
     const parts = externalReference.split("_");
     const workspaceId = parts[1];
     const planId = parts[3];
-    const cycle = parts[5];
+    const cycleRaw = parts[5];
+
+    let cycle = cycleRaw;
+    if (cycleRaw === "mo") cycle = "monthly";
+    else if (cycleRaw === "qu") cycle = "quarterly";
+    else if (cycleRaw === "se") cycle = "semiannual";
+    else if (cycleRaw === "ye") cycle = "yearly";
 
     if (!workspaceId || !planId || !cycle) {
       console.warn("Invalid external reference format:", externalReference);

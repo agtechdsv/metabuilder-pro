@@ -12,6 +12,7 @@ export function MarketingSections() {
   const [plans, setPlans] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'quarterly' | 'semiannual' | 'yearly'>('monthly')
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -253,7 +254,7 @@ export function MarketingSections() {
 
       {/* Dynamic Pricing Section */}
       <section id="pricing" className="max-w-7xl mx-auto py-12 scroll-mt-24">
-        <div className="max-w-4xl mx-auto text-center mb-16 space-y-4">
+        <div className="max-w-4xl mx-auto text-center mb-10 space-y-4">
           <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-black dark:text-white leading-[1.1]">
             Planos flexíveis para <br/>
             <span className="text-indigo-600">qualquer tamanho de equipe</span>
@@ -261,6 +262,56 @@ export function MarketingSections() {
           <p className="text-xl text-neutral-500 dark:text-neutral-400 font-medium">
             Escolha o plano ideal e escale conforme a sua necessidade de licenças.
           </p>
+        </div>
+
+        {/* Billing Cycle Selector */}
+        <div className="flex justify-center mb-16">
+          <div className="bg-neutral-100/80 dark:bg-neutral-900/60 backdrop-blur-md border border-neutral-200/50 dark:border-neutral-800/40 p-1.5 rounded-2xl flex items-center gap-1.5 w-full max-w-lg relative z-20 shadow-inner">
+            {(['monthly', 'quarterly', 'semiannual', 'yearly'] as const).map((c) => {
+              const isSelected = billingCycle === c
+              const labels = {
+                monthly: 'Mensal',
+                quarterly: 'Trimestral',
+                semiannual: 'Semestral',
+                yearly: 'Anual'
+              }
+              const discountPercentage = {
+                monthly: '',
+                quarterly: '-10%',
+                semiannual: '-15%',
+                yearly: '-20%'
+              }
+
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setBillingCycle(c)}
+                  className="relative flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider flex flex-col items-center justify-center transition-all select-none z-10 outline-none"
+                >
+                  {isSelected && (
+                    <motion.div
+                      layoutId="activeMarketingCycleBg"
+                      className="absolute inset-0 bg-white dark:bg-neutral-950 rounded-xl shadow-md border border-neutral-250/20 dark:border-neutral-800/30 z-0"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <span className={`relative z-10 font-extrabold transition-colors ${
+                    isSelected 
+                      ? 'text-indigo-650 dark:text-indigo-400' 
+                      : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white'
+                  }`}>
+                    {labels[c]}
+                  </span>
+                  {discountPercentage[c] && (
+                    <span className="relative z-10 text-[8px] font-bold text-emerald-500 mt-0.5">
+                      {discountPercentage[c]}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {loading ? (
@@ -280,6 +331,48 @@ export function MarketingSections() {
                 : typeof plan.features === 'string'
                   ? JSON.parse(plan.features)
                   : [];
+
+              // Helper price resolver
+              const getCyclePrices = (p: any, currentCycle: 'monthly' | 'quarterly' | 'semiannual' | 'yearly') => {
+                const monthly = Number(p.price_monthly ?? p.price)
+                let total = monthly
+                let months = 1
+
+                if (currentCycle === 'monthly') {
+                  total = Number(p.price_monthly ?? p.price)
+                  months = 1
+                } else if (currentCycle === 'quarterly') {
+                  total = p.price_quarterly ? Number(p.price_quarterly) : Number((monthly * 3 * 0.90).toFixed(2))
+                  months = 3
+                } else if (currentCycle === 'semiannual') {
+                  total = p.price_semiannually ? Number(p.price_semiannually) : Number((monthly * 6 * 0.85).toFixed(2))
+                  months = 6
+                } else if (currentCycle === 'yearly') {
+                  total = p.price_yearly ? Number(p.price_yearly) : Number((monthly * 12 * 0.80).toFixed(2))
+                  months = 12
+                }
+
+                return {
+                  total,
+                  monthlyEquivalent: total / months,
+                  months
+                }
+              }
+
+              const { total, monthlyEquivalent, months } = getCyclePrices(plan, billingCycle)
+
+              // Dynamic discount banner
+              let discountLabel = ''
+              if (billingCycle !== 'monthly') {
+                const monthlyPrice = Number(plan.price_monthly ?? plan.price)
+                if (monthlyPrice > 0) {
+                  const regularPrice = monthlyPrice * months
+                  const discountPercent = Math.round(((regularPrice - total) / regularPrice) * 100)
+                  if (discountPercent > 0) {
+                    discountLabel = `Economize ${discountPercent}%`
+                  }
+                }
+              }
               
               return (
                 <div 
@@ -298,11 +391,41 @@ export function MarketingSections() {
                   
                   <div>
                     <h3 className="text-2xl font-black dark:text-white mb-2">{plan.name}</h3>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-6 min-h-[32px]">{plan.description}</p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4 min-h-[32px]">{plan.description}</p>
                     
-                    <div className="mb-6 flex items-baseline gap-1">
-                      <span className="text-4xl font-black text-indigo-600">R$ {Number(plan.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                      <span className="text-xs font-bold text-neutral-400">/mês</span>
+                    {discountLabel && (
+                      <div className="inline-block mb-4 bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border border-emerald-500/25">
+                        {discountLabel}
+                      </div>
+                    )}
+
+                    <div className="mb-6 flex flex-col justify-start">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-black text-indigo-600">
+                          R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-xs font-bold text-neutral-400">
+                          {billingCycle === 'monthly' 
+                            ? '/mês' 
+                            : billingCycle === 'quarterly' 
+                              ? '/trimestre' 
+                              : billingCycle === 'semiannual' 
+                                ? '/semestre' 
+                                : '/ano'}
+                        </span>
+                      </div>
+                      
+                      {billingCycle !== 'monthly' && (
+                        <div className="text-[11px] font-bold text-neutral-400 mt-1.5">
+                          Equiv. <span className="text-indigo-600 dark:text-indigo-400">R$ {monthlyEquivalent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>/mês
+                        </div>
+                      )}
+
+                      {plan.licenses_count > 1 && (
+                        <div className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 mt-1">
+                          Equiv. <span className="font-extrabold">R$ {(monthlyEquivalent / plan.licenses_count).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>/licença
+                        </div>
+                      )}
                     </div>
 
                     <div className="text-[11px] font-black uppercase tracking-widest text-neutral-400 mb-4">
@@ -320,12 +443,12 @@ export function MarketingSections() {
                   </div>
 
                   <Link 
-                    href={`/checkout?planId=${plan.id}`}
+                    href={`/checkout?planId=${plan.id}&cycle=${billingCycle}`}
                     onClick={(e) => {
                       if (!user) {
                         e.preventDefault()
                         window.dispatchEvent(new CustomEvent('open-auth-modal', {
-                          detail: { redirectTo: `/checkout?planId=${plan.id}` }
+                          detail: { redirectTo: `/checkout?planId=${plan.id}&cycle=${billingCycle}` }
                         }))
                       }
                     }}

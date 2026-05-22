@@ -73,8 +73,8 @@ serve(async (req) => {
 
     // 3. Efetuar chamada no Asaas para cancelar a renovação caso exista a assinatura ativa
     if (asaasSubscriptionId) {
-      const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY");
-      const ASAAS_URL = Deno.env.get("ASAAS_URL") || "https://api.asaas.com/v3";
+      const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY")?.trim();
+      const ASAAS_URL = Deno.env.get("ASAAS_URL")?.trim() || "https://api.asaas.com/v3";
 
       if (!ASAAS_API_KEY) {
         return new Response(

@@ -37,16 +37,21 @@ interface Plan {
 interface CheckoutClientProps {
   plans: Plan[]
   initialPlanId?: string
+  initialCycle?: 'monthly' | 'quarterly' | 'semiannual' | 'yearly'
   workspaceSlug?: string
   user: any
   profile?: any
 }
 
-export function CheckoutClient({ plans, initialPlanId, workspaceSlug, user, profile }: CheckoutClientProps) {
+export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSlug, user, profile }: CheckoutClientProps) {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(
     plans.find(p => p.id === initialPlanId) || plans[0] || null
   )
-  const [cycle, setCycle] = useState<'monthly' | 'quarterly' | 'semiannual' | 'yearly'>('monthly')
+  const [cycle, setCycle] = useState<'monthly' | 'quarterly' | 'semiannual' | 'yearly'>(
+    initialCycle && ['monthly', 'quarterly', 'semiannual', 'yearly'].includes(initialCycle)
+      ? initialCycle
+      : 'monthly'
+  )
   const [workspace, setWorkspace] = useState<any>(null)
 
   // Checkout form states
@@ -95,6 +100,28 @@ export function CheckoutClient({ plans, initialPlanId, workspaceSlug, user, prof
     }
     loadWorkspace()
   }, [workspaceSlug])
+
+  // Listen to profile updates from drawer
+  useEffect(() => {
+    const handleProfileUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent
+      const data = customEvent.detail
+      if (data) {
+        if (data.full_name) {
+          setBillingName(data.full_name)
+          setCardName(data.full_name)
+        }
+        if (data.cnpj) setBillingCpfCnpj(data.cnpj)
+        if (data.email) setBillingEmail(data.email)
+        if (data.whatsapp) setBillingPhone(data.whatsapp)
+        if (data.address_zip) setBillingPostalCode(data.address_zip)
+        if (data.address_number) setBillingAddressNumber(data.address_number)
+      }
+    }
+
+    window.addEventListener('profile-updated', handleProfileUpdate)
+    return () => window.removeEventListener('profile-updated', handleProfileUpdate)
+  }, [])
 
   // Helper to calculate cycle prices
   const getCyclePrices = (plan: Plan | null, currentCycle: 'monthly' | 'quarterly' | 'semiannual' | 'yearly') => {
@@ -311,7 +338,7 @@ export function CheckoutClient({ plans, initialPlanId, workspaceSlug, user, prof
           <p>
             <strong>Valor Contratado:</strong> R${' '}
             {selectedPlan
-              ? getCyclePrices(selectedPlan, cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+              ? getCyclePrices(selectedPlan, cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
               : '0,00'}{' '}
             ({cycle === 'monthly' ? 'Mensal' : cycle === 'quarterly' ? 'Trimestral' : cycle === 'semiannual' ? 'Semestral' : 'Anual'})
           </p>
@@ -902,14 +929,14 @@ export function CheckoutClient({ plans, initialPlanId, workspaceSlug, user, prof
                     return (
                       <div className="text-right shrink-0">
                         <span className="text-lg font-black text-neutral-900 dark:text-white">
-                          R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                         <span className="text-[9px] text-neutral-400 block font-bold mt-0.5">
-                          equiv. R$ {monthlyEquivalent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês
+                          equiv. R$ {monthlyEquivalent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mês
                         </span>
                         {selectedPlan.licenses_count > 1 && (
                           <span className="text-[9px] text-indigo-500 dark:text-indigo-400 block font-bold mt-0.5">
-                            equiv. R$ {(monthlyEquivalent / selectedPlan.licenses_count).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/licença
+                            equiv. R$ {(monthlyEquivalent / selectedPlan.licenses_count).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/licença
                           </span>
                         )}
 
@@ -938,7 +965,7 @@ export function CheckoutClient({ plans, initialPlanId, workspaceSlug, user, prof
                 <div className="border-t border-neutral-150 dark:border-neutral-800/80 pt-4 flex justify-between items-center">
                   <span className="text-xs font-black uppercase tracking-wider text-neutral-400">Total do Ciclo</span>
                   <span className="text-2xl font-black text-indigo-650 dark:text-indigo-400">
-                    R$ {getCyclePrices(selectedPlan, cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {getCyclePrices(selectedPlan, cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
