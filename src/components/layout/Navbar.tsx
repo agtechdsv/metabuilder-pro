@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { LayoutDashboard, Plus, LogIn } from 'lucide-react'
 import { signOut } from '@/app/auth/actions'
 import { LoginForm } from '@/components/auth/LoginForm'
@@ -22,6 +22,33 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
   const { t } = useI18n()
   const pathname = usePathname()
 
+  useEffect(() => {
+    const handleOpenAuth = (e: Event) => {
+      const customEvent = e as CustomEvent
+      const redirectTo = customEvent.detail?.redirectTo
+      if (redirectTo && typeof window !== 'undefined') {
+        const url = new URL(window.location.href)
+        url.searchParams.set('redirect_to', redirectTo)
+        window.history.pushState(null, '', url.toString())
+      }
+      setIsAuthOpen(true)
+    }
+
+    window.addEventListener('open-auth-modal', handleOpenAuth)
+    return () => window.removeEventListener('open-auth-modal', handleOpenAuth)
+  }, [])
+
+  const handleClose = () => {
+    setIsAuthOpen(false)
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      if (url.searchParams.has('redirect_to')) {
+        url.searchParams.delete('redirect_to')
+        window.history.pushState(null, '', url.toString())
+      }
+    }
+  }
+
   // No header transparente para a landing page? 
   // O usuário disse que o de /workspace deve ser o padrão em TODAS, incluindo /
   
@@ -39,14 +66,15 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
               </h1>
             </Link>
 
-            {pathname === '/' && (
+            {(pathname === '/' || pathname?.startsWith('/features')) && (
               <nav className="hidden lg:flex items-center gap-6">
-                <Link href="/features/speed" className="text-[11px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.speed')}</Link>
-                <Link href="/features/integration" className="text-[11px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.integration')}</Link>
-                <Link href="/features/branding" className="text-[11px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.branding')}</Link>
-                <Link href="/features/security" className="text-[11px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.security')}</Link>
-                <Link href="/features/use-cases" className="text-[11px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.use_cases')}</Link>
-                <Link href="/features/zero-trust" className="text-[11px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 transition-colors border-l border-neutral-200 dark:border-neutral-800 pl-6">{t('marketing_v2.navbar.zero_trust')}</Link>
+                <Link href="/features/speed" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.speed')}</Link>
+                <Link href="/features/integration" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.integration')}</Link>
+                <Link href="/features/branding" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.branding')}</Link>
+                <Link href="/features/security" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.security')}</Link>
+                <Link href="/features/use-cases" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.use_cases')}</Link>
+                <Link href="/#pricing" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.pricing')}</Link>
+                <Link href="/features/zero-trust" className="text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 transition-colors border-l border-neutral-200 dark:border-neutral-800 pl-6">{t('marketing_v2.navbar.zero_trust')}</Link>
               </nav>
             )}
           </div>
@@ -66,7 +94,7 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
         </div>
       </header>
 
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)}>
+      <AuthModal isOpen={isAuthOpen} onClose={handleClose}>
         <LoginForm />
       </AuthModal>
     </>

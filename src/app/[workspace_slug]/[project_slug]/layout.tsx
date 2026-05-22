@@ -105,13 +105,32 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   // 1. Resolve Workspace
   const { data: workspaces, error: workspaceError } = await supabase
     .from('workspaces')
-    .select('id, name')
+    .select('id, name, is_blocked, subscription_status')
     .eq('slug', workspace_slug)
     .limit(1)
 
   const workspace = workspaces?.[0]
 
   if (workspaceError || !workspace) notFound()
+
+  // Verificação de assinatura para o runtime (end-users/visitors)
+  if (workspace.is_blocked || workspace.subscription_status === 'blocked' || workspace.subscription_status === 'pending') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950 p-6 text-black dark:text-white">
+        <div className="w-full max-w-md bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-8 rounded-[2rem] shadow-xl text-center space-y-6">
+          <div className="w-16 h-16 bg-amber-500/10 text-amber-600 dark:text-amber-500 rounded-2xl flex items-center justify-center mx-auto shadow-inner font-black text-xl">
+            !
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-xl font-bold tracking-tight">Aplicação Suspensa</h3>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
+              Esta aplicação está temporariamente suspensa por motivos de faturamento. Se você é o administrador, acesse o painel para regularizar.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // 2. Resolve Project (incluindo navegação)
   const { data: projects, error: projectError } = await supabase

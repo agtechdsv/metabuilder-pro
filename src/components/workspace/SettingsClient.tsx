@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, UserPlus, Shield, X, Mail, RefreshCw, FolderLock } from 'lucide-react'
+import { Users, UserPlus, Shield, X, Mail, RefreshCw, FolderLock, CreditCard } from 'lucide-react'
 import { inviteWorkspaceMember, removeWorkspaceMember, toggleMemberProject } from '@/app/actions/workspace'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { useRouter } from 'next/navigation'
+import BillingSettings from './BillingSettings'
 
 interface Member {
   id: string
@@ -22,15 +23,31 @@ interface SettingsClientProps {
     id: string
     name: string
     slug: string
+    plan_id?: string | null
+    subscription_status?: string | null
+    subscription_cycle?: string | null
+    subscription_expires_at?: string | null
+    asaas_customer_id?: string | null
+    asaas_subscription_id?: string | null
   }
   initialMembers: Member[]
   currentUserRole: string
   workspaceProjects?: { id: string; name: string }[]
   initialMemberProjects?: { user_id: string; project_id: string }[]
+  payments: any[]
+  plans: any[]
 }
 
-export function SettingsClient({ workspace, initialMembers, currentUserRole, workspaceProjects, initialMemberProjects }: SettingsClientProps) {
-  const [activeTab, setActiveTab] = useState<'team' | 'general'>('team')
+export function SettingsClient({ 
+  workspace, 
+  initialMembers, 
+  currentUserRole, 
+  workspaceProjects, 
+  initialMemberProjects,
+  payments,
+  plans
+}: SettingsClientProps) {
+  const [activeTab, setActiveTab] = useState<'team' | 'billing'>('team')
   const [members, setMembers] = useState<Member[]>(initialMembers)
   const [memberProjects, setMemberProjects] = useState(initialMemberProjects || [])
 
@@ -118,6 +135,13 @@ export function SettingsClient({ workspace, initialMembers, currentUserRole, wor
         >
           <Users className="w-4 h-4" />
           Equipe e Permissões
+        </button>
+        <button 
+          onClick={() => setActiveTab('billing')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'billing' ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
+        >
+          <CreditCard className="w-4 h-4" />
+          Faturamento
         </button>
       </div>
 
@@ -262,6 +286,15 @@ export function SettingsClient({ workspace, initialMembers, currentUserRole, wor
           </div>
 
         </div>
+      )}
+
+      {activeTab === 'billing' && (
+        <BillingSettings 
+          workspace={workspace} 
+          payments={payments} 
+          plans={plans} 
+          currentUserRole={currentUserRole}
+        />
       )}
 
       {/* Modal de Confirmação de Remoção */}

@@ -141,10 +141,20 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
 
   const handleGoogleLogin = async () => {
     const supabase = createClient()
+    
+    let callbackUrl = `${window.location.origin}/auth/callback?popup=true`
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search)
+      const redirectParam = searchParams.get('redirect_to')
+      if (redirectParam) {
+        callbackUrl += `&next=${encodeURIComponent(redirectParam)}`
+      }
+    }
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?popup=true`,
+        redirectTo: callbackUrl,
         skipBrowserRedirect: true,
         queryParams: {
           prompt: 'select_account',

@@ -1,12 +1,54 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers } from 'lucide-react'
+import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2 } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
+import { createClient } from '@/utils/supabase/client'
 
 export function MarketingSections() {
   const { t } = useI18n()
+  const [plans, setPlans] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('subscription_plans')
+          .select('*')
+          .eq('is_active', true)
+          .order('price', { ascending: true })
+        if (data) {
+          setPlans(data)
+        }
+      } catch (err) {
+        console.error('Error fetching plans:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    const supabase = createClient()
+    fetchPlans()
+
+    // Get initial session/user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user)
+    })
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [])
 
   const features = [
     {
@@ -209,6 +251,99 @@ export function MarketingSections() {
         </div>
       </section>
 
+      {/* Dynamic Pricing Section */}
+      <section id="pricing" className="max-w-7xl mx-auto py-12 scroll-mt-24">
+        <div className="max-w-4xl mx-auto text-center mb-16 space-y-4">
+          <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-black dark:text-white leading-[1.1]">
+            Planos flexíveis para <br/>
+            <span className="text-indigo-600">qualquer tamanho de equipe</span>
+          </h2>
+          <p className="text-xl text-neutral-500 dark:text-neutral-400 font-medium">
+            Escolha o plano ideal e escale conforme a sua necessidade de licenças.
+          </p>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+          </div>
+        ) : plans.length === 0 ? (
+          <div className="text-center py-12 text-neutral-500">
+            Nenhum plano ativo encontrado.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {plans.map((plan) => {
+              // Parse features if string, or use directly if array
+              const featuresList = Array.isArray(plan.features) 
+                ? plan.features 
+                : typeof plan.features === 'string'
+                  ? JSON.parse(plan.features)
+                  : [];
+              
+              return (
+                <div 
+                  key={plan.id}
+                  className={`p-8 rounded-[2.5rem] bg-white dark:bg-neutral-900 border transition-all duration-300 flex flex-col justify-between relative shadow-lg ${
+                    plan.licenses_count === 3 
+                      ? 'border-indigo-500 ring-2 ring-indigo-500/20 scale-105 z-10 dark:bg-neutral-900/90' 
+                      : 'border-neutral-200 dark:border-neutral-800 hover:border-indigo-500/50'
+                  }`}
+                >
+                  {plan.licenses_count === 3 && (
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                      Mais Popular
+                    </div>
+                  )}
+                  
+                  <div>
+                    <h3 className="text-2xl font-black dark:text-white mb-2">{plan.name}</h3>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-6 min-h-[32px]">{plan.description}</p>
+                    
+                    <div className="mb-6 flex items-baseline gap-1">
+                      <span className="text-4xl font-black text-indigo-600">R$ {Number(plan.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      <span className="text-xs font-bold text-neutral-400">/mês</span>
+                    </div>
+
+                    <div className="text-[11px] font-black uppercase tracking-widest text-neutral-400 mb-4">
+                      {plan.licenses_count} {plan.licenses_count === 1 ? 'Licença inclusa' : 'Licenças inclusas'}
+                    </div>
+
+                    <ul className="space-y-3 mb-8">
+                      {featuresList.map((feat: string, index: number) => (
+                        <li key={index} className="flex items-start gap-3 text-sm text-neutral-600 dark:text-neutral-400">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                          <span>{feat}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <Link 
+                    href={`/checkout?planId=${plan.id}`}
+                    onClick={(e) => {
+                      if (!user) {
+                        e.preventDefault()
+                        window.dispatchEvent(new CustomEvent('open-auth-modal', {
+                          detail: { redirectTo: `/checkout?planId=${plan.id}` }
+                        }))
+                      }
+                    }}
+                    className={`w-full py-4 rounded-2xl text-center font-black text-xs uppercase tracking-widest transition-all duration-300 hover:scale-102 ${
+                      plan.licenses_count === 3
+                        ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-500/20'
+                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                    }`}
+                  >
+                    Contratar Plano
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       {/* Final CTA */}
       <section className="max-w-7xl mx-auto py-20 text-center space-y-10">
         <div className="space-y-4">
@@ -227,11 +362,12 @@ export function MarketingSections() {
           >
             {t('marketing_v2.home.cta_start')}
           </Link>
-          <button 
+          <a 
+            href="#pricing"
             className="px-10 py-5 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white rounded-2xl font-black text-xs uppercase tracking-widest border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all"
           >
             {t('marketing_v2.home.cta_plans')}
-          </button>
+          </a>
         </div>
       </section>
 

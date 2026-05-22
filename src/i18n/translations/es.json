@@ -554,6 +554,7 @@
       "branding": "Whitelabel",
       "security": "Seguridad",
       "use_cases": "Lógicas",
+      "pricing": "Planes",
       "zero_trust": "Zero-Trust"
     },
     "hero": {

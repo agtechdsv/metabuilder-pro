@@ -39,6 +39,28 @@ export default async function GlobalDashboard() {
     .select('*, projects(count)')
     .order('created_at', { ascending: false })
 
+  // 1. Verificar se o usuário possui assinaturas ativas (ou se é Super Admin)
+  const isSuperAdmin = profile?.is_super_admin === true
+  
+  if (!isSuperAdmin) {
+    const activeWorkspaces = workspaces?.filter(
+      (w) => !w.is_blocked && (w.subscription_status === 'active' || w.subscription_status === 'canceled')
+    ) || []
+
+    if (activeWorkspaces.length === 0) {
+      // Redireciona para o checkout. Se tiver algum workspace bloqueado dele, passa o slug para pagamento
+      const ownedBlockedWorkspace = workspaces?.find(
+        (w) => w.owner_id === user.id && (w.is_blocked || w.subscription_status === 'blocked' || w.subscription_status === 'pending')
+      )
+
+      if (ownedBlockedWorkspace) {
+        redirect(`/checkout?workspace_slug=${ownedBlockedWorkspace.slug}`)
+      } else {
+        redirect('/checkout')
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col pt-16 bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300">
       

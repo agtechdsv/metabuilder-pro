@@ -117,6 +117,18 @@ export default async function SettingsPage({ params }: SettingsPageProps) {
     .select('user_id, project_id')
     .eq('workspace_id', workspace.id)
 
+  // 6. Busca os planos de assinatura
+  const { data: plans } = await admin
+    .from('subscription_plans')
+    .select('*')
+
+  // 7. Busca os pagamentos do workspace
+  const { data: payments } = await admin
+    .from('payments')
+    .select('*')
+    .eq('workspace_id', workspace.id)
+    .order('created_at', { ascending: false })
+
   return (
     <div className="min-h-screen flex flex-col pt-16 bg-neutral-50 dark:bg-[#050505] text-black dark:text-white transition-colors duration-300">
       
@@ -134,6 +146,8 @@ export default async function SettingsPage({ params }: SettingsPageProps) {
           currentUserRole={currentUserMember.role}
           workspaceProjects={projects || []}
           initialMemberProjects={memberProjects || []}
+          payments={payments || []}
+          plans={plans || []}
         />
       </main>
       <Footer />
