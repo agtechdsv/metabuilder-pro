@@ -33,6 +33,7 @@ import {
   Share2,
   Columns,
   Settings,
+  LayoutGrid,
   Wand2,
   Terminal,
   RotateCcw,
@@ -128,6 +129,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
       details_interface_types: {} as Record<string, 'modal' | 'drawer'>,
       details_inline_types: {} as Record<string, boolean>,
       export_formats: ['xlsx', 'csv', 'json'],
+      gallery_click_behavior: 'lightbox',
       scheduler_config: {
         title_field: '',
         start_date_field: '',
@@ -262,6 +264,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
           details_interface_types: initialData.layout_config?.details_interface_types || {},
           details_inline_types: initialData.layout_config?.details_inline_types || {},
           export_formats: initialData.layout_config?.export_formats || ['xlsx', 'csv', 'json'],
+          gallery_click_behavior: initialData.layout_config?.gallery_click_behavior || 'lightbox',
           scheduler_config: initialData.layout_config?.scheduler_config || {
             title_field: '',
             start_date_field: '',
@@ -733,6 +736,7 @@ function StepLogic({ config, setConfig }: any) {
     { id: 'mapa_mental', title: t('wizard.logic.types.mapa_mental.title'), desc: t('wizard.logic.types.mapa_mental.desc'), icon: Share2 },
     { id: 'analytics', title: t('wizard.logic.types.analytics.title', 'Dashboard (BI)'), desc: t('wizard.logic.types.analytics.desc', 'Indicadores de desempenho, gráficos e KPIs.'), icon: Layout },
     { id: 'scheduler', title: t('wizard.logic.types.scheduler.title', 'Agenda / Calendário'), desc: t('wizard.logic.types.scheduler.desc', 'Agendamentos, prazos, compromissos e tarefas em calendário.'), icon: Calendar },
+    { id: 'galeria', title: t('wizard.logic.types.galeria.title', 'Galeria / Assets'), desc: t('wizard.logic.types.galeria.desc', 'Galeria de mídias, imagens e documentos com download e redirecionamentos.'), icon: LayoutGrid },
     { id: 'personalizado', title: t('wizard.logic.types.personalizado.title'), desc: t('wizard.logic.types.personalizado.desc'), icon: Settings }
   ]
 
@@ -1773,6 +1777,53 @@ function StepLayout({ config, setConfig, models }: any) {
               </div>
             </div>
           )}
+          {config.logic_type === 'galeria' && (
+            <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
+                    <LayoutGrid className="w-4 h-4" />
+                  </div>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Configuração da Galeria</h4>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Visualização de Imagem</label>
+                <div className="flex p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setConfig({
+                      ...config,
+                      layout_config: { ...config.layout_config, gallery_click_behavior: 'lightbox' }
+                    })}
+                    className={cn(
+                      "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                      (config.layout_config.gallery_click_behavior || 'lightbox') === 'lightbox' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
+                    )}
+                  >
+                    Abrir na Modal (Lightbox)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfig({
+                      ...config,
+                      layout_config: { ...config.layout_config, gallery_click_behavior: 'thumbnail' }
+                    })}
+                    className={cn(
+                      "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                      (config.layout_config.gallery_click_behavior || 'lightbox') === 'thumbnail' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
+                    )}
+                  >
+                    Ver no próprio Thumbnail
+                  </button>
+                </div>
+                <p className="text-[10px] text-neutral-400 font-medium italic ml-1">
+                  Selecione "Ver no próprio Thumbnail" para exibir a imagem inteira (sem cortes) diretamente no card, desabilitando a modal de visualização ao clicar.
+                </p>
+              </div>
+            </div>
+          )}
 
 
           {/* Seção Global de Relacionamentos (JOINS) - Posicionada estrategicamente antes das Zonas de Dados */}
@@ -1793,6 +1844,7 @@ function StepLayout({ config, setConfig, models }: any) {
             config.logic_type === 'mapa_mental' || 
             config.logic_type === 'master_detail' || 
             config.logic_type === 'scheduler' || 
+            config.logic_type === 'galeria' || 
             config.logic_type === 'personalizado' || 
             config.logic_type === 'analytics') && (
             <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
@@ -1853,7 +1905,7 @@ function StepLayout({ config, setConfig, models }: any) {
                 <h4 className="text-[9px] font-black uppercase text-emerald-600 tracking-[0.3em]">
                   {config.logic_type === 'kanban' ? t('wizard.layout.zones.kanban_card', 'Campos do Card') : config.logic_type === 'mapa_mental' ? t('wizard.layout.zones.mindmap_nodes', 'Campos do Mapa (Níveis)') : `${t('wizard.layout.zones.zone_02')}: ${t('wizard.layout.zones.grid')}`}
                 </h4>
-                {config.logic_type !== 'kanban' && config.logic_type !== 'mapa_mental' && (
+                {config.logic_type !== 'kanban' && config.logic_type !== 'mapa_mental' && config.logic_type !== 'galeria' && (
                   <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg w-fit">
                     {[
                       { id: 'list', label: t('wizard.layout.display_options.list') },
@@ -1933,6 +1985,7 @@ function StepLayout({ config, setConfig, models }: any) {
             config.logic_type === 'kanban' || 
             config.logic_type === 'scheduler' || 
             config.logic_type === 'mapa_mental' || 
+            config.logic_type === 'galeria' || 
             config.logic_type === 'personalizado') && (
             <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-4 shadow-sm">
               <div className="flex items-center justify-between">

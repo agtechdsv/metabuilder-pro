@@ -68,6 +68,8 @@ export function StudioDashboardClient({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [viewToDelete, setViewToDelete] = useState<any>(null)
 
+  const userViews = views?.filter(view => view.slug !== 'downloads') || []
+
   const refreshData = () => {
     setViewToEdit(null)
     setViewMode('list')
@@ -236,7 +238,7 @@ export function StudioDashboardClient({
                 <div className="p-2 bg-purple-500/10 rounded-xl text-purple-600 dark:text-purple-500">
                   <Layers className="w-5 h-5" />
                 </div>
-                <span className="text-xl font-black text-neutral-900 dark:text-white">{views?.length || 0}</span>
+                <span className="text-xl font-black text-neutral-900 dark:text-white">{userViews.length}</span>
               </div>
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium uppercase tracking-widest">{t('dashboard.projects.studio.stats.custom_views')}</p>
             </div>
@@ -311,7 +313,7 @@ export function StudioDashboardClient({
           <div className="">
             <MenuBuilder 
               project={project}
-              views={views}
+              views={userViews}
               onSave={handleSaveNavigation}
             />
           </div>
@@ -330,7 +332,7 @@ export function StudioDashboardClient({
                 {t('dashboard.projects.studio.use_cases')}
               </h3>
               <div className="px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-[10px] font-black text-neutral-500 dark:text-neutral-400 uppercase tracking-widest border border-neutral-200 dark:border-neutral-800">
-                {views?.length || 0} {t('dashboard.projects.studio.created_suffix')}
+                {userViews.length} {t('dashboard.projects.studio.created_suffix')}
               </div>
             </div>
 
@@ -375,7 +377,7 @@ export function StudioDashboardClient({
                 </div>
               </div>
 
-              {views?.map((view) => (
+              {userViews.map((view) => (
                 <div
                   key={view.id}
                   className="group relative p-5 bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] hover:border-indigo-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl dark:shadow-none hover:-translate-y-1"
@@ -436,7 +438,7 @@ export function StudioDashboardClient({
                 </div>
               ))}
 
-              {views.length === 0 && (
+              {userViews.length === 0 && (
                 <div className="col-span-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[3rem] text-neutral-400 gap-4">
                   <div className="p-4 bg-neutral-50 dark:bg-neutral-900 rounded-full">
                     <Layers className="w-10 h-10 opacity-20" />

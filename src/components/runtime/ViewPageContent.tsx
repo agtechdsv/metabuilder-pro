@@ -67,6 +67,7 @@ interface ViewPageContentProps {
     allow_runtime_edit: boolean
   }
   exportFormats?: string[]
+  galleryClickBehavior?: 'lightbox' | 'thumbnail'
 }
 
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
@@ -103,7 +104,8 @@ export default function ViewPageContent({
   description,
   icon,
   exportFormats = ['xlsx', 'csv', 'json'],
-  analyticsConfig: initialAnalyticsConfig
+  analyticsConfig: initialAnalyticsConfig,
+  galleryClickBehavior
 }: ViewPageContentProps) {
 
   // Garante que todas as listas de campos sejam únicas por ID
@@ -1453,6 +1455,7 @@ export default function ViewPageContent({
               onFiltersChange={setGlobalFilterValues}
               tunnelChannel={tunnelChannel}
               isTunnelReady={isTunnelReady}
+              galleryClickBehavior={galleryClickBehavior}
               onAdd={handleOpenAdd}
               onView={handleOpenView}
               onEdit={handleOpenEdit}

@@ -445,6 +445,10 @@
         "master_detail": {
           "title": "Master-Detail",
           "desc": "Deep relational explorer with tabs and data groupings."
+        },
+        "galeria": {
+          "title": "Gallery / Assets",
+          "desc": "Gallery of media, images, and documents with download and redirection actions."
         }
       },
       "screen_name": "Screen Name",
@@ -786,6 +790,14 @@
           "behavior": "The engine bypasses automatic SQL generators and executes raw database queries specified by the programmer.",
           "example": "Analytical dashboards with complex SQL aggregations or pages integrating external REST APIs.",
           "components": "SQL editor with syntax highlighting, freeform UI templates, and custom route buttons."
+        },
+        "galeria": {
+          "title": "Gallery / Assets",
+          "desc": "Media library and attachment file management with preview and download.",
+          "what_is": "A viewing and control interface for assets (images, PDFs, documents, videos) linked to database records.",
+          "behavior": "Synchronizes file references stored in a bucket (storage) with database records, providing secure download and native previews.",
+          "example": "Customer documents center, product images library, or payment receipts gallery.",
+          "components": "Asset cards grid with preview, extension/category filters, full-screen image lightbox, and download button."
         }
       }
     }

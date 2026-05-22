@@ -370,6 +370,7 @@ export default async function SlugPage({ params }: PageProps) {
           actionInterfaceType={view.layout_config?.action_interface_type}
           analyticsConfig={view.layout_config?.analytics_config}
           exportFormats={view.layout_config?.export_formats}
+          galleryClickBehavior={view.layout_config?.gallery_click_behavior}
           baseUrl={`${baseUrl}/dashboard`}
           breadcrumbs={breadcrumbs}
           description={navDescription}

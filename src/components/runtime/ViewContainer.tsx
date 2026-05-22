@@ -35,12 +35,14 @@ interface ViewContainerProps {
   onFiltersChange?: (filters: Record<string, string>) => void
   tunnelChannel?: any
   isTunnelReady?: boolean
+  galleryClickBehavior?: 'lightbox' | 'thumbnail'
 }
 
 import DynamicCardList from './DynamicCardList'
 import DynamicKanban from './DynamicKanban'
 import DynamicMindMap from './DynamicMindMap'
 import DynamicScheduler from './DynamicScheduler'
+import DynamicGallery from './DynamicGallery'
 import { createClient } from '@/utils/supabase/client'
 import { Loader2 } from 'lucide-react'
 
@@ -84,10 +86,11 @@ export default function ViewContainer({
   externalFilters = {},
   onFiltersChange,
   tunnelChannel,
-  isTunnelReady
+  isTunnelReady,
+  galleryClickBehavior
 }: ViewContainerProps) {
-  const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban' | 'mapa_mental' | 'scheduler'>(
-    logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'kanban' ? 'kanban' : logicType === 'scheduler' ? 'scheduler' : (displayType === 'both' ? defaultView : (displayType as any))
+  const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban' | 'mapa_mental' | 'scheduler' | 'galeria'>(
+    logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'kanban' ? 'kanban' : logicType === 'scheduler' ? 'scheduler' : logicType === 'galeria' ? 'galeria' : (displayType === 'both' ? defaultView : (displayType as any))
   )
   const [searchQuery, setSearchQuery] = useState('')
   const filterValues = externalFilters
@@ -1073,6 +1076,16 @@ export default function ViewContainer({
           onDelete={onDelete}
           primaryKeyName={primaryKeyName}
           dictionary={dictionary}
+        />
+      ) : viewMode === 'galeria' ? (
+        <DynamicGallery 
+          data={data}
+          fields={displayFields}
+          buttonsConfig={buttonsConfig}
+          onView={onView}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          galleryClickBehavior={galleryClickBehavior}
         />
       ) : (
         <div className="space-y-6">

@@ -445,6 +445,10 @@
         "master_detail": {
           "title": "Maestro-Detalle",
           "desc": "Explorador relacional profundo con pestañas y agrupaciones de datos."
+        },
+        "galeria": {
+          "title": "Galería / Assets",
+          "desc": "Galería de medios, imágenes y documentos con descargas y redireccionamientos."
         }
       },
       "screen_name": "Nombre de la Pantalla",
@@ -786,6 +790,14 @@
           "behavior": "El motor omite la generación de SQL automática y procesa la consulta Raw SQL escrita por el programador.",
           "example": "Paneles analíticos complejos con agregaciones pesadas o flujos que llaman a APIs externas.",
           "components": "Editor SQL con resaltado de código, plantillas UI personalizadas y definición de botones de acción."
+        },
+        "galeria": {
+          "title": "Galería / Assets",
+          "desc": "Biblioteca de medios y gestión de archivos adjuntos con previsualización y descarga.",
+          "what_is": "Una interfaz de visualización y control de assets (imágenes, PDFs, documentos, videos) asociados a registros de la base de datos.",
+          "behavior": "Sincroniza referencias de archivos almacenados en el bucket (storage) con registros de la base, ofreciendo descarga segura y preview nativo.",
+          "example": "Central de documentos de clientes, biblioteca de imágenes de productos, o galería de comprobantes de pago.",
+          "components": "Cuadrícula de tarjetas de asset con vista previa, filtros por extensión/categoría, lightbox de imagen en pantalla completa y botón de descarga."
         }
       }
     }
