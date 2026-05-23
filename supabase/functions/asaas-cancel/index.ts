@@ -21,10 +21,11 @@ serve(async (req) => {
       );
     }
 
+    const serviceRoleKey = Deno.env.get("MY_SERVICE_ROLE_KEY")?.trim() || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim() || "";
     // 1. Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", // Use service role to write/update workspaces
+      serviceRoleKey, // Use service role to write/update workspaces
       { global: { headers: { Authorization: authHeader } } }
     );
 
@@ -51,7 +52,7 @@ serve(async (req) => {
     // 2. Fetch the workspace and verify if the user is the owner
     const { data: workspace, error: wsError } = await supabaseClient
       .from("workspaces")
-      .select("id, owner_id, asaas_subscription_id")
+      .select("id, owner_id")
       .eq("id", workspaceId)
       .single();
 
@@ -69,7 +70,14 @@ serve(async (req) => {
       );
     }
 
-    const asaasSubscriptionId = workspace.asaas_subscription_id;
+    // Get the subscription ID from the profile
+    const { data: profile } = await supabaseClient
+      .from("profiles")
+      .select("asaas_subscription_id")
+      .eq("id", user.id)
+      .single();
+
+    const asaasSubscriptionId = profile?.asaas_subscription_id;
 
     // 3. Efetuar chamada no Asaas para cancelar a renovação caso exista a assinatura ativa
     if (asaasSubscriptionId) {
@@ -103,11 +111,11 @@ serve(async (req) => {
 
     // 4. Alterar o status no banco local para canceled
     const { error: updateError } = await supabaseClient
-      .from("workspaces")
+      .from("profiles")
       .update({
         subscription_status: "canceled"
       })
-      .eq("id", workspaceId);
+      .eq("id", user.id);
 
     if (updateError) {
       console.error("Erro ao atualizar status do workspace para cancelado:", updateError);

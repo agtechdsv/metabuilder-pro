@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
+import { createClient, createAdminClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 // Helper to check if the current user is a super admin
@@ -19,7 +19,8 @@ async function checkSuperAdmin() {
     throw new Error('Acesso negado: Apenas administradores globais podem realizar esta ação.')
   }
 
-  return { supabase, user }
+  const adminSupabase = createAdminClient()
+  return { supabase, adminSupabase, user }
 }
 
 export async function savePlan(plan: {
@@ -36,7 +37,7 @@ export async function savePlan(plan: {
   is_active: boolean
 }) {
   try {
-    const { supabase } = await checkSuperAdmin()
+    const { adminSupabase } = await checkSuperAdmin()
 
     const planData = {
       name: plan.name,
@@ -54,14 +55,14 @@ export async function savePlan(plan: {
     let error
     if (plan.id) {
       // Update
-      const { error: err } = await supabase
+      const { error: err } = await adminSupabase
         .from('subscription_plans')
         .update(planData)
         .eq('id', plan.id)
       error = err
     } else {
       // Insert
-      const { error: err } = await supabase
+      const { error: err } = await adminSupabase
         .from('subscription_plans')
         .insert(planData)
       error = err
@@ -82,9 +83,9 @@ export async function savePlan(plan: {
 
 export async function deletePlan(planId: string) {
   try {
-    const { supabase } = await checkSuperAdmin()
+    const { adminSupabase } = await checkSuperAdmin()
 
-    const { error } = await supabase
+    const { error } = await adminSupabase
       .from('subscription_plans')
       .delete()
       .eq('id', planId)
@@ -104,13 +105,12 @@ export async function deletePlan(planId: string) {
 
 export async function toggleWorkspaceBlock(workspaceId: string, isBlocked: boolean) {
   try {
-    const { supabase } = await checkSuperAdmin()
+    const { adminSupabase } = await checkSuperAdmin()
 
-    const { error } = await supabase
+    const { error } = await adminSupabase
       .from('workspaces')
       .update({
-        is_blocked: isBlocked,
-        subscription_status: isBlocked ? 'blocked' : 'active'
+        is_blocked: isBlocked
       })
       .eq('id', workspaceId)
 

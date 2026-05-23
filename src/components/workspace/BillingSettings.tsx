@@ -11,6 +11,13 @@ interface Workspace {
   id: string
   name: string
   slug: string
+  owner_id: string
+}
+
+interface Profile {
+  id: string
+  full_name: string | null
+  email: string | null
   plan_id?: string | null
   subscription_status?: string | null
   subscription_cycle?: string | null
@@ -45,19 +52,20 @@ interface Plan {
 
 interface BillingSettingsProps {
   workspace: Workspace
+  profile: Profile
   payments: Payment[]
   plans: Plan[]
-  currentUserRole: string
+  isOwner: boolean
 }
 
-export default function BillingSettings({ workspace: initialWorkspace, payments, plans, currentUserRole }: BillingSettingsProps) {
-  const [workspace, setWorkspace] = useState<Workspace>(initialWorkspace)
+export default function BillingSettings({ workspace, profile: initialProfile, payments, plans, isOwner }: BillingSettingsProps) {
+  const [profile, setProfile] = useState<Profile>(initialProfile)
   const [isCanceling, setIsCanceling] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
 
-  const activePlan = plans.find(p => p.id === workspace.plan_id)
+  const activePlan = plans.find(p => p.id === profile.plan_id)
 
   const getCycleLabel = (cycle?: string | null) => {
     switch (cycle) {
@@ -80,7 +88,7 @@ export default function BillingSettings({ workspace: initialWorkspace, payments,
 
   const getStatusBadge = (status?: string | null) => {
     const s = status?.toLowerCase()
-    if (s === 'active' || s === 'received' || s === 'confirmed') {
+    if (s === 'active' || s === 'received' || s === 'confirmed' || s === 'paid') {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
           <CheckCircle className="w-3.5 h-3.5" />
@@ -125,7 +133,7 @@ export default function BillingSettings({ workspace: initialWorkspace, payments,
 
   const getPlanPrice = () => {
     if (!activePlan) return null
-    switch (workspace.subscription_cycle) {
+    switch (profile.subscription_cycle) {
       case 'monthly': return activePlan.price_monthly
       case 'quarterly': return activePlan.price_quarterly
       case 'semiannual': return activePlan.price_semiannually
@@ -157,9 +165,9 @@ export default function BillingSettings({ workspace: initialWorkspace, payments,
 
       if (error) throw error
 
-      if (data?.success) {
-        toast(data.message || 'Assinatura cancelada com sucesso!', 'success')
-        setWorkspace(prev => ({ ...prev, subscription_status: 'canceled' }))
+      if (data && data.success) {
+        toast('Assinatura cancelada com sucesso.', 'success')
+        setProfile(prev => ({ ...prev, subscription_status: 'canceled' }))
         setShowCancelModal(false)
         router.refresh()
       } else {
@@ -173,8 +181,7 @@ export default function BillingSettings({ workspace: initialWorkspace, payments,
     }
   }
 
-  const isOwner = currentUserRole === 'owner'
-  const canCancel = isOwner && workspace.subscription_status !== 'canceled' && workspace.asaas_subscription_id
+  const canCancel = isOwner && profile.subscription_status !== 'canceled' && profile.asaas_subscription_id
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -189,7 +196,7 @@ export default function BillingSettings({ workspace: initialWorkspace, payments,
               <div>
                 <h4 className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-2">{activePlan.name}</h4>
                 <p className="text-xs text-neutral-500 mt-1">
-                  {getPlanPrice() !== null ? `${formatPrice(getPlanPrice()!)} / ${getCycleLabel(workspace.subscription_cycle).toLowerCase()}` : '-'}
+                  {getPlanPrice() !== null ? `${formatPrice(getPlanPrice()!)} / ${getCycleLabel(profile.subscription_cycle).toLowerCase()}` : '-'}
                 </p>
               </div>
             </div>
@@ -197,7 +204,7 @@ export default function BillingSettings({ workspace: initialWorkspace, payments,
             <div className="p-5 bg-neutral-50 dark:bg-neutral-950 rounded-2xl border border-neutral-100 dark:border-neutral-800 flex flex-col justify-between">
               <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Ciclo</span>
               <div>
-                <h4 className="text-lg font-bold text-neutral-850 dark:text-neutral-200 mt-2">{getCycleLabel(workspace.subscription_cycle)}</h4>
+                <h4 className="text-lg font-bold text-neutral-850 dark:text-neutral-200 mt-2">{getCycleLabel(profile.subscription_cycle)}</h4>
                 <p className="text-xs text-neutral-500 mt-1">Renovação recorrente</p>
               </div>
             </div>
@@ -205,10 +212,10 @@ export default function BillingSettings({ workspace: initialWorkspace, payments,
             <div className="p-5 bg-neutral-50 dark:bg-neutral-950 rounded-2xl border border-neutral-100 dark:border-neutral-800 flex flex-col justify-between">
               <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Status</span>
               <div className="mt-2.5">
-                {getStatusBadge(workspace.subscription_status)}
-                {workspace.subscription_status === 'canceled' && (
+                {getStatusBadge(profile.subscription_status)}
+                {profile.subscription_status === 'canceled' && (
                   <p className="text-[10px] text-amber-600 dark:text-amber-500 mt-2 font-medium">
-                    Acesso mantido até {formatDate(workspace.subscription_expires_at)}
+                    Acesso mantido até {formatDate(profile.subscription_expires_at)}
                   </p>
                 )}
               </div>
@@ -216,10 +223,10 @@ export default function BillingSettings({ workspace: initialWorkspace, payments,
 
             <div className="p-5 bg-neutral-50 dark:bg-neutral-950 rounded-2xl border border-neutral-100 dark:border-neutral-800 flex flex-col justify-between">
               <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
-                {workspace.subscription_status === 'canceled' ? 'Acesso Expira Em' : 'Próxima Renovação'}
+                {profile.subscription_status === 'canceled' ? 'Acesso Expira Em' : 'Próxima Renovação'}
               </span>
               <div>
-                <h4 className="text-lg font-bold text-neutral-850 dark:text-neutral-200 mt-2">{formatDate(workspace.subscription_expires_at)}</h4>
+                <h4 className="text-lg font-bold text-neutral-850 dark:text-neutral-200 mt-2">{formatDate(profile.subscription_expires_at)}</h4>
                 <p className="text-xs text-neutral-500 mt-1">Débito automático se ativo</p>
               </div>
             </div>
@@ -251,7 +258,7 @@ export default function BillingSettings({ workspace: initialWorkspace, payments,
               >
                 Cancelar Renovação Automática
               </button>
-            ) : workspace.subscription_status === 'canceled' ? (
+            ) : profile.subscription_status === 'canceled' ? (
               <div className="px-4 py-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-900/30 rounded-xl text-[11px] text-amber-700 dark:text-amber-400 font-medium">
                 Renovação automática já cancelada
               </div>
@@ -346,7 +353,7 @@ export default function BillingSettings({ workspace: initialWorkspace, payments,
       >
         <div className="space-y-4 mt-4">
           <p className="text-xs text-neutral-550 dark:text-neutral-450 leading-relaxed">
-            Seu workspace <strong className="text-neutral-800 dark:text-white">{workspace.name}</strong> permanecerá ativo até o dia <strong className="text-neutral-800 dark:text-white">{formatDate(workspace.subscription_expires_at)}</strong>.
+            Seu workspace <strong className="text-neutral-800 dark:text-white">{workspace.name}</strong> permanecerá ativo até o dia <strong className="text-neutral-800 dark:text-white">{formatDate(profile.subscription_expires_at)}</strong>.
           </p>
           <p className="text-xs text-neutral-550 dark:text-neutral-450 leading-relaxed">
             Após este período, você e sua equipe perderão acesso aos recursos pagos e a criação/visualização de novos projetos.

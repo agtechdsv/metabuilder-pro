@@ -242,20 +242,20 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
 
   // Polling e Realtime para ativação Pix/Boleto
   useEffect(() => {
-    if (!workspace?.id || !showPaymentDetails || checkoutStep === 'success') return
+    if (!workspace?.id || !user?.id || !showPaymentDetails || checkoutStep === 'success') return
 
     const supabase = createClient()
     let intervalId: any
 
     const checkStatus = async () => {
       const { data, error } = await supabase
-        .from('workspaces')
-        .select('subscription_status, slug')
-        .eq('id', workspace.id)
+        .from('profiles')
+        .select('subscription_status')
+        .eq('id', user.id)
         .single()
 
       if (!error && data && data.subscription_status === 'active') {
-        setSuccessWorkspaceSlug(data.slug)
+        setSuccessWorkspaceSlug(workspace.slug)
         setCheckoutStep('success')
         toast('Pagamento confirmado e plano ativado!', 'success')
         clearInterval(intervalId)
@@ -267,18 +267,18 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
 
     // Realtime do Supabase
     const channel = supabase
-      .channel(`workspace-status-checkout-${workspace.id}`)
+      .channel(`profile-status-checkout-${user.id}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'workspaces',
-          filter: `id=eq.${workspace.id}`,
+          table: 'profiles',
+          filter: `id=eq.${user.id}`,
         },
         (payload: any) => {
           if (payload.new && payload.new.subscription_status === 'active') {
-            setSuccessWorkspaceSlug(payload.new.slug)
+            setSuccessWorkspaceSlug(workspace.slug)
             setCheckoutStep('success')
             toast('Pagamento confirmado e plano ativado!', 'success')
             clearInterval(intervalId)
@@ -291,7 +291,7 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
       clearInterval(intervalId)
       supabase.removeChannel(channel)
     }
-  }, [workspace, showPaymentDetails, checkoutStep])
+  }, [workspace, user, showPaymentDetails, checkoutStep])
 
   // Redirect countdown
   useEffect(() => {

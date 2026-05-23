@@ -68,17 +68,81 @@ export default function UseCaseBuilder() {
   })
 
   useEffect(() => {
-    const loadModels = async () => {
-      const { data } = await supabase
+    const checkPermissionsAndLoad = async () => {
+      // 1. Resolve User
+      const { data: { user: userData } } = await supabase.auth.getUser()
+      if (!userData) {
+        router.replace('/login')
+        return
+      }
+
+      // 2. Resolve Workspace
+      const { data: ws } = await supabase
+        .from('workspaces')
+        .select('*')
+        .eq('slug', workspace_slug)
+        .single()
+      
+      if (!ws) {
+        router.replace('/login')
+        return
+      }
+
+      // 3. Resolve Project
+      const { data: proj } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('slug', project_slug)
+        .eq('workspace_id', ws.id)
+        .single()
+      
+      if (!proj) {
+        router.replace('/login')
+        return
+      }
+
+      // 4. Resolve permissions
+      const { data: memberData } = await supabase
+        .from('workspace_members')
+        .select('role')
+        .eq('workspace_id', ws.id)
+        .eq('user_id', userData.id)
+        .maybeSingle()
+
+      const isOwner = userData.id === ws.owner_id
+      const userRole = isOwner ? 'owner' : (memberData?.role || 'guest')
+
+      let canCreate = false
+      if (isOwner || userRole === 'admin') {
+        canCreate = true
+      } else if (userRole === 'developer') {
+        const { data: projPerm } = await supabase
+          .from('workspace_member_projects')
+          .select('can_create')
+          .eq('project_id', proj.id)
+          .eq('user_id', userData.id)
+          .maybeSingle()
+        canCreate = projPerm?.can_create === true
+      }
+
+      if (!canCreate) {
+        toast('Você não tem permissão para acessar o construtor.', 'error')
+        router.replace(`/admin/${workspace_slug}/${project_slug}/studio`)
+        return
+      }
+
+      // 5. Load Models
+      const { data: modelsData } = await supabase
         .from('models')
         .select('*, fields(*)')
         .order('db_table_name')
 
-      if (data) setModels(data)
+      if (modelsData) setModels(modelsData)
       setIsLoading(false)
     }
-    loadModels()
-  }, [supabase])
+
+    checkPermissionsAndLoad()
+  }, [supabase, workspace_slug, project_slug, router, toast])
 
   const steps = [
     { id: 1, title: t('dashboard.projects.studio.builder.logic_step'), icon: <Settings2 className="w-4 h-4" /> },

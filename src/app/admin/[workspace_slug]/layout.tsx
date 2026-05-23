@@ -20,6 +20,11 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Enforce password setup if required
+  if (user.user_metadata?.need_password_setup === true) {
+    redirect(`/auth/set-password?workspace_slug=${workspace_slug}`)
+  }
+
   // 2. Fetch profile for navbar
   const { data: profile } = await supabase
     .from('profiles')
@@ -27,18 +32,30 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
     .eq('id', user.id)
     .single()
 
-  // 3. Resolve Workspace with subscription details
+  // 3. Resolve Workspace with subscription details from owner's profile
   const { data: workspace, error: workspaceError } = await supabase
     .from('workspaces')
-    .select('id, name, slug, owner_id, is_blocked, subscription_status')
+    .select('id, name, slug, owner_id')
     .eq('slug', workspace_slug)
     .single()
 
   if (workspaceError || !workspace) notFound()
+  
+  // Buscar o profile do owner separadamente para evitar erro de FK
+  const { data: ownerProfile } = await supabase
+    .from('profiles')
+    .select('subscription_status, is_blocked')
+    .eq('id', workspace.owner_id)
+    .single()
 
   // 4. Enforce subscription check (Unless Super Admin)
   const isSuperAdmin = profile?.is_super_admin === true
-  const isBlocked = workspace.is_blocked || workspace.subscription_status === 'blocked' || workspace.subscription_status === 'pending'
+
+  
+  let isBlocked = false;
+  if (ownerProfile) {
+    isBlocked = ownerProfile.is_blocked || ownerProfile.subscription_status === 'blocked' || ownerProfile.subscription_status === 'pending'
+  }
 
   if (isBlocked && !isSuperAdmin) {
     const isOwner = workspace.owner_id === user.id

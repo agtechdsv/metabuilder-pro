@@ -82,9 +82,10 @@ interface UseCaseBuilderWizardProps {
   initialData?: any
   onClose: () => void
   onSaveSuccess: () => void
+  canCreate?: boolean
 }
 
-export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: UseCaseBuilderWizardProps) {
+export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canCreate = true }: UseCaseBuilderWizardProps) {
   const { t } = useI18n()
   const params = useParams()
   const { workspace_slug, project_slug } = params
@@ -475,6 +476,11 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1))
 
   const handleSave = async () => {
+    if (!canCreate) {
+      toast("Você não tem permissão para salvar alterações.", 'error')
+      return
+    }
+
     if (!config.name || !config.slug) {
       toast(t('wizard.buttons.validation.name_slug_required'), 'error')
       return
@@ -619,16 +625,18 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-95"
-            >
-              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-              {isSaving ? (initialData ? t('wizard.buttons.updating') : t('wizard.buttons.saving')) : (initialData ? t('wizard.buttons.update') : t('wizard.buttons.finish'))}
-            </button>
-          </div>
+          {canCreate && (
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-95"
+              >
+                {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                {isSaving ? (initialData ? t('wizard.buttons.updating') : t('wizard.buttons.saving')) : (initialData ? t('wizard.buttons.update') : t('wizard.buttons.finish'))}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Stepper Progress Bar */}
@@ -697,11 +705,11 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
 
           <button
             onClick={currentStep === steps.length ? handleSave : nextStep}
-            disabled={isSaving}
+            disabled={isSaving || (currentStep === steps.length && !canCreate)}
             className={cn(
               "flex items-center gap-2 px-8 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl",
               currentStep === steps.length
-                ? "text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                ? (!canCreate ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed opacity-50" : "text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800")
                 : (currentStep === 1 && config.logic_type === 'analytics' ? false : !isStepValid(steps[currentStep-1].id))
                   ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed opacity-50"
                   : "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-neutral-900/10 dark:shadow-white/5"
@@ -711,7 +719,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess }: Us
               isSaving ? (
                 <><Loader2 className="w-3 h-3 animate-spin" /> {initialData ? t('wizard.buttons.updating') : t('wizard.buttons.saving')}</>
               ) : (
-                <>{initialData ? t('wizard.buttons.update') : t('wizard.buttons.finish')} <Save className="w-3 h-3 ml-1" /></>
+                <>{!canCreate ? "Sem permissão" : (initialData ? t('wizard.buttons.update') : t('wizard.buttons.finish'))} <Save className="w-3 h-3 ml-1" /></>
               )
             ) : (
               <>{t('wizard.buttons.next')} <ChevronRight className="w-3 h-3" /></>

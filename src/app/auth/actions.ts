@@ -15,10 +15,14 @@ export async function login(formData: FormData) {
   })
 
   if (error) {
-    return redirect(`/login?error=${encodeURIComponent(error.message)}`)
+    let friendlyMessage = error.message
+    if (error.message === 'Invalid login credentials') {
+      friendlyMessage = 'Usuário ou senha inválidos.'
+    }
+    return { error: friendlyMessage }
   }
 
-  redirect('/')
+  return { success: true }
 }
 
 export async function signup(formData: FormData) {
@@ -39,12 +43,10 @@ export async function signup(formData: FormData) {
   })
 
   if (error) {
-    return redirect(`/login?error=${encodeURIComponent(error.message)}`)
+    return { error: error.message }
   }
 
-  // Redireciona para a home/dashboard após o cadastro
-  // Se "Confirm Email" estiver desativado no Supabase, o login será automático
-  return redirect('/')
+  return { success: true }
 }
 
 export async function signInWithGoogle() {

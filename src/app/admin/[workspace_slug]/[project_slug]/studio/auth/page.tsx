@@ -198,13 +198,47 @@ export default function AuthSettingsPage() {
           .eq('id', userData.id)
           .single()
         if (profData) setProfile(profData)
+      } else {
+        router.replace('/login')
+        return
+      }
+
+      if (ws && proj && userData) {
+        const { data: memberData } = await supabase
+          .from('workspace_members')
+          .select('role')
+          .eq('workspace_id', ws.id)
+          .eq('user_id', userData.id)
+          .maybeSingle()
+
+        const isOwner = userData.id === ws.owner_id
+        const userRole = isOwner ? 'owner' : (memberData?.role || 'guest')
+
+        let canCreate = false
+        if (isOwner || userRole === 'admin') {
+          canCreate = true
+        } else if (userRole === 'developer') {
+          const { data: projPerm } = await supabase
+            .from('workspace_member_projects')
+            .select('can_create')
+            .eq('project_id', proj.id)
+            .eq('user_id', userData.id)
+            .maybeSingle()
+          canCreate = projPerm?.can_create === true
+        }
+
+        if (!canCreate) {
+          toast('Você não tem permissão para acessar esta configuração.', 'error')
+          router.replace(`/admin/${workspace_slug}/${project_slug}/studio`)
+          return
+        }
       }
 
       setIsLoading(false)
     }
 
     loadData()
-  }, [project_slug, workspace_slug, supabase])
+  }, [project_slug, workspace_slug, supabase, router, toast])
 
   useEffect(() => {
     if (activeTab === 'users' && project) {

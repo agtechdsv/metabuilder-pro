@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
 
 serve(async (req) => {
-  // Webhooks are normally POST requests
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
@@ -24,126 +23,245 @@ serve(async (req) => {
     const { event, payment, subscription } = body;
 
     console.log(`Received Asaas Webhook event: ${event}`);
-
-    // Extract externalReference from payment or subscription
-    const externalReference = payment?.externalReference || subscription?.externalReference;
-    if (!externalReference || (!externalReference.startsWith("ws_") && !externalReference.startsWith("w_"))) {
-      console.log(`Webhook ignored: no valid external reference (${externalReference})`);
-      return new Response(JSON.stringify({ success: true, message: "Ignored (no reference)" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
-
-    // Parse externalReference: 
-    // Legacy: ws_[workspaceId]_pl_[planId]_cy_[cycle]_t_[timestamp]
-    // Shortened: w_[workspaceId]_p_[planId]_c_[cycleCode]_[timestamp]
-    const parts = externalReference.split("_");
-    const workspaceId = parts[1];
-    const planId = parts[3];
-    const cycleRaw = parts[5];
-
-    let cycle = cycleRaw;
-    if (cycleRaw === "mo") cycle = "monthly";
-    else if (cycleRaw === "qu") cycle = "quarterly";
-    else if (cycleRaw === "se") cycle = "semiannual";
-    else if (cycleRaw === "ye") cycle = "yearly";
-
-    if (!workspaceId || !planId || !cycle) {
-      console.warn("Invalid external reference format:", externalReference);
-      return new Response(JSON.stringify({ error: "Invalid externalReference format" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
+    console.log(`payment.id=${payment?.id} | payment.externalReference=${payment?.externalReference} | subscription=${payment?.subscription}`);
 
     // Initialize Supabase Client with service role to bypass RLS
-    const supabaseClient = createClient(
+    const serviceRoleKey =
+      Deno.env.get("MY_SERVICE_ROLE_KEY")?.trim() ||
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim() ||
+      "";
+    console.log("serviceRoleKey length:", serviceRoleKey.length);
+
+    const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      serviceRoleKey
     );
+
+    // -----------------------------------------------------------------------
+    // resolveContext: Try 3 strategies to find user_id, plan_id, cycle, etc.
+    // We CANNOT rely solely on payment.externalReference — Asaas sometimes
+    // omits it in PAYMENT_RECEIVED payloads for subscription payments.
+    // -----------------------------------------------------------------------
+    const formatUUID = (str: string): string => {
+      if (!str || str.includes("-")) return str;
+      if (str.length !== 32) return str;
+      return `${str.slice(0, 8)}-${str.slice(8, 12)}-${str.slice(12, 16)}-${str.slice(16, 20)}-${str.slice(20)}`;
+    };
+
+    interface Context {
+      userId: string;
+      workspaceId: string;
+      planId: string;
+      cycle: string;
+      externalReference: string;
+    }
+
+    const resolveContext = async (): Promise<Context | null> => {
+
+      // --- Strategy 1: Look up by asaas_payment_id in our payments table ---
+      // This is the most reliable path because the checkout always inserts the
+      // payment row with user_id, plan_id, cycle — independent of externalReference.
+      if (payment?.id) {
+        console.log(`[S1] Looking up payments by asaas_payment_id=${payment.id}`);
+        const { data, error } = await supabase
+          .from("payments")
+          .select("user_id, workspace_id, plan_id, cycle, external_reference")
+          .eq("asaas_payment_id", payment.id)
+          .maybeSingle();
+
+        if (error) console.error("[S1] DB error:", error);
+        if (data?.user_id) {
+          console.log(`[S1] Success: user_id=${data.user_id}`);
+          return {
+            userId: data.user_id,
+            workspaceId: data.workspace_id,
+            planId: data.plan_id,
+            cycle: data.cycle,
+            externalReference: data.external_reference
+          };
+        }
+        console.log("[S1] No record found for this payment ID");
+      }
+
+      // --- Strategy 2: Look up by asaas_subscription_id in profiles ---
+      // Useful when the payment row doesn't exist yet but the subscription was
+      // already registered in profiles by the checkout.
+      const subId = payment?.subscription || subscription?.id;
+      if (subId) {
+        console.log(`[S2] Looking up profiles by asaas_subscription_id=${subId}`);
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, plan_id, subscription_cycle")
+          .eq("asaas_subscription_id", subId)
+          .maybeSingle();
+
+        if (error) console.error("[S2] DB error:", error);
+        if (data?.id) {
+          console.log(`[S2] Success: user_id=${data.id}`);
+          const { data: ws } = await supabase
+            .from("workspaces")
+            .select("id")
+            .eq("owner_id", data.id)
+            .maybeSingle();
+          return {
+            userId: data.id,
+            workspaceId: ws?.id || "",
+            planId: data.plan_id || "",
+            cycle: data.subscription_cycle || "",
+            externalReference: payment?.externalReference || ""
+          };
+        }
+        console.log("[S2] No profile found for this subscription ID");
+      }
+
+      // --- Strategy 3: Parse externalReference (legacy/fallback) ---
+      const extRef = payment?.externalReference || subscription?.externalReference;
+      if (extRef && (extRef.startsWith("w_") || extRef.startsWith("ws_"))) {
+        console.log(`[S3] Parsing externalReference=${extRef}`);
+        const parts = extRef.split("_");
+        let userId = "";
+        let workspaceId = "";
+        let planId = "";
+        let cycleRaw = "";
+
+        if (parts[0] === "u") {
+          userId = parts[1]; workspaceId = parts[3]; planId = parts[5]; cycleRaw = parts[7];
+        } else {
+          workspaceId = parts[1]; planId = parts[3]; cycleRaw = parts[5];
+        }
+
+        userId = formatUUID(userId);
+        workspaceId = formatUUID(workspaceId);
+        planId = formatUUID(planId);
+
+        let cycle = cycleRaw;
+        if (cycleRaw === "mo") cycle = "monthly";
+        else if (cycleRaw === "qu") cycle = "quarterly";
+        else if (cycleRaw === "se") cycle = "semiannual";
+        else if (cycleRaw === "ye") cycle = "yearly";
+
+        // If userId not in ref, look up workspace owner
+        if (!userId && workspaceId) {
+          const { data: ws } = await supabase
+            .from("workspaces")
+            .select("owner_id")
+            .eq("id", workspaceId)
+            .maybeSingle();
+          if (ws?.owner_id) userId = ws.owner_id;
+        }
+
+        if (userId && workspaceId) {
+          console.log(`[S3] Success: user_id=${userId}`);
+          return { userId, workspaceId, planId, cycle, externalReference: extRef };
+        }
+      }
+
+      console.warn("[ALL] Could not resolve payment context from any strategy");
+      return null;
+    };
 
     // 2. Handle Event Types
     if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") {
-      // Calculate expiration date based on the cycle
+      const ctx = await resolveContext();
+
+      if (!ctx?.userId) {
+        console.error("[PAYMENT_RECEIVED] Could not resolve payment context. Full body:", JSON.stringify(body));
+        // Return 200 so Asaas stops retrying — manual review needed
+        return new Response(
+          JSON.stringify({ success: false, message: "Could not resolve payment context — manual review needed" }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      // Calculate expiration date
       let monthsToAdd = 1;
-      if (cycle === "quarterly") monthsToAdd = 3;
-      else if (cycle === "semiannual") monthsToAdd = 6;
-      else if (cycle === "yearly") monthsToAdd = 12;
+      if (ctx.cycle === "quarterly") monthsToAdd = 3;
+      else if (ctx.cycle === "semiannual") monthsToAdd = 6;
+      else if (ctx.cycle === "yearly") monthsToAdd = 12;
 
       const expirationDate = new Date();
       expirationDate.setMonth(expirationDate.getMonth() + monthsToAdd);
 
-      // Update workspace status to active
-      const { error: wsError } = await supabaseClient
-        .from("workspaces")
-        .update({
-          plan_id: planId,
-          subscription_status: "active",
-          is_blocked: false,
-          subscription_cycle: cycle,
-          subscription_expires_at: expirationDate.toISOString()
-        })
-        .eq("id", workspaceId);
+      // Activate the profile
+      const updatePayload: Record<string, any> = {
+        subscription_status: "active",
+        is_blocked: false,
+        subscription_expires_at: expirationDate.toISOString()
+      };
+      if (ctx.planId) updatePayload.plan_id = ctx.planId;
+      if (ctx.cycle) updatePayload.subscription_cycle = ctx.cycle;
 
-      if (wsError) {
-        console.error(`Error updating workspace ${workspaceId}:`, wsError);
-        throw wsError;
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update(updatePayload)
+        .eq("id", ctx.userId);
+
+      if (profileError) {
+        console.error(`[PAYMENT_RECEIVED] Error updating profile ${ctx.userId}:`, profileError);
+        throw profileError;
       }
+      console.log(`[PAYMENT_RECEIVED] Profile ${ctx.userId} activated successfully`);
 
-      // Update payment record
-      const { error: payError } = await supabaseClient
-        .from("payments")
-        .update({
-          status: "paid",
-          webhook_payload: body,
-          webhook_received_at: new Date().toISOString(),
-          webhook_processed: true
-        })
-        .eq("external_reference", externalReference);
-
-      if (payError) {
-        console.error("Error updating payment log:", payError);
-      }
-
-      console.log(`Workspace ${workspaceId} successfully activated with plan ${planId}`);
-    } 
-    
-    else if (event === "SUBSCRIPTION_DELETED" || event === "SUBSCRIPTION_INACTIVATED") {
-      // Update workspace to canceled (but keep access active until expiration date)
-      const { error: wsError } = await supabaseClient
-        .from("workspaces")
-        .update({
-          subscription_status: "canceled"
-        })
-        .eq("id", workspaceId);
-
-      if (wsError) {
-        console.error(`Error updating workspace ${workspaceId}:`, wsError);
-        throw wsError;
-      }
-
-      console.log(`Subscription deleted/canceled for workspace ${workspaceId}`);
-    } 
-    
-    else if (event === "PAYMENT_OVERDUE") {
-      // Block the workspace access immediately since the payment is overdue
-      const { error: wsError } = await supabaseClient
-        .from("workspaces")
-        .update({
-          subscription_status: "blocked",
-          is_blocked: true
-        })
-        .eq("id", workspaceId);
-
-      if (wsError) {
-        console.error(`Error blocking workspace ${workspaceId}:`, wsError);
-        throw wsError;
-      }
-
-      // Update corresponding payment status
+      // Update or insert payment record
       if (payment?.id) {
-        await supabaseClient
+        const { data: existingPay } = await supabase
+          .from("payments")
+          .select("id")
+          .eq("asaas_payment_id", payment.id)
+          .maybeSingle();
+
+        if (existingPay) {
+          await supabase
+            .from("payments")
+            .update({
+              status: "paid",
+              webhook_payload: body,
+              webhook_received_at: new Date().toISOString(),
+              webhook_processed: true
+            })
+            .eq("asaas_payment_id", payment.id);
+        } else {
+          // Payment not in DB yet — insert it
+          await supabase.from("payments").insert({
+            user_id: ctx.userId,
+            workspace_id: ctx.workspaceId || null,
+            plan_id: ctx.planId || null,
+            cycle: ctx.cycle || null,
+            amount: payment.value || 0,
+            status: "paid",
+            external_reference: ctx.externalReference || null,
+            billing_type: payment.billingType || null,
+            asaas_payment_id: payment.id,
+            webhook_payload: body,
+            webhook_received_at: new Date().toISOString(),
+            webhook_processed: true
+          });
+          console.log(`[PAYMENT_RECEIVED] Inserted new payment record for ${payment.id}`);
+        }
+      }
+    }
+
+    else if (event === "SUBSCRIPTION_DELETED" || event === "SUBSCRIPTION_INACTIVATED") {
+      const ctx = await resolveContext();
+      if (ctx?.userId) {
+        await supabase
+          .from("profiles")
+          .update({ subscription_status: "canceled" })
+          .eq("id", ctx.userId);
+        console.log(`[SUBSCRIPTION_DELETED] Profile ${ctx.userId} marked canceled`);
+      }
+    }
+
+    else if (event === "PAYMENT_OVERDUE") {
+      const ctx = await resolveContext();
+      if (ctx?.userId) {
+        await supabase
+          .from("profiles")
+          .update({ subscription_status: "blocked", is_blocked: true })
+          .eq("id", ctx.userId);
+      }
+      if (payment?.id) {
+        await supabase
           .from("payments")
           .update({
             status: "overdue",
@@ -153,8 +271,7 @@ serve(async (req) => {
           })
           .eq("asaas_payment_id", payment.id);
       }
-
-      console.log(`Workspace ${workspaceId} blocked due to overdue payment`);
+      console.log(`[PAYMENT_OVERDUE] Profile blocked for ${ctx?.userId}`);
     }
 
     return new Response(JSON.stringify({ success: true }), {

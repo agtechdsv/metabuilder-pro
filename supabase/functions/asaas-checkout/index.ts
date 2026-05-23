@@ -21,21 +21,33 @@ serve(async (req) => {
       );
     }
 
-    // 1. Initialize Supabase client
-    const supabaseClient = createClient(
+    // 1. Initialize Supabase client for authentication
+    const authClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", // Use service role to write payments/workspaces
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
       { global: { headers: { Authorization: authHeader } } }
     );
 
     // Get current authenticated user
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    const { data: { user }, error: userError } = await authClient.auth.getUser();
     if (userError || !user) {
       return new Response(
         JSON.stringify({ error: "Invalid user token" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const serviceRoleKey = Deno.env.get("MY_SERVICE_ROLE_KEY")?.trim() || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim() || "";
+    // Initialize Supabase Client with service role to bypass RLS for DB operations
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      serviceRoleKey,
+      {
+        auth: {
+          persistSession: false,
+        },
+      }
+    );
 
     // Parse request body
     const body = await req.json();
@@ -171,11 +183,11 @@ serve(async (req) => {
       asaasCustomerId = custData.id;
     }
 
-    // Update workspace with customer id
+    // Update profile with customer id
     await supabaseClient
-      .from("workspaces")
+      .from("profiles")
       .update({ asaas_customer_id: asaasCustomerId })
-      .eq("id", workspaceId);
+      .eq("id", user.id);
 
     // Format Asaas billing type
     let asaasBillingType = "";
@@ -190,9 +202,12 @@ serve(async (req) => {
     }
     const nextDueDate = d.toISOString().split("T")[0];
 
-    // External reference structure
+    // External reference structure (shortened to fit under Asaas 100-char limit)
     const cycleCode = cycle === "monthly" ? "mo" : cycle === "quarterly" ? "qu" : cycle === "semiannual" ? "se" : "ye";
-    const externalReference = `w_${workspaceId}_p_${planId}_c_${cycleCode}_${Date.now()}`;
+    const cleanWorkspaceId = workspaceId.replace(/-/g, "");
+    const cleanPlanId = planId.replace(/-/g, "");
+    const timestamp = Math.floor(Date.now() / 1000);
+    const externalReference = `w_${cleanWorkspaceId}_p_${cleanPlanId}_c_${cycleCode}_${timestamp}`;
 
     // Setup card details if applicable
     let creditCardPayload = {};
@@ -271,11 +286,11 @@ serve(async (req) => {
 
     const asaasPaymentId = firstPayment?.id;
 
-    // Update workspace with subscription id
+    // Update profile with subscription id
     await supabaseClient
-      .from("workspaces")
+      .from("profiles")
       .update({ asaas_subscription_id: asaasSubscriptionId })
-      .eq("id", workspaceId);
+      .eq("id", user.id);
 
     // Save payment log in DB
     const { error: insertError } = await supabaseClient.from("payments").insert({
@@ -319,7 +334,7 @@ serve(async (req) => {
       expirationDate.setMonth(expirationDate.getMonth() + monthsToAdd);
 
       await supabaseClient
-        .from("workspaces")
+        .from("profiles")
         .update({
           plan_id: planId,
           subscription_status: "active",
@@ -327,7 +342,7 @@ serve(async (req) => {
           subscription_cycle: cycle,
           subscription_expires_at: expirationDate.toISOString()
         })
-        .eq("id", workspaceId);
+        .eq("id", user.id);
     }
 
     return new Response(

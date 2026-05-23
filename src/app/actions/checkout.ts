@@ -65,61 +65,73 @@ export async function processCheckout(
     let finalSlug = ''
 
     if (!workspaces || workspaces.length === 0) {
-      // Criar workspace padrão
-      const userPrefix = user.email ? user.email.split('@')[0] : 'user'
-      const sanitizedPrefix = userPrefix.toLowerCase().replace(/[^a-z0-9]/g, '-')
-      const wsSlug = `${sanitizedPrefix}-workspace`
-      const wsName = `Workspace de ${userPrefix.charAt(0).toUpperCase() + userPrefix.slice(1)}`
+      // Check if user is a guest
+      const { data: guestRecord } = await supabase
+        .from('owner_guests')
+        .select('access_level')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle()
 
-      const { data: newWs, error: insertError } = await supabase
-        .from('workspaces')
-        .insert({
-          name: wsName,
-          slug: wsSlug,
-          owner_id: user.id,
-          plan_id: planId,
-          subscription_status: 'active',
-          is_blocked: false
-        })
-        .select()
-        .single()
+      if (guestRecord) {
+        // Find the first workspace they are invited to
+        const { data: memberWorkspaces } = await supabase
+          .from('workspaces')
+          .select('slug')
+          .order('created_at', { ascending: false })
+        finalSlug = (memberWorkspaces && memberWorkspaces.length > 0) ? memberWorkspaces[0].slug : ''
+      } else {
+        // Criar workspace padrão
+        const userPrefix = user.email ? user.email.split('@')[0] : 'user'
+        const sanitizedPrefix = userPrefix.toLowerCase().replace(/[^a-z0-9]/g, '-')
+        const wsSlug = `${sanitizedPrefix}-workspace`
+        const wsName = `Workspace de ${userPrefix.charAt(0).toUpperCase() + userPrefix.slice(1)}`
 
-      if (insertError) {
-        // Se der erro por slug repetido, tenta gerar um aleatório
-        const randomSuffix = Math.floor(Math.random() * 1000)
-        const uniqueSlug = `${wsSlug}-${randomSuffix}`
-        const { data: newWsRetry, error: retryError } = await supabase
+        const { data: newWs, error: insertError } = await supabase
           .from('workspaces')
           .insert({
             name: wsName,
-            slug: uniqueSlug,
-            owner_id: user.id,
-            plan_id: planId,
-            subscription_status: 'active',
-            is_blocked: false
+            slug: wsSlug,
+            owner_id: user.id
           })
           .select()
           .single()
 
-        if (retryError) throw retryError
-        finalSlug = newWsRetry.slug
-      } else {
-        finalSlug = newWs.slug
+        if (insertError) {
+          // Se der erro por slug repetido, tenta gerar um aleatório
+          const randomSuffix = Math.floor(Math.random() * 1000)
+          const uniqueSlug = `${wsSlug}-${randomSuffix}`
+          const { data: newWsRetry, error: retryError } = await supabase
+            .from('workspaces')
+            .insert({
+              name: wsName,
+              slug: uniqueSlug,
+              owner_id: user.id
+            })
+            .select()
+            .single()
+
+          if (retryError) throw retryError
+          finalSlug = newWsRetry.slug
+        } else {
+          finalSlug = newWs.slug
+        }
       }
     } else {
-      // Atualizar o plano de TODOS os workspaces dele
-      const { error: updateError } = await supabase
-        .from('workspaces')
-        .update({
-          plan_id: planId,
-          subscription_status: 'active',
-          is_blocked: false
-        })
-        .eq('owner_id', user.id)
-
-      if (updateError) throw updateError
       finalSlug = workspaces[0].slug
     }
+
+    // Atualizar o plano no profile do usuário
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({
+        plan_id: planId,
+        subscription_status: 'active',
+        is_blocked: false
+      })
+      .eq('id', user.id)
+
+    if (profileError) throw profileError
 
     // Revalidar rotas pertinentes
     revalidatePath('/workspace')
@@ -138,6 +150,24 @@ export async function getOrCreateDefaultWorkspace(workspaceSlug?: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return { success: false, error: 'Usuário não autenticado' }
+    }
+
+    // Check if the user is an invited guest
+    const { data: guestRecord } = await supabase
+      .from('owner_guests')
+      .select('access_level')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle()
+
+    if (guestRecord) {
+      // For guests, we return the first workspace they are invited to (or null if they haven't been assigned yet)
+      const { data: workspaces } = await supabase
+        .from('workspaces')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      return { success: true, workspace: (workspaces && workspaces.length > 0) ? workspaces[0] : null }
     }
 
     // 1. If a workspace slug is specified, try to find that specific workspace owned by the user
@@ -177,9 +207,7 @@ export async function getOrCreateDefaultWorkspace(workspaceSlug?: string) {
       .insert({
         name: wsName,
         slug: wsSlug,
-        owner_id: user.id,
-        subscription_status: 'pending',
-        is_blocked: true
+        owner_id: user.id
       })
       .select()
       .single()
@@ -192,9 +220,7 @@ export async function getOrCreateDefaultWorkspace(workspaceSlug?: string) {
         .insert({
           name: wsName,
           slug: uniqueSlug,
-          owner_id: user.id,
-          subscription_status: 'pending',
-          is_blocked: true
+          owner_id: user.id
         })
         .select()
         .single()

@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient, createAdminClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { ShieldAlert, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -60,23 +60,31 @@ export default async function PlatformAdminPage() {
     )
   }
 
-  // 4. Authorized Super Admin - Fetch BI metrics data
+  // 4. Authorized Super Admin - Fetch BI metrics data using Admin Client to bypass RLS
+  const adminSupabase = createAdminClient()
+
   // Workspaces
-  const { data: workspaces } = await supabase
+  const { data: workspaces } = await adminSupabase
     .from('workspaces')
     .select('*')
     .order('created_at', { ascending: false })
 
   // Active Profiles
-  const { data: profiles } = await supabase
+  const { data: profiles } = await adminSupabase
     .from('profiles')
-    .select('id, email, full_name')
+    .select('id, email, full_name, is_super_admin')
 
   // Plans
-  const { data: plans } = await supabase
+  const { data: plans } = await adminSupabase
     .from('subscription_plans')
     .select('*')
     .order('price', { ascending: true })
+
+  // Payments
+  const { data: payments } = await adminSupabase
+    .from('payments')
+    .select('*')
+    .order('created_at', { ascending: false })
 
   return (
     <div className="min-h-screen flex flex-col pt-16 bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300">
@@ -89,6 +97,7 @@ export default async function PlatformAdminPage() {
           initialWorkspaces={workspaces || []}
           profiles={profiles || []}
           currentUserEmail={user.email || ''}
+          payments={payments || []}
         />
       </main>
 

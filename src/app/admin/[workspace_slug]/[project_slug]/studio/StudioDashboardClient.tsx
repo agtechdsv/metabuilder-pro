@@ -45,6 +45,8 @@ interface StudioDashboardClientProps {
   project_slug: string
   user: any
   profile: any
+  canCreate: boolean
+  canDelete: boolean
 }
 
 export function StudioDashboardClient({
@@ -55,7 +57,9 @@ export function StudioDashboardClient({
   workspace_slug,
   project_slug,
   user,
-  profile
+  profile,
+  canCreate,
+  canDelete
 }: StudioDashboardClientProps) {
   const { t } = useI18n()
   const router = useRouter()
@@ -186,37 +190,43 @@ export function StudioDashboardClient({
                >
                  Casos de Uso
                </button>
-               <button 
-                onClick={() => setViewMode('navigation')}
-                className={cn(
-                  "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                  viewMode === 'navigation' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
-                )}
-               >
-                 Navegação
-               </button>
-               <button 
-                onClick={() => setViewMode('branding')}
-                className={cn(
-                  "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                  viewMode === 'branding' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
-                )}
-               >
-                 Identidade
-               </button>
+               {canCreate && (
+                 <>
+                   <button 
+                    onClick={() => setViewMode('navigation')}
+                    className={cn(
+                      "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                      viewMode === 'navigation' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
+                    )}
+                   >
+                     Navegação
+                   </button>
+                   <button 
+                    onClick={() => setViewMode('branding')}
+                    className={cn(
+                      "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                      viewMode === 'branding' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
+                    )}
+                   >
+                     Identidade
+                   </button>
+                 </>
+               )}
             </div>
 
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => {
-                  setViewToEdit(null)
-                  setViewMode('builder')
-                }}
-                className="flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95"
-              >
-                <Plus className="w-4 h-4" /> {t('dashboard.projects.studio.new_use_case')}
-              </button>
-            </div>
+            {canCreate && (
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => {
+                    setViewToEdit(null)
+                    setViewMode('builder')
+                  }}
+                  className="flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95"
+                >
+                  <Plus className="w-4 h-4" /> {t('dashboard.projects.studio.new_use_case')}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -308,6 +318,7 @@ export function StudioDashboardClient({
               setViewToEdit(null)
             }}
             onSaveSuccess={refreshData}
+            canCreate={canCreate}
           />
         ) : viewMode === 'navigation' ? (
           <div className="">
@@ -360,19 +371,31 @@ export function StudioDashboardClient({
                   </div>
 
                   <div className="mt-auto flex gap-3">
-                    <Link
-                      href={`/admin/${workspace_slug}/${project_slug}/studio/auth`}
-                      className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-indigo-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-indigo-500/20"
-                    >
-                      <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure_login')}
-                    </Link>
-                    <Link
-                      href={`/${workspace_slug}/${project_slug}/login`}
-                      target="_blank"
-                      className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-indigo-600 dark:hover:text-white shadow-sm"
-                    >
-                      <ExternalLink className="w-5 h-5" />
-                    </Link>
+                    {canCreate ? (
+                      <>
+                        <Link
+                          href={`/admin/${workspace_slug}/${project_slug}/studio/auth`}
+                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-indigo-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-indigo-500/20"
+                        >
+                          <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure_login')}
+                        </Link>
+                        <Link
+                          href={`/${workspace_slug}/${project_slug}/login`}
+                          target="_blank"
+                          className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-indigo-600 dark:hover:text-white shadow-sm"
+                        >
+                          <ExternalLink className="w-5 h-5" />
+                        </Link>
+                      </>
+                    ) : (
+                      <Link
+                        href={`/${workspace_slug}/${project_slug}/login`}
+                        target="_blank"
+                        className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-indigo-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-indigo-500/20"
+                      >
+                        <ExternalLink className="w-4 h-4" /> Visualizar Portal
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>
@@ -389,13 +412,22 @@ export function StudioDashboardClient({
                           <div className="px-2.5 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[9px] font-black rounded-lg border border-indigo-500/20 uppercase tracking-widest w-fit">
                             {view.logic_type?.replace('_', ' + ') || 'Custom'}
                           </div>
-                          <button
-                            onClick={() => handleToggleActive(view)}
-                            className={`p-1 rounded-md transition-colors ${view.layout_config?.is_active !== false ? 'text-emerald-500 hover:bg-emerald-500/10' : 'text-neutral-400 hover:bg-neutral-500/10'}`}
-                            title={view.layout_config?.is_active !== false ? t('dashboard.projects.studio.status_active') : t('dashboard.projects.studio.status_inactive')}
-                          >
-                            {view.layout_config?.is_active !== false ? <Power className="w-3.5 h-3.5" /> : <PowerOff className="w-3.5 h-3.5" />}
-                          </button>
+                          {canCreate ? (
+                            <button
+                              onClick={() => handleToggleActive(view)}
+                              className={`p-1 rounded-md transition-colors ${view.layout_config?.is_active !== false ? 'text-emerald-500 hover:bg-emerald-500/10' : 'text-neutral-400 hover:bg-neutral-500/10'}`}
+                              title={view.layout_config?.is_active !== false ? t('dashboard.projects.studio.status_active') : t('dashboard.projects.studio.status_inactive')}
+                            >
+                              {view.layout_config?.is_active !== false ? <Power className="w-3.5 h-3.5" /> : <PowerOff className="w-3.5 h-3.5" />}
+                            </button>
+                          ) : (
+                            <span
+                              className={`p-1 rounded-md cursor-default ${view.layout_config?.is_active !== false ? 'text-emerald-500' : 'text-neutral-400'}`}
+                              title={view.layout_config?.is_active !== false ? t('dashboard.projects.studio.status_active') : t('dashboard.projects.studio.status_inactive')}
+                            >
+                              {view.layout_config?.is_active !== false ? <Power className="w-3.5 h-3.5" /> : <PowerOff className="w-3.5 h-3.5" />}
+                            </span>
+                          )}
                         </div>
                         <h4 className={`text-lg font-bold tracking-tight transition-colors ${view.layout_config?.is_active !== false ? 'text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400' : 'text-neutral-400 italic'}`}>
                           {view.name}
@@ -405,34 +437,48 @@ export function StudioDashboardClient({
                         </p>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          setViewToDelete(view)
-                          setIsDeleteModalOpen(true)
-                        }}
-                        className="p-2 text-neutral-300 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {canDelete && (
+                        <button
+                          onClick={() => {
+                            setViewToDelete(view)
+                            setIsDeleteModalOpen(true)
+                          }}
+                          className="p-2 text-neutral-300 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
 
                     <div className="pt-2 flex gap-3">
-                      <button
-                        onClick={() => {
-                          setViewToEdit(view)
-                          setViewMode('builder')
-                        }}
-                        className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
-                      >
-                        <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure')}
-                      </button>
-                      <Link
-                        href={`/${workspace_slug}/${project_slug}/${view.slug}`}
-                        target="_blank"
-                        className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-indigo-600 dark:hover:text-white shadow-sm"
-                      >
-                        <ArrowRight className="w-5 h-5" />
-                      </Link>
+                      {canCreate ? (
+                        <>
+                          <button
+                            onClick={() => {
+                              setViewToEdit(view)
+                              setViewMode('builder')
+                            }}
+                            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
+                          >
+                            <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure')}
+                          </button>
+                          <Link
+                            href={`/${workspace_slug}/${project_slug}/${view.slug}`}
+                            target="_blank"
+                            className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-indigo-600 dark:hover:text-white shadow-sm"
+                          >
+                            <ArrowRight className="w-5 h-5" />
+                          </Link>
+                        </>
+                      ) : (
+                        <Link
+                          href={`/${workspace_slug}/${project_slug}/${view.slug}`}
+                          target="_blank"
+                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
+                        >
+                          <ArrowRight className="w-4 h-4" /> Acessar Caso de Uso
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -444,7 +490,9 @@ export function StudioDashboardClient({
                     <Layers className="w-10 h-10 opacity-20" />
                   </div>
                   <p className="text-sm font-bold tracking-tight">{t('dashboard.projects.studio.no_use_cases')}</p>
-                  <button onClick={() => setViewMode('builder')} className="text-indigo-600 dark:text-indigo-400 text-xs font-black uppercase tracking-widest hover:underline underline-offset-8 transition-all">{t('dashboard.projects.studio.start_now')}</button>
+                  {canCreate && (
+                    <button onClick={() => setViewMode('builder')} className="text-indigo-600 dark:text-indigo-400 text-xs font-black uppercase tracking-widest hover:underline underline-offset-8 transition-all">{t('dashboard.projects.studio.start_now')}</button>
+                  )}
                 </div>
               )}
             </div>

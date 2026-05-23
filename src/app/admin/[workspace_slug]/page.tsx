@@ -46,6 +46,21 @@ export default async function WorkspaceDashboard({ params }: WorkspaceDashboardP
     .eq('workspace_id', workspace.id)
     .order('created_at', { ascending: false })
 
+  // 3. Busca a role e permissões do usuário logado neste workspace
+  const { data: memberData } = await supabase
+    .from('workspace_members')
+    .select('role, can_create, can_delete')
+    .eq('workspace_id', workspace.id)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const isOwner = user.id === workspace.owner_id
+  const userRole = isOwner ? 'owner' : (memberData?.role || 'guest')
+
+  // Se for owner ou admin, tem permissão total. Se for developer (guest), respeita as colunas.
+  const canCreateProjects = isOwner || userRole === 'admin' || memberData?.can_create === true
+  const canDeleteProjects = isOwner || userRole === 'admin' || memberData?.can_delete === true
+
   return (
     <div className="min-h-screen flex flex-col pt-16 bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300">
       
@@ -62,6 +77,8 @@ export default async function WorkspaceDashboard({ params }: WorkspaceDashboardP
           workspaceId={workspace.id}
           workspaceSlug={workspace.slug}
           workspaceName={workspace.name}
+          canCreate={canCreateProjects}
+          canDelete={canDeleteProjects}
         />
 
       </main>

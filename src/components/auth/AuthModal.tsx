@@ -3,14 +3,16 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 interface AuthModalProps {
   isOpen: boolean
   onClose: () => void
   children: React.ReactNode
+  hideCloseButton?: boolean
 }
 
-export function AuthModal({ isOpen, onClose, children }: AuthModalProps) {
+export function AuthModal({ isOpen, onClose, children, hideCloseButton = false }: AuthModalProps) {
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
@@ -27,7 +29,7 @@ export function AuthModal({ isOpen, onClose, children }: AuthModalProps) {
 
   if (!isMounted) return null
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
@@ -50,14 +52,16 @@ export function AuthModal({ isOpen, onClose, children }: AuthModalProps) {
               className="relative w-full max-w-[450px] bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,0.2)] dark:shadow-[0_30px_100px_rgba(0,0,0,0.6)] overflow-hidden transition-all pointer-events-auto"
             >
               {/* Close Button */}
-              <div className="absolute top-6 right-6 z-50">
-                <button
-                  onClick={onClose}
-                  className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-all hover:bg-neutral-200 dark:hover:bg-neutral-800"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+              {!hideCloseButton && (
+                <div className="absolute top-6 right-6 z-50">
+                  <button
+                    onClick={onClose}
+                    className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-all hover:bg-neutral-200 dark:hover:bg-neutral-800"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
 
               {/* Content */}
               <div className="relative z-10 p-6 md:p-10">
@@ -71,6 +75,8 @@ export function AuthModal({ isOpen, onClose, children }: AuthModalProps) {
           </div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }
+

@@ -105,7 +105,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   // 1. Resolve Workspace
   const { data: workspaces, error: workspaceError } = await supabase
     .from('workspaces')
-    .select('id, name, is_blocked, subscription_status')
+    .select('id, name, owner_id')
     .eq('slug', workspace_slug)
     .limit(1)
 
@@ -113,8 +113,21 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
 
   if (workspaceError || !workspace) notFound()
 
+  // Buscar perfil do owner separadamente
+  const { data: ownerProfile } = await supabase
+    .from('profiles')
+    .select('subscription_status, is_blocked')
+    .eq('id', workspace.owner_id)
+    .single()
+
   // Verificação de assinatura para o runtime (end-users/visitors)
-  if (workspace.is_blocked || workspace.subscription_status === 'blocked' || workspace.subscription_status === 'pending') {
+
+  const isSuspended = ownerProfile?.is_blocked || 
+                      ownerProfile?.subscription_status === 'blocked' || 
+                      ownerProfile?.subscription_status === 'pending' ||
+                      ownerProfile?.subscription_status === 'canceled'
+
+  if (isSuspended) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950 p-6 text-black dark:text-white">
         <div className="w-full max-w-md bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-8 rounded-[2rem] shadow-xl text-center space-y-6">

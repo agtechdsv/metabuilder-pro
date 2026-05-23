@@ -23,6 +23,12 @@ interface SettingsClientProps {
     id: string
     name: string
     slug: string
+    owner_id: string
+  }
+  profile: {
+    id: string
+    full_name: string | null
+    email: string | null
     plan_id?: string | null
     subscription_status?: string | null
     subscription_cycle?: string | null
@@ -38,8 +44,23 @@ interface SettingsClientProps {
   plans: any[]
 }
 
+function getMemberDisplayName(member: Member) {
+  if (member.profiles?.full_name && member.profiles.full_name.trim()) {
+    return member.profiles.full_name
+  }
+  const email = member.profiles?.email
+  if (email && email.includes('@')) {
+    const localPart = email.split('@')[0]
+    if (localPart) {
+      return localPart.charAt(0).toUpperCase() + localPart.slice(1)
+    }
+  }
+  return 'Usuário ' + member.user_id.substring(0, 5)
+}
+
 export function SettingsClient({ 
   workspace, 
+  profile,
   initialMembers, 
   currentUserRole, 
   workspaceProjects, 
@@ -176,17 +197,19 @@ export function SettingsClient({
               </div>
               
               <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                {members.map(member => (
-                  <li key={member.id} className="p-6 flex items-center justify-between group hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-600 rounded-2xl flex items-center justify-center font-bold text-lg uppercase">
-                        {(member.profiles?.full_name || member.profiles?.email || 'U')[0]}
+                {members.map(member => {
+                  const displayName = getMemberDisplayName(member)
+                  return (
+                    <li key={member.id} className="p-6 flex items-center justify-between group hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-600 rounded-2xl flex items-center justify-center font-bold text-lg uppercase">
+                          {(displayName || 'U')[0]}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-neutral-900 dark:text-white">{displayName}</p>
+                          <p className="text-xs text-neutral-500 mt-0.5">{member.profiles?.email || 'Sem e-mail'}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-neutral-900 dark:text-white">{member.profiles?.full_name || 'Usuário ' + member.user_id.substring(0, 5)}</p>
-                        <p className="text-xs text-neutral-500 mt-0.5">{member.profiles?.email || 'Sem e-mail'}</p>
-                      </div>
-                    </div>
                     <div className="flex items-center gap-4">
                       <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
                         member.role === 'owner' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-500' :
@@ -218,7 +241,7 @@ export function SettingsClient({
                       )}
                     </div>
                   </li>
-                ))}
+                )})}`
               </ul>
             </div>
           </div>
@@ -290,10 +313,11 @@ export function SettingsClient({
 
       {activeTab === 'billing' && (
         <BillingSettings 
-          workspace={workspace} 
-          payments={payments} 
-          plans={plans} 
-          currentUserRole={currentUserRole}
+          workspace={workspace}
+          profile={profile}
+          isOwner={currentUserRole === 'owner'}
+          payments={payments}
+          plans={plans}
         />
       )}
 

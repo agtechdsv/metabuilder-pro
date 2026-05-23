@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { AuthModal } from '@/components/auth/AuthModal'
+import { SetPasswordForm } from '@/components/auth/SetPasswordForm'
 
 interface LoginFormProps {
   error?: string
@@ -20,11 +22,40 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [clientError, setClientError] = useState<string | null>(null)
+  const [clientError, setClientError] = useState<string | null>(serverError || null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [showSetPasswordModal, setShowSetPasswordModal] = useState(false)
+  const [showExpiredModal, setShowExpiredModal] = useState(false)
+  const [expiredModalDesc, setExpiredModalDesc] = useState('')
 
   const emailInputRef = useRef<HTMLInputElement>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+
+  const handleCloseModal = async () => {
+    setShowSetPasswordModal(false)
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+    } catch (err) {
+      console.error('Erro ao deslogar no fechamento do modal:', err)
+    } finally {
+      if (typeof window !== 'undefined') {
+        window.location.hash = ''
+        window.location.search = ''
+        window.location.href = '/'
+      }
+    }
+  }
+
+  const handleCloseExpiredModal = () => {
+    setShowExpiredModal(false)
+    if (typeof window !== 'undefined') {
+      window.location.hash = ''
+      window.location.search = ''
+      window.location.href = '/'
+    }
+  }
 
   // Listener para capturar o Magic Link / Convite na URL (Hash Fragment) ou sessão já existente
   useEffect(() => {
@@ -52,10 +83,45 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
       window.location.href = redirectTo
     }
 
-    // Verifica imediatamente se já tem sessão (ex: refresh na página)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigateToDashboard()
+    // Abre o modal imediatamente se detectar o hash de convite
+    if (typeof window !== 'undefined') {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+      const searchParams = new URLSearchParams(window.location.search)
+      
+      const errorCode = hashParams.get('error_code') || searchParams.get('error_code')
+      const errorDesc = hashParams.get('error_description') || searchParams.get('error_description') || searchParams.get('error')
+      
+      if (errorCode === 'otp_expired' || window.location.hash.includes('otp_expired') || window.location.search.includes('otp_expired')) {
+        setExpiredModalDesc(errorDesc || 'O link de e-mail é inválido ou expirou.')
+        setShowExpiredModal(true)
+      } else {
+        const type = hashParams.get('type')
+        if (type === 'invite' || type === 'recovery') {
+          setShowSetPasswordModal(true)
+        }
+      }
+    }
+
+    // Verifica imediatamente se já tem sessão VÁLIDA (ex: refresh na página)
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        let isInviteOrRecovery = false
+        if (typeof window !== 'undefined') {
+          const hashParams = new URLSearchParams(window.location.hash.substring(1))
+          const type = hashParams.get('type')
+          if (type === 'invite' || type === 'recovery') {
+            isInviteOrRecovery = true
+          }
+        }
+        if (user.user_metadata?.need_password_setup === true) {
+          isInviteOrRecovery = true
+        }
+
+        if (isInviteOrRecovery) {
+          setShowSetPasswordModal(true)
+        } else {
+          navigateToDashboard()
+        }
       }
     })
 
@@ -64,21 +130,45 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
       const hashParams = new URLSearchParams(window.location.hash.substring(1))
       const access_token = hashParams.get('access_token')
       const refresh_token = hashParams.get('refresh_token')
+      const type = hashParams.get('type')
       
       if (access_token && refresh_token) {
         supabase.auth.setSession({ access_token, refresh_token }).then(({ data, error }) => {
           if (!error && data.session) {
-            navigateToDashboard()
+            if (type === 'invite' || type === 'recovery' || data.session.user?.user_metadata?.need_password_setup === true) {
+              setShowSetPasswordModal(true)
+            } else {
+              navigateToDashboard()
+            }
           }
         })
       }
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Usamos apenas "if (session)" porque links de convite ou magic links podem
-      // disparar eventos como 'PASSWORD_RECOVERY' ou apenas 'INITIAL_SESSION'.
-      if (session) {
-        navigateToDashboard()
+      // e tratamos INITIAL_SESSION para capturar sessões inicializadas automaticamente a partir do hash.
+      if (session && (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY' || event === 'INITIAL_SESSION')) {
+        const user = session.user
+        if (user) {
+          let isInviteOrRecovery = false
+          if (typeof window !== 'undefined') {
+            const hashParams = new URLSearchParams(window.location.hash.substring(1))
+            const type = hashParams.get('type')
+            if (type === 'invite' || type === 'recovery') {
+              isInviteOrRecovery = true
+            }
+          }
+          if (event === 'PASSWORD_RECOVERY' || user.user_metadata?.need_password_setup === true) {
+            isInviteOrRecovery = true
+          }
+
+          if (isInviteOrRecovery) {
+            setShowSetPasswordModal(true)
+          } else if (event === 'SIGNED_IN') {
+            // Apenas navega para o dashboard em logins normais (SIGNED_IN real)
+            navigateToDashboard()
+          }
+        }
       }
     })
 
@@ -86,6 +176,12 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
       subscription.unsubscribe()
     }
   }, [router])
+
+  useEffect(() => {
+    if (serverError) {
+      setClientError(serverError)
+    }
+  }, [serverError])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -109,6 +205,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
   const handleEmailAction = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setClientError(null)
+    setSuccessMessage(null)
 
     if (mode === 'signup') {
       if (password !== confirmPassword) {
@@ -126,12 +223,56 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
 
     try {
       if (mode === 'login') {
-        await login(formData)
+        const res = await login(formData)
+        if (res && 'error' in res && res.error) {
+          setClientError(res.error)
+          setIsLoading(false)
+        } else {
+          let redirectTo = '/workspace'
+          if (typeof window !== 'undefined') {
+            const hashParams = new URLSearchParams(window.location.hash.substring(1))
+            const searchParams = new URLSearchParams(window.location.search)
+            const redirectParam = hashParams.get('redirect_to') || searchParams.get('redirect_to')
+            if (redirectParam) {
+              try {
+                redirectTo = new URL(redirectParam).pathname
+              } catch {
+                redirectTo = redirectParam.startsWith('/') ? redirectParam : '/workspace'
+              }
+            }
+          }
+          window.location.href = redirectTo
+        }
       } else {
-        await signup(formData)
+        const res = await signup(formData)
+        if (res && 'error' in res && res.error) {
+          setClientError(res.error)
+          setIsLoading(false)
+        } else {
+          const supabase = createClient()
+          const { data: { session } } = await supabase.auth.getSession()
+          
+          if (session) {
+            let redirectTo = '/workspace'
+            if (typeof window !== 'undefined') {
+              const hashParams = new URLSearchParams(window.location.hash.substring(1))
+              const searchParams = new URLSearchParams(window.location.search)
+              const redirectParam = hashParams.get('redirect_to') || searchParams.get('redirect_to')
+              if (redirectParam) {
+                try {
+                  redirectTo = new URL(redirectParam).pathname
+                } catch {
+                  redirectTo = redirectParam.startsWith('/') ? redirectParam : '/workspace'
+                }
+              }
+            }
+            window.location.href = redirectTo
+          } else {
+            setSuccessMessage('Cadastro realizado! Verifique seu e-mail para confirmar a conta.')
+            setIsLoading(false)
+          }
+        }
       }
-      // O redirect acontece via Server Action. 
-      // Se der o erro "unexpected response", o Next.js costuma redirecionar mesmo assim.
     } catch (err: any) {
       if (err.message?.includes('NEXT_REDIRECT')) return
       setClientError(err.message || 'Erro ao processar autenticação')
@@ -205,11 +346,20 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
         </p>
       </div>
 
-      {(clientError || serverError) && (
+      {clientError && (
         <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
           <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
           <p className="text-sm text-red-500/80 font-bold leading-relaxed">
-            {clientError || serverError}
+            {clientError}
+          </p>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+          <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+          <p className="text-sm text-emerald-500/80 font-bold leading-relaxed">
+            {successMessage}
           </p>
         </div>
       )}
@@ -222,10 +372,10 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
       >
         <div className="p-1.5 bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 shadow-sm group-hover:rotate-12 transition-transform">
           <svg className="w-4 h-4" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.3-4.74 3.3-8.09z" />
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
           </svg>
         </div>
         {mode === 'login' ? 'Entrar com Google' : 'Cadastrar com Google'}
@@ -370,6 +520,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
             onClick={() => {
               setMode(mode === 'login' ? 'signup' : 'login')
               setClientError(null)
+              setSuccessMessage(null)
             }}
             className="ml-2 text-indigo-500 hover:text-indigo-400 transition-colors"
           >
@@ -377,6 +528,35 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
           </button>
         </p>
       </div>
+
+      {/* AuthModal com SetPasswordForm */}
+      <AuthModal isOpen={showSetPasswordModal} onClose={handleCloseModal} hideCloseButton={true}>
+        <SetPasswordForm />
+      </AuthModal>
+
+      {/* Modal de Link Expirado */}
+      <AuthModal isOpen={showExpiredModal} onClose={handleCloseExpiredModal} hideCloseButton={false}>
+        <div className="space-y-6 text-center py-2">
+          <div className="mx-auto w-16 h-16 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center text-red-500">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          
+          <div className="space-y-2">
+            <h3 className="text-xl font-bold text-neutral-900 dark:text-white">Link Expirado ou Inválido</h3>
+            <p className="text-xs text-neutral-550 dark:text-neutral-400 leading-relaxed">
+              Por motivos de segurança, os links de convite e redefinição de senha expiram em pouco tempo ou após o primeiro clique. Solicite um novo convite ou tente realizar o processo novamente.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleCloseExpiredModal}
+            className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] active:scale-95 text-xs font-black uppercase tracking-widest cursor-pointer"
+          >
+            Ir para a Página Inicial
+          </button>
+        </div>
+      </AuthModal>
     </div>
   )
 }

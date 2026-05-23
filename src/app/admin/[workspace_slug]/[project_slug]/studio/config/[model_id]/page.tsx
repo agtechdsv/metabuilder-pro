@@ -52,7 +52,69 @@ export default function ViewConfigurator() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // 1. Busca Dados do Model e Fields em paralelo para ganhar tempo
+        // 1. Resolve User
+        const { data: { user: userData } } = await supabase.auth.getUser()
+        if (!userData) {
+          router.replace('/login')
+          return
+        }
+
+        // 2. Resolve Workspace
+        const { data: ws } = await supabase
+          .from('workspaces')
+          .select('*')
+          .eq('slug', workspace_slug)
+          .single()
+        
+        if (!ws) {
+          router.replace('/login')
+          return
+        }
+
+        // 3. Resolve Project
+        const { data: proj } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('slug', project_slug)
+          .eq('workspace_id', ws.id)
+          .single()
+        
+        if (!proj) {
+          router.replace('/login')
+          return
+        }
+
+        // 4. Resolve permissions
+        const { data: memberData } = await supabase
+          .from('workspace_members')
+          .select('role')
+          .eq('workspace_id', ws.id)
+          .eq('user_id', userData.id)
+          .maybeSingle()
+
+        const isOwner = userData.id === ws.owner_id
+        const userRole = isOwner ? 'owner' : (memberData?.role || 'guest')
+
+        let canCreate = false
+        if (isOwner || userRole === 'admin') {
+          canCreate = true
+        } else if (userRole === 'developer') {
+          const { data: projPerm } = await supabase
+            .from('workspace_member_projects')
+            .select('can_create')
+            .eq('project_id', proj.id)
+            .eq('user_id', userData.id)
+            .maybeSingle()
+          canCreate = projPerm?.can_create === true
+        }
+
+        if (!canCreate) {
+          toast('Você não tem permissão para acessar esta configuração.', 'error')
+          router.replace(`/admin/${workspace_slug}/${project_slug}/studio`)
+          return
+        }
+
+        // 5. Busca Dados do Model e Fields em paralelo para ganhar tempo
         const [modelRes, fieldsRes] = await Promise.all([
           supabase.from('models').select('*').eq('id', model_id).single(),
           supabase.from('fields').select('*').eq('model_id', model_id).order('order_index', { ascending: true })
@@ -63,7 +125,7 @@ export default function ViewConfigurator() {
         const modelData = modelRes.data
         const fieldsData = fieldsRes.data
 
-        // 2. Prepara os dados base (nomes originais)
+        // 6. Prepara os dados base (nomes originais)
         const finalSelected: Record<string, boolean> = {}
         const finalLabels: Record<string, string> = {}
         
@@ -72,7 +134,7 @@ export default function ViewConfigurator() {
           finalLabels[f.id] = f.display_name || f.db_column_name
         })
 
-        // 3. Busca a View e as personalizações (ui_components)
+        // 7. Busca a View e as personalizações (ui_components)
         const { data: existingView } = await supabase
           .from('ui_views')
           .select('*, ui_components(field_id, is_visible, label)')
@@ -98,8 +160,7 @@ export default function ViewConfigurator() {
           }
         }
 
-        // 4. Sincroniza tudo de UMA SÓ VEZ
-        // Isso evita que o React renderize estados intermediários (o flicker)
+        // 8. Sincroniza tudo de UMA SÓ VEZ
         setModel(modelData)
         setFields(fieldsData)
         setSelectedFields(finalSelected)
@@ -108,13 +169,12 @@ export default function ViewConfigurator() {
       } catch (err) {
         console.error('Critical error loading Studio:', err)
       } finally {
-        // Só liberamos a tela quando tudo estiver 100% pronto
         setIsLoading(false)
       }
     }
 
     if (model_id) loadData()
-  }, [model_id, supabase])
+  }, [model_id, supabase, workspace_slug, project_slug, router, toast])
 
   const handleSave = async () => {
     setIsSaving(true)

@@ -52,12 +52,28 @@ interface Workspace {
   subscription_status: 'active' | 'blocked' | 'pending' | 'canceled'
   is_blocked: boolean
   created_at: string
+  subscription_cycle?: string | null
 }
 
 interface Profile {
   id: string
   email: string
   full_name: string | null
+  is_super_admin?: boolean | null
+}
+
+interface Payment {
+  id: string
+  user_id: string
+  workspace_id: string
+  plan_id: string | null
+  cycle: string
+  amount: number
+  status: string
+  external_reference: string
+  billing_type: string | null
+  invoice_url: string | null
+  created_at: string
 }
 
 interface PlatformAdminClientProps {
@@ -65,13 +81,15 @@ interface PlatformAdminClientProps {
   initialWorkspaces: Workspace[]
   profiles: Profile[]
   currentUserEmail: string
+  payments: Payment[]
 }
 
 export default function PlatformAdminClient({
   initialPlans,
   initialWorkspaces,
   profiles,
-  currentUserEmail
+  currentUserEmail,
+  payments
 }: PlatformAdminClientProps) {
   const { toast } = useToast()
   
@@ -82,7 +100,14 @@ export default function PlatformAdminClient({
   
   // Client Search & Filter States
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'blocked'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'blocked' | 'registered'>('all')
+
+  // Dashboard Filter States
+  const [dashboardPeriod, setDashboardPeriod] = useState<'all' | 'today' | '7days' | '15days' | '30days' | 'custom'>('all')
+  const [dashboardCustomStart, setDashboardCustomStart] = useState('')
+  const [dashboardCustomEnd, setDashboardCustomEnd] = useState('')
+  const [dashboardPlan, setDashboardPlan] = useState<string>('all')
+  const [dashboardClient, setDashboardClient] = useState<string>('all')
   
   // Plan Modal States
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false)
@@ -101,57 +126,231 @@ export default function PlatformAdminClient({
   const [newFeatureText, setNewFeatureText] = useState('')
   const [planIsActive, setPlanIsActive] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-
+ 
   // Custom Modal States for Actions
   const [isDeletePlanModalOpen, setIsDeletePlanModalOpen] = useState(false)
   const [planToDelete, setPlanToDelete] = useState<{ id: string, name: string } | null>(null)
   const [isDeletingPlan, setIsDeletingPlan] = useState(false)
-
+ 
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false)
   const [workspaceToBlock, setWorkspaceToBlock] = useState<{ id: string, isBlocked: boolean, name: string } | null>(null)
   const [isBlockingWorkspace, setIsBlockingWorkspace] = useState(false)
-
+ 
   // Map workspace with profile and plan
   const mappedWorkspaces = useMemo(() => {
     return workspaces.map(w => {
       const ownerProfile = profiles.find(p => p.id === w.owner_id)
       const workspacePlan = plans.find(p => p.id === w.plan_id)
+      
+      // Calculate monthly equivalent price for MRR
+      let planPrice = 0
+      if (workspacePlan) {
+        // Find the latest successful payment for this workspace
+        const wPayments = payments.filter(p => 
+          p.workspace_id === w.id && 
+          p.plan_id === w.plan_id &&
+          (p.status?.toLowerCase() === 'received' || 
+           p.status?.toLowerCase() === 'confirmed' || 
+           p.status?.toLowerCase() === 'active' || 
+           p.status?.toLowerCase() === 'paid')
+        )
+        
+        const latestPayment = wPayments.length > 0
+          ? wPayments.reduce((latest, current) => {
+              return new Date(current.created_at) > new Date(latest.created_at) ? current : latest
+            })
+          : null
+
+        if (latestPayment) {
+          const amount = Number(latestPayment.amount)
+          const pCycle = latestPayment.cycle?.toLowerCase()
+          switch (pCycle) {
+            case 'monthly':
+              planPrice = amount
+              break
+            case 'quarterly':
+              planPrice = amount / 3
+              break
+            case 'semiannual':
+            case 'semiannually':
+              planPrice = amount / 6
+              break
+            case 'yearly':
+              planPrice = amount / 12
+              break
+            default:
+              planPrice = amount
+          }
+        } else {
+          // Fallback to the plan's current configurations if no successful payments are recorded yet
+          const basePrice = workspacePlan.price
+          switch (w.subscription_cycle) {
+            case 'monthly':
+              planPrice = workspacePlan.price_monthly ?? basePrice
+              break
+            case 'quarterly':
+              planPrice = (workspacePlan.price_quarterly ?? (basePrice * 3)) / 3
+              break
+            case 'semiannual':
+              planPrice = (workspacePlan.price_semiannually ?? (basePrice * 6)) / 6
+              break
+            case 'yearly':
+              planPrice = (workspacePlan.price_yearly ?? (basePrice * 12)) / 12
+              break
+            default:
+              planPrice = basePrice
+          }
+        }
+      }
+
       return {
         ...w,
         ownerName: ownerProfile?.full_name || 'Sem nome',
         ownerEmail: ownerProfile?.email || 'Sem e-mail',
+        ownerIsSuperAdmin: ownerProfile?.is_super_admin || false,
         planName: workspacePlan?.name || 'Gratuito / Nenhum',
-        planPrice: workspacePlan?.price || 0,
+        planPrice,
         planLicenses: workspacePlan?.licenses_count || 0
       }
     })
-  }, [workspaces, profiles, plans])
+  }, [workspaces, profiles, plans, payments])
+
+  // Filtered workspaces and payments for dashboard calculations
+  const filteredDashboardData = useMemo(() => {
+    // 1. Get client-only workspaces (exclude super admins)
+    const customerWorkspaces = mappedWorkspaces.filter(w => !w.ownerIsSuperAdmin)
+
+    // Helper for period check
+    const isDateInPeriod = (dateStr: string) => {
+      if (dashboardPeriod === 'all') return true
+      const d = new Date(dateStr)
+      const now = new Date()
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      
+      if (dashboardPeriod === 'today') {
+        return d >= startOfToday
+      }
+      if (dashboardPeriod === '7days') {
+        const limit = new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000)
+        return d >= limit
+      }
+      if (dashboardPeriod === '15days') {
+        const limit = new Date(startOfToday.getTime() - 14 * 24 * 60 * 60 * 1000)
+        return d >= limit
+      }
+      if (dashboardPeriod === '30days') {
+        const limit = new Date(startOfToday.getTime() - 29 * 24 * 60 * 60 * 1000)
+        return d >= limit
+      }
+      if (dashboardPeriod === 'custom') {
+        if (!dashboardCustomStart) return true
+        const start = new Date(dashboardCustomStart + 'T00:00:00')
+        if (d < start) return false
+        if (dashboardCustomEnd) {
+          const end = new Date(dashboardCustomEnd + 'T23:59:59')
+          if (d > end) return false
+        }
+        return true
+      }
+      return true
+    }
+
+    // 2. Filter Workspaces
+    const workspacesFiltered = customerWorkspaces.filter(w => {
+      // Filter by period ( adesão / workspace created_at )
+      if (!isDateInPeriod(w.created_at)) return false
+
+      // Filter by plan
+      if (dashboardPlan !== 'all') {
+        if (dashboardPlan === 'free') {
+          if (w.plan_id) return false
+        } else {
+          if (w.plan_id !== dashboardPlan) return false
+        }
+      }
+
+      // Filter by client
+      if (dashboardClient !== 'all' && w.id !== dashboardClient) {
+        return false
+      }
+
+      return true
+    })
+
+    // 3. Filter Payments
+    const paymentsFiltered = payments.filter(p => {
+      // Filter by period ( payment created_at )
+      if (!isDateInPeriod(p.created_at)) return false
+
+      // Filter by plan
+      if (dashboardPlan !== 'all') {
+        if (dashboardPlan === 'free') {
+          if (p.plan_id) return false
+        } else {
+          if (p.plan_id !== dashboardPlan) return false
+        }
+      }
+
+      // Filter by client
+      if (dashboardClient !== 'all' && p.workspace_id !== dashboardClient) {
+        return false
+      }
+
+      return true
+    })
+
+    return {
+      workspaces: workspacesFiltered,
+      payments: paymentsFiltered
+    }
+  }, [mappedWorkspaces, payments, dashboardPeriod, dashboardCustomStart, dashboardCustomEnd, dashboardPlan, dashboardClient])
 
   // BI Metric Calculations
   const metrics = useMemo(() => {
-    const totalClients = mappedWorkspaces.length
-    const totalUsers = profiles.length
+    const { workspaces: filteredWorkspaces, payments: filteredPayments } = filteredDashboardData
     
-    // MRR: Sum of monthly subscription prices for active non-blocked workspaces
-    const activeMRR = mappedWorkspaces
+    // Na nova arquitetura, os "Clientes" são os Perfis (Profiles) que não são Super Admins.
+    const customerProfiles = profiles.filter(p => !p.is_super_admin)
+    const totalClients = customerProfiles.length
+
+    // Usuários ativos agora pode contar todos os profiles (ou apenas donos, dependendo da definição. Vamos manter todos não-super admins)
+    const totalUsers = customerProfiles.length
+    
+    // MRR: Soma do valor mensal das assinaturas ativas dos profiles (ou workspaces ativos atrelados aos planos)
+    const activeMRR = filteredWorkspaces
       .filter(w => !w.is_blocked && w.plan_id)
       .reduce((acc, w) => acc + Number(w.planPrice), 0)
 
-    // Conversion Rate: Paid workspaces / Total workspaces * 100
-    const paidWorkspaces = mappedWorkspaces.filter(w => w.plan_id).length
-    const conversionRate = totalClients > 0 ? (paidWorkspaces / totalClients) * 100 : 0
+    // Faturamento (Revenue): Sum of successful payments
+    const faturamento = filteredPayments
+      .filter(p => {
+        const s = p.status?.toLowerCase()
+        return s === 'received' || s === 'confirmed' || s === 'active' || s === 'paid'
+      })
+      .reduce((acc, p) => acc + Number(p.amount), 0)
+
+    // Taxa de Conversão: Quantos clientes (Profiles) possuem um plano ativo
+    // (Como plan_id ainda não está no objeto profile que vem do banco para o frontend aqui, 
+    // podemos usar a quantidade de clientes que têm algum workspace com plan_id válido, ou idealmente o profile.plan_id)
+    // Para simplificar e manter a precisão com o que temos hoje no frontend:
+    const clientsWithPlan = new Set(filteredWorkspaces.filter(w => w.plan_id).map(w => w.owner_id)).size
+    const conversionRate = totalClients > 0 ? (clientsWithPlan / totalClients) * 100 : 0
 
     return {
       activeMRR,
+      faturamento,
       totalClients,
       totalUsers,
       conversionRate
     }
-  }, [mappedWorkspaces, profiles])
+  }, [filteredDashboardData, profiles])
 
   // Filtered Workspaces for client list
   const filteredWorkspaces = useMemo(() => {
     return mappedWorkspaces.filter(w => {
+      // Exclude workspaces owned by super admins from client list
+      if (w.ownerIsSuperAdmin) return false
+
       const matchesSearch = 
         w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         w.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -160,8 +359,9 @@ export default function PlatformAdminClient({
       
       const matchesStatus = 
         statusFilter === 'all' ||
-        (statusFilter === 'active' && !w.is_blocked) ||
-        (statusFilter === 'blocked' && w.is_blocked)
+        (statusFilter === 'active' && !w.is_blocked && w.plan_id) ||
+        (statusFilter === 'blocked' && w.is_blocked) ||
+        (statusFilter === 'registered' && !w.plan_id)
 
       return matchesSearch && matchesStatus
     })
@@ -313,8 +513,9 @@ export default function PlatformAdminClient({
 
   // Render Plan Distribution Custom SVG Chart
   const renderPlanChart = () => {
+    const { workspaces: filteredWorkspaces } = filteredDashboardData
     const plansWithWorkspaces = plans.map(p => {
-      const count = mappedWorkspaces.filter(w => w.plan_id === p.id && !w.is_blocked).length
+      const count = filteredWorkspaces.filter(w => w.plan_id === p.id && !w.is_blocked).length
       return {
         name: p.name,
         count
@@ -333,9 +534,11 @@ export default function PlatformAdminClient({
             const pct = (p.count / maxCount) * 100
             return (
               <div key={idx} className="flex flex-col items-center gap-2 w-16 group">
-                <div className="relative w-8 bg-gradient-to-t from-indigo-600 to-indigo-400 dark:from-indigo-500 dark:to-purple-500 rounded-t-lg transition-all duration-500" style={{ height: `${Math.max(pct, 5)}%` }}>
-                  <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-neutral-900 dark:bg-neutral-800 text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                    {p.count}
+                <div className="h-36 w-8 flex items-end justify-center relative">
+                  <div className="relative w-8 bg-gradient-to-t from-indigo-600 to-indigo-400 dark:from-indigo-500 dark:to-purple-500 rounded-t-lg transition-all duration-500" style={{ height: `${Math.max(pct, 5)}%` }}>
+                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-neutral-900 dark:bg-neutral-800 text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      {p.count}
+                    </div>
                   </div>
                 </div>
                 <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 truncate max-w-full">{p.name}</span>
@@ -394,9 +597,110 @@ export default function PlatformAdminClient({
             transition={{ duration: 0.25 }}
             className="space-y-6"
           >
+            {/* Dashboard Filters */}
+            <div className="bg-white dark:bg-neutral-900/40 p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-4">
+              <div className="flex flex-wrap items-end gap-4">
+                {/* Período */}
+                <div className="flex-1 min-w-[200px] space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Período</label>
+                  <select
+                    value={dashboardPeriod}
+                    onChange={(e) => setDashboardPeriod(e.target.value as any)}
+                    className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-200"
+                  >
+                    <option value="all">Todos os períodos</option>
+                    <option value="today">Hoje</option>
+                    <option value="7days">Últimos 7 Dias</option>
+                    <option value="15days">Últimos 15 Dias</option>
+                    <option value="30days">Últimos 30 Dias</option>
+                    <option value="custom">Personalizado</option>
+                  </select>
+                </div>
+
+                {/* Planos */}
+                <div className="flex-1 min-w-[200px] space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Planos</label>
+                  <select
+                    value={dashboardPlan}
+                    onChange={(e) => setDashboardPlan(e.target.value)}
+                    className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-200"
+                  >
+                    <option value="all">Todos os Planos</option>
+                    {plans.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                    <option value="free">Gratuito / Sem Plano</option>
+                  </select>
+                </div>
+
+                {/* Clientes */}
+                <div className="flex-1 min-w-[200px] space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Clientes</label>
+                  <select
+                    value={dashboardClient}
+                    onChange={(e) => setDashboardClient(e.target.value)}
+                    className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-200"
+                  >
+                    <option value="all">Todos os Clientes</option>
+                    {initialWorkspaces
+                      .filter(w => {
+                        const ownerProfile = profiles.find(p => p.id === w.owner_id)
+                        return !ownerProfile?.is_super_admin
+                      })
+                      .map(w => (
+                        <option key={w.id} value={w.id}>{w.name}</option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Custom Date Pickers */}
+              {dashboardPeriod === 'custom' && (
+                <div className="flex flex-wrap gap-4 pt-2 border-t border-neutral-100 dark:border-neutral-850/60 animate-in fade-in duration-300">
+                  <div className="w-[180px] space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Data de Início</label>
+                    <input
+                      type="date"
+                      value={dashboardCustomStart}
+                      onChange={(e) => setDashboardCustomStart(e.target.value)}
+                      className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-200"
+                    />
+                  </div>
+                  <div className="w-[180px] space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Data de Fim (Opcional)</label>
+                    <input
+                      type="date"
+                      value={dashboardCustomEnd}
+                      onChange={(e) => setDashboardCustomEnd(e.target.value)}
+                      className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-200"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* KPI Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
               
+              {/* Card 0: Faturamento */}
+              <div className="relative bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between overflow-hidden group">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-bl-full pointer-events-none"></div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Faturamento (Caixa)</span>
+                  <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-xl">
+                    <CreditCard className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <h3 className="text-3xl font-black text-neutral-900 dark:text-white">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(metrics.faturamento)}
+                  </h3>
+                  <p className="text-[10px] font-bold text-neutral-400 mt-1">
+                    Total recebido no período
+                  </p>
+                </div>
+              </div>
+
               {/* Card 1: MRR */}
               <div className="relative bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between overflow-hidden group">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-bl-full pointer-events-none"></div>
@@ -457,10 +761,10 @@ export default function PlatformAdminClient({
 
               {/* Card 4: Conversion Rate */}
               <div className="relative bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between overflow-hidden group">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-bl-full pointer-events-none"></div>
+                <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/5 rounded-bl-full pointer-events-none"></div>
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Taxa de Conversão</span>
-                  <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-xl">
+                  <div className="p-2.5 bg-violet-500/10 text-violet-500 rounded-xl">
                     <Activity className="w-5 h-5" />
                   </div>
                 </div>
@@ -514,7 +818,7 @@ export default function PlatformAdminClient({
                       <span className="text-[11px] font-bold dark:text-white">Clientes Bloqueados</span>
                     </div>
                     <span className="text-[9px] font-black uppercase text-amber-500 bg-amber-50 dark:bg-amber-950 px-2 py-0.5 rounded">
-                      {workspaces.filter(w => w.is_blocked).length} Bloqueados
+                      {mappedWorkspaces.filter(w => w.is_blocked && !w.ownerIsSuperAdmin).length} Bloqueados
                     </span>
                   </div>
                 </div>
@@ -647,7 +951,7 @@ export default function PlatformAdminClient({
               </div>
               
               <div className="flex gap-1 bg-neutral-100 dark:bg-neutral-950 p-1 rounded-xl w-full sm:w-auto justify-center">
-                {(['all', 'active', 'blocked'] as const).map((filter) => (
+                {(['all', 'active', 'blocked', 'registered'] as const).map((filter) => (
                   <button
                     key={filter}
                     type="button"
@@ -659,7 +963,13 @@ export default function PlatformAdminClient({
                         : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'
                     )}
                   >
-                    {filter === 'all' ? 'Todos' : filter === 'active' ? 'Ativos' : 'Bloqueados'}
+                    {filter === 'all' 
+                      ? 'Todos' 
+                      : filter === 'active' 
+                        ? 'Ativos' 
+                        : filter === 'blocked' 
+                          ? 'Bloqueados' 
+                          : 'Cadastrados'}
                   </button>
                 ))}
               </div>

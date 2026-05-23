@@ -40,7 +40,24 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
     metadata.avatar_url || 
     metadata.picture
   
-  const fullName = localProfile?.full_name || metadata.full_name || metadata.name || user?.email || t('common.enterprise')
+  const getDisplayName = () => {
+    if (localProfile?.full_name && localProfile.full_name.trim()) return localProfile.full_name
+    if (metadata.full_name && metadata.full_name.trim()) return metadata.full_name
+    if (metadata.name && metadata.name.trim()) return metadata.name
+    
+    // Fallback to email local part capitalized
+    const email = user?.email
+    if (email && email.includes('@')) {
+      const localPart = email.split('@')[0]
+      if (localPart) {
+        return localPart.charAt(0).toUpperCase() + localPart.slice(1)
+      }
+    }
+    
+    return t('common.enterprise')
+  }
+
+  const fullName = getDisplayName()
   const initials = fullName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
 
   useEffect(() => {

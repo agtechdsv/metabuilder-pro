@@ -40,9 +40,18 @@ interface ProjectManagerProps {
   workspaceId: string
   workspaceSlug: string
   workspaceName: string
+  canCreate?: boolean
+  canDelete?: boolean
 }
 
-export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, workspaceName }: ProjectManagerProps) {
+export function ProjectManager({ 
+  initialProjects, 
+  workspaceId, 
+  workspaceSlug, 
+  workspaceName,
+  canCreate = true,
+  canDelete = true
+}: ProjectManagerProps) {
   const [projects, setProjects] = useState<Project[]>(initialProjects)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
@@ -179,7 +188,7 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
     <div className="space-y-6">
 
       {/* Banner de Boas Vindas */}
-      <div className="relative py-6 px-12 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] overflow-hidden group shadow-sm dark:shadow-none">
+      <div className="relative py-6 px-12 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] overflow-hidden group shadow-sm dark:shadow-none">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/5 blur-[100px] -mr-48 -mt-48 group-hover:bg-indigo-600/10 transition-all duration-700"></div>
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
@@ -202,12 +211,14 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
             >
               <Settings className="w-5 h-5" /> Equipe & Configurações
             </Link>
-            <button
-              onClick={() => openDrawer()}
-              className="flex items-center gap-2 px-7 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)] whitespace-nowrap text-sm"
-            >
-              <Plus className="w-5 h-5" /> {t('dashboard.projects.new_project')}
-            </button>
+            {canCreate && (
+              <button
+                onClick={() => openDrawer()}
+                className="flex items-center gap-2 px-7 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)] whitespace-nowrap text-sm"
+              >
+                <Plus className="w-5 h-5" /> {t('dashboard.projects.new_project')}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -228,7 +239,7 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
           {projects.map((project) => (
             <div
               key={project.id}
-              className="group relative p-5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] hover:border-indigo-500/50 transition-all shadow-sm hover:shadow-xl dark:shadow-none"
+              className="group relative p-5 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] hover:border-indigo-500/50 transition-all shadow-sm hover:shadow-xl dark:shadow-none"
             >
               <div className="flex flex-col h-full gap-4">
                 <div className="flex items-start justify-between">
@@ -257,29 +268,37 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
                       {project.is_active ? t('dashboard.projects.status_active') : t('dashboard.projects.status_inactive')}
                     </div>
 
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => toggleActive(project)}
-                        className={`p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ${project.is_active ? 'text-neutral-500 hover:text-red-400' : 'text-neutral-500 hover:text-emerald-400'}`}
-                        title={project.is_active ? t('dashboard.projects.toggle_inactive') : t('dashboard.projects.toggle_active')}
-                      >
-                        {project.is_active ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
-                      </button>
-                      <button
-                        onClick={() => openDrawer(project)}
-                        className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
-                        title={t('dashboard.projects.edit_project')}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => openDeleteModal(project)}
-                        className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400"
-                        title={t('dashboard.projects.delete_project')}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {(canCreate || canDelete) && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {canCreate && (
+                          <>
+                            <button
+                              onClick={() => toggleActive(project)}
+                              className={`p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ${project.is_active ? 'text-neutral-500 hover:text-red-400' : 'text-neutral-500 hover:text-emerald-400'}`}
+                              title={project.is_active ? t('dashboard.projects.toggle_inactive') : t('dashboard.projects.toggle_active')}
+                            >
+                              {project.is_active ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
+                            </button>
+                            <button
+                              onClick={() => openDrawer(project)}
+                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
+                              title={t('dashboard.projects.edit_project')}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => openDeleteModal(project)}
+                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400"
+                            title={t('dashboard.projects.delete_project')}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -307,18 +326,20 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
           ))}
 
           {/* Add New Card */}
-          <button
-            onClick={() => openDrawer()}
-            className="p-8 bg-neutral-50 dark:bg-neutral-950 border-2 border-dashed border-neutral-300 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-white dark:hover:bg-neutral-900 hover:border-indigo-500/30 transition-all group min-h-[250px] shadow-inner dark:shadow-none"
-          >
-            <div className="w-16 h-16 bg-white dark:bg-neutral-900 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm dark:shadow-none">
-              <Plus className="w-8 h-8 text-neutral-400 group-hover:text-indigo-500" />
-            </div>
-            <div className="text-center">
-              <p className="font-bold text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-neutral-200 transition-colors">{t('dashboard.projects.create_project_title')}</p>
-              <p className="text-xs text-neutral-400 dark:text-neutral-600 mt-1">{t('dashboard.projects.create_project_desc')}</p>
-            </div>
-          </button>
+          {canCreate && (
+            <button
+              onClick={() => openDrawer()}
+              className="p-8 bg-neutral-50 dark:bg-neutral-950 border-2 border-dashed border-neutral-300 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-white dark:hover:bg-neutral-800 hover:border-indigo-500/30 transition-all group min-h-[250px] shadow-inner dark:shadow-none"
+            >
+              <div className="w-16 h-16 bg-white dark:bg-neutral-950 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm dark:shadow-none">
+                <Plus className="w-8 h-8 text-neutral-400 group-hover:text-indigo-500" />
+              </div>
+              <div className="text-center">
+                <p className="font-bold text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-neutral-200 transition-colors">{t('dashboard.projects.create_project_title')}</p>
+                <p className="text-xs text-neutral-400 dark:text-neutral-600 mt-1">{t('dashboard.projects.create_project_desc')}</p>
+              </div>
+            </button>
+          )}
         </div>
       </section>
 
@@ -338,13 +359,13 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value, slug: selectedProject ? formData.slug : e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-') })}
                 placeholder={t('dashboard.projects.name_placeholder')}
-                className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white"
               />
             </div>
 
             <div className="space-y-2">
               <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">{t('dashboard.projects.project_slug')}</label>
-              <div className="flex items-center gap-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3">
+              <div className="flex items-center gap-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3">
                 <span className="text-neutral-400 dark:text-neutral-600 text-sm">/</span>
                 <input
                   required
@@ -365,13 +386,13 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
                 placeholder={t('dashboard.projects.desc_placeholder')}
                 rows={3}
-                className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white resize-none"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white resize-none"
               />
             </div>
 
             <div className="space-y-4">
               <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">{t('dashboard.projects.project_icon')}</label>
-              <div className="flex items-center gap-4 p-4 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl">
+              <div className="flex items-center gap-4 p-4 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl">
                 <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0">
                   <DynamicIcon icon={formData.icon || 'Box'} size={24} />
                 </div>
@@ -396,7 +417,7 @@ export function ProjectManager({ initialProjects, workspaceId, workspaceSlug, wo
             </div>
 
             {selectedProject && (
-              <div className="pt-4 flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800">
+              <div className="pt-4 flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-950 rounded-xl border border-neutral-200 dark:border-neutral-800">
                 <div className="space-y-1">
                   <p className="text-sm font-bold text-neutral-900 dark:text-white">{t('dashboard.projects.status_title')}</p>
                   <p className="text-xs text-neutral-500">{t('dashboard.projects.status_desc')}</p>

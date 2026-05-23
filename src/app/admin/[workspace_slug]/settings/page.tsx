@@ -142,6 +142,7 @@ export default async function SettingsPage({ params }: SettingsPageProps) {
       <main className="w-full px-10 pt-8 pb-12 flex-grow">
         <SettingsClient 
           workspace={workspace}
+          profile={profile}
           initialMembers={members as any || []}
           currentUserRole={currentUserMember.role}
           workspaceProjects={projects || []}
