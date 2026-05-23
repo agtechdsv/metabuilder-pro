@@ -73,6 +73,29 @@ export default async function SettingsPage({ params }: SettingsPageProps) {
 
   // 3. Permissão do usuário atual
   let currentUserMember = members?.find(m => m.user_id === user.id)
+
+  const isOwner = user.id === workspace.owner_id
+  
+  // Verifica se o usuário é um convidado com acesso global
+  let isGlobalGuest = false
+  if (!isOwner) {
+    const { data: guestRecord } = await admin
+      .from('owner_guests')
+      .select('access_level')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    isGlobalGuest = guestRecord?.access_level === 'global'
+  }
+  
+  // Se for um convidado com Acesso Global, tratamos ele como um Owner virtual nas configurações
+  if (!currentUserMember && isGlobalGuest) {
+    currentUserMember = {
+      id: 'global-guest',
+      user_id: user.id,
+      role: 'owner',
+      profiles: profile
+    }
+  }
   
   // Se a tabela de membros estiver vazia para este workspace (legado/recém-criado), 
   // nós promovemos o usuário atual a owner para evitar o bloqueio (404).

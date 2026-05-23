@@ -53,10 +53,23 @@ export default async function StudioDashboard({ params }: StudioDashboardProps) 
   const isOwner = user.id === workspace.owner_id
   const userRole = isOwner ? 'owner' : (memberData?.role || 'guest')
 
+  // Para convidados, verifica o nível de acesso global
+  let guestAccessLevel: string | null = null
+  if (!isOwner) {
+    const { data: guestRecord } = await supabase
+      .from('owner_guests')
+      .select('access_level')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    guestAccessLevel = guestRecord?.access_level ?? null
+  }
+
+  const isGlobalGuest = guestAccessLevel === 'global'
+
   let canCreate = false
   let canDelete = false
 
-  if (isOwner || userRole === 'admin') {
+  if (isOwner || isGlobalGuest || userRole === 'admin') {
     canCreate = true
     canDelete = true
   } else if (userRole === 'developer') {

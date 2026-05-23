@@ -59,11 +59,28 @@ export default async function GlobalDashboard() {
   const isGuest = !!guestRecord
   const guestAccessLevel = guestRecord?.access_level || null
 
+  // Busca a role e permissões do convidado nos workspaces
+  const { data: memberships } = await supabase
+    .from('workspace_members')
+    .select('workspace_id, can_create, can_edit, can_delete')
+    .eq('user_id', user.id)
+
+  const isGlobalGuest = guestAccessLevel === 'global'
+
   // Busca os Workspaces do usuário
   const { data: workspaces } = await supabase
     .from('workspaces')
     .select('*, projects(count)')
     .order('created_at', { ascending: false })
+
+  if (workspaces) {
+    workspaces.forEach(w => {
+      const isOwner = user.id === w.owner_id
+      const mem = memberships?.find(m => m.workspace_id === w.id)
+      w.can_edit = isOwner || isGlobalGuest || mem?.can_edit === true
+      w.can_delete = isOwner || isGlobalGuest || mem?.can_delete === true
+    })
+  }
 
   // 1. Verificar se o usuário possui assinaturas ativas (ou se é Super Admin)
   const isSuperAdmin = profile?.is_super_admin === true
@@ -104,10 +121,6 @@ export default async function GlobalDashboard() {
     }
   }
 
-  // Se tiver exatamente 1 workspace ativo, redireciona diretamente para ele
-  if (activeWorkspaces.length === 1) {
-    redirect(`/admin/${activeWorkspaces[0].slug}`)
-  }
 
   // Busca planos de assinatura ativos
   const { data: plans } = await supabase

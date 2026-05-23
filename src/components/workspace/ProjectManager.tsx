@@ -33,6 +33,10 @@ interface Project {
   is_active: boolean
   workspace_id: string
   models?: { count: number }[]
+  can_create?: boolean
+  can_edit?: boolean
+  can_deactivate?: boolean
+  can_delete?: boolean
 }
 
 interface ProjectManagerProps {
@@ -42,6 +46,8 @@ interface ProjectManagerProps {
   workspaceName: string
   canCreate?: boolean
   canDelete?: boolean
+  /** Exibe o botão "Equipe & Configurações". Falso para convidados com Acesso Granular. */
+  showTeamSettings?: boolean
 }
 
 export function ProjectManager({ 
@@ -50,7 +56,8 @@ export function ProjectManager({
   workspaceSlug, 
   workspaceName,
   canCreate = true,
-  canDelete = true
+  canDelete = true,
+  showTeamSettings = true
 }: ProjectManagerProps) {
   const [projects, setProjects] = useState<Project[]>(initialProjects)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
@@ -205,12 +212,15 @@ export function ProjectManager({
           </div>
 
           <div className="flex items-center gap-3">
-            <Link 
-              href={`/admin/${workspaceSlug}/settings`}
-              className="flex items-center gap-2 px-7 py-3 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all shadow-sm text-sm border border-neutral-200 dark:border-neutral-700"
-            >
-              <Settings className="w-5 h-5" /> Equipe & Configurações
-            </Link>
+            {/* Só exibe para owner ou convidado com Acesso Global */}
+            {showTeamSettings && (
+              <Link 
+                href={`/admin/${workspaceSlug}/settings`}
+                className="flex items-center gap-2 px-7 py-3 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all shadow-sm text-sm border border-neutral-200 dark:border-neutral-700"
+              >
+                <Settings className="w-5 h-5" /> Equipe & Configurações
+              </Link>
+            )}
             {canCreate && (
               <button
                 onClick={() => openDrawer()}
@@ -268,27 +278,27 @@ export function ProjectManager({
                       {project.is_active ? t('dashboard.projects.status_active') : t('dashboard.projects.status_inactive')}
                     </div>
 
-                    {(canCreate || canDelete) && (
+                    {(project.can_edit || project.can_deactivate || project.can_delete) && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {canCreate && (
-                          <>
-                            <button
-                              onClick={() => toggleActive(project)}
-                              className={`p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ${project.is_active ? 'text-neutral-500 hover:text-red-400' : 'text-neutral-500 hover:text-emerald-400'}`}
-                              title={project.is_active ? t('dashboard.projects.toggle_inactive') : t('dashboard.projects.toggle_active')}
-                            >
-                              {project.is_active ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
-                            </button>
-                            <button
-                              onClick={() => openDrawer(project)}
-                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
-                              title={t('dashboard.projects.edit_project')}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                          </>
+                        {project.can_deactivate && (
+                          <button
+                            onClick={() => toggleActive(project)}
+                            className={`p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ${project.is_active ? 'text-neutral-500 hover:text-red-400' : 'text-neutral-500 hover:text-emerald-400'}`}
+                            title={project.is_active ? t('dashboard.projects.toggle_inactive') : t('dashboard.projects.toggle_active')}
+                          >
+                            {project.is_active ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
+                          </button>
                         )}
-                        {canDelete && (
+                        {project.can_edit && (
+                          <button
+                            onClick={() => openDrawer(project)}
+                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
+                            title={t('dashboard.projects.edit_project')}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        )}
+                        {project.can_delete && (
                           <button
                             onClick={() => openDeleteModal(project)}
                             className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400"

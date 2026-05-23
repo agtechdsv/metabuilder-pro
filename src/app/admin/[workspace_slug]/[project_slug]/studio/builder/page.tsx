@@ -112,8 +112,21 @@ export default function UseCaseBuilder() {
       const isOwner = userData.id === ws.owner_id
       const userRole = isOwner ? 'owner' : (memberData?.role || 'guest')
 
+      // Para convidados, verifica o nível de acesso global
+      let guestAccessLevel: string | null = null
+      if (!isOwner) {
+        const { data: guestRecord } = await supabase
+          .from('owner_guests')
+          .select('access_level')
+          .eq('user_id', userData.id)
+          .maybeSingle()
+        guestAccessLevel = guestRecord?.access_level ?? null
+      }
+
+      const isGlobalGuest = guestAccessLevel === 'global'
+
       let canCreate = false
-      if (isOwner || userRole === 'admin') {
+      if (isOwner || isGlobalGuest || userRole === 'admin') {
         canCreate = true
       } else if (userRole === 'developer') {
         const { data: projPerm } = await supabase

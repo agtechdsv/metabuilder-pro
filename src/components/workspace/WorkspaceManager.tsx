@@ -16,7 +16,9 @@ import {
   X,
   Lock,
   Send,
-  Loader2
+  Loader2,
+  Power,
+  PowerOff
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -33,6 +35,8 @@ interface Workspace {
   slug: string
   owner_id?: string
   projects?: { count: number }[]
+  can_edit?: boolean
+  can_delete?: boolean
 }
 
 interface Guest {
@@ -42,8 +46,8 @@ interface Guest {
   created_at: string
   full_name: string | null
   email: string | null
-  workspaces: { workspace_id: string; user_id: string; role: string; can_create?: boolean; can_delete?: boolean }[]
-  projects: { workspace_id: string; user_id: string; project_id: string; can_create?: boolean; can_delete?: boolean }[]
+  workspaces: { workspace_id: string; user_id: string; role: string; can_create?: boolean; can_edit?: boolean; can_delete?: boolean }[]
+  projects: { workspace_id: string; user_id: string; project_id: string; can_create?: boolean; can_edit?: boolean; can_deactivate?: boolean; can_delete?: boolean }[]
 }
 
 import { CheckoutClient } from '@/components/checkout/CheckoutClient'
@@ -90,8 +94,8 @@ export function WorkspaceManager({
   const [isInvitingGuest, setIsInvitingGuest] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [selectedGuestAccess, setSelectedGuestAccess] = useState<Guest | null>(null)
-  const [guestWorkspaces, setGuestWorkspaces] = useState<{ id: string; can_create: boolean; can_delete: boolean }[]>([])
-  const [guestProjects, setGuestProjects] = useState<{ id: string; can_create: boolean; can_delete: boolean }[]>([])
+  const [guestWorkspaces, setGuestWorkspaces] = useState<{ id: string; can_create: boolean; can_edit: boolean; can_delete: boolean }[]>([])
+  const [guestProjects, setGuestProjects] = useState<{ id: string; can_create: boolean; can_edit: boolean; can_deactivate: boolean; can_delete: boolean }[]>([])
   const [guestAccessLevel, setGuestAccessLevel] = useState<'global' | 'granular'>('granular')
   const [isSavingAccess, setIsSavingAccess] = useState(false)
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false)
@@ -178,22 +182,25 @@ export function WorkspaceManager({
     setGuestWorkspaces(guest.workspaces.map(w => ({
       id: w.workspace_id,
       can_create: w.can_create || false,
+      can_edit: w.can_edit || false,
       can_delete: w.can_delete || false
     })))
     setGuestProjects(guest.projects.map(p => ({
       id: p.project_id,
       can_create: p.can_create || false,
+      can_edit: p.can_edit || false,
+      can_deactivate: p.can_deactivate || false,
       can_delete: p.can_delete || false
     })))
   }
 
-  const toggleWorkspacePermission = (wsId: string, permission: 'can_create' | 'can_delete') => {
+  const toggleWorkspacePermission = (wsId: string, permission: 'can_create' | 'can_edit' | 'can_delete') => {
     setGuestWorkspaces(prev => prev.map(w => 
       w.id === wsId ? { ...w, [permission]: !w[permission] } : w
     ))
   }
 
-  const toggleProjectPermission = (projId: string, permission: 'can_create' | 'can_delete') => {
+  const toggleProjectPermission = (projId: string, permission: 'can_create' | 'can_edit' | 'can_deactivate' | 'can_delete') => {
     setGuestProjects(prev => prev.map(p => 
       p.id === projId ? { ...p, [permission]: !p[permission] } : p
     ))
@@ -330,7 +337,8 @@ export function WorkspaceManager({
           </div>
 
           <div className="flex items-center gap-3">
-            {teamData && (
+            {/* Só exibe para owner ou convidado com Acesso Global */}
+            {teamData && (!isGuest || initialGuestAccessLevel === 'global') && (
               <button
                 onClick={() => setIsTeamDrawerOpen(true)}
                 className="flex items-center gap-2 px-7 py-3 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all shadow-sm text-sm border border-neutral-200 dark:border-neutral-700 whitespace-nowrap active:scale-95"
@@ -399,22 +407,27 @@ export function WorkspaceManager({
                     </div>
                   </Link>
 
-                  {workspace.owner_id === user?.id && (
+                  {/* Exibe para quem tem permissão de editar ou excluir */}
+                  {(workspace.can_edit || workspace.can_delete) && (
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => openDrawer(workspace)}
-                        className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
-                        title={t('dashboard.edit_workspace')}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => openDeleteModal(workspace)}
-                        className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400"
-                        title={t('dashboard.delete_workspace')}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {workspace.can_edit && (
+                        <button
+                          onClick={() => openDrawer(workspace)}
+                          className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
+                          title={t('dashboard.edit_workspace')}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      )}
+                      {workspace.can_delete && (
+                        <button
+                          onClick={() => openDeleteModal(workspace)}
+                          className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400"
+                          title={t('dashboard.delete_workspace')}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -772,12 +785,16 @@ export function WorkspaceManager({
         </div>
       </Drawer>
 
-      <Drawer
+      {/* Modal elegante de edição de acessos do convidado */}
+      <Modal
         isOpen={!!selectedGuestAccess}
         onClose={() => setSelectedGuestAccess(null)}
-        title={`Permissões: ${selectedGuestAccess?.full_name || selectedGuestAccess?.email}`}
+        title={`Permissões — ${selectedGuestAccess?.full_name || selectedGuestAccess?.email}`}
+        description="Configure quais Workspaces e Projetos este implementador pode visualizar e atuar."
+        size="2xl"
+        zIndex={300}
       >
-        <div className="space-y-6">
+        <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-1">
           <p className="text-xs text-neutral-550 dark:text-neutral-450 leading-relaxed">
             Configure quais Workspaces e Projetos este implementador pode visualizar e atuar. Ele não terá acesso ao que não for selecionado abaixo.
           </p>
@@ -830,6 +847,7 @@ export function WorkspaceManager({
                   {teamData.workspaces.map(ws => {
                     const isWsChecked = guestWorkspaces.some(w => w.id === ws.id)
                     const isWsCreateChecked = guestWorkspaces.find(w => w.id === ws.id)?.can_create || false
+                    const isWsEditChecked = guestWorkspaces.find(w => w.id === ws.id)?.can_edit || false
                     const isWsDeleteChecked = guestWorkspaces.find(w => w.id === ws.id)?.can_delete || false
                     const wsProjects = teamData.projects.filter(p => p.workspace_id === ws.id)
 
@@ -843,10 +861,10 @@ export function WorkspaceManager({
                                 checked={isWsChecked}
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    setGuestWorkspaces([...guestWorkspaces, { id: ws.id, can_create: false, can_delete: false }])
+                                    setGuestWorkspaces([...guestWorkspaces, { id: ws.id, can_create: false, can_edit: false, can_delete: false }])
                                     setGuestProjects([
                                       ...guestProjects,
-                                      ...wsProjects.map(p => ({ id: p.id, can_create: false, can_delete: false }))
+                                      ...wsProjects.map(p => ({ id: p.id, can_create: false, can_edit: false, can_deactivate: false, can_delete: false }))
                                     ])
                                   } else {
                                     setGuestWorkspaces(guestWorkspaces.filter(w => w.id !== ws.id))
@@ -877,6 +895,19 @@ export function WorkspaceManager({
                               </button>
                               <button
                                 type="button"
+                                onClick={() => toggleWorkspacePermission(ws.id, 'can_edit')}
+                                className={cn(
+                                  "px-2 py-1 rounded-lg border transition-all flex items-center justify-center gap-1 text-[9px] font-black uppercase tracking-wider cursor-pointer active:scale-95",
+                                  isWsEditChecked
+                                    ? "bg-amber-500/10 text-amber-550 border-amber-500/30"
+                                    : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 border-transparent hover:text-neutral-600 dark:hover:text-neutral-300"
+                                )}
+                                title="Permitir editar workspace"
+                              >
+                                <Pencil className="w-3 h-3" /> EDITAR
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => toggleWorkspacePermission(ws.id, 'can_delete')}
                                 className={cn(
                                   "px-2 py-1 rounded-lg border transition-all flex items-center justify-center gap-1 text-[9px] font-black uppercase tracking-wider cursor-pointer active:scale-95",
@@ -899,6 +930,8 @@ export function WorkspaceManager({
                               {wsProjects.map(project => {
                                 const isProjChecked = guestProjects.some(p => p.id === project.id)
                                 const isProjCreateChecked = guestProjects.find(p => p.id === project.id)?.can_create || false
+                                const isProjEditChecked = guestProjects.find(p => p.id === project.id)?.can_edit || false
+                                const isProjDeactivateChecked = guestProjects.find(p => p.id === project.id)?.can_deactivate || false
                                 const isProjDeleteChecked = guestProjects.find(p => p.id === project.id)?.can_delete || false
 
                                 return (
@@ -909,7 +942,7 @@ export function WorkspaceManager({
                                         checked={isProjChecked}
                                         onChange={(e) => {
                                           if (e.target.checked) {
-                                            setGuestProjects([...guestProjects, { id: project.id, can_create: false, can_delete: false }])
+                                            setGuestProjects([...guestProjects, { id: project.id, can_create: false, can_edit: false, can_deactivate: false, can_delete: false }])
                                           } else {
                                             setGuestProjects(guestProjects.filter(p => p.id !== project.id))
                                           }
@@ -933,6 +966,32 @@ export function WorkspaceManager({
                                           title="Permitir criar tabelas/telas"
                                         >
                                           <Plus className="w-2.5 h-2.5" /> NOVO
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleProjectPermission(project.id, 'can_deactivate')}
+                                          className={cn(
+                                            "px-1.5 py-0.5 rounded border transition-all flex items-center justify-center gap-0.5 text-[8px] font-black uppercase cursor-pointer active:scale-95",
+                                            isProjDeactivateChecked
+                                              ? "bg-orange-500/10 text-orange-600 border-orange-500/30"
+                                              : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 border-transparent hover:text-neutral-600 dark:hover:text-neutral-300"
+                                          )}
+                                          title="Permitir ativar/desativar projeto"
+                                        >
+                                          <Power className="w-2.5 h-2.5" /> DESATIVAR
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleProjectPermission(project.id, 'can_edit')}
+                                          className={cn(
+                                            "px-1.5 py-0.5 rounded border transition-all flex items-center justify-center gap-0.5 text-[8px] font-black uppercase cursor-pointer active:scale-95",
+                                            isProjEditChecked
+                                              ? "bg-amber-500/10 text-amber-550 border-amber-500/30"
+                                              : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 border-transparent hover:text-neutral-600 dark:hover:text-neutral-300"
+                                          )}
+                                          title="Permitir editar projeto"
+                                        >
+                                          <Pencil className="w-2.5 h-2.5" /> EDITAR
                                         </button>
                                         <button
                                           type="button"
@@ -982,7 +1041,7 @@ export function WorkspaceManager({
             </button>
           </div>
         </div>
-      </Drawer>
+      </Modal>
 
       {/* Modal de Checkout / Assinaturas */}
       {isCheckoutModalOpen && plans && (

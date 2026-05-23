@@ -299,11 +299,22 @@ export async function getStudioTeamData() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Não autenticado.')
 
+    // Resolve ownerId se for convidado com Acesso Global
+    let ownerId = user.id
+    const { data: guestRecord } = await supabaseAdmin
+      .from('owner_guests')
+      .select('owner_id, access_level')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (guestRecord?.access_level === 'global') {
+      ownerId = guestRecord.owner_id
+    }
+
     // 1. Fetch owner profile & subscription plans to check quotas
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('plan_id, subscription_status, is_super_admin, subscription_plans(licenses_count)')
-      .eq('id', user.id)
+      .eq('id', ownerId)
       .single()
 
     if (!profile) throw new Error('Perfil não encontrado.')
@@ -312,7 +323,7 @@ export async function getStudioTeamData() {
     const { data: workspaces } = await supabaseAdmin
       .from('workspaces')
       .select('id, name, slug')
-      .eq('owner_id', user.id)
+      .eq('owner_id', ownerId)
       .order('created_at', { ascending: true })
 
     const workspaceIds = workspaces?.map(w => w.id) || []
@@ -332,7 +343,7 @@ export async function getStudioTeamData() {
     const { data: guests, error: guestsError } = await supabaseAdmin
       .from('owner_guests')
       .select('id, user_id, access_level, created_at')
-      .eq('owner_id', user.id)
+      .eq('owner_id', ownerId)
       .order('created_at', { ascending: true })
 
     if (guestsError) throw guestsError
@@ -353,14 +364,14 @@ export async function getStudioTeamData() {
       if (workspaceIds.length > 0) {
         const { data: wsMembers } = await supabaseAdmin
           .from('workspace_members')
-          .select('workspace_id, user_id, role, can_create, can_delete')
+          .select('workspace_id, user_id, role, can_create, can_edit, can_delete')
           .in('workspace_id', workspaceIds)
           .in('user_id', guestUserIds)
         workspaceMemberships = wsMembers || []
 
         const { data: projAssigns } = await supabaseAdmin
           .from('workspace_member_projects')
-          .select('workspace_id, user_id, project_id, can_create, can_delete')
+          .select('workspace_id, user_id, project_id, can_create, can_edit, can_deactivate, can_delete')
           .in('workspace_id', workspaceIds)
           .in('user_id', guestUserIds)
         projectAssignments = projAssigns || []
@@ -413,17 +424,28 @@ export async function inviteStudioGuest(email: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Não autenticado.')
 
+    // Resolve ownerId se for convidado com Acesso Global
+    let ownerId = user.id
+    const { data: guestRecord } = await supabaseAdmin
+      .from('owner_guests')
+      .select('owner_id, access_level')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (guestRecord?.access_level === 'global') {
+      ownerId = guestRecord.owner_id
+    }
+
     // Fetch limits
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('plan_id, subscription_status, is_super_admin, subscription_plans(licenses_count)')
-      .eq('id', user.id)
+      .eq('id', ownerId)
       .single()
 
     if (!profile) throw new Error('Perfil não encontrado.')
 
     if (!profile.is_super_admin && profile.subscription_status !== 'active') {
-      throw new Error('Sua assinatura não está ativa.')
+      throw new Error('Sua assinatura não está activa.')
     }
 
     let allowedGuests = 0;
@@ -438,7 +460,7 @@ export async function inviteStudioGuest(email: string) {
     const { count } = await supabaseAdmin
       .from('owner_guests')
       .select('*', { count: 'exact', head: true })
-      .eq('owner_id', user.id)
+      .eq('owner_id', ownerId)
 
     if ((count || 0) >= allowedGuests) {
       throw new Error(`Limite do plano atingido. Você pode ter no máximo ${allowedGuests} convidados.`)
@@ -477,7 +499,7 @@ export async function inviteStudioGuest(email: string) {
         const { data: existingGuest } = await supabaseAdmin
           .from('owner_guests')
           .select('id')
-          .eq('owner_id', user.id)
+          .eq('owner_id', ownerId)
           .eq('user_id', userId)
           .maybeSingle()
 
@@ -487,7 +509,7 @@ export async function inviteStudioGuest(email: string) {
 
         // Insert into owner_guests
         const { error: insertError } = await supabaseAdmin.from('owner_guests').insert({
-          owner_id: user.id,
+          owner_id: ownerId,
           user_id: userId,
           access_level: 'granular'
         })
@@ -500,7 +522,7 @@ export async function inviteStudioGuest(email: string) {
 
     if (authData?.user) {
       const { error: insertError } = await supabaseAdmin.from('owner_guests').insert({
-        owner_id: user.id,
+        owner_id: ownerId,
         user_id: authData.user.id,
         access_level: 'granular'
       })
@@ -522,11 +544,22 @@ export async function removeStudioGuest(guestUserId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Não autenticado.')
 
-    // Ensure the caller is the owner
+    // Resolve ownerId se for convidado com Acesso Global
+    let ownerId = user.id
+    const { data: guestRecord } = await supabaseAdmin
+      .from('owner_guests')
+      .select('owner_id, access_level')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (guestRecord?.access_level === 'global') {
+      ownerId = guestRecord.owner_id
+    }
+
+    // Ensure the caller is the owner or global guest
     const { data: ownerGuest, error: ogError } = await supabaseAdmin
       .from('owner_guests')
       .select('id')
-      .eq('owner_id', user.id)
+      .eq('owner_id', ownerId)
       .eq('user_id', guestUserId)
       .single()
 
@@ -536,14 +569,14 @@ export async function removeStudioGuest(guestUserId: string) {
     await supabaseAdmin
       .from('owner_guests')
       .delete()
-      .eq('owner_id', user.id)
+      .eq('owner_id', ownerId)
       .eq('user_id', guestUserId)
 
     // 2. Fetch owner's workspaces
     const { data: ownerWorkspaces } = await supabaseAdmin
       .from('workspaces')
       .select('id')
-      .eq('owner_id', user.id)
+      .eq('owner_id', ownerId)
 
     const ownerWorkspaceIds = ownerWorkspaces?.map(w => w.id) || []
 
@@ -592,8 +625,8 @@ export async function removeStudioGuest(guestUserId: string) {
 export async function updateGuestAccess(
   guestUserId: string,
   accessLevel: 'global' | 'granular',
-  workspaces: { id: string; can_create: boolean; can_delete: boolean }[],
-  projects: { id: string; can_create: boolean; can_delete: boolean }[]
+  workspaces: { id: string; can_create: boolean; can_edit: boolean; can_delete: boolean }[],
+  projects: { id: string; can_create: boolean; can_edit: boolean; can_deactivate: boolean; can_delete: boolean }[]
 ) {
   try {
     const { createClient } = await import('@/utils/supabase/server')
@@ -601,11 +634,22 @@ export async function updateGuestAccess(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Não autenticado.')
 
+    // Resolve ownerId se for convidado com Acesso Global
+    let ownerId = user.id
+    const { data: guestRecord } = await supabaseAdmin
+      .from('owner_guests')
+      .select('owner_id, access_level')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (guestRecord?.access_level === 'global') {
+      ownerId = guestRecord.owner_id
+    }
+
     // Ensure the caller is indeed the owner of this guest (security check)
     const { data: ownerGuest, error: ogError } = await supabaseAdmin
       .from('owner_guests')
       .select('id')
-      .eq('owner_id', user.id)
+      .eq('owner_id', ownerId)
       .eq('user_id', guestUserId)
       .single()
 
@@ -616,7 +660,7 @@ export async function updateGuestAccess(
       .from('owner_guests')
       .update({ access_level: accessLevel })
       .eq('user_id', guestUserId)
-      .eq('owner_id', user.id)
+      .eq('owner_id', ownerId)
 
     if (updateOgError) throw updateOgError
 
@@ -624,7 +668,7 @@ export async function updateGuestAccess(
     const { data: ownerWorkspaces } = await supabaseAdmin
       .from('workspaces')
       .select('id')
-      .eq('owner_id', user.id)
+      .eq('owner_id', ownerId)
 
     const ownerWorkspaceIds = ownerWorkspaces?.map(w => w.id) || []
 
@@ -662,6 +706,7 @@ export async function updateGuestAccess(
           user_id: guestUserId,
           role: 'developer', // Default role for granular guests
           can_create: w.can_create,
+          can_edit: w.can_edit,
           can_delete: w.can_delete
         }))
 
@@ -689,6 +734,8 @@ export async function updateGuestAccess(
               user_id: guestUserId,
               project_id: p.id,
               can_create: uiProj?.can_create || false,
+              can_edit: uiProj?.can_edit || false,
+              can_deactivate: uiProj?.can_deactivate || false,
               can_delete: uiProj?.can_delete || false
             }
           })
@@ -716,6 +763,17 @@ export async function resendStudioGuestInvite(email: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Não autenticado.')
 
+    // Resolve ownerId se for convidado com Acesso Global
+    let ownerId = user.id
+    const { data: guestRecord } = await supabaseAdmin
+      .from('owner_guests')
+      .select('owner_id, access_level')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (guestRecord?.access_level === 'global') {
+      ownerId = guestRecord.owner_id
+    }
+
     // 1. Encontrar o usuário convidado na base do Supabase Auth pelo email
     const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
     if (listError) throw listError
@@ -729,7 +787,7 @@ export async function resendStudioGuestInvite(email: string) {
     const { data: ownerGuest } = await supabaseAdmin
       .from('owner_guests')
       .select('id')
-      .eq('owner_id', user.id)
+      .eq('owner_id', ownerId)
       .eq('user_id', existingUser.id)
       .maybeSingle()
 
