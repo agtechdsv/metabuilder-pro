@@ -21,12 +21,17 @@ export async function GET(request: Request) {
                 <p style="font-size: 12px; color: #666;">Sincronizando plataforma...</p>
               </div>
               <script>
-                if (window.opener) {
-                  // Avisa a janela pai para ir para o destino final
-                  window.opener.location.assign('${origin}${next}');
-                  // Fecha esta janela
+                try {
+                  if (window.opener && !window.opener.closed) {
+                    window.opener.location.assign('${origin}${next}');
+                  }
+                } catch (e) {
+                  console.error('Erro ao redirecionar janela pai:', e);
+                }
+                try {
                   window.close();
-                } else {
+                } catch (e) {
+                  console.error('Erro ao fechar popup:', e);
                   window.location.assign('${origin}${next}');
                 }
               </script>
