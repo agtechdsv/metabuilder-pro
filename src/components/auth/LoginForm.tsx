@@ -182,6 +182,34 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
     }
   }, [serverError])
 
+  // Listener para capturar os tokens vindos do popup de login do Google
+  useEffect(() => {
+    const handleMessage = async (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data?.type === 'SUPABASE_AUTH_SUCCESS') {
+        const { access_token, refresh_token, next } = event.data;
+        const supabase = createClient();
+        
+        setIsLoading(true);
+        const { error } = await supabase.auth.setSession({
+          access_token,
+          refresh_token
+        });
+
+        if (!error) {
+          window.location.href = next || '/workspace';
+        } else {
+          setClientError('Erro ao processar autenticação.');
+          setIsLoading(false);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (mode === 'login') emailInputRef.current?.focus()
@@ -284,23 +312,20 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
     setIsLoading(true)
     setClientError(null)
     
-    // Monta a URL de callback com o destino final
-    let callbackUrl = `${window.location.origin}/auth/callback`
+    let callbackUrl = `${window.location.origin}/auth/callback?popup=true`
     if (typeof window !== 'undefined') {
       const searchParams = new URLSearchParams(window.location.search)
       const redirectParam = searchParams.get('redirect_to')
       if (redirectParam) {
-        callbackUrl += `?next=${encodeURIComponent(redirectParam)}`
+        callbackUrl += `&next=${encodeURIComponent(redirectParam)}`
       }
     }
 
-    // Usa redirect direto na aba atual — único método confiável com SSR/cookies.
-    // O approach de popup falha porque o servidor seta cookies apenas na resposta
-    // para a janela do popup, e esses cookies não se propagam para a janela pai.
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: callbackUrl,
+        skipBrowserRedirect: true,
         queryParams: {
           prompt: 'select_account',
           access_type: 'offline',
@@ -311,8 +336,21 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
     if (error) {
       setClientError(error.message)
       setIsLoading(false)
+      return
     }
-    // Se não houver erro, o Supabase vai redirecionar automaticamente para o Google
+
+    if (data?.url) {
+      const width = 500
+      const height = 650
+      const left = window.screenX + (window.outerWidth - width) / 2
+      const top = window.screenY + (window.outerHeight - height) / 2
+
+      window.open(
+        data.url,
+        'google-login',
+        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,status=yes`
+      )
+    }
   }
 
   return (
