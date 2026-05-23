@@ -146,8 +146,10 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // e tratamos INITIAL_SESSION para capturar sessões inicializadas automaticamente a partir do hash.
-      if (session && (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY' || event === 'INITIAL_SESSION')) {
+      // Tratamos apenas hash-based flows (Magic Link, convite, recuperação de senha).
+      // NÃO navegamos no evento SIGNED_IN para OAuth — o /auth/callback já cuida do
+      // redirect servidor-side após gravar os cookies corretamente.
+      if (session && (event === 'PASSWORD_RECOVERY' || event === 'INITIAL_SESSION')) {
         const user = session.user
         if (user) {
           let isInviteOrRecovery = false
@@ -164,9 +166,6 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
 
           if (isInviteOrRecovery) {
             setShowSetPasswordModal(true)
-          } else if (event === 'SIGNED_IN') {
-            // Apenas navega para o dashboard em logins normais (SIGNED_IN real)
-            navigateToDashboard()
           }
         }
       }
@@ -282,21 +281,26 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
 
   const handleGoogleLogin = async () => {
     const supabase = createClient()
+    setIsLoading(true)
+    setClientError(null)
     
-    let callbackUrl = `${window.location.origin}/auth/callback?popup=true`
+    // Monta a URL de callback com o destino final
+    let callbackUrl = `${window.location.origin}/auth/callback`
     if (typeof window !== 'undefined') {
       const searchParams = new URLSearchParams(window.location.search)
       const redirectParam = searchParams.get('redirect_to')
       if (redirectParam) {
-        callbackUrl += `&next=${encodeURIComponent(redirectParam)}`
+        callbackUrl += `?next=${encodeURIComponent(redirectParam)}`
       }
     }
 
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    // Usa redirect direto na aba atual — único método confiável com SSR/cookies.
+    // O approach de popup falha porque o servidor seta cookies apenas na resposta
+    // para a janela do popup, e esses cookies não se propagam para a janela pai.
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: callbackUrl,
-        skipBrowserRedirect: true,
         queryParams: {
           prompt: 'select_account',
           access_type: 'offline',
@@ -306,21 +310,9 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
 
     if (error) {
       setClientError(error.message)
-      return
+      setIsLoading(false)
     }
-
-    if (data?.url) {
-      const width = 500
-      const height = 650
-      const left = window.screenX + (window.outerWidth - width) / 2
-      const top = window.screenY + (window.outerHeight - height) / 2
-
-      window.open(
-        data.url,
-        'google-login',
-        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,status=yes`
-      )
-    }
+    // Se não houver erro, o Supabase vai redirecionar automaticamente para o Google
   }
 
   return (

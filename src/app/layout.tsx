@@ -47,28 +47,7 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
       suppressHydrationWarning
     >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                if (typeof window !== 'undefined' && window.name === 'google-login') {
-                  setTimeout(() => {
-                    try {
-                      if (window.opener && !window.opener.closed) {
-                        if (window.opener.location.pathname !== '/workspace') {
-                          window.opener.location.href = '/workspace';
-                        }
-                      }
-                    } catch (e) {}
-                    window.close();
-                  }, 200);
-                }
-              } catch (err) {}
-            `
-          }}
-        />
-      </head>
+      <head />
       <body 
         className="min-h-full flex flex-col bg-white dark:bg-black text-black dark:text-white transition-colors duration-300"
         suppressHydrationWarning
