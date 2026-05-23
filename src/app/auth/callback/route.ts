@@ -12,12 +12,12 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error && data.session) {
-      if (isPopup) {
-        // Fluxo popup: enviamos os tokens para a janela pai via postMessage.
-        // A janela pai chama setSession() — o que seta os cookies no contexto DELA —
-        // e só então navega para /workspace. Isso evita a race condition de cookies.
-        const { access_token, refresh_token } = data.session
-        const html = `<!DOCTYPE html>
+      const { access_token, refresh_token } = data.session
+      
+      // Retornamos sempre este HTML. Ele verifica no lado do cliente
+      // se foi aberto como popup (window.opener). Se sim, avisa a janela pai
+      // e fecha. Se não, faz o redirecionamento normal.
+      const html = `<!DOCTYPE html>
 <html>
   <head>
     <title>Autenticando...</title>
@@ -51,11 +51,13 @@ export async function GET(request: Request) {
     <div style="text-align:center;">
       <div class="loader"></div>
       <p style="margin:0 0 6px;font-weight:600;">Autenticação concluída!</p>
-      <p style="margin:0;font-size:13px;color:#666;">Fechando...</p>
+      <p style="margin:0;font-size:13px;color:#666;">Redirecionando...</p>
     </div>
     <script>
       try {
-        if (window.opener && !window.opener.closed) {
+        const isPopup = window.opener && !window.opener.closed && window.opener !== window;
+        
+        if (isPopup) {
           window.opener.postMessage(
             {
               type: 'SUPABASE_AUTH_SUCCESS',
@@ -63,23 +65,23 @@ export async function GET(request: Request) {
               refresh_token: '${refresh_token}',
               next: '${next}'
             },
-            window.opener.location.origin
+            window.opener.location.origin || '*'
           );
+          setTimeout(() => { window.close(); }, 100);
+        } else {
+          window.location.assign('${origin}${next}');
         }
       } catch (e) {
-        console.error('postMessage failed:', e);
+        console.error('Callback error:', e);
+        window.location.assign('${origin}${next}');
       }
-      window.close();
     </script>
   </body>
 </html>`
-        return new NextResponse(html, {
-          headers: { 'Content-Type': 'text/html' },
-        })
-      }
-
-      // Fluxo redirect normal (não-popup): redirect servidor-side simples
-      return NextResponse.redirect(`${origin}${next}`)
+      
+      return new NextResponse(html, {
+        headers: { 'Content-Type': 'text/html' },
+      })
     }
   }
 
