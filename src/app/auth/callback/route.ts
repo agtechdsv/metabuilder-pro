@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/'
+  const next = searchParams.get('next') ?? '/workspace'
 
   if (code) {
     const supabase = await createClient()
@@ -51,19 +51,23 @@ export async function GET(request: Request) {
               const isPopup = (window.opener && window.opener !== window) || window.name === 'google-login';
               
               if (isPopup) {
-                try {
-                  if (window.opener && !window.opener.closed) {
-                    window.opener.location.assign('${origin}${next}');
+                // Aguarda 200ms para garantir que o navegador salvou os cookies na máquina do usuário.
+                // Isso evita o "redirecionamento fantasma" da janela pai de volta para o /login.
+                setTimeout(() => {
+                  try {
+                    if (window.opener && !window.opener.closed) {
+                      window.opener.location.assign('${origin}${next}');
+                    }
+                  } catch (e) {
+                    console.error('Erro ao redirecionar janela pai:', e);
                   }
-                } catch (e) {
-                  console.error('Erro ao redirecionar janela pai:', e);
-                }
-                try {
-                  window.close();
-                } catch (e) {
-                  console.error('Erro ao fechar popup:', e);
-                  window.location.assign('${origin}${next}');
-                }
+                  try {
+                    window.close();
+                  } catch (e) {
+                    console.error('Erro ao fechar popup:', e);
+                    window.location.assign('${origin}${next}');
+                  }
+                }, 200);
               } else {
                 window.location.assign('${origin}${next}');
               }

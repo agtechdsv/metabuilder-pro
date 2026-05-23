@@ -53,14 +53,16 @@ export default async function RootLayout({
             __html: `
               try {
                 if (typeof window !== 'undefined' && window.name === 'google-login') {
-                  try {
-                    if (window.opener && !window.opener.closed) {
-                      if (window.opener.location.pathname !== '/workspace') {
-                        window.opener.location.href = '/workspace';
+                  setTimeout(() => {
+                    try {
+                      if (window.opener && !window.opener.closed) {
+                        if (window.opener.location.pathname !== '/workspace') {
+                          window.opener.location.href = '/workspace';
+                        }
                       }
-                    }
-                  } catch (e) {}
-                  window.close();
+                    } catch (e) {}
+                    window.close();
+                  }, 200);
                 }
               } catch (err) {}
             `
