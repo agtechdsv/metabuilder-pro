@@ -312,12 +312,12 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
     setIsLoading(true)
     setClientError(null)
     
-    let callbackUrl = `${window.location.origin}/auth/callback?popup=true`
+    let callbackUrl = `${window.location.origin}/auth/callback`
     if (typeof window !== 'undefined') {
       const searchParams = new URLSearchParams(window.location.search)
       const redirectParam = searchParams.get('redirect_to')
       if (redirectParam) {
-        callbackUrl += `&next=${encodeURIComponent(redirectParam)}`
+        callbackUrl += `?next=${encodeURIComponent(redirectParam)}`
       }
     }
 

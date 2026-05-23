@@ -47,7 +47,22 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
       suppressHydrationWarning
     >
-      <head />
+      <head>
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            try {
+              // Se o Supabase rejeitar a URL de callback (ex: falta de configuração no painel),
+              // ele faz fallback para a URL base (/). Se isso acontecer no popup e tiver um código OAuth,
+              // interceptamos e forçamos o redirecionamento para o callback correto.
+              if (window.opener && window.opener !== window) {
+                if (window.location.pathname === '/' && window.location.search.includes('code=')) {
+                  window.location.href = '/auth/callback' + window.location.search;
+                }
+              }
+            } catch (e) {}
+          `
+        }} />
+      </head>
       <body 
         className="min-h-full flex flex-col bg-white dark:bg-black text-black dark:text-white transition-colors duration-300"
         suppressHydrationWarning
