@@ -6,14 +6,20 @@ import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react'
 
 type ToastType = 'success' | 'error' | 'info'
 
+interface ToastAction {
+  label: string
+  onClick: () => void
+}
+
 interface Toast {
   id: string
   message: string
   type: ToastType
+  action?: ToastAction
 }
 
 interface ToastContextType {
-  toast: (message: string, type?: ToastType) => void
+  toast: (message: string, type?: ToastType, action?: ToastAction) => void
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined)
@@ -21,9 +27,9 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined)
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
 
-  const toast = useCallback((message: string, type: ToastType = 'info') => {
+  const toast = useCallback((message: string, type: ToastType = 'info', action?: ToastAction) => {
     const id = Math.random().toString(36).substring(2, 9)
-    setToasts((prev) => [...prev, { id, message, type }])
+    setToasts((prev) => [...prev, { id, message, type, action }])
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))
     }, 5000)
@@ -43,9 +49,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
               className={`
                 pointer-events-auto min-w-[320px] max-w-[420px] p-4 rounded-2xl shadow-2xl border flex items-start gap-4 backdrop-blur-xl
-                ${t.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 
+                ${t.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-450' : 
                   t.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400' : 
-                  'bg-indigo-500/10 border-indigo-500/20 text-indigo-600 dark:text-indigo-400'}
+                  'bg-indigo-500/10 border-indigo-500/20 text-indigo-600 dark:text-indigo-450'}
               `}
             >
               <div className={`
@@ -60,10 +66,23 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               </div>
               <div className="flex-1 pt-0.5">
                 <p className="text-sm font-bold leading-tight">{t.message}</p>
+                {t.action && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      e.preventDefault()
+                      t.action?.onClick()
+                      setToasts((prev) => prev.filter((item) => item.id !== t.id))
+                    }}
+                    className="mt-2.5 px-3 py-1.5 bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all border border-neutral-200 dark:border-neutral-700 shadow-sm cursor-pointer"
+                  >
+                    {t.action.label}
+                  </button>
+                )}
               </div>
               <button 
                 onClick={() => setToasts(prev => prev.filter(item => item.id !== t.id))}
-                className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
+                className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4 opacity-50" />
               </button>

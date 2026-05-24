@@ -33,9 +33,12 @@ export function HeroActions({ user }: HeroActionsProps) {
             <span>Entrar</span>
           </button>
         )}
-        <button className="bg-neutral-800/40 hover:bg-neutral-800 text-neutral-200 px-8 py-4 rounded-2xl font-bold transition-all border border-neutral-700/50 backdrop-blur-md active:scale-95 hover:border-neutral-600">
+        <Link 
+          href="/agendamento"
+          className="bg-neutral-800/40 hover:bg-neutral-800 text-neutral-200 px-8 py-4 rounded-2xl font-bold transition-all border border-neutral-700/50 backdrop-blur-md active:scale-95 hover:border-neutral-600 flex items-center justify-center"
+        >
           {t('hero.cta_demo')}
-        </button>
+        </Link>
       </div>
 
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)}>

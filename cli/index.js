@@ -9,6 +9,8 @@ const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const ldap = require('ldapjs');
+const oracledb = require('oracledb');
+oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
 // Configurações do Supabase lidas do ambiente ou perguntadas depois
 let SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -94,8 +96,81 @@ async function introspectPostgres(connectionString) {
   }
 }
 
+// Função 1.5: Introspecção Oracle
+async function introspectOracle(connectionString) {
+  let connection;
+  try {
+    console.log(chalk.blue('\nConectando ao banco de dados Oracle...'));
+    connection = await oracledb.getConnection({ connectString: connectionString });
+    console.log(chalk.green('✓ Conexão Oracle local estabelecida com sucesso!\n'));
+
+    console.log(chalk.gray('Lendo tabelas...'));
+    const tablesResult = await connection.execute(`SELECT TABLE_NAME FROM USER_TABLES`);
+    const tables = tablesResult.rows.map(row => row.TABLE_NAME);
+
+    console.log(chalk.gray('Lendo colunas...'));
+    const columnsResult = await connection.execute(`
+      SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, NULLABLE, DATA_DEFAULT 
+      FROM USER_TAB_COLUMNS
+    `);
+
+    console.log(chalk.gray('Lendo chaves primárias...'));
+    const pkResult = await connection.execute(`
+      SELECT cols.TABLE_NAME, cols.COLUMN_NAME 
+      FROM USER_CONSTRAINTS cons 
+      INNER JOIN USER_CONS_COLUMNS cols ON cons.CONSTRAINT_NAME = cols.CONSTRAINT_NAME 
+      WHERE cons.CONSTRAINT_TYPE = 'P'
+    `);
+    const primaryKeys = pkResult.rows;
+
+    console.log(chalk.gray('Lendo chaves estrangeiras (relacionamentos)...'));
+    const fkResult = await connection.execute(`
+      SELECT a.TABLE_NAME as FOREIGN_TABLE_NAME, a.COLUMN_NAME as FOREIGN_COLUMN_NAME, 
+             c_pk.TABLE_NAME as PRIMARY_TABLE_NAME, b.COLUMN_NAME as PRIMARY_COLUMN_NAME
+      FROM USER_CONS_COLUMNS a
+      JOIN USER_CONSTRAINTS c ON a.CONSTRAINT_NAME = c.CONSTRAINT_NAME
+      JOIN USER_CONSTRAINTS c_pk ON c.R_CONSTRAINT_NAME = c_pk.CONSTRAINT_NAME
+      JOIN USER_CONS_COLUMNS b ON c_pk.CONSTRAINT_NAME = b.CONSTRAINT_NAME AND a.POSITION = b.POSITION
+      WHERE c.CONSTRAINT_TYPE = 'R'
+    `);
+    const foreignKeys = fkResult.rows;
+
+    const schemaDefinition = tables.map(tableName => {
+      const tableColumns = columnsResult.rows.filter(col => col.TABLE_NAME === tableName);
+      const tablePKs = primaryKeys.filter(pk => pk.TABLE_NAME === tableName).map(pk => pk.COLUMN_NAME);
+      const tableFKs = foreignKeys.filter(fk => fk.FOREIGN_TABLE_NAME === tableName);
+
+      return {
+        name: tableName,
+        columns: tableColumns.map(col => ({
+          name: col.COLUMN_NAME,
+          type: col.DATA_TYPE,
+          isNullable: col.NULLABLE === 'Y',
+          defaultValue: col.DATA_DEFAULT ? String(col.DATA_DEFAULT) : null,
+          isPrimary: tablePKs.includes(col.COLUMN_NAME)
+        })),
+        relations: tableFKs.map(fk => ({
+          foreignColumn: fk.FOREIGN_COLUMN_NAME,
+          referencedTable: fk.PRIMARY_TABLE_NAME,
+          referencedColumn: fk.PRIMARY_COLUMN_NAME
+        }))
+      };
+    });
+
+    console.log(chalk.green(`✓ Lidos metadados de ${schemaDefinition.length} tabelas.`));
+    return schemaDefinition;
+  } catch (err) {
+    console.error(chalk.red('Erro na introspecção Oracle: '), err);
+    throw err;
+  } finally {
+    if (connection) {
+      try { await connection.close(); } catch (err) { console.error(err); }
+    }
+  }
+}
+
 // Função 2: Iniciar Túnel Seguro (Modo Agente Escuta)
-async function startTunnel(projectId, secretToken, connectionName, connectionString, configSupabaseUrl, configSupabaseKey, configLdap) {
+async function startTunnel(projectId, secretToken, connectionName, connectionString, configSupabaseUrl, configSupabaseKey, configLdap, dbType = 'postgres') {
   // Pega do ambiente (.env.local) ou do arquivo metabuilder.config.json
   const finalSupabaseUrl = SUPABASE_URL || configSupabaseUrl;
   const finalSupabaseKey = SUPABASE_KEY || configSupabaseKey;
@@ -113,10 +188,16 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
     }
   });
 
-  const pgClient = new Client({ connectionString });
+  let pgClient, oracleConnection;
+  console.log(chalk.blue(`\nConectando ao banco de dados local para o túnel (${dbType})...`));
+
+  if (dbType === 'oracle') {
+    oracleConnection = await oracledb.getConnection({ connectString: connectionString });
+  } else {
+    pgClient = new Client({ connectionString });
+    await pgClient.connect();
+  }
   
-  console.log(chalk.blue(`\nConectando ao banco de dados local para o túnel...`));
-  await pgClient.connect();
   console.log(chalk.green(`✓ Conexão contínua estabelecida com sucesso! (${connectionName || 'public'})`));
 
   const channelName = `tunnel:${projectId}`;
@@ -203,7 +284,11 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
                // Insere o whereClause ou usa AND se já existir WHERE
                sql += (sql.toLowerCase().includes(' where ') ? ' AND ' + conditions.join(' AND ') : whereClause);
             }
-            sql += ` LIMIT ${limit} OFFSET ${offset}`;
+            if (dbType === 'oracle') {
+              sql += ` OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
+            } else {
+              sql += ` LIMIT ${limit} OFFSET ${offset}`;
+            }
           } else {
             let selectCols = `"${safeTable}".*`;
             let joinClause = '';
@@ -216,16 +301,33 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
                     const safeLocal = j.localKey.replace(/[^a-zA-Z0-9_]/g, '');
                     const safeForeign = j.foreignKey.replace(/[^a-zA-Z0-9_]/g, '');
                     
-                    selectCols += `, row_to_json("${safeTo}".*) AS "${safeTo}"`;
+                    if (dbType === 'oracle') {
+                      selectCols += `, (SELECT JSON_OBJECT(*) FROM "${safeTo}" WHERE "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}") AS "${safeTo}"`;
+                    } else {
+                      selectCols += `, row_to_json("${safeTo}".*) AS "${safeTo}"`;
+                    }
                     joinClause += ` LEFT JOIN "${safeTo}" ON "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}"`;
                  }
               });
             }
-            sql = `SELECT ${selectCols} FROM "${safeTable}"${joinClause}${whereClause} LIMIT ${limit} OFFSET ${offset}`;
+            if (dbType === 'oracle') {
+              sql = `SELECT ${selectCols} FROM "${safeTable}"${joinClause}${whereClause} OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
+            } else {
+              sql = `SELECT ${selectCols} FROM "${safeTable}"${joinClause}${whereClause} LIMIT ${limit} OFFSET ${offset}`;
+            }
           }
           
+          if (dbType === 'oracle') {
+            sql = sql.replace(/\$(\d+)/g, ':$1');
+          }
+
           console.log(chalk.gray(`[ SQL ] Executando: ${sql}`));
-          result = await pgClient.query(sql, params);
+          if (dbType === 'oracle') {
+            const oraRes = await oracleConnection.execute(sql, params, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+            result = { rows: oraRes.rows };
+          } else {
+            result = await pgClient.query(sql, params);
+          }
           console.log(chalk.green(`[ OK ] SELECT: Retornou ${result.rows.length} linhas (Limit: ${limit}, Offset: ${offset}).`));
         }
         else if (action === 'validate_login') {
@@ -316,9 +418,16 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
 
             sql = `SELECT * FROM "${safeTable}" WHERE "${safeEmailCol}" = $1`;
             params = [email];
+            if (dbType === 'oracle') sql = sql.replace(/\$(\d+)/g, ':$1');
             
             console.log(chalk.gray(`[ SQL ] Buscando usuário: ${sql}`));
-            const selectResult = await pgClient.query(sql, params);
+            let selectResult;
+            if (dbType === 'oracle') {
+              const oraRes = await oracleConnection.execute(sql, params, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+              selectResult = { rows: oraRes.rows };
+            } else {
+              selectResult = await pgClient.query(sql, params);
+            }
             
             if (selectResult.rows.length === 0) {
               throw new Error('Usuário não encontrado');
@@ -367,11 +476,22 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
           const safeTable = db_table_name.replace(/[^a-zA-Z0-9_]/g, '');
           const safeEmailCol = db_email_column.replace(/[^a-zA-Z0-9_]/g, '');
 
-          sql = `SELECT * FROM "${safeTable}" ORDER BY "${safeEmailCol}" ASC LIMIT $1 OFFSET $2`;
-          params = [limit, offset];
+          if (dbType === 'oracle') {
+            sql = `SELECT * FROM "${safeTable}" ORDER BY "${safeEmailCol}" ASC OFFSET :1 ROWS FETCH NEXT :2 ROWS ONLY`;
+            params = [offset, limit];
+          } else {
+            sql = `SELECT * FROM "${safeTable}" ORDER BY "${safeEmailCol}" ASC LIMIT $1 OFFSET $2`;
+            params = [limit, offset];
+          }
           
           console.log(chalk.gray(`[ SQL ] Buscando usuários: ${sql}`));
-          const selectResult = await pgClient.query(sql, params);
+          let selectResult;
+          if (dbType === 'oracle') {
+            const oraRes = await oracleConnection.execute(sql, params, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+            selectResult = { rows: oraRes.rows };
+          } else {
+            selectResult = await pgClient.query(sql, params);
+          }
           
           let safeRows = selectResult.rows;
           if (db_password_column) {
@@ -390,11 +510,23 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
           const data = payload.payload.data; // { coluna: "valor" }
           const keys = Object.keys(data).map(k => `"${k.replace(/[^a-zA-Z0-9_]/g, '')}"`);
           const values = Object.values(data);
-          const placeholders = values.map((_, i) => `$${i + 1}`);
+          let placeholders;
           
-          sql = `INSERT INTO "${safeTable}" (${keys.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`;
+          if (dbType === 'oracle') {
+            placeholders = values.map((_, i) => `:${i + 1}`);
+            sql = `INSERT INTO "${safeTable}" (${keys.join(', ')}) VALUES (${placeholders.join(', ')})`;
+          } else {
+            placeholders = values.map((_, i) => `$${i + 1}`);
+            sql = `INSERT INTO "${safeTable}" (${keys.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`;
+          }
+          
           params = values;
-          result = await pgClient.query(sql, params);
+          if (dbType === 'oracle') {
+            await oracleConnection.execute(sql, params, { autoCommit: true });
+            result = { rows: [] };
+          } else {
+            result = await pgClient.query(sql, params);
+          }
           console.log(chalk.green(`[ OK ] INSERT: 1 linha criada.`));
         }
         else if (action === 'update') {
@@ -420,13 +552,23 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
 
             const keys = colNames.map(k => `"${k.replace(/[^a-zA-Z0-9_]/g, '')}"`);
             const values = Object.values(currentData);
-            const setClause = keys.map((key, i) => `${key} = $${i + 1}`).join(', ');
-
-            sql = `UPDATE "${safeTable}" SET ${setClause} WHERE "${safeIdCol}" = $${values.length + 1} RETURNING *`;
+            let setClause;
+            if (dbType === 'oracle') {
+              setClause = keys.map((key, i) => `${key} = :${i + 1}`).join(', ');
+              sql = `UPDATE "${safeTable}" SET ${setClause} WHERE "${safeIdCol}" = :${values.length + 1}`;
+            } else {
+              setClause = keys.map((key, i) => `${key} = $${i + 1}`).join(', ');
+              sql = `UPDATE "${safeTable}" SET ${setClause} WHERE "${safeIdCol}" = $${values.length + 1} RETURNING *`;
+            }
             params = [...values, idValue];
 
             try {
-              updateResult = await pgClient.query(sql, params);
+              if (dbType === 'oracle') {
+                 await oracleConnection.execute(sql, params, { autoCommit: true });
+                 updateResult = { rows: [] };
+              } else {
+                 updateResult = await pgClient.query(sql, params);
+              }
               result = updateResult;
               console.log(chalk.green(`[ OK ] UPDATE: 1 linha atualizada.`));
               break; // Sucesso — sai do loop
@@ -457,9 +599,16 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
           const { idColumn, idValue } = payload.payload;
           const safeIdCol = idColumn.replace(/[^a-zA-Z0-9_]/g, '');
           
-          sql = `DELETE FROM "${safeTable}" WHERE "${safeIdCol}" = $1 RETURNING *`;
-          params = [idValue];
-          result = await pgClient.query(sql, params);
+          if (dbType === 'oracle') {
+            sql = `DELETE FROM "${safeTable}" WHERE "${safeIdCol}" = :1`;
+            params = [idValue];
+            await oracleConnection.execute(sql, params, { autoCommit: true });
+            result = { rows: [] };
+          } else {
+            sql = `DELETE FROM "${safeTable}" WHERE "${safeIdCol}" = $1 RETURNING *`;
+            params = [idValue];
+            result = await pgClient.query(sql, params);
+          }
           console.log(chalk.green(`[ OK ] DELETE: 1 linha removida.`));
         } else {
           throw new Error('Ação não suportada');
@@ -559,10 +708,12 @@ async function run() {
       configData.connections.forEach(conn => {
         if (Array.isArray(conn.connectionsString)) {
           conn.connectionsString.forEach(dbConfig => {
-            tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, dbConfig.name, dbConfig.connectionString, configData.supabaseUrl, configData.supabaseAnonKey, configData.ldap));
+            const dbType = dbConfig.type || 'postgres';
+            tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, dbConfig.name, dbConfig.connectionString, configData.supabaseUrl, configData.supabaseAnonKey, configData.ldap, dbType));
           });
         } else if (conn.connectionString) {
-          tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, 'public', conn.connectionString, configData.supabaseUrl, configData.supabaseAnonKey, configData.ldap));
+          const dbType = conn.type || 'postgres';
+          tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, 'public', conn.connectionString, configData.supabaseUrl, configData.supabaseAnonKey, configData.ldap, dbType));
         }
       });
       
@@ -576,7 +727,10 @@ async function run() {
       for (const conn of configData.connections) {
         if (Array.isArray(conn.connectionsString)) {
           for (const dbConfig of conn.connectionsString) {
-            const schemaDefinition = await introspectPostgres(dbConfig.connectionString);
+            const dbType = dbConfig.type || 'postgres';
+            const schemaDefinition = dbType === 'oracle' 
+              ? await introspectOracle(dbConfig.connectionString) 
+              : await introspectPostgres(dbConfig.connectionString);
             console.log(chalk.blue(`\nEnviando metadados do projeto ${conn.projectId} (Schema: ${dbConfig.name})...`));
             try {
               await axios.post(apiUrl, {
@@ -593,7 +747,10 @@ async function run() {
             }
           }
         } else if (conn.connectionString) {
-          const schemaDefinition = await introspectPostgres(conn.connectionString);
+          const dbType = conn.type || 'postgres';
+          const schemaDefinition = dbType === 'oracle' 
+            ? await introspectOracle(conn.connectionString) 
+            : await introspectPostgres(conn.connectionString);
           console.log(chalk.blue(`\nEnviando metadados do projeto ${conn.projectId}...`));
           try {
             await axios.post(apiUrl, {
@@ -631,15 +788,26 @@ async function run() {
         default: 'test-token'
       },
       {
+        type: 'list',
+        name: 'dbType',
+        message: 'Qual é o tipo de banco de dados local?',
+        choices: [
+          { name: 'PostgreSQL', value: 'postgres' },
+          { name: 'Oracle', value: 'oracle' }
+        ]
+      },
+      {
         type: 'input',
         name: 'connectionString',
-        message: 'String de conexão PostgreSQL do SEU BANCO local:',
-        validate: input => input.startsWith('postgres') ? true : 'A string deve começar com postgresql://'
+        message: 'String de conexão (Postgres: postgresql://... ou Oracle: user/pass@host:port/service):',
+        validate: input => input ? true : 'A string de conexão é obrigatória.'
       }
     ]);
 
     if (mode === 'sync') {
-      const schemaDefinition = await introspectPostgres(answers.connectionString);
+      const schemaDefinition = answers.dbType === 'oracle' 
+        ? await introspectOracle(answers.connectionString) 
+        : await introspectPostgres(answers.connectionString);
       console.log(chalk.blue('\nEnviando metadados para a plataforma MetaBuilderPRO...'));
       try {
         await axios.post('http://localhost:3000/api/metadata/sync', {
@@ -656,7 +824,7 @@ async function run() {
       }
       process.exit(0);
     } else if (mode === 'tunnel') {
-      await startTunnel(answers.projectId, answers.secretToken, 'public', answers.connectionString);
+      await startTunnel(answers.projectId, answers.secretToken, 'public', answers.connectionString, null, null, null, answers.dbType);
     }
   }
 }

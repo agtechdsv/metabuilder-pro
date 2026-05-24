@@ -86,7 +86,7 @@
     "title_part2": "a la velocidad de DB.",
     "subtitle": "El motor definitivo para generar aplicaciones CRUD dinámicas orientadas a bases de datos sin tocar la generación de archivos físicos. Conecte su DB empresarial de forma segura.",
     "cta_start": "Empezar a Construir",
-    "cta_demo": "Ver Demostración"
+    "cta_demo": "Agendar demostración"
   },
   "features": {
     "dynamic_title": "Esquemas Dinámicos",
@@ -571,7 +571,7 @@
       "bridge_title": "No migre sus datos.",
       "bridge_subtitle": "Solo dales vida.",
       "bridge_desc": "MetaBuilderPRO se conecta a su base de datos SQL actual y genera una interfaz administrativa completa en minutos, sin tocar una línea de su estructura actual.",
-      "bridge_cta_demo": "Ver Demostración",
+      "bridge_cta_demo": "Agendar demostración",
       "bridge_cta_docs": "Ver documentación",
       "zero_trust_title": "Privacidad primero.",
       "zero_trust_highlight": "Siempre.",

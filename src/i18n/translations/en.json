@@ -86,7 +86,7 @@
     "title_part2": "at DB speed.",
     "subtitle": "The ultimate engine for generating dynamic, database-driven CRUD applications without ever touching physical file generation. Connect your enterprise DB securely.",
     "cta_start": "Start Building Now",
-    "cta_demo": "Watch Demo"
+    "cta_demo": "Schedule demo"
   },
   "features": {
     "dynamic_title": "Dynamic Schemas",
@@ -571,7 +571,7 @@
       "bridge_title": "Don't migrate your data.",
       "bridge_subtitle": "Just bring it to life.",
       "bridge_desc": "MetaBuilderPRO connects to your current SQL database and generates a complete administrative interface in minutes, without touching a single line of your current structure.",
-      "bridge_cta_demo": "View Demo",
+      "bridge_cta_demo": "Schedule demo",
       "bridge_cta_docs": "See Documentation",
       "zero_trust_title": "Privacy first.",
       "zero_trust_highlight": "Always.",

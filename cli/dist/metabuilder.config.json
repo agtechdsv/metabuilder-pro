@@ -6,10 +6,12 @@
 		"connectionsString": [
 			{
 				"name": "supabase",
+				"type": "postgres",
 				"connectionString": "postgresql://postgres.chmstvtepzmjhpyxjjam:Goeta815617%40@aws-1-sa-east-1.pooler.supabase.com:6543/postgres"
 			},
 			{
 				"name": "build_flow",
+				"type": "postgres",
 				"connectionString": "postgresql://build_flow:build_flow@localhost:5432/build_flow"
 			}
 		]
