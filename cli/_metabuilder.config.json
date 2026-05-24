@@ -5,6 +5,11 @@
 		"secretToken": "d1ae2f9be085fa63f26aab6e27d5a31d7b98df06b44f1924b99afda83d9a7a32",
 		"connectionsString": [
 			{
+				"name": "supabase",
+				"type": "postgres",
+				"connectionString": "postgresql://postgres.chmstvtepzmjhpyxjjam:Goeta815617%40@aws-1-sa-east-1.pooler.supabase.com:6543/postgres"
+			},
+			{
 				"name": "build_flow",
 				"type": "postgres",
 				"connectionString": "postgresql://build_flow:build_flow@localhost:5432/build_flow"

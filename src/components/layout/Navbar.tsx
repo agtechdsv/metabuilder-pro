@@ -58,9 +58,11 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
         <div className="w-full px-10 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-3 group transition-all">
-              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-sm">
-                <LayoutDashboard className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-              </div>
+              <img 
+                src="/logo-crystal.png" 
+                className="w-12 h-12 object-contain rounded-full group-hover:scale-105 transition-transform" 
+                alt="Logo" 
+              />
               <h1 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
                 MetaBuilder<span className="text-indigo-500">PRO</span>
               </h1>
