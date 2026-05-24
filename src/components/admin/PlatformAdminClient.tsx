@@ -48,7 +48,6 @@ interface Workspace {
   name: string
   slug: string
   owner_id: string
-  plan_id: string | null
   subscription_status: 'active' | 'blocked' | 'pending' | 'canceled'
   is_blocked: boolean
   created_at: string
@@ -60,6 +59,7 @@ interface Profile {
   email: string
   full_name: string | null
   is_super_admin?: boolean | null
+  plan_id?: string | null
 }
 
 interface Payment {
@@ -76,12 +76,18 @@ interface Payment {
   created_at: string
 }
 
+interface WorkspaceMember {
+  workspace_id: string
+  user_id: string
+}
+
 interface PlatformAdminClientProps {
   initialPlans: Plan[]
   initialWorkspaces: Workspace[]
   profiles: Profile[]
   currentUserEmail: string
   payments: Payment[]
+  workspaceMembers: WorkspaceMember[]
 }
 
 export default function PlatformAdminClient({
@@ -89,7 +95,8 @@ export default function PlatformAdminClient({
   initialWorkspaces,
   profiles,
   currentUserEmail,
-  payments
+  payments,
+  workspaceMembers
 }: PlatformAdminClientProps) {
   const { toast } = useToast()
   
@@ -140,7 +147,7 @@ export default function PlatformAdminClient({
   const mappedWorkspaces = useMemo(() => {
     return workspaces.map(w => {
       const ownerProfile = profiles.find(p => p.id === w.owner_id)
-      const workspacePlan = plans.find(p => p.id === w.plan_id)
+      const workspacePlan = plans.find(p => p.id === ownerProfile?.plan_id)
       
       // Calculate monthly equivalent price for MRR
       let planPrice = 0
@@ -148,7 +155,7 @@ export default function PlatformAdminClient({
         // Find the latest successful payment for this workspace
         const wPayments = payments.filter(p => 
           p.workspace_id === w.id && 
-          p.plan_id === w.plan_id &&
+          p.plan_id === ownerProfile?.plan_id &&
           (p.status?.toLowerCase() === 'received' || 
            p.status?.toLowerCase() === 'confirmed' || 
            p.status?.toLowerCase() === 'active' || 
@@ -203,17 +210,21 @@ export default function PlatformAdminClient({
         }
       }
 
+      const guestCount = workspaceMembers.filter(m => m.workspace_id === w.id && m.user_id !== w.owner_id).length
+
       return {
         ...w,
+        plan_id: ownerProfile?.plan_id || null,
         ownerName: ownerProfile?.full_name || 'Sem nome',
         ownerEmail: ownerProfile?.email || 'Sem e-mail',
         ownerIsSuperAdmin: ownerProfile?.is_super_admin || false,
         planName: workspacePlan?.name || 'Gratuito / Nenhum',
         planPrice,
-        planLicenses: workspacePlan?.licenses_count || 0
+        planLicenses: workspacePlan?.licenses_count || 0,
+        guestCount
       }
     })
-  }, [workspaces, profiles, plans, payments])
+  }, [workspaces, profiles, plans, payments, workspaceMembers])
 
   // Filtered workspaces and payments for dashboard calculations
   const filteredDashboardData = useMemo(() => {
@@ -309,12 +320,23 @@ export default function PlatformAdminClient({
   const metrics = useMemo(() => {
     const { workspaces: filteredWorkspaces, payments: filteredPayments } = filteredDashboardData
     
-    // Na nova arquitetura, os "Clientes" são os Perfis (Profiles) que não são Super Admins.
-    const customerProfiles = profiles.filter(p => !p.is_super_admin)
-    const totalClients = customerProfiles.length
+    // "Total de Clientes" represents unique Owners that passed the filters
+    const ownerIds = new Set(filteredWorkspaces.map(w => w.owner_id))
+    const totalClients = ownerIds.size
 
-    // Usuários ativos agora pode contar todos os profiles (ou apenas donos, dependendo da definição. Vamos manter todos não-super admins)
-    const totalUsers = customerProfiles.length
+    // "Usuários Ativos" agora conta donos únicos + convidados ativos (que existem na tabela profiles)
+    const activeUserIds = new Set<string>()
+    filteredWorkspaces.forEach(w => activeUserIds.add(w.owner_id))
+    
+    const filteredWorkspaceIds = new Set(filteredWorkspaces.map(w => w.id))
+    workspaceMembers.forEach(m => {
+      if (filteredWorkspaceIds.has(m.workspace_id)) {
+        if (profiles.some(p => p.id === m.user_id)) {
+          activeUserIds.add(m.user_id)
+        }
+      }
+    })
+    const totalUsers = activeUserIds.size
     
     // MRR: Soma do valor mensal das assinaturas ativas dos profiles (ou workspaces ativos atrelados aos planos)
     const activeMRR = filteredWorkspaces
@@ -343,7 +365,7 @@ export default function PlatformAdminClient({
       totalUsers,
       conversionRate
     }
-  }, [filteredDashboardData, profiles])
+  }, [filteredDashboardData, profiles, workspaceMembers])
 
   // Filtered Workspaces for client list
   const filteredWorkspaces = useMemo(() => {
@@ -514,37 +536,82 @@ export default function PlatformAdminClient({
   // Render Plan Distribution Custom SVG Chart
   const renderPlanChart = () => {
     const { workspaces: filteredWorkspaces } = filteredDashboardData
-    const plansWithWorkspaces = plans.map(p => {
-      const count = filteredWorkspaces.filter(w => w.plan_id === p.id && !w.is_blocked).length
-      return {
-        name: p.name,
-        count
-      }
+    
+    // 1. Chart Data for Total de Clientes (Owners)
+    const plansWithClients = plans.map(p => {
+      const wForPlan = filteredWorkspaces.filter(w => w.plan_id === p.id && !w.is_blocked)
+      const count = new Set(wForPlan.map(w => w.owner_id)).size
+      return { name: p.name, count }
     })
+    const maxClientsCount = Math.max(...plansWithClients.map(p => p.count), 1)
 
-    const maxCount = Math.max(...plansWithWorkspaces.map(p => p.count), 1)
+    // 2. Chart Data for Usuários Ativos (Owners + Active Guests)
+    const plansWithUsers = plans.map(p => {
+      const wForPlan = filteredWorkspaces.filter(w => w.plan_id === p.id && !w.is_blocked)
+      
+      const activeUserIds = new Set<string>()
+      wForPlan.forEach(w => activeUserIds.add(w.owner_id))
+      
+      const planWorkspaceIds = new Set(wForPlan.map(w => w.id))
+      workspaceMembers.forEach(m => {
+        if (planWorkspaceIds.has(m.workspace_id)) {
+          if (profiles.some(prof => prof.id === m.user_id)) {
+            activeUserIds.add(m.user_id)
+          }
+        }
+      })
+      return { name: p.name, count: activeUserIds.size }
+    })
+    const maxUsersCount = Math.max(...plansWithUsers.map(p => p.count), 1)
 
     return (
-      <div className="bg-white dark:bg-neutral-900/40 p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm flex flex-col justify-between h-[300px]">
-        <div>
-          <h4 className="text-xs font-black uppercase text-neutral-400 tracking-wider mb-4">Distribuição de Planos (Clientes Ativos)</h4>
-        </div>
-        <div className="flex items-end justify-around h-48 px-4 border-b border-l border-neutral-200 dark:border-neutral-800/80 pt-4">
-          {plansWithWorkspaces.map((p, idx) => {
-            const pct = (p.count / maxCount) * 100
-            return (
-              <div key={idx} className="flex flex-col items-center gap-2 w-16 group">
-                <div className="h-36 w-8 flex items-end justify-center relative">
-                  <div className="relative w-8 bg-gradient-to-t from-indigo-600 to-indigo-400 dark:from-indigo-500 dark:to-purple-500 rounded-t-lg transition-all duration-500" style={{ height: `${Math.max(pct, 5)}%` }}>
-                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-neutral-900 dark:bg-neutral-800 text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                      {p.count}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Chart 1: Clientes */}
+        <div className="bg-white dark:bg-neutral-900/40 p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm flex flex-col justify-between h-[300px]">
+          <div>
+            <h4 className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-4">Distribuição (Total de Clientes)</h4>
+          </div>
+          <div className="flex items-end justify-around h-48 px-2 border-b border-l border-neutral-200 dark:border-neutral-800/80 pt-4">
+            {plansWithClients.map((p, idx) => {
+              const pct = (p.count / maxClientsCount) * 100
+              return (
+                <div key={idx} className="flex flex-col items-center gap-2 w-12 group">
+                  <div className="h-36 w-6 flex items-end justify-center relative">
+                    <div className="relative w-6 bg-gradient-to-t from-indigo-600 to-indigo-400 dark:from-indigo-500 dark:to-purple-500 rounded-t-lg transition-all duration-500" style={{ height: `${Math.max(pct, 5)}%` }}>
+                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-neutral-900 dark:bg-neutral-800 text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        {p.count}
+                      </div>
                     </div>
                   </div>
+                  <span className="text-[9px] font-bold text-neutral-500 dark:text-neutral-400 truncate max-w-full">{p.name}</span>
                 </div>
-                <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 truncate max-w-full">{p.name}</span>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Chart 2: Usuários */}
+        <div className="bg-white dark:bg-neutral-900/40 p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm flex flex-col justify-between h-[300px]">
+          <div>
+            <h4 className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-4">Distribuição (Usuários Ativos)</h4>
+          </div>
+          <div className="flex items-end justify-around h-48 px-2 border-b border-l border-neutral-200 dark:border-neutral-800/80 pt-4">
+            {plansWithUsers.map((p, idx) => {
+              const pct = (p.count / maxUsersCount) * 100
+              return (
+                <div key={idx} className="flex flex-col items-center gap-2 w-12 group">
+                  <div className="h-36 w-6 flex items-end justify-center relative">
+                    <div className="relative w-6 bg-gradient-to-t from-amber-500 to-amber-300 dark:from-amber-600 dark:to-orange-400 rounded-t-lg transition-all duration-500" style={{ height: `${Math.max(pct, 5)}%` }}>
+                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-neutral-900 dark:bg-neutral-800 text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        {p.count}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold text-neutral-500 dark:text-neutral-400 truncate max-w-full">{p.name}</span>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
     )
@@ -735,7 +802,7 @@ export default function PlatformAdminClient({
                     {metrics.totalClients}
                   </h3>
                   <p className="text-[10px] font-bold text-neutral-400 mt-1">
-                    Workspaces/Empresas registradas
+                    Donos de workspaces
                   </p>
                 </div>
               </div>
@@ -754,7 +821,7 @@ export default function PlatformAdminClient({
                     {metrics.totalUsers}
                   </h3>
                   <p className="text-[10px] font-bold text-neutral-400 mt-1">
-                    Usuários cadastrados nos profiles
+                    Total de usuários
                   </p>
                 </div>
               </div>
@@ -1014,8 +1081,8 @@ export default function PlatformAdminClient({
                               {ws.planName}
                             </span>
                           </td>
-                          <td className="px-6 py-4.5 font-mono font-bold">
-                            {ws.planLicenses > 0 ? `${ws.planLicenses} Contratadas` : 'Gratuito'}
+                          <td className="px-6 py-4.5 font-mono font-bold text-xs">
+                            {ws.planLicenses > 0 ? `${ws.planLicenses} Contratada(s) / ${1 + ws.guestCount} Consumida(s)` : 'Gratuito'}
                           </td>
                           <td className="px-6 py-4.5 text-neutral-400">
                             {new Date(ws.created_at).toLocaleDateString('pt-BR')}

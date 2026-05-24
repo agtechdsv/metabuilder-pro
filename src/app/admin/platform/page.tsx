@@ -72,7 +72,7 @@ export default async function PlatformAdminPage() {
   // Active Profiles
   const { data: profiles } = await adminSupabase
     .from('profiles')
-    .select('id, email, full_name, is_super_admin')
+    .select('id, email, full_name, is_super_admin, plan_id')
 
   // Plans
   const { data: plans } = await adminSupabase
@@ -86,6 +86,11 @@ export default async function PlatformAdminPage() {
     .select('*')
     .order('created_at', { ascending: false })
 
+  // Workspace Members (for guest count)
+  const { data: workspaceMembers } = await adminSupabase
+    .from('workspace_members')
+    .select('workspace_id, user_id')
+
   return (
     <div className="min-h-screen flex flex-col pt-16 bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300">
       <Navbar user={user} profile={profile} />
@@ -98,6 +103,7 @@ export default async function PlatformAdminPage() {
           profiles={profiles || []}
           currentUserEmail={user.email || ''}
           payments={payments || []}
+          workspaceMembers={workspaceMembers || []}
         />
       </main>
 

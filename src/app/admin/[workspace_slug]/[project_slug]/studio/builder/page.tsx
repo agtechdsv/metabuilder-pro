@@ -403,6 +403,15 @@ function StepLogic({ config, setConfig }: any) {
 
 function StepTables({ config, setConfig, models }: any) {
   const { t } = useI18n()
+  
+  // Agrupa os models pelo schema
+  const groupedModels = models.reduce((acc: any, m: any) => {
+    const schema = m.db_schema_name || 'public'
+    if (!acc[schema]) acc[schema] = []
+    acc[schema].push(m)
+    return acc
+  }, {})
+
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="space-y-2">
@@ -410,29 +419,46 @@ function StepTables({ config, setConfig, models }: any) {
         <p className="text-neutral-500">{t('dashboard.projects.studio.builder.step_tables_desc')}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {models.map((m: any) => {
-          const isSelected = config.selected_models.includes(m.id)
-          return (
-            <button
-              key={m.id}
-              onClick={() => {
-                const newSelected = isSelected
-                  ? config.selected_models.filter((id: string) => id !== m.id)
-                  : [...config.selected_models, m.id]
-                setConfig({ ...config, selected_models: newSelected })
-              }}
-              className={`p-6 rounded-3xl border-2 text-left transition-all relative ${isSelected ? 'border-indigo-600 bg-indigo-600/5' : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'}`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <Database className={`w-5 h-5 ${isSelected ? 'text-indigo-600' : 'text-neutral-400'}`} />
-                {isSelected && <CheckCircle2 className="w-5 h-5 text-indigo-600" />}
-              </div>
-              <h4 className="font-bold text-sm">{m.display_name || m.db_table_name}</h4>
-              <p className="text-[10px] text-neutral-400 font-mono mt-1">{m.db_table_name}</p>
-            </button>
-          )
-        })}
+      <div className="space-y-10">
+        {Object.keys(groupedModels).map((schema) => (
+          <div key={schema} className="space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-600 flex items-center gap-2">
+              <Database className="w-4 h-4" />
+              Banco: {schema}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {groupedModels[schema].map((m: any) => {
+                const isSelected = config.selected_models.includes(m.id)
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => {
+                      const newSelected = isSelected
+                        ? config.selected_models.filter((id: string) => id !== m.id)
+                        : [...config.selected_models, m.id]
+                      setConfig({ ...config, selected_models: newSelected })
+                    }}
+                    className={`p-6 rounded-3xl border-2 text-left transition-all relative group hover:-translate-y-1 ${isSelected ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10' : 'border-neutral-200 dark:border-neutral-800 hover:border-indigo-300 dark:hover:border-indigo-700 bg-white dark:bg-neutral-900 shadow-sm'}`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full transition-colors ${isSelected ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400' : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 dark:group-hover:bg-indigo-900/30 dark:group-hover:text-indigo-400'}`}>
+                        <Database className="w-3 h-3" />
+                        {m.db_schema_name || 'public'}
+                      </div>
+                      {isSelected ? (
+                        <CheckCircle2 className="w-5 h-5 text-indigo-600" />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border-2 border-neutral-200 dark:border-neutral-700 group-hover:border-indigo-300 transition-colors"></div>
+                      )}
+                    </div>
+                    <h4 className="font-bold text-sm text-neutral-900 dark:text-white">{m.display_name || m.db_table_name}</h4>
+                    <p className="text-[10px] text-neutral-400 font-mono mt-1">{m.db_table_name}</p>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       {config.selected_models.length > 1 && (

@@ -8,6 +8,7 @@ const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const ldap = require('ldapjs');
 
 // Configurações do Supabase lidas do ambiente ou perguntadas depois
 let SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -94,7 +95,7 @@ async function introspectPostgres(connectionString) {
 }
 
 // Função 2: Iniciar Túnel Seguro (Modo Agente Escuta)
-async function startTunnel(projectId, secretToken, connectionString, configSupabaseUrl, configSupabaseKey) {
+async function startTunnel(projectId, secretToken, connectionName, connectionString, configSupabaseUrl, configSupabaseKey, configLdap) {
   // Pega do ambiente (.env.local) ou do arquivo metabuilder.config.json
   const finalSupabaseUrl = SUPABASE_URL || configSupabaseUrl;
   const finalSupabaseKey = SUPABASE_KEY || configSupabaseKey;
@@ -116,7 +117,7 @@ async function startTunnel(projectId, secretToken, connectionString, configSupab
   
   console.log(chalk.blue(`\nConectando ao banco de dados local para o túnel...`));
   await pgClient.connect();
-  console.log(chalk.green('✓ Conexão contínua estabelecida com sucesso!'));
+  console.log(chalk.green(`✓ Conexão contínua estabelecida com sucesso! (${connectionName || 'public'})`));
 
   const channelName = `tunnel:${projectId}`;
   const channel = supabase.channel(channelName);
@@ -127,7 +128,7 @@ async function startTunnel(projectId, secretToken, connectionString, configSupab
   channel
     .on('broadcast', { event: 'sql_query' }, async (payload) => {
       // Recebeu um comando do painel MetaBuilderPRO
-      const { queryId, table, action, token } = payload.payload;
+      const { queryId, table, action, token, schemaName } = payload.payload;
 
       // Segurança: Verifica se o comando veio com o token correto do projeto
       if (token !== secretToken) {
@@ -135,8 +136,15 @@ async function startTunnel(projectId, secretToken, connectionString, configSupab
         console.log(chalk.gray(`  Recebido: "${token ? token.substring(0, 6) + '...' : 'null'}" | Configurado: "${secretToken ? secretToken.substring(0, 6) + '...' : 'null'}"`));
         return;
       }
+      
+      // Isolamento: Se o comando for para outro schema, este túnel o ignora silenciosamente
+      const expectedSchema = connectionName || 'public';
+      const incomingSchema = schemaName || 'public';
+      if (incomingSchema !== expectedSchema) {
+        return; // Ignora o broadcast, outro agente responderá
+      }
 
-      console.log(chalk.yellow(`[ EXEC ] Comando Recebido: ${action === 'validate_login' ? 'Validar Login' : `Buscar dados da tabela '${table}'`}`));
+      console.log(chalk.yellow(`[ EXEC ] Comando Recebido no schema '${expectedSchema}': ${action === 'validate_login' ? 'Validar Login' : `Buscar dados da tabela '${table}'`}`));
 
       try {
         const safeTable = table ? table.replace(/[^a-zA-Z0-9_]/g, '') : '';
@@ -225,54 +233,125 @@ async function startTunnel(projectId, secretToken, connectionString, configSupab
           if (!config) {
             throw new Error('Configuração de autenticação não encontrada para o projeto.');
           }
-          const { db_table_name, db_email_column, db_password_column, db_password_hash_type } = config;
+          const { db_table_name, db_email_column, db_password_column, db_password_hash_type, auth_type } = config;
           const { email, password } = credentials || {};
 
-          if (!db_table_name || !db_email_column || !db_password_column) {
-            throw new Error('Mapeamento do banco legado incompleto. Configure a tabela e colunas de e-mail/senha no Studio.');
-          }
+          if (auth_type === 'ldap') {
+            if (!configLdap || !configLdap.enabled) {
+              throw new Error('Integração LDAP não está ativada no metabuilder.config.json local do Agente CLI.');
+            }
 
-          const safeTable = db_table_name.replace(/[^a-zA-Z0-9_]/g, '');
-          const safeEmailCol = db_email_column.replace(/[^a-zA-Z0-9_]/g, '');
-          const safePasswordCol = db_password_column.replace(/[^a-zA-Z0-9_]/g, '');
+            console.log(chalk.gray(`[ LDAP ] Autenticando usuário: ${email}`));
+            
+            const authenticateLdap = () => new Promise((resolve, reject) => {
+               const client = ldap.createClient({ url: configLdap.url });
+               
+               client.on('error', (err) => {
+                 reject(new Error(`Erro de conexão com o LDAP: ${err.message}`));
+               });
 
-          sql = `SELECT * FROM "${safeTable}" WHERE "${safeEmailCol}" = $1`;
-          params = [email];
-          
-          console.log(chalk.gray(`[ SQL ] Buscando usuário: ${sql}`));
-          const selectResult = await pgClient.query(sql, params);
-          
-          if (selectResult.rows.length === 0) {
-            throw new Error('Usuário não encontrado');
-          }
+               client.bind(configLdap.bindDn, configLdap.bindPassword, (err) => {
+                 if (err) return reject(new Error(`Falha no bind de serviço LDAP: ${err.message}`));
+                 
+                 const filter = configLdap.searchFilter.replace('{{username}}', email);
+                 const opts = {
+                   filter,
+                   scope: 'sub',
+                   attributes: ['dn', 'cn', 'mail', 'sAMAccountName']
+                 };
+                 
+                 client.search(configLdap.baseDn, opts, (err, res) => {
+                   if (err) return reject(new Error(`Falha na busca LDAP: ${err.message}`));
+                   
+                   let userDn = null;
+                   let userData = null;
 
-          const userRow = selectResult.rows[0];
-          const dbPassword = userRow[safePasswordCol];
-          let isMatch = false;
+                   res.on('searchEntry', (entry) => {
+                     userDn = entry.objectName || entry.dn;
+                     userData = entry.object;
+                   });
 
-          if (db_password_hash_type === 'plain') {
-            isMatch = (password === dbPassword);
-          } else if (db_password_hash_type === 'md5') {
-            const hash = crypto.createHash('md5').update(password).digest('hex');
-            isMatch = (hash === dbPassword);
-          } else if (db_password_hash_type === 'sha256') {
-            const hash = crypto.createHash('sha256').update(password).digest('hex');
-            isMatch = (hash === dbPassword);
-          } else if (db_password_hash_type === 'bcrypt') {
-            isMatch = bcrypt.compareSync(password, dbPassword);
+                   res.on('error', (err) => {
+                     reject(new Error(`Erro na pesquisa LDAP: ${err.message}`));
+                   });
+
+                   res.on('end', (result) => {
+                     if (result.status !== 0) return reject(new Error('Falha na conclusão da pesquisa LDAP'));
+                     if (!userDn) return reject(new Error('Usuário não encontrado no servidor AD/LDAP corporativo.'));
+
+                     // Bind como o usuário para checar a senha
+                     const userClient = ldap.createClient({ url: configLdap.url });
+                     userClient.on('error', () => {});
+                     userClient.bind(userDn, password, (err) => {
+                       if (err) {
+                         userClient.unbind();
+                         return reject(new Error('Senha incorreta'));
+                       }
+                       
+                       userClient.unbind();
+                       client.unbind();
+                       resolve({
+                         email: userData.mail || email,
+                         name: userData.cn || userData.sAMAccountName || email,
+                         external_id: userDn,
+                         role: 'admin' // default para login LDAP, roles seriam geridas no studio
+                       });
+                     });
+                   });
+                 });
+               });
+            });
+
+            const user = await authenticateLdap();
+            result = { rows: [user] };
+            console.log(chalk.green(`[ OK ] LOGIN LDAP: Usuário '${email}' autenticado com sucesso via rede corporativa.`));
           } else {
-            throw new Error(`Tipo de hash não suportado: ${db_password_hash_type}`);
-          }
+            if (!db_table_name || !db_email_column || !db_password_column) {
+              throw new Error('Mapeamento do banco legado incompleto. Configure a tabela e colunas de e-mail/senha no Studio.');
+            }
 
-          if (!isMatch) {
-            throw new Error('Senha incorreta');
-          }
+            const safeTable = db_table_name.replace(/[^a-zA-Z0-9_]/g, '');
+            const safeEmailCol = db_email_column.replace(/[^a-zA-Z0-9_]/g, '');
+            const safePasswordCol = db_password_column.replace(/[^a-zA-Z0-9_]/g, '');
 
-          const userObj = { ...userRow };
-          delete userObj[safePasswordCol];
-          
-          result = { rows: [userObj] };
-          console.log(chalk.green(`[ OK ] LOGIN: Usuário '${email}' autenticado com sucesso.`));
+            sql = `SELECT * FROM "${safeTable}" WHERE "${safeEmailCol}" = $1`;
+            params = [email];
+            
+            console.log(chalk.gray(`[ SQL ] Buscando usuário: ${sql}`));
+            const selectResult = await pgClient.query(sql, params);
+            
+            if (selectResult.rows.length === 0) {
+              throw new Error('Usuário não encontrado');
+            }
+
+            const userRow = selectResult.rows[0];
+            const dbPassword = userRow[safePasswordCol];
+            let isMatch = false;
+
+            if (db_password_hash_type === 'plain') {
+              isMatch = (password === dbPassword);
+            } else if (db_password_hash_type === 'md5') {
+              const hash = crypto.createHash('md5').update(password).digest('hex');
+              isMatch = (hash === dbPassword);
+            } else if (db_password_hash_type === 'sha256') {
+              const hash = crypto.createHash('sha256').update(password).digest('hex');
+              isMatch = (hash === dbPassword);
+            } else if (db_password_hash_type === 'bcrypt') {
+              isMatch = bcrypt.compareSync(password, dbPassword);
+            } else {
+              throw new Error(`Tipo de hash não suportado: ${db_password_hash_type}`);
+            }
+
+            if (!isMatch) {
+              throw new Error('Senha incorreta');
+            }
+
+            const userObj = { ...userRow };
+            delete userObj[safePasswordCol];
+            
+            result = { rows: [userObj] };
+            console.log(chalk.green(`[ OK ] LOGIN: Usuário '${email}' autenticado com sucesso.`));
+          }
         }
         else if (action === 'get_users') {
           const { config, limit = 100, offset = 0 } = payload.payload;
@@ -476,9 +555,16 @@ async function run() {
     if (mode === 'tunnel') {
       console.log(chalk.gray(`Iniciando Túnel para ${configData.connections.length} projeto(s) simultaneamente...`));
       
-      const tunnelPromises = configData.connections.map(conn => 
-        startTunnel(conn.projectId, conn.secretToken, conn.connectionString, configData.supabaseUrl, configData.supabaseAnonKey)
-      );
+      const tunnelPromises = [];
+      configData.connections.forEach(conn => {
+        if (Array.isArray(conn.connectionsString)) {
+          conn.connectionsString.forEach(dbConfig => {
+            tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, dbConfig.name, dbConfig.connectionString, configData.supabaseUrl, configData.supabaseAnonKey, configData.ldap));
+          });
+        } else if (conn.connectionString) {
+          tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, 'public', conn.connectionString, configData.supabaseUrl, configData.supabaseAnonKey, configData.ldap));
+        }
+      });
       
       await Promise.all(tunnelPromises);
       return; 
@@ -488,19 +574,40 @@ async function run() {
       const apiUrl = configData.apiUrl || 'http://localhost:3000/api/metadata/sync';
       
       for (const conn of configData.connections) {
-        const schemaDefinition = await introspectPostgres(conn.connectionString);
-        console.log(chalk.blue(`\nEnviando metadados do projeto ${conn.projectId}...`));
-        try {
-          await axios.post(apiUrl, {
-            projectId: conn.projectId,
-            metadata: schemaDefinition
-          }, {
-            headers: { 'Authorization': `Bearer ${conn.secretToken}`, 'Content-Type': 'application/json' }
-          });
-          console.log(chalk.green.bold(`✅ Projeto ${conn.projectId} sincronizado com sucesso!`));
-        } catch (error) {
-          const errorMsg = formatAxiosError(error);
-          console.error(chalk.red.bold(`❌ Falha no projeto ${conn.projectId}:`), errorMsg);
+        if (Array.isArray(conn.connectionsString)) {
+          for (const dbConfig of conn.connectionsString) {
+            const schemaDefinition = await introspectPostgres(dbConfig.connectionString);
+            console.log(chalk.blue(`\nEnviando metadados do projeto ${conn.projectId} (Schema: ${dbConfig.name})...`));
+            try {
+              await axios.post(apiUrl, {
+                projectId: conn.projectId,
+                connectionName: dbConfig.name,
+                metadata: schemaDefinition
+              }, {
+                headers: { 'Authorization': `Bearer ${conn.secretToken}`, 'Content-Type': 'application/json' }
+              });
+              console.log(chalk.green.bold(`✅ Projeto ${conn.projectId} (${dbConfig.name}) sincronizado com sucesso!`));
+            } catch (error) {
+              const errorMsg = formatAxiosError(error);
+              console.error(chalk.red.bold(`❌ Falha no projeto ${conn.projectId} (${dbConfig.name}):`), errorMsg);
+            }
+          }
+        } else if (conn.connectionString) {
+          const schemaDefinition = await introspectPostgres(conn.connectionString);
+          console.log(chalk.blue(`\nEnviando metadados do projeto ${conn.projectId}...`));
+          try {
+            await axios.post(apiUrl, {
+              projectId: conn.projectId,
+              connectionName: 'public',
+              metadata: schemaDefinition
+            }, {
+              headers: { 'Authorization': `Bearer ${conn.secretToken}`, 'Content-Type': 'application/json' }
+            });
+            console.log(chalk.green.bold(`✅ Projeto ${conn.projectId} sincronizado com sucesso!`));
+          } catch (error) {
+            const errorMsg = formatAxiosError(error);
+            console.error(chalk.red.bold(`❌ Falha no projeto ${conn.projectId}:`), errorMsg);
+          }
         }
       }
       console.log(chalk.yellow('\nProcesso de Sincronização finalizado.'));
@@ -537,6 +644,7 @@ async function run() {
       try {
         await axios.post('http://localhost:3000/api/metadata/sync', {
           projectId: answers.projectId,
+          connectionName: 'public',
           metadata: schemaDefinition
         }, {
           headers: { 'Authorization': `Bearer ${answers.secretToken}`, 'Content-Type': 'application/json' }
@@ -548,7 +656,7 @@ async function run() {
       }
       process.exit(0);
     } else if (mode === 'tunnel') {
-      await startTunnel(answers.projectId, answers.secretToken, answers.connectionString);
+      await startTunnel(answers.projectId, answers.secretToken, 'public', answers.connectionString);
     }
   }
 }

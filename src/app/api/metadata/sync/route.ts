@@ -17,11 +17,13 @@ export async function POST(request: Request) {
 
     const secretToken = authHeader.replace('Bearer ', '')
     const body = await request.json()
-    const { projectId, metadata } = body
+    const { projectId, metadata, connectionName } = body
 
     if (!projectId || !metadata) {
       return NextResponse.json({ error: 'Payload incompleto' }, { status: 400 })
     }
+
+    const targetSchema = connectionName || 'public'
 
     // 1. Validar Token e Projeto
     const { data: project, error: projectError } = await supabase
@@ -50,7 +52,7 @@ export async function POST(request: Request) {
         .upsert(
           {
             project_id: projectId,
-            db_schema_name: 'public',
+            db_schema_name: targetSchema,
             db_table_name: table.name,
             display_name: table.name, // Por padrão, usa o mesmo nome
             // display_name_plural, description, is_view usarão os valores default do seu banco
@@ -157,6 +159,7 @@ export async function POST(request: Request) {
         .from('models')
         .delete()
         .eq('project_id', projectId)
+        .eq('db_schema_name', targetSchema)
         .not('db_table_name', 'in', `(${incomingTables.join(',')})`)
       
       if (deleteModelsError) {

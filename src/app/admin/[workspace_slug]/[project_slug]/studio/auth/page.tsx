@@ -662,26 +662,17 @@ export default function AuthSettingsPage() {
               {authConfig.auth_type === 'ldap' && (
                 <div className="space-y-6 animate-in fade-in duration-300">
                   <h3 className="text-lg font-bold border-b border-neutral-200 dark:border-neutral-800 pb-3 text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.ldap_config')}</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.ldap_url')}</label>
-                      <input 
-                        type="text"
-                        placeholder="ldap://servidor.empresa.local:389"
-                        value={authConfig.ldap_server_url || ''}
-                        onChange={(e) => setAuthConfig({...authConfig, ldap_server_url: e.target.value})}
-                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
-                      />
+                  <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30 rounded-2xl p-6 flex gap-4">
+                    <div className="p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl h-fit text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+                      <ShieldCheck className="w-6 h-6" />
                     </div>
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.base_dn')}</label>
-                      <input 
-                        type="text"
-                        placeholder="dc=empresa,dc=local"
-                        value={authConfig.ldap_base_dn || ''}
-                        onChange={(e) => setAuthConfig({...authConfig, ldap_base_dn: e.target.value})}
-                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
-                      />
+                    <div>
+                      <h4 className="text-sm font-bold text-neutral-900 dark:text-white mb-2">Configuração via metabuilder.config.json</h4>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                        Por questões de segurança corporativa e proteção de dados sensíveis da sua rede, as credenciais e configurações de conexão do Active Directory / LDAP (como URL e Base DN) não são solicitadas via interface web.
+                        <br /><br />
+                        Para realizar esta integração com segurança, configure o bloco <code className="font-mono text-[10px] bg-white/50 dark:bg-black/30 border border-indigo-200 dark:border-indigo-800 px-1.5 py-0.5 rounded text-indigo-700 dark:text-indigo-300">ldap</code> no arquivo <code className="font-mono text-[10px] bg-white/50 dark:bg-black/30 border border-indigo-200 dark:border-indigo-800 px-1.5 py-0.5 rounded text-indigo-700 dark:text-indigo-300">metabuilder.config.json</code> do Agente CLI.
+                      </p>
                     </div>
                   </div>
                 </div>

@@ -32,7 +32,7 @@ export async function inviteWorkspaceMember(workspaceId: string, workspaceSlug: 
       .select('owner_id')
       .eq('id', workspaceId)
       .single()
-      
+
     if (wsError || !workspaceData) throw new Error('Workspace não encontrado.')
     const ownerId = workspaceData.owner_id
 
@@ -102,7 +102,7 @@ export async function inviteWorkspaceMember(workspaceId: string, workspaceSlug: 
             .from('owner_guests')
             .select('*', { count: 'exact', head: true })
             .eq('owner_id', ownerId)
-          
+
           if ((count || 0) >= allowedGuests) {
             throw new Error(`Limite do plano atingido. Você pode ter no máximo ${allowedGuests} convidados.`)
           }
@@ -135,7 +135,7 @@ export async function inviteWorkspaceMember(workspaceId: string, workspaceSlug: 
             .from('projects')
             .select('id')
             .eq('workspace_id', workspaceId)
-            
+
           if (projects && projects.length > 0) {
             const projectInserts = projects.map(p => ({
               workspace_id: workspaceId,
@@ -157,7 +157,7 @@ export async function inviteWorkspaceMember(workspaceId: string, workspaceSlug: 
         .from('owner_guests')
         .select('*', { count: 'exact', head: true })
         .eq('owner_id', ownerId)
-      
+
       if ((count || 0) >= allowedGuests) {
         // Como o convite Auth já foi enviado, idealmente cancelaríamos.
         // Por ora, vamos bloquear o acesso via owner_guests
@@ -186,7 +186,7 @@ export async function inviteWorkspaceMember(workspaceId: string, workspaceSlug: 
           .from('projects')
           .select('id')
           .eq('workspace_id', workspaceId)
-          
+
         if (projects && projects.length > 0) {
           const projectInserts = projects.map(p => ({
             workspace_id: workspaceId,
@@ -777,7 +777,7 @@ export async function resendStudioGuestInvite(email: string) {
     // 1. Encontrar o usuário convidado na base do Supabase Auth pelo email
     const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
     if (listError) throw listError
-    
+
     const existingUser = authUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
     if (!existingUser) {
       throw new Error('Convidado não encontrado no sistema de autenticação.')

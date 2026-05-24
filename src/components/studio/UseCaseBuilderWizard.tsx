@@ -755,30 +755,6 @@ function StepLogic({ config, setConfig }: any) {
         <p className="text-neutral-500 dark:text-neutral-400 text-sm">{t('wizard.logic.subtitle')}</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {types.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setConfig({ ...config, logic_type: t.id })}
-            className={cn(
-              "p-4 rounded-[1.5rem] border-2 text-left transition-all group relative overflow-hidden",
-              config.logic_type === t.id
-                ? 'border-indigo-600 bg-indigo-600/5 shadow-2xl shadow-indigo-500/10 scale-[1.02]'
-                : 'border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/30'
-            )}
-          >
-            <div className={cn(
-              "w-8 h-8 rounded-lg flex items-center justify-center mb-3 transition-all shadow-sm",
-              config.logic_type === t.id ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 group-hover:text-indigo-600'
-            )}>
-              <t.icon className="w-4 h-4" />
-            </div>
-            <h3 className="font-bold text-sm mb-1">{t.title}</h3>
-            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium line-clamp-2">{t.desc}</p>
-          </button>
-        ))}
-      </div>
-
       <div className="p-4 bg-neutral-50/50 dark:bg-neutral-900/30 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
@@ -819,25 +795,57 @@ function StepLogic({ config, setConfig }: any) {
             </div>
           </div>
         </div>
-
-        {(config.logic_type.includes('pesquisa') || config.logic_type === 'kanban') && (
-          <div className="flex items-center gap-4 p-6 bg-white dark:bg-neutral-950/50 rounded-2xl border border-neutral-200 dark:border-neutral-800 group cursor-pointer hover:border-indigo-500/30 transition-all" onClick={() => setConfig({ ...config, has_arguments: !config.has_arguments })}>
-            <div className={cn(
-              "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
-              config.has_arguments ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-neutral-200 dark:border-neutral-800'
-            )}>
-              {config.has_arguments && <CheckCircle2 className="w-4 h-4" />}
-            </div>
-            <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300">{t('wizard.logic.enable_args')}</span>
-          </div>
-        )}
       </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {types.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setConfig({ ...config, logic_type: t.id })}
+            className={cn(
+              "p-4 rounded-[1.5rem] border-2 text-left transition-all group relative overflow-hidden",
+              config.logic_type === t.id
+                ? 'border-indigo-600 bg-indigo-600/5 shadow-2xl shadow-indigo-500/10 scale-[1.02]'
+                : 'border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/30'
+            )}
+          >
+            <div className={cn(
+              "w-8 h-8 rounded-lg flex items-center justify-center mb-3 transition-all shadow-sm",
+              config.logic_type === t.id ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 group-hover:text-indigo-600'
+            )}>
+              <t.icon className="w-4 h-4" />
+            </div>
+            <h3 className="font-bold text-sm mb-1">{t.title}</h3>
+            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium line-clamp-2">{t.desc}</p>
+          </button>
+        ))}
+      </div>
+
+      {(config.logic_type.includes('pesquisa') || config.logic_type === 'kanban') && (
+        <div className="flex items-center gap-4 p-6 bg-white dark:bg-neutral-950/50 rounded-2xl border border-neutral-200 dark:border-neutral-800 group cursor-pointer hover:border-indigo-500/30 transition-all" onClick={() => setConfig({ ...config, has_arguments: !config.has_arguments })}>
+          <div className={cn(
+            "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
+            config.has_arguments ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-neutral-200 dark:border-neutral-800'
+          )}>
+            {config.has_arguments && <CheckCircle2 className="w-4 h-4" />}
+          </div>
+          <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300">{t('wizard.logic.enable_args')}</span>
+        </div>
+      )}
     </div>
   )
 }
 
 function StepTables({ config, setConfig, models }: any) {
   const { t } = useI18n()
+
+  const groupedModels = models.reduce((acc: any, m: any) => {
+    const schema = m.db_schema_name || 'public'
+    if (!acc[schema]) acc[schema] = []
+    acc[schema].push(m)
+    return acc
+  }, {})
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
       <div className="space-y-2">
@@ -845,39 +853,51 @@ function StepTables({ config, setConfig, models }: any) {
         <p className="text-neutral-500 dark:text-neutral-400 text-sm">{t('wizard.tables.subtitle')}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {models.map((m: any) => {
-          const isSelected = config.selected_models.includes(m.id)
-          return (
-            <button
-              key={m.id}
-              onClick={() => {
-                const newSelected = isSelected
-                  ? config.selected_models.filter((id: string) => id !== m.id)
-                  : [...config.selected_models, m.id]
-                setConfig({ ...config, selected_models: newSelected })
-              }}
-              className={cn(
-                "p-4 rounded-[1.5rem] border-2 text-left transition-all relative group",
-                isSelected
-                  ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10'
-                  : 'border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/30'
-              )}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className={cn(
-                  "p-2.5 rounded-xl transition-all",
-                  isSelected ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
-                )}>
-                  <Database className="w-5 h-5" />
-                </div>
-                {isSelected && <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-indigo-500/40"><CheckCircle2 className="w-4 h-4" /></div>}
-              </div>
-              <h4 className="font-bold text-base text-neutral-900 dark:text-white">{m.display_name || m.db_table_name}</h4>
-              <p className="text-[10px] text-neutral-400 font-mono mt-1 uppercase tracking-widest">{m.db_table_name}</p>
-            </button>
-          )
-        })}
+      <div className="space-y-10">
+        {Object.keys(groupedModels).map((schema) => (
+          <div key={schema} className="space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-600 flex items-center gap-2">
+              <Database className="w-4 h-4" />
+              Banco: {schema}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {groupedModels[schema].map((m: any) => {
+                const isSelected = config.selected_models.includes(m.id)
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => {
+                      const newSelected = isSelected
+                        ? config.selected_models.filter((id: string) => id !== m.id)
+                        : [...config.selected_models, m.id]
+                      setConfig({ ...config, selected_models: newSelected })
+                    }}
+                    className={cn(
+                      "p-4 rounded-[1.5rem] border-2 text-left transition-all relative group hover:-translate-y-1",
+                      isSelected
+                        ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10'
+                        : 'border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/30'
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <div className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full transition-colors ${isSelected ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400' : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 dark:group-hover:bg-indigo-900/30 dark:group-hover:text-indigo-400'}`}>
+                        <Database className="w-3 h-3" />
+                        {m.db_schema_name || 'public'}
+                      </div>
+                      {isSelected ? (
+                        <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-indigo-500/40"><CheckCircle2 className="w-4 h-4" /></div>
+                      ) : (
+                        <div className="w-6 h-6 rounded-full border-2 border-neutral-200 dark:border-neutral-700 group-hover:border-indigo-300 transition-colors"></div>
+                      )}
+                    </div>
+                    <h4 className="font-bold text-base text-neutral-900 dark:text-white">{m.display_name || m.db_table_name}</h4>
+                    <p className="text-[10px] text-neutral-400 font-mono mt-1 uppercase tracking-widest">{m.db_table_name}</p>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </div>
       {config.selected_models.length > 1 && (
         <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-600 dark:text-amber-400">
