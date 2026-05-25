@@ -450,6 +450,10 @@
           "title": "Personalizado",
           "desc": "Lógica personalizada e flujos de trabalho únicos."
         },
+        "gantt": {
+          "title": "Gráfico de Gantt",
+          "desc": "Gestione cronogramas y proyectos con un gráfico interactivo."
+        },
         "master_detail": {
           "title": "Maestro-Detalle",
           "desc": "Explorador relacional profundo con pestañas y agrupaciones de datos."
@@ -495,6 +499,13 @@
         "desc_placeholder": "Seleccione la descripción...",
         "icon_field": "Campo de Icono/Estado (Opcional)",
         "icon_placeholder": "Seleccione el campo de ícono..."
+      },
+      "gantt": {
+        "title": "Configuración del Gráfico de Gantt",
+        "title_field": "Campo de Título (Tarea) - Obligatorio",
+        "start_date_field": "Fecha Inicial - Obligatorio",
+        "end_date_field": "Fecha Final - Obligatorio",
+        "progress_field": "Progreso % - Opcional"
       },
       "map": {
         "title": "Configuración del Mapa (Leaflet)",

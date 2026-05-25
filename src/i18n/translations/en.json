@@ -450,6 +450,10 @@
           "title": "Custom",
           "desc": "Custom logic and unique workflows."
         },
+        "gantt": {
+          "title": "Gantt Chart",
+          "desc": "Manage schedules and projects with an interactive chart."
+        },
         "master_detail": {
           "title": "Master-Detail",
           "desc": "Deep relational explorer with tabs and data groupings."
@@ -495,6 +499,13 @@
         "desc_placeholder": "Select the description...",
         "icon_field": "Icon/Status Field (Optional)",
         "icon_placeholder": "Select icon field..."
+      },
+      "gantt": {
+        "title": "Gantt Chart Configuration",
+        "title_field": "Title Field (Task) - Required",
+        "start_date_field": "Start Date - Required",
+        "end_date_field": "End Date - Required",
+        "progress_field": "Progress % - Optional"
       },
       "map": {
         "title": "Map Configuration (Leaflet)",

@@ -53,6 +53,7 @@ interface ViewPageContentProps {
   schedulerConfig?: any
   timelineConfig?: any
   mapConfig?: any
+  ganttConfig?: any
   dictionary?: any
   joins?: any[]
   masterModelId?: string
@@ -96,6 +97,7 @@ export default function ViewPageContent({
   schedulerConfig,
   timelineConfig,
   mapConfig,
+  ganttConfig,
   dictionary = {},
   joins = [],
   masterModelId,
@@ -1464,6 +1466,7 @@ export default function ViewPageContent({
               schedulerConfig={schedulerConfig}
               timelineConfig={timelineConfig}
               mapConfig={mapConfig}
+              ganttConfig={ganttConfig}
               masterModelId={masterModelId}
               detailDisplayMode={detailDisplayMode}
               dictionary={dictionary}

@@ -43,6 +43,7 @@ import {
   History,
   Gauge,
   BarChart3,
+  BarChartHorizontal,
   Calendar,
   Download
 } from 'lucide-react'
@@ -296,6 +297,13 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
             lng_field: '',
             title_field: '',
             desc_field: ''
+          },
+          gantt_config: initialData.layout_config?.gantt_config || {
+            title_field: '',
+            start_date_field: '',
+            end_date_field: '',
+            progress_field: '',
+            dependencies_field: ''
           }
         },
         buttons_config: (() => {
@@ -463,6 +471,9 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       if (logic_type === 'map') {
         return !!((layout_config as any).map_config?.lat_field && (layout_config as any).map_config?.lng_field && (layout_config as any).map_config?.title_field)
       }
+      if (logic_type === 'gantt') {
+        return !!((layout_config as any).gantt_config?.title_field && (layout_config as any).gantt_config?.start_date_field && (layout_config as any).gantt_config?.end_date_field)
+      }
       if (logic_type === 'scheduler') {
         return !!((layout_config as any).scheduler_config?.title_field && (layout_config as any).scheduler_config?.start_date_field) && hasGrid
       }
@@ -493,6 +504,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         if (logic_type === 'kanban' && !layout_config.kanban_group_field) toast("Please select a grouping field for Kanban.", 'error')
         if (logic_type === 'timeline' && (!(layout_config as any).timeline_config?.date_field || !(layout_config as any).timeline_config?.title_field)) toast("Por favor, selecione os campos de data e título para a Linha do Tempo.", 'error')
         if (logic_type === 'map' && (!(layout_config as any).map_config?.lat_field || !(layout_config as any).map_config?.lng_field || !(layout_config as any).map_config?.title_field)) toast("Por favor, selecione os campos de Latitude, Longitude e Título para o Mapa.", 'error')
+        if (logic_type === 'gantt' && (!(layout_config as any).gantt_config?.title_field || !(layout_config as any).gantt_config?.start_date_field || !(layout_config as any).gantt_config?.end_date_field)) toast("Por favor, selecione os campos de Título, Data Inicial e Data Final para o Gantt.", 'error')
         if (logic_type === 'scheduler' && (!(layout_config as any).scheduler_config?.title_field || !(layout_config as any).scheduler_config?.start_date_field)) toast("Por favor, selecione os campos de título e data de início para o Calendário.", 'error')
         if (logic_type === 'mapa_mental' && !(layout_config as any).mindmap_central_field) toast("Please select a central field for Mind Map.", 'error')
         if (logic_type === 'master_detail' && !(layout_config as any).master_model_id) toast("Please select the Master Table.", 'error')
@@ -775,6 +787,7 @@ function StepLogic({ config, setConfig }: any) {
     { id: 'master_detail', title: t('wizard.logic.types.master_detail.title'), desc: t('wizard.logic.types.master_detail.desc'), icon: Layers },
     { id: 'kanban', title: t('wizard.logic.types.kanban.title'), desc: t('wizard.logic.types.kanban.desc'), icon: Columns },
     { id: 'timeline', title: t('wizard.logic.types.timeline.title', 'Linha do Tempo / Feed'), desc: t('wizard.logic.types.timeline.desc', 'Visualize registros em uma linha do tempo cronológica com base em uma data.'), icon: History },
+    { id: 'gantt', title: t('wizard.logic.types.gantt.title', 'Gráfico de Gantt'), desc: t('wizard.logic.types.gantt.desc', 'Gerencie cronogramas e projetos com um gráfico de Gantt.'), icon: BarChartHorizontal },
     { id: 'map', title: t('wizard.logic.types.map.title', 'Visão de Mapa (Geospatial)'), desc: t('wizard.logic.types.map.desc', 'Visualize registros através de marcadores e coordenadas interativas no mapa.'), icon: Share2 },
     { id: 'mapa_mental', title: t('wizard.logic.types.mapa_mental.title'), desc: t('wizard.logic.types.mapa_mental.desc'), icon: Share2 },
     { id: 'analytics', title: t('wizard.logic.types.analytics.title', 'Dashboard (BI)'), desc: t('wizard.logic.types.analytics.desc', 'Indicadores de desempenho, gráficos e KPIs.'), icon: Layout },
@@ -1912,6 +1925,108 @@ function StepLayout({ config, setConfig, models }: any) {
             </div>
           )}
 
+          {/* ZONA: GANTT CONFIG */}
+          {config.logic_type === 'gantt' && (
+            <div className="p-6 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-[2rem] space-y-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
+                  <BarChartHorizontal className="w-4 h-4" />
+                </div>
+                <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.gantt.title', 'Configuração do Gráfico de Gantt')}</h4>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.title_field', 'Campo de Título (Obrigatório)')}</label>
+                  <select
+                    value={(config.layout_config as any).gantt_config?.title_field || ''}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        gantt_config: { ...(config.layout_config as any).gantt_config, title_field: e.target.value }
+                      }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="">Selecione o campo de título...</option>
+                    {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                      <option key={`opt-gantt-title-${f.id}`} value={f.id}>
+                        {getFieldName(f.id)} ({f.data_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.start_date_field', 'Data Inicial (Obrigatório)')}</label>
+                  <select
+                    value={(config.layout_config as any).gantt_config?.start_date_field || ''}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        gantt_config: { ...(config.layout_config as any).gantt_config, start_date_field: e.target.value }
+                      }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="">Selecione a data inicial...</option>
+                    {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
+                      <option key={`opt-gantt-start-${f.id}`} value={f.id}>
+                        {getFieldName(f.id)} ({f.data_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.end_date_field', 'Data Final (Obrigatório)')}</label>
+                  <select
+                    value={(config.layout_config as any).gantt_config?.end_date_field || ''}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        gantt_config: { ...(config.layout_config as any).gantt_config, end_date_field: e.target.value }
+                      }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="">Selecione a data final...</option>
+                    {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
+                      <option key={`opt-gantt-end-${f.id}`} value={f.id}>
+                        {getFieldName(f.id)} ({f.data_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.progress_field', 'Progresso % (Opcional)')}</label>
+                  <select
+                    value={(config.layout_config as any).gantt_config?.progress_field || ''}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        gantt_config: { ...(config.layout_config as any).gantt_config, progress_field: e.target.value }
+                      }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="">Nenhum (Progresso não exibido)</option>
+                    {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('int') || f.data_type.includes('float') || f.data_type.includes('numeric')).map((f: any) => (
+                      <option key={`opt-gantt-prog-${f.id}`} value={f.id}>
+                        {getFieldName(f.id)} ({f.data_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ZONA: MAP CONFIG */}
           {config.logic_type === 'map' && (
             <div className="p-6 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-[2rem] space-y-6 shadow-sm">
@@ -2289,7 +2404,7 @@ function StepLayout({ config, setConfig, models }: any) {
           )}
 
           {/* ZONA: GRID */}
-          {config.logic_type !== 'timeline' && config.logic_type !== 'map' && (
+          {config.logic_type !== 'timeline' && config.logic_type !== 'map' && config.logic_type !== 'gantt' && (
           <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
@@ -2377,6 +2492,7 @@ function StepLayout({ config, setConfig, models }: any) {
             config.logic_type === 'kanban' || 
             config.logic_type === 'timeline' ||
             config.logic_type === 'map' ||
+            config.logic_type === 'gantt' ||
             config.logic_type === 'scheduler' || 
             config.logic_type === 'mapa_mental' || 
             config.logic_type === 'galeria' || 
