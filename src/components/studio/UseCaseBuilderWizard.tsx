@@ -106,7 +106,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   const [config, setConfig] = useState({
     name: '',
     slug: '',
-    logic_type: 'pesquisa_cadastro',
+    logic_type: '',
     has_arguments: true,
     selected_models: [] as string[],
     tables_config: [] as any[],
@@ -262,7 +262,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       setConfig({
         name: initialData.name || '',
         slug: initialData.slug || '',
-        logic_type: initialData.logic_type || 'pesquisa_cadastro',
+        logic_type: initialData.logic_type || '',
         has_arguments: initialData.has_arguments ?? true,
         selected_models: initialData.tables_config || [],
         tables_config: initialData.tables_config || [],
@@ -458,7 +458,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   ].filter(s => !s.hidden)
 
   const isStepValid = (step: number) => {
-    if (step === 1) return !!(config.name && config.slug)
+    if (step === 1) return !!(config.name && config.slug && config.logic_type)
     if (step === 2) return config.selected_models.length > 0
     if (step === 3) {
       const { logic_type, has_arguments, layout_config } = config
@@ -797,22 +797,62 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
 
 function StepLogic({ config, setConfig }: any) {
   const { t } = useI18n()
-  const types = [
-    { id: 'pesquisa', title: t('wizard.logic.types.pesquisa.title'), desc: t('wizard.logic.types.pesquisa.desc'), icon: Layout },
-    { id: 'cadastro', title: t('wizard.logic.types.cadastro.title'), desc: t('wizard.logic.types.cadastro.desc'), icon: Layout },
-    { id: 'pesquisa_cadastro', title: t('wizard.logic.types.pesquisa_cadastro.title'), desc: t('wizard.logic.types.pesquisa_cadastro.desc'), icon: Layout },
-    { id: 'master_detail', title: t('wizard.logic.types.master_detail.title'), desc: t('wizard.logic.types.master_detail.desc'), icon: Layers },
-    { id: 'kanban', title: t('wizard.logic.types.kanban.title'), desc: t('wizard.logic.types.kanban.desc'), icon: Columns },
-    { id: 'timeline', title: t('wizard.logic.types.timeline.title', 'Linha do Tempo / Feed'), desc: t('wizard.logic.types.timeline.desc', 'Visualize registros em uma linha do tempo cronológica com base em uma data.'), icon: History },
-    { id: 'gantt', title: t('wizard.logic.types.gantt.title', 'Gráfico de Gantt'), desc: t('wizard.logic.types.gantt.desc', 'Gerencie cronogramas e projetos com um gráfico de Gantt.'), icon: BarChartHorizontal },
-    { id: 'blueprint', title: t('wizard.logic.types.blueprint.title', 'Fluxograma (Blueprint)'), desc: t('wizard.logic.types.blueprint.desc', 'Mapeie processos e fluxos de trabalho interligados dinamicamente.'), icon: Activity },
-    { id: 'map', title: t('wizard.logic.types.map.title', 'Visão de Mapa (Geospatial)'), desc: t('wizard.logic.types.map.desc', 'Visualize registros através de marcadores e coordenadas interativas no mapa.'), icon: Share2 },
-    { id: 'mapa_mental', title: t('wizard.logic.types.mapa_mental.title'), desc: t('wizard.logic.types.mapa_mental.desc'), icon: Share2 },
-    { id: 'analytics', title: t('wizard.logic.types.analytics.title', 'Dashboard (BI)'), desc: t('wizard.logic.types.analytics.desc', 'Indicadores de desempenho, gráficos e KPIs.'), icon: Layout },
-    { id: 'scheduler', title: t('wizard.logic.types.scheduler.title', 'Agenda / Calendário'), desc: t('wizard.logic.types.scheduler.desc', 'Agendamentos, prazos, compromissos e tarefas em calendário.'), icon: Calendar },
-    { id: 'galeria', title: t('wizard.logic.types.galeria.title', 'Galeria / Assets'), desc: t('wizard.logic.types.galeria.desc', 'Galeria de mídias, imagens e documentos com download e redirecionamentos.'), icon: LayoutGrid },
-    { id: 'personalizado', title: t('wizard.logic.types.personalizado.title'), desc: t('wizard.logic.types.personalizado.desc'), icon: Settings }
+  const categories = [
+    {
+      id: 'dados',
+      title: 'Gestão de Dados e Cadastros',
+      description: 'Interfaces focadas em inserção, listagem e relacionamento.',
+      icon: Database,
+      items: [
+        { id: 'pesquisa', title: t('wizard.logic.types.pesquisa.title'), desc: t('wizard.logic.types.pesquisa.desc'), icon: Layout },
+        { id: 'cadastro', title: t('wizard.logic.types.cadastro.title'), desc: t('wizard.logic.types.cadastro.desc'), icon: Layout },
+        { id: 'pesquisa_cadastro', title: t('wizard.logic.types.pesquisa_cadastro.title'), desc: t('wizard.logic.types.pesquisa_cadastro.desc'), icon: Layout },
+        { id: 'master_detail', title: t('wizard.logic.types.master_detail.title'), desc: t('wizard.logic.types.master_detail.desc'), icon: Layers },
+      ]
+    },
+    {
+      id: 'projetos',
+      title: 'Projetos, Prazos e Cronogramas',
+      description: 'Controle visual de tarefas, eventos e progresso.',
+      icon: Calendar,
+      items: [
+        { id: 'kanban', title: t('wizard.logic.types.kanban.title'), desc: t('wizard.logic.types.kanban.desc'), icon: Columns },
+        { id: 'timeline', title: t('wizard.logic.types.timeline.title', 'Linha do Tempo / Feed'), desc: t('wizard.logic.types.timeline.desc', 'Visualize registros em uma linha do tempo cronológica com base em uma data.'), icon: History },
+        { id: 'gantt', title: t('wizard.logic.types.gantt.title', 'Gráfico de Gantt'), desc: t('wizard.logic.types.gantt.desc', 'Gerencie cronogramas e projetos com um gráfico de Gantt.'), icon: BarChartHorizontal },
+        { id: 'scheduler', title: t('wizard.logic.types.scheduler.title', 'Agenda / Calendário'), desc: t('wizard.logic.types.scheduler.desc', 'Agendamentos, prazos, compromissos e tarefas em calendário.'), icon: Calendar },
+      ]
+    },
+    {
+      id: 'mapas',
+      title: 'Mapeamento, Fluxos e Espacial',
+      description: 'Interfaces para exibição geoespacial ou diagramas interligados.',
+      icon: Share2,
+      items: [
+        { id: 'blueprint', title: t('wizard.logic.types.blueprint.title', 'Fluxograma (Blueprint)'), desc: t('wizard.logic.types.blueprint.desc', 'Mapeie processos e fluxos de trabalho interligados dinamicamente.'), icon: Activity },
+        { id: 'mapa_mental', title: t('wizard.logic.types.mapa_mental.title'), desc: t('wizard.logic.types.mapa_mental.desc'), icon: Share2 },
+        { id: 'map', title: t('wizard.logic.types.map.title', 'Visão de Mapa (Geospatial)'), desc: t('wizard.logic.types.map.desc', 'Visualize registros através de marcadores e coordenadas interativas no mapa.'), icon: Share2 },
+      ]
+    },
+    {
+      id: 'outros',
+      title: 'Inteligência, Mídia e Outros',
+      description: 'Dashboards analíticos, galerias e lógicas customizadas.',
+      icon: LayoutGrid,
+      items: [
+        { id: 'analytics', title: t('wizard.logic.types.analytics.title', 'Dashboard (BI)'), desc: t('wizard.logic.types.analytics.desc', 'Indicadores de desempenho, gráficos e KPIs.'), icon: Layout },
+        { id: 'galeria', title: t('wizard.logic.types.galeria.title', 'Galeria / Assets'), desc: t('wizard.logic.types.galeria.desc', 'Galeria de mídias, imagens e documentos com download e redirecionamentos.'), icon: LayoutGrid },
+        { id: 'personalizado', title: t('wizard.logic.types.personalizado.title'), desc: t('wizard.logic.types.personalizado.desc'), icon: Settings }
+      ]
+    }
   ]
+
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(() => {
+    if (config.name && config.logic_type) {
+      const found = categories.find(c => c.items.some(i => i.id === config.logic_type))
+      if (found) return found.id
+    }
+    return null
+  })
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
@@ -827,6 +867,7 @@ function StepLogic({ config, setConfig }: any) {
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.logic.screen_name')}</label>
             <input
               required
+              autoFocus
               type="text"
               value={config.name}
               onChange={e => {
@@ -863,28 +904,77 @@ function StepLogic({ config, setConfig }: any) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {types.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setConfig({ ...config, logic_type: t.id })}
-            className={cn(
-              "p-4 rounded-[1.5rem] border-2 text-left transition-all group relative overflow-hidden",
-              config.logic_type === t.id
-                ? 'border-indigo-600 bg-indigo-600/5 shadow-2xl shadow-indigo-500/10 scale-[1.02]'
-                : 'border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/30'
-            )}
-          >
-            <div className={cn(
-              "w-8 h-8 rounded-lg flex items-center justify-center mb-3 transition-all shadow-sm",
-              config.logic_type === t.id ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 group-hover:text-indigo-600'
+      <div className="space-y-4">
+        {categories.map(cat => {
+          const isExpanded = expandedCategory === cat.id
+          const hasSelectedLogic = cat.items.some(i => i.id === config.logic_type)
+          
+          return (
+            <div key={cat.id} className={cn(
+              "rounded-[1.5rem] border-2 overflow-hidden transition-all duration-300",
+              isExpanded ? "border-indigo-600 bg-white dark:bg-neutral-950 shadow-xl" : "border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/30 hover:border-neutral-300 dark:hover:border-neutral-700 cursor-pointer"
             )}>
-              <t.icon className="w-4 h-4" />
+              {/* Header da Categoria */}
+              <div 
+                className={cn("p-4 flex items-center justify-between", !isExpanded && "cursor-pointer")}
+                onClick={() => setExpandedCategory(isExpanded ? null : cat.id)}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                    isExpanded || hasSelectedLogic ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-500"
+                  )}>
+                    <cat.icon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-neutral-900 dark:text-white text-sm">{cat.title}</h3>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">{cat.description}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {hasSelectedLogic && !isExpanded && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
+                      Selecionado
+                    </span>
+                  )}
+                  {isExpanded ? <ChevronUp className="w-5 h-5 text-neutral-400" /> : <ChevronDown className="w-5 h-5 text-neutral-400" />}
+                </div>
+              </div>
+
+              {/* Grid de Lógicas */}
+              {isExpanded && (
+                <div className="p-4 pt-0 border-t border-neutral-100 dark:border-neutral-800/50 mt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-4">
+                    {cat.items.map(t => (
+                      <button
+                        key={t.id}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setConfig({ ...config, logic_type: t.id })
+                        }}
+                        className={cn(
+                          "p-4 rounded-[1.25rem] border-2 text-left transition-all group relative overflow-hidden",
+                          config.logic_type === t.id
+                            ? 'border-indigo-600 bg-indigo-600/5 shadow-md shadow-indigo-500/10 scale-[1.02]'
+                            : 'border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700 bg-white dark:bg-neutral-950/50'
+                        )}
+                      >
+                        <div className={cn(
+                          "w-8 h-8 rounded-lg flex items-center justify-center mb-3 transition-all shadow-sm",
+                          config.logic_type === t.id ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/30'
+                        )}>
+                          <t.icon className="w-4 h-4" />
+                        </div>
+                        <h4 className="font-bold text-sm mb-1 text-neutral-900 dark:text-white">{t.title}</h4>
+                        <p className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium line-clamp-2">{t.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            <h3 className="font-bold text-sm mb-1">{t.title}</h3>
-            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium line-clamp-2">{t.desc}</p>
-          </button>
-        ))}
+          )
+        })}
       </div>
 
       {(config.logic_type.includes('pesquisa') || config.logic_type === 'kanban') && (
