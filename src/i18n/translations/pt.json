@@ -442,6 +442,10 @@
           "title": "Linha do Tempo / Feed",
           "desc": "Visualize registros em uma ordem cronológica baseada em datas."
         },
+        "map": {
+          "title": "Visão de Mapa (Geospatial)",
+          "desc": "Visualize registros através de marcadores e coordenadas interativas no mapa."
+        },
         "personalizado": {
           "title": "Personalizado",
           "desc": "Lógica customizada e fluxos de trabalho únicos."
@@ -490,7 +494,14 @@
         "desc_field": "Campo de Descrição (Opcional)",
         "desc_placeholder": "Selecione a descrição...",
         "icon_field": "Campo de Ícone/Status (Opcional)",
-        "icon_placeholder": "Selecione..."
+        "icon_placeholder": "Selecione o campo de ícone..."
+      },
+      "map": {
+        "title": "Configuração do Mapa (Leaflet)",
+        "lat_field": "Latitude (Y) - Obrigatório",
+        "lng_field": "Longitude (X) - Obrigatório",
+        "title_field": "Título do Marcador (Obrigatório)",
+        "desc_field": "Descrição no Popup (Opcional)"
       },
       "master_detail": {
         "title": "Configuração Mestre-Detalhe",

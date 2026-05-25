@@ -440,7 +440,11 @@
         },
         "timeline": {
           "title": "Línea de Tiempo / Feed",
-          "desc": "Visualice registros en orden cronológico basado en fechas."
+          "desc": "Visualice registros en un orden cronológico basado en fechas."
+        },
+        "map": {
+          "title": "Vista de Mapa (Geospatial)",
+          "desc": "Visualice registros a través de marcadores y coordenadas interactivas en un mapa."
         },
         "personalizado": {
           "title": "Personalizado",
@@ -490,7 +494,14 @@
         "desc_field": "Campo de Descripción (Opcional)",
         "desc_placeholder": "Seleccione la descripción...",
         "icon_field": "Campo de Icono/Estado (Opcional)",
-        "icon_placeholder": "Seleccione..."
+        "icon_placeholder": "Seleccione el campo de ícono..."
+      },
+      "map": {
+        "title": "Configuración del Mapa (Leaflet)",
+        "lat_field": "Latitud (Y) - Obligatorio",
+        "lng_field": "Longitud (X) - Obligatorio",
+        "title_field": "Título del Marcador (Obligatorio)",
+        "desc_field": "Descripción del Popup (Opcional)"
       },
       "master_detail": {
         "title": "Configuración Maestro-Detalle",

@@ -442,6 +442,10 @@
           "title": "Timeline / Feed",
           "desc": "Visualize records in chronological order based on dates."
         },
+        "map": {
+          "title": "Map View (Geospatial)",
+          "desc": "Visualize records through interactive markers and coordinates on a map."
+        },
         "personalizado": {
           "title": "Custom",
           "desc": "Custom logic and unique workflows."
@@ -490,7 +494,14 @@
         "desc_field": "Description Field (Optional)",
         "desc_placeholder": "Select the description...",
         "icon_field": "Icon/Status Field (Optional)",
-        "icon_placeholder": "Select..."
+        "icon_placeholder": "Select icon field..."
+      },
+      "map": {
+        "title": "Map Configuration (Leaflet)",
+        "lat_field": "Latitude (Y) - Required",
+        "lng_field": "Longitude (X) - Required",
+        "title_field": "Marker Title (Required)",
+        "desc_field": "Popup Description (Optional)"
       },
       "master_detail": {
         "title": "Master-Detail Configuration",

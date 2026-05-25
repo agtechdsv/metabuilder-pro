@@ -52,6 +52,7 @@ interface ViewPageContentProps {
   mindmapCentralField?: string
   schedulerConfig?: any
   timelineConfig?: any
+  mapConfig?: any
   dictionary?: any
   joins?: any[]
   masterModelId?: string
@@ -94,6 +95,7 @@ export default function ViewPageContent({
   mindmapCentralField,
   schedulerConfig,
   timelineConfig,
+  mapConfig,
   dictionary = {},
   joins = [],
   masterModelId,
@@ -480,6 +482,8 @@ export default function ViewPageContent({
                 query: rawQuery,
                 sql: rawQuery,
                 token: project?.secret_token || 'test-token',
+                schemaName: workspace?.slug || project?.slug || 'public',
+                slug: workspace?.slug || project?.slug,
                 joins: [],
                 limit: 100,
                 offset: 0
@@ -837,7 +841,9 @@ export default function ViewPageContent({
                   sql: currentQuery,
                   idColumn: detailPkName,
                   idValue: dPkValue,
-                  token: project?.secret_token || 'test-token'
+                  token: project?.secret_token || 'test-token',
+                  schemaName: project?.slug || 'public',
+                  slug: project?.slug
                 }
               }).then(() => {
                 console.log(`[MetaBuilder:handleSaveDetail] channel.send() resolved (attempt ${attempts})`)
@@ -1000,7 +1006,9 @@ export default function ViewPageContent({
             sql: rawQuery,
             idColumn: detailPkName,
             idValue: pkValue,
-            token: project?.secret_token || 'test-token'
+            token: project?.secret_token || 'test-token',
+            schemaName: project?.slug || 'public',
+            slug: project?.slug
           }
         })
       }
@@ -1107,7 +1115,9 @@ export default function ViewPageContent({
           sql: rawQuery, 
           idColumn: cleanPkName,   // EXATAMENTE o que o Agente CLI espera
           idValue: pkValue,   // EXATAMENTE o que o Agente CLI espera
-          token: project?.secret_token || 'test-token'
+          token: project?.secret_token || 'test-token',
+          schemaName: project?.slug || 'public',
+          slug: project?.slug
         }
 
         if (action === 'update' && Object.keys(filters).length > 0) {
@@ -1170,7 +1180,9 @@ export default function ViewPageContent({
                     sql: detailQuery,
                     idColumn: dPkName,
                     idValue: dPkValue,
-                    token: project?.secret_token || 'test-token'
+                    token: project?.secret_token || 'test-token',
+                    schemaName: project?.slug || 'public',
+                    slug: project?.slug
                   }
                 })
               }
@@ -1215,7 +1227,9 @@ export default function ViewPageContent({
                           sql: subQuery,
                           idColumn: sPkName,
                           idValue: sPkValue,
-                          token: project?.secret_token || 'test-token'
+                          token: project?.secret_token || 'test-token',
+                          schemaName: project?.slug || 'public',
+                          slug: project?.slug
                         }
                       })
                     }
@@ -1449,6 +1463,7 @@ export default function ViewPageContent({
               mindmapCentralField={mindmapCentralField}
               schedulerConfig={schedulerConfig}
               timelineConfig={timelineConfig}
+              mapConfig={mapConfig}
               masterModelId={masterModelId}
               detailDisplayMode={detailDisplayMode}
               dictionary={dictionary}

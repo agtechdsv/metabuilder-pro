@@ -375,6 +375,44 @@ export default async function SlugPage({ params }: PageProps) {
       }
     }
 
+    // Garante que os campos do Mapa estejam presentes nos metadados de consulta
+    if (view.logic_type === 'map' && view.layout_config?.map_config) {
+      const mc = view.layout_config.map_config
+      const mapFieldIds = [
+        mc.lat_field,
+        mc.lng_field,
+        mc.title_field,
+        mc.desc_field
+      ].filter(Boolean)
+
+      for (const fieldId of mapFieldIds) {
+        if (!displayFields.find((f: any) => f.id === fieldId)) {
+          let fieldData = allComponents.find((c: any) => c.field?.id === fieldId)?.field
+          
+          if (!fieldData && view.model?.fields) {
+            fieldData = view.model.fields.find((f: any) => f.id === fieldId)
+          }
+
+          if (!fieldData) {
+            const { data: remoteField } = await supabase.from('fields').select('*').eq('id', fieldId).single()
+            if (remoteField) fieldData = remoteField
+          }
+
+          if (fieldData) {
+            displayFields.push({
+              id: fieldData.id,
+              display_name: fieldData.display_name || fieldData.db_column_name,
+              db_column_name: resolveResultKey(fieldData),
+              sql_expression: resolveSqlExpression(fieldData),
+              data_type: fieldData.data_type,
+              config: {},
+              hidden: true
+            })
+          }
+        }
+      }
+    }
+
     const buttonsConfig = view.buttons_config || []
     const canAdd = buttonsConfig.find((b: any) => b.id === 'add')?.visible !== false
     const canExport = buttonsConfig.find((b: any) => b.id === 'export')?.visible !== false
@@ -402,6 +440,7 @@ export default async function SlugPage({ params }: PageProps) {
           mindmapCentralField={view.layout_config?.mindmap_central_field}
           schedulerConfig={view.layout_config?.scheduler_config}
           timelineConfig={view.layout_config?.timeline_config}
+          mapConfig={view.layout_config?.map_config}
           dictionary={dictionary}
           joins={view.layout_config?.joins || []}
           masterModelId={view.layout_config?.master_model_id}

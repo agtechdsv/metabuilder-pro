@@ -44,7 +44,7 @@ export function Modal({ isOpen, onClose, title, description, children, size = 'm
 
       {/* Modal Content */}
       <div className={cn(
-        "relative bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 w-full rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300",
+        "relative bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 w-full rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-300",
         size === 'sm' && "max-w-sm",
         size === 'md' && "max-w-md",
         size === 'lg' && "max-w-lg",
@@ -52,23 +52,23 @@ export function Modal({ isOpen, onClose, title, description, children, size = 'm
         size === '2xl' && "max-w-2xl",
         size === '4xl' && "max-w-4xl"
       )}>
-        <div className="p-8 space-y-6">
+        <div className="p-8 pb-4 shrink-0">
           <div className="flex justify-between items-start">
             <div className="space-y-1">
-              <h3 className="text-xl font-bold text-neutral-900 dark:text-white">{title}</h3>
+              {title && <h3 className="text-xl font-bold text-neutral-900 dark:text-white">{title}</h3>}
               {description && <p className="text-sm text-neutral-500">{description}</p>}
             </div>
             <button 
               onClick={onClose}
-              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-neutral-900 dark:hover:text-white ml-auto"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
+        </div>
 
-          <div className="py-2">
-            {children}
-          </div>
+        <div className="px-8 pb-8 overflow-y-auto custom-scrollbar">
+          {children}
         </div>
       </div>
     </div>

@@ -143,6 +143,12 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         title_field: '',
         desc_field: '',
         icon_field: ''
+      },
+      map_config: {
+        lat_field: '',
+        lng_field: '',
+        title_field: '',
+        desc_field: ''
       }
     },
     buttons_config: [
@@ -284,6 +290,12 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
             title_field: '',
             desc_field: '',
             icon_field: ''
+          },
+          map_config: initialData.layout_config?.map_config || {
+            lat_field: '',
+            lng_field: '',
+            title_field: '',
+            desc_field: ''
           }
         },
         buttons_config: (() => {
@@ -448,6 +460,9 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       if (logic_type === 'timeline') {
         return !!((layout_config as any).timeline_config?.date_field && (layout_config as any).timeline_config?.title_field)
       }
+      if (logic_type === 'map') {
+        return !!((layout_config as any).map_config?.lat_field && (layout_config as any).map_config?.lng_field && (layout_config as any).map_config?.title_field)
+      }
       if (logic_type === 'scheduler') {
         return !!((layout_config as any).scheduler_config?.title_field && (layout_config as any).scheduler_config?.start_date_field) && hasGrid
       }
@@ -477,6 +492,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         if (has_arguments && !layout_config.filter_fields.length && logic_type.includes('pesquisa')) toast(t('wizard.buttons.validation.filter_required'), 'error')
         if (logic_type === 'kanban' && !layout_config.kanban_group_field) toast("Please select a grouping field for Kanban.", 'error')
         if (logic_type === 'timeline' && (!(layout_config as any).timeline_config?.date_field || !(layout_config as any).timeline_config?.title_field)) toast("Por favor, selecione os campos de data e título para a Linha do Tempo.", 'error')
+        if (logic_type === 'map' && (!(layout_config as any).map_config?.lat_field || !(layout_config as any).map_config?.lng_field || !(layout_config as any).map_config?.title_field)) toast("Por favor, selecione os campos de Latitude, Longitude e Título para o Mapa.", 'error')
         if (logic_type === 'scheduler' && (!(layout_config as any).scheduler_config?.title_field || !(layout_config as any).scheduler_config?.start_date_field)) toast("Por favor, selecione os campos de título e data de início para o Calendário.", 'error')
         if (logic_type === 'mapa_mental' && !(layout_config as any).mindmap_central_field) toast("Please select a central field for Mind Map.", 'error')
         if (logic_type === 'master_detail' && !(layout_config as any).master_model_id) toast("Please select the Master Table.", 'error')
@@ -759,6 +775,7 @@ function StepLogic({ config, setConfig }: any) {
     { id: 'master_detail', title: t('wizard.logic.types.master_detail.title'), desc: t('wizard.logic.types.master_detail.desc'), icon: Layers },
     { id: 'kanban', title: t('wizard.logic.types.kanban.title'), desc: t('wizard.logic.types.kanban.desc'), icon: Columns },
     { id: 'timeline', title: t('wizard.logic.types.timeline.title', 'Linha do Tempo / Feed'), desc: t('wizard.logic.types.timeline.desc', 'Visualize registros em uma linha do tempo cronológica com base em uma data.'), icon: History },
+    { id: 'map', title: t('wizard.logic.types.map.title', 'Visão de Mapa (Geospatial)'), desc: t('wizard.logic.types.map.desc', 'Visualize registros através de marcadores e coordenadas interativas no mapa.'), icon: Share2 },
     { id: 'mapa_mental', title: t('wizard.logic.types.mapa_mental.title'), desc: t('wizard.logic.types.mapa_mental.desc'), icon: Share2 },
     { id: 'analytics', title: t('wizard.logic.types.analytics.title', 'Dashboard (BI)'), desc: t('wizard.logic.types.analytics.desc', 'Indicadores de desempenho, gráficos e KPIs.'), icon: Layout },
     { id: 'scheduler', title: t('wizard.logic.types.scheduler.title', 'Agenda / Calendário'), desc: t('wizard.logic.types.scheduler.desc', 'Agendamentos, prazos, compromissos e tarefas em calendário.'), icon: Calendar },
@@ -1772,6 +1789,166 @@ function StepLayout({ config, setConfig, models }: any) {
                   </select>
                 </div>
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 border-t border-indigo-100 dark:border-indigo-900/30 pt-4">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.direction', 'Direção da Linha')}</label>
+                  <select
+                    value={(config.layout_config as any).timeline_config?.layout_direction || 'vertical'}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        timeline_config: { ...(config.layout_config as any).timeline_config, layout_direction: e.target.value }
+                      }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="vertical">Vertical</option>
+                    <option value="horizontal">Horizontal</option>
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.mode', 'Modo de Exibição')}</label>
+                  <select
+                    value={(config.layout_config as any).timeline_config?.layout_mode || 'alternating'}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        timeline_config: { ...(config.layout_config as any).timeline_config, layout_mode: e.target.value }
+                      }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="alternating">Intercalado (Zig-Zag)</option>
+                    <option value="same_side">Mesmo Lado</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-4 border-t border-indigo-100 dark:border-indigo-900/30 pt-4">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.animated', 'Animação de Desenho')}</label>
+                  <select
+                    value={(config.layout_config as any).timeline_config?.animated === false ? 'false' : 'true'}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        timeline_config: { ...(config.layout_config as any).timeline_config, animated: e.target.value === 'true' }
+                      }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="false">Sem Animação (Estático)</option>
+                    <option value="true">Com Animação (Desenho Dinâmico)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ZONA: MAP CONFIG */}
+          {config.logic_type === 'map' && (
+            <div className="p-6 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-[2rem] space-y-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
+                  <Share2 className="w-4 h-4" />
+                </div>
+                <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.map.title', 'Configuração do Mapa (Leaflet)')}</h4>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.title_field', 'Campo de Título (Obrigatório)')}</label>
+                  <select
+                    value={(config.layout_config as any).map_config?.title_field || ''}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        map_config: { ...(config.layout_config as any).map_config, title_field: e.target.value }
+                      }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="">Selecione o título...</option>
+                    {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                      <option key={`opt-map-title-${f.id}`} value={f.id}>
+                        {getFieldName(f.id)} ({f.data_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.desc_field', 'Campo de Descrição (Opcional)')}</label>
+                  <select
+                    value={(config.layout_config as any).map_config?.desc_field || ''}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        map_config: { ...(config.layout_config as any).map_config, desc_field: e.target.value }
+                      }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="">Selecione a descrição...</option>
+                    {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                      <option key={`opt-map-desc-${f.id}`} value={f.id}>
+                        {getFieldName(f.id)} ({f.data_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lat_field', 'Latitude (Y) - Obrigatório')}</label>
+                  <select
+                    value={(config.layout_config as any).map_config?.lat_field || ''}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        map_config: { ...(config.layout_config as any).map_config, lat_field: e.target.value }
+                      }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="">Selecione a latitude...</option>
+                    {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                      <option key={`opt-map-lat-${f.id}`} value={f.id}>
+                        {getFieldName(f.id)} ({f.data_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lng_field', 'Longitude (X) - Obrigatório')}</label>
+                  <select
+                    value={(config.layout_config as any).map_config?.lng_field || ''}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        map_config: { ...(config.layout_config as any).map_config, lng_field: e.target.value }
+                      }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="">Selecione a longitude...</option>
+                    {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                      <option key={`opt-map-lng-${f.id}`} value={f.id}>
+                        {getFieldName(f.id)} ({f.data_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           )}
 
@@ -2050,7 +2227,7 @@ function StepLayout({ config, setConfig, models }: any) {
           )}
 
           {/* ZONA: GRID */}
-          {config.logic_type !== 'timeline' && (
+          {config.logic_type !== 'timeline' && config.logic_type !== 'map' && (
           <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
@@ -2137,6 +2314,7 @@ function StepLayout({ config, setConfig, models }: any) {
             config.logic_type === 'master_detail' || 
             config.logic_type === 'kanban' || 
             config.logic_type === 'timeline' ||
+            config.logic_type === 'map' ||
             config.logic_type === 'scheduler' || 
             config.logic_type === 'mapa_mental' || 
             config.logic_type === 'galeria' || 

@@ -26,6 +26,7 @@ interface ViewContainerProps {
   mindmapCentralField?: string
   schedulerConfig?: any
   timelineConfig?: any
+  mapConfig?: any
   masterModelId?: string
   detailDisplayMode?: 'tabs' | 'sections'
   dictionary?: any
@@ -45,6 +46,7 @@ import DynamicMindMap from './DynamicMindMap'
 import DynamicScheduler from './DynamicScheduler'
 import DynamicGallery from './DynamicGallery'
 import DynamicTimeline from './DynamicTimeline'
+import DynamicMap from './DynamicMap'
 import { createClient } from '@/utils/supabase/client'
 import { Loader2 } from 'lucide-react'
 
@@ -80,6 +82,7 @@ export default function ViewContainer({
   mindmapCentralField,
   schedulerConfig,
   timelineConfig,
+  mapConfig,
   masterModelId,
   detailDisplayMode = 'tabs',
   dictionary = {},
@@ -92,8 +95,8 @@ export default function ViewContainer({
   isTunnelReady,
   galleryClickBehavior
 }: ViewContainerProps) {
-  const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban' | 'mapa_mental' | 'scheduler' | 'galeria' | 'timeline'>(
-    logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'timeline' ? 'timeline' : logicType === 'kanban' ? 'kanban' : logicType === 'scheduler' ? 'scheduler' : logicType === 'galeria' ? 'galeria' : (displayType === 'both' ? defaultView : (displayType as any))
+  const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban' | 'mapa_mental' | 'scheduler' | 'galeria' | 'timeline' | 'map'>(
+    logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'timeline' ? 'timeline' : logicType === 'map' ? 'map' : logicType === 'kanban' ? 'kanban' : logicType === 'scheduler' ? 'scheduler' : logicType === 'galeria' ? 'galeria' : (displayType === 'both' ? defaultView : (displayType as any))
   )
   const [searchQuery, setSearchQuery] = useState('')
   const filterValues = externalFilters
@@ -1079,6 +1082,15 @@ export default function ViewContainer({
           onEdit={onEdit}
           onDelete={onDelete}
           dictionary={dictionary}
+        />
+      ) : viewMode === 'map' ? (
+        <DynamicMap
+          data={data}
+          fields={displayFields}
+          mapConfig={mapConfig || {}}
+          onView={onView!}
+          onEdit={onEdit!}
+          onDelete={onDelete!}
         />
       ) : viewMode === 'mapa_mental' ? (
         <DynamicMindMap 
