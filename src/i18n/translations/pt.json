@@ -438,6 +438,10 @@
           "title": "Kanban",
           "desc": "Gestão de fluxo de trabalho por colunas e status."
         },
+        "timeline": {
+          "title": "Linha do Tempo / Feed",
+          "desc": "Visualize registros em uma ordem cronológica baseada em datas."
+        },
         "personalizado": {
           "title": "Personalizado",
           "desc": "Lógica customizada e fluxos de trabalho únicos."
@@ -476,6 +480,17 @@
         "group_field": "Campo de Agrupamento (Colunas)",
         "group_placeholder": "Selecione um campo para definir as colunas...",
         "group_desc": "Este campo determinará as colunas do Kanban (ex: Status, Etapa)."
+      },
+      "timeline": {
+        "title": "Configuração da Linha do Tempo",
+        "date_field": "Campo de Data (Obrigatório)",
+        "date_placeholder": "Selecione a data...",
+        "title_field": "Campo de Título (Obrigatório)",
+        "title_placeholder": "Selecione o título...",
+        "desc_field": "Campo de Descrição (Opcional)",
+        "desc_placeholder": "Selecione a descrição...",
+        "icon_field": "Campo de Ícone/Status (Opcional)",
+        "icon_placeholder": "Selecione..."
       },
       "master_detail": {
         "title": "Configuração Mestre-Detalhe",

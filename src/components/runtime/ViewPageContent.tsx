@@ -51,6 +51,7 @@ interface ViewPageContentProps {
   kanbanGroupField?: string
   mindmapCentralField?: string
   schedulerConfig?: any
+  timelineConfig?: any
   dictionary?: any
   joins?: any[]
   masterModelId?: string
@@ -92,6 +93,7 @@ export default function ViewPageContent({
   kanbanGroupField,
   mindmapCentralField,
   schedulerConfig,
+  timelineConfig,
   dictionary = {},
   joins = [],
   masterModelId,
@@ -1446,6 +1448,7 @@ export default function ViewPageContent({
               kanbanGroupField={kanbanGroupField}
               mindmapCentralField={mindmapCentralField}
               schedulerConfig={schedulerConfig}
+              timelineConfig={timelineConfig}
               masterModelId={masterModelId}
               detailDisplayMode={detailDisplayMode}
               dictionary={dictionary}
@@ -1492,6 +1495,7 @@ export default function ViewPageContent({
           secretToken={project.secret_token}
           tunnelChannel={tunnelChannel}
           isTunnelReady={isTunnelReady}
+          schemaName={project.slug}
         />
       ) : (
         <RecordDrawer 
@@ -1520,6 +1524,7 @@ export default function ViewPageContent({
           secretToken={project.secret_token}
           tunnelChannel={tunnelChannel}
           isTunnelReady={isTunnelReady}
+          schemaName={project.slug}
         />
       )}
 
@@ -1556,7 +1561,8 @@ export default function ViewPageContent({
           projectId: project.id,
           secretToken: project.secret_token,
           tunnelChannel: tunnelChannel,
-          isTunnelReady: isTunnelReady
+          isTunnelReady: isTunnelReady,
+          schemaName: project.slug
         }
 
         return interfaceType === 'modal' ? (

@@ -25,6 +25,7 @@ interface ViewContainerProps {
   kanbanGroupField?: string
   mindmapCentralField?: string
   schedulerConfig?: any
+  timelineConfig?: any
   masterModelId?: string
   detailDisplayMode?: 'tabs' | 'sections'
   dictionary?: any
@@ -43,6 +44,7 @@ import DynamicKanban from './DynamicKanban'
 import DynamicMindMap from './DynamicMindMap'
 import DynamicScheduler from './DynamicScheduler'
 import DynamicGallery from './DynamicGallery'
+import DynamicTimeline from './DynamicTimeline'
 import { createClient } from '@/utils/supabase/client'
 import { Loader2 } from 'lucide-react'
 
@@ -77,6 +79,7 @@ export default function ViewContainer({
   kanbanGroupField,
   mindmapCentralField,
   schedulerConfig,
+  timelineConfig,
   masterModelId,
   detailDisplayMode = 'tabs',
   dictionary = {},
@@ -89,8 +92,8 @@ export default function ViewContainer({
   isTunnelReady,
   galleryClickBehavior
 }: ViewContainerProps) {
-  const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban' | 'mapa_mental' | 'scheduler' | 'galeria'>(
-    logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'kanban' ? 'kanban' : logicType === 'scheduler' ? 'scheduler' : logicType === 'galeria' ? 'galeria' : (displayType === 'both' ? defaultView : (displayType as any))
+  const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban' | 'mapa_mental' | 'scheduler' | 'galeria' | 'timeline'>(
+    logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'timeline' ? 'timeline' : logicType === 'kanban' ? 'kanban' : logicType === 'scheduler' ? 'scheduler' : logicType === 'galeria' ? 'galeria' : (displayType === 'both' ? defaultView : (displayType as any))
   )
   const [searchQuery, setSearchQuery] = useState('')
   const filterValues = externalFilters
@@ -563,6 +566,7 @@ export default function ViewContainer({
             queryId: queryId,
             table: modelName,
             tableName: modelName,
+            schemaName: project?.slug || 'public',
             action: 'select',
             query: rawQuery,
             sql: rawQuery,
@@ -1061,6 +1065,16 @@ export default function ViewContainer({
           schedulerConfig={schedulerConfig || {}}
           onMove={handleMove}
           onAdd={onAdd}
+          onView={onView}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          dictionary={dictionary}
+        />
+      ) : viewMode === 'timeline' ? (
+        <DynamicTimeline
+          data={data}
+          fields={displayFields}
+          timelineConfig={timelineConfig || {}}
           onView={onView}
           onEdit={onEdit}
           onDelete={onDelete}

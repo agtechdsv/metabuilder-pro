@@ -291,6 +291,7 @@ export default async function SlugPage({ params }: PageProps) {
           id: groupFieldData.id,
           display_name: groupFieldData.display_name || groupFieldData.db_column_name,
           db_column_name: resolveResultKey(groupFieldData),
+          sql_expression: resolveSqlExpression(groupFieldData),
           data_type: groupFieldData.data_type,
           config: {},
           hidden: true
@@ -326,6 +327,45 @@ export default async function SlugPage({ params }: PageProps) {
               id: fieldData.id,
               display_name: fieldData.display_name || fieldData.db_column_name,
               db_column_name: resolveResultKey(fieldData),
+              sql_expression: resolveSqlExpression(fieldData),
+              data_type: fieldData.data_type,
+              config: {},
+              hidden: true
+            })
+          }
+        }
+      }
+    }
+
+    // Garante que os campos da Timeline estejam presentes nos metadados de consulta
+    if (view.logic_type === 'timeline' && view.layout_config?.timeline_config) {
+      const tl = view.layout_config.timeline_config
+      const timelineFieldIds = [
+        tl.date_field,
+        tl.title_field,
+        tl.desc_field,
+        tl.icon_field
+      ].filter(Boolean)
+
+      for (const fieldId of timelineFieldIds) {
+        if (!displayFields.find(f => f.id === fieldId)) {
+          let fieldData = allComponents.find((c: any) => c.field?.id === fieldId)?.field
+          
+          if (!fieldData && view.model?.fields) {
+            fieldData = view.model.fields.find((f: any) => f.id === fieldId)
+          }
+
+          if (!fieldData) {
+            const { data: remoteField } = await supabase.from('fields').select('*').eq('id', fieldId).single()
+            if (remoteField) fieldData = remoteField
+          }
+
+          if (fieldData) {
+            displayFields.push({
+              id: fieldData.id,
+              display_name: fieldData.display_name || fieldData.db_column_name,
+              db_column_name: resolveResultKey(fieldData),
+              sql_expression: resolveSqlExpression(fieldData),
               data_type: fieldData.data_type,
               config: {},
               hidden: true
@@ -361,6 +401,7 @@ export default async function SlugPage({ params }: PageProps) {
           kanbanGroupField={view.layout_config?.kanban_group_field}
           mindmapCentralField={view.layout_config?.mindmap_central_field}
           schedulerConfig={view.layout_config?.scheduler_config}
+          timelineConfig={view.layout_config?.timeline_config}
           dictionary={dictionary}
           joins={view.layout_config?.joins || []}
           masterModelId={view.layout_config?.master_model_id}

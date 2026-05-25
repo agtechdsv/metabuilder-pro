@@ -26,6 +26,7 @@ interface RecordModalProps {
   secretToken?: string
   tunnelChannel?: any
   isTunnelReady?: boolean
+  schemaName?: string
 }
 
 export default function RecordModal({ 
@@ -52,7 +53,8 @@ export default function RecordModal({
   projectId,
   secretToken,
   tunnelChannel,
-  isTunnelReady
+  isTunnelReady,
+  schemaName
 }: RecordModalProps) {
   return (
     <Modal 
@@ -86,6 +88,7 @@ export default function RecordModal({
         secretToken={secretToken}
         tunnelChannel={tunnelChannel}
         isTunnelReady={isTunnelReady}
+        schemaName={schemaName}
       />
     </Modal>
   )

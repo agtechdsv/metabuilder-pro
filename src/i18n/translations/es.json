@@ -436,7 +436,11 @@
         },
         "kanban": {
           "title": "Kanban",
-          "desc": "Gestão de fluxo de trabalho por colunas e estados."
+          "desc": "Gestión del flujo de trabajo por columnas y estados."
+        },
+        "timeline": {
+          "title": "Línea de Tiempo / Feed",
+          "desc": "Visualice registros en orden cronológico basado en fechas."
         },
         "personalizado": {
           "title": "Personalizado",
@@ -473,9 +477,20 @@
       "add_relationship": "Añadir Relación",
       "kanban": {
         "title": "Configuración de Kanban",
-        "group_field": "Campo de Agrupamiento (Columnas)",
+        "group_field": "Campo de Agrupación (Columnas)",
         "group_placeholder": "Seleccione un campo para definir las columnas...",
         "group_desc": "Este campo determinará las columnas del Kanban (ej. Estado, Etapa)."
+      },
+      "timeline": {
+        "title": "Configuración de Línea de Tiempo",
+        "date_field": "Campo de Fecha (Obligatorio)",
+        "date_placeholder": "Seleccione la fecha...",
+        "title_field": "Campo de Título (Obligatorio)",
+        "title_placeholder": "Seleccione el título...",
+        "desc_field": "Campo de Descripción (Opcional)",
+        "desc_placeholder": "Seleccione la descripción...",
+        "icon_field": "Campo de Icono/Estado (Opcional)",
+        "icon_placeholder": "Seleccione..."
       },
       "master_detail": {
         "title": "Configuración Maestro-Detalle",

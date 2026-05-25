@@ -69,6 +69,7 @@ interface RecordFormProps {
   secretToken?: string
   tunnelChannel?: any
   isTunnelReady?: boolean
+  schemaName?: string
 }
 
 export default function RecordForm({ 
@@ -95,7 +96,8 @@ export default function RecordForm({
   projectId,
   secretToken = 'test-token',
   tunnelChannel,
-  isTunnelReady
+  isTunnelReady,
+  schemaName
 }: RecordFormProps) {
   const { t } = useI18n()
   const [formData, setFormData] = useState<any>(initialData || {})
@@ -176,6 +178,7 @@ export default function RecordForm({
               payload: {
                 queryId,
                 table: join.to,
+                schemaName: schemaName || 'public',
                 action: 'select',
                 query: rawQuery,
                 sql: rawQuery,
@@ -249,15 +252,81 @@ export default function RecordForm({
         const comp = config?.component
         if (comp?.type && ['select', 'radio', 'checkbox'].includes(comp.type) && comp.options_type === 'relational' && comp.rel_table) {
           try {
-            const { data } = await supabase
-              .from(comp.rel_table)
-              .select(`${comp.rel_label}, ${comp.rel_value}`)
-            
-            if (data) {
-              newOptions[field.id] = data.map(item => ({
-                label: item[comp.rel_label],
-                value: item[comp.rel_value]
-              }))
+            if (projectId && tunnelChannel && isTunnelReady) {
+              const queryId = crypto.randomUUID()
+              const rawQuery = `SELECT "${comp.rel_label}", "${comp.rel_value}" FROM "${comp.rel_table}"`
+              
+              const data = await new Promise<any[]>((resolve, reject) => {
+                let resolved = false
+                const cleanup = () => {
+                  try {
+                    const bindings = tunnelChannel.bindings?.broadcast
+                    if (Array.isArray(bindings)) {
+                      const cleanBindings = bindings.filter((b: any) => {
+                        const match = b.callback === handleResult
+                        if (match && tunnelChannel.channelAdapter) {
+                          tunnelChannel.channelAdapter.off('broadcast', b.ref)
+                        }
+                        return !match
+                      })
+                      tunnelChannel.bindings.broadcast = cleanBindings
+                    }
+                  } catch (e) {}
+                }
+
+                const handleResult = (payload: any) => {
+                  if (payload.payload?.queryId === queryId) {
+                    resolved = true
+                    cleanup()
+                    if (payload.payload.success) resolve(payload.payload.data || [])
+                    else reject(new Error(payload.payload.error || 'Error fetching relational options'))
+                  }
+                }
+                tunnelChannel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
+                tunnelChannel.on('broadcast', { event: 'sql_result' }, handleResult)
+                
+                tunnelChannel.send({
+                  type: 'broadcast',
+                  event: 'sql_query',
+                  payload: {
+                    queryId,
+                    table: comp.rel_table,
+                    schemaName: schemaName || 'public',
+                    action: 'select',
+                    query: rawQuery,
+                    sql: rawQuery,
+                    token: secretToken,
+                    joins: [],
+                    limit: 1000,
+                    offset: 0
+                  }
+                })
+                
+                setTimeout(() => {
+                  if (!resolved) {
+                    resolved = true
+                    resolve([])
+                  }
+                }, 8000)
+              })
+              
+              if (data) {
+                newOptions[field.id] = data.map(item => ({
+                  label: item[comp.rel_label] || item[comp.rel_label.toLowerCase()] || item[comp.rel_label.toUpperCase()],
+                  value: item[comp.rel_value] || item[comp.rel_value.toLowerCase()] || item[comp.rel_value.toUpperCase()]
+                }))
+              }
+            } else {
+              const { data } = await supabase
+                .from(comp.rel_table)
+                .select(`${comp.rel_label}, ${comp.rel_value}`)
+              
+              if (data) {
+                newOptions[field.id] = data.map(item => ({
+                  label: item[comp.rel_label],
+                  value: item[comp.rel_value]
+                }))
+              }
             }
           } catch (err) {
             console.error(`Error fetching relational options for field ${field.id}:`, err)

@@ -436,7 +436,11 @@
         },
         "kanban": {
           "title": "Kanban",
-          "desc": "Workflow management by columns and status."
+          "desc": "Manage workflow by columns and status."
+        },
+        "timeline": {
+          "title": "Timeline / Feed",
+          "desc": "Visualize records in chronological order based on dates."
         },
         "personalizado": {
           "title": "Custom",
@@ -474,8 +478,19 @@
       "kanban": {
         "title": "Kanban Configuration",
         "group_field": "Grouping Field (Columns)",
-        "group_placeholder": "Select a field to define columns...",
+        "group_placeholder": "Select a field to define the columns...",
         "group_desc": "This field will determine the Kanban columns (e.g., Status, Stage)."
+      },
+      "timeline": {
+        "title": "Timeline Configuration",
+        "date_field": "Date Field (Required)",
+        "date_placeholder": "Select the date...",
+        "title_field": "Title Field (Required)",
+        "title_placeholder": "Select the title...",
+        "desc_field": "Description Field (Optional)",
+        "desc_placeholder": "Select the description...",
+        "icon_field": "Icon/Status Field (Optional)",
+        "icon_placeholder": "Select..."
       },
       "master_detail": {
         "title": "Master-Detail Configuration",

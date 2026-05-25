@@ -26,6 +26,7 @@ interface RecordDrawerProps {
   secretToken?: string
   tunnelChannel?: any
   isTunnelReady?: boolean
+  schemaName?: string
 }
 
 export default function RecordDrawer({ 
@@ -52,7 +53,8 @@ export default function RecordDrawer({
   projectId,
   secretToken,
   tunnelChannel,
-  isTunnelReady
+  isTunnelReady,
+  schemaName
 }: RecordDrawerProps) {
   return (
     <Drawer isOpen={isOpen} onClose={onClose} title="" zIndex={zIndex}>
@@ -79,6 +81,7 @@ export default function RecordDrawer({
         secretToken={secretToken}
         tunnelChannel={tunnelChannel}
         isTunnelReady={isTunnelReady}
+        schemaName={schemaName}
       />
     </Drawer>
   )

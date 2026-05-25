@@ -99,6 +99,7 @@ async function queryViaTunnel(projectId: string, secretToken: string, payload: {
   joins: any[]
   filters?: Record<string, string>
   limit?: number
+  schemaName?: string
 }): Promise<any[]> {
   const queryId = Math.random().toString(36).substring(2, 15) + '_' + Date.now()
   const channelName = `tunnel:${projectId}`
@@ -154,7 +155,8 @@ async function queryViaTunnel(projectId: string, secretToken: string, payload: {
             filters: payload.filters,
             limit: payload.limit || 100000,
             offset: 0,
-            token: secretToken
+            token: secretToken,
+            schemaName: payload.schemaName || 'public'
           }
         }).catch(err => {
           if (!resolved) {
@@ -286,11 +288,12 @@ export async function executeExportBackground(params: {
     await broadcastProgress(projectId, { jobId, progress: 40, status: 'processing', viewName })
 
     let rows: any[] = []
+    let projectSlug = projectId.substring(0, 8)
     try {
       console.log('[Export Worker] Attempting to query via database tunnel for project:', projectId)
       const { data: projectData, error: projError } = await supabase
         .from('projects')
-        .select('secret_token')
+        .select('secret_token, slug')
         .eq('id', projectId)
         .single()
 
@@ -298,13 +301,16 @@ export async function executeExportBackground(params: {
         throw new Error(`Project secret token not found: ${projError?.message}`)
       }
 
+      if (projectData.slug) projectSlug = projectData.slug
+
       rows = await queryViaTunnel(projectId, projectData.secret_token, {
         table: safeTable,
         action: 'select',
         query: rawSql,
         joins: joins,
         filters: filters,
-        limit: 100000
+        limit: 100000,
+        schemaName: projectData.slug || 'public'
       })
       console.log(`[Export Worker] Successfully queried ${rows.length} rows via database tunnel.`)
     } catch (tunnelErr: any) {
@@ -326,8 +332,9 @@ export async function executeExportBackground(params: {
     let buffer: Buffer
     let mimeType = 'application/octet-stream'
     const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14)
+    const ms = Date.now().toString().slice(-4)
     const cleanViewName = viewName.toLowerCase().replace(/[^a-z0-9]/g, '_')
-    const fileName = `export_${cleanViewName}_${timestamp}.${fileType}`
+    const fileName = `${workspaceSlug}_${projectSlug}_${cleanViewName}_${timestamp}${ms}.${fileType}`
 
     if (fileType === 'xlsx') {
       mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
