@@ -54,6 +54,7 @@ interface ViewPageContentProps {
   timelineConfig?: any
   mapConfig?: any
   ganttConfig?: any
+  blueprintConfig?: any
   dictionary?: any
   joins?: any[]
   masterModelId?: string
@@ -98,6 +99,7 @@ export default function ViewPageContent({
   timelineConfig,
   mapConfig,
   ganttConfig,
+  blueprintConfig,
   dictionary = {},
   joins = [],
   masterModelId,
@@ -705,12 +707,11 @@ export default function ViewPageContent({
           lowKey === detailPkName.toLowerCase() ||
           lowKey === 'created_at' ||
           lowKey === 'updated_at' ||
-          v === null ||
           v === undefined ||
           typeof v === 'object'                          // skip objects/arrays (joined relations)
         ) continue
 
-        sanitizedData[k] = String(v)
+        sanitizedData[k] = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
       }
 
       console.log(`[MetaBuilder:handleSaveDetail] RAW formData keys:`, Object.keys(formData))
@@ -741,11 +742,10 @@ export default function ViewPageContent({
               lowKey === detailPkName.toLowerCase() ||
               lowKey === 'created_at' ||
               lowKey === 'updated_at' ||
-              v === null ||
               v === undefined ||
               typeof v === 'object'
             ) continue
-            sanitizedData[k] = String(v)
+            sanitizedData[k] = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
           }
           if (Object.keys(sanitizedData).length === 0) {
             console.warn(`[MetaBuilder:handleSaveDetail] Fallback sanitizedData also empty — nothing to save.`)
@@ -754,13 +754,13 @@ export default function ViewPageContent({
           }
         }
         const setClause = Object.entries(sanitizedData)
-          .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
+          .map(([k, v]) => (v === null || v === '' || String(v).trim() === '') ? `${k} = NULL` : `${k} = '${String(v).replace(/'/g, "''")}'`)
           .join(', ')
         rawQuery = `UPDATE ${tableName} SET ${setClause} WHERE ${detailPkName} = '${String(dPkValue).replace(/'/g, "''")}'`
       } else {
         const keys = Object.keys(sanitizedData).join(', ')
         const values = Object.values(sanitizedData)
-          .map(v => `'${String(v).replace(/'/g, "''")}'`)
+          .map(v => (v === null || v === '' || String(v).trim() === '') ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`)
           .join(', ')
         rawQuery = `INSERT INTO ${tableName} (${keys}) VALUES (${values})`
       }
@@ -796,7 +796,7 @@ export default function ViewPageContent({
 
           // Rebuild rawQuery with current data
           const setClause = Object.entries(currentData)
-            .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
+            .map(([k, v]) => (v === null || v === '' || String(v).trim() === '') ? `${k} = NULL` : `${k} = '${String(v).replace(/'/g, "''")}'`)
             .join(', ')
           const currentQuery = action === 'edit'
             ? `UPDATE ${tableName} SET ${setClause} WHERE ${detailPkName} = '${String(dPkValue).replace(/'/g, "''")}'`
@@ -1079,24 +1079,24 @@ export default function ViewPageContent({
             lowKey === cleanPkName.toLowerCase() ||
             lowKey === 'created_at' ||
             lowKey === 'updated_at' ||
-            v === undefined || v === null ||
+            v === undefined ||
             typeof v === 'object'           // skip objects and arrays (joined relations)
           ) continue
 
-          sanitizedData[k] = String(v)
+          sanitizedData[k] = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
         }
 
         // RAW SQL Builder
         let rawQuery = ''
         if (action === 'update' && pkValue && Object.keys(sanitizedData).length > 0) {
           const setClause = Object.entries(sanitizedData)
-            .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
+            .map(([k, v]) => (v === null || v === '' || String(v).trim() === '') ? `${k} = NULL` : `${k} = '${String(v).replace(/'/g, "''")}'`)
             .join(', ')
           rawQuery = `UPDATE ${modelName} SET ${setClause} WHERE ${cleanPkName} = '${String(pkValue).replace(/'/g, "''")}'`
         } else if (action === 'insert' && Object.keys(sanitizedData).length > 0) {
           const keys = Object.keys(sanitizedData).join(', ')
           const values = Object.values(sanitizedData)
-            .map(v => `'${String(v).replace(/'/g, "''")}'`)
+            .map(v => (v === null || v === '' || String(v).trim() === '') ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`)
             .join(', ')
           rawQuery = `INSERT INTO ${modelName} (${keys}) VALUES (${values})`
         }
@@ -1467,6 +1467,7 @@ export default function ViewPageContent({
               timelineConfig={timelineConfig}
               mapConfig={mapConfig}
               ganttConfig={ganttConfig}
+              blueprintConfig={blueprintConfig}
               masterModelId={masterModelId}
               detailDisplayMode={detailDisplayMode}
               dictionary={dictionary}

@@ -23,6 +23,7 @@ import {
   RefreshCcw,
   Table,
   GripVertical,
+  SlidersHorizontal,
   ArrowRightLeft,
   ArrowRight,
   Type,
@@ -150,6 +151,12 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         lng_field: '',
         title_field: '',
         desc_field: ''
+      },
+      blueprint_config: {
+        title_field: '',
+        desc_field: '',
+        status_field: '',
+        predecessor_field: ''
       }
     },
     buttons_config: [
@@ -304,6 +311,12 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
             end_date_field: '',
             progress_field: '',
             dependencies_field: ''
+          },
+          blueprint_config: initialData.layout_config?.blueprint_config || {
+            title_field: '',
+            desc_field: '',
+            status_field: '',
+            predecessor_field: ''
           }
         },
         buttons_config: (() => {
@@ -474,6 +487,9 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       if (logic_type === 'gantt') {
         return !!((layout_config as any).gantt_config?.title_field && (layout_config as any).gantt_config?.start_date_field && (layout_config as any).gantt_config?.end_date_field)
       }
+      if (logic_type === 'blueprint') {
+        return !!((layout_config as any).blueprint_config?.title_field && (layout_config as any).blueprint_config?.predecessor_field)
+      }
       if (logic_type === 'scheduler') {
         return !!((layout_config as any).scheduler_config?.title_field && (layout_config as any).scheduler_config?.start_date_field) && hasGrid
       }
@@ -505,6 +521,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         if (logic_type === 'timeline' && (!(layout_config as any).timeline_config?.date_field || !(layout_config as any).timeline_config?.title_field)) toast("Por favor, selecione os campos de data e título para a Linha do Tempo.", 'error')
         if (logic_type === 'map' && (!(layout_config as any).map_config?.lat_field || !(layout_config as any).map_config?.lng_field || !(layout_config as any).map_config?.title_field)) toast("Por favor, selecione os campos de Latitude, Longitude e Título para o Mapa.", 'error')
         if (logic_type === 'gantt' && (!(layout_config as any).gantt_config?.title_field || !(layout_config as any).gantt_config?.start_date_field || !(layout_config as any).gantt_config?.end_date_field)) toast("Por favor, selecione os campos de Título, Data Inicial e Data Final para o Gantt.", 'error')
+        if (logic_type === 'blueprint' && (!(layout_config as any).blueprint_config?.title_field || !(layout_config as any).blueprint_config?.predecessor_field)) toast("Por favor, selecione os campos de Título e Predecessora para o Fluxograma.", 'error')
         if (logic_type === 'scheduler' && (!(layout_config as any).scheduler_config?.title_field || !(layout_config as any).scheduler_config?.start_date_field)) toast("Por favor, selecione os campos de título e data de início para o Calendário.", 'error')
         if (logic_type === 'mapa_mental' && !(layout_config as any).mindmap_central_field) toast("Please select a central field for Mind Map.", 'error')
         if (logic_type === 'master_detail' && !(layout_config as any).master_model_id) toast("Please select the Master Table.", 'error')
@@ -788,6 +805,7 @@ function StepLogic({ config, setConfig }: any) {
     { id: 'kanban', title: t('wizard.logic.types.kanban.title'), desc: t('wizard.logic.types.kanban.desc'), icon: Columns },
     { id: 'timeline', title: t('wizard.logic.types.timeline.title', 'Linha do Tempo / Feed'), desc: t('wizard.logic.types.timeline.desc', 'Visualize registros em uma linha do tempo cronológica com base em uma data.'), icon: History },
     { id: 'gantt', title: t('wizard.logic.types.gantt.title', 'Gráfico de Gantt'), desc: t('wizard.logic.types.gantt.desc', 'Gerencie cronogramas e projetos com um gráfico de Gantt.'), icon: BarChartHorizontal },
+    { id: 'blueprint', title: t('wizard.logic.types.blueprint.title', 'Fluxograma (Blueprint)'), desc: t('wizard.logic.types.blueprint.desc', 'Mapeie processos e fluxos de trabalho interligados dinamicamente.'), icon: Activity },
     { id: 'map', title: t('wizard.logic.types.map.title', 'Visão de Mapa (Geospatial)'), desc: t('wizard.logic.types.map.desc', 'Visualize registros através de marcadores e coordenadas interativas no mapa.'), icon: Share2 },
     { id: 'mapa_mental', title: t('wizard.logic.types.mapa_mental.title'), desc: t('wizard.logic.types.mapa_mental.desc'), icon: Share2 },
     { id: 'analytics', title: t('wizard.logic.types.analytics.title', 'Dashboard (BI)'), desc: t('wizard.logic.types.analytics.desc', 'Indicadores de desempenho, gráficos e KPIs.'), icon: Layout },
@@ -2022,6 +2040,182 @@ function StepLayout({ config, setConfig, models }: any) {
                       </option>
                     ))}
                   </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ZONA: BLUEPRINT CONFIG */}
+          {config.logic_type === 'blueprint' && (
+            <div className="space-y-6">
+              {/* Card 1: Mapeamento de Dados */}
+              <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
+                    <Database className="w-4 h-4" />
+                  </div>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Mapeamento de Dados</h4>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Título do Nó (Obrigatório)</label>
+                    <select
+                      value={(config.layout_config as any).blueprint_config?.title_field || ''}
+                      onChange={e => setConfig({
+                        ...config,
+                        layout_config: {
+                          ...config.layout_config,
+                          blueprint_config: { ...(config.layout_config as any).blueprint_config, title_field: e.target.value }
+                        }
+                      })}
+                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                    >
+                      <option value="">Selecione o título...</option>
+                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                        <option key={`opt-bp-title-${f.id}`} value={f.id}>
+                          {getFieldName(f.id)} ({f.data_type})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo Nó Anterior / Predecessora (Obrigatório)</label>
+                    <select
+                      value={(config.layout_config as any).blueprint_config?.predecessor_field || ''}
+                      onChange={e => setConfig({
+                        ...config,
+                        layout_config: {
+                          ...config.layout_config,
+                          blueprint_config: { ...(config.layout_config as any).blueprint_config, predecessor_field: e.target.value }
+                        }
+                      })}
+                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                    >
+                      <option value="">Selecione o campo de relação...</option>
+                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                        <option key={`opt-bp-pred-${f.id}`} value={f.id}>
+                          {getFieldName(f.id)} ({f.data_type})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Status (Opcional)</label>
+                    <select
+                      value={(config.layout_config as any).blueprint_config?.status_field || ''}
+                      onChange={e => setConfig({
+                        ...config,
+                        layout_config: {
+                          ...config.layout_config,
+                          blueprint_config: { ...(config.layout_config as any).blueprint_config, status_field: e.target.value }
+                        }
+                      })}
+                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                    >
+                      <option value="">Selecione o campo de status...</option>
+                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                        <option key={`opt-bp-status-${f.id}`} value={f.id}>
+                          {getFieldName(f.id)} ({f.data_type})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Descrição (Opcional)</label>
+                    <select
+                      value={(config.layout_config as any).blueprint_config?.desc_field || ''}
+                      onChange={e => setConfig({
+                        ...config,
+                        layout_config: {
+                          ...config.layout_config,
+                          blueprint_config: { ...(config.layout_config as any).blueprint_config, desc_field: e.target.value }
+                        }
+                      })}
+                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                    >
+                      <option value="">Selecione a descrição...</option>
+                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                        <option key={`opt-bp-desc-${f.id}`} value={f.id}>
+                          {getFieldName(f.id)} ({f.data_type})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Estilo e Comportamento */}
+              <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
+                    <SlidersHorizontal className="w-4 h-4" />
+                  </div>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Estilo e Comportamento</h4>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Direção da Linha */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Direção da Linha</label>
+                    <select
+                      value={(config.layout_config as any).blueprint_config?.direction || 'TB'}
+                      onChange={e => setConfig({
+                        ...config,
+                        layout_config: { ...config.layout_config, blueprint_config: { ...(config.layout_config as any).blueprint_config, direction: e.target.value } }
+                      })}
+                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                    >
+                      <option value="TB">Vertical (Cima para Baixo)</option>
+                      <option value="LR">Horizontal (Esquerda para Direita)</option>
+                    </select>
+                  </div>
+
+                  {/* Animação */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Animação de Desenho</label>
+                    <select
+                      value={(config.layout_config as any).blueprint_config?.animated_edges !== false ? 'true' : 'false'}
+                      onChange={e => setConfig({
+                        ...config,
+                        layout_config: { ...config.layout_config, blueprint_config: { ...(config.layout_config as any).blueprint_config, animated_edges: e.target.value === 'true' } }
+                      })}
+                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                    >
+                      <option value="true">Com Animação (Desenho Dinâmico)</option>
+                      <option value="false">Sem Animação (Estático)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Slider de Escala */}
+                <div className="space-y-3 pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
+                  <div className="flex justify-between items-center text-xs font-bold text-neutral-500 mb-2 uppercase tracking-wider">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Escala de exibição (Cards e textos)</label>
+                    <span className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
+                      {((config.layout_config as any).blueprint_config?.scale || 1).toFixed(1)}x
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 px-2">
+                    <span className="text-[10px] font-semibold text-neutral-400 whitespace-nowrap">COMPACTO (0.6X)</span>
+                    <input 
+                      type="range" 
+                      min="0.6" 
+                      max="1.4" 
+                      step="0.1" 
+                      value={(config.layout_config as any).blueprint_config?.scale || 1} 
+                      onChange={(e) => setConfig({
+                        ...config,
+                        layout_config: { ...config.layout_config, blueprint_config: { ...(config.layout_config as any).blueprint_config, scale: Number(e.target.value) } }
+                      })}
+                      className="flex-1 h-2 bg-neutral-200 dark:bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-600 transition-all" 
+                    />
+                    <span className="text-[10px] font-semibold text-neutral-400 whitespace-nowrap">AMPLIADO (1.4X)</span>
+                  </div>
+                  <p className="text-[10px] text-neutral-400 mt-2 italic px-2">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaçamentos do fluxograma.</p>
                 </div>
               </div>
             </div>

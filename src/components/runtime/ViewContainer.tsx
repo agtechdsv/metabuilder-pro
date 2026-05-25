@@ -5,6 +5,7 @@ import { LayoutGrid, List, Search, Filter, Plus, Pencil, Trash2, RefreshCcw, Che
 import { cn } from '@/lib/utils'
 import DynamicGrid from '@/components/DynamicGrid'
 import { useI18n } from '@/i18n/I18nContext'
+import { useToast } from '@/components/ui/Toast'
 
 interface ViewContainerProps {
   projectId: string
@@ -28,6 +29,7 @@ interface ViewContainerProps {
   timelineConfig?: any
   mapConfig?: any
   ganttConfig?: any
+  blueprintConfig?: any
   masterModelId?: string
   detailDisplayMode?: 'tabs' | 'sections'
   dictionary?: any
@@ -49,6 +51,7 @@ import DynamicGallery from './DynamicGallery'
 import DynamicTimeline from './DynamicTimeline'
 import DynamicMap from './DynamicMap'
 import DynamicGantt from './DynamicGantt'
+import DynamicBlueprint from './DynamicBlueprint'
 import { createClient } from '@/utils/supabase/client'
 import { Loader2 } from 'lucide-react'
 
@@ -86,6 +89,7 @@ export default function ViewContainer({
   timelineConfig,
   mapConfig,
   ganttConfig,
+  blueprintConfig,
   masterModelId,
   detailDisplayMode = 'tabs',
   dictionary = {},
@@ -98,8 +102,9 @@ export default function ViewContainer({
   isTunnelReady,
   galleryClickBehavior
 }: ViewContainerProps) {
-  const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban' | 'mapa_mental' | 'scheduler' | 'galeria' | 'timeline' | 'map' | 'gantt'>(
-    logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'timeline' ? 'timeline' : logicType === 'map' ? 'map' : logicType === 'gantt' ? 'gantt' : logicType === 'kanban' ? 'kanban' : logicType === 'scheduler' ? 'scheduler' : logicType === 'galeria' ? 'galeria' : (displayType === 'both' ? defaultView : (displayType as any))
+  const { toast } = useToast()
+  const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban' | 'mapa_mental' | 'scheduler' | 'galeria' | 'timeline' | 'map' | 'gantt' | 'blueprint'>(
+    logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'blueprint' ? 'blueprint' : logicType === 'timeline' ? 'timeline' : logicType === 'map' ? 'map' : logicType === 'gantt' ? 'gantt' : logicType === 'kanban' ? 'kanban' : logicType === 'scheduler' ? 'scheduler' : logicType === 'galeria' ? 'galeria' : (displayType === 'both' ? defaultView : (displayType as any))
   )
   const [searchQuery, setSearchQuery] = useState('')
   const filterValues = externalFilters
@@ -613,11 +618,21 @@ export default function ViewContainer({
 
   const handleMove = async (recordId: string, newValue: any) => {
     // 1. Descobrir o valor real da chave primária para enviar ao DB
-    const movedItem = data.find(item => String(item._key || item.id || item.ID || item[primaryKeyName]) === recordId)
-    if (!movedItem) return
-    
     const cleanPrimaryKeyName = primaryKeyName.split('.').pop() || 'id'
-    const actualPrimaryKey = movedItem[primaryKeyName] || movedItem[cleanPrimaryKeyName] || movedItem.id || movedItem.ID
+    
+    // O DynamicBlueprint prioriza row[pkCol], então devemos priorizar cleanPrimaryKeyName aqui!
+    const movedItem = data.find(item => String(item[cleanPrimaryKeyName] || item[primaryKeyName] || item._key || item.id || item.ID) === recordId)
+    
+    if (!movedItem) {
+      toast(`Item não encontrado (Procurado ID: ${recordId})`, 'error')
+      return
+    }
+
+    const actualPrimaryKey = movedItem[cleanPrimaryKeyName] || movedItem[primaryKeyName] || movedItem.id || movedItem.ID
+    if (!actualPrimaryKey) {
+      toast('Chave primária do item não encontrada.', 'error')
+      return
+    }
 
     // 2. Determinar quais colunas atualizar
     let updates: Record<string, any> = {}
@@ -631,21 +646,29 @@ export default function ViewContainer({
     }
 
     // 3. Otimismo: Atualiza localmente o estado
-    setData(prev => prev.map(item => {
-      const itemId = String(item._key || item.id || item.ID || item[primaryKeyName] || item[cleanPrimaryKeyName])
-      if (itemId === recordId) {
-        const updatedItem = { ...item }
-        for (const [col, val] of Object.entries(updates)) {
-          updatedItem[col] = val
-          const fullField = displayFields.find(f => f.db_column_name.endsWith(col))?.db_column_name
-          if (fullField) {
-            updatedItem[fullField] = val
+    setData(prev => {
+      const newData = prev.map(item => {
+        const itemId = String(item[cleanPrimaryKeyName] || item[primaryKeyName] || item._key || item.id || item.ID)
+        if (itemId === recordId) {
+          const updatedItem = { ...item }
+          for (const [col, val] of Object.entries(updates)) {
+            updatedItem[col] = val
+            const fullField = displayFields.find(f => f.db_column_name.endsWith(col))?.db_column_name
+            if (fullField) {
+              updatedItem[fullField] = val
+            }
           }
+          return updatedItem
         }
-        return updatedItem
-      }
-      return item
-    }))
+        return item
+      })
+      
+      // Atualiza também o cache persistente para não perdermos no F5
+      const cacheKey = `${projectId}:${modelName}`
+      setCachedData(cacheKey, newData)
+      
+      return newData
+    })
 
     // 4. Constrói a Query SQL Dinâmica
     const setStatements = Object.entries(updates).map(([col, val]) => {
@@ -660,8 +683,11 @@ export default function ViewContainer({
       queryId,
       table: modelName,
       tableName: modelName,
+      schemaName: project?.slug || 'public',
+      slug: project?.slug,
       action: 'update',
       data: updates,
+      record: updates,
       query: rawQuery,
       sql: rawQuery,
       idColumn: cleanPrimaryKeyName,
@@ -669,18 +695,38 @@ export default function ViewContainer({
       token: project?.secret_token || 'test-token'
     }
 
+    const handleResult = (res: any) => {
+      if (res.payload?.queryId === queryId) {
+        if (!res.payload.success) {
+          toast(res.payload.error || 'Erro ao salvar no banco', 'error')
+        } else {
+          toast('Salvo com sucesso!', 'success')
+        }
+      }
+    }
+
     if (tunnelChannel && isTunnelReady) {
+      tunnelChannel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
       console.log(`[MetaBuilder] 📡 Enviando atualização de movimento via Canal Compartilhado:`, payload)
       tunnelChannel.send({
         type: 'broadcast',
         event: 'sql_query',
         payload
       })
+      setTimeout(() => {
+        try {
+          const bindings = tunnelChannel.bindings?.broadcast
+          if (Array.isArray(bindings)) {
+             tunnelChannel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult)
+          }
+        } catch (_) {}
+      }, 5000)
     } else {
       console.log(`[MetaBuilder] ⚠️ Canal compartilhado não pronto. Usando canal temporário.`)
       const channelName = `tunnel:${projectId}`
       const channel = supabase.channel(channelName)
 
+      channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
       channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           channel.send({
@@ -689,7 +735,7 @@ export default function ViewContainer({
             payload
           })
           // Limpa canal após um tempo
-          setTimeout(() => supabase.removeChannel(channel), 2000)
+          setTimeout(() => supabase.removeChannel(channel), 5000)
         }
       })
     }
@@ -700,7 +746,7 @@ export default function ViewContainer({
   useEffect(() => {
     if (!isTunnelReady) return
 
-    // Na primeira renderização, se tiver cache e nenhum filtro ativo, usa o cache
+    // Na primeira renderização, se tiver cache e nenhum filtro ativo, usa o cache para visualização imediata
     if (isFirstRender.current) {
       const cacheKey = `${projectId}:${modelName}`
       const cached = getCachedData(cacheKey)
@@ -708,8 +754,7 @@ export default function ViewContainer({
       if (cached && !hasActiveFilters) {
         setData(cached)
         setIsLoading(false)
-        isFirstRender.current = false
-        return
+        // NÃO damos return! Deixamos prosseguir para fazer o fetch silencioso em background
       }
     }
 
@@ -1084,6 +1129,7 @@ export default function ViewContainer({
           onView={onView}
           onEdit={onEdit}
           onDelete={onDelete}
+          onRefresh={() => fetchData(currentFiltersRef.current, true)}
           dictionary={dictionary}
         />
       ) : viewMode === 'map' ? (
@@ -1103,6 +1149,18 @@ export default function ViewContainer({
           onView={onView!}
           onEdit={onEdit!}
           onDelete={onDelete!}
+          dictionary={dictionary}
+        />
+      ) : viewMode === 'blueprint' ? (
+        <DynamicBlueprint
+          data={data}
+          fields={displayFields}
+          blueprintConfig={blueprintConfig || {}}
+          onView={onView!}
+          onEdit={onEdit!}
+          onDelete={onDelete!}
+          onMove={handleMove}
+          onRefresh={() => fetchData(currentFiltersRef.current, true)}
           dictionary={dictionary}
         />
       ) : viewMode === 'mapa_mental' ? (

@@ -451,6 +451,44 @@ export default async function SlugPage({ params }: PageProps) {
       }
     }
 
+    // Garante que os campos do Blueprint estejam presentes nos metadados de consulta
+    if (view.logic_type === 'blueprint' && view.layout_config?.blueprint_config) {
+      const bc = view.layout_config.blueprint_config
+      const blueprintFieldIds = [
+        bc.title_field,
+        bc.desc_field,
+        bc.status_field,
+        bc.predecessor_field
+      ].filter(Boolean)
+
+      for (const fieldId of blueprintFieldIds) {
+        if (!displayFields.find((f: any) => f.id === fieldId)) {
+          let fieldData = allComponents.find((c: any) => c.field?.id === fieldId)?.field
+          
+          if (!fieldData && view.model?.fields) {
+            fieldData = view.model.fields.find((f: any) => f.id === fieldId)
+          }
+
+          if (!fieldData) {
+            const { data: remoteField } = await supabase.from('fields').select('*').eq('id', fieldId).single()
+            if (remoteField) fieldData = remoteField
+          }
+
+          if (fieldData) {
+            displayFields.push({
+              id: fieldData.id,
+              display_name: fieldData.display_name || fieldData.db_column_name,
+              db_column_name: resolveResultKey(fieldData),
+              sql_expression: resolveSqlExpression(fieldData),
+              data_type: fieldData.data_type,
+              config: {},
+              hidden: true
+            })
+          }
+        }
+      }
+    }
+
     const buttonsConfig = view.buttons_config || []
     const canAdd = buttonsConfig.find((b: any) => b.id === 'add')?.visible !== false
     const canExport = buttonsConfig.find((b: any) => b.id === 'export')?.visible !== false
@@ -480,6 +518,7 @@ export default async function SlugPage({ params }: PageProps) {
           timelineConfig={view.layout_config?.timeline_config}
           mapConfig={view.layout_config?.map_config}
           ganttConfig={view.layout_config?.gantt_config}
+          blueprintConfig={view.layout_config?.blueprint_config}
           dictionary={dictionary}
           joins={view.layout_config?.joins || []}
           masterModelId={view.layout_config?.master_model_id}

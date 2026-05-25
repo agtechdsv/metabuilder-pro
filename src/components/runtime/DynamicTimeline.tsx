@@ -1,7 +1,7 @@
 'use client'
 
-import React from 'react'
-import { Calendar, Clock, Edit2, Eye, Trash2, Tag, FileText } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Calendar, Clock, Edit2, Eye, Trash2, Tag, FileText, Settings2, RefreshCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { format } from 'date-fns'
@@ -32,6 +32,7 @@ interface DynamicTimelineProps {
   onView?: (row: any) => void
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
+  onRefresh?: () => void
   dictionary?: any
 }
 
@@ -42,6 +43,7 @@ export default function DynamicTimeline({
   onView,
   onEdit,
   onDelete,
+  onRefresh,
   dictionary
 }: DynamicTimelineProps) {
   const { t, language } = useI18n()
@@ -67,11 +69,19 @@ export default function DynamicTimeline({
   const descField = timelineConfig.desc_field ? getDateFieldKey(timelineConfig.desc_field) : null
   const iconField = timelineConfig.icon_field ? getDateFieldKey(timelineConfig.icon_field) : null
 
-  const direction = timelineConfig.layout_direction || 'vertical'
-  const mode = timelineConfig.layout_mode || 'alternating'
-  const style = timelineConfig.layout_style || 'cards'
-  // O Wizard mostra 'true' por padrão se não for definido. Então assumimos true se não for explicitamente false.
-  const animated = timelineConfig.animated !== false
+  const [direction, setDirection] = useState(timelineConfig.layout_direction || 'vertical')
+  const [mode, setMode] = useState(timelineConfig.layout_mode || 'alternating')
+  const [style, setStyle] = useState(timelineConfig.layout_style || 'cards')
+  const [animated, setAnimated] = useState(timelineConfig.animated !== false)
+  const [scale, setScale] = useState(timelineConfig.card_scale ?? 1.0)
+
+  useEffect(() => {
+    setDirection(timelineConfig.layout_direction || 'vertical')
+    setMode(timelineConfig.layout_mode || 'alternating')
+    setStyle(timelineConfig.layout_style || 'cards')
+    setAnimated(timelineConfig.animated !== false)
+    setScale(timelineConfig.card_scale ?? 1.0)
+  }, [timelineConfig])
 
   // Ordenar dados
   // Vertical e Horizontal: mais antigo primeiro (ascending)
@@ -93,7 +103,6 @@ export default function DynamicTimeline({
   }
 
 
-  const scale = timelineConfig.card_scale ?? 1.0
 
   const renderCardContent = (item: any, title: any, desc: any, iconStatus: any, rawDate: any, alignRight: boolean = false) => (
     <div 
@@ -277,9 +286,92 @@ export default function DynamicTimeline({
     )
   }
 
-  if (direction === 'horizontal') {
-    return (
-      <div className="relative w-full overflow-x-auto custom-scrollbar py-8 px-4">
+  return (
+    <div className="flex flex-col gap-4 w-full h-full">
+      {/* Barra de Controles de Estilo Local */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+          <Settings2 className="w-4 h-4" />
+          <span className="text-[10px] font-black uppercase tracking-widest">Estilo e Comportamento</span>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-6">
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] font-bold text-neutral-500 uppercase">Direção:</label>
+            <select 
+              value={direction} 
+              onChange={e => setDirection(e.target.value as any)}
+              className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold focus:outline-none"
+            >
+              <option value="vertical">Vertical</option>
+              <option value="horizontal">Horizontal</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] font-bold text-neutral-500 uppercase">Animação:</label>
+            <select 
+              value={animated ? 'true' : 'false'} 
+              onChange={e => setAnimated(e.target.value === 'true')}
+              className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold focus:outline-none"
+            >
+              <option value="true">Ligada</option>
+              <option value="false">Desligada</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] font-bold text-neutral-500 uppercase">Modo:</label>
+            <select 
+              value={mode} 
+              onChange={e => setMode(e.target.value as any)}
+              className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold focus:outline-none"
+            >
+              <option value="alternating">Zig-Zag</option>
+              <option value="same_side">Lateral</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] font-bold text-neutral-500 uppercase">Aparência:</label>
+            <select 
+              value={style} 
+              onChange={e => setStyle(e.target.value as any)}
+              className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold focus:outline-none"
+            >
+              <option value="cards">Cards</option>
+              <option value="infographic">Info</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-3 ml-2 sm:ml-4 border-l border-neutral-200 dark:border-neutral-800 pl-4 sm:pl-6">
+            <span className="text-[10px] font-bold text-neutral-500 uppercase">Escala:</span>
+            <input 
+              type="range" min="0.6" max="1.4" step="0.1" 
+              value={scale} 
+              onChange={e => setScale(Number(e.target.value))}
+              className="w-20 sm:w-24 h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-indigo-500" 
+            />
+            <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded">{scale.toFixed(1)}x</span>
+          </div>
+
+          {onRefresh && (
+            <div className="flex items-center ml-2 sm:ml-4 border-l border-neutral-200 dark:border-neutral-800 pl-4 sm:pl-6">
+              <button 
+                onClick={onRefresh}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 dark:text-indigo-400 transition-colors"
+                title="Atualizar Dados"
+              >
+                <RefreshCcw className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="w-full bg-neutral-50/50 dark:bg-neutral-950/50 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm relative overflow-hidden">
+        {direction === 'horizontal' ? (
+          <div className="relative w-full overflow-x-auto custom-scrollbar py-8 px-4">
         <div className="relative min-w-max flex items-center gap-8 px-4" style={{ minHeight: mode === 'alternating' ? '450px' : '300px' }}>
           {/* Linha horizontal principal conectando o primeiro ao último nó */}
           {sortedData.length > 1 && (
@@ -414,11 +506,8 @@ export default function DynamicTimeline({
           )}
         </div>
       </div>
-    )
-  }
-
-  return (
-    <div className="relative max-w-4xl mx-auto py-8">
+      ) : (
+        <div className={cn("relative mx-auto py-8", style === 'infographic' ? "max-w-4xl" : "max-w-5xl")}>
       {/* Linha vertical principal */}
       <motion.div 
         initial={animated ? { scaleY: 0 } : false}
@@ -579,6 +668,9 @@ export default function DynamicTimeline({
             </div>
             <h3 className="text-lg font-bold text-neutral-400 dark:text-neutral-500">Nenhum registro encontrado</h3>
           </div>
+        )}
+      </div>
+    </div>
         )}
       </div>
     </div>
