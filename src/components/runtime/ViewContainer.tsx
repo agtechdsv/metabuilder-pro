@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils'
 import DynamicGrid from '@/components/DynamicGrid'
 import { useI18n } from '@/i18n/I18nContext'
 import { useToast } from '@/components/ui/Toast'
+import { Modal } from '@/components/ui/Modal'
+import { Drawer } from '@/components/ui/Drawer'
 
 interface ViewContainerProps {
   projectId: string
@@ -28,6 +30,7 @@ interface ViewContainerProps {
   mindmapCentralField?: string
   schedulerConfig?: any
   timelineConfig?: any
+  initialEditId?: string | null
   mapConfig?: any
   ganttConfig?: any
   blueprintConfig?: any
@@ -89,6 +92,7 @@ export default function ViewContainer({
   mindmapCentralField,
   schedulerConfig,
   timelineConfig,
+  initialEditId,
   mapConfig,
   ganttConfig,
   blueprintConfig,
@@ -107,6 +111,26 @@ export default function ViewContainer({
 }: ViewContainerProps) {
   const { toast } = useToast()
   const router = useRouter()
+  const { t } = useI18n()
+  
+  const [iframeUrl, setIframeUrl] = useState<string>('')
+  const [iframeTitle, setIframeTitle] = useState<string>('')
+  const [isIframeModalOpen, setIsIframeModalOpen] = useState(false)
+  const [isIframeDrawerOpen, setIsIframeDrawerOpen] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'CLOSE_MODAL') {
+        setIsIframeModalOpen(false)
+        setIsIframeDrawerOpen(false)
+        setIframeUrl('')
+        setRefreshTrigger(prev => prev + 1)
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
 
   const handleCustomAction = async (action: any, rowData?: any) => {
     // Helper to interpolate variables {{field}}
@@ -146,10 +170,34 @@ export default function ViewContainer({
     } 
     else if (action.trigger_type === 'usecase') {
       const slug = interpolate(action.usecase_slug)
-      const params = interpolate(action.usecase_params)
-      const url = `/${project?.workspace?.slug}/${project?.slug}/${slug}${params ? '?' + params : ''}`
-      // Open in new tab for now to avoid disrupting the current context completely
-      window.open(url, '_blank')
+      const params = interpolate(action.usecase_params) || ''
+      
+      const selectedFields = action.usecase_selected_fields || []
+      const fieldsParams = selectedFields
+        .map((f: string) => `${f}=${rowData?.[f] !== undefined ? encodeURIComponent(rowData[f]) : ''}`)
+        .join('&')
+        
+      const allParams = [fieldsParams, params].filter(Boolean).join('&')
+      
+      const pathParts = window.location.pathname.split('/').filter(Boolean)
+      const isAdminPath = pathParts[0] === 'admin'
+      const currentWorkspaceSlug = isAdminPath ? pathParts[1] : pathParts[0]
+      const currentProjectSlug = isAdminPath ? pathParts[2] : pathParts[1]
+      const url = `/${project?.workspace?.slug || currentWorkspaceSlug}/${project?.slug || currentProjectSlug}/${slug}${allParams ? '?' + allParams : ''}`
+      const openMode = action.usecase_open_mode || 'page'
+      
+      if (openMode === 'modal') {
+        setIframeUrl(url + (allParams ? '&embedded=true' : '?embedded=true'))
+        setIframeTitle(action.label || 'Visualizar')
+        setIsIframeModalOpen(true)
+      } else if (openMode === 'drawer') {
+        setIframeUrl(url + (allParams ? '&embedded=true' : '?embedded=true'))
+        setIframeTitle(action.label || 'Visualizar')
+        setIsIframeDrawerOpen(true)
+      } else {
+        // page mode
+        router.push(url)
+      }
     }
     else if (action.trigger_type === 'rest') {
       const url = interpolate(action.rest_url)
@@ -287,7 +335,7 @@ export default function ViewContainer({
     if (filterFields.length > 0 || displayFields.length > 0) {
       fetchAllRelational()
     }
-  }, [filterFields, displayFields, isTunnelReady, tunnelChannel, project, projectId])
+  }, [filterFields, displayFields, isTunnelReady, tunnelChannel, project, projectId, refreshTrigger])
 
   const parseFixedOptions = (str: string) => {
     if (!str) return []
@@ -300,6 +348,40 @@ export default function ViewContainer({
 
   const canSearch = buttonsConfig.find((b: any) => b.id === 'search')?.visible === true
   const canClear = buttonsConfig.find((b: any) => b.id === 'clear')?.visible === true
+
+  const getButtonStyles = (btn: any) => {
+    if (!btn) return {}
+    const styles: React.CSSProperties = {}
+    if (btn.font_family && btn.font_family !== 'Inter (Padrão)') {
+      styles.fontFamily = btn.font_family
+    }
+    if (btn.font_size) {
+      styles.fontSize = btn.font_size
+    }
+    if (btn.text_color) {
+      styles.color = btn.text_color
+    }
+    if (btn.bg_color) {
+      styles.backgroundColor = btn.bg_color
+      styles.borderColor = btn.bg_color
+    }
+    const textTrans = btn.text_transform !== undefined ? btn.text_transform : 'capitalize'
+    if (textTrans && textTrans !== 'none') {
+      styles.textTransform = textTrans
+    }
+    return styles
+  }
+
+  const btnSearch = buttonsConfig?.find((b: any) => b.id === 'search')
+  const btnClear = buttonsConfig?.find((b: any) => b.id === 'clear')
+  
+  const labelSearch = btnSearch?.custom_label !== undefined && btnSearch.custom_label !== '' 
+    ? btnSearch.custom_label 
+    : t('runtime.search')
+  
+  const labelClear = btnClear?.custom_label !== undefined && btnClear.custom_label !== '' 
+    ? btnClear.custom_label 
+    : t('runtime.clear')
   
   // Como agora este componente roda apenas no Cliente (SSR: false), 
   // podemos inicializar direto do sessionStorage sem medo de Hydration Mismatch.
@@ -336,6 +418,7 @@ export default function ViewContainer({
   const activeQueriesRef = useRef<Set<string>>(new Set())
   const queryConfigsRef = useRef<Map<string, { append: boolean }>>(new Map())
   const currentFiltersRef = useRef<any>({})
+  const hasAutoOpenedEditRef = useRef<boolean>(false)
   
   useEffect(() => {
     currentFiltersRef.current = externalFilters
@@ -385,6 +468,17 @@ export default function ViewContainer({
           })
         } else {
           setData(resultData)
+          
+          if (initialEditId && onEdit) {
+            if (!hasAutoOpenedEditRef.current) {
+              const rowToEdit = resultData.find((r: any) => String(r[primaryKeyName || 'id'] || r.id) === String(initialEditId))
+              if (rowToEdit) {
+                hasAutoOpenedEditRef.current = true
+                onEdit(rowToEdit)
+              }
+            }
+          }
+
           const cacheKey = `${projectId}:${modelName}`
           if (!Object.keys(currentFiltersRef.current || {}).length) {
             setCachedData(cacheKey, resultData)
@@ -412,6 +506,8 @@ export default function ViewContainer({
       }
     }
   }, [tunnelChannel, isTunnelReady])
+
+  const fetchDataRef = useRef<any>(null)
 
   const fetchData = async (currentFilters: any = {}, forceRefresh: boolean = false, append: boolean = false) => {
     if (!tunnelChannel || !isTunnelReady) {
@@ -755,6 +851,8 @@ export default function ViewContainer({
       }, 100)
     }
 
+  fetchDataRef.current = fetchData
+
   const handleMove = async (recordId: string, newValue: any) => {
     // 1. Descobrir o valor real da chave primária para enviar ao DB
     const cleanPrimaryKeyName = primaryKeyName.split('.').pop() || 'id'
@@ -915,7 +1013,13 @@ export default function ViewContainer({
     fetchData({}, true) // Limpar força o refresh
   }
 
-  const { t } = useI18n()
+  useEffect(() => {
+    if (refreshTrigger > 0 && fetchDataRef.current) {
+      console.log(`[MetaBuilder] Refreshing data because modal was closed...`)
+      toast('Atualizando dados...', 'info')
+      fetchDataRef.current(currentFiltersRef.current, true)
+    }
+  }, [refreshTrigger])
 
   // Lógica de Ordenação Local
   const sortedData = [...data].sort((a, b) => {
@@ -949,11 +1053,11 @@ export default function ViewContainer({
       {/* Toolbar - Custom Actions & Toggles */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex flex-wrap items-center gap-2">
-          {customActions.filter(a => a.context === 'bulk').map(action => (
+          {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('bulk')).map(action => (
             <button
               key={action.id}
               onClick={() => handleCustomAction(action)}
-              className={`flex items-center gap-2 px-4 py-2 bg-${action.color}-600 hover:bg-${action.color}-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-${action.color}-500/20`}
+              className={`flex items-center gap-2 px-4 py-2 bg-${action.color}-600 hover:bg-${action.color}-500 text-white rounded-xl font-bold text-xs capitalize tracking-wider transition-all shadow-lg shadow-${action.color}-500/20`}
             >
               {action.icon === 'Zap' && <Zap className="w-3.5 h-3.5" />}
               {action.icon === 'Link' && <Link className="w-3.5 h-3.5" />}
@@ -1099,20 +1203,28 @@ export default function ViewContainer({
               {canSearch && (
                 <button 
                   onClick={handleSearch}
-                  className="h-[42px] px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2"
+                  style={getButtonStyles(btnSearch)}
+                  className={cn(
+                    "h-[42px] px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2",
+                    (btnSearch?.custom_label !== undefined && btnSearch.custom_label !== '') ? "" : "capitalize tracking-wider"
+                  )}
                 >
                   <Search className="w-4 h-4" />
-                  {t('runtime.search')}
+                  {labelSearch}
                 </button>
               )}
 
               {canClear && (
                 <button 
                   onClick={handleClear}
-                  className="h-[42px] px-6 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-sm flex items-center gap-2"
+                  style={getButtonStyles(btnClear)}
+                  className={cn(
+                    "h-[42px] px-6 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-2",
+                    (btnClear?.custom_label !== undefined && btnClear.custom_label !== '') ? "" : "capitalize tracking-wider"
+                  )}
                 >
                   <RefreshCcw className="w-4 h-4" />
-                  {t('runtime.clear')}
+                  {labelClear}
                 </button>
               )}
             </div>
@@ -1202,7 +1314,7 @@ export default function ViewContainer({
                 <button
                   onClick={() => fetchData(externalFilters, false, true)}
                   disabled={isLoading}
-                  className="ml-4 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-1.5"
+                  className="ml-4 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-black capitalize tracking-wider transition-all disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCcw className="w-3 h-3" />}
                   {t('runtime.load_more', 'Carregar mais 100')}
@@ -1259,7 +1371,7 @@ export default function ViewContainer({
               <button
                 onClick={() => fetchData(externalFilters, false, true)}
                 disabled={isLoading}
-                className="flex items-center gap-2 px-8 py-3 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black rounded-full text-[11px] font-black uppercase tracking-widest transition-all shadow-xl disabled:opacity-50"
+                className="flex items-center gap-2 px-8 py-3 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black rounded-full text-[11px] font-black capitalize tracking-wider transition-all shadow-xl disabled:opacity-50"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCcw className="w-4 h-4" />}
                 {t('runtime.load_more_records', 'Carregar Próximos 100 Registros')} (Total: {data.length})
@@ -1390,6 +1502,39 @@ export default function ViewContainer({
           </div>
         </div>
       )}
+
+      {/* Modal / Drawer for UseCase Actions */}
+      <Modal 
+        isOpen={isIframeModalOpen} 
+        onClose={() => {
+          setIsIframeModalOpen(false)
+          setIframeUrl('')
+          setRefreshTrigger(prev => prev + 1)
+        }} 
+        title={iframeTitle}
+        size="4xl"
+        hideHeader={true}
+        className="!p-0 bg-transparent shadow-none border-none dark:bg-transparent"
+      >
+        <div className="w-full h-[85vh] bg-white dark:bg-neutral-950 rounded-[2.5rem] overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800">
+          {isIframeModalOpen && <iframe src={iframeUrl} className="w-full h-full border-none" />}
+        </div>
+      </Modal>
+
+      <Drawer
+        isOpen={isIframeDrawerOpen}
+        onClose={() => {
+          setIsIframeDrawerOpen(false)
+          setIframeUrl('')
+          setRefreshTrigger(prev => prev + 1)
+        }}
+        title={iframeTitle}
+        hideHeader={true}
+      >
+        <div className="w-full h-full bg-white dark:bg-neutral-950">
+          {isIframeDrawerOpen && <iframe src={iframeUrl} className="w-full h-full border-none" />}
+        </div>
+      </Drawer>
     </div>
   )
 }

@@ -12,9 +12,11 @@ interface ModalProps {
   children: React.ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl'
   zIndex?: number
+  hideHeader?: boolean
+  className?: string
 }
 
-export function Modal({ isOpen, onClose, title, description, children, size = 'md', zIndex = 200 }: ModalProps) {
+export function Modal({ isOpen, onClose, title, description, children, size = 'md', zIndex = 200, hideHeader = false, className }: ModalProps) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -50,24 +52,27 @@ export function Modal({ isOpen, onClose, title, description, children, size = 'm
         size === 'lg' && "max-w-lg",
         size === 'xl' && "max-w-xl",
         size === '2xl' && "max-w-2xl",
-        size === '4xl' && "max-w-4xl"
+        size === '4xl' && "max-w-4xl",
+        className
       )}>
-        <div className="p-8 pb-4 shrink-0">
-          <div className="flex justify-between items-start">
-            <div className="space-y-1">
-              {title && <h3 className="text-xl font-bold text-neutral-900 dark:text-white">{title}</h3>}
-              {description && <p className="text-sm text-neutral-500">{description}</p>}
+        {!hideHeader && (
+          <div className="p-8 pb-4 shrink-0">
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                {title && <h3 className="text-xl font-bold text-neutral-900 dark:text-white">{title}</h3>}
+                {description && <p className="text-sm text-neutral-500">{description}</p>}
+              </div>
+              <button 
+                onClick={onClose}
+                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-neutral-900 dark:hover:text-white ml-auto"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <button 
-              onClick={onClose}
-              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-neutral-900 dark:hover:text-white ml-auto"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
-        </div>
+        )}
 
-        <div className="px-8 pb-8 overflow-y-auto custom-scrollbar">
+        <div className={cn("overflow-y-auto custom-scrollbar", !hideHeader ? "px-8 pb-8" : "w-full h-full")}>
           {children}
         </div>
       </div>

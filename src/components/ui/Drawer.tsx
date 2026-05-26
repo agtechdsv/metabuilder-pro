@@ -9,9 +9,10 @@ interface DrawerProps {
   title: string
   children: React.ReactNode
   zIndex?: number
+  hideHeader?: boolean
 }
 
-export function Drawer({ isOpen, onClose, title, children, zIndex = 100 }: DrawerProps) {
+export function Drawer({ isOpen, onClose, title, children, zIndex = 100, hideHeader = false }: DrawerProps) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -42,18 +43,20 @@ export function Drawer({ isOpen, onClose, title, children, zIndex = 100 }: Drawe
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-neutral-200 dark:border-neutral-800">
-            <h2 className="text-xl font-bold text-neutral-900 dark:text-white">{title}</h2>
-            <button 
-              onClick={onClose}
-              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-900 rounded-lg transition-colors text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          {!hideHeader && (
+            <div className="flex items-center justify-between p-6 border-b border-neutral-200 dark:border-neutral-800 shrink-0">
+              <h2 className="text-xl font-bold text-neutral-900 dark:text-white">{title}</h2>
+              <button 
+                onClick={onClose}
+                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-900 rounded-lg transition-colors text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className={`flex-1 overflow-y-auto ${!hideHeader ? 'p-6' : ''}`}>
             {children}
           </div>
         </div>

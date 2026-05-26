@@ -12,6 +12,8 @@ interface RecordDrawerProps {
   logicType?: string
   masterModelId?: string
   masterModelName?: string
+  customActions?: any[]
+  onCustomAction?: (action: any, row?: any) => void
   masterTabTitle?: string
   detailsTabTitles?: Record<string, string>
   detailDisplayMode?: 'tabs' | 'sections'
@@ -58,7 +60,9 @@ export default function RecordDrawer({
   secretToken,
   tunnelChannel,
   isTunnelReady,
-  project
+  project,
+  customActions = [],
+  onCustomAction
 }: RecordDrawerProps) {
   return (
     <Drawer isOpen={isOpen} onClose={onClose} title="" zIndex={zIndex}>
@@ -88,6 +92,8 @@ export default function RecordDrawer({
         tunnelChannel={tunnelChannel}
         isTunnelReady={isTunnelReady}
         project={project}
+        customActions={customActions}
+        onCustomAction={onCustomAction}
       />
     </Drawer>
   )

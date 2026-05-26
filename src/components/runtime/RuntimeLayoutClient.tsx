@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { DynamicSidebar } from './DynamicSidebar'
 import { RuntimeGlobalHeader } from './RuntimeGlobalHeader'
 import { DynamicIcon } from './DynamicIcon'
@@ -24,6 +24,7 @@ export function RuntimeLayoutClient({
   isNoAuth = false
 }: RuntimeLayoutClientProps) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const iconRef = useRef<HTMLDivElement>(null)
@@ -127,6 +128,15 @@ export function RuntimeLayoutClient({
   if (isLoginPage) {
     return (
       <div className="flex-1 min-h-screen overflow-x-hidden">
+        {children}
+      </div>
+    )
+  }
+  const isEmbedded = searchParams?.get('embedded') === 'true'
+
+  if (isEmbedded) {
+    return (
+      <div className="flex-1 min-h-screen bg-transparent">
         {children}
       </div>
     )

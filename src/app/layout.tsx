@@ -23,6 +23,7 @@ export const metadata: Metadata = {
 import { preinit } from "react-dom";
 import { Providers } from "@/components/Providers";
 import { cookies } from "next/headers";
+import Script from "next/script";
 
 export default async function RootLayout({
   children,
@@ -44,8 +45,8 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{
-          __html: `
+        <Script id="oauth-redirect" strategy="beforeInteractive">
+          {`
             try {
               // Se o Supabase rejeitar a URL de callback (ex: falta de configuração no painel),
               // ele faz fallback para a URL base (/). Se isso acontecer no popup e tiver um código OAuth,
@@ -56,8 +57,8 @@ export default async function RootLayout({
                 }
               }
             } catch (e) {}
-          `
-        }} />
+          `}
+        </Script>
       </head>
       <body 
         className="min-h-full flex flex-col bg-white dark:bg-black text-black dark:text-white transition-colors duration-300"

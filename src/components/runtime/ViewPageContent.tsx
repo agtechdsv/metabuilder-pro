@@ -18,13 +18,16 @@ import DeleteConfirmModal from './DeleteConfirmModal'
 import { createClient } from '@/utils/supabase/client'
 import dynamic from 'next/dynamic'
 import { useI18n } from '@/i18n/I18nContext'
+import { cn } from '@/lib/utils'
 
 import RecordForm from './RecordForm'
 import { RuntimeHeader } from './RuntimeHeader'
 import AnalyticsDashboard from './AnalyticsDashboard'
 import { BIWidgetEditor as BIWidgetConfigEditor } from '@/components/shared/BIWidgetEditor'
 import { Modal } from '@/components/ui/Modal'
+import { Drawer } from '@/components/ui/Drawer'
 import { useToast } from '@/components/ui/Toast'
+import { useRouter } from 'next/navigation'
 import { ExportDropdown, ActiveDownloadsWidget } from './ExportControls'
 
 // Importamos o ViewContainer sem SSR para evitar o "piscar" do loader
@@ -121,6 +124,35 @@ export default function ViewPageContent({
   galleryClickBehavior,
   customActions = []
 }: ViewPageContentProps) {
+  const router = useRouter()
+  const { t } = useI18n()
+  const btnAdd = buttonsConfig?.find((b: any) => b.id === 'add')
+  const labelAdd = btnAdd?.custom_label !== undefined && btnAdd.custom_label !== '' 
+    ? btnAdd.custom_label 
+    : t('runtime.new_record')
+
+  const getButtonStyles = (btn: any) => {
+    if (!btn) return {}
+    const styles: React.CSSProperties = {}
+    if (btn.font_family && btn.font_family !== 'Inter (Padrão)') {
+      styles.fontFamily = btn.font_family
+    }
+    if (btn.font_size) {
+      styles.fontSize = btn.font_size
+    }
+    if (btn.text_color) {
+      styles.color = btn.text_color
+    }
+    if (btn.bg_color) {
+      styles.backgroundColor = btn.bg_color
+      styles.borderColor = btn.bg_color
+    }
+    const textTrans = btn.text_transform !== undefined ? btn.text_transform : 'capitalize'
+    if (textTrans && textTrans !== 'none') {
+      styles.textTransform = textTrans
+    }
+    return styles
+  }
 
   // Garante que todas as listas de campos sejam únicas por ID
   const cleanDisplayFields = useMemo(() => {
@@ -165,7 +197,7 @@ export default function ViewPageContent({
     cleanFormFields.filter(f => f.model_id && String(f.model_id) !== String(masterModelId)),
   [cleanFormFields, masterModelId])
 
-  const { t } = useI18n()
+  const [activeTab, setActiveTab] = useState<'list' | 'card'>(defaultView)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isPageVisible, setIsPageVisible] = useState(false)
@@ -174,6 +206,7 @@ export default function ViewPageContent({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [relationalRefreshKey, setRelationalRefreshKey] = useState(0)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false)
   const [isDetailDeleteModalOpen, setIsDetailDeleteModalOpen] = useState(false)
@@ -197,6 +230,149 @@ export default function ViewPageContent({
   const supabase = createClient()
   const [tunnelChannel, setTunnelChannel] = useState<any>(null)
   const [isTunnelReady, setIsTunnelReady] = useState(false)
+  
+  const [initialEditId, setInitialEditId] = useState<string | null>(null)
+
+  // Custom Actions iframes state
+  const [iframeUrl, setIframeUrl] = useState<string>('')
+  const [iframeTitle, setIframeTitle] = useState<string>('')
+  const [isIframeModalOpen, setIsIframeModalOpen] = useState(false)
+  const [isIframeDrawerOpen, setIsIframeDrawerOpen] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const paramsObj: Record<string, string> = {};
+      
+      const validColumnNames = new Set([
+        ...displayFields.map((f: any) => f.db_column_name),
+        ...filterFields.map((f: any) => f.db_column_name)
+      ]);
+      const pk = primaryKeyName || 'id';
+      validColumnNames.add(pk);
+
+      searchParams.forEach((value, key) => {
+        if (key !== 'embedded') {
+          if (!validColumnNames.has(key) && (key.endsWith('_id') || key === 'id')) {
+             paramsObj[pk] = value;
+          } else if (validColumnNames.has(key)) {
+             paramsObj[key] = value;
+          } else {
+             // Aceita mesmo sem validacao se formos tolerantes, mas vamos forcar para o ID
+             // caso seja a unica parametro ou deixe como esta para nao quebrar custom actions
+             paramsObj[key] = value;
+          }
+        }
+      });
+      
+      if (Object.keys(paramsObj).length > 0) {
+        setGlobalFilterValues(paramsObj);
+        
+        if (logicType !== 'list_only') {
+          const idVal = paramsObj['id'] || paramsObj[pk];
+          if (idVal) {
+            setInitialEditId(idVal);
+          }
+        }
+      }
+    }
+  }, [logicType, primaryKeyName, displayFields, filterFields]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'CLOSE_MODAL') {
+        setIsIframeModalOpen(false)
+        setIsIframeDrawerOpen(false)
+        setIframeUrl('')
+        setRefreshKey(prev => prev + 1)
+        setRelationalRefreshKey(prev => prev + 1)
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
+
+  const handleCustomAction = async (action: any, rowData?: any) => {
+    const interpolate = (str: string) => {
+      if (!str || !rowData) return str
+      return str.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
+        return rowData[key] !== undefined ? String(rowData[key]) : match
+      })
+    }
+
+    if (action.trigger_type === 'sql') {
+      if (!tunnelChannel || !isTunnelReady) {
+        toast('Túnel com banco de dados não está pronto.', 'error')
+        return
+      }
+      const queryId = crypto.randomUUID()
+      const currentModel = project?.models?.find((m: any) => m.db_table_name === modelName)
+      const actualSchemaName = currentModel?.db_schema_name || project?.slug || 'public'
+      const customQuery = interpolate(action.sql_query || '')
+
+      const payload: any = { 
+        queryId, 
+        query: customQuery, 
+        sql: customQuery,
+        params: [],
+        action: 'execute_custom', 
+        token: project?.secret_token || 'test-token',
+        schemaName: actualSchemaName,
+        table: modelName
+      }
+      tunnelChannel.send({ type: 'broadcast', event: 'sql_query', payload })
+      toast(`Executando ação: ${action.label}...`, 'info')
+    } 
+    else if (action.trigger_type === 'usecase') {
+      const slug = interpolate(action.usecase_slug)
+      const params = interpolate(action.usecase_params) || ''
+      const selectedFields = action.usecase_selected_fields || []
+      const fieldsParams = selectedFields
+        .map((f: string) => `${f}=${rowData?.[f] !== undefined ? encodeURIComponent(rowData[f]) : ''}`)
+        .join('&')
+        
+      const allParams = [fieldsParams, params].filter(Boolean).join('&')
+      const pathParts = window.location.pathname.split('/').filter(Boolean)
+      const isAdminPath = pathParts[0] === 'admin'
+      const currentWorkspaceSlug = isAdminPath ? pathParts[1] : pathParts[0]
+      const currentProjectSlug = isAdminPath ? pathParts[2] : pathParts[1]
+      const url = `/${project?.workspace?.slug || currentWorkspaceSlug}/${project?.slug || currentProjectSlug}/${slug}${allParams ? '?' + allParams : ''}`
+      const openMode = action.usecase_open_mode || 'page'
+      
+      if (openMode === 'modal') {
+        setIframeUrl(url + (allParams ? '&embedded=true' : '?embedded=true'))
+        setIframeTitle(action.label || 'Visualizar')
+        setIsIframeModalOpen(true)
+      } else if (openMode === 'drawer') {
+        setIframeUrl(url + (allParams ? '&embedded=true' : '?embedded=true'))
+        setIframeTitle(action.label || 'Visualizar')
+        setIsIframeDrawerOpen(true)
+      } else {
+        router.push(url)
+      }
+    }
+    else if (action.trigger_type === 'rest') {
+      const url = interpolate(action.rest_url)
+      try {
+        toast(`Executando chamada REST...`, 'info')
+        const options: RequestInit = {
+          method: action.rest_method || 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }
+        if (['POST', 'PUT', 'PATCH'].includes(action.rest_method) && action.rest_body) {
+          options.body = interpolate(action.rest_body)
+        }
+        const res = await fetch(url, options)
+        if (res.ok) {
+          toast(`Ação "${action.label}" executada com sucesso!`, 'success')
+        } else {
+          toast(`Erro ao executar API: ${res.status} ${res.statusText}`, 'error')
+        }
+      } catch (err: any) {
+        toast(`Erro de rede: ${err.message}`, 'error')
+      }
+    }
+  }
 
   useEffect(() => {
     if (!project?.id) return
@@ -550,8 +726,6 @@ export default function ViewPageContent({
     })
   }
 
-  // Removido o filtro anterior que estava solto
-
   const handleOpenView = async (row: any) => {
     setDrawerMode('view')
     setIsProcessing(true)
@@ -720,13 +894,6 @@ export default function ViewPageContent({
         sanitizedData[k] = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
       }
 
-      console.log(`[MetaBuilder:handleSaveDetail] RAW formData keys:`, Object.keys(formData))
-      console.log(`[MetaBuilder:handleSaveDetail] action=${action} table=${tableName} pk=${detailPkName} pkValue=${dPkValue}`)
-      console.log(`[MetaBuilder:handleSaveDetail] fields for table (${fields.length}):`, fields.map(f => f.db_column_name))
-      console.log(`[MetaBuilder:handleSaveDetail] selectedDetail keys:`, Object.keys(selectedDetail || {}))
-      console.log(`[MetaBuilder:handleSaveDetail] sanitizedData:`, sanitizedData)
-
-
       // Se for inclusão, garantir que a FK para o mestre esteja correta
       if (action === 'create' && logicType === 'master_detail' && joins) {
         const join = joins.find(j => j.to?.toLowerCase() === tableName?.toLowerCase())
@@ -837,7 +1004,6 @@ export default function ViewPageContent({
             ch.on('broadcast', { event: 'sql_result' }, handleResult)
 
             const doSend = () => {
-              console.log(`[MetaBuilder:handleSaveDetail] Attempt ${attempts}: sending ${action} on ${tableName} with cols:`, Object.keys(currentData))
               ch.send({
                 type: 'broadcast',
                 event: 'sql_query',
@@ -853,10 +1019,6 @@ export default function ViewPageContent({
                   schemaName: project?.models?.find((m: any) => m.db_table_name === tableName)?.db_schema_name || project?.slug || 'public',
                   slug: project?.slug
                 }
-              }).then(() => {
-                console.log(`[MetaBuilder:handleSaveDetail] channel.send() resolved (attempt ${attempts})`)
-              }).catch((err: any) => {
-                console.error(`[MetaBuilder:handleSaveDetail] channel.send() error:`, err)
               })
             }
 
@@ -876,14 +1038,12 @@ export default function ViewPageContent({
           })
 
           if (result.success) {
-            console.log(`[MetaBuilder:handleSaveDetail] CLI confirmed save ✅ (attempt ${attempts})`)
             return true
           }
 
           // Check if this is a generated-column error and retry
           const genCol = parseGeneratedColError(result.error || '')
           if (genCol && result.error?.includes('DEFAULT')) {
-            console.warn(`[MetaBuilder:handleSaveDetail] Column "${genCol}" is generated — removing and retrying...`)
             // Cache this column so future saves skip it immediately
             if (!cachedGenCols.includes(genCol)) {
               cachedGenCols.push(genCol)
@@ -894,7 +1054,6 @@ export default function ViewPageContent({
           }
 
           // Non-retryable error
-          console.error(`[MetaBuilder:handleSaveDetail] CLI error (attempt ${attempts}):`, result.error)
           toast(result.error || 'Erro ao salvar', 'error')
           return false
         }
@@ -906,11 +1065,8 @@ export default function ViewPageContent({
       const saveSucceeded = await sendWithRetry()
 
       // After save confirmed (or timed out), refresh UI
-      // Captura snapshot estável ANTES de qualquer setState
       const parentHistory = [...detailHistory]
 
-      // Aguarda um tick para garantir que o banco já processou o commit antes de re-buscar
-      // (evita race condition onde fetchDetails retorna os dados ANTIGOS ainda não sobrescritos).
       if (saveSucceeded) {
         toast(
           detailModalMode === 'create'
@@ -941,7 +1097,6 @@ export default function ViewPageContent({
       }
 
       // 3. Navega de volta manualmente com dados JA FRESCOS
-      // (Não usa handleCloseDetail() porque ele lê estado stale do closure)
       if (parentHistory.length > 0) {
         const last = parentHistory[parentHistory.length - 1]
         const newHistory = parentHistory.slice(0, -1)
@@ -957,8 +1112,6 @@ export default function ViewPageContent({
         const model = (project as any)?.models?.find((m: any) => m.db_table_name.toLowerCase() === last.tableName?.toLowerCase())
         const interfaceType = detailsInterfaceTypes?.[model?.id || ''] || (project.ui_config as any)?.details_interface_types?.[model?.id || ''] || 'modal'
 
-        // Fecha a interface ATUAL e abre a interface CORRETA do pai.
-        // Crítico: sem fechar a que está aberta, o conteúdo da modal vai parar dentro do drawer.
         if (interfaceType === 'drawer') {
           setIsDetailModalOpen(false)
           setIsDetailDrawerOpen(true)
@@ -967,7 +1120,6 @@ export default function ViewPageContent({
           setIsDetailModalOpen(true)
         }
       } else {
-        // Sem histórico de pai: fecha a modal/drawer de detalhe retornando ao registro mestre.
         setIsDetailModalOpen(false)
         setIsDetailDrawerOpen(false)
         setSelectedDetail(null)
@@ -1107,11 +1259,6 @@ export default function ViewPageContent({
           rawQuery = `INSERT INTO ${modelName} (${keys}) VALUES (${values})`
         }
 
-        console.log(`[MetaBuilder:handleSave] RAW formData keys:`, Object.keys(formData))
-        console.log(`[MetaBuilder:handleSave] action=${action} table=${modelName} pkName=${pkName} cleanPkName=${cleanPkName} pkValue=${pkValue}`)
-        console.log(`[MetaBuilder:handleSave] sanitizedData:`, sanitizedData)
-        console.log(`[MetaBuilder:handleSave] rawQuery:`, rawQuery)
-
         const payload: any = {
           queryId,
           table: modelName,
@@ -1121,8 +1268,8 @@ export default function ViewPageContent({
           record: sanitizedData, 
           query: rawQuery, 
           sql: rawQuery, 
-          idColumn: cleanPkName,   // EXATAMENTE o que o Agente CLI espera
-          idValue: pkValue,   // EXATAMENTE o que o Agente CLI espera
+          idColumn: cleanPkName,
+          idValue: pkValue,
           token: project?.secret_token || 'test-token',
           schemaName: project?.models?.find((m: any) => m.db_table_name === modelName)?.db_schema_name || project?.slug || 'public',
           slug: project?.slug
@@ -1139,114 +1286,6 @@ export default function ViewPageContent({
           event: 'sql_query',
           payload
         })
-
-        // Batch save modified details if any
-        if (formData._details && formData._details.length > 0) {
-          for (const detail of formData._details) {
-            const detailTableName = detail.model_name
-            if (!detailTableName) continue
-            
-            const dFields = detailFields.filter(f => f.model_name?.toLowerCase() === detailTableName.toLowerCase())
-            const pkField = dFields.find(f => f.is_primary_key) || { db_column_name: 'id' }
-            const dPkName = pkField.db_column_name.split('.').pop() || 'id'
-            const dPkValue = detail[dPkName] || detail[dPkName.toUpperCase()] || detail['id'] || detail['ID']
-            
-            if (dPkValue) {
-              const sanitizedDetail: any = {}
-              for (const [k, v] of Object.entries(detail)) {
-                if (v === null || v === undefined) continue
-                const isMatch = dFields.some(f => {
-                  const bCol = f.db_column_name.split('.').pop() || f.db_column_name
-                  return f.db_column_name.toLowerCase() === k.toLowerCase() || bCol.toLowerCase() === k.toLowerCase()
-                })
-                if (isMatch && k.toLowerCase() !== dPkName.toLowerCase() && k.toLowerCase() !== 'id') {
-                  sanitizedDetail[k] = String(v)
-                }
-              }
-
-              console.log(`[MetaBuilder:handleSave] Saving detail: table=${detailTableName} pk=${dPkName}=${dPkValue} fields=`, Object.keys(sanitizedDetail))
-
-              // Strip known generated/computed columns (cached from prior save attempts)
-              const genColsKey = `__mb_gen_cols_${detailTableName}`
-              const genCols: string[] = JSON.parse(sessionStorage.getItem(genColsKey) || '[]')
-              for (const gc of genCols) { delete sanitizedDetail[gc] }
-
-              if (Object.keys(sanitizedDetail).length > 0) {
-                const setClause = Object.entries(sanitizedDetail)
-                  .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
-                  .join(', ')
-                const detailQuery = `UPDATE ${detailTableName} SET ${setClause} WHERE ${dPkName} = '${String(dPkValue).replace(/'/g, "''")}'`
-                
-                channel.send({
-                  type: 'broadcast',
-                  event: 'sql_query',
-                  payload: {
-                    queryId: crypto.randomUUID(),
-                    table: detailTableName,
-                    action: 'update',
-                    data: sanitizedDetail,
-                    sql: detailQuery,
-                    idColumn: dPkName,
-                    idValue: dPkValue,
-                    token: project?.secret_token || 'test-token',
-                    schemaName: project?.models?.find((m: any) => m.db_table_name === detailTableName)?.db_schema_name || project?.slug || 'public',
-                    slug: project?.slug
-                  }
-                })
-              }
-
-              // SUB-DETAILS (Recursividade manual para o 3º nível)
-              if (detail._details && detail._details.length > 0) {
-                for (const subDetail of detail._details) {
-                  const subTableName = subDetail.model_name
-                  if (!subTableName) continue
-
-                  const sdFields = detailFields.filter(f => f.model_name?.toLowerCase() === subTableName.toLowerCase())
-                  const sPkField = sdFields.find(f => f.is_primary_key) || { db_column_name: 'id' }
-                  const sPkName = sPkField.db_column_name.split('.').pop() || 'id'
-                  const sPkValue = subDetail[sPkName] || subDetail[sPkName.toUpperCase()] || subDetail['id'] || subDetail['ID']
-
-                  if (sPkValue) {
-                    const sanitizedSub: any = {}
-                    for (const [sk, sv] of Object.entries(subDetail)) {
-                      const isMatch = sdFields.some(f => {
-                        const bCol = f.db_column_name.split('.').pop() || f.db_column_name
-                        return f.db_column_name.toLowerCase() === sk.toLowerCase() || bCol.toLowerCase() === sk.toLowerCase()
-                      })
-                      if (isMatch && sk.toLowerCase() !== sPkName.toLowerCase() && sk.toLowerCase() !== 'id') {
-                        sanitizedSub[sk] = String(sv)
-                      }
-                    }
-
-                    if (Object.keys(sanitizedSub).length > 0) {
-                      const subSetClause = Object.entries(sanitizedSub)
-                        .map(([k, v]) => `${k} = '${String(v).replace(/'/g, "''")}'`)
-                        .join(', ')
-                      const subQuery = `UPDATE ${subTableName} SET ${subSetClause} WHERE ${sPkName} = '${String(sPkValue).replace(/'/g, "''")}'`
-                      
-                      channel.send({
-                        type: 'broadcast',
-                        event: 'sql_query',
-                        payload: {
-                          queryId: crypto.randomUUID(),
-                          table: subTableName,
-                          action: 'update',
-                          data: sanitizedSub,
-                          sql: subQuery,
-                          idColumn: sPkName,
-                          idValue: sPkValue,
-                          token: project?.secret_token || 'test-token',
-                    schemaName: project?.models?.find((m: any) => m.db_table_name === subTableName)?.db_schema_name || project?.slug || 'public',
-                          slug: project?.slug
-                        }
-                      })
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
       }
 
       if (isTemporary) {
@@ -1272,14 +1311,10 @@ export default function ViewPageContent({
         }
 
         if (isPage) {
-          // Em modo página: recarrega os detalhes e atualiza os campos do mestre
-          // Usa o formData salvo para atualizar os campos do mestre imediatamente,
-          // sem precisar de uma query adicional ao banco.
           const freshDetails = await fetchDetails(selectedRow, modelName)
           setSelectedRow((prev: any) => prev ? { ...prev, ...formData, _details: freshDetails } : prev)
           setRefreshKey(prev => prev + 1)
         } else {
-          // Em modo modal/drawer: fecha e retorna para a lista
           setOpen(false)
           setSelectedRow(null)
           setRefreshKey(prev => prev + 1)
@@ -1320,8 +1355,6 @@ export default function ViewPageContent({
       if (pkValue !== undefined && pkValue !== null) {
         rawQuery = `DELETE FROM ${modelName} WHERE ${cleanPkName} = '${String(pkValue).replace(/'/g, "''")}'`
       }
-
-      console.log(`[MetaBuilder] Executing delete on ${modelName}`, { filters, pkName, cleanPkName, pkValue, rawQuery })
 
       const payload: any = {
         queryId,
@@ -1399,10 +1432,14 @@ export default function ViewPageContent({
             {canAdd && (
               <button 
                 onClick={handleOpenAdd}
-                className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full transition-all font-bold text-xs shadow-[0_0_20px_rgba(79,70,229,0.3)] active:scale-95"
+                style={getButtonStyles(btnAdd)}
+                className={cn(
+                  "flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full transition-all font-bold text-xs shadow-[0_0_20px_rgba(79,70,229,0.3)] active:scale-95",
+                  (btnAdd?.custom_label !== undefined && btnAdd.custom_label !== '') ? "" : "capitalize tracking-wider"
+                )}
               >
                 <Plus className="w-4 h-4" />
-                {t('runtime.new_record')}
+                {labelAdd}
               </button>
             )}
           </div>
@@ -1411,7 +1448,8 @@ export default function ViewPageContent({
 
       <main className="px-10 py-6 pb-8 space-y-8">
         {isPage && isPageVisible ? (
-          <RecordForm 
+          <RecordForm
+            key={`page-form-${relationalRefreshKey}`}
             mode={drawerMode}
             fields={cleanFormFields}
             initialData={selectedRow}
@@ -1438,6 +1476,8 @@ export default function ViewPageContent({
             tunnelChannel={tunnelChannel}
             isTunnelReady={isTunnelReady}
             project={project}
+            customActions={customActions}
+            onCustomAction={handleCustomAction}
           />
         ) : (
           <>
@@ -1477,6 +1517,7 @@ export default function ViewPageContent({
               mapConfig={mapConfig}
               ganttConfig={ganttConfig}
               blueprintConfig={blueprintConfig}
+              initialEditId={initialEditId}
               masterModelId={masterModelId}
               detailDisplayMode={detailDisplayMode}
               dictionary={dictionary}
@@ -1527,6 +1568,8 @@ export default function ViewPageContent({
           tunnelChannel={tunnelChannel}
           isTunnelReady={isTunnelReady}
           project={project}
+          customActions={customActions}
+          onCustomAction={handleCustomAction}
         />
       ) : (
         <RecordDrawer 
@@ -1558,6 +1601,8 @@ export default function ViewPageContent({
           tunnelChannel={tunnelChannel}
           isTunnelReady={isTunnelReady}
           project={project}
+          customActions={customActions}
+          onCustomAction={handleCustomAction}
         />
       )}
 
@@ -1597,7 +1642,9 @@ export default function ViewPageContent({
           secretToken: project.secret_token,
           tunnelChannel: tunnelChannel,
           isTunnelReady: isTunnelReady,
-          project: project
+          project: project,
+          customActions,
+          onCustomAction: handleCustomAction
         }
 
         return interfaceType === 'modal' ? (
@@ -1633,6 +1680,8 @@ export default function ViewPageContent({
         tunnelChannel={tunnelChannel}
         isTunnelReady={isTunnelReady}
         project={project}
+        customActions={customActions}
+        onCustomAction={handleCustomAction}
       />
 
       <RecordDrawer 
@@ -1660,6 +1709,8 @@ export default function ViewPageContent({
         tunnelChannel={tunnelChannel}
         isTunnelReady={isTunnelReady}
         project={project}
+        customActions={customActions}
+        onCustomAction={handleCustomAction}
       />
 
       <DeleteConfirmModal 
@@ -1687,11 +1738,46 @@ export default function ViewPageContent({
 
 
           <div className="flex gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800">
-             <button onClick={() => setIsWidgetModalOpen(false)} className="flex-1 px-4 py-3.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all">Cancelar</button>
-             <button onClick={() => handleSaveWidgetRuntime(editingWidget)} className="flex-1 px-4 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95">Salvar Dashboard</button>
+             <button onClick={() => setIsWidgetModalOpen(false)} className="flex-1 px-4 py-3.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-2xl font-black text-[10px] capitalize tracking-wider transition-all">Cancelar</button>
+             <button onClick={() => handleSaveWidgetRuntime(editingWidget)} className="flex-1 px-4 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] capitalize tracking-wider hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95">Salvar Dashboard</button>
           </div>
         </div>
       </Modal>
+
+      {/* Modal / Drawer for UseCase Actions */}
+      <Modal 
+        isOpen={isIframeModalOpen} 
+        onClose={() => {
+          setIsIframeModalOpen(false)
+          setIframeUrl('')
+          setRefreshKey(prev => prev + 1)
+          setRelationalRefreshKey(prev => prev + 1)
+        }} 
+        title={iframeTitle}
+        size="4xl"
+        hideHeader={true}
+        className="!p-0 bg-transparent shadow-none border-none dark:bg-transparent"
+      >
+        <div className="w-full h-[85vh] bg-white dark:bg-neutral-950 rounded-[2.5rem] overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800">
+          {isIframeModalOpen && <iframe src={iframeUrl} className="w-full h-full border-none" />}
+        </div>
+      </Modal>
+
+      <Drawer
+        isOpen={isIframeDrawerOpen}
+        onClose={() => {
+          setIsIframeDrawerOpen(false)
+          setIframeUrl('')
+          setRefreshKey(prev => prev + 1)
+          setRelationalRefreshKey(prev => prev + 1)
+        }}
+        title={iframeTitle}
+        hideHeader={true}
+      >
+        <div className="w-full h-full bg-white dark:bg-neutral-950">
+          {isIframeDrawerOpen && <iframe src={iframeUrl} className="w-full h-full border-none" />}
+        </div>
+      </Drawer>
 
       {project.theme_config?.enable_downloads !== false && canExport && (
         <ActiveDownloadsWidget 

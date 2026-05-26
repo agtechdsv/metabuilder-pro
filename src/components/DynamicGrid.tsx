@@ -30,6 +30,29 @@ export default function DynamicGrid({
   const canEdit = buttonsConfig.find((b: any) => b.id === 'edit')?.visible === true
   const canDelete = buttonsConfig.find((b: any) => b.id === 'delete')?.visible === true
 
+  const btnView = buttonsConfig?.find((b: any) => b.id === 'view')
+  const btnEdit = buttonsConfig?.find((b: any) => b.id === 'edit')
+  const btnDelete = buttonsConfig?.find((b: any) => b.id === 'delete')
+
+  const getButtonStyles = (btn: any) => {
+    if (!btn) return {}
+    const styles: React.CSSProperties = {}
+    if (btn.font_family && btn.font_family !== 'Inter (Padrão)') {
+      styles.fontFamily = btn.font_family
+    }
+    if (btn.font_size) {
+      styles.fontSize = btn.font_size
+    }
+    if (btn.text_color) {
+      styles.color = btn.text_color
+    }
+    if (btn.bg_color) {
+      styles.backgroundColor = btn.bg_color
+      styles.borderColor = btn.bg_color
+    }
+    return styles
+  }
+
   const getNestedValue = (obj: any, path: string) => {
     if (!obj || !path) return undefined
     
@@ -125,8 +148,9 @@ export default function DynamicGrid({
             <div className="flex items-center justify-end gap-1.5">
               {canView && (
                 <button 
-                  title="Visualizar"
+                  title={btnView?.custom_label !== undefined && btnView.custom_label !== '' ? btnView.custom_label : "Visualizar"}
                   onClick={() => onView?.(row)}
+                  style={getButtonStyles(btnView)}
                   className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all active:scale-90 shadow-sm"
                 >
                   <Search className="w-3.5 h-3.5" />
@@ -134,8 +158,9 @@ export default function DynamicGrid({
               )}
               {canEdit && (
                 <button 
-                  title="Editar"
+                  title={btnEdit?.custom_label !== undefined && btnEdit.custom_label !== '' ? btnEdit.custom_label : "Editar"}
                   onClick={() => onEdit?.(row)}
+                  style={getButtonStyles(btnEdit)}
                   className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-neutral-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-90 shadow-sm"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -143,14 +168,15 @@ export default function DynamicGrid({
               )}
               {canDelete && (
                 <button 
-                  title="Excluir"
+                  title={btnDelete?.custom_label !== undefined && btnDelete.custom_label !== '' ? btnDelete.custom_label : "Excluir"}
                   onClick={() => onDelete?.(row)}
+                  style={getButtonStyles(btnDelete)}
                   className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-red-500 border border-neutral-200 dark:border-neutral-700 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all active:scale-90 shadow-sm"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               )}
-              {customActions.filter(a => a.context === 'row').map(action => (
+              {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('row')).map(action => (
                 <button
                   key={action.id}
                   title={action.label}

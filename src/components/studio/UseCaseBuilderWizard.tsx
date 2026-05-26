@@ -103,6 +103,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   const [isSaving, setIsSaving] = useState(false)
   const [models, setModels] = useState<any[]>([])
   const [relations, setRelations] = useState<any[]>([])
+  const [useCases, setUseCases] = useState<any[]>([])
 
   // Configuração da View sendo criada
   const [config, setConfig] = useState({
@@ -216,6 +217,18 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         .eq('project_id', project.id)
       
       if (relsData) setRelations(relsData)
+
+      const { data: viewsData } = await supabase
+        .from('ui_views')
+        .select('name, slug, logic_type')
+        .eq('project_id', project.id)
+        .order('name')
+      
+      if (viewsData) {
+        // Deduplicate to avoid React key errors
+        const unique = viewsData.filter((v, i, a) => a.findIndex(t => (t.slug === v.slug)) === i)
+        setUseCases(unique)
+      }
 
       setIsLoading(false)
     }
@@ -760,7 +773,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           <StepLayout config={config} setConfig={setConfig} models={models} />
         )}
         {steps[currentStep - 1]?.id === 4 && (
-          <StepActions config={config} setConfig={setConfig} />
+          <StepActions config={config} setConfig={setConfig} models={models} useCases={useCases} />
         )}
       </div>
 
@@ -3225,10 +3238,13 @@ function StepLayout({ config, setConfig, models }: any) {
   )
 }
 
-function StepActions({ config, setConfig }: any) {
+function StepActions({ config, setConfig, models, useCases }: any) {
   const { t } = useI18n()
   const [isActionModalOpen, setIsActionModalOpen] = useState(false)
   const [editingAction, setEditingAction] = useState<any>(null)
+  const [activeModalTab, setActiveModalTab] = useState<'general' | 'trigger'>('general')
+  const [selectedButtonConfig, setSelectedButtonConfig] = useState<any>(null)
+  const [isButtonPropertiesOpen, setIsButtonPropertiesOpen] = useState(false)
 
   const handleSaveAction = (action: any) => {
     const currentActions = config.layout_config.custom_actions || []
@@ -3284,35 +3300,77 @@ function StepActions({ config, setConfig }: any) {
         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.interface_buttons')}</label>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {config.buttons_config.filter((b: any) => b.id !== 'export').map((btn: any) => (
-            <button
-              key={btn.id}
-              onClick={() => {
-                setConfig({
-                  ...config,
-                  buttons_config: config.buttons_config.map((b: any) => 
-                    b.id === btn.id ? { ...b, visible: !b.visible } : b
-                  )
-                })
-              }}
-              className={cn(
-                "p-4 rounded-[1.5rem] border transition-all flex flex-col items-center gap-3",
-                btn.visible 
-                  ? "bg-white dark:bg-neutral-950 border-indigo-600 shadow-lg shadow-indigo-500/5" 
-                  : "bg-neutral-50/50 dark:bg-neutral-900/30 border-neutral-200 dark:border-neutral-800 opacity-50"
-              )}
-            >
-              <div className={cn(
-                "w-10 h-10 rounded-2xl flex items-center justify-center",
-                btn.visible ? "bg-indigo-500 text-white" : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500"
-              )}>
-                {btn.icon === 'search' && <Search className="w-5 h-5" />}
-                {btn.icon === 'refresh-ccw' && <RefreshCcw className="w-5 h-5" />}
-                {btn.icon === 'plus' && <Plus className="w-5 h-5" />}
-                {btn.icon === 'pencil' && <Pencil className="w-5 h-5" />}
-                {btn.icon === 'trash' && <Trash2 className="w-5 h-5" />}
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">{t(btn.labelKey) || btn.label}</span>
-            </button>
+            <div key={btn.id} className="relative group/btn w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  setConfig({
+                    ...config,
+                    buttons_config: config.buttons_config.map((b: any) => 
+                      b.id === btn.id ? { ...b, visible: !b.visible } : b
+                    )
+                  })
+                }}
+                className={cn(
+                  "w-full p-4 rounded-[1.5rem] border transition-all flex flex-col items-center justify-center gap-3 min-h-[108px] relative",
+                  btn.visible 
+                    ? "bg-white dark:bg-neutral-950 border-indigo-600 shadow-lg shadow-indigo-500/5" 
+                    : "bg-neutral-50/50 dark:bg-neutral-900/30 border-neutral-200 dark:border-neutral-800 opacity-50"
+                )}
+              >
+                <div className={cn(
+                  "w-10 h-10 rounded-2xl flex items-center justify-center transition-colors",
+                  btn.visible ? "bg-indigo-500 text-white" : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500"
+                )}
+                style={btn.visible ? {
+                  backgroundColor: btn.bg_color || undefined,
+                  color: btn.text_color || undefined
+                } : undefined}
+                >
+                  {btn.icon === 'search' && <Search className="w-5 h-5" />}
+                  {btn.icon === 'refresh-ccw' && <RefreshCcw className="w-5 h-5" />}
+                  {btn.icon === 'plus' && <Plus className="w-5 h-5" />}
+                  {btn.icon === 'pencil' && <Pencil className="w-5 h-5" />}
+                  {btn.icon === 'trash' && <Trash2 className="w-5 h-5" />}
+                </div>
+                <span 
+                  className={cn(
+                    "text-[10px] font-black transition-all truncate max-w-full px-2",
+                    (btn.custom_label !== undefined && btn.custom_label !== '') ? "" : "capitalize tracking-wider"
+                  )}
+                  style={btn.visible ? {
+                    fontFamily: (btn.font_family && btn.font_family !== 'Inter (Padrão)') ? btn.font_family : undefined,
+                    fontSize: btn.font_size || undefined,
+                    color: btn.text_color || undefined,
+                    textTransform: (btn.text_transform !== undefined ? (btn.text_transform !== 'none' ? btn.text_transform : undefined) : 'capitalize') as any
+                  } : undefined}
+                >
+                  {btn.custom_label !== undefined && btn.custom_label !== '' ? btn.custom_label : (t(btn.labelKey) || btn.label)}
+                </span>
+              </button>
+
+              {/* Settings Trigger Icon */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedButtonConfig({
+                    ...btn,
+                    custom_label: btn.custom_label !== undefined ? btn.custom_label : (t(btn.labelKey) || btn.label),
+                    font_family: btn.font_family || 'Inter (Padrão)',
+                    font_size: btn.font_size || '10px',
+                    text_color: btn.text_color || '',
+                    bg_color: btn.bg_color || '',
+                    text_transform: btn.text_transform || 'capitalize'
+                  });
+                  setIsButtonPropertiesOpen(true);
+                }}
+                className="absolute top-3 right-3 p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-400 opacity-0 group-hover/btn:opacity-100 focus:opacity-100 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all cursor-pointer z-10"
+                title="Propriedades do Botão"
+              >
+                <Settings2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           ))}
         </div>
       </div>
@@ -3332,10 +3390,12 @@ function StepActions({ config, setConfig }: any) {
                 sql_query: '',
                 usecase_slug: '',
                 usecase_params: '',
+                usecase_open_mode: 'page',
                 rest_url: '',
                 rest_method: 'POST',
                 rest_body: ''
               })
+              setActiveModalTab('general')
               setIsActionModalOpen(true)
             }}
             className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all"
@@ -3363,11 +3423,25 @@ function StepActions({ config, setConfig }: any) {
                   </div>
                   <div>
                     <h4 className="font-bold text-sm text-neutral-900 dark:text-white">{action.label}</h4>
-                    <p className="text-[10px] text-neutral-400 uppercase tracking-wider">{action.trigger_type} • {action.context}</p>
+                    <p className="text-[10px] text-neutral-400 uppercase tracking-wider">
+                      {action.trigger_type} • {(() => {
+                        const activeContexts: string[] = action.contexts
+                          ? (Array.isArray(action.contexts) ? action.contexts : [action.contexts])
+                          : (action.context ? [action.context] : ['row']);
+                        return activeContexts.map(c => {
+                          if (c === 'row') return 'Linha (Pesquisa)';
+                          if (c === 'bulk') return 'Global (Pesquisa)';
+                          if (c === 'master_top') return 'Global (Mestre)';
+                          if (c === 'detail_top') return 'Global (Detalhe)';
+                          if (c === 'detail_row') return 'Linha (Detalhe)';
+                          return c;
+                        }).join(', ');
+                      })()}
+                    </p>
                   </div>
                 </div>
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => { setEditingAction(action); setIsActionModalOpen(true); }} className="p-2 text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl hover:bg-indigo-100"><Pencil className="w-4 h-4" /></button>
+                  <button onClick={() => { setEditingAction(action); setActiveModalTab('general'); setIsActionModalOpen(true); }} className="p-2 text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl hover:bg-indigo-100"><Pencil className="w-4 h-4" /></button>
                   <button onClick={() => handleDeleteAction(action.id)} className="p-2 text-red-600 bg-red-50 dark:bg-red-900/30 rounded-xl hover:bg-red-100"><Trash2 className="w-4 h-4" /></button>
                 </div>
               </div>
@@ -3550,169 +3624,471 @@ function StepActions({ config, setConfig }: any) {
         isOpen={isActionModalOpen}
         onClose={() => setIsActionModalOpen(false)}
         title={editingAction?.id ? 'Editar Ação Customizada' : 'Nova Ação Customizada'}
+        size="2xl"
       >
         {editingAction && (
-          <div className="space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar p-1">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Nome do Botão</label>
-                <input
-                  type="text"
-                  value={editingAction.label}
-                  onChange={e => setEditingAction({ ...editingAction, label: e.target.value })}
-                  className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-500 outline-none transition-all"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Contexto</label>
-                <select
-                  value={editingAction.context}
-                  onChange={e => setEditingAction({ ...editingAction, context: e.target.value })}
-                  className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
-                >
-                  <option value="row">Ação de Linha (Cada Registro)</option>
-                  <option value="bulk">Ação Global (Topo da Tela)</option>
-                </select>
-              </div>
+          <div className="space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar p-1">
+            {/* Nav Tabs */}
+            <div className="flex border-b border-neutral-200 dark:border-neutral-800 -mx-1 mb-4 shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveModalTab('general')}
+                className={cn(
+                  "px-5 py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-2",
+                  activeModalTab === 'general'
+                    ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                    : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                )}
+              >
+                <span className={cn(
+                  "w-4.5 h-4.5 rounded-full flex items-center justify-center text-[9px] border",
+                  activeModalTab === 'general' ? "bg-indigo-600 border-indigo-600 text-white font-bold" : "border-neutral-300 dark:border-neutral-700"
+                )}>1</span>
+                Identificação & Aparência
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveModalTab('trigger')}
+                className={cn(
+                  "px-5 py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-2",
+                  activeModalTab === 'trigger'
+                    ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                    : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                )}
+              >
+                <span className={cn(
+                  "w-4.5 h-4.5 rounded-full flex items-center justify-center text-[9px] border",
+                  activeModalTab === 'trigger' ? "bg-indigo-600 border-indigo-600 text-white font-bold" : "border-neutral-300 dark:border-neutral-700"
+                )}>2</span>
+                Comportamento (Trigger)
+              </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Ícone</label>
-                <select
-                  value={editingAction.icon}
-                  onChange={e => setEditingAction({ ...editingAction, icon: e.target.value })}
-                  className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
-                >
-                  <option value="Zap">Raio (Zap)</option>
-                  <option value="Link">Link (Abrir/Anexar)</option>
-                  <option value="Database">Banco de Dados</option>
-                  <option value="Globe">Globo (Web/API)</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Cor</label>
-                <select
-                  value={editingAction.color}
-                  onChange={e => setEditingAction({ ...editingAction, color: e.target.value })}
-                  className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
-                >
-                  <option value="indigo">Índigo (Padrão)</option>
-                  <option value="emerald">Verde (Sucesso/Aprovar)</option>
-                  <option value="red">Vermelho (Perigo/Rejeitar)</option>
-                  <option value="amber">Amarelo (Atenção)</option>
-                  <option value="purple">Roxo (Especial)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Tipo de Ação (Trigger)</label>
-              <div className="flex p-1 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800">
-                <button
-                  onClick={() => setEditingAction({ ...editingAction, trigger_type: 'sql' })}
-                  className={cn("flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", editingAction.trigger_type === 'sql' ? 'bg-white dark:bg-neutral-800 shadow text-indigo-600' : 'text-neutral-500')}
-                >
-                  SQL / Procedure
-                </button>
-                <button
-                  onClick={() => setEditingAction({ ...editingAction, trigger_type: 'usecase' })}
-                  className={cn("flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", editingAction.trigger_type === 'usecase' ? 'bg-white dark:bg-neutral-800 shadow text-indigo-600' : 'text-neutral-500')}
-                >
-                  Outra Tela
-                </button>
-                <button
-                  onClick={() => setEditingAction({ ...editingAction, trigger_type: 'rest' })}
-                  className={cn("flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", editingAction.trigger_type === 'rest' ? 'bg-white dark:bg-neutral-800 shadow text-indigo-600' : 'text-neutral-500')}
-                >
-                  REST API
-                </button>
-              </div>
-            </div>
-
-            {editingAction.trigger_type === 'sql' && (
-              <div className="space-y-2 animate-in fade-in zoom-in-95 duration-300">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Comando SQL</label>
-                <p className="text-[9px] text-neutral-500 ml-1 mb-2">Você pode usar variáveis usando chaves duplas: {'{{id}}'}</p>
-                <textarea
-                  value={editingAction.sql_query}
-                  onChange={e => setEditingAction({ ...editingAction, sql_query: e.target.value })}
-                  className="w-full h-32 bg-neutral-950 text-indigo-400 font-mono text-sm p-4 rounded-2xl outline-none resize-none"
-                  placeholder="CALL sp_aprovar_pedido({{id}});"
-                />
-              </div>
-            )}
-
-            {editingAction.trigger_type === 'usecase' && (
-              <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300 bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Slug do Caso de Uso de Destino</label>
-                  <input
-                    type="text"
-                    value={editingAction.usecase_slug}
-                    onChange={e => setEditingAction({ ...editingAction, usecase_slug: e.target.value })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-500 outline-none"
-                    placeholder="ex: itens-pedido"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Parâmetros (Filtros na URL)</label>
-                  <p className="text-[9px] text-neutral-500 ml-1 mb-2">Ex: obra_id={'{{id}}'}&status=ativo</p>
-                  <input
-                    type="text"
-                    value={editingAction.usecase_params}
-                    onChange={e => setEditingAction({ ...editingAction, usecase_params: e.target.value })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-mono focus:border-indigo-500 outline-none"
-                    placeholder="obra_id={{id}}"
-                  />
-                </div>
-              </div>
-            )}
-
-            {editingAction.trigger_type === 'rest' && (
-              <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300 bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
-                <div className="flex gap-4">
-                  <div className="space-y-2 w-1/3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Método</label>
-                    <select
-                      value={editingAction.rest_method}
-                      onChange={e => setEditingAction({ ...editingAction, rest_method: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
-                    >
-                      <option value="GET">GET</option>
-                      <option value="POST">POST</option>
-                      <option value="PUT">PUT</option>
-                      <option value="DELETE">DELETE</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2 flex-1">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">URL da API / Webhook</label>
+            {/* General Tab */}
+            {activeModalTab === 'general' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {/* Left: Button properties */}
+                <div className="lg:col-span-6 space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Nome do Botão</label>
                     <input
                       type="text"
-                      value={editingAction.rest_url}
-                      onChange={e => setEditingAction({ ...editingAction, rest_url: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-mono focus:border-indigo-500 outline-none"
-                      placeholder="https://api.exemplo.com/hook/{{id}}"
+                      value={editingAction.label}
+                      onChange={e => setEditingAction({ ...editingAction, label: e.target.value })}
+                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-500 outline-none transition-all"
                     />
                   </div>
-                </div>
-                {['POST', 'PUT', 'PATCH'].includes(editingAction.rest_method) && (
+
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Body (JSON Payload)</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Ícone</label>
+                    <select
+                      value={editingAction.icon}
+                      onChange={e => setEditingAction({ ...editingAction, icon: e.target.value })}
+                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-all"
+                    >
+                      <option value="Zap">Raio (Zap)</option>
+                      <option value="Link">Link (Abrir/Anexar)</option>
+                      <option value="Database">Banco de Dados</option>
+                      <option value="Globe">Globo (Web/API)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Cor</label>
+                    <select
+                      value={editingAction.color}
+                      onChange={e => setEditingAction({ ...editingAction, color: e.target.value })}
+                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-all"
+                    >
+                      <option value="indigo">Índigo (Padrão)</option>
+                      <option value="emerald">Verde (Sucesso/Aprovar)</option>
+                      <option value="red">Vermelho (Perigo/Rejeitar)</option>
+                      <option value="amber">Amarelo (Atenção)</option>
+                      <option value="purple">Roxo (Especial)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Right: Context checkboxes */}
+                <div className="lg:col-span-6 space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Contexto <span className="normal-case font-normal">(múltipla seleção)</span></label>
+                  <div className="grid grid-cols-1 gap-1.5 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+                    {[
+                      { value: 'row', label: 'Ação de Linha (Pesquisa)' },
+                      { value: 'bulk', label: 'Ação Global (Topo da Pesquisa)' },
+                      { value: 'master_top', label: 'Ação Global (Topo do Mestre)' },
+                      { value: 'detail_top', label: 'Ação Global (Topo do Detalhe)' },
+                      { value: 'detail_row', label: 'Ação de Linha (Detalhe)' },
+                    ].map(opt => {
+                      const activeContexts: string[] = editingAction.contexts
+                        ? (Array.isArray(editingAction.contexts) ? editingAction.contexts : [editingAction.contexts])
+                        : (editingAction.context ? [editingAction.context] : ['row'])
+                      const isChecked = activeContexts.includes(opt.value)
+                      return (
+                        <label key={opt.value} className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+                          <div
+                            onClick={() => {
+                              const current: string[] = editingAction.contexts
+                                ? (Array.isArray(editingAction.contexts) ? editingAction.contexts : [editingAction.contexts])
+                                : (editingAction.context ? [editingAction.context] : ['row'])
+                              const next = isChecked
+                                ? current.filter(c => c !== opt.value)
+                                : [...current, opt.value]
+                              const safeNext = next.length === 0 ? [opt.value] : next
+                              setEditingAction({ ...editingAction, contexts: safeNext, context: safeNext[0] })
+                            }}
+                            className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all cursor-pointer flex-shrink-0 ${isChecked ? 'bg-indigo-600 border-indigo-600' : 'border-neutral-300 dark:border-neutral-700'}`}
+                          >
+                            {isChecked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                          </div>
+                          <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{opt.label}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Trigger Tab */}
+            {activeModalTab === 'trigger' && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Tipo de Ação (Trigger)</label>
+                  <div className="flex p-1 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+                    <button
+                      type="button"
+                      onClick={() => setEditingAction({ ...editingAction, trigger_type: 'sql' })}
+                      className={cn("flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", editingAction.trigger_type === 'sql' ? 'bg-white dark:bg-neutral-800 shadow text-indigo-600' : 'text-neutral-500')}
+                    >
+                      SQL / Procedure
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingAction({ ...editingAction, trigger_type: 'usecase' })}
+                      className={cn("flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", editingAction.trigger_type === 'usecase' ? 'bg-white dark:bg-neutral-800 shadow text-indigo-600' : 'text-neutral-500')}
+                    >
+                      Outra Tela
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingAction({ ...editingAction, trigger_type: 'rest' })}
+                      className={cn("flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", editingAction.trigger_type === 'rest' ? 'bg-white dark:bg-neutral-800 shadow text-indigo-600' : 'text-neutral-500')}
+                    >
+                      REST API
+                    </button>
+                  </div>
+                </div>
+
+                {editingAction.trigger_type === 'sql' && (
+                  <div className="space-y-2 animate-in fade-in zoom-in-95 duration-300">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Comando SQL</label>
+                    <p className="text-[9px] text-neutral-500 ml-1 mb-2">Você pode usar variáveis usando chaves duplas: {'{{id}}'}</p>
                     <textarea
-                      value={editingAction.rest_body}
-                      onChange={e => setEditingAction({ ...editingAction, rest_body: e.target.value })}
-                      className="w-full h-32 bg-neutral-950 text-indigo-400 font-mono text-xs p-4 rounded-2xl outline-none resize-none"
-                      placeholder={'{\n  "id": "{{id}}",\n  "status": "aprovado"\n}'}
+                      value={editingAction.sql_query}
+                      onChange={e => setEditingAction({ ...editingAction, sql_query: e.target.value })}
+                      className="w-full h-32 bg-neutral-950 text-indigo-400 font-mono text-sm p-4 rounded-2xl outline-none resize-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                      placeholder="CALL sp_aprovar_pedido({{id}});"
                     />
+                  </div>
+                )}
+
+                {editingAction.trigger_type === 'usecase' && (
+                  <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300 bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Caso de Uso de Destino</label>
+                        <select
+                          value={editingAction.usecase_slug}
+                          onChange={e => setEditingAction({ ...editingAction, usecase_slug: e.target.value })}
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-500 outline-none transition-all"
+                        >
+                          <option value="">Selecione um caso de uso...</option>
+                          {useCases?.filter((uc: any) => uc.slug !== config.slug).map((uc: any) => (
+                            <option key={uc.slug} value={uc.slug}>{uc.name} ({uc.slug})</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Modo de Abertura</label>
+                        <select
+                          value={editingAction.usecase_open_mode || 'page'}
+                          onChange={e => setEditingAction({ ...editingAction, usecase_open_mode: e.target.value })}
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-500 outline-none transition-all"
+                        >
+                          <option value="page">Mesma Tela (Navegação Padrão)</option>
+                          <option value="modal">Modal (Centralizado)</option>
+                          <option value="drawer">Drawer (Lateral)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="space-y-4 mt-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campos do Registro como Parâmetros</label>
+                        <div className="space-y-4 p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl max-h-48 overflow-y-auto custom-scrollbar">
+                          {models?.filter((m: any) => config.selected_models?.includes(m.id)).map((model: any) => (
+                            <div key={model.id} className="space-y-2">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className="w-1 h-3 bg-indigo-500 rounded-full"></div>
+                                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                                  {model.display_name || model.db_table_name}
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {model.fields?.map((field: any) => {
+                                  const isSelected = (editingAction.usecase_selected_fields || []).includes(field.db_column_name)
+                                  return (
+                                    <button
+                                      key={field.id}
+                                      type="button"
+                                      onClick={() => {
+                                        const current = editingAction.usecase_selected_fields || []
+                                        const next = isSelected 
+                                          ? current.filter((f: string) => f !== field.db_column_name)
+                                          : [...current, field.db_column_name]
+                                        setEditingAction({ ...editingAction, usecase_selected_fields: next })
+                                      }}
+                                      className={cn(
+                                        "px-2.5 py-1.5 text-[10px] font-bold rounded-lg border transition-all",
+                                        isSelected 
+                                          ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-500/20" 
+                                          : "bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-indigo-500"
+                                      )}
+                                    >
+                                      {field.display_name || field.db_column_name}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                          {(!models || models.filter((m: any) => config.selected_models?.includes(m.id)).length === 0) && (
+                            <p className="text-[10px] text-neutral-400 p-1">Nenhum modelo selecionado no passo 1.</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Parâmetros Adicionais Fixos (Filtros na URL)</label>
+                        <p className="text-[9px] text-neutral-500 ml-1 mb-2">Ex: status=ativo&tipo=1</p>
+                        <input
+                          type="text"
+                          value={editingAction.usecase_params}
+                          onChange={e => setEditingAction({ ...editingAction, usecase_params: e.target.value })}
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-mono focus:border-indigo-500 outline-none transition-all"
+                          placeholder="status=ativo"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {editingAction.trigger_type === 'rest' && (
+                  <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300 bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                    <div className="flex gap-4">
+                      <div className="space-y-2 w-1/3">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Método</label>
+                        <select
+                          value={editingAction.rest_method}
+                          onChange={e => setEditingAction({ ...editingAction, rest_method: e.target.value })}
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-all"
+                        >
+                          <option value="GET">GET</option>
+                          <option value="POST">POST</option>
+                          <option value="PUT">PUT</option>
+                          <option value="DELETE">DELETE</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2 flex-1">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">URL da API / Webhook</label>
+                        <input
+                          type="text"
+                          value={editingAction.rest_url}
+                          onChange={e => setEditingAction({ ...editingAction, rest_url: e.target.value })}
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-mono focus:border-indigo-500 outline-none transition-all"
+                          placeholder="https://api.exemplo.com/hook/{{id}}"
+                        />
+                      </div>
+                    </div>
+                    {['POST', 'PUT', 'PATCH'].includes(editingAction.rest_method) && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Body (JSON Payload)</label>
+                        <textarea
+                          value={editingAction.rest_body}
+                          onChange={e => setEditingAction({ ...editingAction, rest_body: e.target.value })}
+                          className="w-full h-32 bg-neutral-950 text-indigo-400 font-mono text-xs p-4 rounded-2xl outline-none resize-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                          placeholder={'{\n  "id": "{{id}}",\n  "status": "aprovado"\n}'}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             )}
 
             <div className="flex gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800 mt-6">
-              <button onClick={() => setIsActionModalOpen(false)} className="flex-1 px-4 py-3 bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all">Cancelar</button>
-              <button onClick={() => handleSaveAction(editingAction)} className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95">Salvar Ação</button>
+              <button type="button" onClick={() => setIsActionModalOpen(false)} className="flex-1 px-4 py-3 bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all">Cancelar</button>
+              <button type="button" onClick={() => handleSaveAction(editingAction)} className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95">Salvar Ação</button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Button Properties Modal */}
+      <Modal
+        isOpen={isButtonPropertiesOpen}
+        onClose={() => setIsButtonPropertiesOpen(false)}
+        title={`Propriedades do Botão: ${selectedButtonConfig ? (selectedButtonConfig.id === 'search' ? 'Pesquisar' : selectedButtonConfig.id === 'clear' ? 'Limpar' : selectedButtonConfig.id === 'view' ? 'Visualizar' : selectedButtonConfig.id === 'add' ? 'Novo Registro' : selectedButtonConfig.id === 'edit' ? 'Editar' : selectedButtonConfig.id === 'delete' ? 'Excluir' : selectedButtonConfig.label) : ''}`}
+        size="md"
+      >
+        {selectedButtonConfig && (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Texto de Exibição</label>
+              <input
+                type="text"
+                value={selectedButtonConfig.custom_label}
+                onChange={e => setSelectedButtonConfig({ ...selectedButtonConfig, custom_label: e.target.value })}
+                className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-500 outline-none transition-all"
+                placeholder={t(selectedButtonConfig.labelKey) || selectedButtonConfig.label}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Fonte</label>
+                <select
+                  value={selectedButtonConfig.font_family}
+                  onChange={e => setSelectedButtonConfig({ ...selectedButtonConfig, font_family: e.target.value })}
+                  className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-all"
+                >
+                  <option value="Inter">Inter (Padrão)</option>
+                  <option value="Roboto">Roboto</option>
+                  <option value="Outfit">Outfit</option>
+                  <option value="JetBrains Mono">Mono (JetBrains)</option>
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Tamanho</label>
+                <input
+                  type="text"
+                  value={selectedButtonConfig.font_size}
+                  onChange={e => setSelectedButtonConfig({ ...selectedButtonConfig, font_size: e.target.value })}
+                  className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-500 outline-none transition-all"
+                  placeholder="Ex: 10px"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Transformação do Texto</label>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { value: 'none', label: 'Normal', example: 'Aa' },
+                  { value: 'uppercase', label: 'UPPER', example: 'AA' },
+                  { value: 'capitalize', label: 'Iniciais', example: 'Aa' },
+                  { value: 'lowercase', label: 'lower', example: 'aa' },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setSelectedButtonConfig({ ...selectedButtonConfig, text_transform: opt.value })}
+                    className={cn(
+                      "flex flex-col items-center gap-1 py-3 rounded-xl border-2 transition-all",
+                      (selectedButtonConfig.text_transform || 'capitalize') === opt.value
+                        ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600"
+                        : "border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:border-indigo-300"
+                    )}
+                  >
+                    <span
+                      className="text-base font-black"
+                      style={{ textTransform: opt.value as any, fontStyle: opt.value === 'none' ? 'italic' : 'normal' }}
+                    >
+                      {opt.example}
+                    </span>
+                    <span className="text-[8px] font-black uppercase tracking-wider">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+              {/* Live preview */}
+              <div className="mt-3 flex items-center justify-center p-4 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+                <span
+                  className="text-sm font-bold text-neutral-700 dark:text-neutral-300"
+                  style={{
+                    textTransform: ((selectedButtonConfig.text_transform || 'capitalize') !== 'none' ? selectedButtonConfig.text_transform : undefined) as any,
+                    fontFamily: (selectedButtonConfig.font_family && selectedButtonConfig.font_family !== 'Inter (Padrão)') ? selectedButtonConfig.font_family : undefined,
+                    fontSize: selectedButtonConfig.font_size || undefined,
+                    color: selectedButtonConfig.text_color || undefined,
+                    backgroundColor: selectedButtonConfig.bg_color || undefined,
+                  }}
+                >
+                  {selectedButtonConfig.custom_label || 'Preview do Botão'}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Cor do Texto</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={selectedButtonConfig.text_color || '#ffffff'}
+                  onChange={e => setSelectedButtonConfig({ ...selectedButtonConfig, text_color: e.target.value })}
+                  className="w-8 h-8 rounded-lg cursor-pointer overflow-hidden border-none p-0 shrink-0"
+                />
+                <input
+                  type="text"
+                  value={selectedButtonConfig.text_color}
+                  onChange={e => setSelectedButtonConfig({ ...selectedButtonConfig, text_color: e.target.value })}
+                  placeholder="Hexadecimal da cor do texto (ex: #ffffff)"
+                  className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-xs font-mono font-bold outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Cor do Botão (Fundo)</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={selectedButtonConfig.bg_color || '#6366f1'}
+                  onChange={e => setSelectedButtonConfig({ ...selectedButtonConfig, bg_color: e.target.value })}
+                  className="w-8 h-8 rounded-lg cursor-pointer overflow-hidden border-none p-0 shrink-0"
+                />
+                <input
+                  type="text"
+                  value={selectedButtonConfig.bg_color}
+                  onChange={e => setSelectedButtonConfig({ ...selectedButtonConfig, bg_color: e.target.value })}
+                  placeholder="Hexadecimal da cor de fundo (ex: #6366f1)"
+                  className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-xs font-mono font-bold outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800 mt-6">
+              <button
+                type="button"
+                onClick={() => setIsButtonPropertiesOpen(false)}
+                className="flex-1 px-4 py-3 bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 rounded-2xl font-black text-[10px] capitalize tracking-wider hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfig({
+                    ...config,
+                    buttons_config: config.buttons_config.map((b: any) =>
+                      b.id === selectedButtonConfig.id ? selectedButtonConfig : b
+                    )
+                  });
+                  setIsButtonPropertiesOpen(false);
+                }}
+                className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] capitalize tracking-wider hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95"
+              >
+                Confirmar
+              </button>
             </div>
           </div>
         )}

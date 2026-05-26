@@ -12,6 +12,8 @@ interface RecordModalProps {
   logicType?: string
   masterModelId?: string
   masterModelName?: string
+  customActions?: any[]
+  onCustomAction?: (action: any, row?: any) => void
   masterTabTitle?: string
   detailsTabTitles?: Record<string, string>
   detailDisplayMode?: 'tabs' | 'sections'
@@ -58,7 +60,9 @@ export default function RecordModal({
   secretToken,
   tunnelChannel,
   isTunnelReady,
-  project
+  project,
+  customActions = [],
+  onCustomAction
 }: RecordModalProps) {
   return (
     <Modal 
@@ -95,6 +99,8 @@ export default function RecordModal({
         tunnelChannel={tunnelChannel}
         isTunnelReady={isTunnelReady}
         project={project}
+        customActions={customActions}
+        onCustomAction={onCustomAction}
       />
     </Modal>
   )
