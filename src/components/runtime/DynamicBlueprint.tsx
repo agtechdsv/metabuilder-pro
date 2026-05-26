@@ -65,8 +65,8 @@ const BlueprintNode = memo(({ data, selected }: NodeProps) => {
   }
 
   const isHorizontal = direction === 'LR'
-  const isAnimated = data.animated
-  const depth = data.depth || 0
+  const isAnimated = (data as any).animated
+  const depth = Number((data as any).depth || 0)
   const animationDelay = depth * 0.5 // 0.5s por nível
 
   return (
