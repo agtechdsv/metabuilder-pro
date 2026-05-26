@@ -592,6 +592,7 @@
       "security": "Security",
       "use_cases": "Logics",
       "pricing": "Pricing",
+      "control_center": "Control Center",
       "zero_trust": "Zero-Trust"
     },
     "hero": {
@@ -870,6 +871,14 @@
           "components": "Interactive map (Leaflet), customized status pins, popup details cards, and region-based search filters."
         }
       }
+    },
+    "control_center_page": {
+      "badge": "DEVELOPMENT AUDITING",
+      "title": "Control Center.",
+      "title_highlight": "Technical management & metrics.",
+      "desc": "Track and audit engineering productivity in real-time. Monitor Cycle Time, rework rate, active vs. idle dev time, and manage workspaces, billing, and active user licenses.",
+      "interactive_title": "Control Center Modules",
+      "interactive_desc": "Navigate through the Control Center tabs below to simulate how managers track productivity and subscription status."
     }
   }
 }

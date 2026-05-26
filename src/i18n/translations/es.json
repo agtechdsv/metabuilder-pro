@@ -592,6 +592,7 @@
       "security": "Seguridad",
       "use_cases": "Lógicas",
       "pricing": "Planes",
+      "control_center": "Central de Control",
       "zero_trust": "Zero-Trust"
     },
     "hero": {
@@ -870,6 +871,14 @@
           "components": "Mapa interactivo (Leaflet), marcadores de estado personalizados, globos de información (popups) y filtros por zona geográfica."
         }
       }
+    },
+    "control_center_page": {
+      "badge": "AUDITORÍA DE DESARROLLO",
+      "title": "Central de Control.",
+      "title_highlight": "Gestión técnica & productividad.",
+      "desc": "Monitoree y audite la productividad de ingeniería en tiempo real. Vea el Cycle Time, tasa de retrabajo, tiempo activo de cada DEV y gestione workspaces, facturación y licencias.",
+      "interactive_title": "Módulos de la Central de Control",
+      "interactive_desc": "Navegue por las pestañas de la Central de Control abajo para simular cómo los gestores supervisan el rendimiento y la facturación."
     }
   }
 }

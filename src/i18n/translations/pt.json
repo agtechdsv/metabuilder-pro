@@ -592,6 +592,7 @@
       "security": "Segurança",
       "use_cases": "Lógicas",
       "pricing": "Planos",
+      "control_center": "Central de Controle",
       "zero_trust": "Zero-Trust"
     },
     "hero": {
@@ -870,6 +871,14 @@
           "components": "Mapa interativo (Leaflet), marcadores customizáveis por tipo, balões de informações (popups) e busca/filtros por região."
         }
       }
+    },
+    "control_center_page": {
+      "badge": "VAR DO DESENVOLVIMENTO",
+      "title": "Central de Controle.",
+      "title_highlight": "Gestão técnica & produtividade.",
+      "desc": "Acompanhe e audite a produtividade de engenharia em tempo real. Veja o Cycle Time, retrabalho, tempo ocioso vs. ativo de cada DEV, além de gerenciar workspaces, faturamento e licenças.",
+      "interactive_title": "Módulos da Central de Controle",
+      "interactive_desc": "Navegue pelas abas da Central de Controle abaixo para simular como os gestores acompanham a performance e faturamento."
     }
   }
 }
