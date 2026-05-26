@@ -916,7 +916,7 @@ export default function RecordForm({
                                   if (type === 'textarea') {
                                     return (
                                       <textarea
-                                        value={value}
+                                        value={rawValue || ''}
                                         onChange={(e) => handleInlineChange(e.target.value)}
                                         className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
                                         rows={3}
@@ -928,7 +928,7 @@ export default function RecordForm({
                                     const options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
                                     return (
                                       <select
-                                        value={value}
+                                        value={rawValue || ''}
                                         onChange={(e) => handleInlineChange(e.target.value)}
                                         className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
                                       >

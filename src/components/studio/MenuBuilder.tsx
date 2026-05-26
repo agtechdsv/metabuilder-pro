@@ -151,8 +151,8 @@ export function MenuBuilder({ project, views, onSave }: MenuBuilderProps) {
     const overItemData = findItem(menu, overId as string)
     if (overItemData?.type === 'folder') {
       overContainer = overItemData.id
-    } else if (overId.startsWith('empty-folder-')) {
-      overContainer = overId.replace('empty-folder-', '')
+    } else if (String(overId).startsWith('empty-folder-')) {
+      overContainer = String(overId).replace('empty-folder-', '')
     }
 
     if (!activeContainer || !overContainer || activeContainer === overContainer) {
@@ -199,8 +199,8 @@ export function MenuBuilder({ project, views, onSave }: MenuBuilderProps) {
     const overItemData = findItem(menu, overId)
     if (overItemData?.type === 'folder') {
       overContainer = overItemData.id
-    } else if (overId.startsWith('empty-folder-')) {
-      overContainer = overId.replace('empty-folder-', '')
+    } else if (String(overId).startsWith('empty-folder-')) {
+      overContainer = String(overId).replace('empty-folder-', '')
     }
 
     if (activeContainer && overContainer && activeContainer === overContainer) {

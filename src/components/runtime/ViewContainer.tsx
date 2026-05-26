@@ -125,11 +125,12 @@ export default function ViewContainer({
       const queryId = crypto.randomUUID()
       const currentModel = project?.models?.find((m: any) => m.db_table_name === modelName)
       const actualSchemaName = currentModel?.db_schema_name || project?.slug || 'public'
+      const customQuery = interpolate(action.sql_query || '')
 
       const payload: any = { 
         queryId, 
-        query, 
-        sql: query,
+        query: customQuery, 
+        sql: customQuery,
         params: [],
         action: 'execute_custom', 
         token: project?.secret_token || 'test-token',

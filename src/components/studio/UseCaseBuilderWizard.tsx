@@ -134,6 +134,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       },
       details_interface_types: {} as Record<string, 'modal' | 'drawer'>,
       details_inline_types: {} as Record<string, boolean>,
+      master_tab_title: '',
+      details_tab_titles: {} as Record<string, string>,
       export_formats: ['xlsx', 'csv', 'json'],
       gallery_click_behavior: 'lightbox',
       scheduler_config: {
@@ -158,6 +160,13 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         title_field: '',
         desc_field: '',
         status_field: '',
+        predecessor_field: ''
+      },
+      gantt_config: {
+        title_field: '',
+        start_date_field: '',
+        end_date_field: '',
+        progress_field: '',
         predecessor_field: ''
       },
       custom_actions: [] as any[]

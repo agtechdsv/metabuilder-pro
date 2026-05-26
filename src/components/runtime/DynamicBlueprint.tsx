@@ -24,7 +24,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import dagre from 'dagre'
-import { MoreVertical, CheckCircle2, Circle, AlertCircle, PlayCircle, Eye, Pencil, Trash2, Settings2, Wand2, RefreshCcw } from 'lucide-react'
+import { MoreVertical, CheckCircle2, Circle, AlertCircle, PlayCircle, Eye, Pencil, Trash2, Settings2, Wand2, RefreshCcw, Activity } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 
@@ -36,6 +36,9 @@ interface DynamicBlueprintProps {
     desc_field?: string
     status_field?: string
     predecessor_field: string
+    scale?: number
+    direction?: string
+    animated_edges?: boolean
   }
   onView: (row: any) => void
   onEdit: (row: any) => void
@@ -156,8 +159,8 @@ const DeletableEdge = ({
     targetPosition,
   })
 
-  const isAnimated = data?.animated
-  const depth = data?.depth || 0
+  const isAnimated = (data as any)?.animated
+  const depth = Number((data as any)?.depth || 0)
   // Edge aparece um pouco depois do nó de origem, mas antes do nó de destino
   const animationDelay = (depth - 1) * 0.5 + 0.3
 
@@ -192,7 +195,7 @@ const DeletableEdge = ({
             style={{ opacity: selected ? 1 : undefined }}
             onClick={(event) => {
               event.stopPropagation()
-              data?.onDeleteEdge?.()
+              ;(data as any)?.onDeleteEdge?.()
             }}
             title="Remover conexão"
           >
