@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { LayoutGrid, List, Search, Filter, Plus, Pencil, Trash2, RefreshCcw, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { LayoutGrid, List, Search, Filter, Plus, Pencil, Trash2, RefreshCcw, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Zap, Link, Database, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import DynamicGrid from '@/components/DynamicGrid'
 import { useI18n } from '@/i18n/I18nContext'
@@ -41,6 +42,7 @@ interface ViewContainerProps {
   tunnelChannel?: any
   isTunnelReady?: boolean
   galleryClickBehavior?: 'lightbox' | 'thumbnail'
+  customActions?: any[]
 }
 
 import DynamicCardList from './DynamicCardList'
@@ -100,9 +102,78 @@ export default function ViewContainer({
   onFiltersChange,
   tunnelChannel,
   isTunnelReady,
-  galleryClickBehavior
+  galleryClickBehavior,
+  customActions = []
 }: ViewContainerProps) {
   const { toast } = useToast()
+  const router = useRouter()
+
+  const handleCustomAction = async (action: any, rowData?: any) => {
+    // Helper to interpolate variables {{field}}
+    const interpolate = (str: string) => {
+      if (!str || !rowData) return str
+      return str.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
+        return rowData[key] !== undefined ? String(rowData[key]) : match
+      })
+    }
+
+    if (action.trigger_type === 'sql') {
+      if (!tunnelChannel || !isTunnelReady) {
+        toast('Túnel com banco de dados não está pronto.', 'error')
+        return
+      }
+      const queryId = crypto.randomUUID()
+      const currentModel = project?.models?.find((m: any) => m.db_table_name === modelName)
+      const actualSchemaName = currentModel?.db_schema_name || project?.slug || 'public'
+
+      const payload: any = { 
+        queryId, 
+        query, 
+        sql: query,
+        params: [],
+        action: 'execute_custom', 
+        token: project?.secret_token || 'test-token',
+        schemaName: actualSchemaName,
+        table: modelName
+      }
+      tunnelChannel.send({
+        type: 'broadcast',
+        event: 'sql_query',
+        payload
+      })
+      toast(`Executando ação: ${action.label}...`, 'info')
+    } 
+    else if (action.trigger_type === 'usecase') {
+      const slug = interpolate(action.usecase_slug)
+      const params = interpolate(action.usecase_params)
+      const url = `/${project?.workspace?.slug}/${project?.slug}/${slug}${params ? '?' + params : ''}`
+      // Open in new tab for now to avoid disrupting the current context completely
+      window.open(url, '_blank')
+    }
+    else if (action.trigger_type === 'rest') {
+      const url = interpolate(action.rest_url)
+      try {
+        toast(`Executando chamada REST...`, 'info')
+        const options: RequestInit = {
+          method: action.rest_method || 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+        if (['POST', 'PUT', 'PATCH'].includes(action.rest_method) && action.rest_body) {
+          options.body = interpolate(action.rest_body)
+        }
+        const res = await fetch(url, options)
+        if (res.ok) {
+          toast(`Ação "${action.label}" executada com sucesso!`, 'success')
+        } else {
+          toast(`Erro ao executar API: ${res.status} ${res.statusText}`, 'error')
+        }
+      } catch (err: any) {
+        toast(`Erro de rede: ${err.message}`, 'error')
+      }
+    }
+  }
   const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban' | 'mapa_mental' | 'scheduler' | 'galeria' | 'timeline' | 'map' | 'gantt' | 'blueprint'>(
     logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'blueprint' ? 'blueprint' : logicType === 'timeline' ? 'timeline' : logicType === 'map' ? 'map' : logicType === 'gantt' ? 'gantt' : logicType === 'kanban' ? 'kanban' : logicType === 'scheduler' ? 'scheduler' : logicType === 'galeria' ? 'galeria' : (displayType === 'both' ? defaultView : (displayType as any))
   )
@@ -120,24 +191,88 @@ export default function ViewContainer({
   // Busca opções relacionais para os campos de filtro
   useEffect(() => {
     const fetchAllRelational = async () => {
-      const supabase = createClient()
+      const supabaseClient = createClient()
       const newOptions: Record<string, any[]> = {}
       
-      for (const field of filterFields) {
-        // Tenta pegar a config específica de filtro, senão usa a global
-        const config = field.config?.filter_config || field.config
+      const allFieldsWithRelational = [...filterFields, ...displayFields]
+      // Remover duplicados por ID
+      const uniqueFields = Array.from(new Map(allFieldsWithRelational.map(f => [f.id, f])).values())
+
+      for (const field of uniqueFields) {
+        const config = field.config?.filter_config || field.config?.grid_config || field.config
         const comp = config?.component
-        if (comp?.type && ['select', 'radio', 'checkbox'].includes(comp.type) && comp.options_type === 'relational' && comp.rel_table) {
+        const isRelationalComp = comp?.type && (['select', 'radio', 'checkbox', 'Combo (Select)'].includes(comp.type) || comp.options_type === 'relational')
+        if (isRelationalComp && comp.options_type === 'relational' && comp.rel_table) {
           try {
             console.log(`[MetaBuilder] Fetching filter options for ${field.display_name} from ${comp.rel_table}`)
-            const { data } = await supabase
-              .from(comp.rel_table)
-              .select(`${comp.rel_label}, ${comp.rel_value}`)
+            
+            let data: any[] = []
+
+            if (projectId && tunnelChannel && isTunnelReady) {
+              const queryId = crypto.randomUUID()
+              const rawQuery = `SELECT "${comp.rel_label}", "${comp.rel_value}" FROM "${comp.rel_table}"`
+              const schemaToUse = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === comp.rel_table?.toLowerCase())?.db_schema_name || project?.slug || 'public'
+              
+              data = await new Promise<any[]>((resolve, reject) => {
+                let resolved = false
+                const cleanup = () => {
+                  try {
+                    const bindings = tunnelChannel.bindings?.broadcast
+                    if (Array.isArray(bindings)) {
+                      tunnelChannel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult)
+                    }
+                  } catch (e) {}
+                }
+
+                const handleResult = (payload: any) => {
+                  if (payload.payload?.queryId === queryId) {
+                    resolved = true
+                    cleanup()
+                    if (payload.payload.success) resolve(payload.payload.data || [])
+                    else reject(new Error(payload.payload.error || 'Error fetching relational options'))
+                  }
+                }
+
+                tunnelChannel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
+                tunnelChannel.on('broadcast', { event: 'sql_result' }, handleResult)
+                
+                tunnelChannel.send({
+                  type: 'broadcast',
+                  event: 'sql_query',
+                  payload: {
+                    queryId,
+                    table: comp.rel_table,
+                    schemaName: schemaToUse,
+                    action: 'select',
+                    query: rawQuery,
+                    sql: rawQuery,
+                    token: project?.secret_token || 'test-token',
+                    joins: [],
+                    limit: 1000,
+                    offset: 0
+                  }
+                })
+                
+                setTimeout(() => {
+                  if (!resolved) {
+                    resolved = true
+                    cleanup()
+                    console.warn(`[MetaBuilder] Timeout fetching filter options for ${comp.rel_table}`)
+                    resolve([])
+                  }
+                }, 8000)
+              })
+            } else {
+              const { data: directData } = await supabaseClient
+                .from(comp.rel_table)
+                .select(`${comp.rel_label}, ${comp.rel_value}`)
+              if (directData) data = directData
+            }
             
             if (data) {
-              newOptions[field.id] = data.map(item => ({
-                label: item[comp.rel_label],
-                value: item[comp.rel_value]
+              newOptions[field.id] = data.map((item: any) => ({
+                label: item[comp.rel_label] || item[comp.rel_label?.toLowerCase()] || item[comp.rel_label?.toUpperCase()],
+                value: item[comp.rel_value] || item[comp.rel_value?.toLowerCase()] || item[comp.rel_value?.toUpperCase()]
               }))
             }
           } catch (err) {
@@ -148,10 +283,10 @@ export default function ViewContainer({
       setRelationalOptions(newOptions)
     }
     
-    if (filterFields.length > 0) {
+    if (filterFields.length > 0 || displayFields.length > 0) {
       fetchAllRelational()
     }
-  }, [filterFields])
+  }, [filterFields, displayFields, isTunnelReady, tunnelChannel, project, projectId])
 
   const parseFixedOptions = (str: string) => {
     if (!str) return []
@@ -573,11 +708,14 @@ export default function ViewContainer({
             const columns = selectExprs.length > 0 ? selectExprs.join(', ') : '*'
           const rawQuery = `SELECT ${columns} FROM ${modelName} ${buildJoinsSql(joins)}`
 
+          const currentModel = project?.models?.find((m: any) => m.db_table_name === modelName)
+          const actualSchemaName = currentModel?.db_schema_name || project?.slug || 'public'
+
           const payload: any = {
             queryId: queryId,
             table: modelName,
             tableName: modelName,
-            schemaName: project?.slug || 'public',
+            schemaName: actualSchemaName,
             action: 'select',
             query: rawQuery,
             sql: rawQuery,
@@ -807,9 +945,25 @@ export default function ViewContainer({
 
   return (
     <div className="space-y-6">
-      {/* Toolbar - Minimalist, only showing view toggles if both are available */}
+      {/* Toolbar - Custom Actions & Toggles */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex flex-wrap items-center gap-2">
+          {customActions.filter(a => a.context === 'bulk').map(action => (
+            <button
+              key={action.id}
+              onClick={() => handleCustomAction(action)}
+              className={`flex items-center gap-2 px-4 py-2 bg-${action.color}-600 hover:bg-${action.color}-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-${action.color}-500/20`}
+            >
+              {action.icon === 'Zap' && <Zap className="w-3.5 h-3.5" />}
+              {action.icon === 'Link' && <Link className="w-3.5 h-3.5" />}
+              {action.icon === 'Database' && <Database className="w-3.5 h-3.5" />}
+              {action.icon === 'Globe' && <Globe className="w-3.5 h-3.5" />}
+              {action.label}
+            </button>
+          ))}
+        </div>
+
       {displayType === 'both' && (
-        <div className="flex flex-col md:flex-row md:items-center justify-end gap-6">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800">
               {/* Se o padrão for card, o card vem primeiro. Se for list, a list vem primeiro. */}
@@ -858,8 +1012,8 @@ export default function ViewContainer({
               )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Dynamic Filter Arguments Bar with integrated Search Button */}
       {filterFields.length > 0 && (
@@ -990,7 +1144,7 @@ export default function ViewContainer({
                     <th 
                       key={field.id} 
                       onClick={() => handleSort(field.db_column_name)}
-                      className="px-6 py-4 text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.15em] whitespace-nowrap cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors group/th"
+                      className="px-6 py-4 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] whitespace-nowrap cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors group/th"
                     >
                       <div className="flex items-center gap-2">
                         {field.display_name}
@@ -1003,7 +1157,7 @@ export default function ViewContainer({
                       </div>
                     </th>
                   ))}
-                  <th className="sticky right-0 z-30 bg-neutral-100 dark:bg-neutral-900 px-4 py-4 text-right text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.15em] border-l border-neutral-200/50 dark:border-neutral-700/50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)]">
+                  <th className="sticky right-0 z-30 bg-neutral-100 dark:bg-neutral-900 px-4 py-4 text-right text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] border-l border-neutral-200/50 dark:border-neutral-700/50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)]">
                     {t('runtime.actions')}
                   </th>
                 </tr>
@@ -1016,6 +1170,9 @@ export default function ViewContainer({
                   onView={onView}
                   onEdit={onEdit}
                   onDelete={onDelete}
+                  customActions={customActions}
+                  onCustomAction={handleCustomAction}
+                  relationalOptions={relationalOptions}
                 />
               </tbody>
             </table>
@@ -1193,6 +1350,8 @@ export default function ViewContainer({
             onView={onView}
             onEdit={onEdit}
             onDelete={onDelete}
+            customActions={customActions}
+            onCustomAction={handleCustomAction}
           />
 
           {/* Paginador Footer para Cards */}

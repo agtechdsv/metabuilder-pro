@@ -12,6 +12,8 @@ interface RecordModalProps {
   logicType?: string
   masterModelId?: string
   masterModelName?: string
+  masterTabTitle?: string
+  detailsTabTitles?: Record<string, string>
   detailDisplayMode?: 'tabs' | 'sections'
   onEditDetail?: (detail: any) => void
   onDeleteDetail?: (detail: any) => void
@@ -26,7 +28,7 @@ interface RecordModalProps {
   secretToken?: string
   tunnelChannel?: any
   isTunnelReady?: boolean
-  schemaName?: string
+  project?: any
 }
 
 export default function RecordModal({ 
@@ -40,6 +42,8 @@ export default function RecordModal({
   logicType,
   masterModelId,
   masterModelName,
+  masterTabTitle,
+  detailsTabTitles,
   detailDisplayMode = 'tabs',
   onEditDetail,
   onDeleteDetail,
@@ -54,7 +58,7 @@ export default function RecordModal({
   secretToken,
   tunnelChannel,
   isTunnelReady,
-  schemaName
+  project
 }: RecordModalProps) {
   return (
     <Modal 
@@ -74,6 +78,8 @@ export default function RecordModal({
         logicType={logicType}
         masterModelId={masterModelId}
         masterModelName={masterModelName}
+        masterTabTitle={masterTabTitle}
+        detailsTabTitles={detailsTabTitles}
         detailDisplayMode={detailDisplayMode}
         onEditDetail={onEditDetail}
         onDeleteDetail={onDeleteDetail}
@@ -88,7 +94,7 @@ export default function RecordModal({
         secretToken={secretToken}
         tunnelChannel={tunnelChannel}
         isTunnelReady={isTunnelReady}
-        schemaName={schemaName}
+        project={project}
       />
     </Modal>
   )

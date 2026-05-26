@@ -1,6 +1,6 @@
 'use client'
 
-import { Pencil, Trash2, Calendar, Hash, Type, Search } from 'lucide-react'
+import { Pencil, Trash2, Calendar, Hash, Type, Search, Zap, Link, Database, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface DynamicCardListProps {
@@ -10,6 +10,8 @@ interface DynamicCardListProps {
   onView?: (row: any) => void
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
+  customActions?: any[]
+  onCustomAction?: (action: any, row: any) => void
 }
 
 export default function DynamicCardList({ 
@@ -18,7 +20,9 @@ export default function DynamicCardList({
   buttonsConfig = [],
   onView,
   onEdit,
-  onDelete
+  onDelete,
+  customActions = [],
+  onCustomAction
 }: DynamicCardListProps) {
   const canView = buttonsConfig.find((b: any) => b.id === 'view')?.visible === true
   const canEdit = buttonsConfig.find((b: any) => b.id === 'edit')?.visible === true
@@ -95,6 +99,19 @@ export default function DynamicCardList({
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               )}
+              {customActions.filter(a => a.context === 'row').map(action => (
+                <button
+                  key={action.id}
+                  title={action.label}
+                  onClick={() => onCustomAction?.(action, row)}
+                  className={`p-1.5 rounded-lg bg-${action.color}-50 dark:bg-${action.color}-900/30 text-${action.color}-600 dark:text-${action.color}-400 hover:bg-${action.color}-100 dark:hover:bg-${action.color}-900/50 transition-all active:scale-90`}
+                >
+                  {action.icon === 'Zap' && <Zap className="w-3.5 h-3.5" />}
+                  {action.icon === 'Link' && <Link className="w-3.5 h-3.5" />}
+                  {action.icon === 'Database' && <Database className="w-3.5 h-3.5" />}
+                  {action.icon === 'Globe' && <Globe className="w-3.5 h-3.5" />}
+                </button>
+              ))}
             </div>
           </div>
 

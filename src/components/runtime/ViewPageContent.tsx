@@ -62,6 +62,8 @@ interface ViewPageContentProps {
   actionInterfaceType?: 'drawer' | 'modal' | 'page'
   detailsInterfaceTypes?: Record<string, string>
   detailsInlineTypes?: Record<string, boolean>
+  masterTabTitle?: string
+  detailsTabTitles?: Record<string, string>
   baseUrl?: string
   breadcrumbs?: { label: string; href: string }[]
   description?: string
@@ -72,6 +74,7 @@ interface ViewPageContentProps {
   }
   exportFormats?: string[]
   galleryClickBehavior?: 'lightbox' | 'thumbnail'
+  customActions?: any[]
 }
 
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
@@ -106,6 +109,8 @@ export default function ViewPageContent({
   detailDisplayMode,
   detailsInterfaceTypes,
   detailsInlineTypes,
+  masterTabTitle,
+  detailsTabTitles,
   actionInterfaceType = 'drawer',
   baseUrl,
   breadcrumbs = [],
@@ -113,7 +118,8 @@ export default function ViewPageContent({
   icon,
   exportFormats = ['xlsx', 'csv', 'json'],
   analyticsConfig: initialAnalyticsConfig,
-  galleryClickBehavior
+  galleryClickBehavior,
+  customActions = []
 }: ViewPageContentProps) {
 
   // Garante que todas as listas de campos sejam únicas por ID
@@ -486,8 +492,8 @@ export default function ViewPageContent({
                 query: rawQuery,
                 sql: rawQuery,
                 token: project?.secret_token || 'test-token',
-                schemaName: workspace?.slug || project?.slug || 'public',
-                slug: workspace?.slug || project?.slug,
+                schemaName: project?.models?.find((m: any) => m.db_table_name === join.to)?.db_schema_name || project?.slug || 'public',
+                slug: project?.slug,
                 joins: [],
                 limit: 100,
                 offset: 0
@@ -844,7 +850,7 @@ export default function ViewPageContent({
                   idColumn: detailPkName,
                   idValue: dPkValue,
                   token: project?.secret_token || 'test-token',
-                  schemaName: project?.slug || 'public',
+                  schemaName: project?.models?.find((m: any) => m.db_table_name === tableName)?.db_schema_name || project?.slug || 'public',
                   slug: project?.slug
                 }
               }).then(() => {
@@ -1009,7 +1015,7 @@ export default function ViewPageContent({
             idColumn: detailPkName,
             idValue: pkValue,
             token: project?.secret_token || 'test-token',
-            schemaName: project?.slug || 'public',
+            schemaName: project?.models?.find((m: any) => m.db_table_name === tableName)?.db_schema_name || project?.slug || 'public',
             slug: project?.slug
           }
         })
@@ -1118,7 +1124,7 @@ export default function ViewPageContent({
           idColumn: cleanPkName,   // EXATAMENTE o que o Agente CLI espera
           idValue: pkValue,   // EXATAMENTE o que o Agente CLI espera
           token: project?.secret_token || 'test-token',
-          schemaName: project?.slug || 'public',
+          schemaName: project?.models?.find((m: any) => m.db_table_name === modelName)?.db_schema_name || project?.slug || 'public',
           slug: project?.slug
         }
 
@@ -1183,7 +1189,7 @@ export default function ViewPageContent({
                     idColumn: dPkName,
                     idValue: dPkValue,
                     token: project?.secret_token || 'test-token',
-                    schemaName: project?.slug || 'public',
+                    schemaName: project?.models?.find((m: any) => m.db_table_name === detailTableName)?.db_schema_name || project?.slug || 'public',
                     slug: project?.slug
                   }
                 })
@@ -1230,7 +1236,7 @@ export default function ViewPageContent({
                           idColumn: sPkName,
                           idValue: sPkValue,
                           token: project?.secret_token || 'test-token',
-                          schemaName: project?.slug || 'public',
+                    schemaName: project?.models?.find((m: any) => m.db_table_name === subTableName)?.db_schema_name || project?.slug || 'public',
                           slug: project?.slug
                         }
                       })
@@ -1415,6 +1421,8 @@ export default function ViewPageContent({
             logicType={logicType}
             masterModelId={masterModelId}
             masterModelName={modelName}
+            masterTabTitle={masterTabTitle}
+            detailsTabTitles={detailsTabTitles}
             detailDisplayMode={detailDisplayMode}
             isPageMode={true}
             onEditDetail={handleEditDetail}
@@ -1429,6 +1437,7 @@ export default function ViewPageContent({
             secretToken={project.secret_token}
             tunnelChannel={tunnelChannel}
             isTunnelReady={isTunnelReady}
+            project={project}
           />
         ) : (
           <>
@@ -1482,6 +1491,7 @@ export default function ViewPageContent({
               onView={handleOpenView}
               onEdit={handleOpenEdit}
               onDelete={handleOpenDelete}
+              customActions={customActions}
             />
           </>
         )}
@@ -1501,6 +1511,8 @@ export default function ViewPageContent({
           logicType={logicType}
           masterModelId={masterModelId}
           masterModelName={modelName}
+          masterTabTitle={masterTabTitle}
+          detailsTabTitles={detailsTabTitles}
           detailDisplayMode={detailDisplayMode}
           onEditDetail={handleEditDetail}
           onDeleteDetail={handleDeleteDetail}
@@ -1514,7 +1526,7 @@ export default function ViewPageContent({
           secretToken={project.secret_token}
           tunnelChannel={tunnelChannel}
           isTunnelReady={isTunnelReady}
-          schemaName={project.slug}
+          project={project}
         />
       ) : (
         <RecordDrawer 
@@ -1530,6 +1542,8 @@ export default function ViewPageContent({
           logicType={logicType}
           masterModelId={masterModelId}
           masterModelName={modelName}
+          masterTabTitle={masterTabTitle}
+          detailsTabTitles={detailsTabTitles}
           detailDisplayMode={detailDisplayMode}
           onEditDetail={handleEditDetail}
           onDeleteDetail={handleDeleteDetail}
@@ -1543,7 +1557,7 @@ export default function ViewPageContent({
           secretToken={project.secret_token}
           tunnelChannel={tunnelChannel}
           isTunnelReady={isTunnelReady}
-          schemaName={project.slug}
+          project={project}
         />
       )}
 
@@ -1567,6 +1581,8 @@ export default function ViewPageContent({
           isLoading: false,
           logicType: "master_detail" as const,
           masterModelName: item.tableName,
+          masterTabTitle: masterTabTitle,
+          detailsTabTitles: detailsTabTitles,
           joins: joins,
           dictionary: dictionary,
           detailsInlineTypes: detailsInlineTypes,
@@ -1581,7 +1597,7 @@ export default function ViewPageContent({
           secretToken: project.secret_token,
           tunnelChannel: tunnelChannel,
           isTunnelReady: isTunnelReady,
-          schemaName: project.slug
+          project: project
         }
 
         return interfaceType === 'modal' ? (
@@ -1616,6 +1632,7 @@ export default function ViewPageContent({
         secretToken={project.secret_token}
         tunnelChannel={tunnelChannel}
         isTunnelReady={isTunnelReady}
+        project={project}
       />
 
       <RecordDrawer 
@@ -1642,6 +1659,7 @@ export default function ViewPageContent({
         secretToken={project.secret_token}
         tunnelChannel={tunnelChannel}
         isTunnelReady={isTunnelReady}
+        project={project}
       />
 
       <DeleteConfirmModal 

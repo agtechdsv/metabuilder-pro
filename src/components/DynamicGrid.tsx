@@ -1,6 +1,6 @@
 'use client'
 
-import { Pencil, Trash2, Search } from 'lucide-react'
+import { Pencil, Trash2, Search, Zap, Link, Database, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface DynamicGridProps {
@@ -10,6 +10,9 @@ interface DynamicGridProps {
   onView?: (row: any) => void
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
+  customActions?: any[]
+  onCustomAction?: (action: any, row: any) => void
+  relationalOptions?: Record<string, any[]>
 }
 
 export default function DynamicGrid({ 
@@ -18,7 +21,10 @@ export default function DynamicGrid({
   buttonsConfig = [],
   onView,
   onEdit,
-  onDelete
+  onDelete,
+  customActions = [],
+  onCustomAction,
+  relationalOptions = {}
 }: DynamicGridProps) {
   const canView = buttonsConfig.find((b: any) => b.id === 'view')?.visible === true
   const canEdit = buttonsConfig.find((b: any) => b.id === 'edit')?.visible === true
@@ -72,9 +78,24 @@ export default function DynamicGrid({
           </td>
           {fields.map((field) => {
             const rawVal = getNestedValue(row, field.db_column_name)
-            const val = typeof rawVal === 'object' && rawVal !== null
-              ? JSON.stringify(rawVal) 
-              : String(rawVal ?? '')
+            
+            // Resolve label if it is a relational combo
+            const comp = field.config?.grid_config?.component || field.config?.component || {}
+            let finalVal = rawVal
+            if (comp.type === 'select' || comp.type === 'Combo (Select)' || comp.options_type === 'relational') {
+               const opts = relationalOptions[field.id]
+               if (opts && opts.length > 0) {
+                 // Convert both to string to avoid mismatch between number and string IDs
+                 const found = opts.find((o: any) => String(o.value) === String(rawVal))
+                 if (found) {
+                   finalVal = found.label
+                 }
+               }
+            }
+
+            const val = typeof finalVal === 'object' && finalVal !== null
+              ? JSON.stringify(finalVal) 
+              : String(finalVal ?? '')
             
             const zoneConfig = field.config?.grid_config || field.config || {}
             
@@ -129,6 +150,19 @@ export default function DynamicGrid({
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               )}
+              {customActions.filter(a => a.context === 'row').map(action => (
+                <button
+                  key={action.id}
+                  title={action.label}
+                  onClick={() => onCustomAction?.(action, row)}
+                  className={`p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-${action.color}-600 dark:text-${action.color}-400 border border-neutral-200 dark:border-neutral-700 hover:bg-${action.color}-50 dark:hover:bg-${action.color}-900/30 transition-all active:scale-90 shadow-sm`}
+                >
+                  {action.icon === 'Zap' && <Zap className="w-3.5 h-3.5" />}
+                  {action.icon === 'Link' && <Link className="w-3.5 h-3.5" />}
+                  {action.icon === 'Database' && <Database className="w-3.5 h-3.5" />}
+                  {action.icon === 'Globe' && <Globe className="w-3.5 h-3.5" />}
+                </button>
+              ))}
             </div>
           </td>
         </tr>

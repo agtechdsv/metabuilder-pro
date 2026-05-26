@@ -12,6 +12,8 @@ interface RecordDrawerProps {
   logicType?: string
   masterModelId?: string
   masterModelName?: string
+  masterTabTitle?: string
+  detailsTabTitles?: Record<string, string>
   detailDisplayMode?: 'tabs' | 'sections'
   onEditDetail?: (detail: any) => void
   onDeleteDetail?: (detail: any) => void
@@ -26,7 +28,7 @@ interface RecordDrawerProps {
   secretToken?: string
   tunnelChannel?: any
   isTunnelReady?: boolean
-  schemaName?: string
+  project?: any
 }
 
 export default function RecordDrawer({ 
@@ -40,6 +42,8 @@ export default function RecordDrawer({
   logicType,
   masterModelId,
   masterModelName,
+  masterTabTitle,
+  detailsTabTitles,
   detailDisplayMode = 'tabs',
   onEditDetail,
   onDeleteDetail,
@@ -54,7 +58,7 @@ export default function RecordDrawer({
   secretToken,
   tunnelChannel,
   isTunnelReady,
-  schemaName
+  project
 }: RecordDrawerProps) {
   return (
     <Drawer isOpen={isOpen} onClose={onClose} title="" zIndex={zIndex}>
@@ -68,6 +72,8 @@ export default function RecordDrawer({
         logicType={logicType}
         masterModelId={masterModelId}
         masterModelName={masterModelName}
+        masterTabTitle={masterTabTitle}
+        detailsTabTitles={detailsTabTitles}
         detailDisplayMode={detailDisplayMode}
         onEditDetail={onEditDetail}
         onDeleteDetail={onDeleteDetail}
@@ -81,7 +87,7 @@ export default function RecordDrawer({
         secretToken={secretToken}
         tunnelChannel={tunnelChannel}
         isTunnelReady={isTunnelReady}
-        schemaName={schemaName}
+        project={project}
       />
     </Drawer>
   )

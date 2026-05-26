@@ -44,6 +44,58 @@ const getCaseInsensitiveValue = (data: any, path: string) => {
   return undefined
 }
 
+// Helper para aplicar máscara a valores (apenas para exibição)
+const applyMask = (value: any, mask: string) => {
+  if (!mask || value === null || value === undefined || value === '') return value
+  
+  if (mask === '0.000') {
+    const num = Number(value)
+    if (!isNaN(num)) return num.toLocaleString('pt-BR')
+    return value
+  }
+  
+  if (mask === '0.000,00') {
+    const num = Number(value)
+    if (!isNaN(num)) return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return value
+  }
+
+  // Máscaras de string convencionais (ex: 000.000.000-00)
+  const strVal = String(value)
+  const numbers = strVal.replace(/\D/g, '')
+  let maskedValue = ''
+  let numberIndex = 0
+  
+  for (let i = 0; i < mask.length; i++) {
+    if (numberIndex >= numbers.length) break
+    
+    if (mask[i] === '0') {
+      maskedValue += numbers[numberIndex]
+      numberIndex++
+    } else {
+      maskedValue += mask[i]
+      if (strVal[numberIndex] === mask[i]) {
+         numberIndex++
+      }
+    }
+  }
+  return maskedValue
+}
+
+const parseMaskedNumber = (value: string, mask: string) => {
+  if (!value) return ''
+  const numbers = value.replace(/\D/g, '')
+  if (!numbers) return ''
+  
+  if (mask === '0.000,00') {
+    return parseInt(numbers, 10) / 100
+  }
+  if (mask === '0.000') {
+    return parseInt(numbers, 10)
+  }
+  return value
+}
+
 interface RecordFormProps {
   mode: 'create' | 'edit' | 'view'
   fields: any[]
@@ -54,6 +106,8 @@ interface RecordFormProps {
   logicType?: string
   masterModelId?: string
   masterModelName?: string
+  masterTabTitle?: string
+  detailsTabTitles?: Record<string, string>
   detailDisplayMode?: 'tabs' | 'sections'
   isPageMode?: boolean
   onEditDetail?: (detail: any) => void
@@ -69,7 +123,7 @@ interface RecordFormProps {
   secretToken?: string
   tunnelChannel?: any
   isTunnelReady?: boolean
-  schemaName?: string
+  project?: any
 }
 
 export default function RecordForm({ 
@@ -97,7 +151,9 @@ export default function RecordForm({
   secretToken = 'test-token',
   tunnelChannel,
   isTunnelReady,
-  schemaName
+  project,
+  masterTabTitle,
+  detailsTabTitles
 }: RecordFormProps) {
   const { t } = useI18n()
   const [formData, setFormData] = useState<any>(initialData || {})
@@ -178,7 +234,7 @@ export default function RecordForm({
               payload: {
                 queryId,
                 table: join.to,
-                schemaName: schemaName || 'public',
+                schemaName: project?.models?.find((m: any) => m.db_table_name === join.to)?.db_schema_name || project?.slug || 'public',
                 action: 'select',
                 query: rawQuery,
                 sql: rawQuery,
@@ -250,12 +306,17 @@ export default function RecordForm({
         // Tenta pegar a config específica de formulário, senão usa a global
         const config = field.config?.form_config || field.config
         const comp = config?.component
-        if (comp?.type && ['select', 'radio', 'checkbox'].includes(comp.type) && comp.options_type === 'relational' && comp.rel_table) {
+        const isRelationalComp = comp?.type && (['select', 'radio', 'checkbox', 'Combo (Select)'].includes(comp.type) || comp.options_type === 'relational')
+        if (isRelationalComp && comp.options_type === 'relational' && comp.rel_table) {
           try {
             if (projectId && tunnelChannel && isTunnelReady) {
               const queryId = crypto.randomUUID()
               const rawQuery = `SELECT "${comp.rel_label}", "${comp.rel_value}" FROM "${comp.rel_table}"`
               
+              const schemaToUse = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === comp.rel_table?.toLowerCase())?.db_schema_name || project?.slug || 'public'
+              console.log(`[MetaBuilder:RecordForm] Fetching relational options for ${comp.rel_table} with schemaName:`, schemaToUse)
+              console.log(`[MetaBuilder:RecordForm] Query:`, rawQuery)
+
               const data = await new Promise<any[]>((resolve, reject) => {
                 let resolved = false
                 const cleanup = () => {
@@ -278,6 +339,7 @@ export default function RecordForm({
                   if (payload.payload?.queryId === queryId) {
                     resolved = true
                     cleanup()
+                    console.log(`[MetaBuilder:RecordForm] Relational options for ${comp.rel_table} returned:`, payload.payload)
                     if (payload.payload.success) resolve(payload.payload.data || [])
                     else reject(new Error(payload.payload.error || 'Error fetching relational options'))
                   }
@@ -291,7 +353,7 @@ export default function RecordForm({
                   payload: {
                     queryId,
                     table: comp.rel_table,
-                    schemaName: schemaName || 'public',
+                    schemaName: schemaToUse,
                     action: 'select',
                     query: rawQuery,
                     sql: rawQuery,
@@ -305,6 +367,7 @@ export default function RecordForm({
                 setTimeout(() => {
                   if (!resolved) {
                     resolved = true
+                    console.warn(`[MetaBuilder:RecordForm] Timeout fetching relational options for ${comp.rel_table}`)
                     resolve([])
                   }
                 }, 8000)
@@ -339,7 +402,7 @@ export default function RecordForm({
     if (fields.length > 0) {
       fetchAllRelational()
     }
-  }, [fields])
+  }, [fields, isTunnelReady, tunnelChannel, project])
 
   const parseFixedOptions = (str: string) => {
     if (!str) return []
@@ -410,15 +473,20 @@ export default function RecordForm({
 
   const renderField = (field: any) => {
     if (!field) return null;
+    let rawValue = getCaseInsensitiveValue(formData, field.db_column_name) ?? ''
+    let value = rawValue
+
     const zoneConfig = field.config?.form_config || field.config || {}
     const comp = zoneConfig.component || { type: 'text' }
     const fieldType = comp.type || 'text'
     const width = comp.width || '100%'
+    
+    const maskStr = zoneConfig.content?.mask || field.config?.content?.mask
+    const isDateType = fieldType === 'date' || fieldType === 'datetime-local' || fieldType === 'datetime' || fieldType === 'time'
 
-    let rawValue = getCaseInsensitiveValue(formData, field.db_column_name) ?? ''
-    let value = rawValue
-
-    if (value && (typeof value === 'string' || value instanceof Date)) {
+    if (maskStr && !isDateType) {
+      value = applyMask(rawValue, maskStr)
+    } else if (value && (typeof value === 'string' || value instanceof Date)) {
       const dateStr = value instanceof Date ? value.toISOString() : String(value)
       if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
         if (fieldType === 'date') {
@@ -438,11 +506,20 @@ export default function RecordForm({
       const dbCol = field.db_column_name
       const baseName = dbCol.split('.').pop()
       
+      let finalVal = val
+      if (maskStr && typeof val === 'string' && !isDateType) {
+        if (maskStr === '0.000' || maskStr === '0.000,00') {
+          finalVal = parseMaskedNumber(val, maskStr)
+        } else {
+          finalVal = applyMask(val, maskStr)
+        }
+      }
+      
       const newFormData = { ...formData }
       
-      newFormData[dbCol] = val
+      newFormData[dbCol] = finalVal
       if (baseName) {
-        newFormData[baseName] = val
+        newFormData[baseName] = finalVal
       }
       
       // Atualizar chaves case-insensitive correspondentes
@@ -452,11 +529,11 @@ export default function RecordForm({
       for (const key of Object.keys(formData)) {
         const lowerKey = key.toLowerCase()
         if (lowerKey === lowerCol || (lowerBase && lowerKey === lowerBase)) {
-          newFormData[key] = val
+          newFormData[key] = finalVal
         }
         const keyBase = key.split('.').pop()?.toLowerCase()
         if (keyBase && (keyBase === lowerCol || (lowerBase && keyBase === lowerBase))) {
-          newFormData[key] = val
+          newFormData[key] = finalVal
         }
       }
       
@@ -493,8 +570,7 @@ export default function RecordForm({
           }}
           className={cn(
             "text-[10px] font-black tracking-widest ml-1",
-            !zoneConfig.label?.color && "text-neutral-400",
-            !zoneConfig.label?.font && "uppercase"
+            !zoneConfig.label?.color && "text-neutral-400"
           )}
         >
           {zoneConfig.label?.text || field.display_name}
@@ -588,10 +664,11 @@ export default function RecordForm({
           ) : (
             <input 
               type={
-                fieldType === 'number' ? 'number' :
                 fieldType === 'date' ? 'date' :
                 (fieldType === 'datetime-local' || fieldType === 'datetime') ? 'datetime-local' :
-                fieldType === 'time' ? 'time' : 'text'
+                fieldType === 'time' ? 'time' :
+                (zoneConfig.content?.mask || field.config?.content?.mask) ? 'text' :
+                fieldType === 'number' ? 'number' : 'text'
               }
               disabled={isDisabled}
               required={field.config?.content?.required}
@@ -609,13 +686,13 @@ export default function RecordForm({
 
   const renderDetailSection = (tableName: string, parentData: any = formData) => {
     const modelId = fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
-    const displayLabel = dictionary[modelId || ''] || tableName
+    const displayLabel = detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || tableName
 
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">Registros Relacionados: {displayLabel}</h4>
+            <h4 className="text-[10px] font-black tracking-[0.2em] text-indigo-600">Registros Relacionados: {displayLabel}</h4>
             
             {/* Botão Expande/Recolhe Tudo */}
             {detailsInlineTypes[modelId || ''] !== false && (parentData?._details || []).some((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase()) && (
@@ -779,14 +856,28 @@ export default function RecordForm({
                             const detailFieldsForThisModel = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase());
                             return detailFieldsForThisModel.map(field => (
                               <div key={field.id} className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                                <label className="text-[10px] font-black tracking-widest text-neutral-400">
                                   {field.display_name}
                                 </label>
                                 {(() => {
                                   const baseCol = field.db_column_name.split('.').pop() || field.db_column_name;
-                                  const value = detail[baseCol] || detail[baseCol.toUpperCase()] || detail[field.db_column_name] || '';
+                                  const rawValue = detail[baseCol] || detail[baseCol.toUpperCase()] || detail[field.db_column_name] || '';
                                   
-                                  const handleInlineChange = (newVal: any) => {
+                                  const fieldConfig = field.config?.form_config || field.config || {};
+                                  const type = fieldConfig.component?.type || 'text';
+                                  const maskStr = fieldConfig.content?.mask;
+                                  const isDateType = type === 'date' || type === 'datetime-local' || type === 'datetime' || type === 'time';
+                                  
+                                  const handleInlineChange = (rawVal: any) => {
+                                    let newVal = rawVal;
+                                    if (maskStr && typeof rawVal === 'string' && !isDateType) {
+                                      if (maskStr === '0.000' || maskStr === '0.000,00') {
+                                        newVal = parseMaskedNumber(rawVal, maskStr);
+                                      } else {
+                                        newVal = applyMask(rawVal, maskStr);
+                                      }
+                                    }
+                                    
                                     // Se parentData for o formData principal, atualizamos o topo
                                     if (parentData === formData) {
                                       const newDetails = (formData._details || []).map((d: any) => {
@@ -821,8 +912,6 @@ export default function RecordForm({
                                     }
                                   };
 
-                                  const fieldConfig = field.config?.form_config || field.config || {};
-                                  const type = fieldConfig.component?.type || 'text';
 
                                   if (type === 'textarea') {
                                     return (
@@ -851,10 +940,25 @@ export default function RecordForm({
                                     );
                                   }
 
+                                  let displayValue = rawValue;
+                                  if (maskStr && !isDateType) {
+                                    displayValue = applyMask(rawValue, maskStr);
+                                  } else if (isDateType && rawValue && typeof rawValue === 'string') {
+                                    const dateStr = rawValue.replace(' ', 'T');
+                                    if (type === 'date') displayValue = dateStr.substring(0, 10);
+                                    else if (type === 'datetime-local' || type === 'datetime') displayValue = dateStr.substring(0, 16);
+                                  }
+
                                   return (
                                     <input
-                                      type={type === 'number' ? 'number' : 'text'}
-                                      value={value}
+                                      type={
+                                        type === 'date' ? 'date' :
+                                        (type === 'datetime-local' || type === 'datetime') ? 'datetime-local' :
+                                        type === 'time' ? 'time' :
+                                        maskStr ? 'text' :
+                                        type === 'number' ? 'number' : 'text'
+                                      }
+                                      value={displayValue}
                                       onChange={(e) => handleInlineChange(e.target.value)}
                                       className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
                                     />
@@ -896,7 +1000,7 @@ export default function RecordForm({
           <div className="py-12 text-center border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-3xl">
             <p className="text-xs text-neutral-400 italic">Nenhum registro de {(() => {
               const modelId = fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
-              return dictionary[modelId || ''] || tableName
+              return detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || tableName
             })()} encontrado.</p>
           </div>
         )}
@@ -914,7 +1018,7 @@ export default function RecordForm({
           </div>
           <div>
             <h3 className="text-xl font-bold text-neutral-900 dark:text-white">{titles[mode]}</h3>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
+            <p className="text-[10px] font-black tracking-[0.2em] text-neutral-400">
               {mode === 'create' ? t('runtime.record_drawer.new_item') : t('runtime.record_drawer.record_id').replace('{id}', initialData?.id || 'N/A')}
             </p>
           </div>
@@ -923,7 +1027,7 @@ export default function RecordForm({
         {isPageMode && (
           <button 
             onClick={onCancel}
-            className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all"
+            className="flex items-center gap-2 px-4 py-2 text-[10px] font-black tracking-widest text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all"
           >
             <ArrowLeft className="w-4 h-4" /> {t('runtime.back_to_list', 'Voltar para Lista')}
           </button>
@@ -940,11 +1044,11 @@ export default function RecordForm({
                 onTabChange?.('master')
               }}
               className={cn(
-                "px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all border-b-2",
+                "px-4 py-2 text-[10px] font-black tracking-widest transition-all border-b-2",
                 activeTab === 'master' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600'
               )}
             >
-              {t('runtime.master_details.main_data', 'Dados Principais')}
+              {masterTabTitle || t('runtime.master_details.main_data', 'Dados Principais')}
             </button>
             {detailTables.map(tableName => {
               const modelId = fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
@@ -958,11 +1062,11 @@ export default function RecordForm({
                     onTabChange?.(tableName)
                   }}
                   className={cn(
-                    "px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all border-b-2",
+                    "px-4 py-2 text-[10px] font-black tracking-widest transition-all border-b-2",
                     activeTab === tableName ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600'
                   )}
                 >
-                  {displayLabel}
+                  {detailsTabTitles?.[modelId || ''] || displayLabel}
                 </button>
               )
             })}
@@ -975,8 +1079,8 @@ export default function RecordForm({
               {detailDisplayMode === 'sections' && logicType === 'master_detail' && (
                 <div className="flex items-center gap-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-800 dark:text-neutral-200">
-                    {t('runtime.master_details.main_data', 'Dados Principais')}
+                  <h3 className="text-[10px] font-black tracking-[0.2em] text-neutral-800 dark:text-neutral-200">
+                    {masterTabTitle || t('runtime.master_details.main_data', 'Dados Principais')}
                   </h3>
                 </div>
               )}
@@ -997,10 +1101,10 @@ export default function RecordForm({
             <div key={tableName} className="pt-4 space-y-6">
               <div className="flex items-center gap-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-800 dark:text-neutral-200">
+                <h3 className="text-[10px] font-black tracking-[0.2em] text-neutral-800 dark:text-neutral-200">
                   {(() => {
                     const modelId = fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
-                    return dictionary[modelId || ''] || tableName
+                    return detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || tableName
                   })()}
                 </h3>
               </div>

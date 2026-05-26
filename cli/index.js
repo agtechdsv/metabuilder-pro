@@ -222,6 +222,7 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
       const expectedSchema = connectionName || 'public';
       const incomingSchema = schemaName || 'public';
       if (incomingSchema !== expectedSchema) {
+        console.log(chalk.yellow(`[ IGNORADO ] Comando destinado ao schema '${incomingSchema}', mas este agente atende '${expectedSchema}'.`));
         return; // Ignora o broadcast, outro agente responderá
       }
 
@@ -610,6 +611,28 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
             result = await pgClient.query(sql, params);
           }
           console.log(chalk.green(`[ OK ] DELETE: 1 linha removida.`));
+        } else if (action === 'execute_custom') {
+          sql = payload.payload.query || payload.payload.sql;
+          params = payload.payload.params || [];
+          
+          if (!sql) {
+            throw new Error('Query SQL não fornecida para a ação customizada.');
+          }
+
+          if (dbType === 'oracle') {
+            sql = sql.replace(/\$(\d+)/g, ':$1');
+          }
+
+          console.log(chalk.gray(`[ SQL ] Executando Custom Action: ${sql}`));
+          let execResult;
+          if (dbType === 'oracle') {
+            const oraRes = await oracleConnection.execute(sql, params, { autoCommit: true, outFormat: oracledb.OUT_FORMAT_OBJECT });
+            execResult = { rows: oraRes.rows || [] };
+          } else {
+            execResult = await pgClient.query(sql, params);
+          }
+          result = execResult;
+          console.log(chalk.green(`[ OK ] CUSTOM ACTION executada.`));
         } else {
           throw new Error('Ação não suportada');
         }

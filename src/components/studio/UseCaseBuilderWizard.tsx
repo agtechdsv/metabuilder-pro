@@ -46,7 +46,9 @@ import {
   BarChart3,
   BarChartHorizontal,
   Calendar,
-  Download
+  Download,
+  Zap,
+  Globe
 } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
@@ -157,7 +159,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         desc_field: '',
         status_field: '',
         predecessor_field: ''
-      }
+      },
+      custom_actions: [] as any[]
     },
     buttons_config: [
       { id: 'search', label: t('runtime.search'), labelKey: 'runtime.search', icon: 'search', action: 'search', visible: true },
@@ -285,6 +288,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           analytics_config: initialData.layout_config?.analytics_config || { widgets: [], allow_runtime_edit: true },
           details_interface_types: initialData.layout_config?.details_interface_types || {},
           details_inline_types: initialData.layout_config?.details_inline_types || {},
+          master_tab_title: initialData.layout_config?.master_tab_title,
+          details_tab_titles: initialData.layout_config?.details_tab_titles || {},
           export_formats: initialData.layout_config?.export_formats || ['xlsx', 'csv', 'json'],
           gallery_click_behavior: initialData.layout_config?.gallery_click_behavior || 'lightbox',
           scheduler_config: initialData.layout_config?.scheduler_config || {
@@ -317,7 +322,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
             desc_field: '',
             status_field: '',
             predecessor_field: ''
-          }
+          },
+          custom_actions: initialData.layout_config?.custom_actions || []
         },
         buttons_config: (() => {
           const defaults = [
@@ -1310,11 +1316,44 @@ function StepLayout({ config, setConfig, models }: any) {
         <div className="flex items-center justify-between ml-1 pr-6">
           <div className="flex items-center gap-2">
             <div className={cn("w-1.5 h-4 rounded-full shadow-sm", isMaster ? "bg-amber-600" : "bg-amber-400")}></div>
-            <span className="text-[11px] font-black uppercase tracking-widest text-neutral-600 dark:text-neutral-400">
-              {isMaster ? `Mestre: ${model.display_name || model.db_table_name}` : 
-               depth === 1 ? `Detalhe: ${model.display_name || model.db_table_name}` :
-               `Sub-Detalhe: ${model.display_name || model.db_table_name}`}
-            </span>
+            <div className="flex items-center gap-2 group relative">
+              {isMaster ? (
+                <input
+                  type="text"
+                  placeholder={`Mestre: ${model.display_name || model.db_table_name}`}
+                  value={(config.layout_config as any).master_tab_title ?? `Mestre: ${model.display_name || model.db_table_name}`}
+                  onChange={e => setConfig({
+                    ...config,
+                    layout_config: {
+                      ...config.layout_config,
+                      master_tab_title: e.target.value
+                    }
+                  })}
+                  className="bg-transparent border-none outline-none text-[11px] font-black tracking-widest text-neutral-600 dark:text-neutral-400 placeholder:text-neutral-300 dark:placeholder:text-neutral-700 w-[250px] hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:bg-white dark:focus:bg-neutral-900 focus:ring-2 focus:ring-amber-500/20 rounded px-1.5 py-0.5 transition-all"
+                />
+              ) : (
+                <input
+                  type="text"
+                  placeholder={`${depth === 1 ? 'Detalhe' : 'Sub-Detalhe'}: ${model.display_name || model.db_table_name}`}
+                  value={(config.layout_config as any).details_tab_titles?.[model.id] ?? `${depth === 1 ? 'Detalhe' : 'Sub-Detalhe'}: ${model.display_name || model.db_table_name}`}
+                  onChange={e => {
+                    const currentTitles = (config.layout_config as any).details_tab_titles || {}
+                    setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        details_tab_titles: {
+                          ...currentTitles,
+                          [model.id]: e.target.value
+                        }
+                      }
+                    })
+                  }}
+                  className="bg-transparent border-none outline-none text-[11px] font-black tracking-widest text-neutral-600 dark:text-neutral-400 placeholder:text-neutral-300 dark:placeholder:text-neutral-700 w-[250px] hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:bg-white dark:focus:bg-neutral-900 focus:ring-2 focus:ring-amber-500/20 rounded px-1.5 py-0.5 transition-all"
+                />
+              )}
+              <Pencil className="w-3 h-3 text-neutral-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none absolute right-2" />
+            </div>
           </div>
 
           {!isMaster && (
@@ -2961,13 +3000,47 @@ function StepLayout({ config, setConfig, models }: any) {
 
                 <div className="space-y-2">
                   <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.mask')}</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: 000.000.000-00"
-                    value={currentFieldMeta.content.mask}
-                    onChange={e => updateMeta('content', 'mask', e.target.value)}
-                    className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
-                  />
+                  <div className="flex flex-col gap-2">
+                    <select
+                      value={
+                        ['', '000.000.000-00', '00.000.000/0000-00', '00000-000', '(00) 00000-0000', '00/00/0000', '0.000', '0.000,00'].includes(currentFieldMeta.content.mask || '')
+                          ? currentFieldMeta.content.mask || ''
+                          : 'custom'
+                      }
+                      onChange={e => {
+                        const val = e.target.value
+                        if (val !== 'custom') {
+                          updateMeta('content', 'mask', val)
+                        } else {
+                          const isKnown = ['', '000.000.000-00', '00.000.000/0000-00', '00000-000', '(00) 00000-0000', '00/00/0000', '0.000', '0.000,00'].includes(currentFieldMeta.content.mask || '')
+                          if (isKnown) {
+                            updateMeta('content', 'mask', ' ') 
+                          }
+                        }
+                      }}
+                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none cursor-pointer"
+                    >
+                      <option value="">{t('common.none', 'Nenhuma')}</option>
+                      <option value="000.000.000-00">CPF (000.000.000-00)</option>
+                      <option value="00.000.000/0000-00">CNPJ (00.000.000/0000-00)</option>
+                      <option value="00000-000">CEP (00000-000)</option>
+                      <option value="(00) 00000-0000">Telefone/Celular ((00) 00000-0000)</option>
+                      <option value="00/00/0000">Data (00/00/0000)</option>
+                      <option value="0.000">Inteiro com Milhar (0.000)</option>
+                      <option value="0.000,00">Decimal com Milhar (0.000,00)</option>
+                      <option value="custom">Personalizado (Custom)...</option>
+                    </select>
+
+                    {!['', '000.000.000-00', '00.000.000/0000-00', '00000-000', '(00) 00000-0000', '00/00/0000', '0.000', '0.000,00'].includes(currentFieldMeta.content.mask || '') && (
+                      <input
+                        type="text"
+                        placeholder="Ex: 000.000.000-00"
+                        value={(currentFieldMeta.content.mask || '').trim()}
+                        onChange={e => updateMeta('content', 'mask', e.target.value)}
+                        className="w-full bg-neutral-50 dark:bg-neutral-900 border border-indigo-500/50 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-4 p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-2xl border border-neutral-100 dark:border-neutral-800 cursor-pointer group" onClick={() => updateMeta('content', 'required', !currentFieldMeta.content.required)}>
@@ -3145,6 +3218,37 @@ function StepLayout({ config, setConfig, models }: any) {
 
 function StepActions({ config, setConfig }: any) {
   const { t } = useI18n()
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false)
+  const [editingAction, setEditingAction] = useState<any>(null)
+
+  const handleSaveAction = (action: any) => {
+    const currentActions = config.layout_config.custom_actions || []
+    const isNew = !currentActions.some((a: any) => a.id === action.id)
+    const newActions = isNew
+      ? [...currentActions, { ...action, id: action.id || Math.random().toString(36).substr(2, 9) }]
+      : currentActions.map((a: any) => a.id === action.id ? action : a)
+      
+    setConfig({
+      ...config,
+      layout_config: {
+        ...config.layout_config,
+        custom_actions: newActions
+      }
+    })
+    setIsActionModalOpen(false)
+    setEditingAction(null)
+  }
+
+  const handleDeleteAction = (id: string) => {
+    setConfig({
+      ...config,
+      layout_config: {
+        ...config.layout_config,
+        custom_actions: (config.layout_config.custom_actions || []).filter((a: any) => a.id !== id)
+      }
+    })
+  }
+
   const strategies = [
     { 
       id: 'dynamic', 
@@ -3201,6 +3305,65 @@ function StepActions({ config, setConfig }: any) {
               <span className="text-[10px] font-black uppercase tracking-widest">{t(btn.labelKey) || btn.label}</span>
             </button>
           ))}
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Ações Customizadas</label>
+          <button
+            onClick={() => {
+              setEditingAction({
+                id: Math.random().toString(36).substr(2, 9),
+                label: 'Nova Ação',
+                icon: 'Zap',
+                color: 'indigo',
+                trigger_type: 'usecase',
+                context: 'row',
+                sql_query: '',
+                usecase_slug: '',
+                usecase_params: '',
+                rest_url: '',
+                rest_method: 'POST',
+                rest_body: ''
+              })
+              setIsActionModalOpen(true)
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Adicionar Ação
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {(config.layout_config.custom_actions || []).length === 0 ? (
+            <div className="col-span-full p-8 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] flex flex-col items-center justify-center text-neutral-400">
+              <Zap className="w-6 h-6 mb-2 opacity-50" />
+              <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma ação customizada configurada</p>
+            </div>
+          ) : (
+            (config.layout_config.custom_actions || []).map((action: any) => (
+              <div key={action.id} className="p-5 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] flex items-center justify-between group shadow-sm hover:shadow-md transition-all">
+                <div className="flex items-center gap-4">
+                  <div className={`p-3 rounded-2xl bg-${action.color}-100 dark:bg-${action.color}-900/30 text-${action.color}-600 dark:text-${action.color}-400`}>
+                    {action.icon === 'Zap' && <Zap className="w-5 h-5" />}
+                    {action.icon === 'Link' && <Link className="w-5 h-5" />}
+                    {action.icon === 'Database' && <Database className="w-5 h-5" />}
+                    {action.icon === 'Globe' && <Globe className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-neutral-900 dark:text-white">{action.label}</h4>
+                    <p className="text-[10px] text-neutral-400 uppercase tracking-wider">{action.trigger_type} • {action.context}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => { setEditingAction(action); setIsActionModalOpen(true); }} className="p-2 text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl hover:bg-indigo-100"><Pencil className="w-4 h-4" /></button>
+                  <button onClick={() => handleDeleteAction(action.id)} className="p-2 text-red-600 bg-red-50 dark:bg-red-900/30 rounded-xl hover:bg-red-100"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -3373,6 +3536,178 @@ function StepActions({ config, setConfig }: any) {
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={isActionModalOpen}
+        onClose={() => setIsActionModalOpen(false)}
+        title={editingAction?.id ? 'Editar Ação Customizada' : 'Nova Ação Customizada'}
+      >
+        {editingAction && (
+          <div className="space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar p-1">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Nome do Botão</label>
+                <input
+                  type="text"
+                  value={editingAction.label}
+                  onChange={e => setEditingAction({ ...editingAction, label: e.target.value })}
+                  className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-500 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Contexto</label>
+                <select
+                  value={editingAction.context}
+                  onChange={e => setEditingAction({ ...editingAction, context: e.target.value })}
+                  className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
+                >
+                  <option value="row">Ação de Linha (Cada Registro)</option>
+                  <option value="bulk">Ação Global (Topo da Tela)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Ícone</label>
+                <select
+                  value={editingAction.icon}
+                  onChange={e => setEditingAction({ ...editingAction, icon: e.target.value })}
+                  className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
+                >
+                  <option value="Zap">Raio (Zap)</option>
+                  <option value="Link">Link (Abrir/Anexar)</option>
+                  <option value="Database">Banco de Dados</option>
+                  <option value="Globe">Globo (Web/API)</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Cor</label>
+                <select
+                  value={editingAction.color}
+                  onChange={e => setEditingAction({ ...editingAction, color: e.target.value })}
+                  className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
+                >
+                  <option value="indigo">Índigo (Padrão)</option>
+                  <option value="emerald">Verde (Sucesso/Aprovar)</option>
+                  <option value="red">Vermelho (Perigo/Rejeitar)</option>
+                  <option value="amber">Amarelo (Atenção)</option>
+                  <option value="purple">Roxo (Especial)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Tipo de Ação (Trigger)</label>
+              <div className="flex p-1 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+                <button
+                  onClick={() => setEditingAction({ ...editingAction, trigger_type: 'sql' })}
+                  className={cn("flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", editingAction.trigger_type === 'sql' ? 'bg-white dark:bg-neutral-800 shadow text-indigo-600' : 'text-neutral-500')}
+                >
+                  SQL / Procedure
+                </button>
+                <button
+                  onClick={() => setEditingAction({ ...editingAction, trigger_type: 'usecase' })}
+                  className={cn("flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", editingAction.trigger_type === 'usecase' ? 'bg-white dark:bg-neutral-800 shadow text-indigo-600' : 'text-neutral-500')}
+                >
+                  Outra Tela
+                </button>
+                <button
+                  onClick={() => setEditingAction({ ...editingAction, trigger_type: 'rest' })}
+                  className={cn("flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", editingAction.trigger_type === 'rest' ? 'bg-white dark:bg-neutral-800 shadow text-indigo-600' : 'text-neutral-500')}
+                >
+                  REST API
+                </button>
+              </div>
+            </div>
+
+            {editingAction.trigger_type === 'sql' && (
+              <div className="space-y-2 animate-in fade-in zoom-in-95 duration-300">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Comando SQL</label>
+                <p className="text-[9px] text-neutral-500 ml-1 mb-2">Você pode usar variáveis usando chaves duplas: {'{{id}}'}</p>
+                <textarea
+                  value={editingAction.sql_query}
+                  onChange={e => setEditingAction({ ...editingAction, sql_query: e.target.value })}
+                  className="w-full h-32 bg-neutral-950 text-indigo-400 font-mono text-sm p-4 rounded-2xl outline-none resize-none"
+                  placeholder="CALL sp_aprovar_pedido({{id}});"
+                />
+              </div>
+            )}
+
+            {editingAction.trigger_type === 'usecase' && (
+              <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300 bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Slug do Caso de Uso de Destino</label>
+                  <input
+                    type="text"
+                    value={editingAction.usecase_slug}
+                    onChange={e => setEditingAction({ ...editingAction, usecase_slug: e.target.value })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-500 outline-none"
+                    placeholder="ex: itens-pedido"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Parâmetros (Filtros na URL)</label>
+                  <p className="text-[9px] text-neutral-500 ml-1 mb-2">Ex: obra_id={'{{id}}'}&status=ativo</p>
+                  <input
+                    type="text"
+                    value={editingAction.usecase_params}
+                    onChange={e => setEditingAction({ ...editingAction, usecase_params: e.target.value })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-mono focus:border-indigo-500 outline-none"
+                    placeholder="obra_id={{id}}"
+                  />
+                </div>
+              </div>
+            )}
+
+            {editingAction.trigger_type === 'rest' && (
+              <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300 bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                <div className="flex gap-4">
+                  <div className="space-y-2 w-1/3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Método</label>
+                    <select
+                      value={editingAction.rest_method}
+                      onChange={e => setEditingAction({ ...editingAction, rest_method: e.target.value })}
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
+                    >
+                      <option value="GET">GET</option>
+                      <option value="POST">POST</option>
+                      <option value="PUT">PUT</option>
+                      <option value="DELETE">DELETE</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">URL da API / Webhook</label>
+                    <input
+                      type="text"
+                      value={editingAction.rest_url}
+                      onChange={e => setEditingAction({ ...editingAction, rest_url: e.target.value })}
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-mono focus:border-indigo-500 outline-none"
+                      placeholder="https://api.exemplo.com/hook/{{id}}"
+                    />
+                  </div>
+                </div>
+                {['POST', 'PUT', 'PATCH'].includes(editingAction.rest_method) && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Body (JSON Payload)</label>
+                    <textarea
+                      value={editingAction.rest_body}
+                      onChange={e => setEditingAction({ ...editingAction, rest_body: e.target.value })}
+                      className="w-full h-32 bg-neutral-950 text-indigo-400 font-mono text-xs p-4 rounded-2xl outline-none resize-none"
+                      placeholder={'{\n  "id": "{{id}}",\n  "status": "aprovado"\n}'}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800 mt-6">
+              <button onClick={() => setIsActionModalOpen(false)} className="flex-1 px-4 py-3 bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all">Cancelar</button>
+              <button onClick={() => handleSaveAction(editingAction)} className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95">Salvar Ação</button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

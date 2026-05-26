@@ -186,7 +186,7 @@ export default async function SlugPage({ params }: PageProps) {
   }
 
   if (view && !viewError && view.layout_config?.is_active !== false) {
-    const { data: allModels } = await supabase.from('models').select('id, display_name, db_table_name, fields(*)').eq('project_id', project.id)
+    const { data: allModels } = await supabase.from('models').select('id, display_name, db_table_name, db_schema_name, fields(*)').eq('project_id', project.id)
     const dictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.display_name }), {}) || {}
     const tableDictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.db_table_name }), {}) || {}
 
@@ -219,10 +219,21 @@ export default async function SlugPage({ params }: PageProps) {
       return dbColName
     }
     
+    const gridFieldsOrder = view.layout_config?.grid_fields || []
+    const formFieldsOrder = view.layout_config?.form_fields || []
+    const filterFieldsOrder = view.layout_config?.filter_fields || []
+    
     // Transforma os componentes em fields para o Grid (Zona Grid)
     displayFields = allComponents
       .filter((c: any) => c.is_visible !== false && (c.config?.zones?.includes('grid') || !c.config?.zones))
-      .sort((a: any, b: any) => a.order_index - b.order_index)
+      .sort((a: any, b: any) => {
+        const idxA = gridFieldsOrder.indexOf(a.field.id)
+        const idxB = gridFieldsOrder.indexOf(b.field.id)
+        if (idxA === -1 && idxB === -1) return a.order_index - b.order_index
+        if (idxA === -1) return 1
+        if (idxB === -1) return -1
+        return idxA - idxB
+      })
       .map((c: any) => ({
         id: c.field.id,
         model_id: c.field.model_id,
@@ -238,7 +249,14 @@ export default async function SlugPage({ params }: PageProps) {
     // Extrai os campos do Formulário (Zona Form)
     const formFields = allComponents
       .filter((c: any) => c.is_visible !== false && c.config?.zones?.includes('form'))
-      .sort((a: any, b: any) => a.order_index - b.order_index)
+      .sort((a: any, b: any) => {
+        const idxA = formFieldsOrder.indexOf(a.field.id)
+        const idxB = formFieldsOrder.indexOf(b.field.id)
+        if (idxA === -1 && idxB === -1) return a.order_index - b.order_index
+        if (idxA === -1) return 1
+        if (idxB === -1) return -1
+        return idxA - idxB
+      })
       .map((c: any) => ({
         id: c.field.id,
         model_id: c.field.model_id,
@@ -255,6 +273,14 @@ export default async function SlugPage({ params }: PageProps) {
     // Extrai os campos de Filtro (Zona Filter)
     const filterFields = allComponents
       .filter((c: any) => c.is_visible !== false && c.config?.zones?.includes('filter'))
+      .sort((a: any, b: any) => {
+        const idxA = filterFieldsOrder.indexOf(a.field.id)
+        const idxB = filterFieldsOrder.indexOf(b.field.id)
+        if (idxA === -1 && idxB === -1) return a.order_index - b.order_index
+        if (idxA === -1) return 1
+        if (idxB === -1) return -1
+        return idxA - idxB
+      })
       .map((c: any) => ({
         id: c.field.id,
         model_id: c.field.model_id,
@@ -525,10 +551,13 @@ export default async function SlugPage({ params }: PageProps) {
           detailDisplayMode={view.layout_config?.detail_display_mode}
           detailsInterfaceTypes={view.layout_config?.details_interface_types}
           detailsInlineTypes={view.layout_config?.details_inline_types}
+          masterTabTitle={view.layout_config?.master_tab_title}
+          detailsTabTitles={view.layout_config?.details_tab_titles}
           actionInterfaceType={view.layout_config?.action_interface_type}
           analyticsConfig={view.layout_config?.analytics_config}
           exportFormats={view.layout_config?.export_formats}
           galleryClickBehavior={view.layout_config?.gallery_click_behavior}
+          customActions={view.layout_config?.custom_actions || []}
           baseUrl={`${baseUrl}/dashboard`}
           breadcrumbs={breadcrumbs}
           description={navDescription}
