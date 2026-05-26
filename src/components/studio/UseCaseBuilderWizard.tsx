@@ -82,6 +82,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { motion, useDragControls } from 'framer-motion'
+import { useTelemetry } from '@/hooks/useTelemetry'
 
 interface UseCaseBuilderWizardProps {
   initialData?: any
@@ -96,14 +97,55 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   const { workspace_slug, project_slug } = params
   const supabase = createClient()
   const { toast } = useToast()
+  
+  const [currentProjectId, setCurrentProjectId] = useState<string>()
+  const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string>()
+
+  // Telemetria (Heartbeat de Produtividade)
+  const { logAction } = useTelemetry({
+    workspaceId: currentWorkspaceId,
+    projectId: currentProjectId,
+    uiViewId: initialData?.id
+  })
 
   // Estados do Wizard
   const [currentStep, setCurrentStep] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [currentStatus, setCurrentStatus] = useState<string>(initialData?.status || 'draft')
   const [models, setModels] = useState<any[]>([])
   const [relations, setRelations] = useState<any[]>([])
   const [useCases, setUseCases] = useState<any[]>([])
+
+  const handleUpdateStatus = async (newStatus: 'delivered' | 'reopened') => {
+    if (!initialData?.id) return
+    setIsSaving(true)
+    try {
+      const { error } = await supabase
+        .from('ui_views')
+        .update({ status: newStatus })
+        .eq('id', initialData.id)
+      
+      if (error) throw error
+      setCurrentStatus(newStatus)
+      logAction('LIFECYCLE', newStatus === 'delivered' ? 'Entregou o Caso de Uso' : 'Reabriu o Caso de Uso')
+      toast(`Caso de Uso ${newStatus === 'delivered' ? 'entregue' : 'reaberto'} com sucesso!`, 'success')
+      onSaveSuccess()
+    } catch (err: any) {
+      toast("Erro ao atualizar status: " + err.message, 'error')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Telemetria Automática (Hook de Mudança de Estado)
+  useEffect(() => {
+    if (currentStep && currentStep > 1) {
+      logAction('NAVIGATION', `Avançou para Etapa ${currentStep}`)
+    }
+  }, [currentStep, logAction])
+
+  // Lógica de debounce para config movida para baixo
 
   // Configuração da View sendo criada
   const [config, setConfig] = useState({
@@ -190,16 +232,29 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   // Popula os dados iniciais se estiver em modo edição
   const [isInitialized, setIsInitialized] = useState(false)
 
+  // Lógica de debounce para config evitar excesso de logs por keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Ignorar carregamento inicial
+      if (!isInitialized) return
+      logAction('CONFIG_CHANGE', `Alterou propriedades na Etapa ${currentStep}`)
+    }, 2000)
+    return () => clearTimeout(timer)
+  }, [config, currentStep, isInitialized, logAction])
+
   useEffect(() => {
     const loadData = async () => {
       // 1. Primeiro buscamos o ID do projeto atual pelo slug
       const { data: project } = await supabase
         .from('projects')
-        .select('id')
+        .select('id, workspace_id')
         .eq('slug', project_slug)
         .single()
 
       if (!project) return
+      
+      setCurrentProjectId(project.id)
+      setCurrentWorkspaceId(project.workspace_id)
 
       // 2. Buscamos apenas os modelos deste projeto
       const { data: modelsData } = await supabase
@@ -607,15 +662,17 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       let view: any
       let viewError: any
 
-      // Agora só atualizamos se o ID for explicitamente passado (modo edição) 
-      // ou se o Slug já existir. Não tentamos mais "adivinhar" pelo modelo para não sobrescrever telas diferentes.
-      const targetId = isEditMode ? viewId : existingBySlug?.id
+      if (existingBySlug && (!initialData || existingBySlug.id !== initialData.id)) {
+        toast("Já existe um caso de uso com este slug neste projeto.", 'error')
+        setIsSaving(false)
+        return
+      }
 
-      if (targetId) {
+      if (initialData) {
         const { data, error } = await supabase
           .from('ui_views')
           .update(viewPayload)
-          .eq('id', targetId)
+          .eq('id', initialData.id)
           .select()
           .single()
         view = data
@@ -631,6 +688,11 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       }
 
       if (viewError) throw viewError
+
+      // Se for um novo, atualiza a URL sem recarregar para entrar no modo de edição
+      if (!initialData && view) {
+         window.history.replaceState(null, '', `/admin/${workspace_slug}/${project_slug}/studio/builder?id=${view.id}`)
+      }
 
       // 2. Limpar componentes antigos desta view
       await supabase.from('ui_components').delete().eq('view_id', view.id)
@@ -717,14 +779,50 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
 
           {canCreate && (
             <div className="flex items-center gap-4">
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-95"
-              >
-                {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                {isSaving ? (initialData ? t('wizard.buttons.updating') : t('wizard.buttons.saving')) : (initialData ? t('wizard.buttons.update') : t('wizard.buttons.finish'))}
-              </button>
+              {initialData && (
+                <>
+                  <div className={cn(
+                    "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                    currentStatus === 'delivered' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                    currentStatus === 'reopened' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                    'bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-800 dark:border-neutral-700'
+                  )}>
+                    {currentStatus === 'delivered' ? 'Entregue' : currentStatus === 'reopened' ? 'Reaberto' : 'Rascunho'}
+                  </div>
+
+                  {currentStatus !== 'delivered' && (
+                    <button
+                      onClick={() => handleUpdateStatus('delivered')}
+                      disabled={isSaving}
+                      className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20 disabled:opacity-50 active:scale-95"
+                    >
+                      🚀 Entregar
+                    </button>
+                  )}
+
+                  {currentStatus === 'delivered' && (
+                    <button
+                      onClick={() => handleUpdateStatus('reopened')}
+                      disabled={isSaving}
+                      className="flex items-center gap-2 px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-amber-500/20 disabled:opacity-50 active:scale-95"
+                    >
+                      🔓 Reabrir
+                    </button>
+                  )}
+                </>
+              )}
+
+              {/* Só permite salvar se não estiver Entregue */}
+              {currentStatus !== 'delivered' && (
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-95"
+                >
+                  {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                  {isSaving ? (initialData ? t('wizard.buttons.updating') : t('wizard.buttons.saving')) : (initialData ? t('wizard.buttons.update') : t('wizard.buttons.finish'))}
+                </button>
+              )}
             </div>
           )}
         </div>
