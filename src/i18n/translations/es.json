@@ -836,6 +836,38 @@
           "behavior": "Sincroniza referencias de archivos almacenados en el bucket (storage) con registros de la base, ofreciendo descarga segura y preview nativo.",
           "example": "Central de documentos de clientes, biblioteca de imágenes de productos, o galería de comprobantes de pago.",
           "components": "Cuadrícula de tarjetas de asset con vista previa, filtros por extensión/categoría, lightbox de imagen en pantalla completa y botón de descarga."
+        },
+        "timeline": {
+          "title": "Línea de Tiempo / Feed",
+          "desc": "Visualice registros en un orden cronológico basado en fechas.",
+          "what_is": "Un diseño de flujo cronológico ideal para logs de auditoria, feeds de actividad o historial de actualizaciones.",
+          "behavior": "Ordena los registros dinámicamente basándose en una columna de fecha/hora de la base de dados y los renderiza en un feed vertical.",
+          "example": "Feeds de actividad de usuarios, historial de cambios de ofertas o registros de auditoría de seguridad.",
+          "components": "Feed vertical con línea de unión, nodos de eventos estilizados por tipo, orden cronológico inverso y buscador de eventos."
+        },
+        "gantt": {
+          "title": "Gráfico de Gantt",
+          "desc": "Gestione cronogramas y proyectos con un gráfico de barras interactivo.",
+          "what_is": "Una vista de barras de tiempo para planificar cronogramas, dependencias de tareas y progreso de proyectos.",
+          "behavior": "Mapea las fechas de inicio, fin y progreso de los registros de la base para renderizar barras horizontales de tiempo dinámicas.",
+          "example": "Planificación de desarrollo de software, planificación de eventos corporativos o gestión de fases de obras.",
+          "components": "Línea de tiempo por semanas/meses, barras de tareas ajustables, indicadores de progreso y lista lateral de tareas."
+        },
+        "blueprint": {
+          "title": "Diagrama de Flujo (Blueprint)",
+          "desc": "Mapee processos y flujos de trabajo interconectados dinámicamente.",
+          "what_is": "Una interfaz gráfica de diagramas para modelar flujos de trabajo, etapas de aprobación o lógicas de negocio.",
+          "behavior": "Analiza las relaciones de transición y los nodos del sistema para dibujar un diagrama de flujo interactivo con líneas conectadas.",
+          "example": "Flujos de aprobación de propuestas comerciales, procesos internos de compras o escalamiento de tickets de soporte.",
+          "components": "Canvas interactivo de dibujo, tarjetas de nodo personalizables, líneas de enlace inteligentes y disparadores de acciones."
+        },
+        "map": {
+          "title": "Vista de Mapa (Geospatial)",
+          "desc": "Visualice registros mediante marcadores y coordenadas interactivas en el mapa.",
+          "what_is": "Una interfaz cartográfica integrada para localizar activos, clientes, tiendas o vehículos que tienen coordenadas en la base de datos.",
+          "behavior": "Lee columnas de coordenadas geográficas y coloca marcadores georreferenciados en un mapa interactivo con soporte para filtros.",
+          "example": "Mapas de sucursales, ubicación de operarios de campo en tiempo real o geolocalización de envíos.",
+          "components": "Mapa interactivo (Leaflet), marcadores de estado personalizados, globos de información (popups) y filtros por zona geográfica."
         }
       }
     }

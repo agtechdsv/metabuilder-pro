@@ -25,6 +25,7 @@ import {
   BarChart3,
   Zap,
   Activity,
+  Check,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
@@ -392,6 +393,14 @@ function MiniBarChart({ data }: { data: { label: string; count: number; color: s
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+const CANCELLATION_REASONS = [
+  { id: 'preco_alto', label: 'PREÇO MUITO ALTO' },
+  { id: 'dificuldade_uso', label: 'DIFICULDADE DE USO' },
+  { id: 'falta_recursos', label: 'FALTA DE RECURSOS / CONEXÕES' },
+  { id: 'mudanca_estrategia', label: 'MUDANÇA DE ESTRATÉGIA / NÃO PRECISO' },
+  { id: 'outro', label: 'OUTRO MOTIVO' },
+] as const
+
 const TABS = [
   { id: 'dashboard', label: 'Dashboard BI', icon: BarChart3 },
   { id: 'productivity', label: 'Produtividade', icon: Activity },
@@ -417,6 +426,11 @@ export default function ClientDashboardClient({
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [selectedLog, setSelectedLog] = useState<any>(null)
   const [localProfile, setLocalProfile] = useState(profile)
+  
+  // Cancellation feedback states
+  const [selectedReasons, setSelectedReasons] = useState<string[]>([])
+  const [cancellationComment, setCancellationComment] = useState('')
+  const [cancellationError, setCancellationError] = useState<string | null>(null)
   
   // Filters for Productivity Tab
   const [prodFilterProject, setProdFilterProject] = useState<string>('all')
@@ -514,6 +528,23 @@ export default function ClientDashboardClient({
     setIsCanceling(true)
     try {
       const supabase = createClient()
+
+      // Save feedback in Supabase first
+      const { error: dbError } = await supabase.from('cancellation_feedbacks').insert({
+        user_id: localProfile?.id || null,
+        workspace_id: workspaces[0].id,
+        reasons: selectedReasons.map(r => {
+          const found = CANCELLATION_REASONS.find(cr => cr.id === r)
+          return found ? found.label : r
+        }),
+        comment: cancellationComment || null,
+        subscription_id: localProfile?.asaas_subscription_id || null
+      })
+      
+      if (dbError) {
+        console.error('Erro ao salvar feedback de cancelamento:', dbError)
+      }
+
       const { data, error } = await supabase.functions.invoke('asaas-cancel', {
         body: { workspaceId: workspaces[0].id },
       })
@@ -1087,64 +1118,110 @@ export default function ClientDashboardClient({
               ) : (
                 /* Can cancel */
                 <>
-                  {/* What happens card */}
-                  <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-8 shadow-sm">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
-                        <XCircle className="w-5 h-5" />
+                  {/* Cancellation Form Card */}
+                  <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-8 shadow-sm space-y-6">
+                    <div className="text-center space-y-2 mb-6">
+                      <div className="w-12 h-12 bg-rose-500/10 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-2">
+                        <XCircle className="w-6 h-6" />
                       </div>
-                      <h3 className="text-lg font-bold text-neutral-900 dark:text-white">Cancelar Renovação Automática</h3>
-                    </div>
-
-                    <div className="space-y-4 mb-8">
-                      <div className="flex gap-3 items-start">
-                        <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
-                          <span className="text-[10px] font-black">1</span>
-                        </div>
-                        <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
-                          Ao cancelar, <strong>você não perderá acesso imediatamente</strong>. Seu workspace continuará ativo até o final do período já pago: <strong className="text-neutral-900 dark:text-white">{formatDate(localProfile?.subscription_expires_at)}</strong>.
-                        </p>
-                      </div>
-                      <div className="flex gap-3 items-start">
-                        <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
-                          <span className="text-[10px] font-black">2</span>
-                        </div>
-                        <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
-                          Após essa data, o acesso aos recursos pagos será suspenso. Você e sua equipe não poderão criar nem visualizar projetos.
-                        </p>
-                      </div>
-                      <div className="flex gap-3 items-start">
-                        <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                          <span className="text-[10px] font-black">3</span>
-                        </div>
-                        <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
-                          Seus dados ficam preservados. Caso mude de ideia, basta contratar um novo plano para reativar o acesso.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Security note */}
-                    <div className="p-4 bg-neutral-50 dark:bg-neutral-950 rounded-2xl border border-neutral-100 dark:border-neutral-800 flex items-start gap-3 mb-6">
-                      <Shield className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                        As assinaturas são geridas com segurança via Asaas. O cancelamento é processado automaticamente e você receberá uma confirmação.
+                      <h3 className="text-xl font-black text-neutral-900 dark:text-white tracking-tight">
+                        DESEJA REALMENTE CANCELAR SUA ASSINATURA?
+                      </h3>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-lg mx-auto leading-relaxed">
+                        Ao cancelar, seu acesso continuará ativo até o final do período já pago ({formatDate(localProfile?.subscription_expires_at)}). Após essa data, o acesso aos recursos do workspace será suspenso, mas seus dados permanecerão preservados.
                       </p>
                     </div>
 
-                    <div className="flex gap-4">
+                    {/* Motivos Checklist */}
+                    <div className="space-y-3">
+                      <p className="text-[11px] font-black tracking-widest text-rose-500 uppercase">
+                        Motivo do cancelamento?
+                      </p>
+                      
+                      <div className="grid grid-cols-1 gap-2.5">
+                        {CANCELLATION_REASONS.map((reason) => {
+                          const isSelected = selectedReasons.includes(reason.id)
+                          return (
+                            <button
+                              key={reason.id}
+                              type="button"
+                              onClick={() => {
+                                setCancellationError(null)
+                                setSelectedReasons(prev =>
+                                  prev.includes(reason.id)
+                                    ? prev.filter(id => id !== reason.id)
+                                    : [...prev, reason.id]
+                                )
+                              }}
+                              className={cn(
+                                'w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all duration-200 border',
+                                isSelected
+                                  ? 'bg-rose-500/5 dark:bg-rose-500/10 border-rose-500 text-rose-600 dark:text-rose-400'
+                                  : 'bg-neutral-50 dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900'
+                              )}
+                            >
+                              <span className="text-xs font-bold tracking-wide">{reason.label}</span>
+                              <div
+                                className={cn(
+                                  'w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-all duration-200',
+                                  isSelected
+                                    ? 'border-rose-500 bg-rose-500 text-white'
+                                    : 'border-neutral-300 dark:border-neutral-700 bg-transparent'
+                                )}
+                              >
+                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Textarea */}
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-black tracking-widest text-rose-500 uppercase leading-relaxed">
+                        Nos conte um pouco mais sobre o motivo do seu cancelamento e como podemos melhorar nossos serviços
+                      </p>
+                      <textarea
+                        value={cancellationComment}
+                        onChange={(e) => setCancellationComment(e.target.value)}
+                        placeholder="Escreva sua resposta aqui (opcional)..."
+                        rows={4}
+                        className="w-full rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 p-4 text-sm text-neutral-800 dark:text-neutral-200 placeholder-neutral-400 dark:placeholder-neutral-600 focus:border-rose-500 focus:outline-none transition-colors resize-none"
+                      />
+                    </div>
+
+                    {cancellationError && (
+                      <p className="text-xs font-bold text-rose-500 text-center">{cancellationError}</p>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-neutral-150 dark:border-neutral-800">
                       <button
-                        onClick={() => setActiveTab('subscription')}
-                        className="flex-1 px-4 py-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white text-sm font-bold rounded-2xl transition-colors"
+                        onClick={() => {
+                          setSelectedReasons([])
+                          setCancellationComment('')
+                          setCancellationError(null)
+                          setActiveTab('subscription')
+                        }}
+                        className="flex-1 px-4 py-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white text-xs font-bold rounded-xl transition-colors order-2 sm:order-1"
                       >
                         Manter Assinatura
                       </button>
                       {canCancel && (
                         <button
                           id="client-cancel-subscription-btn"
-                          onClick={() => setShowCancelModal(true)}
-                          className="flex-1 px-4 py-3 bg-rose-500/10 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-200 dark:border-rose-500/30 dark:hover:border-rose-600 text-sm font-bold rounded-2xl transition-all"
+                          onClick={() => {
+                            if (selectedReasons.length === 0) {
+                              setCancellationError('Por favor, selecione pelo menos um motivo de cancelamento.')
+                              return
+                            }
+                            setShowCancelModal(true)
+                          }}
+                          className="flex-1 px-4 py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 order-1 sm:order-2"
                         >
-                          Cancelar Renovação
+                          <Zap className="w-4 h-4 fill-white" />
+                          Continuar Cancelamento
                         </button>
                       )}
                     </div>

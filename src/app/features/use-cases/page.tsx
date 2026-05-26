@@ -27,12 +27,16 @@ import {
   Image as ImageIcon,
   Download,
   ExternalLink,
-  Eye
+  Eye,
+  History,
+  MapPin,
+  GitBranch
 } from 'lucide-react'
 import Link from 'next/link'
 import { useI18n } from '@/i18n/I18nContext'
+import { cn } from '@/lib/utils'
 
-type UseCaseType = 'cadastro' | 'pesquisa' | 'pesquisa_cadastro' | 'master_detail' | 'kanban' | 'mapa_mental' | 'dashboard' | 'agenda' | 'personalizado' | 'galeria'
+type UseCaseType = 'cadastro' | 'pesquisa' | 'pesquisa_cadastro' | 'master_detail' | 'kanban' | 'mapa_mental' | 'dashboard' | 'agenda' | 'personalizado' | 'galeria' | 'timeline' | 'gantt' | 'blueprint' | 'map'
 
 export default function UseCasesFeaturePage() {
   const { t } = useI18n()
@@ -268,16 +272,27 @@ export default function UseCasesFeaturePage() {
   )
 
   const useCasesList: { id: UseCaseType; icon: React.ReactNode; color: string }[] = [
-    { id: 'pesquisa_cadastro', icon: <Layers className="w-5 h-5" />, color: 'from-indigo-500 to-indigo-600' },
-    { id: 'cadastro', icon: <UserPlus className="w-5 h-5" />, color: 'from-emerald-500 to-emerald-600' },
+    // 1. Gestão de Dados e Cadastros
     { id: 'pesquisa', icon: <Search className="w-5 h-5" />, color: 'from-cyan-500 to-cyan-600' },
+    { id: 'cadastro', icon: <UserPlus className="w-5 h-5" />, color: 'from-emerald-500 to-emerald-600' },
+    { id: 'pesquisa_cadastro', icon: <Layers className="w-5 h-5" />, color: 'from-indigo-500 to-indigo-600' },
     { id: 'master_detail', icon: <Layout className="w-5 h-5" />, color: 'from-purple-500 to-purple-600' },
+    
+    // 2. Projetos, Prazos e Cronogramas
     { id: 'kanban', icon: <KanbanIcon className="w-5 h-5" />, color: 'from-orange-500 to-orange-600' },
-    { id: 'mapa_mental', icon: <GitFork className="w-5 h-5" />, color: 'from-pink-500 to-pink-600' },
-    { id: 'dashboard', icon: <BarChart3 className="w-5 h-5" />, color: 'from-blue-500 to-blue-600' },
+    { id: 'timeline', icon: <History className="w-5 h-5" />, color: 'from-violet-500 to-violet-600' },
+    { id: 'gantt', icon: <Calendar className="w-5 h-5" />, color: 'from-sky-500 to-sky-600' },
     { id: 'agenda', icon: <Calendar className="w-5 h-5" />, color: 'from-teal-500 to-teal-600' },
-    { id: 'personalizado', icon: <Terminal className="w-5 h-5" />, color: 'from-amber-500 to-amber-600' },
+    
+    // 3. Mapeamento, Fluxos e Espacial
+    { id: 'blueprint', icon: <GitBranch className="w-5 h-5" />, color: 'from-purple-500 to-indigo-600' },
+    { id: 'mapa_mental', icon: <GitFork className="w-5 h-5" />, color: 'from-pink-500 to-pink-600' },
+    { id: 'map', icon: <MapPin className="w-5 h-5" />, color: 'from-blue-500 to-cyan-600' },
+    
+    // 4. Inteligência, Mídia e Outros
+    { id: 'dashboard', icon: <BarChart3 className="w-5 h-5" />, color: 'from-blue-500 to-blue-600' },
     { id: 'galeria', icon: <LayoutGrid className="w-5 h-5" />, color: 'from-rose-500 to-pink-600' },
+    { id: 'personalizado', icon: <Terminal className="w-5 h-5" />, color: 'from-amber-500 to-amber-600' },
   ]
 
   return (
@@ -2019,6 +2034,246 @@ export default function UseCasesFeaturePage() {
                   </motion.div>
                 )}
 
+                {/* 10. TIMELINE / FEED MOCKUP */}
+                {selectedType === 'timeline' && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="space-y-6"
+                  >
+                    <div className="flex items-center justify-between bg-white dark:bg-neutral-950 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
+                      <span className="text-xs font-bold text-neutral-800 dark:text-white">
+                        Histórico de Auditoria
+                      </span>
+                      <span className="px-2.5 py-1 bg-violet-500/10 text-violet-500 text-[10px] font-black rounded-full uppercase tracking-wider">
+                        Real-time Feed
+                      </span>
+                    </div>
+
+                    <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-neutral-200 dark:before:bg-neutral-850">
+                      {[
+                        { time: 'Hoje, 18:30', title: 'Caso de Uso Publicado', desc: 'O desenvolvedor João entregou a tela "Gestão de Contratos".', type: 'success' },
+                        { time: 'Hoje, 15:45', title: 'Integração Estabelecida', desc: 'Conexão via Túnel Seguro estabelecida com o banco Postgres de produção.', type: 'info' },
+                        { time: 'Ontem, 10:15', title: 'Alteração de Permissões', desc: 'Permissões do usuário Maria Santos alteradas para Administrador.', type: 'warning' },
+                        { time: '24 Mai, 14:00', title: 'Novo Integrador Adicionado', desc: 'Webhook configurado para disparar eventos para o Asaas.', type: 'default' }
+                      ].map((item, idx) => (
+                        <div key={idx} className="relative group">
+                          {/* Timeline node dot */}
+                          <div className={cn(
+                            "absolute -left-[22px] top-1.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-neutral-950 transition-transform group-hover:scale-125",
+                            item.type === 'success' ? 'bg-emerald-500' :
+                            item.type === 'info' ? 'bg-blue-500' :
+                            item.type === 'warning' ? 'bg-amber-500' : 'bg-neutral-450'
+                          )} />
+                          
+                          <div 
+                            onClick={() => triggerToast(`Visualizando: ${item.title}`)}
+                            className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer text-left space-y-1"
+                          >
+                            <span className="text-[10px] font-bold text-neutral-400 font-mono">{item.time}</span>
+                            <h5 className="text-xs font-bold text-neutral-850 dark:text-white">{item.title}</h5>
+                            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-normal">{item.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* 11. GANTT CHART MOCKUP */}
+                {selectedType === 'gantt' && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="space-y-6"
+                  >
+                    <div className="flex items-center justify-between bg-white dark:bg-neutral-950 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
+                      <span className="text-xs font-bold text-neutral-800 dark:text-white">
+                        Cronograma de Implementação
+                      </span>
+                      <span className="px-2.5 py-1 bg-sky-500/10 text-sky-500 text-[10px] font-black rounded-full uppercase tracking-wider">
+                        Gantt Chart
+                      </span>
+                    </div>
+
+                    <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden shadow-sm p-4 space-y-4">
+                      {/* Gantt Header timeline */}
+                      <div className="grid grid-cols-12 text-center text-[9px] font-black text-neutral-400 uppercase tracking-widest border-b border-neutral-100 dark:border-neutral-800/80 pb-2">
+                        <span className="col-span-4 text-left">Tarefa</span>
+                        <span className="col-span-2">S1</span>
+                        <span className="col-span-2">S2</span>
+                        <span className="col-span-2">S3</span>
+                        <span className="col-span-2">S4</span>
+                      </div>
+
+                      {/* Gantt Rows */}
+                      <div className="space-y-3.5">
+                        {[
+                          { task: 'Mapeamento SQL', start: 0, width: 3, progress: '100%', color: 'from-sky-500 to-sky-600' },
+                          { task: 'Configuração RLS', start: 2, width: 4, progress: '80%', color: 'from-indigo-500 to-indigo-600' },
+                          { task: 'Integração de APIs', start: 5, width: 5, progress: '40%', color: 'from-purple-500 to-purple-600' },
+                          { task: 'Homologação final', start: 9, width: 3, progress: '0%', color: 'from-neutral-450 to-neutral-500' }
+                        ].map((row, idx) => (
+                          <div 
+                            key={idx} 
+                            onClick={() => triggerToast(`Progresso de ${row.task}: ${row.progress}`)}
+                            className="grid grid-cols-12 items-center text-xs group cursor-pointer"
+                          >
+                            <span className="col-span-4 font-bold text-neutral-800 dark:text-neutral-200 truncate pr-2">{row.task}</span>
+                            
+                            {/* Gantt Bar Lane */}
+                            <div className="col-span-8 grid grid-cols-8 gap-0 h-7 bg-neutral-50 dark:bg-neutral-900/60 rounded-xl relative overflow-hidden border border-neutral-150 dark:border-neutral-850">
+                              <div 
+                                className={cn(
+                                  "h-full rounded-lg bg-gradient-to-r relative flex items-center pl-2 group-hover:brightness-105 transition-all shadow-sm",
+                                  row.color
+                                )}
+                                style={{
+                                  gridColumnStart: row.start + 1,
+                                  gridColumnEnd: row.start + row.width + 1
+                                }}
+                              >
+                                <span className="text-[8px] font-black text-white uppercase tracking-widest">{row.progress}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* 12. FLUXOGRAMA (BLUEPRINT) MOCKUP */}
+                {selectedType === 'blueprint' && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="space-y-6"
+                  >
+                    <div className="flex items-center justify-between bg-white dark:bg-neutral-950 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
+                      <span className="text-xs font-bold text-neutral-800 dark:text-white">
+                        Fluxo de Aprovação de Proposta
+                      </span>
+                      <span className="px-2.5 py-1 bg-indigo-500/10 text-indigo-500 text-[10px] font-black rounded-full uppercase tracking-wider">
+                        Workflow Canvas
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-3xl aspect-[4/3] relative overflow-hidden p-6 flex flex-col items-center justify-between">
+                      {/* Connection arrows using SVG */}
+                      <svg className="w-full h-full absolute inset-0 pointer-events-none" viewBox="0 0 400 300">
+                        {/* Node 1 to Node 2 */}
+                        <line x1="200" y1="65" x2="200" y2="120" stroke="#818cf8" strokeWidth="2.5" />
+                        {/* Arrowhead Node 1 to 2 */}
+                        <polygon points="200,123 196,115 204,115" fill="#818cf8" />
+                        
+                        {/* Node 2 to Node 3 (Aprovado) */}
+                        <path d="M 150 145 L 85 145 L 85 200" fill="none" stroke="#10b981" strokeWidth="2.5" />
+                        <polygon points="85,203 81,195 89,195" fill="#10b981" />
+
+                        {/* Node 2 to Node 4 (Rejeitado) */}
+                        <path d="M 250 145 L 315 145 L 315 200" fill="none" stroke="#f43f5e" strokeWidth="2.5" />
+                        <polygon points="315,203 311,195 319,195" fill="#f43f5e" />
+                      </svg>
+
+                      {/* Nodes */}
+                      <div className="relative w-full h-full">
+                        {/* Node 1: Start */}
+                        <div 
+                          onClick={() => triggerToast('Nó: Criação de Proposta')}
+                          className="absolute left-1/2 -translate-x-1/2 top-4 px-4 py-2.5 bg-indigo-505 text-white rounded-2xl shadow-md cursor-pointer hover:scale-105 transition-transform text-xs font-bold text-center z-10"
+                        >
+                          📝 1. Proposta Criada
+                        </div>
+
+                        {/* Node 2: Decision */}
+                        <div 
+                          onClick={() => triggerToast('Nó de Decisão: Revisão do Gestor')}
+                          className="absolute left-1/2 -translate-x-1/2 top-28 px-5 py-3 bg-white dark:bg-neutral-900 border-2 border-indigo-500 text-neutral-800 dark:text-neutral-200 rounded-2xl shadow-lg cursor-pointer hover:scale-105 transition-transform text-xs font-black text-center z-10"
+                        >
+                          ⚖️ 2. Revisão do Gestor
+                        </div>
+
+                        {/* Node 3: Approved */}
+                        <div 
+                          onClick={() => triggerToast('Ação: Proposta Aprovada')}
+                          className="absolute left-6 bottom-8 px-4 py-2.5 bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500 text-emerald-600 dark:text-emerald-400 rounded-2xl shadow-sm cursor-pointer hover:scale-105 transition-transform text-xs font-bold text-center z-10"
+                        >
+                          ✅ 3. Aprovada e Enviada
+                        </div>
+
+                        {/* Node 4: Rejected */}
+                        <div 
+                          onClick={() => triggerToast('Ação: Proposta Rejeitada')}
+                          className="absolute right-6 bottom-8 px-4 py-2.5 bg-rose-500/10 dark:bg-rose-500/20 border border-rose-500 text-rose-600 dark:text-rose-450 rounded-2xl shadow-sm cursor-pointer hover:scale-105 transition-transform text-xs font-bold text-center z-10"
+                        >
+                          ❌ 4. Devolvida para Ajustes
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* 13. VISÃO DE MAPA MOCKUP */}
+                {selectedType === 'map' && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="space-y-6"
+                  >
+                    <div className="flex items-center justify-between bg-white dark:bg-neutral-950 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
+                      <span className="text-xs font-bold text-neutral-800 dark:text-white">
+                        Geolocalização de Operadores
+                      </span>
+                      <span className="px-2.5 py-1 bg-blue-500/10 text-blue-500 text-[10px] font-black rounded-full uppercase tracking-wider">
+                        Map View (Leaflet)
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-[#e8ecef] dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] aspect-[4/3] relative overflow-hidden shadow-inner flex items-center justify-center">
+                      {/* Map Background Image */}
+                      <img 
+                        src="/map_background.png" 
+                        alt="Map Background" 
+                        className="absolute inset-0 w-full h-full object-cover opacity-60 dark:opacity-30 mix-blend-multiply dark:mix-blend-normal pointer-events-none"
+                      />
+                      {/* Map Background grid grid layout to simulate streets */}
+                      <div className="absolute inset-0 opacity-15 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
+                      
+                      {/* Map Pins */}
+                      <div className="relative w-full h-full">
+                        {[
+                          { name: 'Filial São Paulo (Matriz)', operators: 12, top: '25%', left: '40%' },
+                          { name: 'Filial Rio de Janeiro', operators: 8, top: '60%', left: '75%' },
+                          { name: 'CD Campinas', operators: 4, top: '45%', left: '20%' }
+                        ].map((pin, idx) => (
+                          <div 
+                            key={idx}
+                            style={{ top: pin.top, left: pin.left }}
+                            className="absolute group z-10"
+                          >
+                            {/* Animated Pin dot */}
+                            <div 
+                              onClick={() => triggerToast(`${pin.name}: ${pin.operators} operadores`)}
+                              className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg cursor-pointer hover:scale-125 transition-transform relative border-2 border-white dark:border-neutral-950"
+                            >
+                              <MapPin className="w-4 h-4" />
+                              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 text-[8px] font-black rounded-full flex items-center justify-center text-white ring-1 ring-white">
+                                {pin.operators}
+                              </span>
+                            </div>
+                            
+                            {/* Hover info tooltip */}
+                            <div className="absolute top-8 left-1/2 -translate-x-1/2 bg-neutral-900 text-white text-[9px] font-black px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-md pointer-events-none whitespace-nowrap">
+                              {pin.name}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
               </div>
               
               {/* Interactive Help Hint */}
@@ -2030,6 +2285,77 @@ export default function UseCasesFeaturePage() {
             </div>
 
           </div>
+
+          {/* Details Card */}
+          <motion.div 
+            key={`details-${selectedType}`}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mt-6 p-6 sm:p-8 rounded-[2.5rem] bg-white dark:bg-neutral-950/40 border border-neutral-200 dark:border-neutral-850 shadow-lg space-y-6"
+          >
+            <div className="border-b border-neutral-100 dark:border-neutral-800/85 pb-4">
+              <h4 className="text-sm font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+                Especificações Técnicas
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-left">
+              
+              {/* O que é */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                  <Sparkles className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase tracking-wider">
+                    {t('marketing_v2.use_cases_page.what_is')}
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-600 dark:text-neutral-350 leading-relaxed font-medium">
+                  {t(`marketing_v2.use_cases_page.items.${selectedType}.what_is`)}
+                </p>
+              </div>
+
+              {/* Comportamento da Engine */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
+                  <Terminal className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase tracking-wider">
+                    {t('marketing_v2.use_cases_page.engine_behavior')}
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-600 dark:text-neutral-350 leading-relaxed font-medium">
+                  {t(`marketing_v2.use_cases_page.items.${selectedType}.behavior`)}
+                </p>
+              </div>
+
+              {/* Exemplo Prático */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                  <Play className="w-4 h-4 fill-current" />
+                  <span className="text-[10px] font-black uppercase tracking-wider">
+                    {t('marketing_v2.use_cases_page.practical_example')}
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-600 dark:text-neutral-350 leading-relaxed font-medium">
+                  {t(`marketing_v2.use_cases_page.items.${selectedType}.example`)}
+                </p>
+              </div>
+
+              {/* Componentes Gerados */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-pink-600 dark:text-pink-400">
+                  <Layout className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase tracking-wider">
+                    {t('marketing_v2.use_cases_page.mapped_components')}
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-600 dark:text-neutral-350 leading-relaxed font-medium">
+                  {t(`marketing_v2.use_cases_page.items.${selectedType}.components`)}
+                </p>
+              </div>
+
+            </div>
+          </motion.div>
         </div>
 
       </section>

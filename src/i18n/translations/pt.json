@@ -836,6 +836,38 @@
           "behavior": "Sincroniza referências de arquivos armazenados no bucket (storage) com registros do banco, oferecendo download seguro e preview nativo.",
           "example": "Central de documentos de clientes, biblioteca de imagens de produtos, ou galeria de comprovantes de pagamento.",
           "components": "Grid de cartões de asset com preview, filtros por extensão/categoria, lightbox de imagem em tela cheia e botão de download."
+        },
+        "timeline": {
+          "title": "Linha do Tempo / Feed",
+          "desc": "Visualize registros em uma ordem cronológica baseada em datas.",
+          "what_is": "Uma visualização em fluxo cronológico ideal para logs de auditoria, feeds de atividade ou histórico de atualizações.",
+          "behavior": "Ordena os registros dinamicamente baseando-se em uma coluna de timestamp/data e renderiza em formato de feed vertical com agrupamento por datas.",
+          "example": "Feed de atividades de usuários, histórico de alterações de propostas ou log de auditoria de segurança.",
+          "components": "Feed vertical com linha de conexão, nós de evento estilizados por tipo, ordenação cronológica reversa e busca de eventos."
+        },
+        "gantt": {
+          "title": "Gráfico de Gantt",
+          "desc": "Gerencie cronogramas e projetos com um gráfico de barras interativo.",
+          "what_is": "Uma visualização baseada em barras de tempo para planejar cronogramas, dependências e progresso de tarefas de projetos.",
+          "behavior": "Mapeia as datas de início, fim e porcentagem de conclusão dos registros no banco para renderizar faixas horizontais de tempo dinâmicas.",
+          "example": "Cronograma de desenvolvimento de software, planejamento de eventos corporativos ou gestão de etapas de obras.",
+          "components": "Linha do tempo por semanas/meses, barras de tarefa arrastáveis, indicadores de progresso integrados e listagem lateral de tarefas."
+        },
+        "blueprint": {
+          "title": "Fluxograma (Blueprint)",
+          "desc": "Mapeie processos e fluxos de trabalho interligados dinamicamente.",
+          "what_is": "Uma interface de diagramação para modelar fluxos lógicos, esteiras de aprovação ou caminhos de decisão do negócio.",
+          "behavior": "Analisa relações de transição e nós no banco de dados para renderizar um fluxograma interativo conectado por linhas e setas de fluxo dinâmicas.",
+          "example": "Esteira de aprovação de propostas comerciais, mapeamento de processos internos de compras ou fluxos de tickets de suporte.",
+          "components": "Canvas interativo, caixas de nós customizáveis, setas direcionais inteligentes, legendas de status e triggers de ação rápida."
+        },
+        "map": {
+          "title": "Visão de Mapa (Geospatial)",
+          "desc": "Visualize registros através de marcadores e coordenadas interativas no mapa.",
+          "what_is": "Uma interface cartográfica integrada para localizar ativos, clientes, filiais ou frotas que possuem latitude e longitude no banco de dados.",
+          "behavior": "Lê colunas de coordenadas geográficas e plota marcadores georreferenciados dinamicamente em um mapa interativo com suporte a filtros.",
+          "example": "Mapa de distribuição de filiais, localização de operadores de campo em tempo real ou geolocalização de entregas.",
+          "components": "Mapa interativo (Leaflet), marcadores customizáveis por tipo, balões de informações (popups) e busca/filtros por região."
         }
       }
     }

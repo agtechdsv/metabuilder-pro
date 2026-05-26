@@ -836,6 +836,38 @@
           "behavior": "Synchronizes file references stored in a bucket (storage) with database records, providing secure download and native previews.",
           "example": "Customer documents center, product images library, or payment receipts gallery.",
           "components": "Asset cards grid with preview, extension/category filters, full-screen image lightbox, and download button."
+        },
+        "timeline": {
+          "title": "Timeline / Feed",
+          "desc": "Visualize records in a chronological order based on dates.",
+          "what_is": "A chronological stream layout ideal for audit logs, activity feeds, or tracking update histories.",
+          "behavior": "Dynamically sorts records using a date/timestamp database column and renders them into a vertical feed grouped by dates.",
+          "example": "User activity feeds, proposal edit history tracking, or security auditing logs.",
+          "components": "Vertical feed with linking line, event nodes styled by action type, reverse chronological ordering, and event search."
+        },
+        "gantt": {
+          "title": "Gantt Chart",
+          "desc": "Manage schedules and projects with an interactive bar chart.",
+          "what_is": "A timeline-based bar chart view to plan schedules, track task progress, and manage project milestones.",
+          "behavior": "Maps start dates, end dates, and completion percentages from database records to render dynamic horizontal time bars.",
+          "example": "Software development roadmap planning, corporate event schedules, or construction phase planning.",
+          "components": "Weekly/monthly timeline grids, drag-resizable task bars, integrated progress indicators, and sidebar task list."
+        },
+        "blueprint": {
+          "title": "Flowchart (Blueprint)",
+          "desc": "Map processes and workflows interconnected dynamically.",
+          "what_is": "A diagramming interface to model logic flows, business approvals, or decision-making pipelines.",
+          "behavior": "Inspects transition relations and nodes in the database to render an interactive flowchart connected by directional arrows.",
+          "example": "Commercial proposal approval flows, internal purchase order processes, or support ticket escalation workflows.",
+          "components": "Interactive canvas, custom node cards, smart connector lines, status legends, and quick action triggers."
+        },
+        "map": {
+          "title": "Map View (Geospatial)",
+          "desc": "Visualize records using interactive markers and coordinates on the map.",
+          "what_is": "An integrated cartographic view to locate assets, clients, store branches, or vehicles having latitude and longitude fields.",
+          "behavior": "Queries geospatial coordinate columns and dynamically plots georeferenced markers on an interactive map with filtering options.",
+          "example": "Branch distribution maps, real-time field operator locations, or delivery tracking points.",
+          "components": "Interactive map (Leaflet), customized status pins, popup details cards, and region-based search filters."
         }
       }
     }
