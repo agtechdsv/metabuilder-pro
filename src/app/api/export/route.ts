@@ -29,8 +29,15 @@ export async function POST(request: Request) {
       )
     }
 
+    // Fetch project slug for the filename
+    const { data: projData } = await supabase.from('projects').select('slug').eq('id', projectId).single()
+    const projectSlug = projData?.slug || 'projeto'
+
     // 1. Insert the pending job record in database
-    const cleanFileName = `export_${viewName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_pending.${fileType}`
+    const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14)
+    const ms = Date.now().toString().slice(-4)
+    const cleanViewName = viewName.toLowerCase().replace(/[^a-z0-9]/g, '_')
+    const cleanFileName = `${workspaceSlug}_${projectSlug}_${cleanViewName}_${timestamp}${ms}_pending.${fileType}`
     const { data: jobData, error: jobError } = await supabase
       .from('download_jobs')
       .insert({

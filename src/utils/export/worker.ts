@@ -69,17 +69,37 @@ async function broadcastProgress(projectId: string, payload: {
     
     const channel = supabase.channel(channelName)
     
-    // Subscribe and send
-    await new Promise<void>((resolve) => {
+    // Subscribe and send with timeout
+    await new Promise<void>((resolve, reject) => {
+      let isDone = false
+      const timeout = setTimeout(() => {
+        if (!isDone) {
+          isDone = true
+          supabase.removeChannel(channel)
+          resolve() // resolve anyway to not crash the worker
+        }
+      }, 5000)
+
       channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
+        if (status === 'SUBSCRIBED' && !isDone) {
           channel.send({
             type: 'broadcast',
             event: 'download_progress',
             payload
           }).then(() => {
-            supabase.removeChannel(channel)
-            resolve()
+            if (!isDone) {
+              isDone = true
+              clearTimeout(timeout)
+              supabase.removeChannel(channel)
+              resolve()
+            }
+          }).catch(() => {
+            if (!isDone) {
+              isDone = true
+              clearTimeout(timeout)
+              supabase.removeChannel(channel)
+              resolve()
+            }
           })
         }
       })
@@ -303,6 +323,8 @@ export async function executeExportBackground(params: {
 
       if (projectData.slug) projectSlug = projectData.slug
 
+      const targetSchema = (projectData.slug || 'public').replace(/-/g, '_')
+      
       rows = await queryViaTunnel(projectId, projectData.secret_token, {
         table: safeTable,
         action: 'select',
@@ -310,7 +332,7 @@ export async function executeExportBackground(params: {
         joins: joins,
         filters: filters,
         limit: 100000,
-        schemaName: projectData.slug || 'public'
+        schemaName: targetSchema
       })
       console.log(`[Export Worker] Successfully queried ${rows.length} rows via database tunnel.`)
     } catch (tunnelErr: any) {
