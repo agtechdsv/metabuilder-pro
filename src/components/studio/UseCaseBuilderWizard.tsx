@@ -1,7 +1,7 @@
 'use client'
 // Refined UseCaseBuilderWizard - Metadata Driven Actions Order
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   ArrowLeft,
   Save,
@@ -232,13 +232,153 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   // Popula os dados iniciais se estiver em modo edição
   const [isInitialized, setIsInitialized] = useState(false)
 
-  // Lógica de debounce para config evitar excesso de logs por keystroke
+  // Ref para guardar o estado anterior do config para o diff
+  const prevConfigRef = useRef<typeof config | null>(null)
+
+  // Lógica de debounce com DIFF SEMÂNTICO para "Dar nome aos bois"
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Ignorar carregamento inicial
       if (!isInitialized) return
-      logAction('CONFIG_CHANGE', `Alterou propriedades na Etapa ${currentStep}`)
-    }, 2000)
+
+      const prev = prevConfigRef.current
+      const curr = config
+      const stepNames: Record<number, string> = { 1: 'Etapa 1 (Lógica)', 2: 'Etapa 2 (Tabelas)', 3: 'Etapa 3 (Layout)', 4: 'Etapa 4 (Ações)' }
+      const stepLabel = stepNames[currentStep] || `Etapa ${currentStep}`
+
+      if (!prev) {
+        // Primeira inicialização: apenas grava a baseline, sem logar
+        prevConfigRef.current = curr
+        return
+      }
+
+      const changes: string[] = []
+
+      // --- Etapa 1: Lógica ---
+      if (prev.name !== curr.name && curr.name)
+        changes.push(`Renomeou o caso de uso para "${curr.name}"`)
+      if (prev.slug !== curr.slug && curr.slug)
+        changes.push(`Alterou o slug para "${curr.slug}"`)
+      if (prev.logic_type !== curr.logic_type && curr.logic_type)
+        changes.push(`Alterou a lógica de "${prev.logic_type || 'nenhuma'}" para "${curr.logic_type}"`)
+      if (prev.has_arguments !== curr.has_arguments)
+        changes.push(curr.has_arguments ? 'Habilitou filtros de argumento (Pesquisa com Filtro)' : 'Desabilitou filtros de argumento')
+      if (prev.query_type !== curr.query_type)
+        changes.push(`Alterou tipo de query para "${curr.query_type}"`)
+      if (prev.custom_query !== curr.custom_query && curr.custom_query)
+        changes.push('Editou a query SQL customizada')
+
+      // --- Etapa 2: Tabelas ---
+      const addedModels = curr.selected_models.filter((id: string) => !prev.selected_models.includes(id))
+      const removedModels = prev.selected_models.filter((id: string) => !curr.selected_models.includes(id))
+      if (addedModels.length > 0)
+        changes.push(`Adicionou ${addedModels.length} tabela(s) ao caso de uso`)
+      if (removedModels.length > 0)
+        changes.push(`Removeu ${removedModels.length} tabela(s) do caso de uso`)
+
+      // --- Etapa 3: Layout - Campos ---
+      const zones: Array<{ key: 'filter_fields' | 'grid_fields' | 'form_fields'; label: string }> = [
+        { key: 'filter_fields', label: 'Filtro' },
+        { key: 'grid_fields', label: 'Grid/Listagem' },
+        { key: 'form_fields', label: 'Formulário' },
+      ]
+      zones.forEach(({ key, label }) => {
+        const prevFields: string[] = prev.layout_config[key] || []
+        const currFields: string[] = curr.layout_config[key] || []
+        const added = currFields.filter(f => !prevFields.includes(f))
+        const removed = prevFields.filter(f => !currFields.includes(f))
+        const reordered = added.length === 0 && removed.length === 0 &&
+          JSON.stringify(prevFields) !== JSON.stringify(currFields)
+        if (added.length > 0)
+          changes.push(`Adicionou ${added.length} campo(s) ao ${label} (${stepLabel})`)
+        if (removed.length > 0)
+          changes.push(`Removeu ${removed.length} campo(s) do ${label} (${stepLabel})`)
+        if (reordered)
+          changes.push(`Reordenou campos do ${label} (${stepLabel})`)
+      })
+
+      // --- Layout: Joins ---
+      const prevJoins = prev.layout_config.joins || []
+      const currJoins = curr.layout_config.joins || []
+      if (prevJoins.length !== currJoins.length) {
+        if (currJoins.length > prevJoins.length)
+          changes.push(`Adicionou ${currJoins.length - prevJoins.length} relacionamento(s) (JOIN) ao layout`)
+        else
+          changes.push(`Removeu ${prevJoins.length - currJoins.length} relacionamento(s) (JOIN) do layout`)
+      }
+
+      // --- Layout: Display Type, Grouping, Default View ---
+      if (prev.layout_config.display_type !== curr.layout_config.display_type)
+        changes.push(`Alterou visualização padrão para "${curr.layout_config.display_type}"`)
+      if (prev.layout_config.grouping_type !== curr.layout_config.grouping_type)
+        changes.push(`Alterou agrupamento do formulário para "${curr.layout_config.grouping_type}"`)
+      if (prev.layout_config.default_view !== curr.layout_config.default_view)
+        changes.push(`Alterou modo de visualização padrão para "${curr.layout_config.default_view}"`)
+      if (prev.layout_config.action_interface_type !== curr.layout_config.action_interface_type)
+        changes.push(`Alterou interface de ação de "${prev.layout_config.action_interface_type}" para "${curr.layout_config.action_interface_type}"`)
+      if (prev.layout_config.kanban_group_field !== curr.layout_config.kanban_group_field && curr.layout_config.kanban_group_field)
+        changes.push(`Definiu campo de agrupamento do Kanban: "${curr.layout_config.kanban_group_field}"`)
+      if (prev.layout_config.master_model_id !== curr.layout_config.master_model_id)
+        changes.push(`Alterou tabela Mestre do Master-Detail`)
+      if (prev.layout_config.mindmap_central_field !== curr.layout_config.mindmap_central_field)
+        changes.push(`Alterou campo central do Mapa Mental`)
+
+      // --- Layout: Configs Especializadas ---
+      const specialConfigs: Array<{ key: string; label: string; fields: string[] }> = [
+        { key: 'timeline_config', label: 'Linha do Tempo', fields: ['date_field', 'title_field', 'desc_field', 'icon_field'] },
+        { key: 'map_config', label: 'Mapa', fields: ['lat_field', 'lng_field', 'title_field', 'desc_field'] },
+        { key: 'gantt_config', label: 'Gantt', fields: ['title_field', 'start_date_field', 'end_date_field', 'progress_field', 'predecessor_field'] },
+        { key: 'blueprint_config', label: 'Fluxograma', fields: ['title_field', 'desc_field', 'status_field', 'predecessor_field'] },
+        { key: 'scheduler_config', label: 'Agenda', fields: ['title_field', 'start_date_field', 'end_date_field', 'color_field'] },
+      ]
+      specialConfigs.forEach(({ key, label, fields }) => {
+        const prevSpec = (prev.layout_config as any)[key] || {}
+        const currSpec = (curr.layout_config as any)[key] || {}
+        fields.forEach(field => {
+          if (prevSpec[field] !== currSpec[field] && currSpec[field]) {
+            const fieldLabels: Record<string, string> = {
+              date_field: 'Data', title_field: 'Título', desc_field: 'Descrição',
+              icon_field: 'Ícone', lat_field: 'Latitude', lng_field: 'Longitude',
+              start_date_field: 'Data Início', end_date_field: 'Data Fim',
+              progress_field: 'Progresso', predecessor_field: 'Predecessora',
+              status_field: 'Status', color_field: 'Cor'
+            }
+            changes.push(`Configurou campo "${fieldLabels[field] || field}" do ${label}: "${currSpec[field]}"`)
+          }
+        })
+      })
+
+      // --- Layout: Widgets do Analytics ---
+      const prevWidgets = prev.layout_config.analytics_config?.widgets || []
+      const currWidgets = curr.layout_config.analytics_config?.widgets || []
+      if (currWidgets.length > prevWidgets.length)
+        changes.push(`Adicionou ${currWidgets.length - prevWidgets.length} widget(s) ao Dashboard BI`)
+      if (currWidgets.length < prevWidgets.length)
+        changes.push(`Removeu ${prevWidgets.length - currWidgets.length} widget(s) do Dashboard BI`)
+      // Detectar edição de widget existente
+      currWidgets.forEach((w: any) => {
+        const prevW = prevWidgets.find((pw: any) => pw.id === w.id)
+        if (prevW && JSON.stringify(prevW) !== JSON.stringify(w))
+          changes.push(`Editou widget BI "${w.title || w.type}" no Dashboard`)
+      })
+
+      // --- Etapa 4: Botões ---
+      const prevButtons = prev.buttons_config || []
+      const currButtons = curr.buttons_config || []
+      currButtons.forEach((btn: any) => {
+        const prevBtn = prevButtons.find((b: any) => b.id === btn.id)
+        if (prevBtn && prevBtn.visible !== btn.visible)
+          changes.push(`${btn.visible ? 'Habilitou' : 'Desabilitou'} o botão "${btn.label || btn.id}" (${stepLabel})`)
+        if (prevBtn && prevBtn.label !== btn.label && btn.label)
+          changes.push(`Renomeou o botão "${prevBtn.label}" para "${btn.label}" (${stepLabel})`)
+      })
+
+      // --- Enviar logs ---
+      if (changes.length > 0) {
+        changes.forEach(detail => logAction('CONFIG_CHANGE', detail))
+      }
+
+      prevConfigRef.current = curr
+    }, 1500)
     return () => clearTimeout(timer)
   }, [config, currentStep, isInitialized, logAction])
 
