@@ -1365,7 +1365,8 @@ export default function ViewPageContent({
         sql: rawQuery,
         idColumn: cleanPkName,
         idValue: pkValue,
-        token: project?.secret_token || 'test-token'
+        token: project?.secret_token || 'test-token',
+        schemaName: project?.models?.find((m: any) => m.db_table_name === modelName)?.db_schema_name || project?.slug || 'public'
       }
 
       if (Object.keys(filters).length > 0) {

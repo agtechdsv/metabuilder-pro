@@ -208,6 +208,8 @@ export default function AnalyticsDashboard({
 
     const model = (project as any).models?.find((m: any) => String(m.id) === String(widget.model_id))
     const tableName = model?.db_table_name || (typeof widget.model_id === 'string' && !widget.model_id.includes('-') ? widget.model_id : null)
+    // Resolve o schema real da tabela a partir dos models do projeto
+    const schemaName = model?.db_schema_name || (project as any)?.slug || 'public'
 
     if (!tableName) {
       setErrors(prev => ({ ...prev, [widget.id]: 'Tabela não encontrada' }))
@@ -291,7 +293,9 @@ export default function AnalyticsDashboard({
         payload: {
           queryId,
           action: 'select',
-          sql,
+          query: sql, // ← 'query' é o campo lido pelo CLI
+          sql,        // ← mantido por compatibilidade
+          schemaName, // ← campo obrigatório: identifica o schema para o CLI não ignorar
           table: tableName,
           filters, // Envia filtros para que o CLI aplique a cláusula WHERE
           token: project?.secret_token || 'test-token',
@@ -312,6 +316,13 @@ export default function AnalyticsDashboard({
     }
 
     if (!widget.group_by && (widget.type === 'kpi' || widget.type === 'gauge')) {
+      // Bug fix: COUNT sem group_by deve simplesmente contar os registros retornados
+      // Não tentar converter campos de texto para Number() pois resulta em NaN -> 0
+      if (widget.calc === 'COUNT') {
+        setData(prev => ({ ...prev, [widget.id]: records.length }))
+        return
+      }
+
       const values = records.map((r, idx) => {
         if (isFormula) {
           try {
@@ -338,8 +349,8 @@ export default function AnalyticsDashboard({
       let result = 0
       if (widget.calc === 'SUM') result = values.reduce((a, b) => a + b, 0)
       if (widget.calc === 'AVG') result = values.reduce((a, b) => a + b, 0) / (values.length || 1)
-      if (widget.calc === 'MIN') result = Math.min(...values)
-      if (widget.calc === 'MAX') result = Math.max(...values)
+      if (widget.calc === 'MIN') result = values.length > 0 ? Math.min(...values) : 0
+      if (widget.calc === 'MAX') result = values.length > 0 ? Math.max(...values) : 0
       
       setData(prev => ({ ...prev, [widget.id]: result }))
       return

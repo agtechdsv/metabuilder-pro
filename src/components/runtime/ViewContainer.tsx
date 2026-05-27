@@ -920,7 +920,7 @@ export default function ViewContainer({
       queryId,
       table: modelName,
       tableName: modelName,
-      schemaName: project?.slug || 'public',
+      schemaName: project?.models?.find((m: any) => m.db_table_name === modelName)?.db_schema_name || project?.slug || 'public',
       slug: project?.slug,
       action: 'update',
       data: updates,

@@ -285,10 +285,15 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
                // Insere o whereClause ou usa AND se já existir WHERE
                sql += (sql.toLowerCase().includes(' where ') ? ' AND ' + conditions.join(' AND ') : whereClause);
             }
-            if (dbType === 'oracle') {
-              sql += ` OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
-            } else {
-              sql += ` LIMIT ${limit} OFFSET ${offset}`;
+            // Só acrescenta LIMIT/OFFSET se a query ainda não tiver (evita "LIMIT x LIMIT y")
+            const sqlLower = sql.toLowerCase();
+            const alreadyHasLimit = sqlLower.includes(' limit ');
+            if (!alreadyHasLimit) {
+              if (dbType === 'oracle') {
+                sql += ` OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
+              } else {
+                sql += ` LIMIT ${limit} OFFSET ${offset}`;
+              }
             }
           } else {
             let selectCols = `"${safeTable}".*`;
