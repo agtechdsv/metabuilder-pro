@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { Database, Link2, ShieldAlert, Cpu, ArrowLeft, Terminal, Share2, Shield, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
+import { BottomCta } from '@/components/landing/BottomCta'
 import { useI18n } from '@/i18n/I18nContext'
 
 export default function IntegrationFeaturePage() {
@@ -80,6 +81,14 @@ export default function IntegrationFeaturePage() {
             <span className="text-2xl font-black">SQLite</span>
          </div>
          <p className="text-neutral-400 font-medium">{t('marketing_v2.features.integration.supported_engines')}</p>
+      </section>
+
+      <section className="p-12 rounded-[3rem] bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-center space-y-8">
+         <h2 className="text-3xl font-black dark:text-white">Conecte seu Banco de Dados com Total Segurança</h2>
+         <p className="text-neutral-550 dark:text-neutral-400 max-w-xl mx-auto text-sm leading-relaxed">
+            O MetaBuilderPRO se conecta à sua infraestrutura existente sem migrar seus dados e sem expor portas de rede. Inicie o seu workspace administrativo agora mesmo.
+         </p>
+         <BottomCta />
       </section>
     </div>
   )

@@ -48,6 +48,13 @@ export default async function RootLayout({
         <Script id="oauth-redirect" strategy="beforeInteractive">
           {`
             try {
+              // Capturar código de indicação do iClub
+              const urlParams = new URLSearchParams(window.location.search);
+              const ref = urlParams.get('ref');
+              if (ref) {
+                document.cookie = 'iclub_ref_code=' + encodeURIComponent(ref) + '; path=/; max-age=604800; SameSite=Lax';
+              }
+
               // Se o Supabase rejeitar a URL de callback (ex: falta de configuração no painel),
               // ele faz fallback para a URL base (/). Se isso acontecer no popup e tiver um código OAuth,
               // interceptamos e forçamos o redirecionamento para o callback correto.

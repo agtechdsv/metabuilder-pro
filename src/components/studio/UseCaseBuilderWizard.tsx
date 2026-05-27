@@ -884,6 +884,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         if (compError) throw compError
       }
 
+      logAction('SAVE', 'Atualizou as configurações do caso de uso')
       onSaveSuccess()
     } catch (err: any) {
       console.error(err)

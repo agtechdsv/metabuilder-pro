@@ -239,6 +239,164 @@ serve(async (req) => {
           console.log(`[PAYMENT_RECEIVED] Inserted new payment record for ${payment.id}`);
         }
       }
+
+      // =======================================================================
+      // iClub: Process Referral Conversion & Apply Discounts
+      // =======================================================================
+      try {
+        // Fetch the user's profile to get email and details
+        const { data: subscribedUserProfile } = await supabase
+          .from("profiles")
+          .select("email, full_name")
+          .eq("id", ctx.userId)
+          .single();
+
+        if (subscribedUserProfile) {
+          const userEmail = subscribedUserProfile.email?.toLowerCase();
+
+          // Check if there is a pending referral for this user
+          const { data: referral, error: refError } = await supabase
+            .from("iclub_referrals")
+            .select("id, referrer_id, status")
+            .eq("status", "registered")
+            .or(`referred_id.eq.${ctx.userId},referred_email.eq.${userEmail}`)
+            .maybeSingle();
+
+          if (referral) {
+            console.log(`[iClub] Found referral conversion! ReferralId=${referral.id}, ReferrerId=${referral.referrer_id}`);
+
+            // 1. Update referral status to subscribed
+            await supabase
+              .from("iclub_referrals")
+              .update({
+                referred_id: ctx.userId,
+                status: "subscribed",
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", referral.id);
+
+            // 2. Fetch active referral discount rules
+            const { data: rules } = await supabase
+              .from("iclub_rules")
+              .select("reward_value")
+              .eq("benefit_type", "referral_discount")
+              .eq("is_active", true)
+              .maybeSingle();
+
+            const discountValue = rules ? Number(rules.reward_value) : 5.00; // fallback to 5%
+
+            // 3. Create active reward for referrer
+            await supabase
+              .from("iclub_rewards")
+              .insert({
+                user_id: referral.referrer_id,
+                reward_type: "percent_discount",
+                reward_value: discountValue,
+                status: "active",
+                notes: `Indicação de ${subscribedUserProfile.full_name || userEmail} (${userEmail})`
+              });
+
+            // 4. Recalculate referrer's next invoice value and apply to Asaas
+            const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY")?.trim();
+            const ASAAS_URL = Deno.env.get("ASAAS_URL")?.trim() || "https://api.asaas.com/v3";
+
+            if (ASAAS_API_KEY) {
+              // Get referrer profile
+              const { data: referrerProfile } = await supabase
+                .from("profiles")
+                .select("asaas_subscription_id")
+                .eq("id", referral.referrer_id)
+                .single();
+
+              if (referrerProfile?.asaas_subscription_id) {
+                // Get all active percent discount rewards for referrer
+                const { data: activeRewards } = await supabase
+                  .from("iclub_rewards")
+                  .select("reward_value")
+                  .eq("user_id", referral.referrer_id)
+                  .eq("reward_type", "percent_discount")
+                  .eq("status", "active");
+
+                const totalDiscountPercent = Math.min(
+                  activeRewards ? activeRewards.reduce((sum, r) => sum + Number(r.reward_value), 0) : 0,
+                  100
+                );
+
+                console.log(`[iClub] Referrer total discount percentage: ${totalDiscountPercent}%`);
+
+                if (totalDiscountPercent > 0) {
+                  // Fetch referrer's subscription from Asaas to get base price
+                  const subRes = await fetch(`${ASAAS_URL}/subscriptions/${referrerProfile.asaas_subscription_id}`, {
+                    headers: { "access_token": ASAAS_API_KEY }
+                  });
+
+                  if (subRes.ok) {
+                    const subData = await subRes.json();
+                    const basePrice = Number(subData.value);
+
+                    // Fetch next pending payment
+                    const paymentsRes = await fetch(
+                      `${ASAAS_URL}/payments?subscription=${referrerProfile.asaas_subscription_id}&status=PENDING`,
+                      { headers: { "access_token": ASAAS_API_KEY } }
+                    );
+
+                    if (paymentsRes.ok) {
+                      const paymentsData = await paymentsRes.json();
+                      if (paymentsData.data && paymentsData.data.length > 0) {
+                        const firstPendingPayment = paymentsData.data[0];
+                        const newPrice = Math.max(0, basePrice * (1 - totalDiscountPercent / 100));
+
+                        console.log(`[iClub] Updating pending payment ${firstPendingPayment.id} in Asaas from ${basePrice} to ${newPrice}`);
+
+                        // Update payment value in Asaas
+                        const updatePayRes = await fetch(`${ASAAS_URL}/payments/${firstPendingPayment.id}`, {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            "access_token": ASAAS_API_KEY
+                          },
+                          body: JSON.stringify({ value: newPrice })
+                        });
+
+                        if (!updatePayRes.ok) {
+                          const payErr = await updatePayRes.json().catch(() => ({}));
+                          console.error(`[iClub] Error updating payment in Asaas:`, payErr);
+                        } else {
+                          console.log(`[iClub] Successfully updated payment ${firstPendingPayment.id} value in Asaas.`);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // 5. Consume active rewards for the user who just made a payment (if they have active percent_discount rewards)
+        const { data: userRewardsToConsume } = await supabase
+          .from("iclub_rewards")
+          .select("id")
+          .eq("user_id", ctx.userId)
+          .eq("reward_type", "percent_discount")
+          .eq("status", "active");
+
+        if (userRewardsToConsume && userRewardsToConsume.length > 0) {
+          const rewardIds = userRewardsToConsume.map(r => r.id);
+          console.log(`[iClub] Consuming ${rewardIds.length} active percent_discount rewards for user ${ctx.userId}`);
+          
+          await supabase
+            .from("iclub_rewards")
+            .update({
+              status: "applied",
+              notes: `Aplicado no pagamento Asaas ID ${payment?.id || 'unknown'}`,
+              updated_at: new Date().toISOString()
+            })
+            .in("id", rewardIds);
+        }
+      } catch (iclubErr) {
+        console.error("[iClub] Error processing referral conversion / discounts:", iclubErr);
+      }
     }
 
     else if (event === "SUBSCRIPTION_DELETED" || event === "SUBSCRIPTION_INACTIVATED") {

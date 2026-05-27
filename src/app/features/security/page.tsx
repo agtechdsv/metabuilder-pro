@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { ShieldCheck, Lock, Fingerprint, Network, ArrowLeft, Key } from 'lucide-react'
 import Link from 'next/link'
+import { BottomCta } from '@/components/landing/BottomCta'
 import { useI18n } from '@/i18n/I18nContext'
 
 export default function SecurityFeaturePage() {
@@ -81,9 +82,7 @@ export default function SecurityFeaturePage() {
             <p className="text-indigo-100 max-w-2xl mx-auto text-lg leading-relaxed">
                {t('marketing_v2.features.security.footer_desc')}
             </p>
-            <button className="px-12 py-5 bg-white text-indigo-900 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform shadow-2xl">
-               {t('marketing_v2.features.security.footer_cta')}
-            </button>
+            <BottomCta />
          </div>
       </div>
     </div>

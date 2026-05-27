@@ -33,6 +33,7 @@ import {
   GitBranch
 } from 'lucide-react'
 import Link from 'next/link'
+import { BottomCta } from '@/components/landing/BottomCta'
 import { useI18n } from '@/i18n/I18nContext'
 import { cn } from '@/lib/utils'
 
@@ -2412,13 +2413,7 @@ export default function UseCasesFeaturePage() {
             Abra o painel Studio de um dos seus projetos e use o Use Case Builder para construir qualquer um dos modelos em minutos.
           </p>
         </div>
-        <Link 
-          href="/auth/signup"
-          className="inline-flex items-center gap-2 px-10 py-4.5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-indigo-500/10"
-        >
-          <span>Começar a Construir</span>
-          <ArrowRight className="w-4 h-4" />
-        </Link>
+        <BottomCta />
       </section>
 
     </div>

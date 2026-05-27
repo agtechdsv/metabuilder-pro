@@ -88,6 +88,39 @@
     "cta_start": "Começar a Construir",
     "cta_demo": "Agendar demonstração"
   },
+  "metavoice": {
+    "title": "MetaVoice",
+    "subtitle": "Ideias & Sugestões",
+    "desc": "Ajude-nos a construir o futuro do MetaBuilderPRO. Envie suas ideias, vote nas sugestões de outros usuários e acompanhe o roadmap.",
+    "new_suggestion": "Nova Sugestão",
+    "submit": "Enviar Sugestão",
+    "title_label": "Título da Sugestão",
+    "title_placeholder": "Ex: Modo Escuro no Editor SQL",
+    "desc_label": "Descrição Detalhada",
+    "desc_placeholder": "Explique o que você gostaria que fosse implementado e qual problema isso resolve...",
+    "category": "Categoria",
+    "category_ui_ux": "UI / UX",
+    "category_integration": "Integração",
+    "category_feature": "Nova Funcionalidade",
+    "category_bug": "Bug / Correção",
+    "category_other": "Outro",
+    "anonymous": "Submeter anonimamente (outros usuários não verão seu nome)",
+    "status_under_review": "Em Análise",
+    "status_planned": "Planejado",
+    "status_in_progress": "Em Desenvolvimento",
+    "status_completed": "Concluído",
+    "status_declined": "Descartada",
+    "status_duplicate": "Duplicata",
+    "votes": "Votos",
+    "comments": "Comentários",
+    "add_comment": "Adicionar um comentário...",
+    "comment_btn": "Comentar",
+    "like_btn": "Eu também quero!",
+    "liked": "Você votou",
+    "rate": "Avalie a importância:",
+    "admin_response": "Resposta Oficial do Time",
+    "anonymous_user": "Usuário Anônimo"
+  },
   "features": {
     "dynamic_title": "Schemas Dinâmicos",
     "dynamic_desc": "Introspecção de banco de dados e mapeamento de esquemas em tempo real. Sem mapeamento manual.",
@@ -592,7 +625,7 @@
       "security": "Segurança",
       "use_cases": "Lógicas",
       "pricing": "Planos",
-      "control_center": "Central de Controle",
+      "control_center": "Painel de Controle",
       "zero_trust": "Zero-Trust"
     },
     "hero": {
@@ -616,6 +649,14 @@
       "zero_trust_desc": "Diferente de outras ferramentas, o MetaBuilderPRO não conecta no seu banco. Ele envia comandos criptografados para o seu túnel local, que processa a informação.",
       "zero_trust_encrypted": "Dados Encriptados",
       "zero_trust_ports": "Zero Portas Abertas",
+      "control_center_badge": "Central de Controle",
+      "control_center_title": "Visibilidade total.",
+      "control_center_highlight": "Gestão técnica & financeira.",
+      "control_center_desc": "Painel gerencial completo: métricas de produtividade por DEV, faturamento, assinatura, o iClub de fidelidade e canal de sugestões MetaVoice.",
+      "control_center_desc_long": "A Central de Controle é o cockpit do gestor técnico. Acompanhe sessões de desenvolvimento em tempo real, audite ações com granularidade de linha do tempo, gerencie sua assinatura, interaja com sugestões no MetaVoice e acompanhe os benefícios do iClub — tudo em um único painel.",
+      "control_center_stat1": "Módulos Integrados",
+      "control_center_stat2": "Visibilidade Whitelabel",
+      "control_center_cta": "Conhecer a Central de Controle",
       "wizard_title": "Wizard de Casos de Uso",
       "wizard_desc": "Não perca tempo desenhando grids e formulários um a um. Nosso assistente inteligente cria fluxos completos de CRUD, Master-Detail e Dashboards baseados na semântica do seu banco de dados.",
       "whitelabel_title": "Runtime Whitelabel",
@@ -874,11 +915,11 @@
     },
     "control_center_page": {
       "badge": "VAR DO DESENVOLVIMENTO",
-      "title": "Central de Controle.",
+      "title": "Painel de Controle.",
       "title_highlight": "Gestão técnica & produtividade.",
       "desc": "Acompanhe e audite a produtividade de engenharia em tempo real. Veja o Cycle Time, retrabalho, tempo ocioso vs. ativo de cada DEV, além de gerenciar workspaces, faturamento e licenças.",
-      "interactive_title": "Módulos da Central de Controle",
-      "interactive_desc": "Navegue pelas abas da Central de Controle abaixo para simular como os gestores acompanham a performance e faturamento."
+      "interactive_title": "Módulos da Painel de Controle",
+      "interactive_desc": "Navegue pelas abas da Painel de Controle abaixo para simular como os gestores acompanham a performance e faturamento."
     }
   }
 }

@@ -32,7 +32,7 @@ export async function signup(formData: FormData) {
   const password = formData.get('password') as string
   const displayName = formData.get('display_name') as string
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -44,6 +44,16 @@ export async function signup(formData: FormData) {
 
   if (error) {
     return { error: error.message }
+  }
+
+  // Se o cadastro foi realizado com sucesso, registra a indicação
+  if (data?.user) {
+    try {
+      const { registerReferral } = await import('@/app/actions/iclub')
+      await registerReferral(email, data.user.id)
+    } catch (refError) {
+      console.error('Erro ao registrar indicação no cadastro:', refError)
+    }
   }
 
   return { success: true }

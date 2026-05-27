@@ -21,6 +21,24 @@ const isEmailExistsError = (err: any) => {
   )
 }
 
+async function getIClubAllowedGuestsExtra(ownerId: string): Promise<number> {
+  try {
+    const { data: rewards } = await supabaseAdmin
+      .from('iclub_rewards')
+      .select('reward_value')
+      .eq('user_id', ownerId)
+      .eq('reward_type', 'free_license')
+      .eq('status', 'active')
+    
+    if (rewards && rewards.length > 0) {
+      return rewards.reduce((sum, r) => sum + Number(r.reward_value), 0);
+    }
+  } catch (err) {
+    console.error('Error fetching iClub allowed guests extra:', err);
+  }
+  return 0;
+}
+
 export async function inviteWorkspaceMember(workspaceId: string, workspaceSlug: string, email: string, role: string) {
   try {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
@@ -54,8 +72,9 @@ export async function inviteWorkspaceMember(workspaceId: string, workspaceSlug: 
     if (profileData.is_super_admin) {
       allowedGuests = 9999;
     } else if (profileData.subscription_plans) {
+      const extraLicenses = await getIClubAllowedGuestsExtra(ownerId);
       // licenses_count inclui o dono. Ex: 5 licenças = 1 dono + 4 convidados.
-      const totalLicenses = (profileData.subscription_plans as any).licenses_count || 1;
+      const totalLicenses = ((profileData.subscription_plans as any).licenses_count || 1) + extraLicenses;
       allowedGuests = Math.max(0, totalLicenses - 1);
     }
 
@@ -397,7 +416,8 @@ export async function getStudioTeamData() {
     if (profile.is_super_admin) {
       allowedGuests = 9999;
     } else if (profile.subscription_plans) {
-      const totalLicenses = (profile.subscription_plans as any).licenses_count || 1;
+      const extraLicenses = await getIClubAllowedGuestsExtra(ownerId);
+      const totalLicenses = ((profile.subscription_plans as any).licenses_count || 1) + extraLicenses;
       allowedGuests = Math.max(0, totalLicenses - 1);
     }
 
@@ -452,7 +472,8 @@ export async function inviteStudioGuest(email: string) {
     if (profile.is_super_admin) {
       allowedGuests = 9999;
     } else if (profile.subscription_plans) {
-      const totalLicenses = (profile.subscription_plans as any).licenses_count || 1;
+      const extraLicenses = await getIClubAllowedGuestsExtra(ownerId);
+      const totalLicenses = ((profile.subscription_plans as any).licenses_count || 1) + extraLicenses;
       allowedGuests = Math.max(0, totalLicenses - 1);
     }
 

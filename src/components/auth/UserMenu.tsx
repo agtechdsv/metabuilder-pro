@@ -33,18 +33,18 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
   }, [initialProfile])
 
   const metadata = user?.user_metadata || {}
-  
-  const avatarUrl = 
+
+  const avatarUrl =
     localProfile?.avatar_url ||
     metadata.custom_avatar ||
-    metadata.avatar_url || 
+    metadata.avatar_url ||
     metadata.picture
-  
+
   const getDisplayName = () => {
     if (localProfile?.full_name && localProfile.full_name.trim()) return localProfile.full_name
     if (metadata.full_name && metadata.full_name.trim()) return metadata.full_name
     if (metadata.name && metadata.name.trim()) return metadata.name
-    
+
     // Fallback to email local part capitalized
     const email = user?.email
     if (email && email.includes('@')) {
@@ -53,7 +53,7 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
         return localPart.charAt(0).toUpperCase() + localPart.slice(1)
       }
     }
-    
+
     return t('common.enterprise')
   }
 
@@ -110,8 +110,8 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
   const isCustomAvatar = localProfile?.avatar_url && localProfile.avatar_url !== googleAvatar
 
   return (
-    <div 
-      className="relative" 
+    <div
+      className="relative"
       ref={menuRef}
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
@@ -120,14 +120,14 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
         className="flex items-center gap-3 p-1 pr-3 rounded-full bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 hover:border-blue-500/30 transition-all group cursor-default shadow-sm"
       >
         <div className="relative">
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleUpload} 
-            className="hidden" 
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleUpload}
+            className="hidden"
             accept="image/*"
           />
-          <div 
+          <div
             onClick={(e) => {
               e.stopPropagation();
               fileInputRef.current?.click();
@@ -140,9 +140,9 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
               </div>
             )}
             {avatarUrl && !imgError ? (
-              <img 
-                src={avatarUrl} 
-                alt={fullName} 
+              <img
+                src={avatarUrl}
+                alt={fullName}
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
                 onError={() => setImgError(true)}
@@ -217,10 +217,10 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                     <div className="p-2 bg-emerald-500/10 rounded-xl group-hover:bg-emerald-500/20 transition-all text-emerald-500">
                       <Gauge className="w-4.5 h-4.5" />
                     </div>
-                    <span className="text-sm font-bold">Central de Controle</span>
+                    <span className="text-sm font-bold">Painel de Controle</span>
                   </Link>
                 )}
-                
+
                 <button
                   onClick={() => {
                     setIsOpen(false)
@@ -262,10 +262,10 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
           </motion.div>
         )}
       </AnimatePresence>
-      <ProfileDrawer 
-        isOpen={isProfileOpen} 
-        onClose={() => setIsProfileOpen(false)} 
-        profile={localProfile} 
+      <ProfileDrawer
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        profile={localProfile}
         user={user}
         onUpdate={(updatedData) => setLocalProfile((prev: any) => ({ ...prev, ...updatedData }))}
       />

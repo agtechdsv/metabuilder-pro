@@ -13,6 +13,17 @@ export async function GET(request: Request) {
 
     if (!error && data.session) {
       const { access_token, refresh_token } = data.session
+      const user = data.session.user
+
+      // Se o usuário do OAuth tem e-mail, tenta registrar a indicação
+      if (user && user.email) {
+        try {
+          const { registerReferral } = await import('@/app/actions/iclub')
+          await registerReferral(user.email, user.id)
+        } catch (refError) {
+          console.error('Erro ao registrar indicação no OAuth Callback:', refError)
+        }
+      }
       
       // Retornamos sempre este HTML. Ele verifica no lado do cliente
       // se foi aberto como popup (window.opener). Se sim, avisa a janela pai

@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { Zap, Clock, Rocket, CheckCircle2, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { BottomCta } from '@/components/landing/BottomCta'
 import { useI18n } from '@/i18n/I18nContext'
 
 export default function SpeedFeaturePage() {
@@ -94,9 +95,7 @@ export default function SpeedFeaturePage() {
          <p className="text-neutral-500 dark:text-neutral-400 max-w-xl mx-auto">
             {t('marketing_v2.hero.desc')}
          </p>
-         <button className="px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform">
-            {t('marketing_v2.features.speed.footer_cta')}
-         </button>
+         <BottomCta />
       </section>
     </div>
   )

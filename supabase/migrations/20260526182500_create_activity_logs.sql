@@ -43,3 +43,8 @@ CREATE POLICY "Users can insert their own activity logs"
     ON public.activity_logs FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
+-- Update Policy: Devs logados podem atualizar seus próprios logs (necessário para consolidar as sessões)
+CREATE POLICY "Users can update their own activity logs"
+    ON public.activity_logs FOR UPDATE
+    USING (auth.uid() = user_id);
+

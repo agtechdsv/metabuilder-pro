@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { ShieldCheck, Zap, Database, Globe, ArrowLeft, Lock, Server, Cpu, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
+import { BottomCta } from '@/components/landing/BottomCta'
 import { useI18n } from '@/i18n/I18nContext'
 
 export default function ZeroTrustFeaturePage() {
@@ -120,11 +121,13 @@ export default function ZeroTrustFeaturePage() {
          </div>
       </section>
       
-      <div className="text-center py-10">
-         <button className="px-12 py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform shadow-2xl shadow-indigo-500/20">
-            {t('marketing_v2.features.zero_trust.cta')}
-         </button>
-      </div>
+      <section className="p-12 rounded-[3rem] bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-center space-y-8">
+         <h2 className="text-3xl font-black dark:text-white">{t('marketing_v2.features.zero_trust.cta')}</h2>
+         <p className="text-neutral-500 dark:text-neutral-400 max-w-xl mx-auto">
+            {t('marketing_v2.hero.desc')}
+         </p>
+         <BottomCta />
+      </section>
     </div>
   )
 }

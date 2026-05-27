@@ -20,7 +20,7 @@ import {
 import { useTheme } from '@/components/CustomThemeProvider'
 import { getOccupiedSlots, createAppointment } from '@/app/actions/agenda'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 
 export default function AppointmentPage() {
   return (
@@ -36,6 +36,7 @@ export default function AppointmentPage() {
 
 function AppointmentPageContent() {
   const { theme, setTheme } = useTheme()
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1) // 1: Day, 2: Time, 3: Form, 4: Success
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null) // Format: "HH:MM"
@@ -395,12 +396,13 @@ function AppointmentPageContent() {
                     </div>
 
                     <div className="flex justify-end gap-3 mt-4 border-t border-neutral-100 dark:border-neutral-850 pt-4">
-                      <Link 
-                        href="/"
-                        className="px-5 py-3 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-750 text-neutral-700 dark:text-neutral-300 font-bold text-sm transition-all flex items-center gap-2 border border-neutral-200 dark:border-neutral-700"
+                      <button 
+                        type="button"
+                        onClick={() => router.back()}
+                        className="px-5 py-3 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-750 text-neutral-700 dark:text-neutral-300 font-bold text-sm transition-all flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 cursor-pointer"
                       >
                         Cancelar
-                      </Link>
+                      </button>
                       <button
                         type="button"
                         disabled={!selectedDate}

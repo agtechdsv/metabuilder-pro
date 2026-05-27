@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2 } from 'lucide-react'
+import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
+import { BottomCta } from '@/components/landing/BottomCta'
 
 export function MarketingSections() {
   const { t } = useI18n()
@@ -81,6 +82,12 @@ export function MarketingSections() {
       title: t('marketing_v2.navbar.zero_trust'),
       desc: t('marketing_v2.features.zero_trust.desc'),
       href: "/features/zero-trust"
+    },
+    {
+      icon: <Activity className="w-6 h-6 text-indigo-400" />,
+      title: t('marketing_v2.navbar.control_center'),
+      desc: t('marketing_v2.home.control_center_desc'),
+      href: "/features/control-center"
     }
   ]
 
@@ -230,6 +237,111 @@ export function MarketingSections() {
           </div>
         </div>
       </section>
+      {/* Central de Controle Showcase */}
+      <section className="max-w-7xl mx-auto py-20 border-y border-neutral-100 dark:border-neutral-900">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+          <div className="space-y-8 order-2 lg:order-1">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-widest">
+              <Activity className="w-3.5 h-3.5" />
+              {t('marketing_v2.home.control_center_badge')}
+            </div>
+            <h2 className="text-4xl md:text-6xl font-black tracking-tighter dark:text-white leading-[1]">
+              {t('marketing_v2.home.control_center_title')} <br/>
+              <span className="text-indigo-600">{t('marketing_v2.home.control_center_highlight')}</span>
+            </h2>
+            <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
+              {t('marketing_v2.home.control_center_desc_long')}
+            </p>
+            <div className="flex gap-4">
+              <div className="flex-1 p-6 rounded-3xl bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
+                <h4 className="text-2xl font-black text-indigo-600 mb-2">4</h4>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{t('marketing_v2.home.control_center_stat1')}</p>
+              </div>
+              <div className="flex-1 p-6 rounded-3xl bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
+                <h4 className="text-2xl font-black text-emerald-600 mb-2">100%</h4>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{t('marketing_v2.home.control_center_stat2')}</p>
+              </div>
+            </div>
+            <Link
+              href="/features/control-center"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:scale-105 shadow-xl shadow-indigo-500/20"
+            >
+              {t('marketing_v2.home.control_center_cta')}
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {/* Mini mockup panel */}
+          <div className="order-1 lg:order-2 relative">
+            <div className="p-6 rounded-[3rem] bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 shadow-2xl relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-20 h-20 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl z-10">
+                <Activity className="w-10 h-10" />
+              </div>
+
+              {/* Window chrome */}
+              <div className="flex gap-1.5 mb-4">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+              </div>
+
+              {/* Tabs strip */}
+              <div className="flex gap-1 mb-5 p-1 bg-neutral-100 dark:bg-neutral-900 rounded-xl text-[9px] font-black uppercase tracking-wider overflow-x-auto">
+                {['Dashboard BI', 'Produtividade', 'Assinatura', 'Cancelamento', 'iClub'].map((tab, i) => (
+                  <span
+                    key={tab}
+                    className={`px-3 py-1.5 rounded-lg transition-all ${
+                      i === 0
+                        ? 'bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                        : 'text-neutral-400'
+                    }`}
+                  >
+                    {tab}
+                  </span>
+                ))}
+              </div>
+
+              {/* Metric cards */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {[
+                  { label: 'Licenças Ativas', value: '2 / 3', color: 'text-emerald-500' },
+                  { label: 'Workspaces', value: '1', color: 'text-indigo-500' },
+                  { label: 'Projetos', value: '1', color: 'text-amber-500' },
+                  { label: 'Casos de Uso', value: '3', color: 'text-purple-500' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="p-3 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800 text-center">
+                    <p className={`text-lg font-black leading-none ${color}`}>{value}</p>
+                    <p className="text-[8px] font-bold text-neutral-400 mt-1 uppercase tracking-wider">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Mini bar chart */}
+              <div className="p-3 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800">
+                <p className="text-[8px] font-black uppercase text-neutral-400 tracking-wider mb-2">Atividade de Desenvolvimento</p>
+                <div className="flex items-end gap-1 h-10">
+                  {[40, 65, 30, 80, 55, 90, 45].map((h, i) => (
+                    <div
+                      key={i}
+                      style={{ height: `${h}%` }}
+                      className={`flex-1 rounded-t-sm ${
+                        i === 5 ? 'bg-indigo-500' : 'bg-indigo-200 dark:bg-indigo-900'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Footer status */}
+              <div className="mt-4 flex items-center justify-center gap-2 text-[9px] text-neutral-400 font-bold">
+                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+                Central de Controle — Métricas em tempo real
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
         <div className="p-12 rounded-[2.5rem] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 space-y-6">
           <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-xl">
@@ -477,21 +589,7 @@ export function MarketingSections() {
             {t('marketing_v2.home.cta_desc')}
           </p>
         </div>
-        
-        <div className="flex flex-wrap justify-center gap-6">
-          <Link 
-            href="/auth/signup"
-            className="px-10 py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all hover:scale-105 shadow-2xl shadow-indigo-500/20"
-          >
-            {t('marketing_v2.home.cta_start')}
-          </Link>
-          <a 
-            href="#pricing"
-            className="px-10 py-5 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white rounded-2xl font-black text-xs uppercase tracking-widest border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all"
-          >
-            {t('marketing_v2.home.cta_plans')}
-          </a>
-        </div>
+        <BottomCta />
       </section>
 
     </div>

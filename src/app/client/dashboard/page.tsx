@@ -16,7 +16,7 @@ export default async function ClientDashboardPage() {
   // Fetch full profile
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, email, plan_id, subscription_status, subscription_cycle, subscription_expires_at, asaas_customer_id, asaas_subscription_id, is_super_admin')
+    .select('id, full_name, email, plan_id, subscription_status, subscription_cycle, subscription_expires_at, asaas_customer_id, asaas_subscription_id, is_super_admin, card_brand, card_last_digits')
     .eq('id', user.id)
     .single()
 
@@ -30,6 +30,13 @@ export default async function ClientDashboardPage() {
       .single()
     plan = planData
   }
+
+  // Fetch all active subscription plans for switching
+  const { data: activePlans } = await supabase
+    .from('subscription_plans')
+    .select('id, name, licenses_count, price, price_monthly, price_quarterly, price_semiannually, price_yearly')
+    .eq('is_active', true)
+    .order('price', { ascending: true })
 
   // Fetch user's workspaces (owner only)
   const { data: workspaces } = await supabase
@@ -112,6 +119,7 @@ export default async function ClientDashboardPage() {
         <ClientDashboardClient
           profile={profile}
           plan={plan}
+          plans={activePlans || []}
           workspaces={workspaces || []}
           projects={projectsData}
           useCases={useCasesData}

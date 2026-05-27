@@ -35,8 +35,8 @@ export function useTelemetry({
   const activeTimeSecondsRef = useRef<number>(0)
   const eventsBufferRef = useRef<TelemetryEvent[]>([])
   
-  // Throttle timer for grouping similar rapid actions
-  const throttleTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const logIdRef = useRef<string | null>(null)
+  const hasLoggedEntryRef = useRef(false)
 
   const logAction = useCallback((action: string, detail: string) => {
     const now = new Date()
@@ -56,9 +56,17 @@ export function useTelemetry({
     })
   }, [])
 
+  // Log session start automatically when user is loaded
+  useEffect(() => {
+    if (userId && !hasLoggedEntryRef.current) {
+      logAction('SESSION_START', 'Entrou no configurador do Caso de Uso')
+      hasLoggedEntryRef.current = true
+    }
+  }, [userId, logAction])
+
   // The Heartbeat
   const flush = useCallback(async () => {
-    if (eventsBufferRef.current.length === 0 || !userId || !workspaceId || !projectId) return // Nothing to flush or missing IDs
+    if (eventsBufferRef.current.length === 0 || !userId || !workspaceId || !projectId) return
 
     const now = new Date()
     // Calculate final active time for this chunk if they just clicked something
@@ -77,21 +85,36 @@ export function useTelemetry({
       session_end: now.toISOString(),
       active_time_seconds: Math.floor(activeTimeSecondsRef.current),
       actions_count: eventsBufferRef.current.length,
-      events: eventsBufferRef.current,
+      events: eventsBufferRef.current, // Sending all accumulated events
     }
 
     try {
-      const { error } = await supabase
-        .from('activity_logs')
-        .insert(payload)
-
-      if (error) {
-        console.error('Telemetry flush error:', error)
+      if (logIdRef.current) {
+        // Update existing row
+        const { error } = await supabase
+          .from('activity_logs')
+          .update({
+            session_end: payload.session_end,
+            active_time_seconds: payload.active_time_seconds,
+            actions_count: payload.actions_count,
+            events: payload.events
+          })
+          .eq('id', logIdRef.current)
+          
+        if (error) console.error('Telemetry flush update error:', error)
       } else {
-        // Reset for next heartbeat
-        sessionStartRef.current = now
-        activeTimeSecondsRef.current = 0
-        eventsBufferRef.current = []
+        // Insert new row
+        const { data, error } = await supabase
+          .from('activity_logs')
+          .insert(payload)
+          .select('id')
+          .single()
+
+        if (error) {
+          console.error('Telemetry flush insert error:', error)
+        } else if (data) {
+          logIdRef.current = data.id
+        }
       }
     } catch (err) {
       console.error('Telemetry flush exception:', err)

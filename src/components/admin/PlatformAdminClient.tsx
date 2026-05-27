@@ -44,6 +44,8 @@ import {
   updateAppointmentLink,
   sendConfirmationEmail
 } from '@/app/actions/agenda'
+import { getIClubAdminRules, saveIClubAdminRule, deleteIClubAdminRule, IClubRule } from '@/app/actions/iclub'
+import { MetaVoiceAdminView } from './MetaVoiceAdminView'
 
 interface Plan {
   id: string
@@ -134,19 +136,98 @@ export default function PlatformAdminClient({
   workspaceMembers
 }: PlatformAdminClientProps) {
   const { toast } = useToast()
-  
+
   // State variables
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'plans' | 'clients' | 'agenda'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'plans' | 'clients' | 'agenda' | 'iclub' | 'metavoice'>('dashboard')
   const [plans, setPlans] = useState<Plan[]>(initialPlans)
   const [workspaces, setWorkspaces] = useState<Workspace[]>(initialWorkspaces)
-  
+
+  // iClub States
+  const [iclubRules, setIclubRules] = useState<IClubRule[]>([])
+  const [isLoadingRules, setIsLoadingRules] = useState(false)
+  const [isRuleModalOpen, setIsRuleModalOpen] = useState(false)
+  const [editingRule, setEditingRule] = useState<Partial<IClubRule> | null>(null)
+
+  // Rule Form States
+  const [ruleName, setRuleName] = useState('')
+  const [ruleBenefitType, setRuleBenefitType] = useState<'volume_license' | 'referral_discount'>('referral_discount')
+  const [ruleTargetCount, setRuleTargetCount] = useState(1)
+  const [ruleRewardType, setRuleRewardType] = useState<'free_license' | 'percent_discount'>('percent_discount')
+  const [ruleRewardValue, setRuleRewardValue] = useState(5)
+  const [ruleIsActive, setRuleIsActive] = useState(true)
+  const [isSavingRule, setIsSavingRule] = useState(false)
+
+  const [isDeleteRuleModalOpen, setIsDeleteRuleModalOpen] = useState(false)
+  const [ruleToDelete, setRuleToDelete] = useState<IClubRule | null>(null)
+  const [isDeletingRule, setIsDeletingRule] = useState(false)
+
+  const fetchIClubRules = async () => {
+    setIsLoadingRules(true)
+    const res = await getIClubAdminRules()
+    if (res.success && res.rules) {
+      setIclubRules(res.rules)
+    } else {
+      toast(res.error || 'Erro ao carregar regras do iClub.', 'error')
+    }
+    setIsLoadingRules(false)
+  }
+
+  useEffect(() => {
+    if (activeTab === 'iclub') {
+      fetchIClubRules()
+    }
+  }, [activeTab])
+
+  const handleSaveRule = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!ruleName) {
+      toast('Nome da regra é obrigatório', 'info')
+      return
+    }
+
+    setIsSavingRule(true)
+    const result = await saveIClubAdminRule({
+      id: editingRule?.id,
+      name: ruleName,
+      benefit_type: ruleBenefitType,
+      target_count: ruleTargetCount,
+      reward_type: ruleRewardType,
+      reward_value: ruleRewardValue,
+      is_active: ruleIsActive
+    })
+    setIsSavingRule(false)
+
+    if (result.success) {
+      toast(editingRule ? 'Regra atualizada com sucesso!' : 'Nova regra criada com sucesso!', 'success')
+      setIsRuleModalOpen(false)
+      fetchIClubRules()
+    } else {
+      toast(result.error || 'Erro ao salvar a regra', 'error')
+    }
+  }
+
+  const handleConfirmDeleteRule = async () => {
+    if (!ruleToDelete || !ruleToDelete.id) return
+    setIsDeletingRule(true)
+    const result = await deleteIClubAdminRule(ruleToDelete.id)
+    setIsDeletingRule(false)
+    if (result.success) {
+      toast(`Regra "${ruleToDelete.name}" excluída com sucesso.`, 'success')
+      setIsDeleteRuleModalOpen(false)
+      setRuleToDelete(null)
+      fetchIClubRules()
+    } else {
+      toast(result.error || 'Erro ao excluir a regra.', 'error')
+    }
+  }
+
   // Agenda / Appointment States
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [isLoadingAppointments, setIsLoadingAppointments] = useState(false)
   const [agendaFilter, setAgendaFilter] = useState<'all' | 'Pendente' | 'Confirmado' | 'Cancelado'>('all')
   const [agendaSearchQuery, setAgendaSearchQuery] = useState('')
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
-  
+
   // Rescheduling Modal States
   const [isRescheduling, setIsRescheduling] = useState(false)
 
@@ -245,7 +326,7 @@ export default function PlatformAdminClient({
   const getWhatsappUrl = (app: Appointment) => {
     const cleanPhone = app.cliente_whatsapp?.replace(/\D/g, '') || ''
     const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
-    
+
     const startDate = new Date(app.data_inicio)
     const friendlyDate = startDate.toLocaleDateString('pt-BR', {
       weekday: 'long',
@@ -254,7 +335,7 @@ export default function PlatformAdminClient({
       year: 'numeric'
     })
     const timeStr = `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}h`
-    
+
     const message = `Olá, *${app.cliente_nome || 'Cliente'}*! Tudo bem?
 
 Aqui é o Alexandre Moura do *MetaBuilderPRO*. \u{1F680}
@@ -332,10 +413,10 @@ Nos vemos em breve!`
     setIsRescheduling(true)
     try {
       const [hours, minutes] = fastRescheduleTargetSlot.split(':').map(Number)
-      
+
       const startDateTime = new Date(fastRescheduleTargetDate)
       startDateTime.setHours(hours, minutes, 0, 0)
-      
+
       const endDateTime = new Date(startDateTime)
       endDateTime.setMinutes(endDateTime.getMinutes() + 30)
 
@@ -382,16 +463,16 @@ Nos vemos em breve!`
     if (!app) return
 
     const [hours, minutes] = targetSlot.split(':').map(Number)
-    
+
     const startDateTime = new Date(targetDate)
     startDateTime.setHours(hours, minutes, 0, 0)
-    
+
     // Validate target slot is not in the past
     if (startDateTime < new Date()) {
       toast('Não é possível reagendar compromissos para um horário passado.', 'error')
       return
     }
-    
+
     const endDateTime = new Date(startDateTime)
     endDateTime.setMinutes(endDateTime.getMinutes() + 30)
 
@@ -439,7 +520,7 @@ Nos vemos em breve!`
     const day = d.getDay()
     const diff = d.getDate() - day + (day === 0 ? -6 : 1) // Ajusta para segunda-feira
     const monday = new Date(d.setDate(diff))
-    
+
     return Array.from({ length: 7 }).map((_, i) => {
       const dayDate = new Date(monday)
       dayDate.setDate(monday.getDate() + i)
@@ -449,7 +530,7 @@ Nos vemos em breve!`
 
   const findAppointmentForSlot = (dayDate: Date, slotStr: string) => {
     const [slotH, slotM] = slotStr.split(':').map(Number)
-    
+
     return appointments.find(app => {
       const appDate = new Date(app.data_inicio)
       return (
@@ -468,14 +549,14 @@ Nos vemos em breve!`
       if (agendaFilter !== 'all' && app.status !== agendaFilter) {
         return false
       }
-      
+
       // 2. Search query
       const matchSearch =
         (app.cliente_nome?.toLowerCase() || '').includes(agendaSearchQuery.toLowerCase()) ||
         (app.cliente_email?.toLowerCase() || '').includes(agendaSearchQuery.toLowerCase()) ||
         (app.cliente_whatsapp?.toLowerCase() || '').includes(agendaSearchQuery.toLowerCase()) ||
         (app.titulo?.toLowerCase() || '').includes(agendaSearchQuery.toLowerCase())
-        
+
       return matchSearch
     })
   }, [appointments, agendaFilter, agendaSearchQuery])
@@ -490,11 +571,11 @@ Nos vemos em breve!`
   const [dashboardCustomEnd, setDashboardCustomEnd] = useState('')
   const [dashboardPlan, setDashboardPlan] = useState<string>('all')
   const [dashboardClient, setDashboardClient] = useState<string>('all')
-  
+
   // Plan Modal States
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false)
   const [editingPlan, setEditingPlan] = useState<Partial<Plan> | null>(null)
-  
+
   // Plan Form Fields
   const [planName, setPlanName] = useState('')
   const [planLicenses, setPlanLicenses] = useState(1)
@@ -508,39 +589,39 @@ Nos vemos em breve!`
   const [newFeatureText, setNewFeatureText] = useState('')
   const [planIsActive, setPlanIsActive] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
- 
+
   // Custom Modal States for Actions
   const [isDeletePlanModalOpen, setIsDeletePlanModalOpen] = useState(false)
   const [planToDelete, setPlanToDelete] = useState<{ id: string, name: string } | null>(null)
   const [isDeletingPlan, setIsDeletingPlan] = useState(false)
- 
+
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false)
   const [workspaceToBlock, setWorkspaceToBlock] = useState<{ id: string, isBlocked: boolean, name: string } | null>(null)
   const [isBlockingWorkspace, setIsBlockingWorkspace] = useState(false)
- 
+
   // Map workspace with profile and plan
   const mappedWorkspaces = useMemo(() => {
     return workspaces.map(w => {
       const ownerProfile = profiles.find(p => p.id === w.owner_id)
       const workspacePlan = plans.find(p => p.id === ownerProfile?.plan_id)
-      
+
       // Calculate monthly equivalent price for MRR
       let planPrice = 0
       if (workspacePlan) {
         // Find the latest successful payment for this workspace
-        const wPayments = payments.filter(p => 
-          p.workspace_id === w.id && 
+        const wPayments = payments.filter(p =>
+          p.workspace_id === w.id &&
           p.plan_id === ownerProfile?.plan_id &&
-          (p.status?.toLowerCase() === 'received' || 
-           p.status?.toLowerCase() === 'confirmed' || 
-           p.status?.toLowerCase() === 'active' || 
-           p.status?.toLowerCase() === 'paid')
+          (p.status?.toLowerCase() === 'received' ||
+            p.status?.toLowerCase() === 'confirmed' ||
+            p.status?.toLowerCase() === 'active' ||
+            p.status?.toLowerCase() === 'paid')
         )
-        
+
         const latestPayment = wPayments.length > 0
           ? wPayments.reduce((latest, current) => {
-              return new Date(current.created_at) > new Date(latest.created_at) ? current : latest
-            })
+            return new Date(current.created_at) > new Date(latest.created_at) ? current : latest
+          })
           : null
 
         if (latestPayment) {
@@ -612,7 +693,7 @@ Nos vemos em breve!`
       const d = new Date(dateStr)
       const now = new Date()
       const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      
+
       if (dashboardPeriod === 'today') {
         return d >= startOfToday
       }
@@ -694,7 +775,7 @@ Nos vemos em breve!`
   // BI Metric Calculations
   const metrics = useMemo(() => {
     const { workspaces: filteredWorkspaces, payments: filteredPayments } = filteredDashboardData
-    
+
     // "Total de Clientes" represents unique Owners that passed the filters
     const ownerIds = new Set(filteredWorkspaces.map(w => w.owner_id))
     const totalClients = ownerIds.size
@@ -702,7 +783,7 @@ Nos vemos em breve!`
     // "Usuários Ativos" agora conta donos únicos + convidados ativos (que existem na tabela profiles)
     const activeUserIds = new Set<string>()
     filteredWorkspaces.forEach(w => activeUserIds.add(w.owner_id))
-    
+
     const filteredWorkspaceIds = new Set(filteredWorkspaces.map(w => w.id))
     workspaceMembers.forEach(m => {
       if (filteredWorkspaceIds.has(m.workspace_id)) {
@@ -712,7 +793,7 @@ Nos vemos em breve!`
       }
     })
     const totalUsers = activeUserIds.size
-    
+
     // MRR: Soma do valor mensal das assinaturas ativas dos profiles (ou workspaces ativos atrelados aos planos)
     const activeMRR = filteredWorkspaces
       .filter(w => !w.is_blocked && w.plan_id)
@@ -748,13 +829,13 @@ Nos vemos em breve!`
       // Exclude workspaces owned by super admins from client list
       if (w.ownerIsSuperAdmin) return false
 
-      const matchesSearch = 
+      const matchesSearch =
         w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         w.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         w.ownerEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
         w.slug.toLowerCase().includes(searchQuery.toLowerCase())
-      
-      const matchesStatus = 
+
+      const matchesStatus =
         statusFilter === 'all' ||
         (statusFilter === 'active' && !w.is_blocked && w.plan_id) ||
         (statusFilter === 'blocked' && w.is_blocked) ||
@@ -801,7 +882,7 @@ Nos vemos em breve!`
       toast('Nome do plano é obrigatório', 'info')
       return
     }
-    
+
     setIsSaving(true)
     const result = await savePlan({
       id: editingPlan?.id,
@@ -822,7 +903,7 @@ Nos vemos em breve!`
     if (result.success) {
       toast(editingPlan ? 'Plano atualizado com sucesso!' : 'Novo plano criado com sucesso!', 'success')
       setIsPlanModalOpen(false)
-      
+
       // Update local plans state dynamically
       if (editingPlan?.id) {
         setPlans(prev => prev.map(p => p.id === editingPlan.id ? {
@@ -911,7 +992,7 @@ Nos vemos em breve!`
   // Render Plan Distribution Custom SVG Chart
   const renderPlanChart = () => {
     const { workspaces: filteredWorkspaces } = filteredDashboardData
-    
+
     // 1. Chart Data for Total de Clientes (Owners)
     const plansWithClients = plans.map(p => {
       const wForPlan = filteredWorkspaces.filter(w => w.plan_id === p.id && !w.is_blocked)
@@ -923,10 +1004,10 @@ Nos vemos em breve!`
     // 2. Chart Data for Usuários Ativos (Owners + Active Guests)
     const plansWithUsers = plans.map(p => {
       const wForPlan = filteredWorkspaces.filter(w => w.plan_id === p.id && !w.is_blocked)
-      
+
       const activeUserIds = new Set<string>()
       wForPlan.forEach(w => activeUserIds.add(w.owner_id))
-      
+
       const planWorkspaceIds = new Set(wForPlan.map(w => w.id))
       workspaceMembers.forEach(m => {
         if (planWorkspaceIds.has(m.workspace_id)) {
@@ -1038,7 +1119,7 @@ Nos vemos em breve!`
           </div>
         )
       }
-      
+
       return (
         <button
           key={slotStr}
@@ -1058,8 +1139,8 @@ Nos vemos em breve!`
         onDrop={(e) => handleDrop(e, dayDate, slotStr)}
         className={cn(
           "h-10 border rounded-lg flex items-center justify-center text-[9px] font-semibold transition-all duration-200",
-          isBeforeNow 
-            ? "border-neutral-100 dark:border-neutral-900 bg-neutral-100/30 dark:bg-neutral-950/10 text-neutral-400 dark:text-neutral-600" 
+          isBeforeNow
+            ? "border-neutral-100 dark:border-neutral-900 bg-neutral-100/30 dark:bg-neutral-950/10 text-neutral-400 dark:text-neutral-600"
             : "border-neutral-200 dark:border-neutral-850 bg-neutral-50/50 dark:bg-neutral-950/20 text-neutral-400 dark:text-neutral-500 hover:border-indigo-500/40 hover:bg-indigo-500/5 hover:text-indigo-500 cursor-default"
         )}
       >
@@ -1070,7 +1151,7 @@ Nos vemos em breve!`
 
   return (
     <div className="space-y-8 pb-10">
-      
+
       {/* Admin Panel Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-neutral-900/40 p-8 rounded-[2.5rem] border border-neutral-200 dark:border-neutral-800 shadow-sm">
         <div>
@@ -1079,39 +1160,56 @@ Nos vemos em breve!`
             <span className="text-xs font-bold text-neutral-400">{currentUserEmail}</span>
           </div>
           <h2 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
-            Central de Controle <span className="text-indigo-500">PRO</span>
+            Painel de Controle <span className="text-indigo-500">PRO</span>
           </h2>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
             Monitore o crescimento da plataforma, crie planos e controle o acesso de clientes ativos.
           </p>
         </div>
-        
+
         {/* Navigation Tabs */}
-        <div className="flex gap-1.5 bg-neutral-100 dark:bg-neutral-950 p-1.5 rounded-[1.5rem] border border-neutral-200/50 dark:border-neutral-850">
-          {(['dashboard', 'plans', 'clients', 'agenda'] as const).map(tab => (
+        <div className="flex gap-1.5 bg-neutral-100 dark:bg-neutral-950 p-1.5 rounded-[1.5rem] border border-neutral-200/50 dark:border-neutral-850 overflow-x-auto">
+          {(['dashboard', 'plans', 'clients', 'agenda', 'iclub', 'metavoice'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all",
+                "px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap",
                 activeTab === tab
                   ? "bg-white dark:bg-neutral-850 text-indigo-600 dark:text-indigo-400 shadow-sm"
                   : "text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
               )}
             >
-              {tab === 'dashboard' 
-                ? 'Dashboard BI' 
-                : tab === 'plans' 
-                  ? 'Cadastro de Planos' 
-                  : tab === 'clients' 
-                    ? 'Gestão de Clientes' 
-                    : 'Agenda'}
+              {tab === 'dashboard'
+                ? 'Dashboard BI'
+                : tab === 'plans'
+                  ? 'Cadastro de Planos'
+                  : tab === 'clients'
+                    ? 'Gestão de Clientes'
+                    : tab === 'agenda'
+                      ? 'Agenda'
+                      : tab === 'iclub'
+                        ? 'Gestão do iClub'
+                        : 'MetaVoice'}
             </button>
           ))}
         </div>
       </div>
 
       <AnimatePresence mode="wait">
+        {activeTab === 'metavoice' && (
+          <motion.div
+            key="metavoice"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 15 }}
+            transition={{ duration: 0.25 }}
+            className="space-y-6"
+          >
+            <MetaVoiceAdminView />
+          </motion.div>
+        )}
+
         {activeTab === 'dashboard' && (
           <motion.div
             key="dashboard"
@@ -1205,7 +1303,7 @@ Nos vemos em breve!`
 
             {/* KPI Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-              
+
               {/* Card 0: Faturamento */}
               <div className="relative bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between overflow-hidden group">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-bl-full pointer-events-none"></div>
@@ -1306,7 +1404,7 @@ Nos vemos em breve!`
 
             {/* Visual BI Chart Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
+
               {/* SVG Plan Chart */}
               <div className="lg:col-span-2">
                 {renderPlanChart()}
@@ -1318,7 +1416,7 @@ Nos vemos em breve!`
                   <h4 className="text-xs font-black uppercase text-neutral-400 tracking-wider mb-2">Segurança & Conexões</h4>
                   <p className="text-[10px] text-neutral-400 font-medium">Visualização rápida de integridade da infraestrutura.</p>
                 </div>
-                
+
                 <div className="space-y-4 my-2">
                   <div className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-950/60 rounded-2xl border border-neutral-100 dark:border-neutral-850">
                     <div className="flex items-center gap-2">
@@ -1382,8 +1480,8 @@ Nos vemos em breve!`
             {/* Plans List Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {plans.map(p => (
-                <div 
-                  key={p.id} 
+                <div
+                  key={p.id}
                   className={cn(
                     "bg-white dark:bg-neutral-900/40 border rounded-[2rem] p-8 shadow-sm flex flex-col justify-between relative backdrop-blur-sm",
                     p.is_active ? "border-neutral-200 dark:border-neutral-850" : "border-dashed border-neutral-200 dark:border-neutral-800 opacity-60"
@@ -1392,7 +1490,7 @@ Nos vemos em breve!`
                   {!p.is_active && (
                     <span className="absolute top-4 left-4 px-2 py-0.5 bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 text-[8px] font-black uppercase tracking-wider rounded">Inativo</span>
                   )}
-                  
+
                   {/* Actions buttons */}
                   <div className="absolute top-4 right-4 flex items-center gap-1.5">
                     <button
@@ -1465,15 +1563,15 @@ Nos vemos em breve!`
             <div className="flex flex-col sm:flex-row gap-3 justify-between items-center bg-white dark:bg-neutral-900/40 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm backdrop-blur-sm">
               <div className="relative w-full sm:w-auto flex-grow max-w-md">
                 <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="Buscar workspaces por nome, proprietário ou e-mail..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-xs font-medium focus:outline-none focus:border-indigo-500 text-neutral-800 dark:text-neutral-200"
                 />
               </div>
-              
+
               <div className="flex gap-1 bg-neutral-100 dark:bg-neutral-950 p-1 rounded-xl w-full sm:w-auto justify-center">
                 {(['all', 'active', 'blocked', 'registered'] as const).map((filter) => (
                   <button
@@ -1487,12 +1585,12 @@ Nos vemos em breve!`
                         : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'
                     )}
                   >
-                    {filter === 'all' 
-                      ? 'Todos' 
-                      : filter === 'active' 
-                        ? 'Ativos' 
-                        : filter === 'blocked' 
-                          ? 'Bloqueados' 
+                    {filter === 'all'
+                      ? 'Todos'
+                      : filter === 'active'
+                        ? 'Ativos'
+                        : filter === 'blocked'
+                          ? 'Bloqueados'
                           : 'Cadastrados'}
                   </button>
                 ))}
@@ -1547,7 +1645,7 @@ Nos vemos em breve!`
                           <td className="px-6 py-4.5 text-center">
                             <span className={cn(
                               "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
-                              ws.is_blocked 
+                              ws.is_blocked
                                 ? "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400"
                                 : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-450"
                             )}>
@@ -1666,7 +1764,7 @@ Nos vemos em breve!`
                       className="w-full pl-9 pr-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-800 dark:text-neutral-200"
                     />
                   </div>
-                  
+
                   {/* Status selection buttons */}
                   <div className="flex gap-1 bg-neutral-50 dark:bg-neutral-950 p-1 rounded-xl justify-between border border-neutral-200/50 dark:border-neutral-800/50">
                     {(['all', 'Pendente', 'Confirmado', 'Cancelado'] as const).map(f => (
@@ -1697,7 +1795,7 @@ Nos vemos em breve!`
                     filteredAppointments.map(app => {
                       const startDate = new Date(app.data_inicio)
                       const isSelected = selectedAppointment?.id === app.id
-                      
+
                       return (
                         <div
                           key={app.id}
@@ -1737,7 +1835,7 @@ Nos vemos em breve!`
                             </div>
                           </div>
 
-                           {/* Detail expansion if selected */}
+                          {/* Detail expansion if selected */}
                           {isSelected && (
                             <motion.div
                               initial={{ opacity: 0, height: 0 }}
@@ -1760,11 +1858,11 @@ Nos vemos em breve!`
                               <div className="space-y-1.5 border-t border-neutral-100 dark:border-neutral-850/60 pt-2 pb-1">
                                 <label className="text-[9px] font-black uppercase tracking-wider text-neutral-450 dark:text-neutral-400 block">Link da Demonstração (Meet / Zoom)</label>
                                 <div className="flex gap-1.5">
-                                  <input 
-                                    type="text" 
+                                  <input
+                                    type="text"
                                     value={demoLink}
                                     onChange={(e) => setDemoLink(e.target.value)}
-                                    placeholder="Ex: https://meet.google.com/abc-defg-hij" 
+                                    placeholder="Ex: https://meet.google.com/abc-defg-hij"
                                     onClick={(e) => e.stopPropagation()}
                                     className="flex-grow px-2 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-[10px] font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-200 placeholder-neutral-400 dark:placeholder-neutral-600"
                                   />
@@ -1783,9 +1881,9 @@ Nos vemos em breve!`
                                 {app.link_demonstracao && (
                                   <div className="flex items-center gap-1.5 mt-1 text-[10px]">
                                     <Video className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
-                                    <a 
-                                      href={app.link_demonstracao} 
-                                      target="_blank" 
+                                    <a
+                                      href={app.link_demonstracao}
+                                      target="_blank"
                                       rel="noreferrer"
                                       onClick={(e) => e.stopPropagation()}
                                       className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline truncate"
@@ -1842,7 +1940,7 @@ Nos vemos em breve!`
                                     <span>Confirmar</span>
                                   </button>
                                 )}
-                                
+
                                 {app.status !== 'Cancelado' ? (
                                   <button
                                     onClick={(e) => {
@@ -1956,7 +2054,7 @@ Nos vemos em breve!`
                     <div className="flex flex-col gap-2.5 pt-8">
                       {/* Morning Header */}
                       <span className="text-[8px] font-black uppercase text-neutral-400 tracking-wider text-center h-4 flex items-center justify-center border-b border-neutral-200 dark:border-neutral-800/80 pb-1">Manhã</span>
-                      
+
                       {/* Generate typical morning slots */}
                       {Array.from({ length: 8 }).map((_, idx) => {
                         const h = 8 + Math.floor(idx / 2)
@@ -2016,7 +2114,7 @@ Nos vemos em breve!`
 
                           {/* Evening Spacer */}
                           <span className="h-4 flex-shrink-0 mt-2 border-b border-neutral-100 dark:border-neutral-850/60" />
-                          
+
                           {/* Evening Slots */}
                           {isWeekend ? (
                             /* No evening commercial slots on weekends */
@@ -2065,6 +2163,123 @@ Nos vemos em breve!`
                 </div>
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {activeTab === 'iclub' && (
+          <motion.div
+            key="iclub"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 15 }}
+            transition={{ duration: 0.25 }}
+            className="space-y-6"
+          >
+            {/* Header Banner */}
+            <div className="flex justify-between items-center bg-white dark:bg-neutral-900/40 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
+              <span className="text-xs font-bold text-neutral-500">Configure as regras de pontuação e fidelidade do iClub</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingRule(null)
+                  setRuleName('')
+                  setRuleBenefitType('referral_discount')
+                  setRuleTargetCount(1)
+                  setRuleRewardType('percent_discount')
+                  setRuleRewardValue(5)
+                  setRuleIsActive(true)
+                  setIsRuleModalOpen(true)
+                }}
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-750 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md shadow-indigo-500/10 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nova Regra</span>
+              </button>
+            </div>
+
+            {/* Rules Cards List */}
+            {isLoadingRules ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-3 text-neutral-500 bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem]">
+                <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Carregando regras...</span>
+              </div>
+            ) : iclubRules.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {iclubRules.map(rule => (
+                  <div
+                    key={rule.id}
+                    className={cn(
+                      "bg-white dark:bg-neutral-900/40 border rounded-[2rem] p-8 shadow-sm flex flex-col justify-between relative backdrop-blur-sm",
+                      rule.is_active ? "border-neutral-200 dark:border-neutral-850" : "border-dashed border-neutral-200 dark:border-neutral-800 opacity-60"
+                    )}
+                  >
+                    {!rule.is_active && (
+                      <span className="absolute top-4 left-4 px-2 py-0.5 bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 text-[8px] font-black uppercase tracking-wider rounded">Inativo</span>
+                    )}
+
+                    {/* Actions */}
+                    <div className="absolute top-4 right-4 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingRule(rule)
+                          setRuleName(rule.name)
+                          setRuleBenefitType(rule.benefit_type)
+                          setRuleTargetCount(rule.target_count)
+                          setRuleRewardType(rule.reward_type)
+                          setRuleRewardValue(Number(rule.reward_value))
+                          setRuleIsActive(rule.is_active)
+                          setIsRuleModalOpen(true)
+                        }}
+                        className="p-2 bg-neutral-50 dark:bg-neutral-950 text-neutral-400 hover:text-indigo-500 dark:hover:text-indigo-400 rounded-xl transition-all shadow-sm"
+                        title="Editar regra"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRuleToDelete(rule)
+                          setIsDeleteRuleModalOpen(true)
+                        }}
+                        className="p-2 bg-neutral-50 dark:bg-neutral-950 text-neutral-400 hover:text-red-500 rounded-xl transition-all shadow-sm"
+                        title="Excluir regra"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-4 pt-2">
+                      <div>
+                        <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">
+                          Tipo: {rule.benefit_type === 'volume_license' ? 'Volume de Licenças' : 'Indicação'}
+                        </span>
+                        <h4 className="text-xl font-black text-neutral-900 dark:text-white mt-1">{rule.name}</h4>
+                      </div>
+
+                      <div className="space-y-1.5 text-xs text-neutral-600 dark:text-neutral-350">
+                        <p>
+                          <span className="font-bold text-neutral-400">Meta: </span>
+                          A cada <strong className="text-neutral-850 dark:text-white">{rule.target_count}</strong> {rule.benefit_type === 'volume_license' ? 'licenças contratadas' : 'indicações ativas'}
+                        </p>
+                        <p>
+                          <span className="font-bold text-neutral-400">Recompensa: </span>
+                          <strong className="text-indigo-600 dark:text-indigo-400">
+                            {rule.reward_type === 'free_license'
+                              ? `${Number(rule.reward_value)} Licença(s) Grátis`
+                              : `${Number(rule.reward_value)}% de Desconto`}
+                          </strong>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-12 text-center text-neutral-400 italic bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] text-xs">
+                Nenhuma regra cadastrada no iClub.
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -2361,8 +2576,8 @@ Nos vemos em breve!`
           }
         }}
         title={workspaceToBlock?.isBlocked ? "Bloquear Workspace" : "Ativar Workspace"}
-        description={workspaceToBlock?.isBlocked 
-          ? "Isso suspenderá o acesso do cliente a este workspace temporariamente." 
+        description={workspaceToBlock?.isBlocked
+          ? "Isso suspenderá o acesso do cliente a este workspace temporariamente."
           : "Isso restaurará o acesso do cliente a este workspace."}
         size="md"
       >
@@ -2562,6 +2777,201 @@ Nos vemos em breve!`
                 <>
                   <Check className="w-4 h-4" />
                   <span>Confirmar Reagendamento</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Save/Edit Rule Modal Dialog */}
+      <AnimatePresence>
+        {isRuleModalOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col"
+            >
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-850 flex items-center justify-between">
+                <span className="text-xs font-black uppercase tracking-widest text-indigo-500">
+                  {editingRule ? 'Editar Regra iClub' : 'Nova Regra iClub'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsRuleModalOpen(false)}
+                  className="p-1 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-100 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Modal Form */}
+              <form onSubmit={handleSaveRule} className="flex-grow flex flex-col">
+                <div className="p-6 space-y-4">
+                  {/* Name */}
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-1.5 block">Nome da Regra</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: Licença Grátis a cada 12 contratadas"
+                      value={ruleName}
+                      onChange={(e) => setRuleName(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-100"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Benefit Type */}
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-1.5 block">Tipo de Meta</label>
+                      <select
+                        value={ruleBenefitType}
+                        onChange={(e) => setRuleBenefitType(e.target.value as any)}
+                        className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-105"
+                      >
+                        <option value="volume_license">Volume de Licenças</option>
+                        <option value="referral_discount">Indicação Convertida</option>
+                      </select>
+                    </div>
+
+                    {/* Target Count */}
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-1.5 block">Quantidade Meta</label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        value={ruleTargetCount}
+                        onChange={(e) => setRuleTargetCount(Number(e.target.value))}
+                        className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-100"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Reward Type */}
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-1.5 block">Tipo de Recompensa</label>
+                      <select
+                        value={ruleRewardType}
+                        onChange={(e) => setRuleRewardType(e.target.value as any)}
+                        className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-105"
+                      >
+                        <option value="free_license">Licença Grátis</option>
+                        <option value="percent_discount">Desconto em Porcentagem</option>
+                      </select>
+                    </div>
+
+                    {/* Reward Value */}
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-1.5 block">Valor da Recompensa</label>
+                      <input
+                        type="number"
+                        required
+                        step="0.01"
+                        min="0"
+                        value={ruleRewardValue}
+                        onChange={(e) => setRuleRewardValue(Number(e.target.value))}
+                        className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-100"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Is Active Status checkbox */}
+                  <div className="flex items-center gap-2 pt-2">
+                    <input
+                      type="checkbox"
+                      id="ruleIsActive"
+                      checked={ruleIsActive}
+                      onChange={(e) => setRuleIsActive(e.target.checked)}
+                      className="w-4 h-4 rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <label htmlFor="ruleIsActive" className="text-xs font-bold text-neutral-700 dark:text-neutral-350">
+                      Disponibilizar regra (Ativa)
+                    </label>
+                  </div>
+                </div>
+
+                {/* Modal Footer Actions */}
+                <div className="px-6 py-4 bg-neutral-50 dark:bg-neutral-900/40 border-t border-neutral-100 dark:border-neutral-850 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsRuleModalOpen(false)}
+                    className="h-10 px-5 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 font-bold text-xs uppercase tracking-widest border border-neutral-200 dark:border-neutral-700 rounded-xl"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingRule}
+                    className="h-10 px-5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md shadow-indigo-500/20 flex items-center gap-2"
+                  >
+                    {isSavingRule ? 'Salvando...' : 'Salvar Regra'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirm Delete Rule Modal */}
+      <Modal
+        isOpen={isDeleteRuleModalOpen}
+        onClose={() => {
+          if (!isDeletingRule) {
+            setIsDeleteRuleModalOpen(false)
+            setRuleToDelete(null)
+          }
+        }}
+        title="Excluir Regra iClub"
+        description="Esta ação removerá a regra permanentemente do iClub."
+        size="md"
+      >
+        <div className="space-y-6">
+          <div className="flex items-center gap-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-650 dark:text-red-400">
+            <div className="p-2.5 bg-red-500/20 rounded-xl">
+              <AlertTriangle className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <p className="text-sm font-black">Você tem certeza absoluta?</p>
+              <p className="text-xs opacity-90 mt-0.5">
+                A regra <span className="font-bold">"{ruleToDelete?.name}"</span> será removida permanentemente.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              disabled={isDeletingRule}
+              onClick={() => {
+                setIsDeleteRuleModalOpen(false)
+                setRuleToDelete(null)
+              }}
+              className="h-10 px-5 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 font-bold text-xs uppercase tracking-widest border border-neutral-200 dark:border-neutral-750 rounded-xl transition-all"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={isDeletingRule}
+              onClick={handleConfirmDeleteRule}
+              className="h-10 px-6 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md shadow-red-500/20 flex items-center gap-2"
+            >
+              {isDeletingRule ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Excluindo...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  <span>Confirmar Exclusão</span>
                 </>
               )}
             </button>

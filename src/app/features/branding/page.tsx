@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { Palette, ImageIcon, Type, Layout, ArrowLeft, MousePointer2 } from 'lucide-react'
 import Link from 'next/link'
+import { BottomCta } from '@/components/landing/BottomCta'
 import { useI18n } from '@/i18n/I18nContext'
 
 export default function BrandingFeaturePage() {
@@ -102,9 +103,7 @@ export default function BrandingFeaturePage() {
          <p className="text-neutral-500 dark:text-neutral-400 max-w-2xl mx-auto text-lg mb-10">
             {t('marketing_v2.hero.desc')}
          </p>
-         <button className="px-12 py-5 bg-purple-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-purple-700 transition-all shadow-2xl shadow-purple-500/20">
-            {t('marketing_v2.features.branding.footer_cta')}
-         </button>
+         <BottomCta />
       </div>
     </div>
   )
