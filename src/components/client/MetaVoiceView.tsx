@@ -168,8 +168,8 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
     setIsCommenting(false)
   }
 
-  const filteredSuggestions = suggestions.filter(s => 
-    s.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const filteredSuggestions = suggestions.filter(s =>
+    s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.description.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
@@ -177,7 +177,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
 
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-200">
-      
+
       {/* Header Banner */}
       <div className="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-3xl p-8 text-white relative overflow-hidden shadow-lg border border-indigo-500/20">
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
@@ -202,9 +202,9 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-2 rounded-2xl">
         <div className="flex-1 w-full relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <input 
-            type="text" 
-            placeholder="Buscar sugestões..." 
+          <input
+            type="text"
+            placeholder="Buscar sugestões..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full bg-transparent border-none focus:ring-0 pl-10 pr-4 py-2 text-sm text-neutral-900 dark:text-neutral-100"
@@ -212,15 +212,15 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
         </div>
         <div className="w-px h-6 bg-neutral-200 dark:bg-neutral-800 hidden md:block"></div>
         <div className="flex gap-2 w-full md:w-auto px-2 pb-2 md:pb-0 overflow-x-auto">
-          <select 
-            value={filterCategory} 
+          <select
+            value={filterCategory}
             onChange={e => setFilterCategory(e.target.value)}
             className="bg-neutral-100 dark:bg-neutral-800 border-none text-xs font-bold rounded-lg px-3 py-2 text-neutral-700 dark:text-neutral-300 focus:ring-0"
           >
             {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
-          <select 
-            value={filterStatus} 
+          <select
+            value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
             className="bg-neutral-100 dark:bg-neutral-800 border-none text-xs font-bold rounded-lg px-3 py-2 text-neutral-700 dark:text-neutral-300 focus:ring-0"
           >
@@ -253,8 +253,8 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
             const StatusIcon = st.icon
 
             return (
-              <div 
-                key={s.id} 
+              <div
+                key={s.id}
                 onClick={() => handleOpenDetails(s.id)}
                 className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col h-full group"
               >
@@ -266,7 +266,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
                     {getCategoryLabel(s.category)}
                   </span>
                 </div>
-                
+
                 <h3 className="text-lg font-black text-neutral-900 dark:text-white leading-tight mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
                   {s.title}
                 </h3>
@@ -277,7 +277,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
                 {/* Footer Metrics */}
                 <div className="flex items-center justify-between pt-4 border-t border-neutral-100 dark:border-neutral-800 mt-auto">
                   <div className="flex items-center gap-4">
-                    <button 
+                    <button
                       onClick={(e) => handleLike(s.id, e)}
                       className={cn(
                         "flex items-center gap-1.5 text-xs font-bold transition-colors",
@@ -292,7 +292,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
                       {s._count?.comments || 0}
                     </div>
                   </div>
-                  
+
                   {s.avgStars !== undefined && s.avgStars > 0 && (
                     <div className="flex items-center gap-1 text-xs font-bold text-amber-500">
                       <Star className="w-4 h-4 fill-current" />
@@ -307,11 +307,11 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
       )}
 
       {/* New Suggestion Modal */}
-      <Modal isOpen={showNewModal} onClose={() => setShowNewModal(false)} title="Nova Sugestão" size="xl">
+      <Modal isOpen={showNewModal} onClose={() => setShowNewModal(false)} title="Nova Sugestão" size="2xl">
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
             <label className="block text-xs font-black uppercase text-neutral-500 mb-1.5">Título da Sugestão</label>
-            <input 
+            <input
               required
               value={newTitle}
               onChange={e => setNewTitle(e.target.value)}
@@ -321,7 +321,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
           </div>
           <div>
             <label className="block text-xs font-black uppercase text-neutral-500 mb-1.5">Categoria</label>
-            <select 
+            <select
               value={newCategory}
               onChange={e => setNewCategory(e.target.value)}
               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500"
@@ -333,7 +333,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
           </div>
           <div>
             <label className="block text-xs font-black uppercase text-neutral-500 mb-1.5">Descrição Detalhada</label>
-            <textarea 
+            <textarea
               required
               maxLength={2000}
               value={newDesc}
@@ -352,9 +352,9 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
             </div>
           </div>
           <div className="flex items-center gap-2 pt-2">
-            <input 
-              type="checkbox" 
-              id="anon" 
+            <input
+              type="checkbox"
+              id="anon"
               checked={isAnonymous}
               onChange={e => setIsAnonymous(e.target.checked)}
               className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-neutral-300"
@@ -423,7 +423,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
             {/* Voting Area */}
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-between p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl">
               <div className="flex items-center gap-4">
-                <button 
+                <button
                   onClick={() => handleLike(selectedSuggestion.id)}
                   className={cn(
                     "px-4 py-2 rounded-xl text-sm font-black uppercase tracking-wider flex items-center gap-2 transition-all",
@@ -439,17 +439,17 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
                   {selectedSuggestion.votes?.filter(v => v.type === 'like').length || 0} votos
                 </span>
               </div>
-              
+
               <div className="w-px h-8 bg-neutral-200 dark:bg-neutral-800 hidden sm:block"></div>
-              
+
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mr-2">Avalie a importância:</span>
                 {[1, 2, 3, 4, 5].map(star => {
                   const userStar = selectedSuggestion.votes?.find(v => v.user_id === userId && v.type === 'star')?.star_value || 0
                   const isFilled = star <= userStar
                   return (
-                    <button 
-                      key={star} 
+                    <button
+                      key={star}
                       onClick={() => handleStar(selectedSuggestion.id, star)}
                       className="focus:outline-none transition-transform hover:scale-110"
                     >
@@ -465,7 +465,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
               <h3 className="text-sm font-black uppercase text-neutral-500 tracking-wider border-b border-neutral-100 dark:border-neutral-800 pb-2">
                 Comentários ({selectedSuggestion.comments?.length || 0})
               </h3>
-              
+
               <div className="space-y-4 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
                 {selectedSuggestion.comments?.map(comment => (
                   <div key={comment.id} className="flex gap-3">
@@ -492,7 +492,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
 
               {/* Add comment */}
               <form onSubmit={handleComment} className="flex gap-2 pt-2">
-                <input 
+                <input
                   required
                   value={newComment}
                   onChange={e => setNewComment(e.target.value)}

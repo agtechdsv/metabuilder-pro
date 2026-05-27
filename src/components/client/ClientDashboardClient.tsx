@@ -903,7 +903,7 @@ export default function ClientDashboardClient({
 
       {/* Tab Navigation */}
       {!isGuest && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
           {/* Left Tabs Group */}
           <div className="flex sm:grid sm:grid-cols-4 gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-fit">
             {TABS.filter(tab => tab.id !== 'iclub' && tab.id !== 'metavoice').map(tab => (
