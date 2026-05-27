@@ -307,7 +307,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
       )}
 
       {/* New Suggestion Modal */}
-      <Modal isOpen={showNewModal} onClose={() => setShowNewModal(false)} title="Nova Sugestão">
+      <Modal isOpen={showNewModal} onClose={() => setShowNewModal(false)} title="Nova Sugestão" size="xl">
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
             <label className="block text-xs font-black uppercase text-neutral-500 mb-1.5">Título da Sugestão</label>
@@ -339,7 +339,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
               value={newDesc}
               onChange={e => setNewDesc(e.target.value)}
               placeholder="Explique o que você gostaria que fosse implementado e qual problema isso resolve..."
-              className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 h-32 resize-none"
+              className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 h-48 resize-none"
             />
             <div className="flex justify-between items-center mt-1.5 px-1">
               <span className="text-[10px] text-neutral-400">Máximo de 2000 caracteres</span>
@@ -384,7 +384,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
       </Modal>
 
       {/* Details Drawer/Modal */}
-      <Modal isOpen={!!selectedId} onClose={() => setSelectedId(null)} title="Detalhes da Sugestão" maxWidth="max-w-3xl">
+      <Modal isOpen={!!selectedId} onClose={() => setSelectedId(null)} title="Detalhes da Sugestão" size="2xl">
         {loadingDetails || !selectedSuggestion ? (
           <div className="py-20 flex justify-center">
             <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />

@@ -21,6 +21,7 @@ export interface Suggestion {
     likes: number
     comments: number
   }
+  avgStars?: number
 }
 
 export interface SuggestionVote {

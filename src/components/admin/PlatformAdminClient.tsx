@@ -30,7 +30,10 @@ import {
   ChevronRight,
   Mail,
   Phone,
-  User
+  User,
+  BarChart3,
+  Zap,
+  Lightbulb
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
@@ -117,6 +120,15 @@ interface Appointment {
   created_at: string
   updated_at: string
 }
+
+const TAB_CONFIG = {
+  dashboard: { label: 'Dashboard BI', icon: BarChart3, iconColor: 'text-blue-500 dark:text-blue-400' },
+  plans: { label: 'Cadastro de Planos', icon: Layers, iconColor: 'text-emerald-500 dark:text-emerald-400' },
+  clients: { label: 'Gestão de Clientes', icon: Users, iconColor: 'text-purple-500 dark:text-purple-400' },
+  agenda: { label: 'Agenda', icon: Calendar, iconColor: 'text-teal-500 dark:text-teal-400' },
+  iclub: { label: 'Gestão do iClub', icon: Zap, iconColor: 'text-indigo-500 dark:text-indigo-400' },
+  metavoice: { label: 'MetaVoice', icon: Lightbulb, iconColor: 'text-amber-500 dark:text-amber-400' },
+} as const
 
 interface PlatformAdminClientProps {
   initialPlans: Plan[]
@@ -1153,46 +1165,74 @@ Nos vemos em breve!`
     <div className="space-y-8 pb-10">
 
       {/* Admin Panel Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-neutral-900/40 p-8 rounded-[2.5rem] border border-neutral-200 dark:border-neutral-800 shadow-sm">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="px-2 py-0.5 rounded bg-indigo-500 text-white text-[9px] font-black uppercase tracking-wider">Super Admin</span>
-            <span className="text-xs font-bold text-neutral-400">{currentUserEmail}</span>
+      <div className="flex flex-col gap-6 bg-white dark:bg-neutral-900/40 p-8 rounded-[2.5rem] border border-neutral-200 dark:border-neutral-800 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center shadow-inner shrink-0">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2 py-0.5 rounded bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[9px] font-black uppercase tracking-wider border border-indigo-500/15">Super Admin</span>
+                <span className="text-xs font-bold text-neutral-400">{currentUserEmail}</span>
+              </div>
+              <h2 className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">
+                Painel de Controle <span className="text-indigo-500">PRO</span>
+              </h2>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+                Monitore o crescimento da plataforma, crie planos e controle o acesso de clientes ativos.
+              </p>
+            </div>
           </div>
-          <h2 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
-            Painel de Controle <span className="text-indigo-500">PRO</span>
-          </h2>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-            Monitore o crescimento da plataforma, crie planos e controle o acesso de clientes ativos.
-          </p>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex gap-1.5 bg-neutral-100 dark:bg-neutral-950 p-1.5 rounded-[1.5rem] border border-neutral-200/50 dark:border-neutral-850 overflow-x-auto">
-          {(['dashboard', 'plans', 'clients', 'agenda', 'iclub', 'metavoice'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                "px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap",
-                activeTab === tab
-                  ? "bg-white dark:bg-neutral-850 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                  : "text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
-              )}
-            >
-              {tab === 'dashboard'
-                ? 'Dashboard BI'
-                : tab === 'plans'
-                  ? 'Cadastro de Planos'
-                  : tab === 'clients'
-                    ? 'Gestão de Clientes'
-                    : tab === 'agenda'
-                      ? 'Agenda'
-                      : tab === 'iclub'
-                        ? 'Gestão do iClub'
-                        : 'MetaVoice'}
-            </button>
-          ))}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
+          {/* Left Tabs Group */}
+          <div className="flex flex-wrap gap-1.5 bg-neutral-100 dark:bg-neutral-950 p-1.5 rounded-2xl border border-neutral-200/50 dark:border-neutral-850/80 w-fit">
+            {(['dashboard', 'plans', 'clients', 'agenda'] as const).map(tab => {
+              const config = TAB_CONFIG[tab]
+              const Icon = config.icon
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={cn(
+                    "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 whitespace-nowrap",
+                    activeTab === tab
+                      ? "bg-white dark:bg-neutral-850 text-neutral-900 dark:text-white shadow-sm"
+                      : "text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+                  )}
+                >
+                  <Icon className={cn("w-4 h-4", config.iconColor)} />
+                  <span>{config.label}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Right Tabs Group */}
+          <div className="flex flex-wrap gap-1.5 bg-neutral-100 dark:bg-neutral-950 p-1.5 rounded-2xl border border-neutral-200/50 dark:border-neutral-850/80 w-fit">
+            {(['iclub', 'metavoice'] as const).map(tab => {
+              const config = TAB_CONFIG[tab]
+              const Icon = config.icon
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={cn(
+                    "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 whitespace-nowrap",
+                    activeTab === tab
+                      ? "bg-white dark:bg-neutral-850 text-neutral-900 dark:text-white shadow-sm"
+                      : "text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+                  )}
+                >
+                  <Icon className={cn("w-4 h-4", config.iconColor)} />
+                  <span>{config.label}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
 

@@ -210,7 +210,7 @@ export function MetaVoiceAdminView() {
       </div>
 
       {/* Modal Edit/Moderate */}
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Moderar Sugestão" maxWidth="max-w-2xl">
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Moderar Sugestão" size="2xl">
         {selectedSuggestion && (
           <form onSubmit={handleSave} className="space-y-6">
             <div className="p-4 bg-neutral-50 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800">

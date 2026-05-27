@@ -493,7 +493,7 @@ export default function ControlCenterFeaturePage() {
                       : 'text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-900/40'
                   )}
                 >
-                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <LayoutDashboard className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
                   <span>Dashboard BI</span>
                 </button>
                 <button
@@ -505,7 +505,7 @@ export default function ControlCenterFeaturePage() {
                       : 'text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-900/40'
                   )}
                 >
-                  <Activity className="w-3.5 h-3.5" />
+                  <Activity className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
                   <span>Produtividade</span>
                 </button>
                 <button
@@ -517,7 +517,7 @@ export default function ControlCenterFeaturePage() {
                       : 'text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-900/40'
                   )}
                 >
-                  <CreditCard className="w-3.5 h-3.5" />
+                  <CreditCard className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
                   <span>Assinatura</span>
                 </button>
                 <button
@@ -529,7 +529,7 @@ export default function ControlCenterFeaturePage() {
                       : 'text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-900/40'
                   )}
                 >
-                  <XCircle className="w-3.5 h-3.5" />
+                  <XCircle className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
                   <span>Cancelamento</span>
                 </button>
               </div>

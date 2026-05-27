@@ -436,13 +436,32 @@ export default function ClientDashboardClient({
   payments,
   activityLogs = [],
 }: ClientDashboardClientProps) {
-  const [activeTab, setActiveTab] = useState<TabId>('dashboard')
+  const [localProfile, setLocalProfile] = useState(profile)
+  const isGuest = !localProfile?.plan_id && !localProfile?.is_super_admin
+  const [activeTab, setActiveTab] = useState<TabId>(isGuest ? 'metavoice' : 'dashboard')
   const [isCanceling, setIsCanceling] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [selectedLog, setSelectedLog] = useState<any>(null)
   const [modalTab, setModalTab] = useState<'visual' | 'raw'>('visual')
   const [copied, setCopied] = useState(false)
-  const [localProfile, setLocalProfile] = useState(profile)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const tab = params.get('tab') as TabId
+      if (tab && TABS.some(t => t.id === tab)) {
+        if (!isGuest || tab === 'metavoice') {
+          setActiveTab(tab)
+        }
+      }
+    }
+  }, [isGuest])
+
+  useEffect(() => {
+    if (isGuest && activeTab !== 'metavoice') {
+      setActiveTab('metavoice')
+    }
+  }, [isGuest, activeTab])
 
   // Real-time Asaas data
   const [asaasSubData, setAsaasSubData] = useState<{ creditCard: any; pendingInvoice: any } | null>(null)
@@ -850,69 +869,93 @@ export default function ClientDashboardClient({
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shadow-inner">
-            <Gauge className="w-6 h-6" />
+        {isGuest ? (
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center shadow-inner">
+              <Lightbulb className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-neutral-900 dark:text-white">Sugestões & Ideias (MetaVoice)</h1>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+                Deixe sugestões ou vote nas ideias da comunidade para nos ajudar a melhorar o MetaBuilder PRO
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-black text-neutral-900 dark:text-white">Painel de Controle</h1>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-              Visão geral dos seus dados, assinatura e conta
-            </p>
-          </div>
-        </div>
-        {localProfile?.subscription_status && (
-          <StatusBadge status={localProfile.subscription_status} />
+        ) : (
+          <>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shadow-inner">
+                <Gauge className="w-6 h-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-neutral-900 dark:text-white">Painel de Controle</h1>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+                  Visão geral dos seus dados, assinatura e conta
+                </p>
+              </div>
+            </div>
+            {localProfile?.subscription_status && (
+              <StatusBadge status={localProfile.subscription_status} />
+            )}
+          </>
         )}
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        {/* Left Tabs Group */}
-        <div className="flex sm:grid sm:grid-cols-4 gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-fit">
-          {TABS.filter(tab => tab.id !== 'iclub' && tab.id !== 'metavoice').map(tab => (
-            <button
-              key={tab.id}
-              id={`client-tab-${tab.id}`}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                'flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 w-full whitespace-nowrap',
-                activeTab === tab.id
-                  ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm'
-                  : 'text-neutral-500 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
-              )}
-            >
-              <tab.icon className="w-4 h-4" />
-              <span className="hidden sm:block">{tab.label}</span>
-            </button>
-          ))}
-        </div>
+      {!isGuest && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          {/* Left Tabs Group */}
+          <div className="flex sm:grid sm:grid-cols-4 gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-fit">
+            {TABS.filter(tab => tab.id !== 'iclub' && tab.id !== 'metavoice').map(tab => (
+              <button
+                key={tab.id}
+                id={`client-tab-${tab.id}`}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 w-full whitespace-nowrap',
+                  activeTab === tab.id
+                    ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm'
+                    : 'text-neutral-500 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+                )}
+              >
+                <tab.icon className={cn(
+                  "w-4 h-4",
+                  tab.id === 'dashboard' && "text-indigo-500 dark:text-indigo-400",
+                  tab.id === 'productivity' && "text-purple-500 dark:text-purple-400",
+                  tab.id === 'subscription' && "text-emerald-500 dark:text-emerald-400",
+                  tab.id === 'cancel' && "text-rose-500 dark:text-rose-400"
+                )} />
+                <span className="hidden sm:block">{tab.label}</span>
+              </button>
+            ))}
+          </div>
 
-        {/* Right Tab Group (Engagement / MetaVoice & iClub) */}
-        <div className="flex sm:grid sm:grid-cols-2 gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-fit">
-          {TABS.filter(tab => tab.id === 'metavoice' || tab.id === 'iclub').map(tab => (
-            <button
-              key={tab.id}
-              id={`client-tab-${tab.id}`}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                'flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 w-full whitespace-nowrap',
-                activeTab === tab.id
-                  ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm'
-                  : 'text-neutral-500 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
-              )}
-            >
-              <tab.icon className={cn(
-                "w-4 h-4",
-                tab.id === 'iclub'
-                  ? "text-indigo-500 dark:text-indigo-400"
-                  : "text-amber-500 dark:text-amber-400"
-              )} />
-              <span>{tab.label}</span>
-            </button>
-          ))}
+          {/* Right Tab Group (Engagement / MetaVoice & iClub) */}
+          <div className="flex sm:grid sm:grid-cols-2 gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-fit">
+            {TABS.filter(tab => tab.id === 'metavoice' || tab.id === 'iclub').map(tab => (
+              <button
+                key={tab.id}
+                id={`client-tab-${tab.id}`}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 w-full whitespace-nowrap',
+                  activeTab === tab.id
+                    ? 'bg-white dark:bg-neutral-800 shadow-sm text-neutral-900 dark:text-white'
+                    : 'text-neutral-500 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+                )}
+              >
+                <tab.icon className={cn(
+                  "w-4 h-4",
+                  tab.id === 'iclub'
+                    ? "text-indigo-500 dark:text-indigo-400"
+                    : "text-amber-500 dark:text-amber-400"
+                )} />
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Tab Panels */}
       <AnimatePresence mode="wait">

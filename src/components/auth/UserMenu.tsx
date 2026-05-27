@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { User, LogOut, Camera, ChevronDown, LayoutDashboard, Loader2, RefreshCcw, ShieldCheck, Gauge } from 'lucide-react'
+import { User, LogOut, Camera, ChevronDown, LayoutDashboard, Loader2, RefreshCcw, ShieldCheck, Gauge, Lightbulb } from 'lucide-react'
 import { signOut, updateAvatar, resetAvatar } from '@/app/auth/actions'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
@@ -218,6 +218,19 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                       <Gauge className="w-4.5 h-4.5" />
                     </div>
                     <span className="text-sm font-bold">Painel de Controle</span>
+                  </Link>
+                )}
+
+                {!localProfile?.is_super_admin && !localProfile?.plan_id && (
+                  <Link
+                    href="/client/dashboard?tab=metavoice"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-amber-500/5 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-300 hover:text-amber-600 dark:hover:text-white transition-all group"
+                  >
+                    <div className="p-2 bg-amber-500/10 rounded-xl group-hover:bg-amber-500/20 transition-all text-amber-500">
+                      <Lightbulb className="w-4.5 h-4.5" />
+                    </div>
+                    <span className="text-sm font-bold">Sugestões (MetaVoice)</span>
                   </Link>
                 )}
 
