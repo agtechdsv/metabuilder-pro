@@ -126,3 +126,174 @@ export async function toggleWorkspaceBlock(workspaceId: string, isBlocked: boole
     return { success: false, error: err.message }
   }
 }
+
+export async function toggleUserCommunityBlock(userId: string, isBlocked: boolean) {
+  try {
+    const { adminSupabase } = await checkSuperAdmin()
+
+    const { error } = await adminSupabase
+      .from('profiles')
+      .update({
+        is_blocked_community: isBlocked
+      })
+      .eq('id', userId)
+
+    if (error) throw error
+
+    revalidatePath('/admin/platform')
+    revalidatePath('/client/dashboard')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao alternar bloqueio de comunidade do usuário:', err)
+    return { success: false, error: err.message }
+  }
+}
+
+export async function toggleUserMetaVoiceBlock(userId: string, isBlocked: boolean) {
+  try {
+    const { adminSupabase } = await checkSuperAdmin()
+
+    const { error } = await adminSupabase
+      .from('profiles')
+      .update({
+        is_blocked_metavoice: isBlocked
+      })
+      .eq('id', userId)
+
+    if (error) throw error
+
+    revalidatePath('/admin/platform')
+    revalidatePath('/client/dashboard')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao alternar bloqueio de MetaVoice do usuário:', err)
+    return { success: false, error: err.message }
+  }
+}
+
+export async function toggleCommunityPostHide(postId: string, isHidden: boolean) {
+  try {
+    const { adminSupabase } = await checkSuperAdmin()
+
+    const { error } = await adminSupabase
+      .from('community_posts')
+      .update({
+        is_hidden: isHidden
+      })
+      .eq('id', postId)
+
+    if (error) throw error
+
+    revalidatePath('/admin/platform')
+    revalidatePath('/client/dashboard')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao alternar ocultação de post da comunidade:', err)
+    return { success: false, error: err.message }
+  }
+}
+
+export async function deleteCommunityPostAdmin(postId: string) {
+  try {
+    const { adminSupabase } = await checkSuperAdmin()
+
+    const { error } = await adminSupabase
+      .from('community_posts')
+      .delete()
+      .eq('id', postId)
+
+    if (error) throw error
+
+    revalidatePath('/admin/platform')
+    revalidatePath('/client/dashboard')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao deletar post da comunidade:', err)
+    return { success: false, error: err.message }
+  }
+}
+
+export async function toggleCommunityCommentHide(commentId: string, isHidden: boolean) {
+  try {
+    const { adminSupabase } = await checkSuperAdmin()
+
+    const { error } = await adminSupabase
+      .from('community_comments')
+      .update({
+        is_hidden: isHidden
+      })
+      .eq('id', commentId)
+
+    if (error) throw error
+
+    revalidatePath('/admin/platform')
+    revalidatePath('/client/dashboard')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao alternar ocultação de comentário da comunidade:', err)
+    return { success: false, error: err.message }
+  }
+}
+
+export async function deleteCommunityCommentAdmin(commentId: string) {
+  try {
+    const { adminSupabase } = await checkSuperAdmin()
+
+    const { error } = await adminSupabase
+      .from('community_comments')
+      .delete()
+      .eq('id', commentId)
+
+    if (error) throw error
+
+    revalidatePath('/admin/platform')
+    revalidatePath('/client/dashboard')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao deletar comentário da comunidade:', err)
+    return { success: false, error: err.message }
+  }
+}
+
+export async function toggleSuggestionHide(suggestionId: string, isHidden: boolean) {
+  try {
+    const { adminSupabase } = await checkSuperAdmin()
+
+    const { error } = await adminSupabase
+      .from('suggestions')
+      .update({
+        is_hidden: isHidden
+      })
+      .eq('id', suggestionId)
+
+    if (error) throw error
+
+    revalidatePath('/admin/platform')
+    revalidatePath('/client/dashboard')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao alternar ocultação de sugestão:', err)
+    return { success: false, error: err.message }
+  }
+}
+
+export async function deleteSuggestionAdmin(suggestionId: string) {
+  try {
+    const { adminSupabase } = await checkSuperAdmin()
+
+    const { error } = await adminSupabase
+      .from('suggestions')
+      .delete()
+      .eq('id', suggestionId)
+
+    if (error) throw error
+
+    revalidatePath('/admin/platform')
+    revalidatePath('/client/dashboard')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao deletar sugestão:', err)
+    return { success: false, error: err.message }
+  }
+}
+

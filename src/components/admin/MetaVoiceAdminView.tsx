@@ -14,7 +14,12 @@ import {
   MessageCircle,
   Star,
   ThumbsUp,
-  RefreshCw
+  RefreshCw,
+  Eye,
+  EyeOff,
+  Trash2,
+  UserX,
+  UserCheck
 } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
@@ -25,6 +30,11 @@ import {
   updateSuggestionStatus,
   adminReplyToSuggestion
 } from '@/app/actions/metavoice'
+import {
+  toggleUserMetaVoiceBlock,
+  toggleSuggestionHide,
+  deleteSuggestionAdmin
+} from '@/app/actions/admin'
 
 const STATUS_MAP: Record<string, { label: string, color: string, icon: any }> = {
   under_review: { label: 'Em Análise', color: 'bg-amber-500/10 text-amber-500', icon: Clock },
@@ -49,6 +59,11 @@ export function MetaVoiceAdminView() {
   const [privateNote, setPrivateNote] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
+  const [isHidden, setIsHidden] = useState(false)
+  const [isBlocked, setIsBlocked] = useState(false)
+  const [isProcessingBlock, setIsProcessingBlock] = useState(false)
+  const [isProcessingDelete, setIsProcessingDelete] = useState(false)
+
   const { toast } = useToast()
 
   const fetchSuggestions = async () => {
@@ -69,6 +84,8 @@ export function MetaVoiceAdminView() {
     setEditStatus(s.status)
     setPublicReply(s.admin_response_public || '')
     setPrivateNote(s.admin_response_private || '')
+    setIsHidden(s.is_hidden || false)
+    setIsBlocked(s.author?.is_blocked_metavoice || false)
     setShowModal(true)
   }
 
@@ -89,10 +106,46 @@ export function MetaVoiceAdminView() {
       privateNote: privateNote
     })
 
+    // Update is_hidden if changed
+    if (isHidden !== selectedSuggestion.is_hidden) {
+      await toggleSuggestionHide(selectedSuggestion.id, isHidden)
+    }
+
     toast('Sugestão atualizada com sucesso!', 'success')
     setShowModal(false)
     fetchSuggestions()
     setIsSaving(false)
+  }
+
+  const handleToggleBlock = async () => {
+    if (!selectedSuggestion?.author) return
+    setIsProcessingBlock(true)
+    const nextBlock = !isBlocked
+    const res = await toggleUserMetaVoiceBlock(selectedSuggestion.author.id, nextBlock)
+    if (res.success) {
+      setIsBlocked(nextBlock)
+      toast(nextBlock ? 'Usuário bloqueado no MetaVoice!' : 'Usuário desbloqueado!', 'success')
+      fetchSuggestions()
+    } else {
+      toast(res.error || 'Erro ao alternar bloqueio', 'error')
+    }
+    setIsProcessingBlock(false)
+  }
+
+  const handleDeleteSuggestion = async () => {
+    if (!selectedSuggestion) return
+    if (!confirm('Tem certeza de que deseja EXCLUIR permanentemente esta sugestão? Esta ação não pode ser desfeita.')) return
+    
+    setIsProcessingDelete(true)
+    const res = await deleteSuggestionAdmin(selectedSuggestion.id)
+    if (res.success) {
+      toast('Sugestão excluída com sucesso!', 'success')
+      setShowModal(false)
+      fetchSuggestions()
+    } else {
+      toast(res.error || 'Erro ao excluir sugestão', 'error')
+    }
+    setIsProcessingDelete(false)
   }
 
   const filtered = suggestions.filter(s => {
@@ -174,8 +227,13 @@ export function MetaVoiceAdminView() {
                 return (
                   <tr key={s.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-bold text-neutral-900 dark:text-white truncate max-w-[300px]">
-                        {s.title}
+                      <div className="flex items-center gap-2">
+                        <div className="font-bold text-neutral-900 dark:text-white truncate max-w-[300px]">
+                          {s.title}
+                        </div>
+                        {s.is_hidden && (
+                          <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-neutral-100 dark:bg-neutral-800 text-neutral-500 border border-neutral-200 dark:border-neutral-700">Oculta</span>
+                        )}
                       </div>
                       <div className="text-xs text-neutral-500">{new Date(s.created_at).toLocaleDateString()}</div>
                     </td>
@@ -224,11 +282,31 @@ export function MetaVoiceAdminView() {
         {selectedSuggestion && (
           <form onSubmit={handleSave} className="space-y-6">
             <div className="p-4 bg-neutral-50 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800">
-              <h3 className="font-black text-lg mb-1">{selectedSuggestion.title}</h3>
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-black text-lg">{selectedSuggestion.title}</h3>
+                {selectedSuggestion.author && (
+                  <div className="flex items-center gap-2 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shrink-0">
+                    <img
+                      src={selectedSuggestion.author.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${selectedSuggestion.author.id}`}
+                      alt={selectedSuggestion.author.full_name || 'Autor'}
+                      className="w-5 h-5 rounded-full object-cover"
+                    />
+                    <div className="text-left">
+                      <div className="text-xs font-black text-neutral-900 dark:text-white leading-none">
+                        {selectedSuggestion.author.full_name || 'Membro'}
+                        {selectedSuggestion.is_anonymous && (
+                          <span className="text-[8px] font-black text-rose-500 bg-rose-500/10 px-1 py-0.5 rounded ml-1 uppercase">Anônimo</span>
+                        )}
+                      </div>
+                      <div className="text-[9px] text-neutral-400 leading-none mt-0.5">Autor</div>
+                    </div>
+                  </div>
+                )}
+              </div>
               <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4 whitespace-pre-wrap">{selectedSuggestion.description}</p>
               <div className="flex items-center gap-4 text-xs font-bold text-neutral-500 uppercase">
                 <span>Categoria: {selectedSuggestion.category}</span>
-                <span>Anônimo: {selectedSuggestion.is_anonymous ? 'Sim' : 'Não'}</span>
+                <span>Data: {new Date(selectedSuggestion.created_at).toLocaleString()}</span>
               </div>
             </div>
 
@@ -272,6 +350,60 @@ export function MetaVoiceAdminView() {
                 />
               </div>
 
+            </div>
+
+            {/* Moderation & Safety Tools */}
+            <div className="border-t border-neutral-100 dark:border-neutral-800 pt-6">
+              <h4 className="text-xs font-black uppercase text-neutral-500 mb-3 flex items-center gap-1">
+                <ShieldAlert className="w-4 h-4 text-indigo-500" /> Ferramentas de Moderação e Segurança
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                
+                {/* Ocultar / Exibir */}
+                <div className="flex items-center gap-2.5 p-3.5 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800">
+                  <input
+                    type="checkbox"
+                    id="hide-suggestion"
+                    checked={isHidden}
+                    onChange={e => setIsHidden(e.target.checked)}
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-neutral-300 dark:border-neutral-700"
+                  />
+                  <label htmlFor="hide-suggestion" className="text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5 cursor-pointer">
+                    {isHidden ? <EyeOff className="w-4 h-4 text-neutral-500" /> : <Eye className="w-4 h-4 text-emerald-500" />}
+                    {isHidden ? 'Oculto (Exibir)' : 'Ocultar do MetaVoice'}
+                  </label>
+                </div>
+
+                {/* Bloquear Autor */}
+                {selectedSuggestion.author && (
+                  <button
+                    type="button"
+                    onClick={handleToggleBlock}
+                    disabled={isProcessingBlock}
+                    className={cn(
+                      "px-4 py-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all active:scale-95 disabled:opacity-50",
+                      isBlocked
+                        ? "bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20"
+                        : "bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-500/20"
+                    )}
+                  >
+                    {isBlocked ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+                    {isBlocked ? 'Desbloquear Autor' : 'Bloquear Autor'}
+                  </button>
+                )}
+
+                {/* Excluir Sugestão */}
+                <button
+                  type="button"
+                  onClick={handleDeleteSuggestion}
+                  disabled={isProcessingDelete}
+                  className="px-4 py-3 bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Excluir Sugestão
+                </button>
+
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">

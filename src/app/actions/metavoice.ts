@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
+import { createClient, createAdminClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export interface Suggestion {
@@ -11,6 +11,7 @@ export interface Suggestion {
   status: string
   author_id: string | null
   is_anonymous: boolean
+  is_hidden: boolean
   admin_response_public: string | null
   admin_response_private: string | null
   created_at: string
@@ -22,6 +23,15 @@ export interface Suggestion {
     comments: number
   }
   avgStars?: number
+  author?: {
+    id: string
+    full_name: string | null
+    email: string | null
+    avatar_url: string | null
+    is_super_admin: boolean
+    is_blocked_metavoice?: boolean
+    is_blocked_community?: boolean
+  } | null
 }
 
 export interface SuggestionVote {
@@ -39,10 +49,28 @@ export interface SuggestionComment {
   content: string
   is_admin_response: boolean
   created_at: string
+  is_hidden?: boolean
   author?: {
     id: string
     full_name: string | null
     email: string | null
+    avatar_url: string | null
+    is_super_admin: boolean
+    is_blocked_metavoice?: boolean
+    is_blocked_community?: boolean
+  }
+}
+
+// Helper to check if a user is blocked from MetaVoice
+async function checkMetaVoiceBlock(userId: string) {
+  const adminSupabase = createAdminClient()
+  const { data: profile } = await adminSupabase
+    .from('profiles')
+    .select('is_blocked_metavoice')
+    .eq('id', userId)
+    .maybeSingle()
+  if (profile?.is_blocked_metavoice) {
+    throw new Error('Você está bloqueado no MetaVoice.')
   }
 }
 
@@ -50,11 +78,24 @@ export interface SuggestionComment {
 
 export async function getSuggestions(filters?: { category?: string; status?: string }) {
   const supabase = await createClient()
+  const adminSupabase = createAdminClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  let isCurrentUserAdmin = false
+  if (user) {
+    const { data: currentProfile } = await adminSupabase
+      .from('profiles')
+      .select('is_super_admin')
+      .eq('id', user.id)
+      .maybeSingle()
+    isCurrentUserAdmin = currentProfile?.is_super_admin === true
+  }
 
   let query = supabase
     .from('suggestions')
     .select(`
       *,
+      author:profiles(id, full_name, avatar_url, is_super_admin, is_blocked_metavoice, is_blocked_community),
       votes:suggestion_votes(*),
       comments:suggestion_comments(count)
     `)
@@ -66,6 +107,10 @@ export async function getSuggestions(filters?: { category?: string; status?: str
   
   if (filters?.status && filters.status !== 'all') {
     query = query.eq('status', filters.status)
+  }
+
+  if (!isCurrentUserAdmin) {
+    query = query.not('is_hidden', 'eq', true)
   }
 
   const { data, error } = await query
@@ -85,8 +130,12 @@ export async function getSuggestions(filters?: { category?: string; status?: str
       ? starVotes.reduce((acc: number, v: any) => acc + (v.star_value || 0), 0) / starVotes.length
       : 0
 
+    // Anonymize if anonymous and current user is not admin
+    const author = s.is_anonymous && !isCurrentUserAdmin ? null : s.author
+
     return {
       ...s,
+      author,
       _count: {
         likes,
         comments: s.comments?.[0]?.count || 0
@@ -100,14 +149,28 @@ export async function getSuggestions(filters?: { category?: string; status?: str
 
 export async function getSuggestionById(id: string) {
   const supabase = await createClient()
+  const adminSupabase = createAdminClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  let isCurrentUserAdmin = false
+  if (user) {
+    const { data: currentProfile } = await adminSupabase
+      .from('profiles')
+      .select('is_super_admin')
+      .eq('id', user.id)
+      .maybeSingle()
+    isCurrentUserAdmin = currentProfile?.is_super_admin === true
+  }
+
   const { data, error } = await supabase
     .from('suggestions')
     .select(`
       *,
+      author:profiles(id, full_name, avatar_url, is_super_admin, is_blocked_metavoice, is_blocked_community),
       votes:suggestion_votes(*),
       comments:suggestion_comments(
         *,
-        author:profiles(id, full_name, email)
+        author:profiles(id, full_name, avatar_url, is_super_admin, is_blocked_metavoice, is_blocked_community)
       )
     `)
     .eq('id', id)
@@ -116,6 +179,13 @@ export async function getSuggestionById(id: string) {
   if (error) {
     console.error('Error fetching suggestion:', error)
     return { data: null, error: error.message }
+  }
+
+  // Anonymize if anonymous and not admin
+  if (data) {
+    if (data.is_anonymous && !isCurrentUserAdmin) {
+      data.author = null
+    }
   }
 
   // Sort comments oldest to newest
@@ -138,6 +208,12 @@ export async function createSuggestion(payload: {
   
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Usuário não autenticado.' }
+
+  try {
+    await checkMetaVoiceBlock(user.id)
+  } catch (err: any) {
+    return { error: err.message }
+  }
 
   const { data, error } = await supabase
     .from('suggestions')
@@ -167,6 +243,12 @@ export async function voteSuggestion(suggestionId: string, type: 'like' | 'star'
   
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Usuário não autenticado.' }
+
+  try {
+    await checkMetaVoiceBlock(user.id)
+  } catch (err: any) {
+    return { error: err.message }
+  }
 
   // Check if vote exists
   const { data: existingVote } = await supabase
@@ -211,6 +293,12 @@ export async function addSuggestionComment(suggestionId: string, content: string
   
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Usuário não autenticado.' }
+
+  try {
+    await checkMetaVoiceBlock(user.id)
+  } catch (err: any) {
+    return { error: err.message }
+  }
 
   const { error } = await supabase
     .from('suggestion_comments')

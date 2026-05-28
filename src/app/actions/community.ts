@@ -39,16 +39,45 @@ async function getUserDisplayRole(userId: string): Promise<'ADMIN' | 'OWNER' | '
   return 'DEV'
 }
 
+// Helper to check if a user is blocked from the community
+async function checkCommunityBlock(userId: string) {
+  const adminSupabase = createAdminClient()
+  const { data: profile } = await adminSupabase
+    .from('profiles')
+    .select('is_blocked_community')
+    .eq('id', userId)
+    .maybeSingle()
+  if (profile?.is_blocked_community) {
+    throw new Error('Você está bloqueado nesta comunidade.')
+  }
+}
+
 export async function getPosts() {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     const adminSupabase = createAdminClient()
 
+    let isCurrentUserAdmin = false
+    if (user) {
+      const { data: currentProfile } = await adminSupabase
+        .from('profiles')
+        .select('is_super_admin')
+        .eq('id', user.id)
+        .maybeSingle()
+      isCurrentUserAdmin = currentProfile?.is_super_admin === true
+    }
+
     // Fetch posts WITHOUT embedded join — community_posts.user_id → auth.users, not public.profiles
-    const { data: posts, error } = await adminSupabase
+    let query = adminSupabase
       .from('community_posts')
-      .select('id, content, image_url, created_at, user_id')
+      .select('id, content, image_url, created_at, user_id, is_hidden')
+
+    if (!isCurrentUserAdmin) {
+      query = query.not('is_hidden', 'eq', true)
+    }
+
+    const { data: posts, error } = await query
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -59,7 +88,7 @@ export async function getPosts() {
     const userIds = [...new Set(posts.map((p: any) => p.user_id))]
     const { data: profiles } = await adminSupabase
       .from('profiles')
-      .select('id, full_name, avatar_url')
+      .select('id, full_name, avatar_url, is_blocked_community')
       .in('id', userIds)
 
     const profilesMap = new Map((profiles || []).map((p: any) => [p.id, p]))
@@ -86,6 +115,7 @@ export async function getPosts() {
         content: post.content,
         image_url: post.image_url,
         created_at: post.created_at,
+        is_hidden: post.is_hidden || false,
         likesCount: likes?.length || 0,
         commentsCount: commentsCount || 0,
         likedByMe,
@@ -93,7 +123,8 @@ export async function getPosts() {
           id: post.user_id,
           name: profile?.full_name || 'Usuário da Comunidade',
           avatar: profile?.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${post.user_id}`,
-          role
+          role,
+          is_blocked_community: profile?.is_blocked_community || false
         }
       }
     }))
@@ -110,6 +141,8 @@ export async function createPost(content: string, imageUrl?: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Não autenticado')
+
+    await checkCommunityBlock(user.id)
 
     const { data, error } = await supabase
       .from('community_posts')
@@ -135,6 +168,8 @@ export async function toggleLikePost(postId: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Não autenticado')
+
+    await checkCommunityBlock(user.id)
 
     // Check if already liked
     const { data: existingLike } = await supabase
@@ -172,13 +207,31 @@ export async function toggleLikePost(postId: string) {
 
 export async function getComments(postId: string) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
     const adminSupabase = createAdminClient()
 
+    let isCurrentUserAdmin = false
+    if (user) {
+      const { data: currentProfile } = await adminSupabase
+        .from('profiles')
+        .select('is_super_admin')
+        .eq('id', user.id)
+        .maybeSingle()
+      isCurrentUserAdmin = currentProfile?.is_super_admin === true
+    }
+
     // Fetch comments without embedded join — same auth.users FK issue
-    const { data: comments, error } = await adminSupabase
+    let query = adminSupabase
       .from('community_comments')
-      .select('id, content, created_at, user_id')
+      .select('id, content, created_at, user_id, is_hidden')
       .eq('post_id', postId)
+
+    if (!isCurrentUserAdmin) {
+      query = query.not('is_hidden', 'eq', true)
+    }
+
+    const { data: comments, error } = await query
       .order('created_at', { ascending: true })
 
     if (error) throw error
@@ -189,7 +242,7 @@ export async function getComments(postId: string) {
     const userIds = [...new Set(comments.map((c: any) => c.user_id))]
     const { data: profiles } = await adminSupabase
       .from('profiles')
-      .select('id, full_name, avatar_url')
+      .select('id, full_name, avatar_url, is_blocked_community')
       .in('id', userIds)
 
     const profilesMap = new Map((profiles || []).map((p: any) => [p.id, p]))
@@ -201,11 +254,13 @@ export async function getComments(postId: string) {
         id: comment.id,
         content: comment.content,
         created_at: comment.created_at,
+        is_hidden: comment.is_hidden || false,
         user: {
           id: comment.user_id,
           name: profile?.full_name || 'Membro',
           avatar: profile?.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${comment.user_id}`,
-          role
+          role,
+          is_blocked_community: profile?.is_blocked_community || false
         }
       }
     }))
@@ -222,6 +277,8 @@ export async function createComment(postId: string, content: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Não autenticado')
+
+    await checkCommunityBlock(user.id)
 
     const { data, error } = await supabase
       .from('community_comments')
@@ -293,6 +350,8 @@ export async function sendConnectionRequest(targetUserId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Não autenticado')
 
+    await checkCommunityBlock(user.id)
+
     const { data, error } = await supabase
       .from('community_connections')
       .insert({
@@ -313,6 +372,11 @@ export async function sendConnectionRequest(targetUserId: string) {
 export async function acceptConnection(connectionId: string) {
   try {
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Não autenticado')
+
+    await checkCommunityBlock(user.id)
+
     const { error } = await supabase
       .from('community_connections')
       .update({
@@ -369,16 +433,33 @@ export async function getDiscoverySuggestions() {
 
     // 2. Fetch profiles that are NOT in the connectedUserIds set
     const adminSupabase = createAdminClient()
+    
+    // Fetch if the current user is an admin
+    const { data: currentProfile } = await adminSupabase
+      .from('profiles')
+      .select('is_super_admin')
+      .eq('id', user.id)
+      .maybeSingle()
+    const isCurrentUserAdmin = currentProfile?.is_super_admin === true
+
     const { data: profiles, error } = await adminSupabase
       .from('profiles')
-      .select('id, full_name, avatar_url, is_super_admin')
+      .select('id, full_name, avatar_url, is_super_admin, is_blocked_community')
       .limit(30)
 
     if (error) throw error
 
     const suggestions = await Promise.all(
       (profiles || [])
-        .filter((p: any) => !connectedUserIds.has(p.id))
+        .filter((p: any) => {
+          if (p.id === user.id) return false
+          if (connectedUserIds.has(p.id)) return false
+          // If the profile is an admin and the current user is NOT an admin, hide it!
+          if (p.is_super_admin && !isCurrentUserAdmin) return false
+          // If the user/admin is blocked from community, do not suggest them to anyone
+          if (p.is_blocked_community) return false
+          return true
+        })
         .map(async (p: any) => {
           const role = await getUserDisplayRole(p.id)
           return {
@@ -465,6 +546,8 @@ export async function sendChatMessage(roomId: string, content: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Não autenticado')
+
+    await checkCommunityBlock(user.id)
 
     const { data: message, error } = await supabase
       .from('community_chat_messages')

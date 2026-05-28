@@ -18,7 +18,11 @@ import {
   Paperclip,
   Trash2,
   UserMinus,
-  MessageSquareOff
+  MessageSquareOff,
+  EyeOff,
+  Eye,
+  UserX,
+  UserCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/utils/supabase/client'
@@ -37,12 +41,23 @@ import {
   getChatMessages,
   sendChatMessage
 } from '@/app/actions/community'
+import {
+  toggleCommunityPostHide,
+  deleteCommunityPostAdmin,
+  toggleCommunityCommentHide,
+  deleteCommunityCommentAdmin,
+  toggleUserCommunityBlock
+} from '@/app/actions/admin'
 
 export default function CommunityHubView({ hideHeader = false }: { hideHeader?: boolean }) {
   const supabase = createClient()
   
   // Auth state
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [isCurrentUserAdmin, setIsCurrentUserAdmin] = useState(false)
+
+  // Admin Moderation States
+  const [processingAdminAction, setProcessingAdminAction] = useState<Record<string, boolean>>({})
   
   // Tabs & Navigation
   const [activeSubTab, setActiveSubTab] = useState<'feed' | 'chat'>('feed')
@@ -104,9 +119,13 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
         // Fetch current profile state
         const { data: profile } = await supabase
           .from('profiles')
-          .select('avatar_url, full_name')
+          .select('avatar_url, full_name, is_super_admin')
           .eq('id', user.id)
           .maybeSingle()
+
+        if (profile?.is_super_admin) {
+          setIsCurrentUserAdmin(true)
+        }
 
         if (profile) {
           const googleAvatar = user.user_metadata?.picture || user.user_metadata?.avatar_url
@@ -401,6 +420,69 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
     setIsSubmittingComment(false)
   }
 
+  // Admin: Toggle Hide Post
+  const handleAdminTogglePostHide = async (postId: string, isHidden: boolean) => {
+    setProcessingAdminAction(prev => ({ ...prev, [`post_hide_${postId}`]: true }))
+    const res = await toggleCommunityPostHide(postId, !isHidden)
+    if (res.success) {
+      fetchPosts(true)
+    }
+    setProcessingAdminAction(prev => ({ ...prev, [`post_hide_${postId}`]: false }))
+  }
+
+  // Admin: Delete Post
+  const handleAdminDeletePost = async (postId: string) => {
+    if (!confirm('Tem certeza de que deseja EXCLUIR permanentemente esta publicação?')) return
+    setProcessingAdminAction(prev => ({ ...prev, [`post_delete_${postId}`]: true }))
+    const res = await deleteCommunityPostAdmin(postId)
+    if (res.success) {
+      fetchPosts(true)
+      if (openCommentsPostId === postId) setOpenCommentsPostId(null)
+    }
+    setProcessingAdminAction(prev => ({ ...prev, [`post_delete_${postId}`]: false }))
+  }
+
+  // Admin: Toggle Hide Comment
+  const handleAdminToggleCommentHide = async (postId: string, commentId: string, isHidden: boolean) => {
+    setProcessingAdminAction(prev => ({ ...prev, [`comment_hide_${commentId}`]: true }))
+    const res = await toggleCommunityCommentHide(commentId, !isHidden)
+    if (res.success) {
+      const result = await getComments(postId)
+      if (result.success && result.comments) {
+        setCommentsForPost(prev => ({ ...prev, [postId]: result.comments }))
+      }
+      fetchPosts(true)
+    }
+    setProcessingAdminAction(prev => ({ ...prev, [`comment_hide_${commentId}`]: false }))
+  }
+
+  // Admin: Delete Comment
+  const handleAdminDeleteComment = async (postId: string, commentId: string) => {
+    if (!confirm('Tem certeza de que deseja EXCLUIR permanentemente este comentário?')) return
+    setProcessingAdminAction(prev => ({ ...prev, [`comment_delete_${commentId}`]: true }))
+    const res = await deleteCommunityCommentAdmin(commentId)
+    if (res.success) {
+      const result = await getComments(postId)
+      if (result.success && result.comments) {
+        setCommentsForPost(prev => ({ ...prev, [postId]: result.comments }))
+      }
+      fetchPosts(true)
+    }
+    setProcessingAdminAction(prev => ({ ...prev, [`comment_delete_${commentId}`]: false }))
+  }
+
+  // Admin: Toggle Block User from Community
+  const handleAdminToggleUserBlock = async (userId: string, isBlocked: boolean) => {
+    if (!confirm(isBlocked ? 'Desbloquear este usuário na Comunidade?' : 'Bloquear este usuário da Comunidade?')) return
+    setProcessingAdminAction(prev => ({ ...prev, [`user_block_${userId}`]: true }))
+    const res = await toggleUserCommunityBlock(userId, !isBlocked)
+    if (res.success) {
+      fetchPosts(true)
+      fetchConnectionsData(true)
+    }
+    setProcessingAdminAction(prev => ({ ...prev, [`user_block_${userId}`]: false }))
+  }
+
   // Image Input Change Handler
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -630,7 +712,7 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
                 ) : (
                   <div className="space-y-4">
                     {posts.map(post => (
-                      <div key={post.id} className="bg-white dark:bg-neutral-900 rounded-3xl p-6 shadow-sm border border-neutral-200 dark:border-neutral-800 transition-colors">
+                      <div key={post.id} className={cn("bg-white dark:bg-neutral-900 rounded-3xl p-6 shadow-sm border transition-colors", post.is_hidden ? "border-amber-300 dark:border-amber-700 bg-amber-50/30 dark:bg-amber-900/10" : "border-neutral-200 dark:border-neutral-800")}>
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-3">
                             <img src={post.user.avatar} alt={post.user.name} className="w-10 h-10 rounded-full object-cover border border-neutral-200 dark:border-neutral-800" />
@@ -645,6 +727,9 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
                                 )}>
                                   {post.user.role}
                                 </span>
+                                {isCurrentUserAdmin && post.is_hidden && (
+                                  <span className="px-1.5 py-0.5 text-[8px] font-black uppercase bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded border border-amber-200 dark:border-amber-700">Oculto</span>
+                                )}
                               </h4>
                               <span className="text-xs text-neutral-400">
                                 {new Date(post.created_at).toLocaleDateString('pt-BR', {
@@ -654,6 +739,41 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
                               </span>
                             </div>
                           </div>
+                          
+                          {/* Admin Controls */}
+                          {isCurrentUserAdmin && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleAdminToggleUserBlock(post.user.id, post.user.is_blocked_community)}
+                                disabled={processingAdminAction[`user_block_${post.user.id}`]}
+                                title={post.user.is_blocked_community ? 'Desbloquear usuário' : 'Bloquear usuário'}
+                                className={cn(
+                                  "p-1.5 rounded-lg text-xs transition-all active:scale-90 disabled:opacity-50",
+                                  post.user.is_blocked_community
+                                    ? "text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                                    : "text-neutral-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20"
+                                )}
+                              >
+                                {post.user.is_blocked_community ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+                              </button>
+                              <button
+                                onClick={() => handleAdminTogglePostHide(post.id, post.is_hidden)}
+                                disabled={processingAdminAction[`post_hide_${post.id}`]}
+                                title={post.is_hidden ? 'Exibir post' : 'Ocultar post'}
+                                className="p-1.5 rounded-lg text-neutral-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all active:scale-90 disabled:opacity-50"
+                              >
+                                {post.is_hidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                              </button>
+                              <button
+                                onClick={() => handleAdminDeletePost(post.id)}
+                                disabled={processingAdminAction[`post_delete_${post.id}`]}
+                                title="Excluir post permanentemente"
+                                className="p-1.5 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-90 disabled:opacity-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                         
                         <p className="text-neutral-700 dark:text-neutral-300 mb-4 text-[15px] leading-relaxed whitespace-pre-line">
@@ -716,19 +836,58 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
                                   <p className="text-xs text-neutral-450 italic py-2 text-center">Nenhum comentário. Comece a conversa!</p>
                                 ) : (
                                   (commentsForPost[post.id] || []).map(comment => (
-                                    <div key={comment.id} className="flex gap-3 items-start p-3 bg-neutral-50 dark:bg-neutral-850 rounded-2xl">
+                                    <div key={comment.id} className={cn("flex gap-3 items-start p-3 rounded-2xl", comment.is_hidden ? "bg-amber-50/60 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50" : "bg-neutral-50 dark:bg-neutral-850")}>
                                       <img src={comment.user.avatar} alt={comment.user.name} className="w-8 h-8 rounded-full object-cover shrink-0" />
                                       <div className="flex-1 space-y-1">
-                                        <div className="flex items-center justify-between">
-                                          <div className="flex items-center gap-2">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <div className="flex items-center gap-2 flex-wrap">
                                             <span className="font-bold text-xs text-neutral-900 dark:text-white">{comment.user.name}</span>
                                             <span className="px-1.5 py-0.2 bg-neutral-200 dark:bg-neutral-800 text-[8px] font-black uppercase text-neutral-500 rounded">
                                               {comment.user.role}
                                             </span>
+                                            {isCurrentUserAdmin && comment.is_hidden && (
+                                              <span className="px-1.5 py-0.5 text-[8px] font-black uppercase bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded border border-amber-200 dark:border-amber-700">Oculto</span>
+                                            )}
                                           </div>
-                                          <span className="text-[10px] text-neutral-400">
-                                            {new Date(comment.created_at).toLocaleDateString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                          </span>
+                                          <div className="flex items-center gap-1 shrink-0">
+                                            <span className="text-[10px] text-neutral-400">
+                                              {new Date(comment.created_at).toLocaleDateString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                            {/* Admin comment controls */}
+                                            {isCurrentUserAdmin && (
+                                              <>
+                                                <button
+                                                  onClick={() => handleAdminToggleUserBlock(comment.user.id, comment.user.is_blocked_community)}
+                                                  disabled={processingAdminAction[`user_block_${comment.user.id}`]}
+                                                  title={comment.user.is_blocked_community ? 'Desbloquear usuário' : 'Bloquear usuário'}
+                                                  className={cn(
+                                                    "p-1 rounded-lg transition-all active:scale-90 disabled:opacity-50",
+                                                    comment.user.is_blocked_community
+                                                      ? "text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                                                      : "text-neutral-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20"
+                                                  )}
+                                                >
+                                                  {comment.user.is_blocked_community ? <UserCheck className="w-3.5 h-3.5" /> : <UserX className="w-3.5 h-3.5" />}
+                                                </button>
+                                                <button
+                                                  onClick={() => handleAdminToggleCommentHide(post.id, comment.id, comment.is_hidden)}
+                                                  disabled={processingAdminAction[`comment_hide_${comment.id}`]}
+                                                  title={comment.is_hidden ? 'Exibir comentário' : 'Ocultar comentário'}
+                                                  className="p-1 rounded-lg text-neutral-300 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all active:scale-90 disabled:opacity-50"
+                                                >
+                                                  {comment.is_hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                                                </button>
+                                                <button
+                                                  onClick={() => handleAdminDeleteComment(post.id, comment.id)}
+                                                  disabled={processingAdminAction[`comment_delete_${comment.id}`]}
+                                                  title="Excluir comentário"
+                                                  className="p-1 rounded-lg text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-90 disabled:opacity-50"
+                                                >
+                                                  <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                              </>
+                                            )}
+                                          </div>
                                         </div>
                                         <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-normal whitespace-pre-wrap">
                                           {comment.content}

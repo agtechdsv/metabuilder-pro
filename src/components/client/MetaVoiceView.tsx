@@ -270,9 +270,26 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
                 <h3 className="text-lg font-black text-neutral-900 dark:text-white leading-tight mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
                   {s.title}
                 </h3>
-                <p className="text-xs text-neutral-500 line-clamp-3 mb-6 flex-1">
+                <p className="text-xs text-neutral-500 line-clamp-3 mb-4 flex-1">
                   {s.description}
                 </p>
+
+                {/* Author Info */}
+                {s.author && (
+                  <div className="flex items-center gap-2 mb-4">
+                    <img
+                      src={s.author.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${s.author.id}`}
+                      alt={s.author.full_name || 'Usuário'}
+                      className="w-5 h-5 rounded-full object-cover border border-neutral-200 dark:border-neutral-800"
+                    />
+                    <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 flex items-center gap-1.5">
+                      {s.author.full_name || 'Membro'}
+                      {s.is_anonymous && (
+                        <span className="text-[8px] font-black text-rose-500 uppercase bg-rose-500/10 px-1.5 py-0.5 rounded-full">Anônimo</span>
+                      )}
+                    </span>
+                  </div>
+                )}
 
                 {/* Footer Metrics */}
                 <div className="flex items-center justify-between pt-4 border-t border-neutral-100 dark:border-neutral-800 mt-auto">
@@ -293,12 +310,30 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
                     </div>
                   </div>
 
-                  {s.avgStars !== undefined && s.avgStars > 0 && (
-                    <div className="flex items-center gap-1 text-xs font-bold text-amber-500">
-                      <Star className="w-4 h-4 fill-current" />
-                      {s.avgStars.toFixed(1)}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                    {[1, 2, 3, 4, 5].map(star => {
+                      const userStar = s.votes?.find(v => v.user_id === userId && v.type === 'star')?.star_value || 0
+                      const isFilled = star <= userStar
+                      return (
+                        <button
+                          key={star}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleStar(s.id, star)
+                          }}
+                          className="focus:outline-none transition-transform hover:scale-120 p-0.5"
+                          title={`Avaliar importância: ${star} estrelas`}
+                        >
+                          <Star className={cn("w-4 h-4 transition-colors", isFilled ? "fill-amber-400 text-amber-400" : "text-neutral-300 dark:text-neutral-700 hover:text-amber-300")} />
+                        </button>
+                      )
+                    })}
+                    {s.avgStars !== undefined && s.avgStars > 0 && (
+                      <span className="text-[10px] font-black text-amber-500 ml-1">
+                        ({s.avgStars.toFixed(1)})
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             )
@@ -402,6 +437,23 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
                 </span>
               </div>
               <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-2">{selectedSuggestion.title}</h2>
+              
+              {selectedSuggestion.author && (
+                <div className="flex items-center gap-2 mb-4">
+                  <img
+                    src={selectedSuggestion.author.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${selectedSuggestion.author.id}`}
+                    alt={selectedSuggestion.author.full_name || 'Usuário'}
+                    className="w-6 h-6 rounded-full object-cover border border-neutral-200 dark:border-neutral-800"
+                  />
+                  <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 flex items-center gap-1.5">
+                    Sugerido por <strong className="text-neutral-900 dark:text-white">{selectedSuggestion.author.full_name}</strong>
+                    {selectedSuggestion.is_anonymous && (
+                      <span className="text-[9px] font-black text-rose-500 uppercase bg-rose-500/10 px-2 py-0.5 rounded-full">Anônimo (Visível apenas para Admin)</span>
+                    )}
+                  </span>
+                </div>
+              )}
+
               <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed bg-neutral-50 dark:bg-neutral-900 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
                 {selectedSuggestion.description}
               </p>
@@ -469,9 +521,17 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
               <div className="space-y-4 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
                 {selectedSuggestion.comments?.map(comment => (
                   <div key={comment.id} className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center shrink-0 text-xs font-bold text-neutral-500">
-                      {comment.is_admin_response ? 'AG' : (comment.author?.full_name?.charAt(0) || 'U')}
-                    </div>
+                    {comment.is_admin_response ? (
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center shrink-0 text-xs font-bold text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                        AG
+                      </div>
+                    ) : (
+                      <img
+                        src={comment.author?.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${comment.author?.id || comment.id}`}
+                        alt={comment.author?.full_name || 'Membro'}
+                        className="w-8 h-8 rounded-full object-cover shrink-0 border border-neutral-200 dark:border-neutral-800"
+                      />
+                    )}
                     <div className={cn("flex-1 p-3 rounded-2xl", comment.is_admin_response ? "bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20" : "bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800")}>
                       <div className="flex items-center justify-between mb-1">
                         <span className={cn("text-xs font-black", comment.is_admin_response ? "text-indigo-600 dark:text-indigo-400" : "text-neutral-900 dark:text-white")}>
