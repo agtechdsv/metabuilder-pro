@@ -558,18 +558,6 @@ export default function ControlCenterFeaturePage() {
               {/* Right group: MetaVoice & iClub */}
               <div className="flex gap-1.5">
                 <button
-                  onClick={() => setActiveTab('community')}
-                  className={cn(
-                    "px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1",
-                    activeTab === 'community'
-                      ? 'bg-neutral-100 dark:bg-neutral-900 text-neutral-800 dark:text-white shadow-sm'
-                      : 'text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-900/40'
-                  )}
-                >
-                  <Users className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
-                  <span>MetaBuilders</span>
-                </button>
-                <button
                   onClick={() => setActiveTab('metavoice')}
                   className={cn(
                     "px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1",
@@ -580,6 +568,18 @@ export default function ControlCenterFeaturePage() {
                 >
                   <Lightbulb className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
                   <span>MetaVoice</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('community')}
+                  className={cn(
+                    "px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1",
+                    activeTab === 'community'
+                      ? 'bg-neutral-100 dark:bg-neutral-900 text-neutral-800 dark:text-white shadow-sm'
+                      : 'text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-900/40'
+                  )}
+                >
+                  <Users className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
+                  <span>MetaBuilders</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('iclub')}

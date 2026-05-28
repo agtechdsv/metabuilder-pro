@@ -1215,7 +1215,7 @@ Nos vemos em breve!`
 
           {/* Right Tabs Group */}
           <div className="flex flex-wrap gap-1.5 bg-neutral-100 dark:bg-neutral-950 p-1.5 rounded-2xl border border-neutral-200/50 dark:border-neutral-850/80 w-fit">
-            {(['iclub', 'metavoice', 'community'] as const).map(tab => {
+            {(['iclub', 'community', 'metavoice'] as const).map(tab => {
               const config = TAB_CONFIG[tab]
               const Icon = config.icon
               return (
