@@ -407,25 +407,6 @@ export default function ControlCenterFeaturePage() {
               </p>
             </div>
 
-            {/* MetaVoice Description */}
-            <div
-              onClick={() => setActiveTab('metavoice')}
-              className={cn(
-                "p-6 rounded-3xl border transition-all duration-300 cursor-pointer text-left space-y-3",
-                activeTab === 'metavoice'
-                  ? 'bg-amber-500/10 border-amber-500/30 shadow-lg'
-                  : 'bg-white dark:bg-neutral-900/40 border-neutral-200 dark:border-neutral-800/80 hover:bg-neutral-50 dark:hover:bg-neutral-900/60'
-              )}
-            >
-              <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
-                <Lightbulb className="w-5 h-5" />
-                <h3 className="font-bold text-base">MetaVoice - Sugestões & Feedback</h3>
-              </div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                Canal de feedback bidirecional integrado para a comunidade de clientes. Permite o envio de novas sugestões, votação de recursos e troca de comentários, permitindo priorizar o roadmap em tempo real.
-              </p>
-            </div>
-
             {/* 5. MetaBuilders Description */}
             <div
               onClick={() => setActiveTab('community')}
@@ -442,6 +423,25 @@ export default function ControlCenterFeaturePage() {
               </div>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
                 Hub de networking exclusivo para clientes. Conecte-se com Owners e Devs, compartilhe insights, troque experiências em tempo real e amplie suas conexões dentro do ecossistema MetaBuilderPRO.
+              </p>
+            </div>
+
+            {/* MetaVoice Description */}
+            <div
+              onClick={() => setActiveTab('metavoice')}
+              className={cn(
+                "p-6 rounded-3xl border transition-all duration-300 cursor-pointer text-left space-y-3",
+                activeTab === 'metavoice'
+                  ? 'bg-amber-500/10 border-amber-500/30 shadow-lg'
+                  : 'bg-white dark:bg-neutral-900/40 border-neutral-200 dark:border-neutral-800/80 hover:bg-neutral-50 dark:hover:bg-neutral-900/60'
+              )}
+            >
+              <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
+                <Lightbulb className="w-5 h-5" />
+                <h3 className="font-bold text-base">MetaVoice - Sugestões & Feedback</h3>
+              </div>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                Canal de feedback bidirecional integrado para a comunidade de clientes. Permite o envio de novas sugestões, votação de recursos e troca de comentários, permitindo priorizar o roadmap em tempo real.
               </p>
             </div>
 
@@ -558,18 +558,6 @@ export default function ControlCenterFeaturePage() {
               {/* Right group: MetaVoice & iClub */}
               <div className="flex gap-1.5">
                 <button
-                  onClick={() => setActiveTab('metavoice')}
-                  className={cn(
-                    "px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1",
-                    activeTab === 'metavoice'
-                      ? 'bg-neutral-100 dark:bg-neutral-900 text-neutral-800 dark:text-white shadow-sm'
-                      : 'text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-900/40'
-                  )}
-                >
-                  <Lightbulb className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
-                  <span>MetaVoice</span>
-                </button>
-                <button
                   onClick={() => setActiveTab('community')}
                   className={cn(
                     "px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1",
@@ -580,6 +568,18 @@ export default function ControlCenterFeaturePage() {
                 >
                   <Users className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
                   <span>MetaBuilders</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('metavoice')}
+                  className={cn(
+                    "px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1",
+                    activeTab === 'metavoice'
+                      ? 'bg-neutral-100 dark:bg-neutral-900 text-neutral-800 dark:text-white shadow-sm'
+                      : 'text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-900/40'
+                  )}
+                >
+                  <Lightbulb className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
+                  <span>MetaVoice</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('iclub')}
