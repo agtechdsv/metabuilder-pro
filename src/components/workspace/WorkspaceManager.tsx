@@ -683,7 +683,7 @@ export function WorkspaceManager({
                           </div>
                           <div>
                             <p className="text-xs font-bold text-neutral-900 dark:text-white">{guest.full_name || 'Usuário Convidado'}</p>
-                            <p className="text-[10px] text-neutral-505 mt-0.5">{guest.email}</p>
+                            <p className="text-[10px] text-neutral-500 mt-0.5">{guest.email}</p>
                           </div>
                         </div>
 

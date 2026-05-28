@@ -3,6 +3,7 @@
 @theme {
   --color-background: #0a0a0a;
   --color-foreground: #ededed;
+  --color-neutral-850: #202020;
 }
 
 @custom-variant dark (&:is(.dark *));

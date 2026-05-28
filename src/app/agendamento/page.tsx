@@ -342,7 +342,7 @@ function AppointmentPageContent() {
                   </a>
                   <Link 
                     href="/"
-                    className="px-6 py-3 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-805 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold text-sm transition-colors border border-neutral-200 dark:border-neutral-700 flex items-center justify-center"
+                    className="px-6 py-3 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold text-sm transition-colors border border-neutral-200 dark:border-neutral-700 flex items-center justify-center"
                   >
                     Voltar ao Início
                   </Link>

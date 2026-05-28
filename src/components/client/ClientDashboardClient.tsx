@@ -1726,7 +1726,7 @@ export default function ClientDashboardClient({
                               href={asaasSubData.pendingInvoice.bankSlipUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-neutral-900 hover:bg-neutral-950 dark:bg-neutral-105 dark:hover:bg-white text-white dark:text-neutral-900 rounded-xl text-xs font-bold transition-colors"
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-neutral-900 hover:bg-neutral-950 dark:bg-neutral-100 dark:hover:bg-white text-white dark:text-neutral-900 rounded-xl text-xs font-bold transition-colors"
                             >
                               Imprimir Boleto <ExternalLink className="w-3.5 h-3.5" />
                             </a>
@@ -1745,7 +1745,7 @@ export default function ClientDashboardClient({
                                     navigator.clipboard.writeText(asaasSubData.pendingInvoice.identificationField);
                                     toast('Linha digitável copiada!', 'success');
                                   }}
-                                  className="px-3.5 py-2 bg-neutral-200 hover:bg-neutral-300 dark:bg-neutral-800 dark:hover:bg-neutral-750 text-neutral-700 dark:text-neutral-200 rounded-xl text-xs font-bold shrink-0 transition-colors"
+                                  className="px-3.5 py-2 bg-neutral-200 hover:bg-neutral-300 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 rounded-xl text-xs font-bold shrink-0 transition-colors"
                                 >
                                   Copiar
                                 </button>

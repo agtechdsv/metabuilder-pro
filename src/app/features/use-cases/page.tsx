@@ -583,7 +583,7 @@ export default function UseCasesFeaturePage() {
                               <button 
                                 type="button" 
                                 onClick={() => setRecordToDelete(null)}
-                                className="px-4 py-2.5 border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 rounded-xl text-xs font-bold hover:bg-neutral-50 dark:hover:bg-neutral-905 transition-colors"
+                                className="px-4 py-2.5 border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 rounded-xl text-xs font-bold hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors"
                               >
                                 {t('marketing_v2.use_cases_page.mockups.delete_confirm_no')}
                               </button>
@@ -1981,7 +1981,7 @@ export default function UseCasesFeaturePage() {
                               <button 
                                 type="button"
                                 onClick={() => setSelectedAssetPreview(null)}
-                                className="text-xs font-black text-neutral-405 hover:text-neutral-600 dark:hover:text-neutral-200"
+                                className="text-xs font-black text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
                               >
                                 Fechar
                               </button>

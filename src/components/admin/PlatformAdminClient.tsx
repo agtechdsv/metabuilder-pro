@@ -2886,7 +2886,7 @@ Nos vemos em breve!`
                       <select
                         value={ruleBenefitType}
                         onChange={(e) => setRuleBenefitType(e.target.value as any)}
-                        className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-105"
+                        className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-100"
                       >
                         <option value="volume_license">Volume de Licenças</option>
                         <option value="referral_discount">Indicação Convertida</option>
@@ -2914,7 +2914,7 @@ Nos vemos em breve!`
                       <select
                         value={ruleRewardType}
                         onChange={(e) => setRuleRewardType(e.target.value as any)}
-                        className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-105"
+                        className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-100"
                       >
                         <option value="free_license">Licença Grátis</option>
                         <option value="percent_discount">Desconto em Porcentagem</option>
