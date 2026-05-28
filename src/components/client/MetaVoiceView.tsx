@@ -18,7 +18,8 @@ import {
   Activity,
   Layers,
   MoreVertical,
-  ShieldAlert
+  ShieldAlert,
+  RefreshCw
 } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
@@ -251,6 +252,15 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
             <option value="all">Todos os Status</option>
             {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
+          <button
+            type="button"
+            onClick={() => fetchSuggestions()}
+            disabled={loading}
+            title="Atualizar lista"
+            className="p-2 text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-800 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center justify-center disabled:opacity-50 group active:scale-95 duration-200"
+          >
+            <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", loading ? "animate-spin" : "group-hover:rotate-180")} />
+          </button>
         </div>
       </div>
 
