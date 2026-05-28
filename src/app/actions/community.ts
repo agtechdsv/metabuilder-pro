@@ -100,11 +100,15 @@ export async function getPosts() {
         .select('user_id')
         .eq('post_id', post.id)
 
-      // Get comments count
-      const { count: commentsCount } = await adminSupabase
+      // Get comments count — exclude hidden comments for non-admin users
+      let commentsCountQuery = adminSupabase
         .from('community_comments')
         .select('*', { count: 'exact', head: true })
         .eq('post_id', post.id)
+      if (!isCurrentUserAdmin) {
+        commentsCountQuery = commentsCountQuery.not('is_hidden', 'eq', true)
+      }
+      const { count: commentsCount } = await commentsCountQuery
 
       const likedByMe = user ? (likes || []).some((l: any) => l.user_id === user.id) : false
       const role = await getUserDisplayRole(post.user_id)
