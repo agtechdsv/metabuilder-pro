@@ -129,7 +129,7 @@ const TAB_CONFIG = {
   agenda: { label: 'Agenda', icon: Calendar, iconColor: 'text-teal-500 dark:text-teal-400' },
   iclub: { label: 'Gestão do iClub', icon: Zap, iconColor: 'text-indigo-500 dark:text-indigo-400' },
   metavoice: { label: 'MetaVoice', icon: Lightbulb, iconColor: 'text-amber-500 dark:text-amber-400' },
-  community: { label: 'Comunidade PRO', icon: Users, iconColor: 'text-blue-500 dark:text-blue-400' },
+  community: { label: 'MetaBuilders', icon: Users, iconColor: 'text-blue-500 dark:text-blue-400' },
 } as const
 
 interface PlatformAdminClientProps {

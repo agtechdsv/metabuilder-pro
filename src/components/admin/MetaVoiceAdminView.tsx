@@ -267,7 +267,7 @@ export function MetaVoiceAdminView() {
                         </span>
                         {s.avgStars !== undefined && s.avgStars > 0 && (
                           <span className="flex items-center gap-1 text-xs font-bold text-amber-500">
-                            <Star className="w-3.5 h-3.5" /> {s.avgStars.toFixed(1)}
+                            <Star className="w-3.5 h-3.5" /> Média: {s.avgStars.toFixed(1)}
                           </span>
                         )}
                       </div>

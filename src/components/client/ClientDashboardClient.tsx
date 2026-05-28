@@ -417,7 +417,7 @@ const CANCELLATION_REASONS = [
 const TABS = [
   { id: 'dashboard', label: 'Dashboard BI', icon: BarChart3 },
   { id: 'productivity', label: 'Produtividade', icon: Activity },
-  { id: 'community', label: 'Comunidade PRO', icon: Users },
+  { id: 'community', label: 'MetaBuilders', icon: Users },
   { id: 'metavoice', label: 'MetaVoice', icon: Lightbulb },
   { id: 'iclub', label: 'iClub', icon: Zap },
   { id: 'subscription', label: 'Assinatura', icon: CreditCard },
@@ -881,7 +881,7 @@ export default function ClientDashboardClient({
             </div>
             <div>
               <h1 className="text-2xl font-black text-neutral-900 dark:text-white">
-                {activeTab === 'community' ? 'Comunidade PRO' : 'Sugestões & Ideias (MetaVoice)'}
+                {activeTab === 'community' ? 'MetaBuilders' : 'Sugestões & Ideias (MetaVoice)'}
               </h1>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
                 {activeTab === 'community' 

@@ -230,7 +230,7 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                     <div className="p-2 bg-blue-500/10 rounded-xl group-hover:bg-blue-500/20 transition-all text-blue-500">
                       <Users className="w-4.5 h-4.5" />
                     </div>
-                    <span className="text-sm font-bold">Social HUB</span>
+                    <span className="text-sm font-bold">MetaConnect</span>
                   </Link>
                 )}
 

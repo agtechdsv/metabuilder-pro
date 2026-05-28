@@ -330,7 +330,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
                     })}
                     {s.avgStars !== undefined && s.avgStars > 0 && (
                       <span className="text-[10px] font-black text-amber-500 ml-1">
-                        ({s.avgStars.toFixed(1)})
+                        (Média: {s.avgStars.toFixed(1)})
                       </span>
                     )}
                   </div>

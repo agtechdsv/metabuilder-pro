@@ -634,7 +634,7 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
                 <ExternalLink className="w-4 h-4" />
               </button>
             </div>
-            <h2 className="text-3xl font-black mb-2">Comunidade PRO</h2>
+            <h2 className="text-3xl font-black mb-2">MetaBuilders</h2>
             <p className="text-indigo-100 max-w-2xl">
               Conecte-se com outros Owners e Desenvolvedores. Compartilhe insights, peça ajuda, ou faça networking.
             </p>

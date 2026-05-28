@@ -547,7 +547,7 @@ export default function ControlCenterFeaturePage() {
                   )}
                 >
                   <Users className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
-                  <span>Comunidade PRO</span>
+                  <span>MetaBuilders</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('metavoice')}
