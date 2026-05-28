@@ -66,22 +66,35 @@ export async function GET(request: Request) {
     </div>
     <script>
       try {
-        const isPopup = window.opener && !window.opener.closed && window.opener !== window;
-        
-        if (isPopup) {
-          window.opener.postMessage(
-            {
-              type: 'SUPABASE_AUTH_SUCCESS',
-              access_token: '${access_token}',
-              refresh_token: '${refresh_token}',
-              next: '${next}'
-            },
-            window.location.origin
-          );
-          setTimeout(() => { window.close(); }, 100);
-        } else {
-          window.location.assign('${origin}${next}');
+        // BroadcastChannel funciona entre janelas/abas do mesmo origin,
+        // mesmo quando window.opener é null por causa do COOP do Google.
+        const bc = new BroadcastChannel('supabase_auth_channel');
+        bc.postMessage({
+          type: 'SUPABASE_AUTH_SUCCESS',
+          access_token: '${access_token}',
+          refresh_token: '${refresh_token}',
+          next: '${next}'
+        });
+        bc.close();
+
+        // Tenta também via postMessage clássico (fallback para browsers sem BroadcastChannel
+        // ou quando opener ainda está acessível)
+        if (window.opener && !window.opener.closed && window.opener !== window) {
+          try {
+            window.opener.postMessage(
+              {
+                type: 'SUPABASE_AUTH_SUCCESS',
+                access_token: '${access_token}',
+                refresh_token: '${refresh_token}',
+                next: '${next}'
+              },
+              window.location.origin
+            );
+          } catch (_) {}
         }
+
+        // Fecha o popup após um breve delay para garantir entrega da mensagem
+        setTimeout(() => { window.close(); }, 300);
       } catch (e) {
         console.error('Callback error:', e);
         window.location.assign('${origin}${next}');

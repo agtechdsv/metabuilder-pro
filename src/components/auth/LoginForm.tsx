@@ -183,31 +183,45 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
   }, [serverError])
 
   // Listener para capturar os tokens vindos do popup de login do Google
+  // Usa BroadcastChannel (principal) + postMessage (fallback)
+  // O BroadcastChannel é necessário pois o COOP do Google pode cortar window.opener em produção
   useEffect(() => {
-    const handleMessage = async (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
+    const supabase = createClient();
 
+    const processAuthSuccess = async (access_token: string, refresh_token: string, next: string) => {
+      setIsLoading(true);
+      const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+      if (!error) {
+        window.location.href = next || '/workspace';
+      } else {
+        setClientError('Erro ao processar autenticação.');
+        setIsLoading(false);
+      }
+    };
+
+    // Canal principal: BroadcastChannel (não depende de window.opener)
+    const bc = new BroadcastChannel('supabase_auth_channel');
+    bc.onmessage = async (event) => {
       if (event.data?.type === 'SUPABASE_AUTH_SUCCESS') {
         const { access_token, refresh_token, next } = event.data;
-        const supabase = createClient();
-        
-        setIsLoading(true);
-        const { error } = await supabase.auth.setSession({
-          access_token,
-          refresh_token
-        });
+        await processAuthSuccess(access_token, refresh_token, next);
+      }
+    };
 
-        if (!error) {
-          window.location.href = next || '/workspace';
-        } else {
-          setClientError('Erro ao processar autenticação.');
-          setIsLoading(false);
-        }
+    // Canal secundário: postMessage clássico (para browsers sem BroadcastChannel)
+    const handleMessage = async (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === 'SUPABASE_AUTH_SUCCESS') {
+        const { access_token, refresh_token, next } = event.data;
+        await processAuthSuccess(access_token, refresh_token, next);
       }
     };
 
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      bc.close();
+    };
   }, []);
 
   useEffect(() => {
