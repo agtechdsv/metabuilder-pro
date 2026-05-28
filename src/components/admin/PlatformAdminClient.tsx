@@ -49,6 +49,7 @@ import {
 } from '@/app/actions/agenda'
 import { getIClubAdminRules, saveIClubAdminRule, deleteIClubAdminRule, IClubRule } from '@/app/actions/iclub'
 import { MetaVoiceAdminView } from './MetaVoiceAdminView'
+import CommunityHubView from '@/components/client/CommunityHubView'
 
 interface Plan {
   id: string
@@ -128,6 +129,7 @@ const TAB_CONFIG = {
   agenda: { label: 'Agenda', icon: Calendar, iconColor: 'text-teal-500 dark:text-teal-400' },
   iclub: { label: 'Gestão do iClub', icon: Zap, iconColor: 'text-indigo-500 dark:text-indigo-400' },
   metavoice: { label: 'MetaVoice', icon: Lightbulb, iconColor: 'text-amber-500 dark:text-amber-400' },
+  community: { label: 'Comunidade PRO', icon: Users, iconColor: 'text-blue-500 dark:text-blue-400' },
 } as const
 
 interface PlatformAdminClientProps {
@@ -150,7 +152,7 @@ export default function PlatformAdminClient({
   const { toast } = useToast()
 
   // State variables
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'plans' | 'clients' | 'agenda' | 'iclub' | 'metavoice'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'plans' | 'clients' | 'agenda' | 'iclub' | 'metavoice' | 'community'>('dashboard')
   const [plans, setPlans] = useState<Plan[]>(initialPlans)
   const [workspaces, setWorkspaces] = useState<Workspace[]>(initialWorkspaces)
 
@@ -1213,7 +1215,7 @@ Nos vemos em breve!`
 
           {/* Right Tabs Group */}
           <div className="flex flex-wrap gap-1.5 bg-neutral-100 dark:bg-neutral-950 p-1.5 rounded-2xl border border-neutral-200/50 dark:border-neutral-850/80 w-fit">
-            {(['iclub', 'metavoice'] as const).map(tab => {
+            {(['iclub', 'metavoice', 'community'] as const).map(tab => {
               const config = TAB_CONFIG[tab]
               const Icon = config.icon
               return (
@@ -1237,6 +1239,19 @@ Nos vemos em breve!`
       </div>
 
       <AnimatePresence mode="wait">
+        {activeTab === 'community' && (
+          <motion.div
+            key="community"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="mt-6"
+          >
+            <CommunityHubView />
+          </motion.div>
+        )}
+
         {activeTab === 'metavoice' && (
           <motion.div
             key="metavoice"

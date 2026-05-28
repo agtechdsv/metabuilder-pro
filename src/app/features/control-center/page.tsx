@@ -49,8 +49,9 @@ import Link from 'next/link'
 import { BottomCta } from '@/components/landing/BottomCta'
 import { useI18n } from '@/i18n/I18nContext'
 import { cn } from '@/lib/utils'
+import CommunityHubView from '@/components/client/CommunityHubView'
 
-type TabType = 'bi' | 'productivity' | 'iclub' | 'subscription' | 'cancel' | 'metavoice'
+type TabType = 'bi' | 'productivity' | 'iclub' | 'subscription' | 'cancel' | 'metavoice' | 'community'
 
 export default function ControlCenterFeaturePage() {
   const { t } = useI18n()
@@ -537,6 +538,18 @@ export default function ControlCenterFeaturePage() {
               {/* Right group: MetaVoice & iClub */}
               <div className="flex gap-1.5">
                 <button
+                  onClick={() => setActiveTab('community')}
+                  className={cn(
+                    "px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1",
+                    activeTab === 'community'
+                      ? 'bg-neutral-100 dark:bg-neutral-900 text-neutral-800 dark:text-white shadow-sm'
+                      : 'text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-900/40'
+                  )}
+                >
+                  <Users className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
+                  <span>Comunidade PRO</span>
+                </button>
+                <button
                   onClick={() => setActiveTab('metavoice')}
                   className={cn(
                     "px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1",
@@ -703,7 +716,12 @@ export default function ControlCenterFeaturePage() {
                 </motion.div>
               )}
 
-              {/* TAB 2: PRODUTIVIDADE & VAR */}
+              {/* TAB: COMMUNITY PRO */}
+              {activeTab === 'community' && (
+                <CommunityHubView />
+              )}
+
+              {/* TAB 2: PRODUTIVIDADE */}
               {activeTab === 'productivity' && (
                 <motion.div
                   initial={{ opacity: 0 }}
