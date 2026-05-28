@@ -14,6 +14,7 @@ export interface Suggestion {
   is_hidden: boolean
   admin_response_public: string | null
   admin_response_private: string | null
+  image_url?: string | null
   created_at: string
   updated_at: string
   votes?: SuggestionVote[]
@@ -203,6 +204,7 @@ export async function createSuggestion(payload: {
   description: string
   category: string
   is_anonymous: boolean
+  image_data_url?: string
 }) {
   const supabase = await createClient()
   
@@ -215,15 +217,47 @@ export async function createSuggestion(payload: {
     return { error: err.message }
   }
 
+  // Upload image to storage if provided
+  let imageUrl: string | undefined
+  if (payload.image_data_url) {
+    try {
+      const adminSupabase = createAdminClient()
+      // Convert base64 data URL to buffer
+      const base64Data = payload.image_data_url.replace(/^data:image\/\w+;base64,/, '')
+      const buffer = Buffer.from(base64Data, 'base64')
+      const mimeMatch = payload.image_data_url.match(/^data:(image\/\w+);/)
+      const mimeType = mimeMatch?.[1] || 'image/png'
+      const ext = mimeType.split('/')[1] || 'png'
+      const fileName = `suggestion-${user.id}-${Date.now()}.${ext}`
+      const filePath = `suggestions/${fileName}`
+
+      const { error: uploadError } = await adminSupabase.storage
+        .from('community')
+        .upload(filePath, buffer, { contentType: mimeType, upsert: true })
+
+      if (!uploadError) {
+        const { data: { publicUrl } } = adminSupabase.storage
+          .from('community')
+          .getPublicUrl(filePath)
+        imageUrl = publicUrl
+      }
+    } catch (imgErr) {
+      console.warn('Image upload failed, continuing without image:', imgErr)
+    }
+  }
+
+  const insertPayload: any = {
+    title: payload.title,
+    description: payload.description,
+    category: payload.category,
+    is_anonymous: payload.is_anonymous,
+    author_id: user.id,
+  }
+  if (imageUrl) insertPayload.image_url = imageUrl
+
   const { data, error } = await supabase
     .from('suggestions')
-    .insert({
-      title: payload.title,
-      description: payload.description,
-      category: payload.category,
-      is_anonymous: payload.is_anonymous,
-      author_id: user.id,
-    })
+    .insert(insertPayload)
     .select()
     .single()
 

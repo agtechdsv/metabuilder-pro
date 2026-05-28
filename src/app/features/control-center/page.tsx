@@ -43,7 +43,8 @@ import {
   Lightbulb,
   MessageCircle,
   ThumbsUp,
-  Star
+  Star,
+  Heart
 } from 'lucide-react'
 import Link from 'next/link'
 import { BottomCta } from '@/components/landing/BottomCta'
@@ -425,7 +426,26 @@ export default function ControlCenterFeaturePage() {
               </p>
             </div>
 
-            {/* 5. iClub Description */}
+            {/* 5. MetaBuilders Description */}
+            <div
+              onClick={() => setActiveTab('community')}
+              className={cn(
+                "p-6 rounded-3xl border transition-all duration-300 cursor-pointer text-left space-y-3",
+                activeTab === 'community'
+                  ? 'bg-blue-500/10 border-blue-500/30 shadow-lg'
+                  : 'bg-white dark:bg-neutral-900/40 border-neutral-200 dark:border-neutral-800/80 hover:bg-neutral-50 dark:hover:bg-neutral-900/60'
+              )}
+            >
+              <div className="flex items-center gap-3 text-blue-600 dark:text-blue-400">
+                <Users className="w-5 h-5" />
+                <h3 className="font-bold text-base">MetaBuilders - Rede Exclusiva</h3>
+              </div>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                Hub de networking exclusivo para clientes. Conecte-se com Owners e Devs, compartilhe insights, troque experiências em tempo real e amplie suas conexões dentro do ecossistema MetaBuilderPRO.
+              </p>
+            </div>
+
+            {/* 6. iClub Description */}
             <div
               onClick={() => setActiveTab('iclub')}
               className={cn(
@@ -1935,6 +1955,83 @@ export default function ControlCenterFeaturePage() {
                 </motion.div>
               )}
 
+              {/* TAB 7: COMMUNITY (MetaBuilders) */}
+              {activeTab === 'community' && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="space-y-4 text-left"
+                >
+                  {/* Banner */}
+                  <div className="bg-gradient-to-br from-indigo-900 to-blue-900 rounded-2xl p-5 text-white relative overflow-hidden border border-blue-500/20">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl pointer-events-none" />
+                    <div className="relative z-10 space-y-1.5">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black bg-white/10 border border-white/20">
+                        <Users className="w-3 h-3 text-blue-300" /> MetaBuilders
+                      </span>
+                      <h4 className="text-sm font-black">Rede Exclusiva de Builders</h4>
+                      <p className="text-[10px] text-blue-100 leading-relaxed">
+                        Conecte-se com Owners e Devs, compartilhe insights e faça networking no hub exclusivo de clientes MetaBuilderPRO.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Mock create post */}
+                  <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 space-y-3 shadow-sm">
+                    <div className="flex gap-3 items-center">
+                      <div className="w-7 h-7 rounded-full bg-indigo-500/20 flex items-center justify-center text-[10px] font-black text-indigo-500 shrink-0">AM</div>
+                      <div className="flex-1 h-8 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 flex items-center">
+                        <span className="text-[10px] text-neutral-400">O que você quer compartilhar com a comunidade?</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 border-t border-neutral-100 dark:border-neutral-800">
+                      <div className="flex items-center gap-1 text-neutral-400">
+                        <Eye className="w-3.5 h-3.5" />
+                        <span className="text-[9px] font-bold">Imagem</span>
+                      </div>
+                      <button className="px-3 py-1 bg-indigo-600 text-white text-[9px] font-black uppercase rounded-lg">Publicar</button>
+                    </div>
+                  </div>
+
+                  {/* Mock posts feed */}
+                  <div className="space-y-3">
+                    {/* Post 1 */}
+                    <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 shadow-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-[8px] font-black text-emerald-600 shrink-0">JS</div>
+                        <div>
+                          <span className="text-[10px] font-black dark:text-white">João Silva</span>
+                          <span className="ml-1.5 text-[8px] px-1.5 py-0.5 bg-indigo-500/10 text-indigo-500 rounded-full font-black uppercase">OWNER</span>
+                        </div>
+                        <span className="ml-auto text-[8px] text-neutral-400">há 2h</span>
+                      </div>
+                      <p className="text-[10px] text-neutral-600 dark:text-neutral-400 leading-relaxed mb-2">Alguém conseguiu integrar o MetaBuilder com o Google Sheets? Estou tentando criar um relatório automático e preciso de dicas!</p>
+                      <div className="flex items-center gap-4 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                        <span className="flex items-center gap-1 text-[9px] text-neutral-400 font-bold"><Heart className="w-3 h-3" /> 8</span>
+                        <span className="flex items-center gap-1 text-[9px] text-neutral-400 font-bold"><MessageCircle className="w-3 h-3" /> 3</span>
+                      </div>
+                    </div>
+
+                    {/* Post 2 */}
+                    <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 shadow-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[8px] font-black text-purple-600 shrink-0">ML</div>
+                        <div>
+                          <span className="text-[10px] font-black dark:text-white">Maria Lima</span>
+                          <span className="ml-1.5 text-[8px] px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 rounded-full font-black uppercase">DEV</span>
+                        </div>
+                        <span className="ml-auto text-[8px] text-neutral-400">há 5h</span>
+                      </div>
+                      <p className="text-[10px] text-neutral-600 dark:text-neutral-400 leading-relaxed mb-2">Dica: use o campo de fórmula no Grid para calcular totais por linha sem precisar criar campo extra no banco. Economizou muito meu tempo!</p>
+                      <div className="flex items-center gap-4 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                        <span className="flex items-center gap-1 text-[9px] text-indigo-500 font-bold"><Heart className="w-3 h-3 fill-current" /> 14</span>
+                        <span className="flex items-center gap-1 text-[9px] text-neutral-400 font-bold"><MessageCircle className="w-3 h-3" /> 5</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
             </div>
 
             {/* Mockup Footer banner */}
@@ -2073,7 +2170,18 @@ export default function ControlCenterFeaturePage() {
             </p>
           </div>
 
-          {/* Card 4: iClub - Vantagens e Fidelidade */}
+          {/* Card 4: MetaBuilders - Rede Exclusiva */}
+          <div className="p-8 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] space-y-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500">
+              <Users className="w-6 h-6" />
+            </div>
+            <h4 className="text-xl font-bold dark:text-white">MetaBuilders - Rede Exclusiva</h4>
+            <p className="text-neutral-500 dark:text-neutral-400 text-xs leading-relaxed">
+              Comunidade exclusiva integrada ao painel. Conecte-se com outros Owners e Devs, publique insights, curta e comente posts em tempo real. Um hub de networking pensado para quem vive e respira o ecossistema MetaBuilderPRO.
+            </p>
+          </div>
+
+          {/* Card 5: iClub - Vantagens e Fidelidade */}
           <div className="p-8 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] space-y-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500">
               <Zap className="w-6 h-6" />

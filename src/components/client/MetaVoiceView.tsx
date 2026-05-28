@@ -68,6 +68,8 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
   const [newCategory, setNewCategory] = useState('feature')
   const [isAnonymous, setIsAnonymous] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [suggestionImageFile, setSuggestionImageFile] = useState<File | null>(null)
+  const [suggestionImagePreview, setSuggestionImagePreview] = useState<string | null>(null)
 
   // Modal Details
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -99,11 +101,23 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
     if (!newTitle.trim() || !newDesc.trim()) return
 
     setIsSubmitting(true)
+
+    // If image attached, convert to base64 to pass along (server action will handle upload)
+    let imageDataUrl: string | undefined = undefined
+    if (suggestionImageFile) {
+      imageDataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.readAsDataURL(suggestionImageFile)
+      })
+    }
+
     const { error } = await createSuggestion({
       title: newTitle,
       description: newDesc,
       category: newCategory,
-      is_anonymous: isAnonymous
+      is_anonymous: isAnonymous,
+      image_data_url: imageDataUrl
     })
 
     if (error) {
@@ -115,6 +129,8 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
       setNewDesc('')
       setNewCategory('feature')
       setIsAnonymous(false)
+      setSuggestionImageFile(null)
+      setSuggestionImagePreview(null)
       fetchSuggestions()
     }
     setIsSubmitting(false)
@@ -373,7 +389,24 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
               maxLength={2000}
               value={newDesc}
               onChange={e => setNewDesc(e.target.value)}
-              placeholder="Explique o que você gostaria que fosse implementado e qual problema isso resolve..."
+              onPaste={(e) => {
+                const items = e.clipboardData?.items
+                if (!items) return
+                for (const item of Array.from(items)) {
+                  if (item.type.startsWith('image/')) {
+                    e.preventDefault()
+                    const file = item.getAsFile()
+                    if (file) {
+                      setSuggestionImageFile(file)
+                      const reader = new FileReader()
+                      reader.onloadend = () => setSuggestionImagePreview(reader.result as string)
+                      reader.readAsDataURL(file)
+                    }
+                    break
+                  }
+                }
+              }}
+              placeholder="Explique o que você gostaria que fosse implementado e qual problema isso resolve... (Cole uma imagem com Ctrl+V)"
               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 h-48 resize-none"
             />
             <div className="flex justify-between items-center mt-1.5 px-1">
@@ -385,6 +418,21 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
                 {newDesc.length} / 2000
               </span>
             </div>
+            {/* Suggestion image preview */}
+            {suggestionImagePreview && (
+              <div className="relative mt-3 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800">
+                <img src={suggestionImagePreview} alt="Preview" className="max-h-48 w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => { setSuggestionImageFile(null); setSuggestionImagePreview(null) }}
+                  className="absolute top-2 right-2 p-1.5 bg-neutral-950/80 hover:bg-neutral-950 text-white rounded-full transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <span className="absolute bottom-2 left-2 text-[9px] font-black bg-neutral-900/70 text-white px-2 py-0.5 rounded-full backdrop-blur-sm">🖼️ Imagem colada
+                </span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 pt-2">
             <input
@@ -457,6 +505,15 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
               <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed bg-neutral-50 dark:bg-neutral-900 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
                 {selectedSuggestion.description}
               </p>
+              {selectedSuggestion.image_url && (
+                <div className="mt-3 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800">
+                  <img
+                    src={selectedSuggestion.image_url}
+                    alt="Imagem anexada à sugestão"
+                    className="w-full max-h-72 object-contain bg-neutral-100 dark:bg-neutral-900"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Admin Response */}

@@ -353,10 +353,12 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
         setPostImagePreview(null)
         fetchPosts(true)
       } else {
-        alert('Erro ao publicar: ' + result.error)
+        setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} })
+        // Show inline error via temporary state instead of alert
+        console.error('Erro ao publicar:', result.error)
       }
     } catch (err: any) {
-      alert('Erro inesperado: ' + err.message)
+      console.error('Erro inesperado:', err.message)
     } finally {
       setIsPublishing(false)
     }
@@ -530,6 +532,25 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
     }
   }
 
+  // Paste image from clipboard in post creation textarea
+  const handlePostPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault()
+        const file = item.getAsFile()
+        if (file) {
+          setPostImageFile(file)
+          const reader = new FileReader()
+          reader.onloadend = () => setPostImagePreview(reader.result as string)
+          reader.readAsDataURL(file)
+        }
+        break
+      }
+    }
+  }
+
   // Handle Connections Requests (Send, Accept, Reject)
   const handleConnectionAction = async (action: 'send' | 'accept' | 'reject' | 'remove', id: string) => {
     setIsProcessingConnection(prev => ({ ...prev, [id]: true }))
@@ -673,9 +694,10 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
                       </div>
                       <div className="flex-1 space-y-4">
                         <textarea 
-                          placeholder="O que você quer compartilhar com a comunidade?"
+                          placeholder="O que você quer compartilhar com a comunidade? (Cole uma imagem com Ctrl+V)"
                           value={newPostContent}
                           onChange={(e) => setNewPostContent(e.target.value)}
+                          onPaste={handlePostPaste}
                           className="w-full bg-transparent border-none focus:ring-0 resize-none min-h-[80px] text-neutral-900 dark:text-white placeholder:text-neutral-400 text-lg focus:outline-none"
                         />
                         
