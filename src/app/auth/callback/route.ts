@@ -76,7 +76,7 @@ export async function GET(request: Request) {
               refresh_token: '${refresh_token}',
               next: '${next}'
             },
-            window.opener.location.origin || '*'
+            window.location.origin
           );
           setTimeout(() => { window.close(); }, 100);
         } else {
