@@ -22,7 +22,8 @@ import {
   EyeOff,
   Eye,
   UserX,
-  UserCheck
+  UserCheck,
+  RefreshCw
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Modal } from '@/components/ui/Modal'
@@ -642,18 +643,29 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
                 </span>
               </div>
               
-              <button 
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    window.open('/client/community/popout', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no')
-                  }
-                }}
-                className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md border border-white/20 transition-all flex items-center gap-2 group"
-                title="Abrir em Nova Janela (Modo Foco)"
-              >
-                <span className="hidden md:inline text-xs font-bold uppercase tracking-widest group-hover:text-white">Modo Foco</span>
-                <ExternalLink className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { fetchPosts(); fetchConnectionsData() }}
+                  disabled={isLoadingPosts}
+                  className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md border border-white/20 transition-all flex items-center gap-2 group disabled:opacity-50"
+                  title="Atualizar feed"
+                >
+                  <RefreshCw className={cn("w-4 h-4 transition-transform duration-500", isLoadingPosts ? "animate-spin" : "group-hover:rotate-180")} />
+                </button>
+
+                <button 
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.open('/client/community/popout', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no')
+                    }
+                  }}
+                  className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md border border-white/20 transition-all flex items-center gap-2 group"
+                  title="Abrir em Nova Janela (Modo Foco)"
+                >
+                  <span className="hidden md:inline text-xs font-bold uppercase tracking-widest group-hover:text-white">Modo Foco</span>
+                  <ExternalLink className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             <h2 className="text-3xl font-black mb-2">MetaBuilders</h2>
             <p className="text-indigo-100 max-w-2xl">
