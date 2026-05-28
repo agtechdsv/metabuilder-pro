@@ -43,24 +43,28 @@ export async function getPosts() {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
+    const adminSupabase = createAdminClient()
 
-    const { data: posts, error } = await supabase
+    // Fetch posts WITHOUT embedded join — community_posts.user_id → auth.users, not public.profiles
+    const { data: posts, error } = await adminSupabase
       .from('community_posts')
-      .select(`
-        id,
-        content,
-        image_url,
-        created_at,
-        user_id,
-        profile:profiles(id, full_name, avatar_url, is_super_admin)
-      `)
+      .select('id, content, image_url, created_at, user_id')
       .order('created_at', { ascending: false })
 
     if (error) throw error
 
-    const adminSupabase = createAdminClient()
+    if (!posts || posts.length === 0) return { success: true, posts: [] }
 
-    const enrichedPosts = await Promise.all((posts || []).map(async (post: any) => {
+    // Batch-fetch profiles for all unique user_ids
+    const userIds = [...new Set(posts.map((p: any) => p.user_id))]
+    const { data: profiles } = await adminSupabase
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .in('id', userIds)
+
+    const profilesMap = new Map((profiles || []).map((p: any) => [p.id, p]))
+
+    const enrichedPosts = await Promise.all(posts.map(async (post: any) => {
       // Get likes
       const { data: likes } = await adminSupabase
         .from('community_post_likes')
@@ -75,6 +79,7 @@ export async function getPosts() {
 
       const likedByMe = user ? (likes || []).some((l: any) => l.user_id === user.id) : false
       const role = await getUserDisplayRole(post.user_id)
+      const profile = profilesMap.get(post.user_id)
 
       return {
         id: post.id,
@@ -86,9 +91,9 @@ export async function getPosts() {
         likedByMe,
         user: {
           id: post.user_id,
-          name: post.profile?.full_name || 'Usuário da Comunidade',
-          avatar: post.profile?.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${post.user_id}`,
-          role: role
+          name: profile?.full_name || 'Usuário da Comunidade',
+          avatar: profile?.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${post.user_id}`,
+          role
         }
       }
     }))
@@ -167,29 +172,40 @@ export async function toggleLikePost(postId: string) {
 
 export async function getComments(postId: string) {
   try {
-    const supabase = await createClient()
-    const { data: comments, error } = await supabase
+    const adminSupabase = createAdminClient()
+
+    // Fetch comments without embedded join — same auth.users FK issue
+    const { data: comments, error } = await adminSupabase
       .from('community_comments')
-      .select(`
-        *,
-        profile:profiles(id, full_name, avatar_url, is_super_admin)
-      `)
+      .select('id, content, created_at, user_id')
       .eq('post_id', postId)
       .order('created_at', { ascending: true })
 
     if (error) throw error
 
-    const enrichedComments = await Promise.all((comments || []).map(async (comment: any) => {
+    if (!comments || comments.length === 0) return { success: true, comments: [] }
+
+    // Batch-fetch profiles
+    const userIds = [...new Set(comments.map((c: any) => c.user_id))]
+    const { data: profiles } = await adminSupabase
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .in('id', userIds)
+
+    const profilesMap = new Map((profiles || []).map((p: any) => [p.id, p]))
+
+    const enrichedComments = await Promise.all(comments.map(async (comment: any) => {
       const role = await getUserDisplayRole(comment.user_id)
+      const profile = profilesMap.get(comment.user_id)
       return {
         id: comment.id,
         content: comment.content,
         created_at: comment.created_at,
         user: {
           id: comment.user_id,
-          name: comment.profile?.full_name || 'Membro',
-          avatar: comment.profile?.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${comment.user_id}`,
-          role: role
+          name: profile?.full_name || 'Membro',
+          avatar: profile?.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${comment.user_id}`,
+          role
         }
       }
     }))

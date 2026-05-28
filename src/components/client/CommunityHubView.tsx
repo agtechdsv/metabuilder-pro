@@ -81,21 +81,76 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
   const imageInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // 1. Fetch current logged in user
+  // Refs for stale closure prevention in realtime subscriptions
+  const openCommentsPostIdRef = useRef<string | null>(null)
+  const commentsForPostRef = useRef<Record<string, any[]>>({})
+
   useEffect(() => {
-    async function fetchUser() {
+    openCommentsPostIdRef.current = openCommentsPostId
+  }, [openCommentsPostId])
+
+  useEffect(() => {
+    commentsForPostRef.current = commentsForPost
+  }, [commentsForPost])
+
+
+  // 1. Fetch current logged in user and sync Google metadata if necessary
+  useEffect(() => {
+    async function fetchAndSyncUser() {
       const { data: { user } } = await supabase.auth.getUser()
       setCurrentUser(user)
+
+      if (user) {
+        // Fetch current profile state
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('avatar_url, full_name')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (profile) {
+          const googleAvatar = user.user_metadata?.picture || user.user_metadata?.avatar_url
+          const googleName = user.user_metadata?.full_name
+          const updates: any = {}
+
+          if (!profile.avatar_url && googleAvatar) {
+            updates.avatar_url = googleAvatar
+          }
+          if (!profile.full_name && googleName) {
+            updates.full_name = googleName
+          }
+
+          if (Object.keys(updates).length > 0) {
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update(updates)
+              .eq('id', user.id)
+
+            if (!updateError) {
+              // Re-fetch data silently to update local state with synced data
+              fetchPosts(true)
+              fetchConnectionsData(true)
+            }
+          }
+        }
+      }
     }
-    fetchUser()
+    fetchAndSyncUser()
   }, [])
 
   // 2. Fetch initial feed posts
   const fetchPosts = async (silent = false) => {
     if (!silent) setIsLoadingPosts(true)
-    const result = await getPosts()
-    if (result.success && result.posts) {
-      setPosts(result.posts)
+    try {
+      const result = await getPosts()
+      console.log("COMMUNITY_DEBUG [fetchPosts]:", result)
+      if (result.success && result.posts) {
+        setPosts(result.posts)
+      } else {
+        console.error("COMMUNITY_DEBUG [fetchPosts error]:", result.error)
+      }
+    } catch (err) {
+      console.error("COMMUNITY_DEBUG [fetchPosts exception]:", err)
     }
     setIsLoadingPosts(false)
   }
@@ -103,16 +158,21 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
   // 3. Fetch connections and discovery suggestions
   const fetchConnectionsData = async (silent = false) => {
     if (!silent) setIsLoadingConnections(true)
-    const [connResult, suggResult] = await Promise.all([
-      getConnections(),
-      getDiscoverySuggestions()
-    ])
-    
-    if (connResult.success && connResult.connections) {
-      setConnections(connResult.connections)
-    }
-    if (suggResult.success && suggResult.suggestions) {
-      setSuggestions(suggResult.suggestions)
+    try {
+      const [connResult, suggResult] = await Promise.all([
+        getConnections(),
+        getDiscoverySuggestions()
+      ])
+      console.log("COMMUNITY_DEBUG [connections/suggestions]:", { connResult, suggResult })
+      
+      if (connResult.success && connResult.connections) {
+        setConnections(connResult.connections)
+      }
+      if (suggResult.success && suggResult.suggestions) {
+        setSuggestions(suggResult.suggestions)
+      }
+    } catch (err) {
+      console.error("COMMUNITY_DEBUG [fetchConnectionsData exception]:", err)
     }
     setIsLoadingConnections(false)
   }
@@ -143,8 +203,25 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
     // Channel for community comments
     const commentsChannel = supabase
       .channel('community_comments_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'community_comments' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'community_comments' }, (payload: any) => {
         fetchPosts(true)
+        const activePostId = openCommentsPostIdRef.current
+        if (activePostId) {
+          const changedPostId = payload.new?.post_id
+          const deletedCommentId = payload.old?.id
+
+          const isRelatedToActivePost = 
+            (changedPostId && changedPostId === activePostId) || 
+            (deletedCommentId && commentsForPostRef.current[activePostId]?.some((c: any) => c.id === deletedCommentId))
+
+          if (isRelatedToActivePost) {
+            getComments(activePostId).then(result => {
+              if (result.success && result.comments) {
+                setCommentsForPost(prev => ({ ...prev, [activePostId]: result.comments }))
+              }
+            })
+          }
+        }
       })
       .subscribe()
 
