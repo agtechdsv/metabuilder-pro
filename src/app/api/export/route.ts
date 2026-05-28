@@ -1,11 +1,33 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { executeExportBackground } from '@/utils/export/worker'
+import ws from 'ws'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: { persistSession: false },
+  realtime: { transport: ws as any }
+})
+
+async function broadcastDelete(projectId: string, localPaths: string[]) {
+  if (!localPaths || localPaths.length === 0) return
+  const channel = supabase.channel(`tunnel:${projectId}`)
+  await new Promise<void>((resolve) => {
+    let isDone = false
+    const timeout = setTimeout(() => { if (!isDone) { isDone = true; supabase.removeChannel(channel); resolve() } }, 3000)
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED' && !isDone) {
+        Promise.all(localPaths.filter(Boolean).map(localPath => 
+          channel.send({ type: 'broadcast', event: 'delete_export_file', payload: { localPath } })
+        )).then(() => {
+          if (!isDone) { isDone = true; clearTimeout(timeout); supabase.removeChannel(channel); resolve() }
+        })
+      }
+    })
+  })
+}
 
 export async function POST(request: Request) {
   try {
@@ -114,49 +136,53 @@ export async function DELETE(request: Request) {
 
     // --- CASE 1: Expired jobs cleanup ---
     if (cleanup) {
-      console.log('[Export API] Running auto-cleanup for expired download jobs (>24h)...')
-      // Find jobs older than 24 hours
-      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      console.log('[Export API] Running auto-cleanup for expired download jobs...')
       
-      const { data: expiredJobs, error: fetchError } = await supabase
-        .from('download_jobs')
-        .select('id, file_name')
-        .lt('created_at', twentyFourHoursAgo)
+      const { data: projects } = await supabase.from('projects').select('id, download_retention_hours')
+      let totalCleaned = 0
 
-      if (fetchError) {
-        console.error('[Export API] Error fetching expired jobs:', fetchError)
-        return NextResponse.json({ error: 'Failed to fetch expired jobs' }, { status: 500 })
-      }
+      for (const project of (projects || [])) {
+        // Se for null/vazio, significa que nunca deve apagar automaticamente
+        if (project.download_retention_hours === null) continue
 
-      if (expiredJobs && expiredJobs.length > 0) {
-        const fileNames = expiredJobs.map(j => j.file_name).filter(Boolean)
-        
-        // Remove files from storage
-        if (fileNames.length > 0) {
-          const { error: storageError } = await supabase.storage
-            .from('downloads')
-            .remove(fileNames)
-          if (storageError) {
-            console.error('[Export API] Storage deletion warning:', storageError)
+        const retentionMs = project.download_retention_hours * 60 * 60 * 1000
+        const cutoffDate = new Date(Date.now() - retentionMs).toISOString()
+
+        const { data: expiredJobs, error: fetchError } = await supabase
+          .from('download_jobs')
+          .select('id, local_path, project_id')
+          .eq('project_id', project.id)
+          .lt('created_at', cutoffDate)
+
+        if (fetchError) {
+          console.error(`[Export API] Error fetching expired jobs for project ${project.id}:`, fetchError)
+          continue
+        }
+
+        if (expiredJobs && expiredJobs.length > 0) {
+          const localPaths = expiredJobs.map(j => j.local_path).filter(Boolean)
+          
+          if (localPaths.length > 0) {
+            await broadcastDelete(project.id, localPaths)
+          }
+
+          // Delete from database
+          const ids = expiredJobs.map(j => j.id)
+          const { error: deleteError } = await supabase
+            .from('download_jobs')
+            .delete()
+            .in('id', ids)
+
+          if (deleteError) {
+            console.error('[Export API] DB deletion error:', deleteError)
+          } else {
+            totalCleaned += expiredJobs.length
           }
         }
-
-        // Delete from database
-        const ids = expiredJobs.map(j => j.id)
-        const { error: deleteError } = await supabase
-          .from('download_jobs')
-          .delete()
-          .in('id', ids)
-
-        if (deleteError) {
-          console.error('[Export API] DB deletion error:', deleteError)
-          return NextResponse.json({ error: 'Failed to delete expired jobs records' }, { status: 500 })
-        }
-        
-        console.log(`[Export API] Cleaned up ${expiredJobs.length} expired download jobs.`)
       }
 
-      return NextResponse.json({ success: true, message: `Cleaned up ${expiredJobs?.length || 0} jobs.` })
+      console.log(`[Export API] Cleaned up ${totalCleaned} expired download jobs across all projects.`)
+      return NextResponse.json({ success: true, message: `Cleaned up ${totalCleaned} jobs.` })
     }
 
     // --- CASE 2: Single job deletion ---
@@ -183,14 +209,9 @@ export async function DELETE(request: Request) {
         )
       }
 
-      // Delete from storage if file exists
-      if (job.file_name) {
-        const { error: storageError } = await supabase.storage
-          .from('downloads')
-          .remove([job.file_name])
-        if (storageError) {
-          console.error('[Export API] Storage file deletion warning:', storageError)
-        }
+      // Broadcast deletion to local agent
+      if (job.local_path) {
+        await broadcastDelete(job.project_id, [job.local_path])
       }
 
       // Delete database record
@@ -221,16 +242,11 @@ export async function DELETE(request: Request) {
       }
 
       if (jobsToDelete && jobsToDelete.length > 0) {
-        const fileNames = jobsToDelete.map(j => j.file_name).filter(Boolean)
+        const localPaths = jobsToDelete.map(j => j.local_path).filter(Boolean)
 
-        // Remove from storage
-        if (fileNames.length > 0) {
-          const { error: storageError } = await supabase.storage
-            .from('downloads')
-            .remove(fileNames)
-          if (storageError) {
-            console.error('[Export API] Storage clear history warning:', storageError)
-          }
+        // Broadcast deletion
+        if (localPaths.length > 0) {
+          await broadcastDelete(projectId, localPaths)
         }
 
         // Remove from database

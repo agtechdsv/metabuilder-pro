@@ -424,7 +424,7 @@ export default function ViewPageContent({
 
         const exists = prev.some(d => d.jobId === job.jobId)
         if (exists) {
-          return prev.map(d => d.jobId === job.jobId ? job : d)
+          return prev.map(d => d.jobId === job.jobId ? { ...d, ...job } : d)
         } else {
           return [...prev, job]
         }
@@ -446,6 +446,43 @@ export default function ViewPageContent({
       }
     }
   }, [tunnelChannel, isTunnelReady])
+
+  // --- POSTGRES REALTIME FALLBACK: sync widget when DB changes (catches what broadcasts miss) ---
+  useEffect(() => {
+    const dbChannel = supabase
+      .channel('widget_download_jobs_sync')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'download_jobs' },
+        (payload: any) => {
+          const updatedJob = payload.new
+          if (!updatedJob?.id) return
+
+          setActiveDownloads(prev => {
+            // Only update if this job is already being tracked in the widget
+            const exists = prev.some(d => d.jobId === updatedJob.id)
+            if (!exists) return prev
+
+            if (updatedJob.status === 'completed' || updatedJob.status === 'failed') {
+              setTimeout(() => {
+                setActiveDownloads(current => current.filter(d => d.jobId !== updatedJob.id))
+              }, 10000)
+            }
+
+            return prev.map(d => d.jobId === updatedJob.id ? {
+              ...d,
+              status: updatedJob.status,
+              fileName: updatedJob.file_name || d.fileName,
+              recordCount: updatedJob.record_count ?? d.recordCount,
+              error: updatedJob.error_message || d.error,
+            } : d)
+          })
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(dbChannel) }
+  }, [])
 
   const handleAddWidgetRuntime = () => {
     setEditingWidget({
@@ -1786,6 +1823,7 @@ export default function ViewPageContent({
           onRemove={handleRemoveDownload} 
           workspaceSlug={workspace?.slug}
           projectSlug={project?.slug}
+          projectId={project?.id}
         />
       )}
     </div>

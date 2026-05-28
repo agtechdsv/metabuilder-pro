@@ -154,7 +154,7 @@ export function ExportDropdown({
       const data = await response.json()
 
       if (response.status === 202 && data.success) {
-        toast(`Os dados de "${viewName}" estão sendo processados em segundo plano.`, 'success')
+        // Widget flutuante já notifica — toast redundante removido
       } else {
         throw new Error(data.error || 'Erro desconhecido ao iniciar exportação.')
       }
@@ -294,13 +294,15 @@ interface ActiveDownloadsWidgetProps {
   onRemove: (jobId: string) => void
   workspaceSlug?: string
   projectSlug?: string
+  projectId?: string
 }
 
 export function ActiveDownloadsWidget({ 
   downloads, 
   onRemove,
   workspaceSlug,
-  projectSlug
+  projectSlug,
+  projectId
 }: ActiveDownloadsWidgetProps) {
   const [isMinimized, setIsMinimized] = useState(false)
 
@@ -383,7 +385,7 @@ export function ActiveDownloadsWidget({
                             ? `Sucesso • ${d.recordCount ?? 0} registros` 
                             : isFailed 
                               ? 'Falha no processamento' 
-                              : `Processando (${d.progress}%)`}
+                              : <span className="animate-pulse text-indigo-500 dark:text-indigo-400">Em andamento...</span>}
                         </span>
                       </div>
                     </div>
@@ -396,16 +398,6 @@ export function ActiveDownloadsWidget({
                     </button>
                   </div>
 
-                  {/* Progress bar */}
-                  {isProcessing && (
-                    <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-1.5 overflow-hidden">
-                      <div 
-                        className="bg-indigo-600 dark:bg-indigo-400 h-1.5 rounded-full transition-all duration-500" 
-                        style={{ width: `${d.progress}%` }}
-                      />
-                    </div>
-                  )}
-
                   {/* Fail Error Message */}
                   {isFailed && (
                     <span className="text-[9px] text-red-500 bg-red-50 dark:bg-red-950/20 p-2 rounded-xl border border-red-200/50 dark:border-red-950/50 font-medium leading-normal">
@@ -414,9 +406,9 @@ export function ActiveDownloadsWidget({
                   )}
 
                   {/* Completed Action Button */}
-                  {isCompleted && d.fileUrl && (
+                  {isCompleted && (
                     <a
-                      href={d.fileUrl}
+                      href={`/api/download/stream?jobId=${d.jobId}&projectId=${projectId}`}
                       download={d.fileName}
                       className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-emerald-600/25"
                     >

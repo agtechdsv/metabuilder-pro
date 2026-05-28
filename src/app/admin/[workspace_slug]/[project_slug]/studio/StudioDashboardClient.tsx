@@ -1,5 +1,7 @@
 'use client'
 
+import React, { useState, useTransition, useEffect } from 'react'
+
 import {
   LayoutDashboard,
   Database,
@@ -21,7 +23,6 @@ import {
   LayoutGrid
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useState, useTransition, useEffect } from 'react'
 import Link from 'next/link'
 import { HeaderActions } from '@/components/layout/HeaderActions'
 import { Footer } from '@/components/layout/Footer'
@@ -35,6 +36,112 @@ import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { MenuBuilder } from '@/components/studio/MenuBuilder'
 import { BrandingConfig } from '@/components/studio/BrandingConfig'
+
+const RETENTION_OPTIONS = [
+  { value: '', label: '∞ Manter para Sempre' },
+  { value: '1', label: '1 Hora' },
+  { value: '6', label: '6 Horas' },
+  { value: '12', label: '12 Horas' },
+  { value: '24', label: '24 Horas' },
+  { value: '72', label: '3 Dias' },
+  { value: '168', label: '7 Dias' },
+]
+
+function RetentionDropdown({
+  value,
+  onChange,
+  disabled
+}: {
+  value: string
+  onChange: (v: string) => void
+  disabled: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 })
+  const btnRef = React.useRef<HTMLButtonElement>(null)
+  const selected = RETENTION_OPTIONS.find(o => o.value === value) || RETENTION_OPTIONS[0]
+
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      setCoords({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+    }
+    setOpen(prev => !prev)
+  }
+
+  // Close on click outside
+  useEffect(() => {
+    if (!open) return
+    const close = () => setOpen(false)
+    window.addEventListener('mousedown', close)
+    return () => window.removeEventListener('mousedown', close)
+  }, [open])
+
+  return (
+    <div className="relative w-full">
+      <button
+        ref={btnRef}
+        type="button"
+        disabled={disabled}
+        onClick={(e) => { e.stopPropagation(); handleOpen() }}
+        className={cn(
+          "w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg border text-[9px] font-bold transition-all",
+          "bg-white dark:bg-neutral-800/80",
+          "border-neutral-200 dark:border-neutral-700",
+          "hover:border-indigo-400 dark:hover:border-indigo-500",
+          "focus:outline-none focus:ring-1 focus:ring-indigo-500/50",
+          disabled && "opacity-50 cursor-not-allowed"
+        )}
+      >
+        <span className={cn(
+          "truncate",
+          value === '' ? "text-emerald-600 dark:text-emerald-400" : "text-indigo-600 dark:text-indigo-400"
+        )}>
+          {selected.label}
+        </span>
+        <svg
+          className={cn("w-3 h-3 text-neutral-400 transition-transform flex-shrink-0", open && "rotate-180")}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && typeof window !== 'undefined' && (
+        <div
+          className={cn(
+            "fixed z-[9999] rounded-xl border overflow-hidden shadow-2xl",
+            "bg-white dark:bg-neutral-900",
+            "border-neutral-200 dark:border-neutral-700",
+          )}
+          style={{ top: coords.top, left: coords.left, width: coords.width }}
+          onMouseDown={e => e.stopPropagation()}
+        >
+          {RETENTION_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              className={cn(
+                "w-full text-left px-3 py-2 text-[9px] font-bold transition-all",
+                "hover:bg-indigo-50 dark:hover:bg-indigo-900/30",
+                opt.value === value
+                  ? "bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400"
+                  : "text-neutral-600 dark:text-neutral-300",
+                opt.value === '' && opt.value !== value && "text-emerald-600 dark:text-emerald-400"
+              )}
+            >
+              {opt.label}
+              {opt.value === value && (
+                <span className="float-right text-indigo-500">✓</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface StudioDashboardClientProps {
   workspace: any
@@ -66,6 +173,29 @@ export function StudioDashboardClient({
   const supabase = createClient()
   const { toast } = useToast()
   const [isPending, startTransition] = useTransition()
+
+  const [retention, setRetention] = useState<string>(
+    project.download_retention_hours !== null && project.download_retention_hours !== undefined
+      ? String(project.download_retention_hours)
+      : ''
+  )
+  const [isUpdatingRetention, setIsUpdatingRetention] = useState(false)
+
+  const updateRetention = async (value: string) => {
+    setRetention(value)
+    setIsUpdatingRetention(true)
+    const numValue = value ? parseInt(value) : null
+    const { error } = await supabase
+      .from('projects')
+      .update({ download_retention_hours: numValue })
+      .eq('id', project.id)
+    if (error) {
+      toast('Erro ao atualizar retenção de downloads.', 'error')
+    } else {
+      toast('Política de retenção atualizada!', 'success')
+    }
+    setIsUpdatingRetention(false)
+  }
 
   const [viewMode, setViewMode] = useState<'list' | 'builder' | 'navigation' | 'branding'>('list')
   const [viewToEdit, setViewToEdit] = useState<any>(null)
@@ -304,6 +434,16 @@ export function StudioDashboardClient({
                       Copiar
                     </button>
                   </div>
+                </div>
+
+                {/* Linha 3: Retenção de Downloads */}
+                <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800/50">
+                  <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider block mb-1.5">Retenção de Exports:</span>
+                  <RetentionDropdown
+                    value={retention}
+                    onChange={updateRetention}
+                    disabled={isUpdatingRetention}
+                  />
                 </div>
               </div>
             </div>

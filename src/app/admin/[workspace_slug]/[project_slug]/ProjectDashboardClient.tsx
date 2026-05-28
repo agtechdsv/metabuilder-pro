@@ -13,6 +13,8 @@ import { useI18n } from '@/i18n/I18nContext'
 
 import { HeaderActions } from '@/components/layout/HeaderActions'
 import { useToast } from '@/components/ui/Toast'
+import { createClient } from '@/utils/supabase/client'
+import { useState } from 'react'
 
 interface ProjectDashboardClientProps {
   workspace: any
@@ -28,6 +30,28 @@ export function ProjectDashboardClient({ workspace, project, profile, views, wor
   const { t } = useI18n()
 
   const { toast } = useToast()
+  const supabase = createClient()
+
+  const [retention, setRetention] = useState<string>(project.download_retention_hours ? String(project.download_retention_hours) : '')
+  const [isUpdatingRetention, setIsUpdatingRetention] = useState(false)
+
+  const updateRetention = async (value: string) => {
+    setRetention(value)
+    setIsUpdatingRetention(true)
+    const numValue = value ? parseInt(value) : null
+    
+    const { error } = await supabase
+      .from('projects')
+      .update({ download_retention_hours: numValue })
+      .eq('id', project.id)
+      
+    if (error) {
+      toast('Erro ao atualizar retenção de downloads.', 'error')
+    } else {
+      toast('Política de retenção atualizada!', 'success')
+    }
+    setIsUpdatingRetention(false)
+  }
 
   const copyProjectId = () => {
     navigator.clipboard.writeText(project.id)
@@ -137,6 +161,32 @@ export function ProjectDashboardClient({ workspace, project, profile, views, wor
                   <div>
                     <p className="text-xs font-bold">{t('dashboard.projects.connection_established')}</p>
                     <p className="text-[10px] text-neutral-500">{t('dashboard.projects.connection_desc')}</p>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800">
+                  <label className="text-xs font-bold text-neutral-900 dark:text-white block mb-2 uppercase tracking-widest">
+                    Política de Retenção de Downloads
+                  </label>
+                  <p className="text-[10px] text-neutral-500 mb-3 leading-relaxed">
+                    Tempo que os arquivos exportados ficarão disponíveis no servidor do Agente CLI antes da exclusão automática.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={retention}
+                      onChange={(e) => updateRetention(e.target.value)}
+                      disabled={isUpdatingRetention}
+                      className="flex-1 bg-neutral-50 dark:bg-black/40 border border-neutral-200 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-50 appearance-none"
+                    >
+                      <option value="">Manter para Sempre (Sem exclusão automática)</option>
+                      <option value="1">1 Hora</option>
+                      <option value="6">6 Horas</option>
+                      <option value="12">12 Horas</option>
+                      <option value="24">24 Horas (Padrão)</option>
+                      <option value="72">3 Dias</option>
+                      <option value="168">7 Dias</option>
+                    </select>
+                    {isUpdatingRetention && <Zap className="w-4 h-4 text-indigo-500 animate-pulse" />}
                   </div>
                 </div>
               </div>

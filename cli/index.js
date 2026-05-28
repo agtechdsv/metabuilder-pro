@@ -170,7 +170,7 @@ async function introspectOracle(connectionString) {
 }
 
 // Função 2: Iniciar Túnel Seguro (Modo Agente Escuta)
-async function startTunnel(projectId, secretToken, connectionName, connectionString, configSupabaseUrl, configSupabaseKey, configLdap, dbType = 'postgres') {
+async function startTunnel(projectId, secretToken, connectionName, connectionString, configSupabaseUrl, configSupabaseKey, configLdap, dbType = 'postgres', configData = {}) {
   // Pega do ambiente (.env.local) ou do arquivo metabuilder.config.json
   const finalSupabaseUrl = SUPABASE_URL || configSupabaseUrl;
   const finalSupabaseKey = SUPABASE_KEY || configSupabaseKey;
@@ -683,8 +683,11 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
           payload: errorPayload
         });
       }
-    })
-    .subscribe((status) => {
+    });
+
+    require('./export_handler').registerExportHandlers(channel, pgClient, oracleConnection, dbType, secretToken, projectId, configData, supabase);
+
+    channel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         console.log(chalk.green.bold('🔌 Túnel Seguro estabelecido. Tudo pronto!'));
       }
@@ -737,11 +740,11 @@ async function run() {
         if (Array.isArray(conn.connectionsString)) {
           conn.connectionsString.forEach(dbConfig => {
             const dbType = dbConfig.type || 'postgres';
-            tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, dbConfig.name, dbConfig.connectionString, configData.supabaseUrl, configData.supabaseAnonKey, configData.ldap, dbType));
+            tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, dbConfig.name, dbConfig.connectionString, configData.supabaseUrl, configData.supabaseAnonKey, configData.ldap, dbType, configData));
           });
         } else if (conn.connectionString) {
           const dbType = conn.type || 'postgres';
-          tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, 'public', conn.connectionString, configData.supabaseUrl, configData.supabaseAnonKey, configData.ldap, dbType));
+          tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, 'public', conn.connectionString, configData.supabaseUrl, configData.supabaseAnonKey, configData.ldap, dbType, configData));
         }
       });
       
@@ -858,3 +861,5 @@ async function run() {
 }
 
 run();
+
+

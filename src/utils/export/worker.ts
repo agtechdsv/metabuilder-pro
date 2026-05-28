@@ -1,271 +1,77 @@
 import { createClient } from '@supabase/supabase-js'
 import { Pool } from 'pg'
-import * as xlsx from 'xlsx'
-import { jsPDF } from 'jspdf'
 import ws from 'ws'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-// Connection string to our Supabase PostgreSQL DB
 const dbConnectionString = "postgresql://postgres.chmstvtepzmjhpyxjjam:Goeta815617%40@aws-1-sa-east-1.pooler.supabase.com:6543/postgres"
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: { persistSession: false },
-  realtime: {
-    transport: ws as any
-  }
+  realtime: { transport: ws as any }
 })
 const dbPool = new Pool({ connectionString: dbConnectionString })
 
-/**
- * Ensures that the secure 'downloads' storage bucket exists in Supabase.
- */
-async function ensureDownloadsBucket() {
-  try {
-    const { data: buckets, error } = await supabase.storage.listBuckets()
-    if (error) throw error
-    
-    const exists = buckets?.some(b => b.id === 'downloads')
-    if (!exists) {
-      console.log('[Export Worker] 📁 Creating secure "downloads" bucket in Supabase Storage...')
-      const { error: createError } = await supabase.storage.createBucket('downloads', {
-        public: false, // Private bucket (we will generate Signed URLs)
-        fileSizeLimit: 104857600 // 100MB
-      })
-      if (createError) throw createError
-    } else {
-      // Force update existing bucket size limit to 100MB to avoid "maximum allowed size exceeded" errors
-      console.log('[Export Worker] 📁 Updating secure "downloads" bucket limit to 100MB...')
-      const { error: updateError } = await supabase.storage.updateBucket('downloads', {
-        public: false,
-        fileSizeLimit: 104857600 // 100MB
-      })
-      if (updateError) {
-        console.warn('[Export Worker] Warning updating storage bucket size limit:', updateError)
-      }
-    }
-  } catch (err) {
-    console.error('[Export Worker] Error checking/creating/updating storage bucket:', err)
-  }
-}
-
-/**
- * Sends a real-time progress update to the client over the Broadcast Tunnel.
- */
 async function broadcastProgress(projectId: string, payload: {
-  jobId: string
-  progress: number
-  status: string
-  fileName?: string
-  viewName: string
-  fileUrl?: string
-  recordCount?: number
-  error?: string
+  jobId: string, progress: number, status: string, error?: string, viewName?: string
 }) {
   try {
     const channelName = `tunnel:${projectId}`
-    console.log(`[Export Worker] 📡 Broadcasting progress for job ${payload.jobId}: ${payload.progress}% (${payload.status})`)
-    
     const channel = supabase.channel(channelName)
-    
-    // Subscribe and send with timeout
-    await new Promise<void>((resolve, reject) => {
+    await new Promise<void>((resolve) => {
       let isDone = false
       const timeout = setTimeout(() => {
-        if (!isDone) {
-          isDone = true
-          supabase.removeChannel(channel)
-          resolve() // resolve anyway to not crash the worker
-        }
+        if (!isDone) { isDone = true; supabase.removeChannel(channel); resolve(); }
       }, 5000)
-
       channel.subscribe((status) => {
         if (status === 'SUBSCRIBED' && !isDone) {
-          channel.send({
-            type: 'broadcast',
-            event: 'download_progress',
-            payload
-          }).then(() => {
-            if (!isDone) {
-              isDone = true
-              clearTimeout(timeout)
-              supabase.removeChannel(channel)
-              resolve()
-            }
+          channel.send({ type: 'broadcast', event: 'download_progress', payload }).then(() => {
+            if (!isDone) { isDone = true; clearTimeout(timeout); supabase.removeChannel(channel); resolve() }
           }).catch(() => {
-            if (!isDone) {
-              isDone = true
-              clearTimeout(timeout)
-              supabase.removeChannel(channel)
-              resolve()
-            }
+            if (!isDone) { isDone = true; clearTimeout(timeout); supabase.removeChannel(channel); resolve() }
           })
         }
       })
     })
-  } catch (err) {
-    console.error('[Export Worker] Failed to broadcast progress over tunnel:', err)
-  }
+  } catch (err) {}
 }
 
-/**
- * Executes a PostgreSQL query over the secure real-time broadcast tunnel.
- */
-async function queryViaTunnel(projectId: string, secretToken: string, payload: {
-  table: string
-  action: 'select'
-  query: string
-  joins: any[]
-  filters?: Record<string, string>
-  limit?: number
-  schemaName?: string
-}): Promise<any[]> {
-  const queryId = Math.random().toString(36).substring(2, 15) + '_' + Date.now()
-  const channelName = `tunnel:${projectId}`
-  const channel = supabase.channel(channelName)
-
-  return new Promise<any[]>((resolve, reject) => {
-    let resolved = false
-
-    // Timeout de 25 segundos
-    const timeout = setTimeout(() => {
-      if (!resolved) {
-        resolved = true
-        supabase.removeChannel(channel)
-        reject(new Error('Timeout esperando resposta do banco de dados local via túnel.'))
-      }
-    }, 25000)
-
-    const handleResult = (payloadEvent: any) => {
-      const res = payloadEvent.payload
-      if (res && res.queryId === queryId) {
-        if (!resolved) {
-          resolved = true
-          clearTimeout(timeout)
-          supabase.removeChannel(channel)
-          if (res.success) {
-            resolve(res.data || [])
-          } else {
-            reject(new Error(res.error || 'Falha na execução da query via túnel.'))
-          }
-        }
-      }
-    }
-
-    channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
-    channel.on('broadcast', { event: 'sql_result' }, handleResult)
-
-    channel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        // Pequeno atraso para garantir aquecimento do canal
-        await new Promise(r => setTimeout(r, 200))
-        
-        channel.send({
-          type: 'broadcast',
-          event: 'sql_query',
-          payload: {
-            queryId,
-            table: payload.table,
-            tableName: payload.table,
-            action: 'select',
-            query: payload.query,
-            sql: payload.query,
-            joins: payload.joins,
-            filters: payload.filters,
-            limit: payload.limit || 100000,
-            offset: 0,
-            token: secretToken,
-            schemaName: payload.schemaName || 'public'
-          }
-        }).catch(err => {
-          if (!resolved) {
-            resolved = true
-            clearTimeout(timeout)
-            supabase.removeChannel(channel)
-            reject(err)
-          }
-        })
-      }
-    })
-  })
-}
-
-/**
- * Background worker task that executes the asynchronous export process.
- */
 export async function executeExportBackground(params: {
-  jobId: string
-  projectId: string
-  userId: string
-  workspaceSlug: string
-  viewName: string
-  modelName: string
-  fileType: 'xlsx' | 'csv' | 'json' | 'pdf' | 'ofx'
-  columnsList: string[]
-  joins: any[]
-  filters: Record<string, string>
+  jobId: string, projectId: string, userId: string, workspaceSlug: string,
+  viewName: string, modelName: string, fileType: string,
+  columnsList: string[], joins: any[], filters: Record<string, string>
 }) {
-  const {
-    jobId,
-    projectId,
-    userId,
-    workspaceSlug,
-    viewName,
-    modelName,
-    fileType,
-    columnsList,
-    joins,
-    filters
-  } = params
-
+  const { jobId, projectId, workspaceSlug, viewName, modelName, fileType, columnsList, joins, filters } = params
   const client = await dbPool.connect()
   
   try {
-    // 1. Update status to 'processing' (10% progress)
-    await client.query(
-      `UPDATE public.download_jobs SET status = 'processing', progress = 10, updated_at = NOW() WHERE id = $1`,
-      [jobId]
-    )
+    // 1. Fetch secret token & Project Slug
+    const { data: projectData, error: projError } = await supabase
+      .from('projects').select('secret_token, slug').eq('id', projectId).single()
+
+    if (projError || !projectData) throw new Error('Project secret token not found')
+
+    // 2. Set to processing
+    await client.query(`UPDATE public.download_jobs SET status = 'processing', progress = 10, updated_at = NOW() WHERE id = $1`, [jobId])
     await broadcastProgress(projectId, { jobId, progress: 10, status: 'processing', viewName })
 
-    // Ensure bucket is available
-    await ensureDownloadsBucket()
-
-    // 2. Build the exact same raw SQL query with joins and filters from Runtime
+    // 3. Build SQL Query
     const safeTable = modelName.replace(/[^a-zA-Z0-9_]/g, '')
     let selectCols = columnsList.map(c => {
-      // Clean col names or keep them intact if they are expressions
-      const lowerC = c.toLowerCase()
-      if (lowerC.includes(' as ')) {
-        return c
-      }
-      if (c.includes('.')) {
-        return `${c} AS "${c}"`
-      }
-      // Primary table column without table prefix: fully qualify it to avoid ambiguity
+      if (c.toLowerCase().includes(' as ')) return c
+      if (c.includes('.')) return `${c} AS "${c}"`
       return `"${safeTable}"."${c}" AS "${c}"`
-    }).join(', ')
-    
-    if (!selectCols) {
-      selectCols = `"${safeTable}".*`
-    }
+    }).join(', ') || `"${safeTable}".*`
 
     let joinClause = ''
     if (joins && joins.length > 0) {
       joins.forEach(j => {
-        const fromTable = j.table || j.from
-        const toTable = j.toTable || j.to
-        const localOn = j.on || j.localKey
-        const foreignOn = j.toOn || j.foreignKey
-
-        if (fromTable && toTable && localOn && foreignOn) {
-          const safeFrom = String(fromTable).replace(/[^a-zA-Z0-9_]/g, '')
-          const safeTo = String(toTable).replace(/[^a-zA-Z0-9_]/g, '')
-          const safeLocal = String(localOn).replace(/[^a-zA-Z0-9_]/g, '')
-          const safeForeign = String(foreignOn).replace(/[^a-zA-Z0-9_]/g, '')
-          
-          joinClause += ` LEFT JOIN "${safeTo}" ON "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}"`
+        const fromT = String(j.table || j.from).replace(/[^a-zA-Z0-9_]/g, '')
+        const toT = String(j.toTable || j.to).replace(/[^a-zA-Z0-9_]/g, '')
+        const local = String(j.on || j.localKey).replace(/[^a-zA-Z0-9_]/g, '')
+        const foreign = String(j.toOn || j.foreignKey).replace(/[^a-zA-Z0-9_]/g, '')
+        if (fromT && toT && local && foreign) {
+          joinClause += ` LEFT JOIN "${toT}" ON "${fromT}"."${local}" = "${toT}"."${foreign}"`
         }
       })
     }
@@ -277,438 +83,61 @@ export async function executeExportBackground(params: {
       let i = 1
       for (const [key, value] of Object.entries(filters)) {
         if (value !== undefined && value !== '') {
-          let tablePart = safeTable
-          let columnPart = key
+          let tablePart = safeTable, columnPart = key.replace(/[^a-zA-Z0-9_]/g, '')
           if (key.includes('.')) {
             const parts = key.split('.')
             tablePart = parts[0].replace(/[^a-zA-Z0-9_]/g, '')
             columnPart = parts[1].replace(/[^a-zA-Z0-9_]/g, '')
-          } else {
-            columnPart = key.replace(/[^a-zA-Z0-9_]/g, '')
           }
-          
           conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) ILIKE $${i}`)
           sqlParams.push(`%${value}%`)
           i++
         }
       }
-      if (conditions.length > 0) {
-        whereClause = ` WHERE ${conditions.join(' AND ')}`
-      }
+      if (conditions.length > 0) whereClause = ` WHERE ${conditions.join(' AND ')}`
     }
 
     const rawSql = `SELECT DISTINCT ${selectCols} FROM "${safeTable}"${joinClause}${whereClause}`
-    console.log('[Export Worker] Executing query:', rawSql, 'Params:', sqlParams)
 
-    // 3. Run database query (progress 40%)
-    await client.query(
-      `UPDATE public.download_jobs SET progress = 40, updated_at = NOW() WHERE id = $1`,
-      [jobId]
-    )
-    await broadcastProgress(projectId, { jobId, progress: 40, status: 'processing', viewName })
+    // 4. Send request to CLI Tunnel
+    const channelName = `tunnel:${projectId}`
+    const channel = supabase.channel(channelName)
 
-    let rows: any[] = []
-    let projectSlug = projectId.substring(0, 8)
-    try {
-      console.log('[Export Worker] Attempting to query via database tunnel for project:', projectId)
-      const { data: projectData, error: projError } = await supabase
-        .from('projects')
-        .select('secret_token, slug')
-        .eq('id', projectId)
-        .single()
+    await new Promise<void>((resolve, reject) => {
+      let isDone = false
+      const timeout = setTimeout(() => {
+        if (!isDone) { isDone = true; supabase.removeChannel(channel); reject(new Error('Timeout enviando requisição para CLI local')); }
+      }, 10000)
 
-      if (projError || !projectData) {
-        throw new Error(`Project secret token not found: ${projError?.message}`)
-      }
-
-      if (projectData.slug) projectSlug = projectData.slug
-
-      const targetSchema = (projectData.slug || 'public').replace(/-/g, '_')
-      
-      rows = await queryViaTunnel(projectId, projectData.secret_token, {
-        table: safeTable,
-        action: 'select',
-        query: rawSql,
-        joins: joins,
-        filters: filters,
-        limit: 100000,
-        schemaName: targetSchema
-      })
-      console.log(`[Export Worker] Successfully queried ${rows.length} rows via database tunnel.`)
-    } catch (tunnelErr: any) {
-      console.warn('[Export Worker] Tunnel query failed or timed out, falling back to direct DB connection:', tunnelErr.message)
-      const result = await client.query(`${rawSql} LIMIT 100000`, sqlParams)
-      rows = result.rows
-    }
-
-    const recordCount = rows.length
-    console.log(`[Export Worker] Query returned ${recordCount} records. Processing file format...`)
-
-    // 4. Format files (progress 70%)
-    await client.query(
-      `UPDATE public.download_jobs SET progress = 70, updated_at = NOW() WHERE id = $1`,
-      [jobId]
-    )
-    await broadcastProgress(projectId, { jobId, progress: 70, status: 'processing', viewName })
-
-    let buffer: Buffer
-    let mimeType = 'application/octet-stream'
-    const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14)
-    const ms = Date.now().toString().slice(-4)
-    const cleanViewName = viewName.toLowerCase().replace(/[^a-z0-9]/g, '_')
-    const fileName = `${workspaceSlug}_${projectSlug}_${cleanViewName}_${timestamp}${ms}.${fileType}`
-
-    if (fileType === 'xlsx') {
-      mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      
-      // Clean up column names for business readability
-      const cleanedRows = rows.map(row => {
-        const cleanRow: Record<string, any> = {}
-        for (const [key, val] of Object.entries(row)) {
-          // Exclui chaves internas auxiliares
-          if (key === '_key' || key === '_details') continue
-          
-          // Limpa nomes do tipo "tabela.coluna" para apenas "Coluna"
-          const cleanKey = key.includes('.') ? key.split('.').pop() || key : key
-          const formattedKey = cleanKey.charAt(0).toUpperCase() + cleanKey.slice(1).replace(/_/g, ' ')
-          
-          cleanRow[formattedKey] = val
-        }
-        return cleanRow
-      })
-
-      const worksheet = xlsx.utils.json_to_sheet(cleanedRows)
-      const workbook = xlsx.utils.book_new()
-      xlsx.utils.book_append_sheet(workbook, worksheet, 'Dados Exportados')
-      
-      buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' })
-    } else if (fileType === 'csv') {
-      mimeType = 'text/csv'
-      
-      if (rows.length === 0) {
-        buffer = Buffer.from('', 'utf-8')
-      } else {
-        const headers = Object.keys(rows[0]).filter(k => k !== '_key' && k !== '_details')
-        const csvHeaders = headers.map(h => `"${h.replace(/"/g, '""')}"`).join(',')
-        
-        const csvRows = rows.map(row => {
-          return headers.map(h => {
-            const val = row[h]
-            if (val === null || val === undefined) return '""'
-            return `"${String(val).replace(/"/g, '""')}"`
-          }).join(',')
-        })
-        
-        const csvContent = '\uFEFF' + [csvHeaders, ...csvRows].join('\n') // Add UTF-8 BOM for Excel compatibility
-        buffer = Buffer.from(csvContent, 'utf-8')
-      }
-    } else if (fileType === 'pdf') {
-      mimeType = 'application/pdf'
-      
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      })
-
-      // Page parameters (margins and dynamic column auto-widths)
-      const pageWidth = 210
-      const pageHeight = 297
-      const margin = 14
-      const usableWidth = pageWidth - (margin * 2) // 182mm
-      const rowHeight = 8
-      const headerHeight = 10
-      const startY = 35
-      
-      // Limit PDF export to 500 rows to ensure fast generation and keep file size under 1MB (avoiding Supabase size limits)
-      const maxPdfRows = 500
-      const isLimited = rows.length > maxPdfRows
-      const rowsToProcess = rows.slice(0, maxPdfRows)
-
-      const rawCols = rows.length > 0 ? Object.keys(rows[0]).filter(k => k !== '_key' && k !== '_details') : []
-      const headers = rawCols.map(col => {
-        const cleanKey = col.includes('.') ? col.split('.').pop() || col : col
-        return cleanKey.charAt(0).toUpperCase() + cleanKey.slice(1).replace(/_/g, ' ')
-      })
-
-      const colCount = Math.max(headers.length, 1)
-      const colWidth = usableWidth / colCount
-
-      let pageCount = 1
-      const drawPageDecorations = (pdfDoc: any, currentPage: number) => {
-        // Indigo top color bar
-        pdfDoc.setFillColor(79, 70, 229)
-        pdfDoc.rect(0, 0, pageWidth, 4, 'F')
-        
-        // Report Title
-        pdfDoc.setFont('helvetica', 'bold')
-        pdfDoc.setFontSize(14)
-        pdfDoc.setTextColor(31, 41, 55)
-        pdfDoc.text(viewName.toUpperCase(), margin, 16)
-        
-        // Metadata subtitle
-        pdfDoc.setFont('helvetica', 'normal')
-        pdfDoc.setFontSize(8)
-        pdfDoc.setTextColor(107, 114, 128)
-        const dateStr = `Exportado em: ${new Date().toLocaleString('pt-BR')}`
-        const totalRowsCount = rows.length
-        const recordsStr = isLimited
-          ? `Registros: ${maxPdfRows} de ${totalRowsCount} (Visualização Limitada)`
-          : `Registros: ${totalRowsCount}`
-        pdfDoc.text(`${dateStr}  |  ${recordsStr}`, margin, 22)
-        
-        // Dynamic Warning Subtitle for limited exports
-        if (isLimited) {
-          pdfDoc.setFont('helvetica', 'oblique')
-          pdfDoc.setFontSize(7)
-          pdfDoc.setTextColor(239, 68, 68) // red-500
-          pdfDoc.text('* Base completa disponível nos formatos Excel (.xlsx) e CSV (.csv).', margin, 24)
-        }
-
-        // Thin gray line
-        pdfDoc.setDrawColor(229, 231, 235)
-        pdfDoc.setLineWidth(0.3)
-        pdfDoc.line(margin, 25, pageWidth - margin, 25)
-        
-        // Footer (Page indicator)
-        pdfDoc.setFont('helvetica', 'normal')
-        pdfDoc.setFontSize(8)
-        pdfDoc.setTextColor(156, 163, 175)
-        pdfDoc.text(`Página ${currentPage}`, pageWidth / 2, pageHeight - 10, { align: 'center' })
-      }
-
-      drawPageDecorations(doc, pageCount)
-
-      let currentY = startY
-      
-      // Draw Header row block
-      doc.setFillColor(31, 41, 55)
-      doc.rect(margin, currentY, usableWidth, headerHeight, 'F')
-      
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(8)
-      doc.setTextColor(255, 255, 255)
-
-      headers.forEach((h, index) => {
-        const xPos = margin + (index * colWidth) + 2
-        const maxChars = Math.max(Math.floor(colWidth / 1.8), 1)
-        const clippedH = h.length > maxChars ? h.slice(0, maxChars - 1) + '..' : h
-        doc.text(clippedH, xPos, currentY + 6.5)
-      })
-
-      currentY += headerHeight
-
-      // Draw rows list
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(8)
-
-      rowsToProcess.forEach((row, rowIndex) => {
-        // Multi-page spanning: Check page bounds
-        if (currentY + rowHeight > pageHeight - 20) {
-          doc.addPage()
-          pageCount++
-          drawPageDecorations(doc, pageCount)
-          
-          currentY = startY
-          doc.setFillColor(31, 41, 55)
-          doc.rect(margin, currentY, usableWidth, headerHeight, 'F')
-          
-          doc.setFont('helvetica', 'bold')
-          doc.setFontSize(8)
-          doc.setTextColor(255, 255, 255)
-
-          headers.forEach((h, index) => {
-            const xPos = margin + (index * colWidth) + 2
-            const maxChars = Math.max(Math.floor(colWidth / 1.8), 1)
-            const clippedH = h.length > maxChars ? h.slice(0, maxChars - 1) + '..' : h
-            doc.text(clippedH, xPos, currentY + 6.5)
+      channel.subscribe((status) => {
+        if (status === 'SUBSCRIBED' && !isDone) {
+          channel.send({
+            type: 'broadcast',
+            event: 'export_job_start',
+            payload: {
+              jobId,
+              token: projectData.secret_token,
+              sql: rawSql,
+              params: sqlParams,
+              fileType,
+              viewName,
+              workspaceSlug,
+              projectSlug: projectData.slug
+            }
+          }).then(() => {
+            if (!isDone) { isDone = true; clearTimeout(timeout); supabase.removeChannel(channel); resolve() }
+          }).catch(err => {
+            if (!isDone) { isDone = true; clearTimeout(timeout); supabase.removeChannel(channel); reject(err) }
           })
-
-          currentY += headerHeight
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(8)
         }
-
-        // Zebra striping
-        if (rowIndex % 2 === 0) {
-          doc.setFillColor(249, 250, 251)
-        } else {
-          doc.setFillColor(255, 255, 255)
-        }
-        doc.rect(margin, currentY, usableWidth, rowHeight, 'F')
-        
-        doc.setDrawColor(243, 244, 246)
-        doc.line(margin, currentY + rowHeight, pageWidth - margin, currentY + rowHeight)
-
-        doc.setTextColor(55, 65, 81)
-        rawCols.forEach((col, colIndex) => {
-          const val = row[col]
-          let cellText = val === null || val === undefined ? '' : String(val)
-          
-          const xPos = margin + (colIndex * colWidth) + 2
-          
-          // String bounds safety check
-          const maxChars = Math.max(Math.floor(colWidth / 1.6), 1)
-          if (cellText.length > maxChars) {
-            cellText = cellText.slice(0, maxChars - 2) + '..'
-          }
-          
-          doc.text(cellText, xPos, currentY + 5.2)
-        })
-
-        currentY += rowHeight
       })
-
-      const pdfArrayBuffer = doc.output('arraybuffer')
-      buffer = Buffer.from(pdfArrayBuffer)
-    } else if (fileType === 'ofx') {
-      mimeType = 'application/x-ofx'
-      
-      // Generic best-effort OFX generator
-      let ofxContent = `OFXHEADER:100
-DATA:OFXSGML
-VERSION:102
-SECURITY:NONE
-ENCODING:USASCII
-CHARSET:1252
-COMPRESSION:NONE
-OLDFILEUID:NONE
-NEWFILEUID:NONE
-
-<OFX>
-  <BANKMSGSRSV1>
-    <STMTTRNRS>
-      <TRNUID>${jobId}
-      <STATUS><CODE>0<SEVERITY>INFO</STATUS>
-      <STMTRS>
-        <CURDEF>BRL
-        <BANKACCTFROM>
-          <BANKID>000
-          <ACCTID>00000
-          <ACCTTYPE>CHECKING
-        </BANKACCTFROM>
-        <BANKTRANLIST>
-`
-      rows.forEach((row, index) => {
-        // Try to find reasonable columns for amount, date, and memo
-        const lowerKeys = Object.keys(row).reduce((acc: any, k) => {
-          acc[k.toLowerCase()] = { key: k, val: row[k] }
-          return acc
-        }, {})
-
-        let trnAmt = 0
-        let dtPosted = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14)
-        let memo = 'Exported Transaction'
-
-        for (const [lk, item] of Object.entries(lowerKeys)) {
-          const { key, val } = item as any
-          if (val === null || val === undefined) continue
-          
-          if ((lk.includes('valor') || lk.includes('amount') || lk.includes('preco') || lk.includes('price')) && !isNaN(Number(val))) {
-            trnAmt = Number(val)
-          } else if ((lk.includes('data') || lk.includes('date') || lk.includes('criado')) && !isNaN(Date.parse(String(val)))) {
-            dtPosted = new Date(String(val)).toISOString().replace(/[^0-9]/g, '').slice(0, 14)
-          } else if (lk.includes('desc') || lk.includes('memo') || lk.includes('nome') || lk.includes('name')) {
-            memo = String(val).substring(0, 255) // OFX memo length limit
-          }
-        }
-
-        const trnType = trnAmt >= 0 ? 'CREDIT' : 'DEBIT'
-
-        ofxContent += `          <STMTTRN>
-            <TRNTYPE>${trnType}
-            <DTPOSTED>${dtPosted}
-            <TRNAMT>${trnAmt.toFixed(2)}
-            <FITID>${row.id || index}
-            <MEMO>${memo.replace(/[<>]/g, '')}
-          </STMTTRN>
-`
-      })
-
-      ofxContent += `        </BANKTRANLIST>
-        <LEDGERBAL>
-          <BALAMT>0.00
-          <DTASOF>${new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14)}
-        </LEDGERBAL>
-      </STMTRS>
-    </STMTTRNRS>
-  </BANKMSGSRSV1>
-</OFX>`
-
-      buffer = Buffer.from(ofxContent, 'utf-8')
-    } else {
-      // JSON
-      mimeType = 'application/json'
-      const jsonContent = JSON.stringify(rows, null, 2)
-      buffer = Buffer.from(jsonContent, 'utf-8')
-    }
-
-    // 5. Upload buffer to Supabase Private Bucket (progress 90%)
-    await client.query(
-      `UPDATE public.download_jobs SET progress = 90, updated_at = NOW() WHERE id = $1`,
-      [jobId]
-    )
-    await broadcastProgress(projectId, { jobId, progress: 90, status: 'processing', viewName })
-
-    console.log(`[Export Worker] Uploading file ${fileName} (${buffer.length} bytes) to storage...`)
-    const { error: uploadError } = await supabase.storage
-      .from('downloads')
-      .upload(fileName, buffer, {
-        contentType: mimeType,
-        upsert: true
-      })
-
-    if (uploadError) throw uploadError
-
-    // 6. Generate secure temporary Signed URL (expires in 7 days / 604800 seconds)
-    // We set 7 days to match our storage policy and pass the download parameter to force attachment headers
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-      .from('downloads')
-      .createSignedUrl(fileName, 604800, {
-        download: fileName
-      })
-
-    if (signedUrlError || !signedUrlData) throw signedUrlError || new Error('Failed to generate Signed URL')
-
-    const fileUrl = signedUrlData.signedUrl
-
-    // 7. Update database to completed (progress 100%)
-    await client.query(
-      `UPDATE public.download_jobs 
-       SET status = 'completed', progress = 100, file_url = $1, file_name = $2, record_count = $3, updated_at = NOW() 
-       WHERE id = $4`,
-      [fileUrl, fileName, recordCount, jobId]
-    )
-
-    console.log(`[Export Worker] Job ${jobId} finished successfully! URL generated.`)
-    await broadcastProgress(projectId, {
-      jobId,
-      progress: 100,
-      status: 'completed',
-      viewName,
-      fileName,
-      fileUrl,
-      recordCount
     })
 
+    console.log(`[Export Worker] Job ${jobId} offloaded to local CLI.`)
   } catch (err: any) {
     console.error(`[Export Worker] Job ${jobId} failed:`, err)
-    
-    // Save error state in DB
-    await client.query(
-      `UPDATE public.download_jobs 
-       SET status = 'failed', error_message = $1, updated_at = NOW() 
-       WHERE id = $2`,
-      [err.message || 'Erro inesperado na exportação', jobId]
-    )
-
-    await broadcastProgress(projectId, {
-      jobId,
-      progress: 0,
-      status: 'failed',
-      viewName,
-      error: err.message || 'Erro na geração da exportação'
-    })
+    await client.query(`UPDATE public.download_jobs SET status = 'failed', error_message = $1, updated_at = NOW() WHERE id = $2`, [err.message || 'Erro inesperado', jobId])
+    await broadcastProgress(projectId, { jobId, progress: 0, status: 'failed', viewName, error: err.message })
   } finally {
     client.release()
   }

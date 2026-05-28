@@ -256,26 +256,23 @@ export function DownloadsManagerClient({
   }
 
   // 5. Force download of the generated file
-  const handleDownloadFile = async (e: React.MouseEvent, url: string, fileName: string) => {
+  const handleDownloadFile = async (e: React.MouseEvent, jobId: string, projectId: string) => {
     e.preventDefault()
-    toast('Iniciando o download do arquivo...', 'success')
+    toast('Iniciando o download do arquivo. Isso pode demorar alguns instantes...', 'success')
 
     try {
-      const response = await fetch(url)
-      if (!response.ok) throw new Error('Não foi possível obter o arquivo.')
-      const blob = await response.blob()
+      const downloadUrl = `/api/download/stream?jobId=${jobId}&projectId=${projectId}`
       
-      const blobUrl = window.URL.createObjectURL(blob)
+      // Let the browser handle the streaming directly to disk
       const link = document.createElement('a')
-      link.href = blobUrl
-      link.setAttribute('download', fileName)
+      link.href = downloadUrl
+      link.setAttribute('target', '_blank')
       document.body.appendChild(link)
       link.click()
       link.parentNode?.removeChild(link)
-      window.URL.revokeObjectURL(blobUrl)
     } catch (err: any) {
-      console.warn('Erro ao realizar download via blob, abrindo link em nova aba:', err)
-      window.open(url, '_blank')
+      console.error('Erro ao iniciar o download:', err)
+      toast('Falha ao iniciar o download.', 'error')
     }
   }
 
@@ -348,10 +345,10 @@ export function DownloadsManagerClient({
             </div>
             <div className="flex flex-col gap-1.5">
               <h4 className="text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                Política de Retenção de Arquivos (24 Horas)
+                Política de Retenção de Arquivos Automática
               </h4>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-3xl leading-normal font-medium">
-                Por razões de privacidade, integridade de dados e conformidade, todos os arquivos exportados ficam disponíveis de forma segura por até <strong>24 horas</strong>. Após este período, tanto o arquivo no armazenamento em nuvem (bucket privado) quanto seu histórico de download serão <strong>permanentemente eliminados</strong> do servidor de forma automática.
+                Por razões de privacidade e conformidade, os arquivos gerados serão mantidos pelo tempo definido na <strong>política de retenção configurada pelo administrador do projeto</strong>. Após esse prazo (ex: 24 horas), eles serão excluídos automaticamente de forma física do servidor local. Se nenhuma limpeza estiver configurada, os arquivos devem ser geridos manualmente.
               </p>
             </div>
           </div>
@@ -575,18 +572,12 @@ export function DownloadsManagerClient({
 
                     <div className="flex flex-col gap-2 w-full lg:w-64">
                       {isProcessing && (
-                        <>
-                          <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-neutral-400">
-                            <span>Processando registros...</span>
-                            <span className="text-indigo-600 dark:text-indigo-400">{job.progress}%</span>
-                          </div>
-                          <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-2 overflow-hidden shadow-inner">
-                            <div 
-                              className="bg-gradient-to-r from-indigo-500 to-indigo-600 dark:from-indigo-400 dark:to-indigo-500 h-2 rounded-full transition-all duration-500 animate-pulse"
-                              style={{ width: `${job.progress}%` }}
-                            />
-                          </div>
-                        </>
+                        <div className="flex items-center justify-center bg-indigo-50 dark:bg-indigo-950/20 px-4 py-2.5 rounded-xl border border-indigo-200/40">
+                          <Loader2 className="w-4 h-4 text-indigo-500 animate-spin mr-2" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 animate-pulse">
+                            Em andamento...
+                          </span>
+                        </div>
                       )}
 
                       {isCompleted && (
@@ -611,11 +602,10 @@ export function DownloadsManagerClient({
                     </div>
 
                     <div className="flex items-center gap-3 self-end lg:self-center">
-                      {isCompleted && job.file_url ? (
+                      {isCompleted ? (
                         <a
-                          href={job.file_url}
-                          download={job.file_name}
-                          onClick={(e) => handleDownloadFile(e, job.file_url!, job.file_name || 'export_file')}
+                          href={`/api/download/stream?jobId=${job.id}&projectId=${job.project_id}`}
+                          onClick={(e) => handleDownloadFile(e, job.id, job.project_id)}
                           className="flex items-center gap-2 py-3 px-5 bg-gradient-to-tr from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-emerald-600/25"
                         >
                           <Download className="w-4 h-4" />

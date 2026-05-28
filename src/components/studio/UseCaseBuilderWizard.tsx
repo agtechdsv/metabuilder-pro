@@ -914,7 +914,10 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
             <div className="h-8 w-px bg-neutral-200 dark:bg-neutral-800 mx-2"></div>
             <div>
               <h1 className="text-sm font-black tracking-tight">{t('wizard.title')}</h1>
-              <p className="text-[8px] text-indigo-600 dark:text-indigo-400 uppercase font-black tracking-[0.2em]">{initialData ? t('wizard.edit_mode') : t('wizard.new_mode')}</p>
+              <p className="text-[8px] text-indigo-600 dark:text-indigo-400 uppercase font-black tracking-[0.2em]">
+                {initialData ? t('wizard.edit_mode') : t('wizard.new_mode')}
+                {config.name ? <span className="text-neutral-400 dark:text-neutral-500 ml-1">/ {config.name}</span> : ''}
+              </p>
             </div>
           </div>
 
