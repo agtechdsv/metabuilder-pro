@@ -29,14 +29,24 @@ function CallbackHandler() {
       // Canal principal: BroadcastChannel (funciona mesmo sem window.opener)
       try {
         const bc = new BroadcastChannel('supabase_auth_channel')
-        bc.postMessage({ type: 'SUPABASE_AUTH_SUCCESS', next })
+        bc.postMessage({ 
+          type: 'SUPABASE_AUTH_SUCCESS', 
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+          next 
+        })
         bc.close()
       } catch (_) {}
 
       // Fallback: postMessage direto ao opener
       if (typeof window !== 'undefined' && window.opener && !window.opener.closed && window.opener !== window) {
         try {
-          window.opener.postMessage({ type: 'SUPABASE_AUTH_SUCCESS', next }, window.location.origin)
+          window.opener.postMessage({ 
+            type: 'SUPABASE_AUTH_SUCCESS', 
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            next 
+          }, window.location.origin)
         } catch (_) {}
       }
 
