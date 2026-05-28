@@ -146,13 +146,21 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
     setLoadingDetails(false)
   }
 
+  // Atualiza os dados do modal em background sem fechar/piscar
+  const refreshSelectedSilently = async (id: string) => {
+    const { data, error } = await getSuggestionById(id)
+    if (!error && data) {
+      setSelectedSuggestion(data)
+    }
+  }
+
   const handleLike = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
     const { error } = await voteSuggestion(id, 'like')
     if (error) {
       toast(error, 'error')
     } else {
-      if (selectedId === id) handleOpenDetails(id)
+      if (selectedId === id) refreshSelectedSilently(id)
       fetchSuggestions(true)
     }
   }
@@ -162,7 +170,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
     if (error) {
       toast(error, 'error')
     } else {
-      if (selectedId === id) handleOpenDetails(id)
+      if (selectedId === id) refreshSelectedSilently(id)
       fetchSuggestions(true)
     }
   }
@@ -178,7 +186,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
     } else {
       toast('Comentário adicionado!', 'success')
       setNewComment('')
-      handleOpenDetails(selectedId)
+      refreshSelectedSilently(selectedId)
       fetchSuggestions(true)
     }
     setIsCommenting(false)
