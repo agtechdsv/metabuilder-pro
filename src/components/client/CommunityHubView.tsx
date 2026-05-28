@@ -25,6 +25,7 @@ import {
   UserCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Modal } from '@/components/ui/Modal'
 import { createClient } from '@/utils/supabase/client'
 import { 
   getPosts, 
@@ -58,6 +59,17 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
 
   // Admin Moderation States
   const [processingAdminAction, setProcessingAdminAction] = useState<Record<string, boolean>>({})
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  })
   
   // Tabs & Navigation
   const [activeSubTab, setActiveSubTab] = useState<'feed' | 'chat'>('feed')
@@ -431,15 +443,22 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
   }
 
   // Admin: Delete Post
-  const handleAdminDeletePost = async (postId: string) => {
-    if (!confirm('Tem certeza de que deseja EXCLUIR permanentemente esta publicação?')) return
-    setProcessingAdminAction(prev => ({ ...prev, [`post_delete_${postId}`]: true }))
-    const res = await deleteCommunityPostAdmin(postId)
-    if (res.success) {
-      fetchPosts(true)
-      if (openCommentsPostId === postId) setOpenCommentsPostId(null)
-    }
-    setProcessingAdminAction(prev => ({ ...prev, [`post_delete_${postId}`]: false }))
+  const handleAdminDeletePost = (postId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Publicação',
+      message: 'Tem certeza de que deseja EXCLUIR permanentemente esta publicação?',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }))
+        setProcessingAdminAction(prev => ({ ...prev, [`post_delete_${postId}`]: true }))
+        const res = await deleteCommunityPostAdmin(postId)
+        if (res.success) {
+          fetchPosts(true)
+          if (openCommentsPostId === postId) setOpenCommentsPostId(null)
+        }
+        setProcessingAdminAction(prev => ({ ...prev, [`post_delete_${postId}`]: false }))
+      }
+    })
   }
 
   // Admin: Toggle Hide Comment
@@ -457,30 +476,45 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
   }
 
   // Admin: Delete Comment
-  const handleAdminDeleteComment = async (postId: string, commentId: string) => {
-    if (!confirm('Tem certeza de que deseja EXCLUIR permanentemente este comentário?')) return
-    setProcessingAdminAction(prev => ({ ...prev, [`comment_delete_${commentId}`]: true }))
-    const res = await deleteCommunityCommentAdmin(commentId)
-    if (res.success) {
-      const result = await getComments(postId)
-      if (result.success && result.comments) {
-        setCommentsForPost(prev => ({ ...prev, [postId]: result.comments }))
+  const handleAdminDeleteComment = (postId: string, commentId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Comentário',
+      message: 'Tem certeza de que deseja EXCLUIR permanentemente este comentário?',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }))
+        setProcessingAdminAction(prev => ({ ...prev, [`comment_delete_${commentId}`]: true }))
+        const res = await deleteCommunityCommentAdmin(commentId)
+        if (res.success) {
+          const result = await getComments(postId)
+          if (result.success && result.comments) {
+            setCommentsForPost(prev => ({ ...prev, [postId]: result.comments }))
+          }
+          fetchPosts(true)
+        }
+        setProcessingAdminAction(prev => ({ ...prev, [`comment_delete_${commentId}`]: false }))
       }
-      fetchPosts(true)
-    }
-    setProcessingAdminAction(prev => ({ ...prev, [`comment_delete_${commentId}`]: false }))
+    })
   }
 
   // Admin: Toggle Block User from Community
-  const handleAdminToggleUserBlock = async (userId: string, isBlocked: boolean) => {
-    if (!confirm(isBlocked ? 'Desbloquear este usuário na Comunidade?' : 'Bloquear este usuário da Comunidade?')) return
-    setProcessingAdminAction(prev => ({ ...prev, [`user_block_${userId}`]: true }))
-    const res = await toggleUserCommunityBlock(userId, !isBlocked)
-    if (res.success) {
-      fetchPosts(true)
-      fetchConnectionsData(true)
-    }
-    setProcessingAdminAction(prev => ({ ...prev, [`user_block_${userId}`]: false }))
+  const handleAdminToggleUserBlock = (userId: string, isBlocked: boolean) => {
+    const actionText = isBlocked ? 'Desbloquear' : 'Bloquear'
+    setConfirmModal({
+      isOpen: true,
+      title: `${actionText} Usuário`,
+      message: isBlocked ? 'Desbloquear este usuário na Comunidade?' : 'Bloquear este usuário da Comunidade?',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }))
+        setProcessingAdminAction(prev => ({ ...prev, [`user_block_${userId}`]: true }))
+        const res = await toggleUserCommunityBlock(userId, !isBlocked)
+        if (res.success) {
+          fetchPosts(true)
+          fetchConnectionsData(true)
+        }
+        setProcessingAdminAction(prev => ({ ...prev, [`user_block_${userId}`]: false }))
+      }
+    })
   }
 
   // Image Input Change Handler
@@ -1213,8 +1247,37 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
 
           </div>
         </div>
-
       </div>
+
+      {/* Custom Confirmation Modal */}
+      <Modal 
+        isOpen={confirmModal.isOpen} 
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} 
+        title={confirmModal.title}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            {confirmModal.message}
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+              className="px-4 py-2 text-xs font-bold text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={confirmModal.onConfirm}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
+            >
+              Confirmar
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

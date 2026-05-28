@@ -78,8 +78,8 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
 
   const { toast } = useToast()
 
-  const fetchSuggestions = async () => {
-    setLoading(true)
+  const fetchSuggestions = async (silent = false) => {
+    if (!silent) setLoading(true)
     const { data, error } = await getSuggestions({
       category: filterCategory,
       status: filterStatus
@@ -87,7 +87,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
     if (!error && data) {
       setSuggestions(data)
     }
-    setLoading(false)
+    if (!silent) setLoading(false)
   }
 
   useEffect(() => {
@@ -137,7 +137,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
       toast(error, 'error')
     } else {
       if (selectedId === id) handleOpenDetails(id)
-      fetchSuggestions()
+      fetchSuggestions(true)
     }
   }
 
@@ -147,7 +147,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
       toast(error, 'error')
     } else {
       if (selectedId === id) handleOpenDetails(id)
-      fetchSuggestions()
+      fetchSuggestions(true)
     }
   }
 
@@ -163,7 +163,7 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
       toast('Comentário adicionado!', 'success')
       setNewComment('')
       handleOpenDetails(selectedId)
-      fetchSuggestions()
+      fetchSuggestions(true)
     }
     setIsCommenting(false)
   }

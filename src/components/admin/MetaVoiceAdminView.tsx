@@ -59,6 +59,18 @@ export function MetaVoiceAdminView() {
   const [privateNote, setPrivateNote] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  })
+
   const [isHidden, setIsHidden] = useState(false)
   const [isBlocked, setIsBlocked] = useState(false)
   const [isProcessingBlock, setIsProcessingBlock] = useState(false)
@@ -132,20 +144,26 @@ export function MetaVoiceAdminView() {
     setIsProcessingBlock(false)
   }
 
-  const handleDeleteSuggestion = async () => {
+  const handleDeleteSuggestion = () => {
     if (!selectedSuggestion) return
-    if (!confirm('Tem certeza de que deseja EXCLUIR permanentemente esta sugestão? Esta ação não pode ser desfeita.')) return
-    
-    setIsProcessingDelete(true)
-    const res = await deleteSuggestionAdmin(selectedSuggestion.id)
-    if (res.success) {
-      toast('Sugestão excluída com sucesso!', 'success')
-      setShowModal(false)
-      fetchSuggestions()
-    } else {
-      toast(res.error || 'Erro ao excluir sugestão', 'error')
-    }
-    setIsProcessingDelete(false)
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Sugestão',
+      message: 'Tem certeza de que deseja EXCLUIR permanentemente esta sugestão? Esta ação não pode ser desfeita.',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }))
+        setIsProcessingDelete(true)
+        const res = await deleteSuggestionAdmin(selectedSuggestion.id)
+        if (res.success) {
+          toast('Sugestão excluída com sucesso!', 'success')
+          setShowModal(false)
+          fetchSuggestions()
+        } else {
+          toast(res.error || 'Erro ao excluir sugestão', 'error')
+        }
+        setIsProcessingDelete(false)
+      }
+    })
   }
 
   const filtered = suggestions.filter(s => {
@@ -427,6 +445,35 @@ export function MetaVoiceAdminView() {
         )}
       </Modal>
 
+      {/* Custom Confirmation Modal */}
+      <Modal 
+        isOpen={confirmModal.isOpen} 
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} 
+        title={confirmModal.title}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            {confirmModal.message}
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+              className="px-4 py-2 text-xs font-bold text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={confirmModal.onConfirm}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
+            >
+              Confirmar
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
