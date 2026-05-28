@@ -22,8 +22,7 @@ import {
   EyeOff,
   Eye,
   UserX,
-  UserCheck,
-  RefreshCw
+  UserCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Modal } from '@/components/ui/Modal'
@@ -51,7 +50,13 @@ import {
   toggleUserCommunityBlock
 } from '@/app/actions/admin'
 
-export default function CommunityHubView({ hideHeader = false }: { hideHeader?: boolean }) {
+export default function CommunityHubView({ 
+  hideHeader = false,
+  isSimulator = false
+}: { 
+  hideHeader?: boolean
+  isSimulator?: boolean
+}) {
   const supabase = createClient()
   
   // Auth state
@@ -216,6 +221,8 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
 
   // 4. Setup Realtime Subscriptions for global feed activity
   useEffect(() => {
+    if (isSimulator) return
+
     // Channel for community posts
     const postsChannel = supabase
       .channel('community_posts_realtime')
@@ -340,6 +347,32 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
     if (!newPostContent.trim() && !postImageFile) return
     setIsPublishing(true)
 
+    if (isSimulator) {
+      setTimeout(() => {
+        const newMockPost = {
+          id: `mock-post-${Date.now()}`,
+          content: newPostContent,
+          image_url: postImagePreview || '',
+          created_at: new Date().toISOString(),
+          likesCount: 0,
+          commentsCount: 0,
+          likedByMe: false,
+          user: {
+            id: currentUser?.id || 'mock-user-id',
+            name: currentUser?.user_metadata?.full_name || 'Alexandre Silva',
+            avatar: currentUser?.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150',
+            role: 'DEV'
+          }
+        }
+        setPosts(prev => [newMockPost, ...prev])
+        setNewPostContent('')
+        setPostImageFile(null)
+        setPostImagePreview(null)
+        setIsPublishing(false)
+      }, 1000)
+      return
+    }
+
     try {
       let imageUrl = ''
       if (postImageFile) {
@@ -382,6 +415,11 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
       return p
     }))
 
+    if (isSimulator) {
+      setIsLiking(prev => ({ ...prev, [postId]: false }))
+      return
+    }
+
     const result = await toggleLikePost(postId)
     if (!result.success) {
       // Revert optimistic update on failure
@@ -414,6 +452,38 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
     if (!newCommentText.trim()) return
     setIsSubmittingComment(true)
 
+    if (isSimulator) {
+      setTimeout(() => {
+        const newMockComment = {
+          id: `mock-comment-${Date.now()}`,
+          post_id: postId,
+          content: newCommentText,
+          created_at: new Date().toISOString(),
+          is_hidden: false,
+          user: {
+            id: currentUser?.id || 'mock-user-id',
+            name: currentUser?.user_metadata?.full_name || 'Alexandre Silva',
+            avatar: currentUser?.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150',
+            role: 'DEV',
+            is_blocked_community: false
+          }
+        }
+        setCommentsForPost(prev => ({
+          ...prev,
+          [postId]: [...(prev[postId] || []), newMockComment]
+        }))
+        setNewCommentText('')
+        setPosts(prev => prev.map(p => {
+          if (p.id === postId) {
+            return { ...p, commentsCount: p.commentsCount + 1 }
+          }
+          return p
+        }))
+        setIsSubmittingComment(false)
+      }, 800)
+      return
+    }
+
     const result = await createComment(postId, newCommentText)
     if (result.success) {
       setNewCommentText('')
@@ -438,6 +508,16 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
   // Admin: Toggle Hide Post
   const handleAdminTogglePostHide = async (postId: string, isHidden: boolean) => {
     setProcessingAdminAction(prev => ({ ...prev, [`post_hide_${postId}`]: true }))
+
+    if (isSimulator) {
+      setPosts(prev => prev.map(p => {
+        if (p.id === postId) return { ...p, is_hidden: !isHidden }
+        return p
+      }))
+      setProcessingAdminAction(prev => ({ ...prev, [`post_hide_${postId}`]: false }))
+      return
+    }
+
     const res = await toggleCommunityPostHide(postId, !isHidden)
     if (res.success) {
       fetchPosts(true)
@@ -454,6 +534,14 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }))
         setProcessingAdminAction(prev => ({ ...prev, [`post_delete_${postId}`]: true }))
+
+        if (isSimulator) {
+          setPosts(prev => prev.filter(p => p.id !== postId))
+          if (openCommentsPostId === postId) setOpenCommentsPostId(null)
+          setProcessingAdminAction(prev => ({ ...prev, [`post_delete_${postId}`]: false }))
+          return
+        }
+
         const res = await deleteCommunityPostAdmin(postId)
         if (res.success) {
           fetchPosts(true)
@@ -467,6 +555,19 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
   // Admin: Toggle Hide Comment
   const handleAdminToggleCommentHide = async (postId: string, commentId: string, isHidden: boolean) => {
     setProcessingAdminAction(prev => ({ ...prev, [`comment_hide_${commentId}`]: true }))
+
+    if (isSimulator) {
+      setCommentsForPost(prev => ({
+        ...prev,
+        [postId]: (prev[postId] || []).map(c => {
+          if (c.id === commentId) return { ...c, is_hidden: !isHidden }
+          return c
+        })
+      }))
+      setProcessingAdminAction(prev => ({ ...prev, [`comment_hide_${commentId}`]: false }))
+      return
+    }
+
     const res = await toggleCommunityCommentHide(commentId, !isHidden)
     if (res.success) {
       const result = await getComments(postId)
@@ -487,6 +588,20 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }))
         setProcessingAdminAction(prev => ({ ...prev, [`comment_delete_${commentId}`]: true }))
+
+        if (isSimulator) {
+          setCommentsForPost(prev => ({
+            ...prev,
+            [postId]: (prev[postId] || []).filter(c => c.id !== commentId)
+          }))
+          setPosts(prev => prev.map(p => {
+            if (p.id === postId) return { ...p, commentsCount: Math.max(0, p.commentsCount - 1) }
+            return p
+          }))
+          setProcessingAdminAction(prev => ({ ...prev, [`comment_delete_${commentId}`]: false }))
+          return
+        }
+
         const res = await deleteCommunityCommentAdmin(commentId)
         if (res.success) {
           const result = await getComments(postId)
@@ -510,6 +625,36 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }))
         setProcessingAdminAction(prev => ({ ...prev, [`user_block_${userId}`]: true }))
+
+        if (isSimulator) {
+          setPosts(prev => prev.map(p => {
+            if (p.user.id === userId) {
+              return { ...p, user: { ...p.user, is_blocked_community: !isBlocked } }
+            }
+            return p
+          }))
+          setCommentsForPost(prev => {
+            const copy = { ...prev }
+            Object.keys(copy).forEach(postId => {
+              copy[postId] = copy[postId].map(c => {
+                if (c.user.id === userId) {
+                  return { ...c, user: { ...c.user, is_blocked_community: !isBlocked } }
+                }
+                return c
+              })
+            })
+            return copy
+          })
+          setConnections(prev => prev.map(c => {
+            if (c.user.id === userId) {
+              return { ...c, user: { ...c.user, is_blocked_community: !isBlocked } }
+            }
+            return c
+          }))
+          setProcessingAdminAction(prev => ({ ...prev, [`user_block_${userId}`]: false }))
+          return
+        }
+
         const res = await toggleUserCommunityBlock(userId, !isBlocked)
         if (res.success) {
           fetchPosts(true)
@@ -555,6 +700,37 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
   // Handle Connections Requests (Send, Accept, Reject)
   const handleConnectionAction = async (action: 'send' | 'accept' | 'reject' | 'remove', id: string) => {
     setIsProcessingConnection(prev => ({ ...prev, [id]: true }))
+
+    if (isSimulator) {
+      setTimeout(() => {
+        if (action === 'send') {
+          const suggUser = suggestions.find(s => s.id === id)
+          if (suggUser) {
+            setSuggestions(prev => prev.filter(s => s.id !== id))
+            setConnections(prev => [...prev, {
+              id: `mock-conn-${Date.now()}`,
+              status: 'PENDING',
+              isRequester: true,
+              user: {
+                id: suggUser.id,
+                name: suggUser.name,
+                avatar: suggUser.avatar,
+                role: suggUser.role
+              }
+            }])
+          }
+        } else if (action === 'accept') {
+          setConnections(prev => prev.map(c => {
+            if (c.id === id) return { ...c, status: 'ACCEPTED' }
+            return c
+          }))
+        } else {
+          setConnections(prev => prev.filter(c => c.id !== id))
+        }
+        setIsProcessingConnection(prev => ({ ...prev, [id]: false }))
+      }, 500)
+      return
+    }
     
     let result: { success: boolean, error?: string }
     if (action === 'send') {
@@ -579,6 +755,22 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
     setActiveConnection(connection)
     setActiveSubTab('chat')
     setIsLoadingMessages(true)
+
+    if (isSimulator) {
+      setTimeout(() => {
+        setMessages([
+          {
+            id: `mock-msg-1-${Date.now()}`,
+            sender_id: connection.user.id,
+            content: 'Olá! Como posso te ajudar com o projeto?',
+            created_at: new Date(Date.now() - 3600000).toISOString()
+          }
+        ])
+        setActiveRoomId('mock-room-id')
+        setIsLoadingMessages(false)
+      }, 500)
+      return
+    }
     
     const roomResult = await getOrCreateChatRoom(connection.user.id)
     if (roomResult.success && roomResult.roomId) {
@@ -596,13 +788,27 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
 
   // Send Chat Message
   const handleSendMessage = async () => {
-    if (!newMessageText.trim() || !activeRoomId) return
+    if (!newMessageText.trim() || (!activeRoomId && !isSimulator)) return
     setIsSendingMessage(true)
 
     const textToSend = newMessageText
     setNewMessageText('')
 
-    const result = await sendChatMessage(activeRoomId, textToSend)
+    if (isSimulator) {
+      setTimeout(() => {
+        const myMsg = {
+          id: `mock-msg-sent-${Date.now()}`,
+          sender_id: currentUser?.id || 'me',
+          content: textToSend,
+          created_at: new Date().toISOString()
+        }
+        setMessages(prev => [...prev, myMsg])
+        setIsSendingMessage(false)
+      }, 300)
+      return
+    }
+
+    const result = await sendChatMessage(activeRoomId!, textToSend)
     if (result.success && result.message) {
       // Add message locally optimistically
       setMessages(prev => {
@@ -643,29 +849,18 @@ export default function CommunityHubView({ hideHeader = false }: { hideHeader?: 
                 </span>
               </div>
               
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => { fetchPosts(); fetchConnectionsData() }}
-                  disabled={isLoadingPosts}
-                  className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md border border-white/20 transition-all flex items-center gap-2 group disabled:opacity-50"
-                  title="Atualizar feed"
-                >
-                  <RefreshCw className={cn("w-4 h-4 transition-transform duration-500", isLoadingPosts ? "animate-spin" : "group-hover:rotate-180")} />
-                </button>
-
-                <button 
-                  onClick={() => {
-                    if (typeof window !== 'undefined') {
-                      window.open('/client/community/popout', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no')
-                    }
-                  }}
-                  className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md border border-white/20 transition-all flex items-center gap-2 group"
-                  title="Abrir em Nova Janela (Modo Foco)"
-                >
-                  <span className="hidden md:inline text-xs font-bold uppercase tracking-widest group-hover:text-white">Modo Foco</span>
-                  <ExternalLink className="w-4 h-4" />
-                </button>
-              </div>
+              <button 
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.open('/client/community/popout', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no')
+                  }
+                }}
+                className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md border border-white/20 transition-all flex items-center gap-2 group"
+                title="Abrir em Nova Janela (Modo Foco)"
+              >
+                <span className="hidden md:inline text-xs font-bold uppercase tracking-widest group-hover:text-white">Modo Foco</span>
+                <ExternalLink className="w-4 h-4" />
+              </button>
             </div>
             <h2 className="text-3xl font-black mb-2">MetaBuilders</h2>
             <p className="text-indigo-100 max-w-2xl">

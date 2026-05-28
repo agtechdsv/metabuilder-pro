@@ -738,7 +738,7 @@ export default function ControlCenterFeaturePage() {
 
               {/* TAB: COMMUNITY PRO */}
               {activeTab === 'community' && (
-                <CommunityHubView />
+                <CommunityHubView isSimulator={true} />
               )}
 
               {/* TAB 2: PRODUTIVIDADE */}
