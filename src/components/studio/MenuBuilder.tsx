@@ -114,7 +114,7 @@ export function MenuBuilder({ project, views, onSave }: MenuBuilderProps) {
   const [menu, setMenu] = useState<MenuItem[]>(project.navigation || [])
   const [isSaving, setIsSaving] = useState(false)
   const [lastAddedId, setLastAddedId] = useState<string | null>(null)
-  
+
   // DND State
   const [activeId, setActiveId] = useState<string | null>(null)
   const activeItem = useMemo(() => activeId ? findItem(menu, activeId) : null, [activeId, menu])
@@ -145,7 +145,7 @@ export function MenuBuilder({ project, views, onSave }: MenuBuilderProps) {
     if (activeItemData?.type === 'folder') return // Pastas só se movem na raiz (onDragEnd)
 
     const activeContainer = findParent(menu, active.id as string)
-    
+
     // Identifica o container de destino
     let overContainer = findParent(menu, overId as string)
     const overItemData = findItem(menu, overId as string)
@@ -164,13 +164,13 @@ export function MenuBuilder({ project, views, onSave }: MenuBuilderProps) {
       if (!activeItem) return prev
 
       const itemsWithoutActive = removeItem(prev, active.id as string)
-      
-      const overContainerItems = overContainer === 'root' 
-        ? itemsWithoutActive 
+
+      const overContainerItems = overContainer === 'root'
+        ? itemsWithoutActive
         : findItem(itemsWithoutActive, overContainer)?.children || []
-        
+
       const overIndex = overContainerItems.findIndex(i => i.id === overId)
-      
+
       let newIndex
       if (overIndex >= 0) {
         newIndex = overIndex
@@ -194,7 +194,7 @@ export function MenuBuilder({ project, views, onSave }: MenuBuilderProps) {
     if (activeId === overId) return
 
     const activeContainer = findParent(menu, activeId)
-    
+
     let overContainer = findParent(menu, overId)
     const overItemData = findItem(menu, overId)
     if (overItemData?.type === 'folder') {
@@ -205,20 +205,20 @@ export function MenuBuilder({ project, views, onSave }: MenuBuilderProps) {
 
     if (activeContainer && overContainer && activeContainer === overContainer) {
       setMenu((prev) => {
-        const containerItems = activeContainer === 'root' 
-          ? prev 
+        const containerItems = activeContainer === 'root'
+          ? prev
           : findItem(prev, activeContainer)?.children || []
-          
+
         const oldIndex = containerItems.findIndex(i => i.id === activeId)
         let newIndex = containerItems.findIndex(i => i.id === overId)
-        
+
         if (newIndex === -1) {
           newIndex = oldIndex
         }
 
         if (oldIndex !== newIndex) {
           const reorderedItems = arrayMove(containerItems, oldIndex, newIndex)
-          
+
           if (activeContainer === 'root') {
             return reorderedItems
           } else {
@@ -239,7 +239,7 @@ export function MenuBuilder({ project, views, onSave }: MenuBuilderProps) {
     const newId = Math.random().toString(36).substr(2, 9)
     const newItem: MenuItem = {
       id: newId,
-      label: '', 
+      label: '',
       description: '',
       icon: type === 'folder' ? 'Layers' : 'Layout',
       type,
@@ -425,7 +425,7 @@ function MenuNodeBase({ item, views, onUpdate, onRemove, onAddChild, lastAddedId
           ? "bg-emerald-500/5 border-emerald-500/10 dark:bg-emerald-500/10 dark:border-emerald-500/20"
           : "bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800"
       )}>
-        <div 
+        <div
           className="p-1 -ml-1 text-neutral-300 hover:text-indigo-500 cursor-grab active:cursor-grabbing shrink-0"
           {...dragAttributes}
           {...dragListeners}
@@ -434,7 +434,7 @@ function MenuNodeBase({ item, views, onUpdate, onRemove, onAddChild, lastAddedId
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <button 
+          <button
             onClick={() => onUpdate && setShowIconPicker(true)}
             disabled={isOverlay}
             className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-neutral-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all group/icon disabled:opacity-50"
@@ -445,7 +445,7 @@ function MenuNodeBase({ item, views, onUpdate, onRemove, onAddChild, lastAddedId
         </div>
 
         {showIconPicker && onUpdate && (
-          <IconPicker 
+          <IconPicker
             currentIcon={item.icon}
             onSelect={(icon) => onUpdate(item.id, { icon })}
             onClose={() => setShowIconPicker(false)}
@@ -479,7 +479,7 @@ function MenuNodeBase({ item, views, onUpdate, onRemove, onAddChild, lastAddedId
                 const selectedSlug = e.target.value
                 const selectedView = views.find((v: any) => v.slug === selectedSlug)
                 const updates: any = { target: selectedSlug }
-                
+
                 if (!item.label) {
                   if (selectedSlug === 'downloads') updates.label = 'Central de Downloads'
                   else if (selectedView) updates.label = selectedView.name
@@ -542,15 +542,15 @@ function MenuNodeBase({ item, views, onUpdate, onRemove, onAddChild, lastAddedId
             )}
 
             <div className="flex items-center gap-2 px-3 py-1.5 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={item.show_dashboard !== false}
                 onChange={e => onUpdate?.(item.id, { show_dashboard: e.target.checked })}
                 disabled={isOverlay}
                 className="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer disabled:opacity-50"
                 id={`dash-${item.id}`}
               />
-              <label htmlFor={`dash-${item.id}`} className="text-[9px] font-black uppercase tracking-widest text-neutral-400 cursor-pointer select-none">Dash</label>
+              <label htmlFor={`dash-${item.id}`} className="text-[9px] font-black tracking-widest text-neutral-400 cursor-pointer select-none">Disponibilizar DashBoard</label>
             </div>
 
             {onRemove && (
@@ -564,8 +564,8 @@ function MenuNodeBase({ item, views, onUpdate, onRemove, onAddChild, lastAddedId
             )}
 
             {item.type === 'folder' && (
-              <button 
-                onClick={() => setIsExpanded(!isExpanded)} 
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
                 disabled={isOverlay}
                 className="p-2 text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors disabled:opacity-50"
               >
@@ -606,7 +606,7 @@ function DroppableEmptyFolder({ id }: { id: string }) {
   })
 
   return (
-    <div 
+    <div
       ref={setNodeRef}
       className={cn(
         "py-6 border-2 border-dashed rounded-2xl flex items-center justify-center transition-all",

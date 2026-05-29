@@ -630,10 +630,10 @@
     },
     "hero": {
       "badge": "The Software Engine of the Future",
-      "title": "Build",
+      "title": "Systems",
       "enterprise": "Enterprise",
-      "subtitle": "Apps in Seconds.",
-      "desc": "Accelerate your technical delivery with MetaBuilderPRO. Connect legacy databases, use AI to generate premium interfaces, and manage multiple projects in a single whitelabel platform."
+      "subtitle": "with the speed your business demands",
+      "desc": "Accelerate your technical delivery with MetaBuilderPRO. Connect legacy databases, use Metadata Intelligence to structure premium interfaces, and manage multiple projects in a whitelabel platform with native, secure and highly scalable Next.js backend."
     },
     "home": {
       "bento_title": "A complete engine for",
