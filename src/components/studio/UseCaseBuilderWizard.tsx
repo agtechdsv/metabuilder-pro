@@ -2991,7 +2991,7 @@ function StepLayout({ config, setConfig, models }: any) {
           )}
 
           {/* ZONA: GRID */}
-          {config.logic_type !== 'timeline' && config.logic_type !== 'map' && config.logic_type !== 'gantt' && (
+          {config.logic_type !== 'timeline' && config.logic_type !== 'map' && config.logic_type !== 'gantt' && config.logic_type !== 'cadastro' && (
           <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="space-y-1">

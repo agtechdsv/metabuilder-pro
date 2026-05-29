@@ -197,10 +197,13 @@ export default function ViewPageContent({
     cleanFormFields.filter(f => f.model_id && String(f.model_id) !== String(masterModelId)),
   [cleanFormFields, masterModelId])
 
+  const isCadastroOnly = logicType === 'cadastro'
+
   const [activeTab, setActiveTab] = useState<'list' | 'card'>(defaultView)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isPageVisible, setIsPageVisible] = useState(false)
+  // Modo "Apenas Cadastro": entra direto no formulário sem passar pela tela de pesquisa
+  const [isPageVisible, setIsPageVisible] = useState(logicType === 'cadastro')
   const [drawerMode, setDrawerMode] = useState<'create' | 'edit' | 'view'>('create')
   const [selectedRow, setSelectedRow] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -258,8 +261,6 @@ export default function ViewPageContent({
           } else if (validColumnNames.has(key)) {
              paramsObj[key] = value;
           } else {
-             // Aceita mesmo sem validacao se formos tolerantes, mas vamos forcar para o ID
-             // caso seja a unica parametro ou deixe como esta para nao quebrar custom actions
              paramsObj[key] = value;
           }
         }
@@ -269,7 +270,11 @@ export default function ViewPageContent({
         setGlobalFilterValues(paramsObj);
         
         if (logicType !== 'list_only') {
-          const idVal = paramsObj['id'] || paramsObj[pk];
+          // No modo cadastro sem displayFields/filterFields, qualquer param de ID conta
+          const idVal = paramsObj['id'] || paramsObj[pk] ||
+            (logicType === 'cadastro'
+              ? Object.entries(paramsObj).find(([k]) => k.endsWith('_id') || k === 'id')?.[1]
+              : undefined);
           if (idVal) {
             setInitialEditId(idVal);
           }
@@ -397,6 +402,57 @@ export default function ViewPageContent({
       setIsTunnelReady(false)
     }
   }, [project?.id])
+
+  // Modo "Apenas Cadastro" com ID passado por parâmetro: busca o registro e abre em edição
+  useEffect(() => {
+    if (!isCadastroOnly || !initialEditId || !isTunnelReady || !tunnelChannel) return
+
+    const queryId = crypto.randomUUID()
+    const cleanPk = (primaryKeyName || 'id').split('.').pop() || 'id'
+    const currentModel = project?.models?.find((m: any) => m.db_table_name === modelName)
+    const actualSchemaName = currentModel?.db_schema_name || project?.slug || 'public'
+    const rawQuery = `SELECT * FROM "${modelName}" WHERE "${cleanPk}" = '${String(initialEditId).replace(/'/g, "''")}' LIMIT 1`
+
+    console.log(`[MetaBuilder] 🔍 Buscando registro para edição no modo Cadastro: ${rawQuery}`)
+
+    const handleResult = (payload: any) => {
+      if (payload.payload?.queryId !== queryId) return
+      if (payload.payload?.success && payload.payload?.data?.length > 0) {
+        const record = payload.payload.data[0]
+        setSelectedRow(record)
+        setDrawerMode('edit')
+        setIsPageVisible(true)
+        console.log(`[MetaBuilder] ✅ Registro encontrado para edição:`, record)
+      }
+      // Limpa o listener após receber
+      try {
+        const bindings = tunnelChannel.bindings?.broadcast
+        if (Array.isArray(bindings)) {
+          tunnelChannel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult)
+        }
+      } catch (e) {}
+    }
+
+    tunnelChannel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
+    tunnelChannel.on('broadcast', { event: 'sql_result' }, handleResult)
+
+    tunnelChannel.send({
+      type: 'broadcast',
+      event: 'sql_query',
+      payload: {
+        queryId,
+        table: modelName,
+        schemaName: actualSchemaName,
+        action: 'select',
+        query: rawQuery,
+        sql: rawQuery,
+        token: project?.secret_token || 'test-token',
+        joins: [],
+        limit: 1,
+        offset: 0
+      }
+    })
+  }, [isCadastroOnly, initialEditId, isTunnelReady, tunnelChannel])
 
 
   const handleAddWidgetRuntime = () => {
@@ -1262,7 +1318,13 @@ export default function ViewPageContent({
           sessionStorage.removeItem(`metabuilder_cache_${project.id}:${modelName}`)
         }
 
-        if (isPage) {
+        if (isCadastroOnly) {
+          // No modo "Apenas Cadastro", limpa o formulário para permitir um novo registro
+          setSelectedRow(null)
+          setDrawerMode('create')
+          setIsPageVisible(true)
+          setRefreshKey(prev => prev + 1)
+        } else if (isPage) {
           const freshDetails = await fetchDetails(selectedRow, modelName)
           setSelectedRow((prev: any) => prev ? { ...prev, ...formData, _details: freshDetails } : prev)
           setRefreshKey(prev => prev + 1)
@@ -1401,14 +1463,14 @@ export default function ViewPageContent({
       />
 
       <main className="px-10 py-6 pb-8 space-y-8">
-        {isPage && isPageVisible ? (
+        {(isPage && isPageVisible) || isCadastroOnly ? (
           <RecordForm
-            key={`page-form-${relationalRefreshKey}`}
+            key={`page-form-${relationalRefreshKey}-${refreshKey}`}
             mode={drawerMode}
             fields={cleanFormFields}
             initialData={selectedRow}
             onSave={handleSave}
-            onCancel={() => setIsPageVisible(false)}
+            onCancel={isCadastroOnly ? () => {} : () => setIsPageVisible(false)}
             isLoading={isProcessing}
             logicType={logicType}
             masterModelId={masterModelId}

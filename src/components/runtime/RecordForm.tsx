@@ -1180,13 +1180,15 @@ export default function RecordForm({
           "pt-8 mt-auto border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-end gap-3 sticky bottom-0",
           footerBgClass
         )}>
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="px-6 py-3 rounded-xl text-xs font-bold capitalize tracking-wider text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
-          >
-            {mode === 'view' ? t('runtime.close') : t('common.cancel')}
-          </button>
+          {!(logicType === 'cadastro' && isPageMode) && (
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="px-6 py-3 rounded-xl text-xs font-bold capitalize tracking-wider text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
+            >
+              {mode === 'view' ? t('runtime.close') : t('common.cancel')}
+            </button>
+          )}
 
           {mode !== 'view' && (
             <button

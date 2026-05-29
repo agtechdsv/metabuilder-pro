@@ -67,3 +67,4 @@ node_modules
 /scratch_query.js
 /simulate_fields.js
 
+/cli/dist

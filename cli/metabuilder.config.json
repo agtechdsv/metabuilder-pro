@@ -14,7 +14,7 @@
   ],
   "supabaseUrl": "https://chmstvtepzmjhpyxjjam.supabase.co",
   "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNobXN0dnRlcHptamhweXhqamFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMjk1ODgsImV4cCI6MjA5MzYwNTU4OH0.eMw33Jv7lco6uXWJnz0bdMSbHRAQFW0Ala7K6S_R8To",
-  "apiUrl": "https://metabuilderpro.com/api/metadata/sync",
+  "apiUrl": "http://localhost:3000/api/metadata/sync",
   "ldap": {
     "enabled": false,
     "url": "ldap://10.0.0.15:389",
@@ -23,5 +23,5 @@
     "bindPassword": "senha_secreta_do_bind",
     "searchFilter": "(sAMAccountName={{username}})"
   },
-  "downloadPath": "C:\\\\AgTech"
+  "downloadPath": "C:\\AgTech\\DownloadsMetaBuilder"
 }

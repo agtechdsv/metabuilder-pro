@@ -71,12 +71,12 @@ interface WorkspaceManagerProps {
   initialGuestAccessLevel?: 'global' | 'granular' | null
 }
 
-export function WorkspaceManager({ 
-  initialWorkspaces, 
-  userName, 
-  teamData, 
-  plans, 
-  user, 
+export function WorkspaceManager({
+  initialWorkspaces,
+  userName,
+  teamData,
+  plans,
+  user,
   profile,
   isGuest = false,
   initialGuestAccessLevel = null
@@ -195,13 +195,13 @@ export function WorkspaceManager({
   }
 
   const toggleWorkspacePermission = (wsId: string, permission: 'can_create' | 'can_edit' | 'can_delete') => {
-    setGuestWorkspaces(prev => prev.map(w => 
+    setGuestWorkspaces(prev => prev.map(w =>
       w.id === wsId ? { ...w, [permission]: !w[permission] } : w
     ))
   }
 
   const toggleProjectPermission = (projId: string, permission: 'can_create' | 'can_edit' | 'can_deactivate' | 'can_delete') => {
-    setGuestProjects(prev => prev.map(p => 
+    setGuestProjects(prev => prev.map(p =>
       p.id === projId ? { ...p, [permission]: !p[permission] } : p
     ))
   }
@@ -700,8 +700,8 @@ export function WorkspaceManager({
                       <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800/50">
                         <div className="relative group/badge">
                           <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider cursor-help select-none ${guest.access_level === 'global'
-                              ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600'
-                              : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600'
+                            ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600'
+                            : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600'
                             }`}>
                             Acesso {guest.access_level === 'global' ? 'Global' : 'Granular'}
                           </div>
@@ -790,13 +790,13 @@ export function WorkspaceManager({
         isOpen={!!selectedGuestAccess}
         onClose={() => setSelectedGuestAccess(null)}
         title={`Permissões — ${selectedGuestAccess?.full_name || selectedGuestAccess?.email}`}
-        description="Configure quais Workspaces e Projetos este implementador pode visualizar e atuar."
+        description="Configure quais Workspaces e Projetos este colaborador pode visualizar e atuar."
         size="2xl"
         zIndex={300}
       >
         <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-1">
           <p className="text-xs text-neutral-550 dark:text-neutral-450 leading-relaxed">
-            Configure quais Workspaces e Projetos este implementador pode visualizar e atuar. Ele não terá acesso ao que não for selecionado abaixo.
+            Configure quais Workspaces e Projetos este colaborador pode visualizar e atuar. Ele não terá acesso ao que não for selecionado abaixo.
           </p>
 
           {/* Access Level Selector */}
@@ -807,8 +807,8 @@ export function WorkspaceManager({
                 type="button"
                 onClick={() => setGuestAccessLevel('global')}
                 className={`p-4 border rounded-2xl flex flex-col items-start gap-2 text-left transition-all ${guestAccessLevel === 'global'
-                    ? 'border-indigo-650 bg-indigo-50/20 dark:bg-indigo-500/10'
-                    : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900'
+                  ? 'border-indigo-650 bg-indigo-50/20 dark:bg-indigo-500/10'
+                  : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900'
                   }`}
               >
                 <div className="flex items-center gap-2 font-bold text-xs text-neutral-900 dark:text-white">
@@ -823,8 +823,8 @@ export function WorkspaceManager({
                 type="button"
                 onClick={() => setGuestAccessLevel('granular')}
                 className={`p-4 border rounded-2xl flex flex-col items-start gap-2 text-left transition-all ${guestAccessLevel === 'granular'
-                    ? 'border-indigo-650 bg-indigo-50/20 dark:bg-indigo-500/10'
-                    : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900'
+                  ? 'border-indigo-650 bg-indigo-50/20 dark:bg-indigo-500/10'
+                  : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900'
                   }`}
               >
                 <div className="flex items-center gap-2 font-bold text-xs text-neutral-900 dark:text-white">
@@ -1052,7 +1052,7 @@ export function WorkspaceManager({
           size="4xl"
         >
           <div className="max-h-[70vh] overflow-y-auto pr-1">
-            <CheckoutClient 
+            <CheckoutClient
               plans={plans}
               user={user}
               profile={profile}
