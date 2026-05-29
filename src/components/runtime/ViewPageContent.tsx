@@ -28,7 +28,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Drawer } from '@/components/ui/Drawer'
 import { useToast } from '@/components/ui/Toast'
 import { useRouter } from 'next/navigation'
-import { ExportDropdown, ActiveDownloadsWidget } from './ExportControls'
+import { ExportDropdown } from './ExportControls'
 
 // Importamos o ViewContainer sem SSR para evitar o "piscar" do loader
 // e conflitos de hidratação com o sessionStorage
@@ -398,91 +398,6 @@ export default function ViewPageContent({
     }
   }, [project?.id])
 
-  // --- REAL-TIME DOWNLOAD PROGRESS LISTENER ---
-  const [activeDownloads, setActiveDownloads] = useState<any[]>([])
-
-  const handleRemoveDownload = (jobId: string) => {
-    setActiveDownloads(prev => prev.filter(d => d.jobId !== jobId))
-  }
-
-  useEffect(() => {
-    if (!tunnelChannel || !isTunnelReady) return
-
-    const handleDownloadProgress = (payload: any) => {
-      const job = payload.payload
-      if (!job || !job.jobId) return
-
-      console.log('[MetaBuilder] Live download progress event:', job)
-
-      setActiveDownloads(prev => {
-        // Automatically hide completed/failed jobs after 10 seconds
-        if (job.status === 'completed' || job.status === 'failed') {
-          setTimeout(() => {
-            setActiveDownloads(current => current.filter(d => d.jobId !== job.jobId))
-          }, 10000)
-        }
-
-        const exists = prev.some(d => d.jobId === job.jobId)
-        if (exists) {
-          return prev.map(d => d.jobId === job.jobId ? { ...d, ...job } : d)
-        } else {
-          return [...prev, job]
-        }
-      })
-    }
-
-    tunnelChannel.on('broadcast', { event: 'download_progress' }, handleDownloadProgress)
-
-    return () => {
-      const bindings = tunnelChannel.bindings?.broadcast
-      if (Array.isArray(bindings)) {
-        const binding = bindings.find((b: any) => b.callback === handleDownloadProgress)
-        if (binding) {
-          if (tunnelChannel.channelAdapter) {
-            tunnelChannel.channelAdapter.off('broadcast', binding.ref)
-          }
-          tunnelChannel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleDownloadProgress)
-        }
-      }
-    }
-  }, [tunnelChannel, isTunnelReady])
-
-  // --- POSTGRES REALTIME FALLBACK: sync widget when DB changes (catches what broadcasts miss) ---
-  useEffect(() => {
-    const dbChannel = supabase
-      .channel('widget_download_jobs_sync')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'download_jobs' },
-        (payload: any) => {
-          const updatedJob = payload.new
-          if (!updatedJob?.id) return
-
-          setActiveDownloads(prev => {
-            // Only update if this job is already being tracked in the widget
-            const exists = prev.some(d => d.jobId === updatedJob.id)
-            if (!exists) return prev
-
-            if (updatedJob.status === 'completed' || updatedJob.status === 'failed') {
-              setTimeout(() => {
-                setActiveDownloads(current => current.filter(d => d.jobId !== updatedJob.id))
-              }, 10000)
-            }
-
-            return prev.map(d => d.jobId === updatedJob.id ? {
-              ...d,
-              status: updatedJob.status,
-              fileName: updatedJob.file_name || d.fileName,
-              recordCount: updatedJob.record_count ?? d.recordCount,
-              error: updatedJob.error_message || d.error,
-            } : d)
-          })
-        }
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(dbChannel) }
-  }, [])
 
   const handleAddWidgetRuntime = () => {
     setEditingWidget({
@@ -1458,6 +1373,7 @@ export default function ViewPageContent({
               <ExportDropdown 
                 projectId={project.id}
                 workspaceSlug={workspace.slug}
+                projectSlug={project.slug}
                 viewName={viewName}
                 modelName={modelName}
                 displayFields={cleanDisplayFields}
@@ -1817,15 +1733,6 @@ export default function ViewPageContent({
         </div>
       </Drawer>
 
-      {project.theme_config?.enable_downloads !== false && canExport && (
-        <ActiveDownloadsWidget 
-          downloads={activeDownloads} 
-          onRemove={handleRemoveDownload} 
-          workspaceSlug={workspace?.slug}
-          projectSlug={project?.slug}
-          projectId={project?.id}
-        />
-      )}
     </div>
   )
 }
