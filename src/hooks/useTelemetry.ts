@@ -11,6 +11,7 @@ interface UseTelemetryProps {
   workspaceId?: string
   projectId?: string
   uiViewId?: string
+  uiViewName?: string
   heartbeatIntervalMs?: number // Default: 2 minutes
 }
 
@@ -18,6 +19,7 @@ export function useTelemetry({
   workspaceId,
   projectId,
   uiViewId,
+  uiViewName,
   heartbeatIntervalMs = 120000,
 }: UseTelemetryProps) {
   const supabase = createClient()
@@ -59,10 +61,10 @@ export function useTelemetry({
   // Log session start automatically when user is loaded
   useEffect(() => {
     if (userId && !hasLoggedEntryRef.current) {
-      logAction('SESSION_START', 'Entrou no configurador do Caso de Uso')
+      logAction('SESSION_START', uiViewName ? `Entrou no configurador do Caso de Uso: ${uiViewName}` : 'Entrou no configurador do Caso de Uso')
       hasLoggedEntryRef.current = true
     }
-  }, [userId, logAction])
+  }, [userId, logAction, uiViewName])
 
   // The Heartbeat
   const flush = useCallback(async (overrideUiViewId?: string) => {

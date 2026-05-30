@@ -55,7 +55,7 @@ export default function AuthSettingsPage() {
   const [newRoleName, setNewRoleName] = useState('')
   
   const [authConfig, setAuthConfig] = useState({
-    auth_type: 'managed',
+    auth_type: 'none',
     db_table_name: '',
     db_email_column: '',
     db_password_column: '',

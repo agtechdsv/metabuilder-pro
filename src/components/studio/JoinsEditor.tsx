@@ -1,7 +1,7 @@
 'use client'
 
-import React from 'react'
-import { Link, Plus, ArrowRight, Trash2 } from 'lucide-react'
+import React, { useState } from 'react'
+import { Link, Plus, ArrowRight, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface JoinsEditorProps {
   joins: any[]
@@ -11,6 +11,8 @@ interface JoinsEditorProps {
 }
 
 export const JoinsEditor = ({ joins, models, onUpdate, t }: JoinsEditorProps) => {
+  const [isExpanded, setIsExpanded] = useState(true)
+
   const handleAdd = () => {
     onUpdate([...joins, { from: '', localKey: '', to: '', foreignKey: '' }])
   }
@@ -31,17 +33,26 @@ export const JoinsEditor = ({ joins, models, onUpdate, t }: JoinsEditorProps) =>
 
   return (
     <div className="p-3 bg-indigo-50/30 dark:bg-indigo-900/5 border border-indigo-100 dark:border-indigo-900/20 rounded-[1.5rem] space-y-4">
-      <div className="flex items-center gap-2">
-        <div className="p-1.5 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/20">
-          <Link className="w-4 h-4 text-white" />
+      <div 
+        className="flex items-center justify-between cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/20">
+            <Link className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">{t('wizard.layout.relationships')}</h4>
+            <p className="text-[9px] text-neutral-500 font-medium">{t('wizard.layout.relationships_desc')}</p>
+          </div>
         </div>
-        <div>
-          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">{t('wizard.layout.relationships')}</h4>
-          <p className="text-[9px] text-neutral-500 font-medium">{t('wizard.layout.relationships_desc')}</p>
+        <div className="p-2 text-indigo-600">
+          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </div>
       </div>
 
-      <div className="space-y-2">
+      {isExpanded && (
+        <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
         {(joins || []).map((join: any, index: number) => (
           <div key={index} className="flex flex-wrap items-center gap-2 p-2 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 shadow-sm group animate-in zoom-in-95 duration-300">
             {/* FROM TABLE */}
@@ -112,7 +123,8 @@ export const JoinsEditor = ({ joins, models, onUpdate, t }: JoinsEditorProps) =>
           <Plus className="w-4 h-4" />
           {t('wizard.layout.add_relationship', 'Add Relationship')}
         </button>
-      </div>
+        </div>
+      )}
     </div>
   )
 }

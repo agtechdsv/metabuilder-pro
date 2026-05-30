@@ -1,8 +1,8 @@
 {
   "connections": [
     {
-      "projectId": "a3e0a439-2b44-437c-83c5-ff779caccf34",
-      "secretToken": "691114bfeded344b62d2f8426a4dfc40ca0b04c4dc02bbae837971e68cb3f982",
+      "projectId": "4f1a995a-cdff-4397-a62a-6e2f271169f8",
+      "secretToken": "b873684fdc774ac3a1f029dac32dff6047b8df958269924d94936c03e19f360a",
       "connectionsString": [
         {
           "name": "build_flow",

@@ -1134,7 +1134,7 @@ export default function ViewPageContent({
       }
 
       if (typeof window !== 'undefined') {
-        sessionStorage.removeItem(`metabuilder_cache_${project.id}:${modelName}`)
+        // Cache is updated silently by fetchData, do not remove it to prevent loader flashing
       }
 
       setDetailRefreshKey(prev => prev + 1)
@@ -1315,15 +1315,21 @@ export default function ViewPageContent({
 
         // Limpar cache para forçar refresh real
         if (typeof window !== 'undefined') {
-          sessionStorage.removeItem(`metabuilder_cache_${project.id}:${modelName}`)
+          // Cache is updated silently by fetchData, do not remove it to prevent loader flashing
         }
 
         if (isCadastroOnly) {
-          // No modo "Apenas Cadastro", limpa o formulário para permitir um novo registro
-          setSelectedRow(null)
-          setDrawerMode('create')
-          setIsPageVisible(true)
-          setRefreshKey(prev => prev + 1)
+          if (action === 'insert') {
+            // No modo "Apenas Cadastro", limpa o formulário para permitir um novo registro
+            setSelectedRow(null)
+            setDrawerMode('create')
+            setIsPageVisible(true)
+            setRefreshKey(prev => prev + 1)
+          } else {
+            // Se foi atualização de um registro no modo modal embed/cadastro, mantém os dados
+            setSelectedRow((prev: any) => prev ? { ...prev, ...formData } : prev)
+            setRefreshKey(prev => prev + 1)
+          }
         } else if (isPage) {
           const freshDetails = await fetchDetails(selectedRow, modelName)
           setSelectedRow((prev: any) => prev ? { ...prev, ...formData, _details: freshDetails } : prev)
@@ -1482,6 +1488,7 @@ export default function ViewPageContent({
             onEditDetail={handleEditDetail}
             onDeleteDetail={handleDeleteDetail}
             onAddDetail={handleOpenAddDetail}
+            refreshTrigger={refreshKey}
             joins={joins}
             dictionary={dictionary}
             detailsInlineTypes={detailsInlineTypes}
@@ -1513,7 +1520,7 @@ export default function ViewPageContent({
             )}
 
             <ViewContainer 
-              key={refreshKey}
+              externalRefreshTrigger={refreshKey}
               projectId={project.id}
               project={project}
               modelName={modelName}
@@ -1586,6 +1593,7 @@ export default function ViewPageContent({
           project={project}
           customActions={customActions}
           onCustomAction={handleCustomAction}
+          refreshTrigger={refreshKey}
         />
       ) : (
         <RecordDrawer 
@@ -1619,6 +1627,7 @@ export default function ViewPageContent({
           project={project}
           customActions={customActions}
           onCustomAction={handleCustomAction}
+          refreshTrigger={refreshKey}
         />
       )}
 
@@ -1698,6 +1707,7 @@ export default function ViewPageContent({
         project={project}
         customActions={customActions}
         onCustomAction={handleCustomAction}
+        refreshTrigger={refreshKey}
       />
 
       <RecordDrawer 
@@ -1727,6 +1737,7 @@ export default function ViewPageContent({
         project={project}
         customActions={customActions}
         onCustomAction={handleCustomAction}
+        refreshTrigger={refreshKey}
       />
 
       <DeleteConfirmModal 

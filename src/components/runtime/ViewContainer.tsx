@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { LayoutGrid, List, Search, Filter, Plus, Pencil, Trash2, RefreshCcw, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Zap, Link, Database, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import DynamicGrid from '@/components/DynamicGrid'
+import { DynamicIcon } from '@/components/runtime/DynamicIcon'
 import { useI18n } from '@/i18n/I18nContext'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
@@ -46,6 +47,7 @@ interface ViewContainerProps {
   isTunnelReady?: boolean
   galleryClickBehavior?: 'lightbox' | 'thumbnail'
   customActions?: any[]
+  externalRefreshTrigger?: number
 }
 
 import DynamicCardList from './DynamicCardList'
@@ -133,7 +135,8 @@ export default function ViewContainer({
   tunnelChannel,
   isTunnelReady,
   galleryClickBehavior,
-  customActions = []
+  customActions = [],
+  externalRefreshTrigger = 0
 }: ViewContainerProps) {
   const { toast } = useToast()
   const router = useRouter()
@@ -1047,6 +1050,13 @@ export default function ViewContainer({
     }
   }, [refreshTrigger])
 
+  useEffect(() => {
+    if (externalRefreshTrigger > 0 && fetchDataRef.current) {
+      console.log(`[MetaBuilder] Refreshing data from external trigger...`)
+      fetchDataRef.current(currentFiltersRef.current, true)
+    }
+  }, [externalRefreshTrigger])
+
   // Lógica de Ordenação Local
   const sortedData = [...data].sort((a, b) => {
     if (!sortConfig) return 0
@@ -1088,10 +1098,7 @@ export default function ViewContainer({
                 getBulkActionClasses(action.color)
               )}
             >
-              {action.icon === 'Zap' && <Zap className="w-3.5 h-3.5" />}
-              {action.icon === 'Link' && <Link className="w-3.5 h-3.5" />}
-              {action.icon === 'Database' && <Database className="w-3.5 h-3.5" />}
-              {action.icon === 'Globe' && <Globe className="w-3.5 h-3.5" />}
+              <DynamicIcon icon={action.icon || 'Zap'} className="w-3.5 h-3.5" />
               {action.label}
             </button>
           ))}
@@ -1167,8 +1174,7 @@ export default function ViewContainer({
                       }}
                       className={cn(
                         "text-[10px] font-black tracking-widest ml-1",
-                        !zoneConfig.label?.color && "text-neutral-400",
-                        !zoneConfig.label?.font && "uppercase" // Mantém uppercase apenas se for o padrão do sistema
+                        !zoneConfig.label?.color && "text-neutral-400"
                       )}
                     >
                       {zoneConfig.label?.text || field.display_name}

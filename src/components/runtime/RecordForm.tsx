@@ -5,6 +5,7 @@ import { Loader2, Save, Eye, Pencil, Plus, Trash2, ArrowLeft, Check, ChevronDown
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
+import { DynamicIcon } from '@/components/runtime/DynamicIcon'
 
 // Helper para obter valores de forma insensível a maiúsculas/minúsculas e tolerante a prefixos
 const getCaseInsensitiveValue = (data: any, path: string) => {
@@ -27,31 +28,24 @@ const getCaseInsensitiveValue = (data: any, path: string) => {
 
   for (const key of Object.keys(data)) {
     const lowerKey = key.toLowerCase()
-    if (lowerKey === lowerPath) {
-      return data[key]
-    }
-    if (lowerBase && lowerKey === lowerBase) {
-      return data[key]
-    }
-
-    // Tratar se a chave no data for "tabela.coluna" e o lowerBase/lowerPath bater com o final dela
+    if (lowerKey === lowerPath) return data[key]
+    
     const keyBase = key.split('.').pop()?.toLowerCase()
-    if (keyBase && (keyBase === lowerPath || (lowerBase && keyBase === lowerBase))) {
-      return data[key]
-    }
+    if (keyBase && (keyBase === lowerPath || (lowerBase && keyBase === lowerBase))) return data[key]
   }
 
   return undefined
 }
 
 const getActionIcon = (iconName: string, className?: string) => {
-  switch (iconName) {
-    case 'Zap': return <Zap className={className || "w-4 h-4"} />
-    case 'Link': return <Link className={className || "w-4 h-4"} />
-    case 'Database': return <Database className={className || "w-4 h-4"} />
-    case 'Globe': return <Globe className={className || "w-4 h-4"} />
-    default: return <Zap className={className || "w-4 h-4"} />
-  }
+  return <DynamicIcon icon={iconName} className={className || "w-4 h-4"} />
+}
+
+const getFontFamily = (font?: string) => {
+  if (!font) return undefined;
+  const cleanFont = font.replace(' (Padrão)', '');
+  if (cleanFont.includes('Mono')) return `"${cleanFont}", monospace`;
+  return `"${cleanFont}", sans-serif`;
 }
 
 // Helper para aplicar máscara a valores (apenas para exibição)
@@ -136,6 +130,7 @@ interface RecordFormProps {
   tunnelChannel?: any
   isTunnelReady?: boolean
   project?: any
+  refreshTrigger?: number
 }
 
 const getActionColorClasses = (color: string) => {
@@ -264,7 +259,8 @@ export default function RecordForm({
   isTunnelReady,
   project,
   masterTabTitle,
-  detailsTabTitles
+  detailsTabTitles,
+  refreshTrigger = 0
 }: RecordFormProps) {
   const { t } = useI18n()
   const [formData, setFormData] = useState<any>(initialData || {})
@@ -522,7 +518,7 @@ export default function RecordForm({
     if (fields.length > 0) {
       fetchAllRelational()
     }
-  }, [fields, isTunnelReady, tunnelChannel, project])
+  }, [fields, isTunnelReady, tunnelChannel, project, projectId, refreshTrigger])
 
   const parseFixedOptions = (str: string) => {
     if (!str) return []
@@ -593,6 +589,24 @@ export default function RecordForm({
 
   const renderField = (field: any) => {
     if (!field) return null;
+
+    const fieldCustomActions = customActions?.filter((a: any) => {
+      const ctxs = a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context];
+      if (!ctxs.includes('field_group')) return false;
+      const targets = a.group_fields || (a.group_field ? [a.group_field] : []);
+      if (targets.includes(field.db_column_name) && !targets.some((t: string) => t.includes(':'))) return true;
+
+      // Identify zone: compare field.model_id with main usecase's masterModelId
+      const mainModelName = project?.models?.find((m: any) => m.id === masterModelId)?.db_table_name;
+      const isMasterZone = !mainModelName || mainModelName.toLowerCase() === masterModelName?.toLowerCase();
+      const zoneStr = isMasterZone ? 'master' : 'detail';
+      
+      return targets.includes(`${zoneStr}:${field.db_column_name}`);
+    }) || [];
+
+    const leftActions = fieldCustomActions.filter((a: any) => a.group_position === 'left');
+    const rightActions = fieldCustomActions.filter((a: any) => a.group_position !== 'left');
+
     let rawValue = getCaseInsensitiveValue(formData, field.db_column_name) ?? ''
     let value = rawValue
 
@@ -661,7 +675,7 @@ export default function RecordForm({
     }
 
     const inputStyle = {
-      fontFamily: field.config?.content?.font,
+      fontFamily: getFontFamily(field.config?.content?.font),
       fontSize: field.config?.content?.size,
       color: field.config?.content?.color,
     }
@@ -684,7 +698,7 @@ export default function RecordForm({
       <div className="space-y-2" style={{ width: width }}>
         <label
           style={{
-            fontFamily: zoneConfig.label?.font,
+            fontFamily: getFontFamily(zoneConfig.label?.font),
             fontSize: zoneConfig.label?.size,
             color: zoneConfig.label?.color,
           }}
@@ -698,106 +712,156 @@ export default function RecordForm({
           {zoneConfig.content?.required && <span className="ml-1 text-red-500">*</span>}
         </label>
 
-        <div className="relative group">
-          {fieldType === 'textarea' ? (
-            <textarea
-              disabled={isDisabled}
-              required={zoneConfig.content?.required}
-              value={value}
-              onChange={e => handleChange(e.target.value)}
-              rows={comp.rows || 3}
-              style={inputStyle}
-              className={cn(commonClasses, "resize-none")}
-              placeholder={mode === 'view' ? '' : t('runtime.record_drawer.input_placeholder').replace('{field}', field.display_name)}
-            />
-          ) : fieldType === 'select' ? (
-            <select
-              disabled={isDisabled}
-              required={zoneConfig.content?.required}
-              value={value}
-              onChange={e => handleChange(e.target.value)}
-              style={inputStyle}
-              className={commonClasses}
-            >
-              <option value="">{t('common.select', 'Selecione...')}</option>
-              {options.map((opt: any, i: number) => (
-                <option key={i} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          ) : fieldType === 'radio' ? (
-            <div className="flex flex-wrap gap-4 p-4 bg-neutral-50/50 dark:bg-neutral-950/30 rounded-2xl border border-neutral-100 dark:border-neutral-800">
-              {options.map((opt: any, i: number) => (
-                <label key={i} className="flex items-center gap-2 cursor-pointer group/opt">
-                  <div
-                    onClick={() => !isDisabled && handleChange(opt.value)}
-                    className={cn(
-                      "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
-                      String(value) === String(opt.value) ? 'border-indigo-600 bg-indigo-600' : 'border-neutral-300 dark:border-neutral-700'
-                    )}
-                  >
-                    {String(value) === String(opt.value) && <div className="w-2 h-2 bg-white rounded-full" />}
-                  </div>
-                  <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 group-hover/opt:text-indigo-600 transition-colors">{opt.label}</span>
-                </label>
-              ))}
-            </div>
-          ) : fieldType === 'checkbox' ? (
-            <div className="flex flex-wrap gap-4 p-4 bg-neutral-50/50 dark:bg-neutral-950/30 rounded-2xl border border-neutral-100 dark:border-neutral-800">
-              {options.map((opt: any, i: number) => {
-                const checked = Array.isArray(value) ? value.includes(opt.value) : String(value).split(',').includes(String(opt.value))
+        <div className="flex items-center gap-2">
+          {leftActions.length > 0 && (
+            <div className="flex items-center gap-1 shrink-0">
+              {leftActions.map((action: any) => {
+                const colors = getActionColorClasses(action.color);
                 return (
+                  <button
+                    key={action.id}
+                    type="button"
+                    onClick={() => onCustomAction?.(action, formData)}
+                    className={cn(
+                      "p-3 rounded-xl border shadow-sm transition-all flex items-center justify-center",
+                      colors.text,
+                      colors.hover,
+                      "bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800"
+                    )}
+                    title={action.label}
+                  >
+                    {getActionIcon(action.icon, "w-4 h-4")}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="relative group flex-1">
+            {fieldType === 'textarea' ? (
+              <textarea
+                disabled={isDisabled}
+                required={zoneConfig.content?.required}
+                value={value}
+                onChange={e => handleChange(e.target.value)}
+                rows={comp.rows || 3}
+                style={inputStyle}
+                className={cn(commonClasses, "resize-none")}
+                placeholder={mode === 'view' ? '' : t('runtime.record_drawer.input_placeholder').replace('{field}', field.display_name)}
+              />
+            ) : fieldType === 'select' ? (
+              <select
+                disabled={isDisabled}
+                required={zoneConfig.content?.required}
+                value={value}
+                onChange={e => handleChange(e.target.value)}
+                style={inputStyle}
+                className={commonClasses}
+              >
+                <option value="">{t('common.select', 'Selecione...')}</option>
+                {options.map((opt: any, i: number) => (
+                  <option key={i} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            ) : fieldType === 'radio' ? (
+              <div className="flex flex-wrap gap-4 p-4 bg-neutral-50/50 dark:bg-neutral-950/30 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                {options.map((opt: any, i: number) => (
                   <label key={i} className="flex items-center gap-2 cursor-pointer group/opt">
                     <div
-                      onClick={() => {
-                        if (isDisabled) return
-                        const currentArr = Array.isArray(value) ? value : (value ? String(value).split(',') : [])
-                        const nextArr = currentArr.includes(String(opt.value))
-                          ? currentArr.filter(v => v !== String(opt.value))
-                          : [...currentArr, String(opt.value)]
-                        handleChange(nextArr.join(','))
-                      }}
+                      onClick={() => !isDisabled && handleChange(opt.value)}
                       className={cn(
-                        "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
-                        checked ? 'border-indigo-600 bg-indigo-600' : 'border-neutral-300 dark:border-neutral-700'
+                        "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                        String(value) === String(opt.value) ? 'border-indigo-600 bg-indigo-600' : 'border-neutral-300 dark:border-neutral-700'
                       )}
                     >
-                      {checked && <Check className="w-3 h-3 text-white" />}
+                      {String(value) === String(opt.value) && <div className="w-2 h-2 bg-white rounded-full" />}
                     </div>
                     <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 group-hover/opt:text-indigo-600 transition-colors">{opt.label}</span>
                   </label>
-                )
+                ))}
+              </div>
+            ) : fieldType === 'checkbox' ? (
+              <div className="flex flex-wrap gap-4 p-4 bg-neutral-50/50 dark:bg-neutral-950/30 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                {options.map((opt: any, i: number) => {
+                  const checked = Array.isArray(value) ? value.includes(opt.value) : String(value).split(',').includes(String(opt.value))
+                  return (
+                    <label key={i} className="flex items-center gap-2 cursor-pointer group/opt">
+                      <div
+                        onClick={() => {
+                          if (isDisabled) return
+                          const currentArr = Array.isArray(value) ? value : (value ? String(value).split(',') : [])
+                          const nextArr = currentArr.includes(String(opt.value))
+                            ? currentArr.filter(v => v !== String(opt.value))
+                            : [...currentArr, String(opt.value)]
+                          handleChange(nextArr.join(','))
+                        }}
+                        className={cn(
+                          "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
+                          checked ? 'border-indigo-600 bg-indigo-600' : 'border-neutral-300 dark:border-neutral-700'
+                        )}
+                      >
+                        {checked && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 group-hover/opt:text-indigo-600 transition-colors">{opt.label}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            ) : fieldType === 'switch' ? (
+              <div
+                onClick={() => !isDisabled && handleChange(!value)}
+                className={cn(
+                  "w-12 h-6 rounded-full p-1 cursor-pointer transition-all relative",
+                  value ? 'bg-indigo-600' : 'bg-neutral-200 dark:bg-neutral-800'
+                )}
+              >
+                <div className={cn(
+                  "w-4 h-4 bg-white rounded-full shadow-sm transition-all absolute top-1",
+                  value ? 'left-7' : 'left-1'
+                )} />
+              </div>
+            ) : (
+              <input
+                type={
+                  fieldType === 'date' ? 'date' :
+                    (fieldType === 'datetime-local' || fieldType === 'datetime') ? 'datetime-local' :
+                      fieldType === 'time' ? 'time' :
+                        (zoneConfig.content?.mask || field.config?.content?.mask) ? 'text' :
+                          fieldType === 'number' ? 'number' : 'text'
+                }
+                disabled={isDisabled}
+                required={field.config?.content?.required}
+                value={value}
+                onChange={e => handleChange(e.target.value)}
+                style={inputStyle}
+                className={commonClasses}
+                placeholder={mode === 'view' ? '' : t('runtime.record_drawer.input_placeholder').replace('{field}', field.display_name)}
+              />
+            )}
+          </div>
+          
+          {rightActions.length > 0 && (
+            <div className="flex items-center gap-1 shrink-0">
+              {rightActions.map((action: any) => {
+                const colors = getActionColorClasses(action.color);
+                return (
+                  <button
+                    key={action.id}
+                    type="button"
+                    onClick={() => onCustomAction?.(action, formData)}
+                    className={cn(
+                      "p-3 rounded-xl border shadow-sm transition-all flex items-center justify-center",
+                      colors.text,
+                      colors.hover,
+                      "bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800"
+                    )}
+                    title={action.label}
+                  >
+                    {getActionIcon(action.icon, "w-4 h-4")}
+                  </button>
+                );
               })}
             </div>
-          ) : fieldType === 'switch' ? (
-            <div
-              onClick={() => !isDisabled && handleChange(!value)}
-              className={cn(
-                "w-12 h-6 rounded-full p-1 cursor-pointer transition-all relative",
-                value ? 'bg-indigo-600' : 'bg-neutral-200 dark:bg-neutral-800'
-              )}
-            >
-              <div className={cn(
-                "w-4 h-4 bg-white rounded-full shadow-sm transition-all absolute top-1",
-                value ? 'left-7' : 'left-1'
-              )} />
-            </div>
-          ) : (
-            <input
-              type={
-                fieldType === 'date' ? 'date' :
-                  (fieldType === 'datetime-local' || fieldType === 'datetime') ? 'datetime-local' :
-                    fieldType === 'time' ? 'time' :
-                      (zoneConfig.content?.mask || field.config?.content?.mask) ? 'text' :
-                        fieldType === 'number' ? 'number' : 'text'
-              }
-              disabled={isDisabled}
-              required={field.config?.content?.required}
-              value={value}
-              onChange={e => handleChange(e.target.value)}
-              style={inputStyle}
-              className={commonClasses}
-              placeholder={mode === 'view' ? '' : t('runtime.record_drawer.input_placeholder').replace('{field}', field.display_name)}
-            />
           )}
         </div>
       </div>

@@ -274,3 +274,29 @@ export async function DELETE(request: Request) {
     )
   }
 }
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const projectId = searchParams.get('projectId')
+    const userId = searchParams.get('userId')
+
+    if (!projectId || !userId) {
+      return NextResponse.json({ error: 'Missing parameters' }, { status: 400 })
+    }
+
+    const { data, error } = await supabase
+      .from('download_jobs')
+      .select('*')
+      .eq('project_id', projectId)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    return NextResponse.json({ jobs: data })
+  } catch (error: any) {
+    console.error('[Export API] GET handler error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}

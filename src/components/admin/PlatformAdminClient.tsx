@@ -50,6 +50,7 @@ import {
 import { getIClubAdminRules, saveIClubAdminRule, deleteIClubAdminRule, IClubRule } from '@/app/actions/iclub'
 import { MetaVoiceAdminView } from './MetaVoiceAdminView'
 import CommunityHubView from '@/components/client/CommunityHubView'
+import { CliFilesAdminView } from './CliFilesAdminView'
 
 interface Plan {
   id: string
@@ -130,6 +131,7 @@ const TAB_CONFIG = {
   iclub: { label: 'Gestão do iClub', icon: Zap, iconColor: 'text-indigo-500 dark:text-indigo-400' },
   metavoice: { label: 'MetaVoice', icon: Lightbulb, iconColor: 'text-amber-500 dark:text-amber-400' },
   community: { label: 'MetaBuilders', icon: Users, iconColor: 'text-blue-500 dark:text-blue-400' },
+  arquivos: { label: 'Arquivos CLI', icon: Layers, iconColor: 'text-indigo-500 dark:text-indigo-400' },
 } as const
 
 interface PlatformAdminClientProps {
@@ -154,7 +156,7 @@ export default function PlatformAdminClient({
   const { toast } = useToast()
 
   // State variables
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'plans' | 'clients' | 'agenda' | 'iclub' | 'metavoice' | 'community'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'plans' | 'clients' | 'agenda' | 'iclub' | 'metavoice' | 'community' | 'arquivos'>('dashboard')
   const [plans, setPlans] = useState<Plan[]>(initialPlans)
   const [workspaces, setWorkspaces] = useState<Workspace[]>(initialWorkspaces)
 
@@ -1248,7 +1250,7 @@ Nos vemos em breve!`
 
           {/* Right Tabs Group */}
           <div className="flex flex-wrap gap-1.5 bg-neutral-100 dark:bg-neutral-950 p-1.5 rounded-2xl border border-neutral-200/50 dark:border-neutral-850/80 w-fit">
-            {(['community', 'metavoice', 'iclub'] as const).map(tab => {
+            {(['community', 'metavoice', 'iclub', 'arquivos'] as const).map(tab => {
               const config = TAB_CONFIG[tab]
               const Icon = config.icon
               return (
@@ -1295,6 +1297,19 @@ Nos vemos em breve!`
             className="space-y-6"
           >
             <MetaVoiceAdminView />
+          </motion.div>
+        )}
+
+        {activeTab === 'arquivos' && (
+          <motion.div
+            key="arquivos"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 15 }}
+            transition={{ duration: 0.25 }}
+            className="space-y-6"
+          >
+            <CliFilesAdminView />
           </motion.div>
         )}
 

@@ -65,8 +65,17 @@ export default async function DownloadsPage({ params }: PageProps) {
     }
   }
 
+  // >>> NOVO: Busca config de autenticação do projeto
+  const { data: authConfig } = await supabase
+    .from('project_auth_config')
+    .select('auth_type')
+    .eq('project_id', project.id)
+    .maybeSingle()
+
+  const isNoAuth = !authConfig || authConfig.auth_type === 'none'
+
   // 4. Se não estiver autenticado de nenhuma forma, renderiza "Acesso Restrito"
-  if (!userId) {
+  if (!userId && !isNoAuth) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50 dark:bg-neutral-950 p-10 text-center">
         <div className="p-4 bg-red-100 dark:bg-red-950/40 rounded-3xl text-red-600 mb-4 shadow-xl shadow-red-500/10">
@@ -92,31 +101,33 @@ export default async function DownloadsPage({ params }: PageProps) {
 
   let isAuthorized = true
 
-  if (viewRow) {
-    // Busca o papel do usuário no projeto
-    const { data: userRole } = await supabase
-      .from('project_user_roles')
-      .select('role_id')
-      .eq('project_id', project.id)
-      .eq('external_user_id', userId)
-      .maybeSingle()
-
-    if (userRole?.role_id) {
-      // Verifica se o downloads está explicitamente negado (can_read = false)
-      const { data: deniedPermission } = await supabase
-        .from('project_role_permissions')
-        .select('id')
-        .eq('role_id', userRole.role_id)
-        .eq('view_id', viewRow.id)
-        .eq('can_read', false)
+  if (!isNoAuth) {
+    if (viewRow) {
+      // Busca o papel do usuário no projeto
+      const { data: userRole } = await supabase
+        .from('project_user_roles')
+        .select('role_id')
+        .eq('project_id', project.id)
+        .eq('external_user_id', userId)
         .maybeSingle()
 
-      if (deniedPermission) {
+      if (userRole?.role_id) {
+        // Verifica se o downloads está explicitamente negado (can_read = false)
+        const { data: deniedPermission } = await supabase
+          .from('project_role_permissions')
+          .select('id')
+          .eq('role_id', userRole.role_id)
+          .eq('view_id', viewRow.id)
+          .eq('can_read', false)
+          .maybeSingle()
+
+        if (deniedPermission) {
+          isAuthorized = false
+        }
+      } else {
+        // Se não há grupo atribuído, acesso negado
         isAuthorized = false
       }
-    } else {
-      // Se não há grupo atribuído, acesso negado
-      isAuthorized = false
     }
   }
 
@@ -149,7 +160,7 @@ export default async function DownloadsPage({ params }: PageProps) {
       workspaceSlug={workspace_slug}
       projectSlug={project_slug}
       projectId={project.id}
-      userId={userId}
+      userId={userId || '00000000-0000-0000-0000-000000000000'}
     />
   )
 }

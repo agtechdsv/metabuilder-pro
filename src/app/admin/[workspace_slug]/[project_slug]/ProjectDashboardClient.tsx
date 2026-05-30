@@ -97,6 +97,12 @@ export function ProjectDashboardClient({ workspace, project, profile, views, wor
 
           <div className="flex items-center gap-3">
             <Link 
+              href={`/admin/${workspace_slug}/${project_slug}/enumerations`}
+              className="flex items-center gap-2 px-6 py-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white rounded-full text-xs font-bold transition-all"
+            >
+              <Database className="w-4 h-4" /> Enums
+            </Link>
+            <Link 
               href={`/admin/${workspace_slug}/${project_slug}/studio`}
               className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-bold transition-all shadow-[0_0_25px_rgba(79,70,229,0.4)]"
             >

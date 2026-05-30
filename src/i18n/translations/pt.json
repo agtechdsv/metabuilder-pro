@@ -223,7 +223,7 @@
         },
         "stats": {
           "synced_tables": "Tabelas Sincronizadas",
-          "custom_views": "Vistas Personalizadas",
+          "custom_views": "Views Personalizadas",
           "tunnel_status": "Estado do Túnel Seguro",
           "now": "AGORA"
         },

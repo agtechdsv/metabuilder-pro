@@ -112,7 +112,7 @@ export default async function SlugPage({ params }: PageProps) {
       .eq('project_id', project.id)
       .maybeSingle()
 
-    const isNoAuth = authConfig?.auth_type === 'none'
+    const isNoAuth = !authConfig || authConfig.auth_type === 'none'
 
     const cookieStore = await cookies()
     const sessionCookie = cookieStore.get(`client_session_${project.id}`)?.value

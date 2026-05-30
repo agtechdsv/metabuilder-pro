@@ -31,6 +31,7 @@ interface RecordDrawerProps {
   tunnelChannel?: any
   isTunnelReady?: boolean
   project?: any
+  refreshTrigger?: number
 }
 
 export default function RecordDrawer({ 
@@ -62,7 +63,8 @@ export default function RecordDrawer({
   isTunnelReady,
   project,
   customActions = [],
-  onCustomAction
+  onCustomAction,
+  refreshTrigger
 }: RecordDrawerProps) {
   return (
     <Drawer isOpen={isOpen} onClose={onClose} title="" zIndex={zIndex}>
@@ -94,6 +96,7 @@ export default function RecordDrawer({
         project={project}
         customActions={customActions}
         onCustomAction={onCustomAction}
+        refreshTrigger={refreshTrigger}
       />
     </Drawer>
   )

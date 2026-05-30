@@ -15,27 +15,39 @@ interface IconPickerProps {
 const ICON_CATEGORIES = [
   {
     name: 'Negócios & CRM',
-    icons: ['Users', 'UserPlus', 'UserCheck', 'Briefcase', 'Contact', 'Building2', 'Target', 'Handshake']
+    icons: ['Users', 'User', 'UserPlus', 'UserCheck', 'UserCog', 'Contact', 'Briefcase', 'Building2', 'Building', 'Store', 'Landmark', 'Target', 'Handshake', 'Network', 'Presentation', 'PhoneCall', 'Megaphone']
   },
   {
     name: 'Financeiro',
-    icons: ['DollarSign', 'CreditCard', 'PieChart', 'BarChart3', 'TrendingUp', 'Wallet', 'Calculator', 'PiggyBank']
+    icons: ['DollarSign', 'CreditCard', 'Wallet', 'PiggyBank', 'Banknote', 'Coins', 'Receipt', 'Calculator', 'PieChart', 'BarChart', 'BarChart2', 'BarChart3', 'LineChart', 'TrendingUp', 'TrendingDown', 'Activity', 'Scale']
   },
   {
-    name: 'Navegação',
-    icons: ['Home', 'Layout', 'Layers', 'Grid', 'Menu', 'Map', 'Compass', 'Navigation']
+    name: 'Navegação & UI',
+    icons: ['Home', 'Layout', 'LayoutDashboard', 'Layers', 'Grid', 'Menu', 'MoreHorizontal', 'MoreVertical', 'Map', 'MapPin', 'Compass', 'Navigation', 'Globe', 'Locate', 'Route', 'Milestone', 'Signpost']
   },
   {
     name: 'Dados & Tecnologia',
-    icons: ['Database', 'HardDrive', 'Cpu', 'Cloud', 'Zap', 'Shield', 'Code', 'Terminal']
+    icons: ['Database', 'Server', 'HardDrive', 'Cpu', 'Cloud', 'Zap', 'Shield', 'ShieldCheck', 'Code', 'Terminal', 'Laptop', 'Smartphone', 'Monitor', 'Wifi', 'Bug', 'Bot', 'Key', 'Lock', 'Unlock']
   },
   {
     name: 'Comunicação',
-    icons: ['Mail', 'MessageSquare', 'Phone', 'Send', 'Share2', 'Bell', 'Announce', 'AtSign']
+    icons: ['Mail', 'MailOpen', 'Inbox', 'MessageSquare', 'MessageCircle', 'Phone', 'Send', 'Share2', 'Bell', 'BellRing', 'AtSign', 'Mic', 'Video', 'Camera']
   },
   {
-    name: 'Operações',
-    icons: ['Package', 'ShoppingCart', 'Truck', 'Tag', 'ClipboardList', 'Calendar', 'Clock', 'Settings']
+    name: 'Operações & Logística',
+    icons: ['Package', 'Box', 'Boxes', 'Archive', 'ShoppingCart', 'Truck', 'Tag', 'Tags', 'Wrench', 'Hammer', 'ClipboardList', 'Calendar', 'CalendarDays', 'Clock', 'Timer', 'Settings', 'Settings2', 'Sliders']
+  },
+  {
+    name: 'Arquivos & Mídia',
+    icons: ['File', 'FileText', 'Files', 'Folder', 'FolderOpen', 'FileSearch', 'FileSignature', 'StickyNote', 'Image', 'Music', 'Headphones', 'Film', 'Play', 'PenTool', 'PaintBucket']
+  },
+  {
+    name: 'Educação & Saúde',
+    icons: ['Book', 'BookOpen', 'GraduationCap', 'Library', 'Microscope', 'Stethoscope', 'HeartPulse', 'Heart', 'Syringe', 'Brain']
+  },
+  {
+    name: 'Sinalização',
+    icons: ['Check', 'CheckCircle', 'CheckCircle2', 'X', 'XCircle', 'AlertCircle', 'AlertTriangle', 'Info', 'HelpCircle', 'Star', 'Sun', 'Moon']
   }
 ]
 

@@ -2,6 +2,7 @@
 
 import { Pencil, Trash2, Search, Zap, Link, Database, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { DynamicIcon } from '@/components/runtime/DynamicIcon'
 
 interface DynamicGridProps {
   fields: any[]
@@ -260,10 +261,7 @@ export default function DynamicGrid({
                       colors.hover
                     )}
                   >
-                    {action.icon === 'Zap' && <Zap className="w-3.5 h-3.5" />}
-                    {action.icon === 'Link' && <Link className="w-3.5 h-3.5" />}
-                    {action.icon === 'Database' && <Database className="w-3.5 h-3.5" />}
-                    {action.icon === 'Globe' && <Globe className="w-3.5 h-3.5" />}
+                    <DynamicIcon icon={action.icon || 'Zap'} className="w-3.5 h-3.5" />
                   </button>
                 )
               })}

@@ -180,7 +180,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
     .eq('project_id', project.id)
     .maybeSingle()
 
-  const isNoAuth = authConfig?.auth_type === 'none'
+  const isNoAuth = !authConfig || authConfig.auth_type === 'none'
 
   const cookieStore = await cookies()
   const locale = cookieStore.get('app-language')?.value || 'pt'

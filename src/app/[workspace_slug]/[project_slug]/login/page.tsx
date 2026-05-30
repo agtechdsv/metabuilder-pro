@@ -48,10 +48,10 @@ export default async function LoginPage({ params }: any) {
     .from('project_auth_config')
     .select('*')
     .eq('project_id', project.id)
-    .single()
+    .maybeSingle()
 
   const visual = config?.ui_config as any || {}
-  const auth = config as any || {}
+  const auth = config as any || { auth_type: 'none' }
   const allowSignup = visual.allow_signup || false
   
   if (auth.auth_type === 'none') {

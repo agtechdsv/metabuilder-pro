@@ -90,6 +90,19 @@ export function ExportDropdown({
         if (user) {
           userId = user.id
         }
+        
+        if (!userId) {
+          // Verifica se o projeto está com autenticação desabilitada (auth_type = 'none')
+          const { data: authConfig } = await supabase
+            .from('project_auth_config')
+            .select('auth_type')
+            .eq('project_id', projectId)
+            .maybeSingle()
+            
+          if (!authConfig || authConfig.auth_type === 'none') {
+            userId = '00000000-0000-0000-0000-000000000000'
+          }
+        }
       }
       
       if (!userId) {

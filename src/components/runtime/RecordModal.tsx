@@ -22,15 +22,16 @@ interface RecordModalProps {
   onAddDetail?: (tableName: string) => void
   joins?: any[]
   dictionary?: Record<string, string>
-  initialTab?: string
+  detailsInlineTypes?: Record<string, 'table' | 'cards'>
+  initialTab?: 'master' | string
   onTabChange?: (tab: string) => void
   zIndex?: number
-  detailsInlineTypes?: Record<string, boolean>
   projectId?: string
   secretToken?: string
   tunnelChannel?: any
   isTunnelReady?: boolean
   project?: any
+  refreshTrigger?: number
 }
 
 export default function RecordModal({ 
@@ -62,7 +63,8 @@ export default function RecordModal({
   isTunnelReady,
   project,
   customActions = [],
-  onCustomAction
+  onCustomAction,
+  refreshTrigger
 }: RecordModalProps) {
   return (
     <Modal 
@@ -101,6 +103,7 @@ export default function RecordModal({
         project={project}
         customActions={customActions}
         onCustomAction={onCustomAction}
+        refreshTrigger={refreshTrigger}
       />
     </Modal>
   )

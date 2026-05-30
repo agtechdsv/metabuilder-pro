@@ -58,6 +58,8 @@ import { JoinsEditor } from './JoinsEditor'
 import { cn } from '@/lib/utils'
 import { Drawer } from '@/components/ui/Drawer'
 import { Modal } from '@/components/ui/Modal'
+import { IconPicker } from './IconPicker'
+import { DynamicIcon } from '@/components/runtime/DynamicIcon'
 import { BIWidgetEditor as BIWidgetConfigEditor } from '@/components/shared/BIWidgetEditor'
 import {
   DndContext,
@@ -105,7 +107,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   const { logAction, flush } = useTelemetry({
     workspaceId: currentWorkspaceId,
     projectId: currentProjectId,
-    uiViewId: initialData?.id
+    uiViewId: initialData?.id,
+    uiViewName: initialData?.name || config.name || 'Novo Caso de Uso'
   })
 
   // Estados do Wizard
@@ -114,8 +117,10 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   const [isSaving, setIsSaving] = useState(false)
   const [currentStatus, setCurrentStatus] = useState<string>(initialData?.status || 'draft')
   const [models, setModels] = useState<any[]>([])
+  const [enumerations, setEnumerations] = useState<any[]>([])
   const [relations, setRelations] = useState<any[]>([])
   const [useCases, setUseCases] = useState<any[]>([])
+  const [isDownloadsActive, setIsDownloadsActive] = useState(false)
 
   const handleUpdateStatus = async (newStatus: 'delivered' | 'reopened') => {
     if (!initialData?.id) return
@@ -140,7 +145,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   }
 
   // Ref e Timeout para debounce dos campos de texto (name, slug, custom_query) e propriedades do Drawer (fields_metadata)
-  const textChangesRef = useRef<{name?: string, slug?: string, custom_query?: string, fields_metadata?: boolean}>({})
+  const textChangesRef = useRef<{name?: string, slug?: string, custom_query?: string, fields_metadata?: boolean, master_tab_title?: boolean, details_tab_titles?: boolean}>({})
   const textTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const flushTextChanges = useCallback(() => {
@@ -152,6 +157,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     if (textChangesRef.current.slug) logAction('CONFIG_CHANGE', `Alterou o slug para "${textChangesRef.current.slug}"`)
     if (textChangesRef.current.custom_query) logAction('CONFIG_CHANGE', 'Editou a query SQL customizada')
     if (textChangesRef.current.fields_metadata) logAction('CONFIG_CHANGE', 'Alterou as propriedades de um campo (Etapa 3 (Campos & Layout))')
+    if (textChangesRef.current.master_tab_title) logAction('CONFIG_CHANGE', 'Alterou o nome da aba Mestre (Etapa 3)')
+    if (textChangesRef.current.details_tab_titles) logAction('CONFIG_CHANGE', 'Alterou os nomes das abas de Detalhe (Etapa 3)')
     textChangesRef.current = {}
   }, [logAction])
 
@@ -255,6 +262,41 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     }
   }, [initialData])
 
+  function formatLabelText(text: string) {
+    if (!text) return ''
+    if (text.toLowerCase() === 'id') return 'ID'
+    // Remove "id" from the end (e.g., "user_id" -> "user", "clienteId" -> "cliente")
+    let formatted = text.replace(/_id$/i, '').replace(/Id$/i, '')
+    if (formatted.trim() === '') formatted = text
+    // Replace underscores with spaces
+    formatted = formatted.replace(/_/g, ' ')
+    // Split camelCase and PascalCase with spaces
+    formatted = formatted.replace(/([a-z])([A-Z])/g, '$1 $2')
+    // Title Case
+    return formatted.replace(/\w\S*/g, (txt) => {
+      return txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase()
+    }).trim()
+  }
+
+  function getFormattedFieldName(id: string) {
+    for (const m of models) {
+      const f = m.fields.find((f: any) => f.id === id)
+      if (f) {
+        return formatLabelText(f.display_name || f.db_column_name)
+      }
+    }
+    return formatLabelText(id)
+  }
+
+  function createDefaultFieldMeta(fid: string) {
+    return {
+      label: { text: getFormattedFieldName(fid), font: 'Inter', size: '10px', color: '' },
+      content: { font: 'Inter', size: '12px', color: '', mask: '', required: false },
+      component: { type: 'text', rows: 3, width: '100%', options_type: 'fixed', fixed_options: '', rel_table: '', rel_label: '', rel_value: '' },
+      viacep: { enabled: false, logradouro: '', bairro: '', cidade: '', uf: '' }
+    }
+  }
+
   // Ref para guardar o estado anterior do config para o diff
   const prevConfigRef = useRef<typeof config | null>(null)
   
@@ -290,7 +332,36 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     const prevMeta = prev.layout_config.fields_metadata || {}
     const currMeta = curr.layout_config.fields_metadata || {}
     if (JSON.stringify(prevMeta) !== JSON.stringify(currMeta)) {
-      textChangesRef.current.fields_metadata = true
+      const changedFid = Object.keys(currMeta).find(k => JSON.stringify(prevMeta[k]) !== JSON.stringify(currMeta[k]))
+      if (changedFid) {
+        let actualId = changedFid
+        let zoneLabel = ''
+        if (changedFid.startsWith('filter-')) {
+          actualId = changedFid.replace('filter-', '')
+          zoneLabel = ' no Filtro'
+        } else if (changedFid.startsWith('grid-')) {
+          actualId = changedFid.replace('grid-', '')
+          zoneLabel = ' no Grid'
+        } else if (changedFid.startsWith('form-')) {
+          actualId = changedFid.replace('form-', '')
+          zoneLabel = ' no Formulário'
+        }
+        textChangesRef.current.fields_metadata = `Alterou as propriedades do campo "${getFormattedFieldName(actualId)}"${zoneLabel} (Etapa 3)`
+      } else {
+        textChangesRef.current.fields_metadata = 'Alterou as propriedades de um campo (Etapa 3)'
+      }
+      hasDebouncedChange = true
+    }
+
+    if (prev.layout_config.master_tab_title !== curr.layout_config.master_tab_title) {
+      textChangesRef.current.master_tab_title = true
+      hasDebouncedChange = true
+    }
+
+    const prevDetailTabs = prev.layout_config.details_tab_titles || {}
+    const currDetailTabs = curr.layout_config.details_tab_titles || {}
+    if (JSON.stringify(prevDetailTabs) !== JSON.stringify(currDetailTabs)) {
+      textChangesRef.current.details_tab_titles = true
       hasDebouncedChange = true
     }
 
@@ -300,7 +371,9 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           if (textChangesRef.current.name) logAction('CONFIG_CHANGE', `Renomeou o caso de uso para "${textChangesRef.current.name}"`)
           if (textChangesRef.current.slug) logAction('CONFIG_CHANGE', `Alterou o slug para "${textChangesRef.current.slug}"`)
           if (textChangesRef.current.custom_query) logAction('CONFIG_CHANGE', 'Editou a query SQL customizada')
-          if (textChangesRef.current.fields_metadata) logAction('CONFIG_CHANGE', 'Alterou as propriedades de um campo (Etapa 3 (Campos & Layout))')
+          if (textChangesRef.current.fields_metadata) logAction('CONFIG_CHANGE', typeof textChangesRef.current.fields_metadata === 'string' ? textChangesRef.current.fields_metadata : 'Alterou as propriedades de um campo (Etapa 3)')
+          if (textChangesRef.current.master_tab_title) logAction('CONFIG_CHANGE', 'Alterou o nome da aba Mestre (Etapa 3)')
+          if (textChangesRef.current.details_tab_titles) logAction('CONFIG_CHANGE', 'Alterou os nomes das abas de Detalhe (Etapa 3)')
           textChangesRef.current = {}
        }, 1500)
     }
@@ -309,10 +382,14 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     const addedModels = curr.selected_models.filter((id: string) => !prev.selected_models.includes(id))
     const removedModels = prev.selected_models.filter((id: string) => !curr.selected_models.includes(id))
     if (currentStep >= 2) {
-      if (addedModels.length > 0)
-        changes.push(`Adicionou ${addedModels.length} tabela(s) ao caso de uso`)
-      if (removedModels.length > 0)
-        changes.push(`Removeu ${removedModels.length} tabela(s) do caso de uso`)
+      if (addedModels.length > 0) {
+        const addedNames = addedModels.map((id: string) => models.find((m: any) => m.id === id)?.name || id).join(', ')
+        changes.push(`Adicionou tabela(s): ${addedNames}`)
+      }
+      if (removedModels.length > 0) {
+        const removedNames = removedModels.map((id: string) => models.find((m: any) => m.id === id)?.name || id).join(', ')
+        changes.push(`Removeu tabela(s): ${removedNames}`)
+      }
     }
 
     // --- Etapa 3: Layout - Campos ---
@@ -330,12 +407,17 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       const reordered = added.length === 0 && removed.length === 0 &&
         JSON.stringify(prevFields) !== JSON.stringify(currFields)
       if (currentStep >= 3) {
-        if (added.length > 0)
-          changes.push(`Adicionou ${added.length} campo(s) ao ${label} ${step3Label}`)
-        if (removed.length > 0)
-          changes.push(`Removeu ${removed.length} campo(s) do ${label} ${step3Label}`)
-        if (reordered)
-          changes.push(`Reordenou campos do ${label} ${step3Label}`)
+        if (added.length > 0) {
+          const addedNames = added.map(f => getFormattedFieldName(f)).join(', ')
+          changes.push(`Adicionou ao ${label}: ${addedNames}`)
+        }
+        if (removed.length > 0) {
+          const removedNames = removed.map(f => getFormattedFieldName(f)).join(', ')
+          changes.push(`Removeu do ${label}: ${removedNames}`)
+        }
+        if (reordered) {
+          changes.push(`Reordenou campos no ${label}`)
+        }
       }
     })
 
@@ -344,10 +426,17 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     const currJoins = curr.layout_config.joins || []
     if (prevJoins.length !== currJoins.length) {
       if (currentStep >= 3) {
-        if (currJoins.length > prevJoins.length)
-          changes.push(`Adicionou ${currJoins.length - prevJoins.length} relacionamento(s) (JOIN) ao layout`)
-        else
+        if (currJoins.length > prevJoins.length) {
+          const newJoins = currJoins.filter((j: any) => !prevJoins.some((pj: any) => pj.id === j.id))
+          newJoins.forEach((j: any) => {
+            const sourceModel = models.find((m: any) => m.id === j.source_model_id)?.name || 'Tabela A'
+            const targetModel = models.find((m: any) => m.id === j.target_model_id)?.name || 'Tabela B'
+            changes.push(`Adicionou relacionamento (JOIN) entre ${sourceModel} e ${targetModel}`)
+          })
+        }
+        else {
           changes.push(`Removeu ${prevJoins.length - currJoins.length} relacionamento(s) (JOIN) do layout`)
+        }
       }
     }
 
@@ -432,6 +521,23 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       }
     })
 
+    // --- Etapa 4: Ações Customizadas ---
+    const prevActions = prev.layout_config.custom_actions || []
+    const currActions = curr.layout_config.custom_actions || []
+    if (currentStep >= 4) {
+      if (currActions.length > prevActions.length)
+        changes.push(`Adicionou ${currActions.length - prevActions.length} ação(ões) customizada(s) ${step4Label}`)
+      if (currActions.length < prevActions.length)
+        changes.push(`Removeu ${prevActions.length - currActions.length} ação(ões) customizada(s) ${step4Label}`)
+      
+      currActions.forEach((a: any) => {
+        const prevA = prevActions.find((pa: any) => pa.id === a.id)
+        if (prevA && JSON.stringify(prevA) !== JSON.stringify(a)) {
+          changes.push(`Editou a ação customizada "${a.label || a.id}" ${step4Label}`)
+        }
+      })
+    }
+
     // --- Etapa 4: Formatos de Exportação ---
     const prevFormats: string[] = prev.layout_config.export_formats || ['xlsx', 'csv', 'json']
     const currFormats: string[] = curr.layout_config.export_formats || ['xlsx', 'csv', 'json']
@@ -468,12 +574,13 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       // 1. Primeiro buscamos o ID do projeto atual pelo slug
       const { data: project } = await supabase
         .from('projects')
-        .select('id, workspace_id')
+        .select('id, workspace_id, theme_config')
         .eq('slug', project_slug)
         .single()
 
       if (!project) return
       
+      setIsDownloadsActive(project.theme_config?.enable_downloads !== false)
       setCurrentProjectId(project.id)
       setCurrentWorkspaceId(project.workspace_id)
 
@@ -485,6 +592,15 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         .order('db_table_name')
 
       if (modelsData) setModels(modelsData)
+
+      // 2.5 Buscamos as enumerations globais do projeto
+      const { data: enumsData } = await supabase
+        .from('project_enumerations')
+        .select('*')
+        .eq('project_id', project.id)
+        .order('name')
+        
+      if (enumsData) setEnumerations(enumsData)
 
       // 3. Buscamos apenas as relações deste projeto
       const { data: relsData } = await supabase
@@ -517,33 +633,73 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     // ou se não houver modelos suficientes selecionados
     if (config.layout_config.joins.length > 0 || config.selected_models.length <= 1) return
 
-    if (currentStep === 3 && relations.length > 0) {
+    if (currentStep === 3) {
       const autoJoins: any[] = []
       
-      // Filtra relações onde AMBOS os modelos estão selecionados no Wizard
-      const relevantRelations = relations.filter(rel => 
-        config.selected_models.includes(rel.from_model_id) && 
-        config.selected_models.includes(rel.to_model_id)
-      )
+      if (relations.length > 0) {
+        // Filtra relações onde AMBOS os modelos estão selecionados no Wizard
+        const relevantRelations = relations.filter(rel => 
+          config.selected_models.includes(rel.foreign_table_id) && 
+          config.selected_models.includes(rel.referenced_table_id)
+        )
 
-      relevantRelations.forEach(rel => {
-        const fromModel = models.find(m => m.id === rel.from_model_id)
-        const toModel = models.find(m => m.id === rel.to_model_id)
-        const fromField = fromModel?.fields.find((f: any) => f.id === rel.from_field_id)
-        const toField = toModel?.fields.find((f: any) => f.id === rel.to_field_id)
+        relevantRelations.forEach(rel => {
+          const fromModel = models.find(m => m.id === rel.foreign_table_id)
+          const toModel = models.find(m => m.id === rel.referenced_table_id)
+          const fromField = fromModel?.fields.find((f: any) => f.id === rel.foreign_column_id)
+          const toField = toModel?.fields.find((f: any) => f.id === rel.referenced_column_id)
 
-        if (fromModel && toModel && fromField && toField) {
-          // No MetaBuilder, convencionamos Mestre (Pai) -> Detalhe (Filho)
-          // No banco: fromModel(B).fromField(a_id) -> toModel(A).toField(id)
-          // Na UI: A.id -> B.a_id
-          autoJoins.push({
-            from: toModel.db_table_name,
-            localKey: toField.db_column_name,
-            to: fromModel.db_table_name,
-            foreignKey: fromField.db_column_name
-          })
+          if (fromModel && toModel && fromField && toField) {
+            // No MetaBuilder, convencionamos Mestre (Pai) -> Detalhe (Filho)
+            // No banco: fromModel(B).fromField(a_id) -> toModel(A).toField(id)
+            // Na UI: A.id -> B.a_id
+            autoJoins.push({
+              from: toModel.db_table_name,
+              localKey: toField.db_column_name,
+              to: fromModel.db_table_name,
+              foreignKey: fromField.db_column_name
+            })
+          }
+        })
+      }
+
+      // NOVO: Fallback (Heurística) para caso não encontre relações via banco de dados
+      if (autoJoins.length === 0) {
+        const selectedModelsData = models.filter(m => config.selected_models.includes(m.id))
+        for (let i = 0; i < selectedModelsData.length; i++) {
+          for (let j = 0; j < selectedModelsData.length; j++) {
+            if (i === j) continue
+            const modelA = selectedModelsData[i]
+            const modelB = selectedModelsData[j]
+            
+            const expectedKeys = [
+              `${modelA.db_table_name}_id`,
+              `${modelA.db_table_name.replace(/s$/, '')}_id`
+            ]
+            
+            const parts = modelA.db_table_name.split('_')
+            if (parts.length > 1) {
+              expectedKeys.push(`${parts[0]}_id`)
+              expectedKeys.push(`${parts[0].replace(/s$/, '')}_id`)
+            }
+
+            const fkField = modelB.fields.find((f: any) => expectedKeys.includes(f.db_column_name))
+            const pkField = modelA.fields.find((f: any) => f.db_column_name === 'id') || modelA.fields[0]
+
+            if (fkField && pkField) {
+              const alreadyExists = autoJoins.some(j => (j.from === modelA.db_table_name && j.to === modelB.db_table_name) || (j.from === modelB.db_table_name && j.to === modelA.db_table_name))
+              if (!alreadyExists) {
+                autoJoins.push({
+                  from: modelA.db_table_name,
+                  localKey: pkField.db_column_name,
+                  to: modelB.db_table_name,
+                  foreignKey: fkField.db_column_name
+                })
+              }
+            }
+          }
         }
-      })
+      }
 
       if (autoJoins.length > 0) {
         setConfig(prev => ({
@@ -553,7 +709,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
             joins: autoJoins
           }
         }))
-        toast(`Sugerimos ${autoJoins.length} relacionamentos baseados no seu banco de dados!`, 'info')
+        toast(`Sugerimos ${autoJoins.length} relacionamentos automaticamente!`, 'info')
       }
     }
   }, [currentStep, relations, config.selected_models, initialData, models])
@@ -857,6 +1013,20 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       // 1. Criar/Atualizar a View Principal
       const { data: projectData } = await supabase.from('projects').select('id').eq('slug', project_slug).single()
 
+      const allFieldIds = new Set([
+        ...(config.layout_config.form_fields || []),
+        ...(config.layout_config.grid_fields || []),
+        ...(config.layout_config.filter_fields || []),
+      ])
+
+      const populatedFieldsMeta = { ...config.layout_config.fields_metadata }
+
+      allFieldIds.forEach(fid => {
+        if (!populatedFieldsMeta[fid]) {
+          populatedFieldsMeta[fid] = createDefaultFieldMeta(fid)
+        }
+      })
+
       const viewPayload = {
         project_id: projectData?.id,
         name: config.name,
@@ -866,7 +1036,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         tables_config: config.selected_models,
         query_type: config.query_type,
         custom_query: config.custom_query,
-        layout_config: { ...config.layout_config, is_active: true },
+        layout_config: { ...config.layout_config, fields_metadata: populatedFieldsMeta, is_active: true },
         buttons_config: config.buttons_config,
         view_type: 'advanced_use_case',
         model_id: config.selected_models[0], // Define a primeira tabela como modelo principal
@@ -916,35 +1086,51 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       // 3. Consolidar componentes por field_id para evitar violação de constraint unique(view_id, field_id)
       const componentMap: Record<string, any> = {}
 
+      const formatLabelText = (text: string) => {
+        let formatted = text.replace(/_id$/i, '').replace(/Id$/i, '')
+        formatted = formatted.replace(/_/g, ' ')
+        formatted = formatted.replace(/([a-z])([A-Z])/g, '$1 $2')
+        return formatted.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase())
+      }
+
+      const getFormattedFieldName = (id: string) => {
+        for (const m of models) {
+          const f = m.fields?.find((f: any) => f.id === id)
+          if (f) return formatLabelText(f.display_name || f.db_column_name)
+        }
+        return formatLabelText(id)
+      }
+
       const addOrUpdateComponent = (fid: string, zone: string) => {
-        // Tenta carregar a meta específica da zona ou fallback para global
         const zoneMeta = config.layout_config.fields_metadata[`${zone}-${fid}`]
         const globalMeta = config.layout_config.fields_metadata[fid] || {}
         const metadata = zoneMeta || globalMeta
+        
+        const labelText = metadata.label?.text || getFormattedFieldName(fid)
 
         if (!componentMap[fid]) {
           componentMap[fid] = {
             view_id: view.id,
             field_id: fid,
-            component_type: zone, // Usa a primeira zona como tipo inicial
-            label: metadata.label?.text || '',
+            component_type: zone,
+            label: labelText,
             is_visible: true,
             config: {
               zones: [zone],
-              [`${zone}_config`]: metadata, // Armazena a config específica da zona
-              ...metadata // Inclui todas as propriedades no root para retrocompatibilidade
+              [`${zone}_config`]: metadata,
+              ...metadata
             }
           }
         } else {
           if (!componentMap[fid].config.zones.includes(zone)) {
             componentMap[fid].config.zones.push(zone)
           }
-          // Adiciona a config específica da zona ao componente existente
           componentMap[fid].config[`${zone}_config`] = metadata
           
-          // Se for a zona de formulário, ela tende a ditar o label principal
           if (zone === 'form' && metadata.label?.text) {
              componentMap[fid].label = metadata.label.text
+          } else if (zone === 'form' && !componentMap[fid].label) {
+             componentMap[fid].label = labelText
           }
         }
       }
@@ -1090,10 +1276,10 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           <StepTables config={config} setConfig={setConfig} models={models} />
         )}
         {steps[currentStep - 1]?.id === 3 && (
-          <StepLayout config={config} setConfig={setConfig} models={models} />
+          <StepLayout config={config} setConfig={setConfig} models={models} enumerations={enumerations} />
         )}
         {steps[currentStep - 1]?.id === 4 && (
-          <StepActions config={config} setConfig={setConfig} models={models} useCases={useCases} />
+          <StepActions config={config} setConfig={setConfig} models={models} useCases={useCases} isDownloadsActive={isDownloadsActive} />
         )}
       </div>
 
@@ -1292,7 +1478,7 @@ function StepLogic({ config, setConfig }: any) {
               {/* Grid de Lógicas */}
               {isExpanded && (
                 <div className="p-4 pt-0 border-t border-neutral-100 dark:border-neutral-800/50 mt-2">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pt-4">
                     {cat.items.map(t => (
                       <button
                         key={t.id}
@@ -1364,7 +1550,7 @@ function StepTables({ config, setConfig, models }: any) {
               <Database className="w-4 h-4" />
               Banco: {schema}
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {groupedModels[schema].map((m: any) => {
                 const isSelected = config.selected_models.includes(m.id)
                 return (
@@ -1430,12 +1616,53 @@ function StepTables({ config, setConfig, models }: any) {
   )
 }
 
-function StepLayout({ config, setConfig, models }: any) {
+function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
   const { t } = useI18n()
   const { toast } = useToast()
+
+  function formatLabelText(text: string) {
+    if (!text) return ''
+    if (text.toLowerCase() === 'id') return 'ID'
+    let formatted = text.replace(/_id$/i, '').replace(/Id$/i, '')
+    if (formatted.trim() === '') formatted = text
+    formatted = formatted.replace(/_/g, ' ')
+    formatted = formatted.replace(/([a-z])([A-Z])/g, '$1 $2')
+    return formatted.replace(/\w\S*/g, (txt) => {
+      return txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase()
+    }).trim()
+  }
+
+  function getFormattedFieldName(id: string) {
+    for (const m of models) {
+      const f = m.fields?.find((f: any) => f.id === id)
+      if (f) {
+        return formatLabelText(f.display_name || f.db_column_name)
+      }
+    }
+    return formatLabelText(id)
+  }
+
+  function createDefaultFieldMeta(fid: string) {
+    return {
+      label: { text: getFormattedFieldName(fid), font: 'Inter', size: '10px', color: '' },
+      content: { font: 'Inter', size: '12px', color: '', mask: '', required: false },
+      component: { type: 'text', rows: 3, width: '100%', options_type: 'fixed', fixed_options: '', rel_table: '', rel_label: '', rel_value: '' },
+      viacep: { enabled: false, logradouro: '', bairro: '', cidade: '', uf: '' }
+    }
+  }
+  const [expandedZones, setExpandedZones] = useState<Record<string, boolean>>({
+    masterDetail: true,
+    joins: true,
+    zone01: true,
+    zone02: true,
+    zone03: true
+  })
+  const toggleZone = (zone: string) => setExpandedZones(prev => ({ ...prev, [zone]: !prev[zone] }))
+
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null)
   const [editingFieldZone, setEditingFieldZone] = useState<string | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [drawerActiveTab, setDrawerActiveTab] = useState<'geral' | 'estilos'>('geral')
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [collapsedTables, setCollapsedTables] = useState<Record<string, boolean>>({})
@@ -1856,6 +2083,7 @@ function StepLayout({ config, setConfig, models }: any) {
     })
   }
 
+
   const getFieldName = (id: string) => {
     for (const m of models) {
       const f = m.fields.find((f: any) => f.id === id)
@@ -1874,16 +2102,12 @@ function StepLayout({ config, setConfig, models }: any) {
     
     if (meta) return meta
 
-    return {
-      label: { text: getFieldName(fid), font: 'Inter', size: '9px', color: '' },
-      content: { font: 'Inter', size: '12px', color: '', mask: '', required: false },
-      component: { type: 'text', rows: 3, width: '100%', options_type: 'fixed', fixed_options: '', rel_table: '', rel_label: '', rel_value: '' }
-    }
+    return createDefaultFieldMeta(fid)
   }
 
   const currentFieldMeta = editingFieldId ? getFieldMeta(editingFieldId, editingFieldZone) : null
 
-  const updateMeta = (section: 'label' | 'content' | 'component', key: string, value: any) => {
+  const updateMeta = (section: 'label' | 'content' | 'component' | 'viacep', key: string, value: any) => {
     if (!editingFieldId) return
     const newMeta = { ...currentFieldMeta }
     newMeta[section] = { ...newMeta[section], [key]: value }
@@ -1940,11 +2164,21 @@ function StepLayout({ config, setConfig, models }: any) {
             </button>
             <button
               onClick={() => {
+                const newFieldsMeta: Record<string, any> = {}
+                const allFieldIds = new Set([
+                  ...(config.layout_config.form_fields || []),
+                  ...(config.layout_config.grid_fields || []),
+                  ...(config.layout_config.filter_fields || []),
+                ])
+                allFieldIds.forEach(fid => {
+                  newFieldsMeta[fid] = createDefaultFieldMeta(fid)
+                })
+
                 setConfig({
                   ...config,
                   layout_config: {
                     ...config.layout_config,
-                    fields_metadata: {}
+                    fields_metadata: newFieldsMeta
                   }
                 })
                 setShowResetConfirm(false)
@@ -2813,16 +3047,27 @@ function StepLayout({ config, setConfig, models }: any) {
 
           {/* ZONA: MASTER-DETAIL CONFIG */}
           {config.logic_type === 'master_detail' && (
-            <div className="p-6 bg-slate-50/50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800 rounded-[2rem] space-y-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
-                  <Layers className="w-5 h-5" />
+            <div className="p-6 bg-slate-50/50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800 rounded-[2rem] space-y-6 shadow-sm overflow-hidden transition-all duration-300">
+              <div 
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => toggleZone('masterDetail')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
+                    <Layers className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.master_detail.title')}</h4>
+                    <p className="text-[10px] text-neutral-400 font-medium mt-1">{t('wizard.layout.master_detail.subtitle')}</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.master_detail.title')}</h4>
-                  <p className="text-[10px] text-neutral-400 font-medium mt-1">{t('wizard.layout.master_detail.subtitle')}</p>
+                <div className="p-2 text-indigo-600">
+                  {expandedZones.masterDetail ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                 </div>
               </div>
+
+              {expandedZones.masterDetail && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-300 pt-4 border-t border-slate-200 dark:border-slate-800/50">
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3">
@@ -3034,22 +3279,33 @@ function StepLayout({ config, setConfig, models }: any) {
             config.logic_type === 'galeria' || 
             config.logic_type === 'personalizado' || 
             config.logic_type === 'analytics') && (
-            <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h4 className="text-[9px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_01')}: {t('wizard.layout.zones.filter')}</h4>
-                <div className="flex items-center gap-2">
+            <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm overflow-hidden transition-all duration-300">
+              <div 
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => toggleZone('zone01')}
+              >
+                <div className="flex items-center gap-3">
+                  <h4 className="text-[9px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_01')}: {t('wizard.layout.zones.filter')}</h4>
                   <span className="px-3 py-1 bg-indigo-500/10 text-indigo-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.filter_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
+                </div>
+                <div className="flex items-center gap-2">
                   {config.layout_config.filter_fields.length > 0 && (
                     <button
-                      onClick={() => setConfig({ ...config, layout_config: { ...config.layout_config, filter_fields: [] } })}
+                      onClick={(e) => { e.stopPropagation(); setConfig({ ...config, layout_config: { ...config.layout_config, filter_fields: [] } }) }}
                       className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
                       title={t('common.clear_all', 'Limpar Tudo')}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
+                  <div className="p-1 text-indigo-600">
+                    {expandedZones.zone01 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </div>
                 </div>
               </div>
+
+              {expandedZones.zone01 && (
+                <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
               <DroppableZone id="droppable-filter" className="grid grid-cols-7 gap-3 min-h-[80px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-start">
                 {config.layout_config.filter_fields.length === 0 ? (
                   <p className="text-xs text-neutral-400 font-medium w-full text-center italic">{t('wizard.layout.subtitle')}</p>
@@ -3082,6 +3338,8 @@ function StepLayout({ config, setConfig, models }: any) {
                   </SortableContext>
                 )}
               </DroppableZone>
+              </div>
+            )}
             </div>
           )}
 
@@ -3165,7 +3423,9 @@ function StepLayout({ config, setConfig, models }: any) {
                 </SortableContext>
               )}
             </DroppableZone>
-          </div>
+            </div>
+            )}
+            </div>
           )}
 
           {/* ZONA: FORMULÁRIO (RECURSIVO) */}
@@ -3179,26 +3439,36 @@ function StepLayout({ config, setConfig, models }: any) {
             config.logic_type === 'mapa_mental' || 
             config.logic_type === 'galeria' || 
             config.logic_type === 'personalizado') && (
-            <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h4 className="text-[9px] font-black uppercase text-amber-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_03')}: {t('wizard.layout.zones.form')}</h4>
-                <div className="flex items-center gap-2">
+            <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-4 shadow-sm overflow-hidden transition-all duration-300">
+              <div 
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => toggleZone('zone03')}
+              >
+                <div className="flex items-center gap-3">
+                  <h4 className="text-[9px] font-black uppercase text-amber-600 tracking-[0.3em]">{config.logic_type === 'cadastro' ? t('wizard.layout.zones.zone_01') : t('wizard.layout.zones.zone_03')}: {t('wizard.layout.zones.form')}</h4>
                   <span className="px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.form_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
+                </div>
+                <div className="flex items-center gap-2">
                   {config.layout_config.form_fields.length > 0 && (
                     <button
-                      onClick={() => setConfig({ ...config, layout_config: { ...config.layout_config, form_fields: [] } })}
+                      onClick={(e) => { e.stopPropagation(); setConfig({ ...config, layout_config: { ...config.layout_config, form_fields: [] } }) }}
                       className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
                       title={t('common.clear_all', 'Limpar Tudo')}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
+                  <div className="p-1 text-amber-600">
+                    {expandedZones.zone03 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-6 pt-2">
-                {relationalTree.map((node: any, nIdx: number) => renderModelZone(node, 0, nIdx))}
-              </div>
+              {expandedZones.zone03 && (
+                <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                  {relationalTree.map((node: any, nIdx: number) => renderModelZone(node, 0, nIdx))}
+                </div>
+              )}
             </div>
           )}
           </div>
@@ -3240,310 +3510,411 @@ function StepLayout({ config, setConfig, models }: any) {
         title={`${t('wizard.layout.drawer.title')}: ${editingFieldId ? getFieldName(editingFieldId) : ''}`}
       >
         {currentFieldMeta && (
-          <div className="space-y-10 pb-20">
-            <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="w-1 h-4 bg-indigo-600 rounded-full"></div>
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.label_config')}</h3>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.display_text')}</label>
-                  <input
-                    type="text"
-                    value={currentFieldMeta.label.text}
-                    onChange={e => updateMeta('label', 'text', e.target.value)}
-                    className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold focus:border-indigo-500 outline-none transition-all"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.font')}</label>
-                    <select
-                      value={currentFieldMeta.label.font}
-                      onChange={e => updateMeta('label', 'font', e.target.value)}
-                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
-                    >
-                      <option value="Inter">{t('wizard.layout.drawer.font_default')}</option>
-                      <option value="Roboto">Roboto</option>
-                      <option value="Outfit">Outfit</option>
-                      <option value="JetBrains Mono">Mono</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.size')}</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: 12px"
-                      value={currentFieldMeta.label.size}
-                      onChange={e => updateMeta('label', 'size', e.target.value)}
-                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.text_color')}</label>
-                  <div className="flex gap-2 items-center">
-                    <input
-                      type="color"
-                      value={currentFieldMeta.label.color || '#6366f1'}
-                      onChange={e => updateMeta('label', 'color', e.target.value)}
-                      className="w-8 h-8 rounded-lg cursor-pointer overflow-hidden border-none p-0"
-                    />
-                    <input
-                      type="text"
-                      value={currentFieldMeta.label.color}
-                      onChange={e => updateMeta('label', 'color', e.target.value)}
-                      placeholder={t('wizard.layout.drawer.text_color')}
-                      className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-mono font-bold outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
+          <div className="flex flex-col h-full">
+            <div className="flex border-b border-neutral-100 dark:border-neutral-800 mb-6">
+              <button
+                onClick={() => setDrawerActiveTab('geral')}
+                className={cn(
+                  "flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
+                  drawerActiveTab === 'geral' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
+                )}
+              >
+                Básico / Geral
+                {drawerActiveTab === 'geral' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
+              </button>
+              <button
+                onClick={() => setDrawerActiveTab('estilos')}
+                className={cn(
+                  "flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
+                  drawerActiveTab === 'estilos' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
+                )}
+              >
+                Aparência / Estilos
+                {drawerActiveTab === 'estilos' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
+              </button>
             </div>
 
-            <div className="space-y-6 pt-6 border-t border-neutral-100 dark:border-neutral-800">
-              <div className="flex items-center gap-3">
-                <div className="w-1 h-4 bg-emerald-600 rounded-full"></div>
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.content_config')}</h3>
-              </div>
-
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.font')}</label>
-                    <select
-                      value={currentFieldMeta.content.font}
-                      onChange={e => updateMeta('content', 'font', e.target.value)}
-                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
-                    >
-                      <option value="Inter">{t('wizard.layout.drawer.font_default')}</option>
-                      <option value="Roboto">Roboto</option>
-                      <option value="Outfit">Outfit</option>
-                      <option value="JetBrains Mono">Mono</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.size')}</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: 14px"
-                      value={currentFieldMeta.content.size}
-                      onChange={e => updateMeta('content', 'size', e.target.value)}
-                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.content_color')}</label>
-                  <div className="flex gap-2 items-center">
-                    <input
-                      type="color"
-                      value={currentFieldMeta.content.color || '#000000'}
-                      onChange={e => updateMeta('content', 'color', e.target.value)}
-                      className="w-8 h-8 rounded-lg cursor-pointer overflow-hidden border-none p-0"
-                    />
-                    <input
-                      type="text"
-                      value={currentFieldMeta.content.color}
-                      onChange={e => updateMeta('content', 'color', e.target.value)}
-                      placeholder={t('wizard.layout.drawer.content_color')}
-                      className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-mono font-bold outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.mask')}</label>
-                  <div className="flex flex-col gap-2">
-                    <select
-                      value={
-                        ['', '000.000.000-00', '00.000.000/0000-00', '00000-000', '(00) 00000-0000', '00/00/0000', '0.000', '0.000,00'].includes(currentFieldMeta.content.mask || '')
-                          ? currentFieldMeta.content.mask || ''
-                          : 'custom'
-                      }
-                      onChange={e => {
-                        const val = e.target.value
-                        if (val !== 'custom') {
-                          updateMeta('content', 'mask', val)
-                        } else {
-                          const isKnown = ['', '000.000.000-00', '00.000.000/0000-00', '00000-000', '(00) 00000-0000', '00/00/0000', '0.000', '0.000,00'].includes(currentFieldMeta.content.mask || '')
-                          if (isKnown) {
-                            updateMeta('content', 'mask', ' ') 
-                          }
-                        }
-                      }}
-                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none cursor-pointer"
-                    >
-                      <option value="">{t('common.none', 'Nenhuma')}</option>
-                      <option value="000.000.000-00">CPF (000.000.000-00)</option>
-                      <option value="00.000.000/0000-00">CNPJ (00.000.000/0000-00)</option>
-                      <option value="00000-000">CEP (00000-000)</option>
-                      <option value="(00) 00000-0000">Telefone/Celular ((00) 00000-0000)</option>
-                      <option value="00/00/0000">Data (00/00/0000)</option>
-                      <option value="0.000">Inteiro com Milhar (0.000)</option>
-                      <option value="0.000,00">Decimal com Milhar (0.000,00)</option>
-                      <option value="custom">Personalizado (Custom)...</option>
-                    </select>
-
-                    {!['', '000.000.000-00', '00.000.000/0000-00', '00000-000', '(00) 00000-0000', '00/00/0000', '0.000', '0.000,00'].includes(currentFieldMeta.content.mask || '') && (
+            <div className="space-y-8 pb-20">
+              {drawerActiveTab === 'geral' && (
+                <>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1 h-4 bg-indigo-600 rounded-full"></div>
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.label_config')}</h3>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.display_text')}</label>
                       <input
                         type="text"
-                        placeholder="Ex: 000.000.000-00"
-                        value={(currentFieldMeta.content.mask || '').trim()}
-                        onChange={e => updateMeta('content', 'mask', e.target.value)}
-                        className="w-full bg-neutral-50 dark:bg-neutral-900 border border-indigo-500/50 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
-                      />
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-2xl border border-neutral-100 dark:border-neutral-800 cursor-pointer group" onClick={() => updateMeta('content', 'required', !currentFieldMeta.content.required)}>
-                  <div className={cn(
-                    "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
-                    currentFieldMeta.content.required ? 'bg-red-500 border-red-500 text-white' : 'border-neutral-300 dark:border-neutral-700'
-                  )}>
-                    {currentFieldMeta.content.required && <Plus className="w-3 h-3 rotate-45" />}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase tracking-widest">{t('wizard.layout.drawer.required')}</span>
-                    <span className="text-[8px] text-neutral-400 font-medium">{t('wizard.layout.drawer.required_desc')}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6 pt-6 border-t border-neutral-100 dark:border-neutral-800">
-              <div className="flex items-center gap-3">
-                <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.component_config', 'Configuração do Componente')}</h3>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.component_type', 'Tipo de Componente')}</label>
-                  <select
-                    value={currentFieldMeta.component?.type || 'text'}
-                    onChange={e => updateMeta('component', 'type', e.target.value)}
-                    className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
-                  >
-                    <option value="text">Input Texto</option>
-                    <option value="textarea">Área de Texto (Textarea)</option>
-                    <option value="number">Número</option>
-                    <option value="select">Combo (Select)</option>
-                    <option value="radio">Radio Buttons</option>
-                    <option value="checkbox">Checkbox Group</option>
-                    <option value="switch">Switch (Liga/Desliga)</option>
-                    <option value="date">Data</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.width', 'Largura')}</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: 100% ou 200px"
-                      value={currentFieldMeta.component?.width || '100%'}
-                      onChange={e => updateMeta('component', 'width', e.target.value)}
-                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
-                    />
-                  </div>
-                  {currentFieldMeta.component?.type === 'textarea' && (
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.rows', 'Linhas')}</label>
-                      <input
-                        type="number"
-                        value={currentFieldMeta.component?.rows || 3}
-                        onChange={e => updateMeta('component', 'rows', parseInt(e.target.value))}
-                        className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
+                        value={currentFieldMeta.label.text}
+                        onChange={e => updateMeta('label', 'text', e.target.value)}
+                        className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold focus:border-indigo-500 outline-none transition-all"
                       />
                     </div>
-                  )}
-                </div>
+                  </div>
 
-                {(['select', 'radio', 'checkbox'].includes(currentFieldMeta.component?.type)) && (
-                  <div className="space-y-4 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/50">
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-indigo-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.options_source', 'Origem dos Dados')}</label>
-                      <div className="flex gap-2">
-                        {['fixed', 'relational'].map(opt => (
-                          <button
-                            key={opt}
-                            onClick={() => updateMeta('component', 'options_type', opt)}
-                            className={cn(
-                              "flex-1 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all",
-                              (currentFieldMeta.component?.options_type || 'fixed') === opt ? 'bg-indigo-600 text-white shadow-md' : 'bg-white dark:bg-neutral-900 text-neutral-400'
-                            )}
+                  <div className="space-y-4 pt-6 border-t border-neutral-100 dark:border-neutral-800">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1 h-4 bg-emerald-600 rounded-full"></div>
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.content_config')}</h3>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.mask')}</label>
+                        <div className="flex flex-col gap-2">
+                          <select
+                            value={
+                              ['', '000.000.000-00', '00.000.000/0000-00', '00000-000', '(00) 00000-0000', '00/00/0000', '0.000', '0.000,00'].includes(currentFieldMeta.content.mask || '')
+                                ? currentFieldMeta.content.mask || ''
+                                : 'custom'
+                            }
+                            onChange={e => {
+                              const val = e.target.value
+                              if (val !== 'custom') {
+                                updateMeta('content', 'mask', val)
+                              } else {
+                                const isKnown = ['', '000.000.000-00', '00.000.000/0000-00', '00000-000', '(00) 00000-0000', '00/00/0000', '0.000', '0.000,00'].includes(currentFieldMeta.content.mask || '')
+                                if (isKnown) {
+                                  updateMeta('content', 'mask', ' ') 
+                                }
+                              }
+                            }}
+                            className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none cursor-pointer"
                           >
-                            {opt === 'fixed' ? 'Valores Fixos' : 'Relacionamento'}
-                          </button>
-                        ))}
+                            <option value="">{t('common.none', 'Nenhuma')}</option>
+                            <option value="000.000.000-00">CPF (000.000.000-00)</option>
+                            <option value="00.000.000/0000-00">CNPJ (00.000.000/0000-00)</option>
+                            <option value="00000-000">CEP (00000-000)</option>
+                            <option value="(00) 00000-0000">Telefone/Celular ((00) 00000-0000)</option>
+                            <option value="00/00/0000">Data (00/00/0000)</option>
+                            <option value="0.000">Inteiro com Milhar (0.000)</option>
+                            <option value="0.000,00">Decimal com Milhar (0.000,00)</option>
+                            <option value="custom">Personalizado (Custom)...</option>
+                          </select>
+
+                          {!['', '000.000.000-00', '00.000.000/0000-00', '00000-000', '(00) 00000-0000', '00/00/0000', '0.000', '0.000,00'].includes(currentFieldMeta.content.mask || '') && (
+                            <input
+                              type="text"
+                              placeholder="Ex: 000.000.000-00"
+                              value={(currentFieldMeta.content.mask || '').trim()}
+                              onChange={e => updateMeta('content', 'mask', e.target.value)}
+                              className="w-full bg-neutral-50 dark:bg-neutral-900 border border-indigo-500/50 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+                            />
+                          )}
+
+                          {currentFieldMeta.content.mask === '00000-000' && (
+                            <div className="space-y-4 p-4 mt-2 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 animate-in fade-in slide-in-from-top-2">
+                              <div className="flex items-center gap-3">
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input 
+                                    type="checkbox" 
+                                    className="sr-only peer"
+                                    checked={currentFieldMeta.viacep?.enabled || false}
+                                    onChange={(e) => updateMeta('viacep', 'enabled', e.target.checked)}
+                                  />
+                                  <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none rounded-full peer dark:bg-neutral-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                                </label>
+                                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Busca Automática de Endereço (ViaCEP)</span>
+                              </div>
+
+                              {currentFieldMeta.viacep?.enabled && (
+                                <div className="space-y-3 pt-4 border-t border-indigo-100 dark:border-indigo-900/30">
+                                  <p className="text-[9px] text-neutral-500 font-medium leading-relaxed">Mapeie os campos do formulário que receberão os dados do ViaCEP automaticamente:</p>
+                                  
+                                  {['logradouro', 'bairro', 'cidade', 'uf'].map((fieldKey) => (
+                                    <div key={fieldKey} className="flex items-center justify-between gap-2">
+                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider w-20">{fieldKey}</label>
+                                      <select
+                                        value={currentFieldMeta.viacep?.[fieldKey] || ''}
+                                        onChange={e => updateMeta('viacep', fieldKey, e.target.value)}
+                                        className="flex-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1.5 text-[9px] font-bold outline-none"
+                                      >
+                                        <option value="">Selecione o campo...</option>
+                                        {config.layout_config.form_fields.map((ffId: string) => (
+                                          <option key={ffId} value={ffId}>{getFieldName(ffId)}</option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-2xl border border-neutral-100 dark:border-neutral-800 cursor-pointer group" onClick={() => updateMeta('content', 'required', !currentFieldMeta.content.required)}>
+                        <div className={cn(
+                          "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
+                          currentFieldMeta.content.required ? 'bg-red-500 border-red-500 text-white' : 'border-neutral-300 dark:border-neutral-700'
+                        )}>
+                          {currentFieldMeta.content.required && <Plus className="w-3 h-3 rotate-45" />}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase tracking-widest">{t('wizard.layout.drawer.required')}</span>
+                          <span className="text-[8px] text-neutral-400 font-medium">{t('wizard.layout.drawer.required_desc')}</span>
+                        </div>
                       </div>
                     </div>
+                  </div>
 
-                    {(currentFieldMeta.component?.options_type || 'fixed') === 'fixed' ? (
+                  <div className="space-y-4 pt-6 border-t border-neutral-100 dark:border-neutral-800">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.component_config', 'Configuração do Componente')}</h3>
+                    </div>
+
+                    <div className="space-y-4">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.fixed_options', 'Opções (Label:Valor, separadas por vírgula)')}</label>
-                        <textarea
-                          placeholder="Ex: Ativo:A, Inativo:I"
-                          value={currentFieldMeta.component?.fixed_options || ''}
-                          onChange={e => updateMeta('component', 'fixed_options', e.target.value)}
-                          className="w-full h-20 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none resize-none"
+                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.component_type', 'Tipo de Componente')}</label>
+                        <select
+                          value={currentFieldMeta.component?.type || 'text'}
+                          onChange={e => updateMeta('component', 'type', e.target.value)}
+                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
+                        >
+                          <option value="text">Input Texto</option>
+                          <option value="textarea">Área de Texto (Textarea)</option>
+                          <option value="number">Número</option>
+                          <option value="select">Combo (Select)</option>
+                          <option value="radio">Radio Buttons</option>
+                          <option value="checkbox">Checkbox Group</option>
+                          <option value="switch">Switch (Liga/Desliga)</option>
+                          <option value="date">Data</option>
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.width', 'Largura')}</label>
+                          <input
+                            type="text"
+                            placeholder="Ex: 100% ou 200px"
+                            value={currentFieldMeta.component?.width || '100%'}
+                            onChange={e => updateMeta('component', 'width', e.target.value)}
+                            className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
+                          />
+                        </div>
+                        {currentFieldMeta.component?.type === 'textarea' && (
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.rows', 'Linhas')}</label>
+                            <input
+                              type="number"
+                              value={currentFieldMeta.component?.rows || 3}
+                              onChange={e => updateMeta('component', 'rows', parseInt(e.target.value))}
+                              className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {(['select', 'radio', 'checkbox'].includes(currentFieldMeta.component?.type)) && (
+                        <div className="space-y-4 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/50">
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-bold text-indigo-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.options_source', 'Origem dos Dados')}</label>
+                            <div className="flex gap-2">
+                              {['fixed', 'enumeration', 'relational'].map(opt => (
+                                <button
+                                  key={opt}
+                                  onClick={() => updateMeta('component', 'options_type', opt)}
+                                  className={cn(
+                                    "flex-1 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all",
+                                    (currentFieldMeta.component?.options_type || 'fixed') === opt ? 'bg-indigo-600 text-white shadow-md' : 'bg-white dark:bg-neutral-900 text-neutral-400'
+                                  )}
+                                >
+                                  {opt === 'fixed' ? 'Valores Fixos' : opt === 'enumeration' ? 'Enum Global' : 'Relacionamento'}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {(currentFieldMeta.component?.options_type || 'fixed') === 'fixed' ? (
+                            <div className="space-y-2">
+                              <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.fixed_options', 'Opções (Label:Valor, separadas por vírgula)')}</label>
+                              <textarea
+                                placeholder="Ex: Ativo:A, Inativo:I"
+                                value={currentFieldMeta.component?.fixed_options || ''}
+                                onChange={e => updateMeta('component', 'fixed_options', e.target.value)}
+                                className="w-full h-20 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none resize-none"
+                              />
+                            </div>
+                          ) : currentFieldMeta.component?.options_type === 'enumeration' ? (
+                            <div className="space-y-2">
+                              <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Selecione o Enumeration</label>
+                              <select
+                                value={currentFieldMeta.component?.rel_table || ''}
+                                onChange={e => updateMeta('component', 'rel_table', e.target.value)}
+                                className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                              >
+                                <option value="">Selecione...</option>
+                                {enumerations.map((e: any) => (
+                                  <option key={e.id} value={e.id}>{e.name}</option>
+                                ))}
+                              </select>
+                              {currentFieldMeta.component?.rel_table && (
+                                <p className="text-[9px] text-neutral-500 mt-2 italic px-1">
+                                  {enumerations.find(e => e.id === currentFieldMeta.component?.rel_table)?.values?.length || 0} opções disponíveis
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.rel_table', 'Tabela Relacionada')}</label>
+                                <select
+                                  value={currentFieldMeta.component?.rel_table || ''}
+                                  onChange={e => updateMeta('component', 'rel_table', e.target.value)}
+                                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                                >
+                                  <option value="">Selecione...</option>
+                                  {models.map((m: any) => (
+                                    <option key={m.id} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Label (Exibição)</label>
+                                  <select
+                                    value={currentFieldMeta.component?.rel_label || ''}
+                                    onChange={e => updateMeta('component', 'rel_label', e.target.value)}
+                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                                  >
+                                    <option value="">Selecione...</option>
+                                    {models.find((m: any) => m.db_table_name === currentFieldMeta.component?.rel_table)?.fields.map((f: any) => (
+                                      <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Value (ID)</label>
+                                  <select
+                                    value={currentFieldMeta.component?.rel_value || ''}
+                                    onChange={e => updateMeta('component', 'rel_value', e.target.value)}
+                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                                  >
+                                    <option value="">Selecione...</option>
+                                    {models.find((m: any) => m.db_table_name === currentFieldMeta.component?.rel_table)?.fields.map((f: any) => (
+                                      <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {drawerActiveTab === 'estilos' && (
+                <>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1 h-4 bg-indigo-600 rounded-full"></div>
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.label_config')}</h3>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.font')}</label>
+                        <select
+                          value={currentFieldMeta.label.font}
+                          onChange={e => updateMeta('label', 'font', e.target.value)}
+                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
+                        >
+                          <option value="Inter">{t('wizard.layout.drawer.font_default')}</option>
+                          <option value="Roboto">Roboto</option>
+                          <option value="Outfit">Outfit</option>
+                          <option value="JetBrains Mono">Mono</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.size')}</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: 12px"
+                          value={currentFieldMeta.label.size}
+                          onChange={e => updateMeta('label', 'size', e.target.value)}
+                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
                         />
                       </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="space-y-2">
-                          <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.rel_table', 'Tabela Relacionada')}</label>
-                          <select
-                            value={currentFieldMeta.component?.rel_table || ''}
-                            onChange={e => updateMeta('component', 'rel_table', e.target.value)}
-                            className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
-                          >
-                            <option value="">Selecione...</option>
-                            {models.map((m: any) => (
-                              <option key={m.id} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-2">
-                            <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Label (Exibição)</label>
-                            <select
-                              value={currentFieldMeta.component?.rel_label || ''}
-                              onChange={e => updateMeta('component', 'rel_label', e.target.value)}
-                              className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
-                            >
-                              <option value="">Selecione...</option>
-                              {models.find((m: any) => m.db_table_name === currentFieldMeta.component?.rel_table)?.fields.map((f: any) => (
-                                <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Value (ID)</label>
-                            <select
-                              value={currentFieldMeta.component?.rel_value || ''}
-                              onChange={e => updateMeta('component', 'rel_value', e.target.value)}
-                              className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
-                            >
-                              <option value="">Selecione...</option>
-                              {models.find((m: any) => m.db_table_name === currentFieldMeta.component?.rel_table)?.fields.map((f: any) => (
-                                <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.text_color')}</label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="color"
+                          value={currentFieldMeta.label.color || '#6366f1'}
+                          onChange={e => updateMeta('label', 'color', e.target.value)}
+                          className="w-8 h-8 rounded-lg cursor-pointer overflow-hidden border-none p-0"
+                        />
+                        <input
+                          type="text"
+                          value={currentFieldMeta.label.color}
+                          onChange={e => updateMeta('label', 'color', e.target.value)}
+                          placeholder={t('wizard.layout.drawer.text_color')}
+                          className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-mono font-bold outline-none"
+                        />
                       </div>
-                    )}
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  <div className="space-y-4 pt-6 border-t border-neutral-100 dark:border-neutral-800">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1 h-4 bg-emerald-600 rounded-full"></div>
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.content_config')}</h3>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.font')}</label>
+                        <select
+                          value={currentFieldMeta.content.font}
+                          onChange={e => updateMeta('content', 'font', e.target.value)}
+                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
+                        >
+                          <option value="Inter">{t('wizard.layout.drawer.font_default')}</option>
+                          <option value="Roboto">Roboto</option>
+                          <option value="Outfit">Outfit</option>
+                          <option value="JetBrains Mono">Mono</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.size')}</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: 14px"
+                          value={currentFieldMeta.content.size}
+                          onChange={e => updateMeta('content', 'size', e.target.value)}
+                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.content_color')}</label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="color"
+                          value={currentFieldMeta.content.color || '#000000'}
+                          onChange={e => updateMeta('content', 'color', e.target.value)}
+                          className="w-8 h-8 rounded-lg cursor-pointer overflow-hidden border-none p-0"
+                        />
+                        <input
+                          type="text"
+                          value={currentFieldMeta.content.color}
+                          onChange={e => updateMeta('content', 'color', e.target.value)}
+                          placeholder={t('wizard.layout.drawer.content_color')}
+                          className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-mono font-bold outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -3575,13 +3946,50 @@ function StepLayout({ config, setConfig, models }: any) {
   )
 }
 
-function StepActions({ config, setConfig, models, useCases }: any) {
+function StepActions({ config, setConfig, models, useCases, isDownloadsActive }: any) {
   const { t } = useI18n()
   const [isActionModalOpen, setIsActionModalOpen] = useState(false)
   const [editingAction, setEditingAction] = useState<any>(null)
-  const [activeModalTab, setActiveModalTab] = useState<'general' | 'trigger'>('general')
+  const [editingActionIndex, setEditingActionIndex] = useState<number | null>(null)
+  const [isIconPickerOpen, setIsIconPickerOpen] = useState(false)
+  const [activeModalTab, setActiveModalTab] = useState<'general' | 'trigger' | 'appearance'>('general')
   const [selectedButtonConfig, setSelectedButtonConfig] = useState<any>(null)
   const [isButtonPropertiesOpen, setIsButtonPropertiesOpen] = useState(false)
+
+  const getFieldName = (id: string) => {
+    for (const m of models) {
+      const f = m.fields?.find((f: any) => f.id === id)
+      if (f) {
+        return f.display_name || f.db_column_name
+      }
+    }
+    return id
+  }
+
+  const getGroupedFields = () => {
+    const layout = config.layout_config || {}
+    const filterIds = layout.filter_fields || []
+    const gridIds = layout.grid_fields || []
+    const formIds = layout.form_fields || []
+    const masterId = layout.master_model_id
+
+    const filterFields: any[] = []
+    const gridFields: any[] = []
+    const masterFields: any[] = []
+    const detailFields: any[] = []
+
+    models.forEach((m: any) => {
+      m.fields?.forEach((f: any) => {
+        if (filterIds.includes(f.id)) filterFields.push(f)
+        if (gridIds.includes(f.id)) gridFields.push(f)
+        if (formIds.includes(f.id)) {
+          if (m.id === masterId) masterFields.push(f)
+          else detailFields.push(f)
+        }
+      })
+    })
+    return { filterFields, gridFields, masterFields, detailFields }
+  }
 
   const handleSaveAction = (action: any) => {
     const currentActions = config.layout_config.custom_actions || []
@@ -3625,6 +4033,8 @@ function StepActions({ config, setConfig, models, useCases }: any) {
       icon: Terminal 
     }
   ]
+
+  const groupedFields = getGroupedFields()
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
@@ -4016,18 +4426,29 @@ function StepActions({ config, setConfig, models, useCases }: any) {
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 relative">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Ícone</label>
-                    <select
-                      value={editingAction.icon}
-                      onChange={e => setEditingAction({ ...editingAction, icon: e.target.value })}
-                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-all"
+                    <button
+                      type="button"
+                      onClick={() => setIsIconPickerOpen(true)}
+                      className="w-full flex items-center justify-between bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800"
                     >
-                      <option value="Zap">Raio (Zap)</option>
-                      <option value="Link">Link (Abrir/Anexar)</option>
-                      <option value="Database">Banco de Dados</option>
-                      <option value="Globe">Globo (Web/API)</option>
-                    </select>
+                      <div className="flex items-center gap-3">
+                        <DynamicIcon name={editingAction.icon || 'Zap'} className="w-5 h-5 text-indigo-500" />
+                        <span>{editingAction.icon || 'Selecione um ícone...'}</span>
+                      </div>
+                      <span className="text-[10px] uppercase text-neutral-400 font-bold">Trocar</span>
+                    </button>
+                    {isIconPickerOpen && (
+                      <IconPicker 
+                        currentIcon={editingAction.icon || 'Zap'} 
+                        onSelect={icon => {
+                          setEditingAction({ ...editingAction, icon })
+                          setIsIconPickerOpen(false)
+                        }}
+                        onClose={() => setIsIconPickerOpen(false)}
+                      />
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -4056,6 +4477,7 @@ function StepActions({ config, setConfig, models, useCases }: any) {
                       { value: 'master_top', label: 'Ação Global (Topo do Mestre)' },
                       { value: 'detail_top', label: 'Ação Global (Topo do Detalhe)' },
                       { value: 'detail_row', label: 'Ação de Linha (Detalhe)' },
+                      { value: 'field_group', label: 'Agrupado ao Campo (Formulário)' },
                     ].map(opt => {
                       const activeContexts: string[] = editingAction.contexts
                         ? (Array.isArray(editingAction.contexts) ? editingAction.contexts : [editingAction.contexts])
@@ -4082,6 +4504,124 @@ function StepActions({ config, setConfig, models, useCases }: any) {
                         </label>
                       )
                     })}
+                    
+                    {(() => {
+                      const activeContexts: string[] = editingAction.contexts
+                        ? (Array.isArray(editingAction.contexts) ? editingAction.contexts : [editingAction.contexts])
+                        : (editingAction.context ? [editingAction.context] : ['row'])
+                      return activeContexts.includes('field_group') ? (
+                        <div className="p-3 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-xl mt-2 space-y-3 animate-in fade-in slide-in-from-top-2">
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">Campos Alvo (Selecione um ou mais)</label>
+                            <div className="max-h-48 overflow-y-auto custom-scrollbar border border-indigo-100 dark:border-indigo-900/30 rounded-lg bg-white dark:bg-neutral-950 p-3 space-y-4">
+                              {/* Filtros */}
+                              {groupedFields.filterFields.length > 0 && (
+                                <div className="space-y-1.5">
+                                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Filtros (Argumentos)</span>
+                                  {groupedFields.filterFields.map((f: any) => {
+                                    const val = `filter:${f.db_column_name}`;
+                                    const legacyVal = f.db_column_name;
+                                    const current = editingAction.group_fields || (editingAction.group_field ? [editingAction.group_field] : []);
+                                    const isChecked = current.includes(val) || (current.includes(legacyVal) && !current.some((c: string) => c.includes(':')));
+                                    return (
+                                      <label key={`flt-${f.id}`} className="flex items-center gap-2 cursor-pointer group">
+                                        <input type="checkbox" checked={isChecked} onChange={(e) => {
+                                          const next = e.target.checked ? [...current.filter((c: string) => c !== legacyVal), val] : current.filter((c: string) => c !== val && c !== legacyVal);
+                                          setEditingAction({ ...editingAction, group_fields: next, group_field: next[0]?.split(':').pop() || '' });
+                                        }} className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900" />
+                                        <span className="text-xs text-neutral-700 dark:text-neutral-300 group-hover:text-indigo-600 transition-colors">{getFieldName(f.id)} ({f.db_column_name})</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              {/* Grid */}
+                              {groupedFields.gridFields.length > 0 && (
+                                <div className="space-y-1.5">
+                                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Grid (Listagem)</span>
+                                  {groupedFields.gridFields.map((f: any) => {
+                                    const val = `grid:${f.db_column_name}`;
+                                    const legacyVal = f.db_column_name;
+                                    const current = editingAction.group_fields || (editingAction.group_field ? [editingAction.group_field] : []);
+                                    const isChecked = current.includes(val) || (current.includes(legacyVal) && !current.some((c: string) => c.includes(':')));
+                                    return (
+                                      <label key={`grd-${f.id}`} className="flex items-center gap-2 cursor-pointer group">
+                                        <input type="checkbox" checked={isChecked} onChange={(e) => {
+                                          const next = e.target.checked ? [...current.filter((c: string) => c !== legacyVal), val] : current.filter((c: string) => c !== val && c !== legacyVal);
+                                          setEditingAction({ ...editingAction, group_fields: next, group_field: next[0]?.split(':').pop() || '' });
+                                        }} className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900" />
+                                        <span className="text-xs text-neutral-700 dark:text-neutral-300 group-hover:text-indigo-600 transition-colors">{getFieldName(f.id)} ({f.db_column_name})</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              {/* Master */}
+                              {groupedFields.masterFields.length > 0 && (
+                                <div className="space-y-1.5">
+                                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Mestre (Formulário)</span>
+                                  {groupedFields.masterFields.map((f: any) => {
+                                    const val = `master:${f.db_column_name}`;
+                                    const legacyVal = f.db_column_name;
+                                    const current = editingAction.group_fields || (editingAction.group_field ? [editingAction.group_field] : []);
+                                    const isChecked = current.includes(val) || (current.includes(legacyVal) && !current.some((c: string) => c.includes(':')));
+                                    return (
+                                      <label key={`mst-${f.id}`} className="flex items-center gap-2 cursor-pointer group">
+                                        <input type="checkbox" checked={isChecked} onChange={(e) => {
+                                          const next = e.target.checked ? [...current.filter((c: string) => c !== legacyVal), val] : current.filter((c: string) => c !== val && c !== legacyVal);
+                                          setEditingAction({ ...editingAction, group_fields: next, group_field: next[0]?.split(':').pop() || '' });
+                                        }} className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900" />
+                                        <span className="text-xs text-neutral-700 dark:text-neutral-300 group-hover:text-indigo-600 transition-colors">{getFieldName(f.id)} ({f.db_column_name})</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              {/* Detail */}
+                              {groupedFields.detailFields.length > 0 && (
+                                <div className="space-y-1.5">
+                                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Detalhes (Formulário)</span>
+                                  {groupedFields.detailFields.map((f: any) => {
+                                    const val = `detail:${f.db_column_name}`;
+                                    const legacyVal = f.db_column_name;
+                                    const current = editingAction.group_fields || (editingAction.group_field ? [editingAction.group_field] : []);
+                                    const isChecked = current.includes(val) || (current.includes(legacyVal) && !current.some((c: string) => c.includes(':')));
+                                    return (
+                                      <label key={`dtl-${f.id}`} className="flex items-center gap-2 cursor-pointer group">
+                                        <input type="checkbox" checked={isChecked} onChange={(e) => {
+                                          const next = e.target.checked ? [...current.filter((c: string) => c !== legacyVal), val] : current.filter((c: string) => c !== val && c !== legacyVal);
+                                          setEditingAction({ ...editingAction, group_fields: next, group_field: next[0]?.split(':').pop() || '' });
+                                        }} className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900" />
+                                        <span className="text-xs text-neutral-700 dark:text-neutral-300 group-hover:text-indigo-600 transition-colors">{getFieldName(f.id)} ({f.db_column_name})</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">Posição</label>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setEditingAction({ ...editingAction, group_position: 'left' })}
+                                className={cn("flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-md transition-all border", (editingAction.group_position || 'right') === 'left' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50')}
+                              >
+                                Esquerda
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingAction({ ...editingAction, group_position: 'right' })}
+                                className={cn("flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-md transition-all border", (editingAction.group_position || 'right') === 'right' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50')}
+                              >
+                                Direita
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null
+                    })()}
                   </div>
                 </div>
               </div>
@@ -4141,6 +4681,7 @@ function StepActions({ config, setConfig, models, useCases }: any) {
                           className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-500 outline-none transition-all"
                         >
                           <option value="">Selecione um caso de uso...</option>
+                          {isDownloadsActive && <option value="downloads">📁 Central de Downloads</option>}
                           {useCases?.filter((uc: any) => uc.slug !== config.slug).map((uc: any) => (
                             <option key={uc.slug} value={uc.slug}>{uc.name} ({uc.slug})</option>
                           ))}

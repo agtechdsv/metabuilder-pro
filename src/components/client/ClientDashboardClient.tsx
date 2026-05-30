@@ -33,6 +33,7 @@ import {
   Download,
   Copy,
   Lightbulb,
+  RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
@@ -41,7 +42,10 @@ import { MetaVoiceView } from './MetaVoiceView'
 import CommunityHubView from './CommunityHubView'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { getIClubDashboardData, IClubRule, IClubReferral, IClubReward } from '@/app/actions/iclub'
+import { CliFilesClientView } from './CliFilesClientView'
+import { TeamDrawer } from '@/components/workspace/TeamDrawer'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -418,6 +422,7 @@ const CANCELLATION_REASONS = [
 const TABS = [
   { id: 'dashboard', label: 'Dashboard BI', icon: BarChart3 },
   { id: 'productivity', label: 'Produtividade', icon: Activity },
+  { id: 'downloads', label: 'Central de Downloads', icon: Download },
   { id: 'community', label: 'MetaBuilders', icon: Users },
   { id: 'metavoice', label: 'MetaVoice', icon: Lightbulb },
   { id: 'iclub', label: 'iClub', icon: Zap },
@@ -448,6 +453,7 @@ export default function ClientDashboardClient({
   const [selectedLog, setSelectedLog] = useState<any>(null)
   const [modalTab, setModalTab] = useState<'visual' | 'raw'>('visual')
   const [copied, setCopied] = useState(false)
+  const [isTeamDrawerOpen, setIsTeamDrawerOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -537,6 +543,13 @@ export default function ClientDashboardClient({
 
   const { toast } = useToast()
   const router = useRouter()
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const refreshAllData = () => {
+    setIsRefreshing(true)
+    router.refresh()
+    setTimeout(() => setIsRefreshing(false), 1000)
+  }
 
   // Fetch real-time data from Asaas (e.g. active credit card, pending invoices) when tab becomes active
   useEffect(() => {
@@ -906,9 +919,20 @@ export default function ClientDashboardClient({
                 </p>
               </div>
             </div>
-            {localProfile?.subscription_status && (
-              <StatusBadge status={localProfile.subscription_status} />
-            )}
+            <div className="flex items-center gap-4 mt-4 md:mt-0">
+              {localProfile?.subscription_status && (
+                <StatusBadge status={localProfile.subscription_status} />
+              )}
+              {!isGuest && (
+                <button 
+                  onClick={() => setIsTeamDrawerOpen(true)}
+                  className="flex items-center justify-center gap-2 h-11 px-6 rounded-xl text-sm font-bold transition-all duration-200 whitespace-nowrap bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700 shadow-sm"
+                >
+                  <Users className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+                  <span>Gerenciar Equipe</span>
+                </button>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -917,14 +941,14 @@ export default function ClientDashboardClient({
       <div className={cn("flex flex-col sm:flex-row gap-4 w-full", isGuest ? "sm:justify-end" : "sm:items-center sm:justify-between")}>
         {/* Left Tabs Group */}
         {!isGuest && (
-          <div className="flex sm:grid sm:grid-cols-4 gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-fit">
+          <div className="flex sm:grid sm:grid-cols-5 gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-full xl:w-fit overflow-x-auto no-scrollbar">
             {TABS.filter(tab => tab.id !== 'iclub' && tab.id !== 'metavoice' && tab.id !== 'community').map(tab => (
               <button
                 key={tab.id}
                 id={`client-tab-${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  'flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 w-full whitespace-nowrap',
+                  'flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 whitespace-nowrap min-w-[140px] sm:min-w-0',
                   activeTab === tab.id
                     ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm'
                     : 'text-neutral-500 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
@@ -934,6 +958,7 @@ export default function ClientDashboardClient({
                   "w-4 h-4",
                   tab.id === 'dashboard' && "text-indigo-500 dark:text-indigo-400",
                   tab.id === 'productivity' && "text-purple-500 dark:text-purple-400",
+                  tab.id === 'downloads' && "text-cyan-500 dark:text-cyan-400",
                   tab.id === 'subscription' && "text-emerald-500 dark:text-emerald-400",
                   tab.id === 'cancel' && "text-rose-500 dark:text-rose-400"
                 )} />
@@ -943,11 +968,12 @@ export default function ClientDashboardClient({
           </div>
         )}
 
-        {/* Right Tab Group (Engagement / MetaVoice & iClub) */}
-        <div className={cn(
-          "flex sm:grid gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-fit",
-          isGuest ? "sm:grid-cols-2" : "sm:grid-cols-3"
-        )}>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          {/* Right Tab Group (Engagement / MetaVoice & iClub) */}
+          <div className={cn(
+            "flex sm:grid gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-fit",
+            isGuest ? "sm:grid-cols-2" : "sm:grid-cols-3"
+          )}>
           {TABS.filter(tab => {
             if (isGuest && tab.id === 'iclub') return false;
             return tab.id === 'metavoice' || tab.id === 'iclub' || tab.id === 'community';
@@ -974,6 +1000,7 @@ export default function ClientDashboardClient({
               <span>{tab.label}</span>
             </button>
           ))}
+          </div>
         </div>
       </div>
 
@@ -996,9 +1023,24 @@ export default function ClientDashboardClient({
             <MetaVoiceView userId={localProfile?.id} />
           )}
 
+          {/* ── TAB: Central de Downloads ─────────────────────────────────────── */}
+          {activeTab === 'downloads' && (
+            <CliFilesClientView />
+          )}
+
           {/* ── TAB: Dashboard BI ─────────────────────────────────────── */}
           {activeTab === 'dashboard' && (
             <div className="space-y-8">
+              <div className="flex justify-end">
+                <button
+                  onClick={() => refreshAllData()}
+                  disabled={isRefreshing}
+                  title="Atualizar painel"
+                  className="p-2 text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-800 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center justify-center disabled:opacity-50 group active:scale-95 duration-200"
+                >
+                  <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
+                </button>
+              </div>
 
               {/* KPI Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1208,6 +1250,16 @@ export default function ClientDashboardClient({
                   <option value="7d">Últimos 7 dias</option>
                   <option value="30d">Últimos 30 dias</option>
                 </select>
+                <div className="ml-auto">
+                  <button
+                    onClick={() => refreshAllData()}
+                    disabled={isRefreshing}
+                    title="Atualizar painel"
+                    className="p-2 text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-800 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center justify-center disabled:opacity-50 group active:scale-95 duration-200"
+                  >
+                    <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
+                  </button>
+                </div>
               </div>
 
               {/* Sub-tabs Navigation */}
@@ -1351,11 +1403,18 @@ export default function ClientDashboardClient({
                               {filteredActivityLogs.map((log) => {
                                 const profile = profiles.find(p => p.id === log.user_id)
                                 const name = profile?.full_name || profile?.email || 'Desenvolvedor'
+                                const useCase = useCases.find(uc => uc.id === log.ui_view_id)
+                                const useCaseName = useCase ? useCase.name : 'Caso de Uso Removido/Desconhecido'
 
                                 return (
                                   <tr key={log.id} className="group hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
-                                    <td className="py-4 text-sm font-bold text-neutral-800 dark:text-neutral-200">
-                                      {name}
+                                    <td className="py-4">
+                                      <div className="text-sm font-bold text-neutral-800 dark:text-neutral-200">
+                                        {name}
+                                      </div>
+                                      <div className="text-[10px] text-indigo-500 font-medium uppercase tracking-wider mt-0.5">
+                                        {useCaseName}
+                                      </div>
                                     </td>
                                     <td className="py-4 text-sm text-neutral-600 dark:text-neutral-400">
                                       {new Date(log.session_start).toLocaleString('pt-BR')}
@@ -2679,6 +2738,12 @@ export default function ClientDashboardClient({
           </div>
         </form>
       </Modal>
+
+      <TeamDrawer 
+        isOpen={isTeamDrawerOpen}
+        onClose={() => setIsTeamDrawerOpen(false)}
+        onRequestSubscriptionUpdate={() => setActiveTab('subscription')}
+      />
     </div>
   )
 }

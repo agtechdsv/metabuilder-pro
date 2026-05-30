@@ -237,15 +237,7 @@ export function ProjectManager({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Só exibe para owner ou convidado com Acesso Global */}
-            {showTeamSettings && (
-              <Link 
-                href={`/admin/${workspaceSlug}/settings`}
-                className="flex items-center gap-2 px-7 py-3 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all shadow-sm text-sm border border-neutral-200 dark:border-neutral-700"
-              >
-                <Settings className="w-5 h-5" /> Equipe & Configurações
-              </Link>
-            )}
+            {/* Botão de Equipe & Configurações foi removido conforme solicitação (Item 11) */}
             {canCreate && (
               <button
                 onClick={() => openDrawer()}

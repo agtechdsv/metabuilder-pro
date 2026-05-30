@@ -74,17 +74,14 @@ export function DownloadsManagerClient({
     if (!userId || !projectId) return
 
     try {
-      const { data, error } = await supabase
-        .from('download_jobs')
-        .select('*')
-        .eq('project_id', projectId)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setJobs(data || [])
+      const response = await fetch(`/api/export?projectId=${projectId}&userId=${userId}`)
+      const data = await response.json()
+      
+      if (data.error) throw new Error(data.error)
+      
+      setJobs(data.jobs || [])
     } catch (err: any) {
-      console.error('Error fetching jobs:', err)
+      console.error('[DownloadsPage] Fetch error:', err)
       toast(err.message || 'Não foi possível carregar as exportações.', 'error')
     }
   }

@@ -36,6 +36,7 @@ import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { MenuBuilder } from '@/components/studio/MenuBuilder'
 import { BrandingConfig } from '@/components/studio/BrandingConfig'
+import { EnumerationsClient } from '../enumerations/EnumerationsClient'
 
 const RETENTION_OPTIONS = [
   { value: '', label: '∞ Manter para Sempre' },
@@ -197,7 +198,7 @@ export function StudioDashboardClient({
     setIsUpdatingRetention(false)
   }
 
-  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'navigation' | 'branding'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'navigation' | 'branding' | 'enumerations'>('list')
   const [viewToEdit, setViewToEdit] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [viewToDelete, setViewToDelete] = useState<any>(null)
@@ -359,6 +360,15 @@ export function StudioDashboardClient({
                    >
                      Identidade
                    </button>
+                   <button 
+                    onClick={() => setViewMode('enumerations')}
+                    className={cn(
+                      "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
+                      viewMode === 'enumerations' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
+                    )}
+                   >
+                     <Database className="w-3.5 h-3.5" /> Enums
+                   </button>
                  </>
                )}
             </div>
@@ -493,6 +503,12 @@ export function StudioDashboardClient({
             <BrandingConfig 
               project={project}
               onSave={handleSaveBranding}
+            />
+          </div>
+        ) : viewMode === 'enumerations' ? (
+          <div className="">
+            <EnumerationsClient 
+              project={project}
             />
           </div>
         ) : (
