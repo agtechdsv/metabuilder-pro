@@ -48,7 +48,8 @@ import {
   Calendar,
   Download,
   Zap,
-  Globe
+  Globe,
+  Copy
 } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
@@ -1660,6 +1661,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
   const toggleZone = (zone: string) => setExpandedZones(prev => ({ ...prev, [zone]: !prev[zone] }))
 
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null)
+  const [editingTabId, setEditingTabId] = useState<string | null>(null)
   const [editingFieldZone, setEditingFieldZone] = useState<string | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [drawerActiveTab, setDrawerActiveTab] = useState<'geral' | 'estilos'>('geral')
@@ -1897,6 +1899,13 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
       model.fields.some((f: any) => f.id === fid)
     )
 
+    const tabsMeta = (config.layout_config as any).fields_metadata?.['form-TABS'] || (config.layout_config as any).fields_metadata?.['TABS']
+    const tabStyles = {
+      fontFamily: tabsMeta?.label?.font?.replace(' (Padrão)', ''),
+      fontSize: tabsMeta?.label?.size ? (tabsMeta.label.size.includes('px') ? tabsMeta.label.size : `${tabsMeta.label.size}px`) : undefined,
+      color: tabsMeta?.label?.color || undefined,
+    }
+
     return (
       <div key={`${model.id}-${depth}-${index}`} className={cn("space-y-4", depth > 0 && "ml-8 border-l-2 border-dashed border-amber-200 dark:border-amber-900/30 pl-6 pb-4")}>
         <div className="flex items-center justify-between ml-1 pr-6">
@@ -1915,7 +1924,8 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       master_tab_title: e.target.value
                     }
                   })}
-                  className="bg-transparent border-none outline-none text-[11px] font-black tracking-widest text-neutral-600 dark:text-neutral-400 placeholder:text-neutral-300 dark:placeholder:text-neutral-700 w-[250px] hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:bg-white dark:focus:bg-neutral-900 focus:ring-2 focus:ring-amber-500/20 rounded px-1.5 py-0.5 transition-all"
+                  style={tabStyles}
+                  className="bg-transparent border-none outline-none font-black tracking-widest text-neutral-600 dark:text-neutral-400 placeholder:text-neutral-300 dark:placeholder:text-neutral-700 w-[250px] hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:bg-white dark:focus:bg-neutral-900 focus:ring-2 focus:ring-amber-500/20 rounded px-1.5 py-0.5 transition-all"
                 />
               ) : (
                 <input
@@ -1935,10 +1945,18 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       }
                     })
                   }}
-                  className="bg-transparent border-none outline-none text-[11px] font-black tracking-widest text-neutral-600 dark:text-neutral-400 placeholder:text-neutral-300 dark:placeholder:text-neutral-700 w-[250px] hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:bg-white dark:focus:bg-neutral-900 focus:ring-2 focus:ring-amber-500/20 rounded px-1.5 py-0.5 transition-all"
+                  style={tabStyles}
+                  className="bg-transparent border-none outline-none font-black tracking-widest text-neutral-600 dark:text-neutral-400 placeholder:text-neutral-300 dark:placeholder:text-neutral-700 w-[250px] hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:bg-white dark:focus:bg-neutral-900 focus:ring-2 focus:ring-amber-500/20 rounded px-1.5 py-0.5 transition-all"
                 />
               )}
-              <Pencil className="w-3 h-3 text-neutral-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none absolute right-2" />
+              <button
+                type="button"
+                title="Configurar propriedades das abas"
+                onClick={() => { setEditingFieldId('TABS'); setEditingTabId(isMaster ? 'master' : model.id); setEditingFieldZone('form'); setDrawerActiveTab('estilos'); setIsDrawerOpen(true); }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 p-1 bg-white dark:bg-neutral-900 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-400 hover:text-indigo-600 hover:border-indigo-200 shadow-sm z-10"
+              >
+                <Settings2 className="w-3 h-3" />
+              </button>
             </div>
           </div>
 
@@ -2122,6 +2140,49 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
           ...config.layout_config.fields_metadata,
           [metaKey]: newMeta
         }
+      }
+    })
+  }
+
+  const handleApplyStylesToZone = () => {
+    if (!editingFieldId || !editingFieldZone) return
+    
+    // Identificar os campos da zona atual
+    const zoneFields = editingFieldZone === 'filter' ? config.layout_config.filter_fields 
+      : editingFieldZone === 'grid' ? config.layout_config.grid_fields
+      : editingFieldZone === 'form' ? config.layout_config.form_fields
+      : []
+
+    if (!zoneFields.length) return
+
+    const newFieldsMetadata = { ...(config.layout_config.fields_metadata || {}) }
+    const stylesToCopyLabel = { ...currentFieldMeta.label }
+    delete stylesToCopyLabel.text // Não sobrescrever o texto de exibição
+
+    const stylesToCopyContent = { ...currentFieldMeta.content }
+
+    zoneFields.forEach((fieldId: string) => {
+      const metaKey = `${editingFieldZone}-${fieldId}`
+      const existingMeta = newFieldsMetadata[metaKey] || { label: {}, content: {}, component: {} }
+      
+      newFieldsMetadata[metaKey] = {
+        ...existingMeta,
+        label: {
+          ...existingMeta.label,
+          ...stylesToCopyLabel
+        },
+        content: {
+          ...existingMeta.content,
+          ...stylesToCopyContent
+        }
+      }
+    })
+
+    setConfig({
+      ...config,
+      layout_config: {
+        ...config.layout_config,
+        fields_metadata: newFieldsMetadata
       }
     })
   }
@@ -3511,31 +3572,127 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
       >
         {currentFieldMeta && (
           <div className="flex flex-col h-full">
-            <div className="flex border-b border-neutral-100 dark:border-neutral-800 mb-6">
-              <button
-                onClick={() => setDrawerActiveTab('geral')}
-                className={cn(
-                  "flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
-                  drawerActiveTab === 'geral' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
-                )}
-              >
-                Básico / Geral
-                {drawerActiveTab === 'geral' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
-              </button>
-              <button
-                onClick={() => setDrawerActiveTab('estilos')}
-                className={cn(
-                  "flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
-                  drawerActiveTab === 'estilos' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
-                )}
-              >
-                Aparência / Estilos
-                {drawerActiveTab === 'estilos' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
-              </button>
-            </div>
+            {editingFieldId !== 'TABS' && (
+              <div className="flex border-b border-neutral-100 dark:border-neutral-800 mb-6">
+                <button
+                  onClick={() => setDrawerActiveTab('geral')}
+                  className={cn(
+                    "flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
+                    drawerActiveTab === 'geral' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
+                  )}
+                >
+                  Básico / Geral
+                  {drawerActiveTab === 'geral' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
+                </button>
+                <button
+                  onClick={() => setDrawerActiveTab('estilos')}
+                  className={cn(
+                    "flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
+                    drawerActiveTab === 'estilos' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
+                  )}
+                >
+                  Aparência / Estilos
+                  {drawerActiveTab === 'estilos' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
+                </button>
+              </div>
+            )}
 
             <div className="space-y-8 pb-20">
-              {drawerActiveTab === 'geral' && (
+              {editingFieldId === 'TABS' && (
+                <>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1 h-4 bg-indigo-600 rounded-full"></div>
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.label_config')}</h3>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.font')}</label>
+                        <select
+                          value={currentFieldMeta.label.font}
+                          onChange={e => updateMeta('label', 'font', e.target.value)}
+                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
+                        >
+                          <option value="Inter">{t('wizard.layout.drawer.font_default')}</option>
+                          <option value="Roboto">Roboto</option>
+                          <option value="Outfit">Outfit</option>
+                          <option value="JetBrains Mono">Mono</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.size')}</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: 12px"
+                          value={currentFieldMeta.label.size}
+                          onChange={e => updateMeta('label', 'size', e.target.value)}
+                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.text_color')}</label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="color"
+                          value={currentFieldMeta.label.color || '#6366f1'}
+                          onChange={e => updateMeta('label', 'color', e.target.value)}
+                          className="w-8 h-8 rounded-lg cursor-pointer overflow-hidden border-none p-0"
+                        />
+                        <input
+                          type="text"
+                          value={currentFieldMeta.label.color}
+                          onChange={e => updateMeta('label', 'color', e.target.value)}
+                          placeholder={t('wizard.layout.drawer.text_color')}
+                          className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-mono font-bold outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* TEXTO DE EXIBIÇÃO PARA TABS FICA SEPARADO MAS NA MESMA ABA ÚNICA */}
+                  <div className="space-y-4 pt-6 mt-6 border-t border-neutral-100 dark:border-neutral-800">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1 h-4 bg-indigo-600 rounded-full"></div>
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.label_config')}</h3>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.display_text')}</label>
+                      <input
+                        type="text"
+                        value={
+                          editingTabId === 'master' 
+                            ? ((config.layout_config as any).master_tab_title || `Mestre: ${models.find((m: any) => m.id === (config.layout_config as any).master_model_id)?.display_name || ''}`)
+                            : ((config.layout_config as any).details_tab_titles?.[editingTabId || ''] || `Detalhe`)
+                        }
+                        onChange={e => {
+                          if (editingTabId === 'master') {
+                            setConfig({
+                              ...config,
+                              layout_config: { ...config.layout_config, master_tab_title: e.target.value }
+                            })
+                          } else if (editingTabId) {
+                            const currentTitles = (config.layout_config as any).details_tab_titles || {}
+                            setConfig({
+                              ...config,
+                              layout_config: {
+                                ...config.layout_config,
+                                details_tab_titles: { ...currentTitles, [editingTabId]: e.target.value }
+                              }
+                            })
+                          }
+                        }}
+                        className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold focus:border-indigo-500 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {editingFieldId !== 'TABS' && drawerActiveTab === 'geral' && (
                 <>
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
@@ -3808,8 +3965,15 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                 </>
               )}
 
-              {drawerActiveTab === 'estilos' && (
+              {editingFieldId !== 'TABS' && drawerActiveTab === 'estilos' && (
                 <>
+                  <button
+                      onClick={handleApplyStylesToZone}
+                      className="w-full mb-6 flex items-center justify-center gap-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 py-3 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors text-xs font-bold"
+                    >
+                      <Copy className="w-4 h-4" />
+                      Aplicar formatação a todos desta zona ({editingFieldZone === 'filter' ? 'Filtro' : editingFieldZone === 'grid' ? 'Grid' : 'Formulário'})
+                    </button>
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="w-1 h-4 bg-indigo-600 rounded-full"></div>

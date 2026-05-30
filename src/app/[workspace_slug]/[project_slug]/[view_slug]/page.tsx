@@ -553,6 +553,7 @@ export default async function SlugPage({ params }: PageProps) {
           detailsInlineTypes={view.layout_config?.details_inline_types}
           masterTabTitle={view.layout_config?.master_tab_title}
           detailsTabTitles={view.layout_config?.details_tab_titles}
+          tabsStyleConfig={view.layout_config?.fields_metadata?.['form-TABS'] || view.layout_config?.fields_metadata?.['TABS']}
           actionInterfaceType={view.layout_config?.action_interface_type}
           analyticsConfig={view.layout_config?.analytics_config}
           exportFormats={view.layout_config?.export_formats}

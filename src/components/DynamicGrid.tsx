@@ -87,6 +87,19 @@ const getActionColorClasses = (color: string) => {
   }
 }
 
+const getFontFamily = (font?: string) => {
+  if (!font) return undefined;
+  const cleanFont = font.replace(' (Padrão)', '');
+  if (cleanFont.includes('Mono')) return `"${cleanFont}", monospace`;
+  return `"${cleanFont}", sans-serif`;
+}
+
+const getFontSize = (size?: string) => {
+  if (!size) return undefined;
+  if (!isNaN(Number(size))) return `${size}px`;
+  return size;
+}
+
 export default function DynamicGrid({ 
   fields, 
   data, 
@@ -199,8 +212,8 @@ export default function DynamicGrid({
                 key={field.id} 
                 title={val}
                 style={{
-                  fontFamily: zoneConfig.content?.font,
-                  fontSize: zoneConfig.content?.size,
+                  fontFamily: getFontFamily(zoneConfig.content?.font),
+                  fontSize: getFontSize(zoneConfig.content?.size),
                   color: zoneConfig.content?.color,
                 }}
                 className={cn(

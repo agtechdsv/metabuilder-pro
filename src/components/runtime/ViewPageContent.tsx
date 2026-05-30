@@ -67,6 +67,7 @@ interface ViewPageContentProps {
   detailsInlineTypes?: Record<string, boolean>
   masterTabTitle?: string
   detailsTabTitles?: Record<string, string>
+  tabsStyleConfig?: any
   baseUrl?: string
   breadcrumbs?: { label: string; href: string }[]
   description?: string
@@ -114,6 +115,7 @@ export default function ViewPageContent({
   detailsInlineTypes,
   masterTabTitle,
   detailsTabTitles,
+  tabsStyleConfig,
   actionInterfaceType = 'drawer',
   baseUrl,
   breadcrumbs = [],
@@ -1483,6 +1485,7 @@ export default function ViewPageContent({
             masterModelName={modelName}
             masterTabTitle={masterTabTitle}
             detailsTabTitles={detailsTabTitles}
+            tabsStyleConfig={tabsStyleConfig}
             detailDisplayMode={detailDisplayMode}
             isPageMode={true}
             onEditDetail={handleEditDetail}
@@ -1577,6 +1580,7 @@ export default function ViewPageContent({
           masterModelName={modelName}
           masterTabTitle={masterTabTitle}
           detailsTabTitles={detailsTabTitles}
+          tabsStyleConfig={tabsStyleConfig}
           detailDisplayMode={detailDisplayMode}
           onEditDetail={handleEditDetail}
           onDeleteDetail={handleDeleteDetail}
@@ -1611,6 +1615,7 @@ export default function ViewPageContent({
           masterModelName={modelName}
           masterTabTitle={masterTabTitle}
           detailsTabTitles={detailsTabTitles}
+          tabsStyleConfig={tabsStyleConfig}
           detailDisplayMode={detailDisplayMode}
           onEditDetail={handleEditDetail}
           onDeleteDetail={handleDeleteDetail}
@@ -1725,6 +1730,7 @@ export default function ViewPageContent({
         onEditDetail={handleEditDetail}
         onDeleteDetail={handleDeleteDetail}
         onAddDetail={handleOpenAddDetail}
+        tabsStyleConfig={tabsStyleConfig}
         joins={joins}
         dictionary={dictionary}
         detailsInlineTypes={detailsInlineTypes}

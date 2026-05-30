@@ -100,6 +100,19 @@ const getBulkActionClasses = (color: string) => {
   }
 }
 
+const getFontFamily = (font?: string) => {
+  if (!font) return undefined;
+  const cleanFont = font.replace(' (Padrão)', '');
+  if (cleanFont.includes('Mono')) return `"${cleanFont}", monospace`;
+  return `"${cleanFont}", sans-serif`;
+}
+
+const getFontSize = (size?: string) => {
+  if (!size) return undefined;
+  if (!isNaN(Number(size))) return `${size}px`;
+  return size;
+}
+
 export default function ViewContainer({ 
   projectId, 
   modelName, 
@@ -1169,7 +1182,7 @@ export default function ViewContainer({
                     <label 
                       style={{
                         fontFamily: zoneConfig.label?.font,
-                        fontSize: zoneConfig.label?.size,
+                        fontSize: getFontSize(zoneConfig.label?.size),
                         color: zoneConfig.label?.color,
                       }}
                       className={cn(
@@ -1194,9 +1207,9 @@ export default function ViewContainer({
                       )
 
                       const style = {
-                        fontFamily: field.config?.content?.font,
-                        fontSize: field.config?.content?.size,
-                        color: field.config?.content?.color,
+                        fontFamily: getFontFamily(zoneConfig.content?.font),
+                        fontSize: getFontSize(zoneConfig.content?.size),
+                        color: zoneConfig.content?.color,
                       }
 
                       if (fieldType === 'select') {
@@ -1292,6 +1305,14 @@ export default function ViewContainer({
                     <th 
                       key={field.id} 
                       onClick={() => handleSort(field.db_column_name)}
+                      style={{
+                        fontFamily: getFontFamily(field.config?.label?.font),
+                        fontSize: getFontSize(field.config?.label?.size),
+                        color: field.config?.label?.color,
+                        fontWeight: field.config?.label?.bold ? 'bold' : undefined,
+                        fontStyle: field.config?.label?.italic ? 'italic' : undefined,
+                        textTransform: field.config?.label?.uppercase ? 'uppercase' : undefined,
+                      }}
                       className="px-6 py-4 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] whitespace-nowrap cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors group/th"
                     >
                       <div className="flex items-center gap-2">

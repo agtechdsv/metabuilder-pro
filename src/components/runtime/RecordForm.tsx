@@ -48,6 +48,12 @@ const getFontFamily = (font?: string) => {
   return `"${cleanFont}", sans-serif`;
 }
 
+const getFontSize = (size?: string) => {
+  if (!size) return undefined;
+  if (!isNaN(Number(size))) return `${size}px`;
+  return size;
+}
+
 // Helper para aplicar máscara a valores (apenas para exibição)
 const applyMask = (value: any, mask: string) => {
   if (!mask || value === null || value === undefined || value === '') return value
@@ -112,6 +118,7 @@ interface RecordFormProps {
   masterModelName?: string
   masterTabTitle?: string
   detailsTabTitles?: Record<string, string>
+  tabsStyleConfig?: any
   detailDisplayMode?: 'tabs' | 'sections'
   isPageMode?: boolean
   onEditDetail?: (detail: any) => void
@@ -241,6 +248,7 @@ export default function RecordForm({
   masterModelId,
   masterModelName,
   detailDisplayMode = 'tabs',
+  tabsStyleConfig,
   isPageMode = false,
   onEditDetail,
   onDeleteDetail,
@@ -676,7 +684,7 @@ export default function RecordForm({
 
     const inputStyle = {
       fontFamily: getFontFamily(field.config?.content?.font),
-      fontSize: field.config?.content?.size,
+      fontSize: getFontSize(field.config?.content?.size),
       color: field.config?.content?.color,
     }
 
@@ -699,7 +707,7 @@ export default function RecordForm({
         <label
           style={{
             fontFamily: getFontFamily(zoneConfig.label?.font),
-            fontSize: zoneConfig.label?.size,
+            fontSize: getFontSize(zoneConfig.label?.size),
             color: zoneConfig.label?.color,
           }}
           className={cn(
@@ -1076,7 +1084,17 @@ export default function RecordForm({
                           const detailFieldsForThisModel = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase());
                           return detailFieldsForThisModel.map(field => (
                             <div key={field.id} className="space-y-1.5">
-                              <label className="text-[10px] font-black tracking-widest text-neutral-400">
+                              <label 
+                                style={{
+                                  fontFamily: getFontFamily(field.config?.label?.font),
+                                  fontSize: getFontSize(field.config?.label?.size),
+                                  color: field.config?.label?.color,
+                                  fontWeight: field.config?.label?.bold ? 'bold' : undefined,
+                                  fontStyle: field.config?.label?.italic ? 'italic' : undefined,
+                                  textTransform: field.config?.label?.uppercase ? 'uppercase' : undefined,
+                                }}
+                                className="text-[10px] font-black tracking-widest text-neutral-400"
+                              >
                                 {field.display_name}
                               </label>
                               {(() => {
@@ -1280,9 +1298,14 @@ export default function RecordForm({
                 setActiveTab('master')
                 onTabChange?.('master')
               }}
+              style={{
+                fontFamily: getFontFamily(tabsStyleConfig?.label?.font),
+                fontSize: getFontSize(tabsStyleConfig?.label?.size),
+                ...(activeTab === 'master' && tabsStyleConfig?.label?.color ? { color: tabsStyleConfig.label.color, borderColor: tabsStyleConfig.label.color } : {})
+              }}
               className={cn(
                 "px-4 py-2 text-[10px] font-black tracking-widest transition-all border-b-2",
-                activeTab === 'master' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600'
+                !tabsStyleConfig?.label?.color && activeTab === 'master' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600'
               )}
             >
               {masterTabTitle || t('runtime.master_details.main_data', 'Dados Principais')}
@@ -1298,9 +1321,14 @@ export default function RecordForm({
                     setActiveTab(tableName)
                     onTabChange?.(tableName)
                   }}
+                  style={{
+                    fontFamily: getFontFamily(tabsStyleConfig?.label?.font),
+                    fontSize: getFontSize(tabsStyleConfig?.label?.size),
+                    ...(activeTab === tableName && tabsStyleConfig?.label?.color ? { color: tabsStyleConfig.label.color, borderColor: tabsStyleConfig.label.color } : {})
+                  }}
                   className={cn(
                     "px-4 py-2 text-[10px] font-black tracking-widest transition-all border-b-2",
-                    activeTab === tableName ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600'
+                    !tabsStyleConfig?.label?.color && activeTab === tableName ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600'
                   )}
                 >
                   {detailsTabTitles?.[modelId || ''] || displayLabel}

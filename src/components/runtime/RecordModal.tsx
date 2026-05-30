@@ -16,6 +16,7 @@ interface RecordModalProps {
   onCustomAction?: (action: any, row?: any) => void
   masterTabTitle?: string
   detailsTabTitles?: Record<string, string>
+  tabsStyleConfig?: any
   detailDisplayMode?: 'tabs' | 'sections'
   onEditDetail?: (detail: any) => void
   onDeleteDetail?: (detail: any) => void
@@ -64,7 +65,8 @@ export default function RecordModal({
   project,
   customActions = [],
   onCustomAction,
-  refreshTrigger
+  refreshTrigger,
+  tabsStyleConfig
 }: RecordModalProps) {
   return (
     <Modal 
@@ -86,6 +88,7 @@ export default function RecordModal({
         masterModelName={masterModelName}
         masterTabTitle={masterTabTitle}
         detailsTabTitles={detailsTabTitles}
+        tabsStyleConfig={tabsStyleConfig}
         detailDisplayMode={detailDisplayMode}
         onEditDetail={onEditDetail}
         onDeleteDetail={onDeleteDetail}
