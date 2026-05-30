@@ -79,6 +79,88 @@ function registerExportHandlers(channel, pgClient, oracleConnection, dbType, sec
       else if (fileType === 'json') {
         buffer = Buffer.from(JSON.stringify(rows, null, 2), 'utf-8');
       }
+      else if (fileType === 'ofx') {
+        const dtserver = new Date().toISOString().replace(/[-T:.Z]/g, '').substring(0, 14);
+        let transactionsXml = '';
+        
+        rows.forEach((row, idx) => {
+          // Identify keys dynamically
+          const amtKey = Object.keys(row).find(k => ['amount', 'valor', 'total', 'value', 'price', 'preco'].includes(k.toLowerCase()) || k.toLowerCase().includes('valor'));
+          const amt = amtKey != null ? parseFloat(row[amtKey]) || 0 : 0;
+          
+          const dateKey = Object.keys(row).find(k => ['date', 'data', 'created_at', 'timestamp'].includes(k.toLowerCase()) || k.toLowerCase().includes('data'));
+          const rawDate = dateKey != null ? row[dateKey] : new Date();
+          const parsedDate = new Date(rawDate);
+          const dateStr = !isNaN(parsedDate.getTime()) 
+            ? parsedDate.toISOString().replace(/[-T:.Z]/g, '').substring(0, 14)
+            : dtserver;
+
+          const descKey = Object.keys(row).find(k => ['description', 'descricao', 'name', 'nome', 'title', 'titulo', 'memo'].includes(k.toLowerCase()) || k.toLowerCase().includes('nome') || k.toLowerCase().includes('desc'));
+          const desc = descKey != null ? String(row[descKey]).substring(0, 32) : `Transacao ${idx + 1}`;
+          
+          const fitid = row.id || row.ID || row._key || `${dtserver}-${idx}`;
+          const trntype = amt < 0 ? 'DEBIT' : 'CREDIT';
+          
+          transactionsXml += `
+            <STMTTRN>
+              <TRNTYPE>${trntype}</TRNTYPE>
+              <DTPOSTED>${dateStr}</DTPOSTED>
+              <TRNAMT>${amt.toFixed(2)}</TRNAMT>
+              <FITID>${fitid}</FITID>
+              <NAME>${desc.replace(/[&<>"']/g, '')}</NAME>
+            </STMTTRN>`;
+        });
+
+        const ofxContent = `OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+SECURITY:NONE
+ENCODING:USASCII
+CHARSET:1252
+COMPRESSION:NONE
+OLDFILEUID:NONE
+NEWFILEUID:NONE
+
+<OFX>
+  <SIGNONMSGSRSV1>
+    <SONRS>
+      <STATUS>
+        <CODE>0</CODE>
+        <SEVERITY>INFO</SEVERITY>
+      </STATUS>
+      <DTSERVER>${dtserver}</DTSERVER>
+      <LANGUAGE>POR</LANGUAGE>
+    </SONRS>
+  </SIGNONMSGSRSV1>
+  <BANKMSGSRSV1>
+    <STMTTRNRS>
+      <TRNUID>1</TRNUID>
+      <STATUS>
+        <CODE>0</CODE>
+        <SEVERITY>INFO</SEVERITY>
+      </STATUS>
+      <STMTRS>
+        <CURDEF>BRL</CURDEF>
+        <BANKACCTFROM>
+          <BANKID>0001</BANKID>
+          <ACCTID>123456</ACCTID>
+          <ACCTTYPE>CHECKING</ACCTTYPE>
+        </BANKACCTFROM>
+        <BANKTRANLIST>
+          <DTSTART>${dtserver}</DTSTART>
+          <DTEND>${dtserver}</DTEND>${transactionsXml}
+        </BANKTRANLIST>
+        <LEDGERBAL>
+          <BALAMT>0.00</BALAMT>
+          <DTASOF>${dtserver}</DTASOF>
+        </LEDGERBAL>
+      </STMTRS>
+    </STMTTRNRS>
+  </BANKMSGSRSV1>
+</OFX>`;
+
+        buffer = Buffer.from(ofxContent, 'utf-8');
+      }
       else {
         // Fallback for unsupported formats in this quick implementation
         buffer = Buffer.from('Unsupported format on CLI', 'utf-8');

@@ -201,8 +201,9 @@ export function StudioDashboardClient({
   const [viewToEdit, setViewToEdit] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [viewToDelete, setViewToDelete] = useState<any>(null)
-
   const userViews = views?.filter(view => view.slug !== 'downloads') || []
+  const downloadsView = views?.find(view => view.slug === 'downloads')
+  const isDownloadsActive = downloadsView ? (downloadsView.layout_config?.is_active !== false) : true
 
   const refreshData = () => {
     setViewToEdit(null)
@@ -277,6 +278,24 @@ export function StudioDashboardClient({
         .eq('id', project.id)
 
       if (error) throw error
+
+      // Update downloads view layout_config in ui_views
+      const enableDownloads = data.theme_config?.enable_downloads !== false
+      const { error: viewError } = await supabase
+        .from('ui_views')
+        .upsert({
+          project_id: project.id,
+          model_id: null,
+          name: 'Central de Downloads',
+          slug: 'downloads',
+          logic_type: 'personalizado',
+          view_type: 'advanced_use_case',
+          layout_config: { is_active: enableDownloads }
+        }, { onConflict: 'project_id, slug' })
+
+      if (viewError) {
+        console.error('Error updating downloads view is_active status:', viewError)
+      }
 
       toast('Identidade visual salva com sucesso!', 'success')
       router.refresh()
@@ -465,6 +484,7 @@ export function StudioDashboardClient({
             <MenuBuilder 
               project={project}
               views={userViews}
+              isDownloadsActive={isDownloadsActive}
               onSave={handleSaveNavigation}
             />
           </div>

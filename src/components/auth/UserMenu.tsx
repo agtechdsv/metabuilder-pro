@@ -184,16 +184,18 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
               </div>
 
               <div className="p-3">
-                <Link
-                  href="/workspace"
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-300 hover:text-blue-600 dark:hover:text-white transition-all group"
-                >
-                  <div className="p-2 bg-blue-500/10 rounded-xl group-hover:bg-blue-500/20 transition-all text-blue-500">
-                    <LayoutDashboard className="w-4.5 h-4.5" />
-                  </div>
-                  <span className="text-sm font-bold">{t('common.dashboard')}</span>
-                </Link>
+                {(localProfile?.is_super_admin || localProfile?.subscription_status === 'active' || localProfile?.subscription_status === 'canceled') && (
+                  <Link
+                    href="/workspace"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-300 hover:text-blue-600 dark:hover:text-white transition-all group"
+                  >
+                    <div className="p-2 bg-blue-500/10 rounded-xl group-hover:bg-blue-500/20 transition-all text-blue-500">
+                      <LayoutDashboard className="w-4.5 h-4.5" />
+                    </div>
+                    <span className="text-sm font-bold">{t('common.dashboard')}</span>
+                  </Link>
+                )}
 
                 {localProfile?.is_super_admin && (
                   <Link
@@ -208,7 +210,7 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                   </Link>
                 )}
 
-                {!localProfile?.is_super_admin && localProfile?.plan_id && (
+                {(localProfile?.subscription_status === 'active' || localProfile?.subscription_status === 'canceled') && !localProfile?.is_super_admin && localProfile?.plan_id && (
                   <Link
                     href="/client/dashboard"
                     onClick={() => setIsOpen(false)}
@@ -221,7 +223,7 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                   </Link>
                 )}
 
-                {!localProfile?.is_super_admin && !localProfile?.plan_id && (
+                {(localProfile?.subscription_status === 'active' || localProfile?.subscription_status === 'canceled') && !localProfile?.is_super_admin && !localProfile?.plan_id && (
                   <Link
                     href="/client/dashboard?tab=community"
                     onClick={() => setIsOpen(false)}

@@ -61,8 +61,8 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
   useEffect(() => {
     const supabase = createClient()
     
-    const navigateToDashboard = () => {
-      let redirectTo = '/workspace'
+    const navigateToDashboard = async (userId: string) => {
+      let redirectTo = ''
       if (typeof window !== 'undefined') {
         const hashParams = new URLSearchParams(window.location.hash.substring(1))
         const searchParams = new URLSearchParams(window.location.search)
@@ -72,8 +72,17 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
             // Garante que pegamos só o pathname para navegação interna
             redirectTo = new URL(redirectParam).pathname
           } catch {
-            redirectTo = redirectParam.startsWith('/') ? redirectParam : '/workspace'
+            redirectTo = redirectParam.startsWith('/') ? redirectParam : ''
           }
+        }
+      }
+      if (!redirectTo) {
+        try {
+          const { getPostLoginRedirectPath } = await import('@/app/auth/actions')
+          redirectTo = await getPostLoginRedirectPath(userId)
+        } catch (err) {
+          console.error('Error getting dynamic redirect path:', err)
+          redirectTo = '/workspace'
         }
       }
       // Usar window.location.href em vez de router.push garante um "hard reload"
@@ -120,7 +129,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
         if (isInviteOrRecovery) {
           setShowSetPasswordModal(true)
         } else {
-          navigateToDashboard()
+          navigateToDashboard(user.id)
         }
       }
     })
@@ -138,7 +147,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
             if (type === 'invite' || type === 'recovery' || data.session.user?.user_metadata?.need_password_setup === true) {
               setShowSetPasswordModal(true)
             } else {
-              navigateToDashboard()
+              navigateToDashboard(data.session.user.id)
             }
           }
         })
@@ -192,7 +201,22 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
       setIsLoading(true);
       const { error } = await supabase.auth.setSession({ access_token, refresh_token });
       if (!error) {
-        window.location.href = next || '/workspace';
+        let redirectTo = next
+        if (!redirectTo || redirectTo === '/workspace') {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            try {
+              const { getPostLoginRedirectPath } = await import('@/app/auth/actions')
+              redirectTo = await getPostLoginRedirectPath(user.id)
+            } catch (err) {
+              console.error('Error in OAuth redirect:', err)
+              redirectTo = '/workspace'
+            }
+          } else {
+            redirectTo = '/workspace'
+          }
+        }
+        window.location.href = redirectTo;
       } else {
         setClientError('Erro ao processar autenticação.');
         setIsLoading(false);
@@ -269,7 +293,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
           setClientError(res.error)
           setIsLoading(false)
         } else {
-          let redirectTo = '/workspace'
+          let redirectTo = ''
           if (typeof window !== 'undefined') {
             const hashParams = new URLSearchParams(window.location.hash.substring(1))
             const searchParams = new URLSearchParams(window.location.search)
@@ -278,8 +302,18 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
               try {
                 redirectTo = new URL(redirectParam).pathname
               } catch {
-                redirectTo = redirectParam.startsWith('/') ? redirectParam : '/workspace'
+                redirectTo = redirectParam.startsWith('/') ? redirectParam : ''
               }
+            }
+          }
+          if (!redirectTo) {
+            const supabase = createClient()
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+              const { getPostLoginRedirectPath } = await import('@/app/auth/actions')
+              redirectTo = await getPostLoginRedirectPath(user.id)
+            } else {
+              redirectTo = '/workspace'
             }
           }
           window.location.href = redirectTo
@@ -294,7 +328,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
           const { data: { session } } = await supabase.auth.getSession()
           
           if (session) {
-            let redirectTo = '/workspace'
+            let redirectTo = ''
             if (typeof window !== 'undefined') {
               const hashParams = new URLSearchParams(window.location.hash.substring(1))
               const searchParams = new URLSearchParams(window.location.search)
@@ -303,9 +337,13 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
                 try {
                   redirectTo = new URL(redirectParam).pathname
                 } catch {
-                  redirectTo = redirectParam.startsWith('/') ? redirectParam : '/workspace'
+                  redirectTo = redirectParam.startsWith('/') ? redirectParam : ''
                 }
               }
+            }
+            if (!redirectTo) {
+              const { getPostLoginRedirectPath } = await import('@/app/auth/actions')
+              redirectTo = await getPostLoginRedirectPath(session.user.id)
             }
             window.location.href = redirectTo
           } else {

@@ -299,9 +299,9 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
       return () => clearTimeout(timer)
     } else if (checkoutStep === 'success' && countdown === 0) {
-      router.push(`/admin/${successWorkspaceSlug}`)
+      router.push('/client/dashboard')
     }
-  }, [checkoutStep, countdown, successWorkspaceSlug, router])
+  }, [checkoutStep, countdown, router])
 
   const featuresList = selectedPlan
     ? (Array.isArray(selectedPlan.features)
@@ -334,7 +334,7 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
         </div>
 
         <div className="p-5 bg-neutral-50 dark:bg-neutral-950/60 rounded-2xl border border-neutral-100 dark:border-neutral-800/80 text-left text-xs text-neutral-600 dark:text-neutral-300 space-y-2">
-          <p><strong>Ambiente de Trabalho:</strong> /admin/{successWorkspaceSlug}</p>
+          <p><strong>Ambiente de Trabalho:</strong> /client/dashboard</p>
           <p>
             <strong>Valor Contratado:</strong> R${' '}
             {selectedPlan
@@ -350,7 +350,7 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
             Redirecionando em <span className="font-bold text-indigo-500">{countdown}s</span> para o painel de controle...
           </p>
           <button
-            onClick={() => router.push(`/admin/${successWorkspaceSlug}`)}
+            onClick={() => router.push('/client/dashboard')}
             className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/25 active:scale-[0.98]"
           >
             Acessar Painel Agora <ArrowRight className="w-4 h-4" />

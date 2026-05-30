@@ -138,6 +138,103 @@ interface RecordFormProps {
   project?: any
 }
 
+const getActionColorClasses = (color: string) => {
+  const normalized = color?.toLowerCase() || 'indigo'
+  switch (normalized) {
+    case 'emerald':
+      return {
+        text: 'text-emerald-650 dark:text-emerald-400',
+        bg: 'bg-emerald-50 dark:bg-emerald-950/30',
+        border: 'border-emerald-200 dark:border-emerald-800/50',
+        hover: 'hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-300'
+      }
+    case 'amber':
+      return {
+        text: 'text-amber-650 dark:text-amber-400',
+        bg: 'bg-amber-50 dark:bg-amber-950/30',
+        border: 'border-amber-200 dark:border-amber-800/50',
+        hover: 'hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-700 dark:hover:text-amber-305'
+      }
+    case 'red':
+      return {
+        text: 'text-red-655 dark:text-red-405',
+        bg: 'bg-red-50 dark:bg-red-950/30',
+        border: 'border-red-200 dark:border-red-800/50',
+        hover: 'hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-700 dark:hover:text-red-305'
+      }
+    case 'blue':
+      return {
+        text: 'text-blue-600 dark:text-blue-400',
+        bg: 'bg-blue-50 dark:bg-blue-950/30',
+        border: 'border-blue-200 dark:border-blue-800/50',
+        hover: 'hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-350'
+      }
+    case 'violet':
+      return {
+        text: 'text-violet-650 dark:text-violet-400',
+        bg: 'bg-violet-50 dark:bg-violet-950/30',
+        border: 'border-violet-200 dark:border-violet-800/50',
+        hover: 'hover:bg-violet-100 dark:hover:bg-violet-900/30 hover:text-violet-700 dark:hover:text-violet-305'
+      }
+    case 'pink':
+      return {
+        text: 'text-pink-655 dark:text-pink-400',
+        bg: 'bg-pink-50 dark:bg-pink-950/30',
+        border: 'border-pink-200 dark:border-pink-800/50',
+        hover: 'hover:bg-pink-100 dark:hover:bg-pink-900/30 hover:text-pink-700 dark:hover:text-pink-305'
+      }
+    case 'rose':
+      return {
+        text: 'text-rose-600 dark:text-rose-400',
+        bg: 'bg-rose-50 dark:bg-rose-950/30',
+        border: 'border-rose-200 dark:border-rose-800/50',
+        hover: 'hover:bg-rose-100 dark:hover:bg-rose-900/30 hover:text-rose-700 dark:hover:text-rose-350'
+      }
+    case 'neutral':
+    case 'gray':
+      return {
+        text: 'text-neutral-600 dark:text-neutral-400',
+        bg: 'bg-neutral-50 dark:bg-neutral-950/30',
+        border: 'border-neutral-200 dark:border-neutral-800/50',
+        hover: 'hover:bg-neutral-100 dark:hover:bg-neutral-900/30 hover:text-neutral-700 dark:hover:text-neutral-300'
+      }
+    case 'indigo':
+    default:
+      return {
+        text: 'text-indigo-650 dark:text-indigo-400',
+        bg: 'bg-indigo-50 dark:bg-indigo-950/30',
+        border: 'border-indigo-200 dark:border-indigo-800/50',
+        hover: 'hover:bg-indigo-100 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-305'
+      }
+  }
+}
+
+const getBulkActionClasses = (color: string) => {
+  const normalized = color?.toLowerCase() || 'indigo'
+  switch (normalized) {
+    case 'emerald':
+      return 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20'
+    case 'amber':
+      return 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-500/20'
+    case 'red':
+      return 'bg-red-655 hover:bg-red-500 text-white shadow-red-500/20'
+    case 'blue':
+      return 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20'
+    case 'violet':
+      return 'bg-violet-600 hover:bg-violet-500 text-white shadow-violet-500/20'
+    case 'pink':
+      return 'bg-pink-655 hover:bg-pink-500 text-white shadow-pink-500/20'
+    case 'rose':
+      return 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-500/20'
+    case 'neutral':
+    case 'gray':
+      return 'bg-neutral-600 hover:bg-neutral-500 text-white shadow-neutral-500/20'
+    case 'indigo':
+    default:
+      return 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20'
+  }
+}
+
 export default function RecordForm({
   mode,
   fields,
@@ -780,17 +877,24 @@ export default function RecordForm({
             )}
           </div>
 
-          {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('detail_top')).map(action => (
-            <button
-              key={action.id}
-              type="button"
-              onClick={() => onCustomAction?.(action, formData)}
-              className={`p-1.5 bg-${action.color}-50 dark:bg-${action.color}-900/30 text-${action.color}-600 dark:text-${action.color}-400 rounded-lg hover:bg-${action.color}-100 dark:hover:bg-${action.color}-900/50 transition-colors shadow-sm`}
-              title={action.label}
-            >
-              {getActionIcon(action.icon, "w-4 h-4")}
-            </button>
-          ))}
+          {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('detail_top')).map(action => {
+            const colors = getActionColorClasses(action.color)
+            return (
+              <button
+                key={action.id}
+                type="button"
+                onClick={() => onCustomAction?.(action, formData)}
+                className={cn(
+                  "p-1.5 rounded-lg border transition-all shadow-sm bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700",
+                  colors.text,
+                  colors.hover
+                )}
+                title={action.label}
+              >
+                {getActionIcon(action.icon, "w-4 h-4")}
+              </button>
+            )
+          })}
           <button
             type="button"
             onClick={() => onAddDetail?.(tableName, parentData.id || parentData.ID)}
@@ -865,17 +969,24 @@ export default function RecordForm({
                           }
                         </button>
                       )}
-                      {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('detail_row')).map(action => (
-                        <button
-                          key={action.id}
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, detail); }}
-                          className={`p-1.5 bg-${action.color}-50 dark:bg-${action.color}-900/20 rounded-lg text-${action.color}-500 hover:text-${action.color}-600 hover:bg-${action.color}-100 dark:hover:bg-${action.color}-900/40 shadow-sm transition-all`}
-                          title={action.label}
-                        >
-                          {getActionIcon(action.icon, "w-3.5 h-3.5")}
-                        </button>
-                      ))}
+                      {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('detail_row')).map(action => {
+                        const colors = getActionColorClasses(action.color)
+                        return (
+                          <button
+                            key={action.id}
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, detail); }}
+                            className={cn(
+                              "p-1.5 rounded-lg border transition-all shadow-sm bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700",
+                              colors.text,
+                              colors.hover
+                            )}
+                            title={action.label}
+                          >
+                            {getActionIcon(action.icon, "w-3.5 h-3.5")}
+                          </button>
+                        )
+                      })}
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); onEditDetail?.(detail); }}
@@ -1075,7 +1186,10 @@ export default function RecordForm({
               key={action.id}
               onClick={() => onCustomAction?.(action, formData)}
               type="button"
-              className={`flex items-center gap-2 px-4 py-2 bg-${action.color}-600 hover:bg-${action.color}-500 text-white rounded-xl font-bold text-xs capitalize tracking-wider transition-all shadow-lg shadow-${action.color}-500/20`}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs capitalize tracking-wider transition-all shadow-lg",
+                getBulkActionClasses(action.color)
+              )}
             >
               {getActionIcon(action.icon)}
               {action.label}

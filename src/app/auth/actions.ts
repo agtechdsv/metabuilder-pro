@@ -218,3 +218,60 @@ export async function signOut() {
   await supabase.auth.signOut()
   redirect('/')
 }
+
+export async function getPostLoginRedirectPath(userId: string): Promise<string> {
+  const supabase = await createClient()
+
+  try {
+    // 1. Fetch profile to check if is_super_admin or has plan_id status
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_super_admin, plan_id, subscription_status')
+      .eq('id', userId)
+      .single()
+
+    if (profile?.is_super_admin) {
+      return '/admin/platform'
+    }
+
+    // 2. Check if they are a guest (in owner_guests)
+    const { data: guestRecord } = await supabase
+      .from('owner_guests')
+      .select('access_level')
+      .eq('user_id', userId)
+      .limit(1)
+      .maybeSingle()
+
+    if (guestRecord) {
+      if (guestRecord.access_level === 'global') {
+        return '/workspace'
+      } else {
+        // access_level === 'granular'
+        const { data: memberships } = await supabase
+          .from('workspace_members')
+          .select('workspace_id, workspaces(slug)')
+          .eq('user_id', userId)
+
+        const validMemberships = memberships?.filter((m: any) => m.workspaces?.slug) || []
+
+        if (validMemberships.length === 1) {
+          const slug = (validMemberships[0]?.workspaces as any)?.slug
+          if (slug) {
+            return `/admin/${slug}`
+          }
+        }
+        return '/workspace'
+      }
+    }
+
+    // 3. User is an Owner (not super admin, not guest)
+    if (profile?.plan_id && profile?.subscription_status === 'active') {
+      return '/client/dashboard'
+    }
+  } catch (err) {
+    console.error('Error determining post-login redirect path:', err)
+  }
+
+  return '/checkout'
+}
+

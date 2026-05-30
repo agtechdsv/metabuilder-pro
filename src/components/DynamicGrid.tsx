@@ -15,6 +15,77 @@ interface DynamicGridProps {
   relationalOptions?: Record<string, any[]>
 }
 
+const getActionColorClasses = (color: string) => {
+  const normalized = color?.toLowerCase() || 'indigo'
+  switch (normalized) {
+    case 'emerald':
+      return {
+        text: 'text-emerald-600 dark:text-emerald-400',
+        bg: 'bg-emerald-50 dark:bg-emerald-950/30',
+        border: 'border-emerald-200 dark:border-emerald-800/50',
+        hover: 'hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-300'
+      }
+    case 'amber':
+      return {
+        text: 'text-amber-650 dark:text-amber-400',
+        bg: 'bg-amber-50 dark:bg-amber-950/30',
+        border: 'border-amber-200 dark:border-amber-800/50',
+        hover: 'hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-700 dark:hover:text-amber-305'
+      }
+    case 'red':
+      return {
+        text: 'text-red-655 dark:text-red-405',
+        bg: 'bg-red-50 dark:bg-red-950/30',
+        border: 'border-red-200 dark:border-red-800/50',
+        hover: 'hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-700 dark:hover:text-red-305'
+      }
+    case 'blue':
+      return {
+        text: 'text-blue-600 dark:text-blue-400',
+        bg: 'bg-blue-50 dark:bg-blue-950/30',
+        border: 'border-blue-200 dark:border-blue-800/50',
+        hover: 'hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-350'
+      }
+    case 'violet':
+      return {
+        text: 'text-violet-650 dark:text-violet-400',
+        bg: 'bg-violet-50 dark:bg-violet-950/30',
+        border: 'border-violet-200 dark:border-violet-800/50',
+        hover: 'hover:bg-violet-100 dark:hover:bg-violet-900/30 hover:text-violet-700 dark:hover:text-violet-305'
+      }
+    case 'pink':
+      return {
+        text: 'text-pink-655 dark:text-pink-400',
+        bg: 'bg-pink-50 dark:bg-pink-950/30',
+        border: 'border-pink-200 dark:border-pink-800/50',
+        hover: 'hover:bg-pink-100 dark:hover:bg-pink-900/30 hover:text-pink-700 dark:hover:text-pink-305'
+      }
+    case 'rose':
+      return {
+        text: 'text-rose-600 dark:text-rose-400',
+        bg: 'bg-rose-50 dark:bg-rose-950/30',
+        border: 'border-rose-200 dark:border-rose-800/50',
+        hover: 'hover:bg-rose-100 dark:hover:bg-rose-900/30 hover:text-rose-700 dark:hover:text-rose-350'
+      }
+    case 'neutral':
+    case 'gray':
+      return {
+        text: 'text-neutral-600 dark:text-neutral-400',
+        bg: 'bg-neutral-50 dark:bg-neutral-950/30',
+        border: 'border-neutral-200 dark:border-neutral-800/50',
+        hover: 'hover:bg-neutral-100 dark:hover:bg-neutral-900/30 hover:text-neutral-700 dark:hover:text-neutral-300'
+      }
+    case 'indigo':
+    default:
+      return {
+        text: 'text-indigo-650 dark:text-indigo-400',
+        bg: 'bg-indigo-50 dark:bg-indigo-950/30',
+        border: 'border-indigo-200 dark:border-indigo-800/50',
+        hover: 'hover:bg-indigo-100 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-305'
+      }
+  }
+}
+
 export default function DynamicGrid({ 
   fields, 
   data, 
@@ -176,19 +247,26 @@ export default function DynamicGrid({
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               )}
-              {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('row')).map(action => (
-                <button
-                  key={action.id}
-                  title={action.label}
-                  onClick={() => onCustomAction?.(action, row)}
-                  className={`p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-${action.color}-600 dark:text-${action.color}-400 border border-neutral-200 dark:border-neutral-700 hover:bg-${action.color}-50 dark:hover:bg-${action.color}-900/30 transition-all active:scale-90 shadow-sm`}
-                >
-                  {action.icon === 'Zap' && <Zap className="w-3.5 h-3.5" />}
-                  {action.icon === 'Link' && <Link className="w-3.5 h-3.5" />}
-                  {action.icon === 'Database' && <Database className="w-3.5 h-3.5" />}
-                  {action.icon === 'Globe' && <Globe className="w-3.5 h-3.5" />}
-                </button>
-              ))}
+              {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('row')).map(action => {
+                const colors = getActionColorClasses(action.color)
+                return (
+                  <button
+                    key={action.id}
+                    title={action.label}
+                    onClick={() => onCustomAction?.(action, row)}
+                    className={cn(
+                      "p-1.5 rounded-lg border transition-all active:scale-90 shadow-sm bg-white dark:bg-neutral-850 border-neutral-200 dark:border-neutral-700",
+                      colors.text,
+                      colors.hover
+                    )}
+                  >
+                    {action.icon === 'Zap' && <Zap className="w-3.5 h-3.5" />}
+                    {action.icon === 'Link' && <Link className="w-3.5 h-3.5" />}
+                    {action.icon === 'Database' && <Database className="w-3.5 h-3.5" />}
+                    {action.icon === 'Globe' && <Globe className="w-3.5 h-3.5" />}
+                  </button>
+                )
+              })}
             </div>
           </td>
         </tr>

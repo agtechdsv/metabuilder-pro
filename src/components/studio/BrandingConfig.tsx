@@ -16,7 +16,11 @@ export function BrandingConfig({ project, onSave }: BrandingConfigProps) {
   const [description, setDescription] = useState(project.description || '')
   const [icon, setIcon] = useState(project.icon || 'Box')
   const [showIconPicker, setShowIconPicker] = useState(false)
-  const [enableDownloads, setEnableDownloads] = useState(project.theme_config?.enable_downloads !== false)
+  const [enableDownloads, setEnableDownloads] = useState(
+    project.theme_config?.enable_downloads === undefined
+      ? true
+      : project.theme_config.enable_downloads !== false
+  )
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = async () => {

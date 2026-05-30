@@ -60,24 +60,6 @@ export function ExportDropdown({
   const handleExport = async (fileType: 'xlsx' | 'csv' | 'json' | 'pdf' | 'ofx') => {
     setIsOpen(false)
 
-    // LOCAL JSON EXPORT (Full Tree) when editing a record
-    if (selectedRecord && fileType === 'json') {
-      try {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selectedRecord, null, 2))
-        const downloadAnchorNode = document.createElement('a')
-        downloadAnchorNode.setAttribute("href", dataStr)
-        const cleanName = viewName.toLowerCase().replace(/[^a-z0-9]/g, '_')
-        const recId = selectedRecord.id || selectedRecord.ID || 'record'
-        downloadAnchorNode.setAttribute("download", `${cleanName}_${recId}.json`)
-        document.body.appendChild(downloadAnchorNode)
-        downloadAnchorNode.click()
-        downloadAnchorNode.remove()
-        toast('Árvore JSON do registro exportada com sucesso!', 'success')
-      } catch (err) {
-        toast('Erro ao exportar JSON da árvore de dados.', 'error')
-      }
-      return
-    }
 
     setIsInitializing(true)
 

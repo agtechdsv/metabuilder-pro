@@ -20,6 +20,11 @@ export default async function ClientDashboardPage() {
     .eq('id', user.id)
     .single()
 
+  // Check active subscription status for non-super-admin
+  if (profile && !profile.is_super_admin && profile.subscription_status !== 'active' && profile.subscription_status !== 'canceled') {
+    redirect('/checkout')
+  }
+
   // Fetch the user's subscription plan
   let plan = null
   if (profile?.plan_id) {
@@ -110,6 +115,13 @@ export default async function ClientDashboardPage() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
+  // Fetch owner guests to get accurate license counts (global and granular)
+  const { data: ownerGuests } = await supabase
+    .from('owner_guests')
+    .select('id, user_id, access_level')
+    .eq('owner_id', user.id)
+  const ownerGuestsData = ownerGuests || []
+
   return (
     <div className="min-h-screen flex flex-col pt-16 bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300">
       <Navbar user={user} profile={profile} />
@@ -127,6 +139,7 @@ export default async function ClientDashboardPage() {
           profiles={profilesData}
           payments={payments || []}
           activityLogs={activityLogsData}
+          ownerGuests={ownerGuestsData}
         />
       </main>
 

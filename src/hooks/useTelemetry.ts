@@ -65,7 +65,7 @@ export function useTelemetry({
   }, [userId, logAction])
 
   // The Heartbeat
-  const flush = useCallback(async () => {
+  const flush = useCallback(async (overrideUiViewId?: string) => {
     if (eventsBufferRef.current.length === 0 || !userId || !workspaceId || !projectId) return
 
     const now = new Date()
@@ -76,11 +76,13 @@ export function useTelemetry({
        lastActiveRef.current = now
     }
 
+    const finalUiViewId = overrideUiViewId || uiViewId || null
+
     const payload = {
       workspace_id: workspaceId,
       project_id: projectId,
       user_id: userId,
-      ui_view_id: uiViewId || null,
+      ui_view_id: finalUiViewId,
       session_start: sessionStartRef.current.toISOString(),
       session_end: now.toISOString(),
       active_time_seconds: Math.floor(activeTimeSecondsRef.current),
@@ -97,7 +99,8 @@ export function useTelemetry({
             session_end: payload.session_end,
             active_time_seconds: payload.active_time_seconds,
             actions_count: payload.actions_count,
-            events: payload.events
+            events: payload.events,
+            ui_view_id: payload.ui_view_id
           })
           .eq('id', logIdRef.current)
           

@@ -37,7 +37,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
-import { savePlan, deletePlan, toggleWorkspaceBlock } from '@/app/actions/admin'
+import { savePlan, deletePlan, toggleWorkspaceBlock, deleteClientAdmin } from '@/app/actions/admin'
 import { Modal } from '@/components/ui/Modal'
 import {
   getAllAppointments,
@@ -139,6 +139,7 @@ interface PlatformAdminClientProps {
   currentUserEmail: string
   payments: Payment[]
   workspaceMembers: WorkspaceMember[]
+  ownerGuests: any[]
 }
 
 export default function PlatformAdminClient({
@@ -147,7 +148,8 @@ export default function PlatformAdminClient({
   profiles,
   currentUserEmail,
   payments,
-  workspaceMembers
+  workspaceMembers,
+  ownerGuests = []
 }: PlatformAdminClientProps) {
   const { toast } = useToast()
 
@@ -613,6 +615,10 @@ Nos vemos em breve!`
   const [workspaceToBlock, setWorkspaceToBlock] = useState<{ id: string, isBlocked: boolean, name: string } | null>(null)
   const [isBlockingWorkspace, setIsBlockingWorkspace] = useState(false)
 
+  const [isDeleteClientModalOpen, setIsDeleteClientModalOpen] = useState(false)
+  const [clientToDelete, setClientToDelete] = useState<{ id: string, name: string, ownerName: string, ownerId: string, ownerEmail: string } | null>(null)
+  const [isDeletingClient, setIsDeletingClient] = useState(false)
+
   // Map workspace with profile and plan
   const mappedWorkspaces = useMemo(() => {
     return workspaces.map(w => {
@@ -680,7 +686,11 @@ Nos vemos em breve!`
         }
       }
 
-      const guestCount = workspaceMembers.filter(m => m.workspace_id === w.id && m.user_id !== w.owner_id).length
+      const uniqueGuests = new Set<string>()
+      workspaceMembers.filter(m => m.workspace_id === w.id && m.user_id !== w.owner_id).forEach(m => uniqueGuests.add(m.user_id))
+      ownerGuests.filter(g => g.owner_id === w.owner_id && g.access_level === 'global').forEach(g => uniqueGuests.add(g.user_id))
+
+      const guestCount = uniqueGuests.size
 
       return {
         ...w,
@@ -694,7 +704,7 @@ Nos vemos em breve!`
         guestCount
       }
     })
-  }, [workspaces, profiles, plans, payments, workspaceMembers])
+  }, [workspaces, profiles, plans, payments, workspaceMembers, ownerGuests])
 
   // Filtered workspaces and payments for dashboard calculations
   const filteredDashboardData = useMemo(() => {
@@ -796,15 +806,16 @@ Nos vemos em breve!`
 
     // "Usuários Ativos" agora conta donos únicos + convidados ativos (que existem na tabela profiles)
     const activeUserIds = new Set<string>()
-    filteredWorkspaces.forEach(w => activeUserIds.add(w.owner_id))
-
-    const filteredWorkspaceIds = new Set(filteredWorkspaces.map(w => w.id))
-    workspaceMembers.forEach(m => {
-      if (filteredWorkspaceIds.has(m.workspace_id)) {
-        if (profiles.some(p => p.id === m.user_id)) {
-          activeUserIds.add(m.user_id)
+    filteredWorkspaces.forEach(w => {
+      activeUserIds.add(w.owner_id)
+      
+      // Find all guests of this owner (global and granular)
+      const clientGuests = ownerGuests.filter(g => g.owner_id === w.owner_id)
+      clientGuests.forEach(g => {
+        if (profiles.some(p => p.id === g.user_id)) {
+          activeUserIds.add(g.user_id)
         }
-      }
+      })
     })
     const totalUsers = activeUserIds.size
 
@@ -988,6 +999,28 @@ Nos vemos em breve!`
       setWorkspaceToBlock(null)
     } else {
       toast(result.error || `Erro ao ${actionLabel} o workspace.`, 'error')
+    }
+  }
+
+  // Delete Client Handler (Trigger Modal)
+  const handleDeleteClient = (workspaceId: string, wsName: string, ownerName: string, ownerId: string, ownerEmail: string) => {
+    setClientToDelete({ id: workspaceId, name: wsName, ownerName, ownerId, ownerEmail })
+    setIsDeleteClientModalOpen(true)
+  }
+
+  // Delete Client Action (Confirm from Modal)
+  const handleConfirmDeleteClient = async () => {
+    if (!clientToDelete) return
+    setIsDeletingClient(true)
+    const result = await deleteClientAdmin(clientToDelete.ownerId)
+    setIsDeletingClient(false)
+    if (result.success) {
+      toast(`Cliente "${clientToDelete.ownerName}" (${clientToDelete.name}) excluído com sucesso.`, 'success')
+      setWorkspaces(prev => prev.filter(w => w.owner_id !== clientToDelete.ownerId))
+      setIsDeleteClientModalOpen(false)
+      setClientToDelete(null)
+    } else {
+      toast(result.error || 'Erro ao excluir o cliente.', 'error')
     }
   }
 
@@ -1192,7 +1225,7 @@ Nos vemos em breve!`
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
           {/* Left Tabs Group */}
           <div className="flex flex-wrap gap-1.5 bg-neutral-100 dark:bg-neutral-950 p-1.5 rounded-2xl border border-neutral-200/50 dark:border-neutral-850/80 w-fit">
-            {(['dashboard', 'plans', 'clients', 'agenda'] as const).map(tab => {
+            {(['dashboard', 'clients', 'agenda', 'plans'] as const).map(tab => {
               const config = TAB_CONFIG[tab]
               const Icon = config.icon
               return (
@@ -1215,7 +1248,7 @@ Nos vemos em breve!`
 
           {/* Right Tabs Group */}
           <div className="flex flex-wrap gap-1.5 bg-neutral-100 dark:bg-neutral-950 p-1.5 rounded-2xl border border-neutral-200/50 dark:border-neutral-850/80 w-fit">
-            {(['iclub', 'community', 'metavoice'] as const).map(tab => {
+            {(['community', 'metavoice', 'iclub'] as const).map(tab => {
               const config = TAB_CONFIG[tab]
               const Icon = config.icon
               return (
@@ -1708,25 +1741,35 @@ Nos vemos em breve!`
                             </span>
                           </td>
                           <td className="px-6 py-4.5 text-right">
-                            {ws.is_blocked ? (
+                            <div className="flex items-center justify-end gap-2">
+                              {ws.is_blocked ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleBlock(ws.id, false, ws.name)}
+                                  className="px-3 py-1.5 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 shrink-0"
+                                >
+                                  <Unlock className="w-3.5 h-3.5" />
+                                  <span>Ativar</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleBlock(ws.id, true, ws.name)}
+                                  className="px-3 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 shrink-0"
+                                >
+                                  <Lock className="w-3.5 h-3.5" />
+                                  <span>Bloquear</span>
+                                </button>
+                              )}
                               <button
                                 type="button"
-                                onClick={() => handleToggleBlock(ws.id, false, ws.name)}
-                                className="px-3 py-1.5 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 ml-auto"
+                                onClick={() => handleDeleteClient(ws.id, ws.name, ws.ownerName, ws.owner_id, ws.ownerEmail)}
+                                className="px-3 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 shrink-0"
                               >
-                                <Unlock className="w-3.5 h-3.5" />
-                                <span>Ativar</span>
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Excluir</span>
                               </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleToggleBlock(ws.id, true, ws.name)}
-                                className="px-3 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 ml-auto"
-                              >
-                                <Lock className="w-3.5 h-3.5" />
-                                <span>Bloquear</span>
-                              </button>
-                            )}
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -3019,6 +3062,66 @@ Nos vemos em breve!`
               className="h-10 px-6 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md shadow-red-500/20 flex items-center gap-2"
             >
               {isDeletingRule ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Excluindo...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  <span>Confirmar Exclusão</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Confirm Delete Client Modal */}
+      <Modal
+        isOpen={isDeleteClientModalOpen}
+        onClose={() => {
+          if (!isDeletingClient) {
+            setIsDeleteClientModalOpen(false)
+            setClientToDelete(null)
+          }
+        }}
+        title="Excluir Geral o Cliente"
+        description="Esta ação removerá permanentemente o cliente, seu usuário de acesso, workspaces e todos os dados associados."
+        size="md"
+      >
+        <div className="space-y-6">
+          <div className="flex items-center gap-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-650 dark:text-red-400">
+            <div className="p-2.5 bg-red-500/20 rounded-xl">
+              <AlertTriangle className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <p className="text-sm font-black">Você tem certeza absoluta?</p>
+              <p className="text-xs opacity-90 mt-0.5">
+                Esta ação é <span className="font-bold">irreversível</span>. O cliente <span className="font-bold">"{clientToDelete?.ownerName}"</span> ({clientToDelete?.ownerEmail}) e todas as suas informações de workspaces serão apagadas para sempre.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              disabled={isDeletingClient}
+              onClick={() => {
+                setIsDeleteClientModalOpen(false)
+                setClientToDelete(null)
+              }}
+              className="h-10 px-5 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 font-bold text-xs uppercase tracking-widest border border-neutral-200 dark:border-neutral-750 rounded-xl transition-all"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={isDeletingClient}
+              onClick={handleConfirmDeleteClient}
+              className="h-10 px-6 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md shadow-red-500/20 flex items-center gap-2"
+            >
+              {isDeletingClient ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Excluindo...</span>

@@ -156,32 +156,25 @@ export default function AuthSettingsPage() {
           // Verifica se "Central de Downloads" com o slug "downloads" já existe
           const hasDownloads = dbViews.some(v => v.slug === 'downloads')
           if (!hasDownloads) {
-            // Obtém um model_id dummy do projeto para satisfazer a constraint NOT NULL
-            const dummyModelId = modelsData && modelsData.length > 0 ? modelsData[0].id : null
-
-            if (dummyModelId) {
-              // Cria a view "Central de Downloads" automaticamente para o projeto
-              const { data: newView, error: insertError } = await supabase
-                .from('ui_views')
-                .insert({
-                  project_id: proj.id,
-                  model_id: dummyModelId,
-                  name: 'Central de Downloads',
-                  slug: 'downloads',
-                  logic_type: 'personalizado',
-                  view_type: 'advanced_use_case',
-                  layout_config: { is_active: true }
-                })
-                .select('id, name, slug')
-                .single()
-              
-              if (newView && !insertError) {
-                viewsData.push(newView)
-              } else if (insertError) {
-                console.error("Error inserting default downloads view:", insertError)
-              }
-            } else {
-              console.warn("Cannot insert default downloads view because project has no models/tables yet.")
+            // Cria a view "Central de Downloads" automaticamente para o projeto
+            const { data: newView, error: insertError } = await supabase
+              .from('ui_views')
+              .upsert({
+                project_id: proj.id,
+                model_id: null,
+                name: 'Central de Downloads',
+                slug: 'downloads',
+                logic_type: 'personalizado',
+                view_type: 'advanced_use_case',
+                layout_config: { is_active: true }
+              }, { onConflict: 'project_id, slug' })
+              .select('id, name, slug')
+              .single()
+            
+            if (newView && !insertError) {
+              viewsData.push(newView)
+            } else if (insertError) {
+              console.error("Error inserting default downloads view:", insertError)
             }
           }
         }

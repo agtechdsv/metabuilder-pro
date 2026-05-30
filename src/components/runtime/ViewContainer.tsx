@@ -72,6 +72,32 @@ const setCachedData = (key: string, data: any[]) => {
   sessionStorage.setItem(`metabuilder_cache_${key}`, JSON.stringify(data))
 }
 
+const getBulkActionClasses = (color: string) => {
+  const normalized = color?.toLowerCase() || 'indigo'
+  switch (normalized) {
+    case 'emerald':
+      return 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20'
+    case 'amber':
+      return 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-500/20'
+    case 'red':
+      return 'bg-red-655 hover:bg-red-500 text-white shadow-red-500/20'
+    case 'blue':
+      return 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20'
+    case 'violet':
+      return 'bg-violet-600 hover:bg-violet-500 text-white shadow-violet-500/20'
+    case 'pink':
+      return 'bg-pink-655 hover:bg-pink-500 text-white shadow-pink-500/20'
+    case 'rose':
+      return 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-500/20'
+    case 'neutral':
+    case 'gray':
+      return 'bg-neutral-600 hover:bg-neutral-500 text-white shadow-neutral-500/20'
+    case 'indigo':
+    default:
+      return 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20'
+  }
+}
+
 export default function ViewContainer({ 
   projectId, 
   modelName, 
@@ -1057,7 +1083,10 @@ export default function ViewContainer({
             <button
               key={action.id}
               onClick={() => handleCustomAction(action)}
-              className={`flex items-center gap-2 px-4 py-2 bg-${action.color}-600 hover:bg-${action.color}-500 text-white rounded-xl font-bold text-xs capitalize tracking-wider transition-all shadow-lg shadow-${action.color}-500/20`}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs capitalize tracking-wider transition-all shadow-lg",
+                getBulkActionClasses(action.color)
+              )}
             >
               {action.icon === 'Zap' && <Zap className="w-3.5 h-3.5" />}
               {action.icon === 'Link' && <Link className="w-3.5 h-3.5" />}

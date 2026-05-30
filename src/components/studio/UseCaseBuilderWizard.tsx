@@ -1,7 +1,7 @@
 'use client'
 // Refined UseCaseBuilderWizard - Metadata Driven Actions Order
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   ArrowLeft,
   Save,
@@ -102,7 +102,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string>()
 
   // Telemetria (Heartbeat de Produtividade)
-  const { logAction } = useTelemetry({
+  const { logAction, flush } = useTelemetry({
     workspaceId: currentWorkspaceId,
     projectId: currentProjectId,
     uiViewId: initialData?.id
@@ -128,6 +128,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       
       if (error) throw error
       setCurrentStatus(newStatus)
+      flushTextChanges()
       logAction('LIFECYCLE', newStatus === 'delivered' ? 'Entregou o Caso de Uso' : 'Reabriu o Caso de Uso')
       toast(`Caso de Uso ${newStatus === 'delivered' ? 'entregue' : 'reaberto'} com sucesso!`, 'success')
       onSaveSuccess()
@@ -138,14 +139,29 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     }
   }
 
+  // Ref e Timeout para debounce dos campos de texto (name, slug, custom_query) e propriedades do Drawer (fields_metadata)
+  const textChangesRef = useRef<{name?: string, slug?: string, custom_query?: string, fields_metadata?: boolean}>({})
+  const textTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const flushTextChanges = useCallback(() => {
+    if (textTimeoutRef.current) {
+      clearTimeout(textTimeoutRef.current)
+      textTimeoutRef.current = null
+    }
+    if (textChangesRef.current.name) logAction('CONFIG_CHANGE', `Renomeou o caso de uso para "${textChangesRef.current.name}"`)
+    if (textChangesRef.current.slug) logAction('CONFIG_CHANGE', `Alterou o slug para "${textChangesRef.current.slug}"`)
+    if (textChangesRef.current.custom_query) logAction('CONFIG_CHANGE', 'Editou a query SQL customizada')
+    if (textChangesRef.current.fields_metadata) logAction('CONFIG_CHANGE', 'Alterou as propriedades de um campo (Etapa 3 (Campos & Layout))')
+    textChangesRef.current = {}
+  }, [logAction])
+
   // Telemetria Automática (Hook de Mudança de Estado)
   useEffect(() => {
     if (currentStep && currentStep > 1) {
+      flushTextChanges()
       logAction('NAVIGATION', `Avançou para Etapa ${currentStep}`)
     }
-  }, [currentStep, logAction])
-
-  // Lógica de debounce para config movida para baixo
+  }, [currentStep, logAction, flushTextChanges])
 
   // Configuração da View sendo criada
   const [config, setConfig] = useState({
@@ -232,81 +248,111 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   // Popula os dados iniciais se estiver em modo edição
   const [isInitialized, setIsInitialized] = useState(false)
 
+  // Se for criação de novo caso de uso, inicializa imediatamente para habilitar logs de telemetria
+  useEffect(() => {
+    if (!initialData) {
+      setIsInitialized(true)
+    }
+  }, [initialData])
+
   // Ref para guardar o estado anterior do config para o diff
   const prevConfigRef = useRef<typeof config | null>(null)
-
-  // Lógica de debounce com DIFF SEMÂNTICO para "Dar nome aos bois"
+  
+  // Lógica de diff síncrona para "Dar nome aos bois" sem perder a ordem sequencial das ações
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!isInitialized) return
+    if (!isInitialized) return
 
-      const prev = prevConfigRef.current
-      const curr = config
-      const stepNames: Record<number, string> = { 1: 'Etapa 1 (Lógica)', 2: 'Etapa 2 (Tabelas)', 3: 'Etapa 3 (Layout)', 4: 'Etapa 4 (Ações)' }
-      const stepLabel = stepNames[currentStep] || `Etapa ${currentStep}`
+    const prev = prevConfigRef.current
+    const curr = config
 
-      if (!prev) {
-        // Primeira inicialização: apenas grava a baseline, sem logar
-        prevConfigRef.current = curr
-        return
-      }
+    if (!prev) {
+      // Primeira inicialização: apenas grava a baseline, sem logar
+      prevConfigRef.current = curr
+      return
+    }
 
-      const changes: string[] = []
+    const changes: string[] = []
 
-      // --- Etapa 1: Lógica ---
-      if (prev.name !== curr.name && curr.name)
-        changes.push(`Renomeou o caso de uso para "${curr.name}"`)
-      if (prev.slug !== curr.slug && curr.slug)
-        changes.push(`Alterou o slug para "${curr.slug}"`)
-      if (prev.logic_type !== curr.logic_type && curr.logic_type)
-        changes.push(`Alterou a lógica de "${prev.logic_type || 'nenhuma'}" para "${curr.logic_type}"`)
-      if (prev.has_arguments !== curr.has_arguments)
-        changes.push(curr.has_arguments ? 'Habilitou filtros de argumento (Pesquisa com Filtro)' : 'Desabilitou filtros de argumento')
-      if (prev.query_type !== curr.query_type)
-        changes.push(`Alterou tipo de query para "${curr.query_type}"`)
-      if (prev.custom_query !== curr.custom_query && curr.custom_query)
-        changes.push('Editou a query SQL customizada')
+    // --- Etapa 1: Lógica (Selects e Toggles) ---
+    if (prev.logic_type !== curr.logic_type && curr.logic_type)
+      changes.push(`Alterou a lógica de "${prev.logic_type || 'nenhuma'}" para "${curr.logic_type}"`)
+    if (prev.has_arguments !== curr.has_arguments)
+      changes.push(curr.has_arguments ? 'Habilitou filtros de argumento (Pesquisa com Filtro)' : 'Desabilitou filtros de argumento')
+    if (prev.query_type !== curr.query_type)
+      changes.push(`Alterou tipo de query para "${curr.query_type}"`)
 
-      // --- Etapa 2: Tabelas ---
-      const addedModels = curr.selected_models.filter((id: string) => !prev.selected_models.includes(id))
-      const removedModels = prev.selected_models.filter((id: string) => !curr.selected_models.includes(id))
+    // Debounce manual para inputs de texto (Etapa 1) e propriedades do campo no Drawer (Etapa 3)
+    let hasDebouncedChange = false
+    if (prev.name !== curr.name) { textChangesRef.current.name = curr.name; hasDebouncedChange = true }
+    if (prev.slug !== curr.slug) { textChangesRef.current.slug = curr.slug; hasDebouncedChange = true }
+    if (prev.custom_query !== curr.custom_query) { textChangesRef.current.custom_query = curr.custom_query; hasDebouncedChange = true }
+
+    const prevMeta = prev.layout_config.fields_metadata || {}
+    const currMeta = curr.layout_config.fields_metadata || {}
+    if (JSON.stringify(prevMeta) !== JSON.stringify(currMeta)) {
+      textChangesRef.current.fields_metadata = true
+      hasDebouncedChange = true
+    }
+
+    if (hasDebouncedChange) {
+       if (textTimeoutRef.current) clearTimeout(textTimeoutRef.current)
+       textTimeoutRef.current = setTimeout(() => {
+          if (textChangesRef.current.name) logAction('CONFIG_CHANGE', `Renomeou o caso de uso para "${textChangesRef.current.name}"`)
+          if (textChangesRef.current.slug) logAction('CONFIG_CHANGE', `Alterou o slug para "${textChangesRef.current.slug}"`)
+          if (textChangesRef.current.custom_query) logAction('CONFIG_CHANGE', 'Editou a query SQL customizada')
+          if (textChangesRef.current.fields_metadata) logAction('CONFIG_CHANGE', 'Alterou as propriedades de um campo (Etapa 3 (Campos & Layout))')
+          textChangesRef.current = {}
+       }, 1500)
+    }
+
+    // --- Etapa 2: Tabelas ---
+    const addedModels = curr.selected_models.filter((id: string) => !prev.selected_models.includes(id))
+    const removedModels = prev.selected_models.filter((id: string) => !curr.selected_models.includes(id))
+    if (currentStep >= 2) {
       if (addedModels.length > 0)
         changes.push(`Adicionou ${addedModels.length} tabela(s) ao caso de uso`)
       if (removedModels.length > 0)
         changes.push(`Removeu ${removedModels.length} tabela(s) do caso de uso`)
+    }
 
-      // --- Etapa 3: Layout - Campos ---
-      const zones: Array<{ key: 'filter_fields' | 'grid_fields' | 'form_fields'; label: string }> = [
-        { key: 'filter_fields', label: 'Filtro' },
-        { key: 'grid_fields', label: 'Grid/Listagem' },
-        { key: 'form_fields', label: 'Formulário' },
-      ]
-      zones.forEach(({ key, label }) => {
-        const prevFields: string[] = prev.layout_config[key] || []
-        const currFields: string[] = curr.layout_config[key] || []
-        const added = currFields.filter(f => !prevFields.includes(f))
-        const removed = prevFields.filter(f => !currFields.includes(f))
-        const reordered = added.length === 0 && removed.length === 0 &&
-          JSON.stringify(prevFields) !== JSON.stringify(currFields)
+    // --- Etapa 3: Layout - Campos ---
+    const step3Label = '(Etapa 3 (Campos & Layout))'
+    const zones: Array<{ key: 'filter_fields' | 'grid_fields' | 'form_fields'; label: string }> = [
+      { key: 'filter_fields', label: 'Filtro' },
+      { key: 'grid_fields', label: 'Grid/Listagem' },
+      { key: 'form_fields', label: 'Formulário' },
+    ]
+    zones.forEach(({ key, label }) => {
+      const prevFields: string[] = prev.layout_config[key] || []
+      const currFields: string[] = curr.layout_config[key] || []
+      const added = currFields.filter(f => !prevFields.includes(f))
+      const removed = prevFields.filter(f => !currFields.includes(f))
+      const reordered = added.length === 0 && removed.length === 0 &&
+        JSON.stringify(prevFields) !== JSON.stringify(currFields)
+      if (currentStep >= 3) {
         if (added.length > 0)
-          changes.push(`Adicionou ${added.length} campo(s) ao ${label} (${stepLabel})`)
+          changes.push(`Adicionou ${added.length} campo(s) ao ${label} ${step3Label}`)
         if (removed.length > 0)
-          changes.push(`Removeu ${removed.length} campo(s) do ${label} (${stepLabel})`)
+          changes.push(`Removeu ${removed.length} campo(s) do ${label} ${step3Label}`)
         if (reordered)
-          changes.push(`Reordenou campos do ${label} (${stepLabel})`)
-      })
+          changes.push(`Reordenou campos do ${label} ${step3Label}`)
+      }
+    })
 
-      // --- Layout: Joins ---
-      const prevJoins = prev.layout_config.joins || []
-      const currJoins = curr.layout_config.joins || []
-      if (prevJoins.length !== currJoins.length) {
+    // --- Layout: Joins ---
+    const prevJoins = prev.layout_config.joins || []
+    const currJoins = curr.layout_config.joins || []
+    if (prevJoins.length !== currJoins.length) {
+      if (currentStep >= 3) {
         if (currJoins.length > prevJoins.length)
           changes.push(`Adicionou ${currJoins.length - prevJoins.length} relacionamento(s) (JOIN) ao layout`)
         else
           changes.push(`Removeu ${prevJoins.length - currJoins.length} relacionamento(s) (JOIN) do layout`)
       }
+    }
 
-      // --- Layout: Display Type, Grouping, Default View ---
+    // --- Layout: Display Type, Grouping, Default View ---
+    if (currentStep >= 3) {
       if (prev.layout_config.display_type !== curr.layout_config.display_type)
         changes.push(`Alterou visualização padrão para "${curr.layout_config.display_type}"`)
       if (prev.layout_config.grouping_type !== curr.layout_config.grouping_type)
@@ -321,35 +367,39 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         changes.push(`Alterou tabela Mestre do Master-Detail`)
       if (prev.layout_config.mindmap_central_field !== curr.layout_config.mindmap_central_field)
         changes.push(`Alterou campo central do Mapa Mental`)
+    }
 
-      // --- Layout: Configs Especializadas ---
-      const specialConfigs: Array<{ key: string; label: string; fields: string[] }> = [
-        { key: 'timeline_config', label: 'Linha do Tempo', fields: ['date_field', 'title_field', 'desc_field', 'icon_field'] },
-        { key: 'map_config', label: 'Mapa', fields: ['lat_field', 'lng_field', 'title_field', 'desc_field'] },
-        { key: 'gantt_config', label: 'Gantt', fields: ['title_field', 'start_date_field', 'end_date_field', 'progress_field', 'predecessor_field'] },
-        { key: 'blueprint_config', label: 'Fluxograma', fields: ['title_field', 'desc_field', 'status_field', 'predecessor_field'] },
-        { key: 'scheduler_config', label: 'Agenda', fields: ['title_field', 'start_date_field', 'end_date_field', 'color_field'] },
-      ]
-      specialConfigs.forEach(({ key, label, fields }) => {
-        const prevSpec = (prev.layout_config as any)[key] || {}
-        const currSpec = (curr.layout_config as any)[key] || {}
-        fields.forEach(field => {
-          if (prevSpec[field] !== currSpec[field] && currSpec[field]) {
-            const fieldLabels: Record<string, string> = {
-              date_field: 'Data', title_field: 'Título', desc_field: 'Descrição',
-              icon_field: 'Ícone', lat_field: 'Latitude', lng_field: 'Longitude',
-              start_date_field: 'Data Início', end_date_field: 'Data Fim',
-              progress_field: 'Progresso', predecessor_field: 'Predecessora',
-              status_field: 'Status', color_field: 'Cor'
-            }
+    // --- Layout: Configs Especializadas ---
+    const specialConfigs: Array<{ key: string; label: string; fields: string[] }> = [
+      { key: 'timeline_config', label: 'Linha do Tempo', fields: ['date_field', 'title_field', 'desc_field', 'icon_field'] },
+      { key: 'map_config', label: 'Mapa', fields: ['lat_field', 'lng_field', 'title_field', 'desc_field'] },
+      { key: 'gantt_config', label: 'Gantt', fields: ['title_field', 'start_date_field', 'end_date_field', 'progress_field', 'predecessor_field'] },
+      { key: 'blueprint_config', label: 'Fluxograma', fields: ['title_field', 'desc_field', 'status_field', 'predecessor_field'] },
+      { key: 'scheduler_config', label: 'Agenda', fields: ['title_field', 'start_date_field', 'end_date_field', 'color_field'] },
+    ]
+    specialConfigs.forEach(({ key, label, fields }) => {
+      const prevSpec = (prev.layout_config as any)[key] || {}
+      const currSpec = (curr.layout_config as any)[key] || {}
+      fields.forEach(field => {
+        if (prevSpec[field] !== currSpec[field] && currSpec[field]) {
+          const fieldLabels: Record<string, string> = {
+            date_field: 'Data', title_field: 'Título', desc_field: 'Descrição',
+            icon_field: 'Ícone', lat_field: 'Latitude', lng_field: 'Longitude',
+            start_date_field: 'Data Início', end_date_field: 'Data Fim',
+            progress_field: 'Progresso', predecessor_field: 'Predecessora',
+            status_field: 'Status', color_field: 'Cor'
+          }
+          if (currentStep >= 3) {
             changes.push(`Configurou campo "${fieldLabels[field] || field}" do ${label}: "${currSpec[field]}"`)
           }
-        })
+        }
       })
+    })
 
-      // --- Layout: Widgets do Analytics ---
-      const prevWidgets = prev.layout_config.analytics_config?.widgets || []
-      const currWidgets = curr.layout_config.analytics_config?.widgets || []
+    // --- Layout: Widgets do Analytics ---
+    const prevWidgets = prev.layout_config.analytics_config?.widgets || []
+    const currWidgets = curr.layout_config.analytics_config?.widgets || []
+    if (currentStep >= 3) {
       if (currWidgets.length > prevWidgets.length)
         changes.push(`Adicionou ${currWidgets.length - prevWidgets.length} widget(s) ao Dashboard BI`)
       if (currWidgets.length < prevWidgets.length)
@@ -360,26 +410,57 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         if (prevW && JSON.stringify(prevW) !== JSON.stringify(w))
           changes.push(`Editou widget BI "${w.title || w.type}" no Dashboard`)
       })
+    }
 
-      // --- Etapa 4: Botões ---
-      const prevButtons = prev.buttons_config || []
-      const currButtons = curr.buttons_config || []
-      currButtons.forEach((btn: any) => {
-        const prevBtn = prevButtons.find((b: any) => b.id === btn.id)
-        if (prevBtn && prevBtn.visible !== btn.visible)
-          changes.push(`${btn.visible ? 'Habilitou' : 'Desabilitou'} o botão "${btn.label || btn.id}" (${stepLabel})`)
-        if (prevBtn && prevBtn.label !== btn.label && btn.label)
-          changes.push(`Renomeou o botão "${prevBtn.label}" para "${btn.label}" (${stepLabel})`)
-      })
-
-      // --- Enviar logs ---
-      if (changes.length > 0) {
-        changes.forEach(detail => logAction('CONFIG_CHANGE', detail))
+    // --- Etapa 4: Botões e Configurações de Ação ---
+    const step4Label = '(Etapa 4 (Ações & Query))'
+    const prevButtons = prev.buttons_config || []
+    const currButtons = curr.buttons_config || []
+    currButtons.forEach((btn: any) => {
+      const prevBtn = prevButtons.find((b: any) => b.id === btn.id)
+      if (prevBtn && prevBtn.visible !== btn.visible) {
+        // Apenas registra a alteração do botão se o usuário estiver na Etapa 4
+        // para evitar registrar o auto-suggest de botões que roda na Etapa 1
+        if (currentStep >= 4) {
+          changes.push(`${btn.visible ? 'Habilitou' : 'Desabilitou'} o botão "${btn.label || btn.id}" ${step4Label}`)
+        }
       }
+      if (prevBtn && prevBtn.label !== btn.label && btn.label) {
+        if (currentStep >= 4) {
+          changes.push(`Renomeou o botão "${prevBtn.label}" para "${btn.label}" ${step4Label}`)
+        }
+      }
+    })
 
-      prevConfigRef.current = curr
-    }, 1500)
-    return () => clearTimeout(timer)
+    // --- Etapa 4: Formatos de Exportação ---
+    const prevFormats: string[] = prev.layout_config.export_formats || ['xlsx', 'csv', 'json']
+    const currFormats: string[] = curr.layout_config.export_formats || ['xlsx', 'csv', 'json']
+    const formatLabels: Record<string, string> = {
+      xlsx: 'Excel (XLSX)',
+      csv: 'CSV',
+      json: 'JSON',
+      pdf: 'PDF',
+      ofx: 'OFX (Finance)'
+    }
+    const addedFormats = currFormats.filter(f => !prevFormats.includes(f))
+    const removedFormats = prevFormats.filter(f => !currFormats.includes(f))
+    if (currentStep >= 4) {
+      addedFormats.forEach(fmt => {
+        const fmtLabel = formatLabels[fmt] || fmt
+        changes.push(`Habilitou o botão "${fmtLabel}" ${step4Label}`)
+      })
+      removedFormats.forEach(fmt => {
+        const fmtLabel = formatLabels[fmt] || fmt
+        changes.push(`Desabilitou o botão "${fmtLabel}" ${step4Label}`)
+      })
+    }
+
+    // --- Enviar logs ---
+    if (changes.length > 0) {
+      changes.forEach(detail => logAction('CONFIG_CHANGE', detail))
+    }
+
+    prevConfigRef.current = curr
   }, [config, currentStep, isInitialized, logAction])
 
   useEffect(() => {
@@ -434,7 +515,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   useEffect(() => {
     // Se estiver em modo edição ou se já houver joins configurados, não sobrescrevemos
     // ou se não houver modelos suficientes selecionados
-    if (initialData || config.layout_config.joins.length > 0 || config.selected_models.length <= 1) return
+    if (config.layout_config.joins.length > 0 || config.selected_models.length <= 1) return
 
     if (currentStep === 3 && relations.length > 0) {
       const autoJoins: any[] = []
@@ -829,11 +910,6 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
 
       if (viewError) throw viewError
 
-      // Se for um novo, atualiza a URL sem recarregar para entrar no modo de edição
-      if (!initialData && view) {
-         window.history.replaceState(null, '', `/admin/${workspace_slug}/${project_slug}/studio/builder?id=${view.id}`)
-      }
-
       // 2. Limpar componentes antigos desta view
       await supabase.from('ui_components').delete().eq('view_id', view.id)
 
@@ -884,7 +960,9 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         if (compError) throw compError
       }
 
+      flushTextChanges()
       logAction('SAVE', 'Atualizou as configurações do caso de uso')
+      await flush(view.id)
       onSaveSuccess()
     } catch (err: any) {
       console.error(err)
@@ -1296,7 +1374,24 @@ function StepTables({ config, setConfig, models }: any) {
                       const newSelected = isSelected
                         ? config.selected_models.filter((id: string) => id !== m.id)
                         : [...config.selected_models, m.id]
-                      setConfig({ ...config, selected_models: newSelected })
+                      
+                      // Extrai todos os IDs de campos válidos baseados nas tabelas selecionadas
+                      const validFields = models
+                        .filter((mod: any) => newSelected.includes(mod.id))
+                        .flatMap((mod: any) => mod.fields?.map((f: any) => f.id) || [])
+
+                      setConfig({ 
+                        ...config, 
+                        selected_models: newSelected,
+                        layout_config: {
+                          ...config.layout_config,
+                          filter_fields: config.layout_config.filter_fields?.filter((id: string) => validFields.includes(id)) || [],
+                          grid_fields: config.layout_config.grid_fields?.filter((id: string) => validFields.includes(id)) || [],
+                          form_fields: config.layout_config.form_fields?.filter((id: string) => validFields.includes(id)) || [],
+                          master_model_id: newSelected.includes(config.layout_config.master_model_id) ? config.layout_config.master_model_id : '',
+                          joins: [] // Reseta os joins para forçar a re-sugestão na Etapa 3
+                        }
+                      })
                     }}
                     className={cn(
                       "p-4 rounded-[1.5rem] border-2 text-left transition-all relative group hover:-translate-y-1",

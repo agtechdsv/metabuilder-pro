@@ -91,6 +91,11 @@ export default async function PlatformAdminPage() {
     .from('workspace_members')
     .select('workspace_id, user_id')
 
+  // Fetch owner guests for accurate license count in admin
+  const { data: ownerGuests } = await adminSupabase
+    .from('owner_guests')
+    .select('owner_id, user_id, access_level')
+
   return (
     <div className="min-h-screen flex flex-col pt-16 bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300">
       <Navbar user={user} profile={profile} />
@@ -104,6 +109,7 @@ export default async function PlatformAdminPage() {
           currentUserEmail={user.email || ''}
           payments={payments || []}
           workspaceMembers={workspaceMembers || []}
+          ownerGuests={ownerGuests || []}
         />
       </main>
 

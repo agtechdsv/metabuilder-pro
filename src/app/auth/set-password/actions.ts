@@ -32,11 +32,17 @@ export async function setPasswordAction(
     return { error: error.message }
   }
 
-  // Redireciona server-side — cookie já está correto neste ponto
-  const destination =
-    workspaceSlug && workspaceSlug !== 'default'
+  // Redireciona server-side usando a lógica centralizada de redirecionamento pós-login
+  let destination = '/workspace'
+  try {
+    const { getPostLoginRedirectPath } = await import('@/app/auth/actions')
+    destination = await getPostLoginRedirectPath(user.id)
+  } catch (err) {
+    console.error('Error in setPasswordAction redirect:', err)
+    destination = workspaceSlug && workspaceSlug !== 'default'
       ? `/admin/${workspaceSlug}`
       : '/workspace'
+  }
 
   redirect(destination)
 }

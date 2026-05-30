@@ -297,3 +297,29 @@ export async function deleteSuggestionAdmin(suggestionId: string) {
   }
 }
 
+export async function deleteClientAdmin(profileId: string) {
+  try {
+    const { adminSupabase } = await checkSuperAdmin()
+
+    // 1. Delete user from auth.users (triggers cascade deletes on profiles, workspaces, etc.)
+    const { error: authError } = await adminSupabase.auth.admin.deleteUser(profileId)
+    if (authError) {
+      console.error('Erro ao deletar usuário do auth:', authError)
+      return { success: false, error: authError.message }
+    }
+
+    // 2. Direct database delete for profile as backup
+    const { error: profileError } = await adminSupabase
+      .from('profiles')
+      .delete()
+      .eq('id', profileId)
+
+    revalidatePath('/admin/platform')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao excluir cliente:', err)
+    return { success: false, error: err.message }
+  }
+}
+
+

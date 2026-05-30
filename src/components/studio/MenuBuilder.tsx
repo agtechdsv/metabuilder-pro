@@ -57,6 +57,7 @@ interface MenuItem {
 interface MenuBuilderProps {
   project: any
   views: any[]
+  isDownloadsActive?: boolean
   onSave: (menu: MenuItem[]) => Promise<void>
 }
 
@@ -109,7 +110,7 @@ const insertItem = (items: MenuItem[], containerId: string, itemToInsert: MenuIt
   })
 }
 
-export function MenuBuilder({ project, views, onSave }: MenuBuilderProps) {
+export function MenuBuilder({ project, views, isDownloadsActive = true, onSave }: MenuBuilderProps) {
   const { t } = useI18n()
   const [menu, setMenu] = useState<MenuItem[]>(project.navigation || [])
   const [isSaving, setIsSaving] = useState(false)
@@ -331,6 +332,7 @@ export function MenuBuilder({ project, views, onSave }: MenuBuilderProps) {
                   key={item.id}
                   item={item}
                   views={views}
+                  isDownloadsActive={isDownloadsActive}
                   onUpdate={handleUpdateItem}
                   onRemove={handleRemoveItem}
                   onAddChild={handleAddItem}
@@ -352,6 +354,7 @@ export function MenuBuilder({ project, views, onSave }: MenuBuilderProps) {
               <MenuNodeBase
                 item={activeItem}
                 views={views}
+                isDownloadsActive={isDownloadsActive}
                 isOverlay
               />
             ) : null}
@@ -403,7 +406,7 @@ function SortableMenuNode(props: any) {
 }
 
 // O MenuNodeBase contém a UI do item. Ele é separado para poder ser usado pelo SortableMenuNode e pelo DragOverlay.
-function MenuNodeBase({ item, views, onUpdate, onRemove, onAddChild, lastAddedId, dragListeners, dragAttributes, isOverlay }: any) {
+function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemove, onAddChild, lastAddedId, dragListeners, dragAttributes, isOverlay }: any) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [showAddMenu, setShowAddMenu] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
@@ -490,7 +493,9 @@ function MenuNodeBase({ item, views, onUpdate, onRemove, onAddChild, lastAddedId
               className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-1.5 text-xs font-bold outline-none disabled:opacity-50"
             >
               <option value="">Selecionar Caso de Uso...</option>
-              <option value="downloads">📁 Central de Downloads (Utilitário)</option>
+              {isDownloadsActive !== false && (
+                <option value="downloads">📁 Central de Downloads (Utilitário)</option>
+              )}
               {views.map((v: any) => (
                 <option key={v.id} value={v.slug}>{v.name}</option>
               ))}

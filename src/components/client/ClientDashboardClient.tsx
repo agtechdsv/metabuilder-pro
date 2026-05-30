@@ -121,6 +121,7 @@ interface ClientDashboardClientProps {
   profiles: { id: string; full_name: string | null; email: string | null }[]
   payments: Payment[]
   activityLogs?: any[]
+  ownerGuests?: any[]
 }
 
 // ─── Logic Type Labels ────────────────────────────────────────────────────────
@@ -437,6 +438,7 @@ export default function ClientDashboardClient({
   profiles,
   payments,
   activityLogs = [],
+  ownerGuests = [],
 }: ClientDashboardClientProps) {
   const [localProfile, setLocalProfile] = useState(profile)
   const isGuest = !localProfile?.plan_id && !localProfile?.is_super_admin
@@ -655,12 +657,12 @@ export default function ClientDashboardClient({
   // ── Computed metrics ──────────────────────────────────────────────────────
 
   const licensesUsed = useMemo(() => {
-    // Count unique users across all workspaces the client owns (+1 for the owner)
+    // Count unique users: Owner + unique guest user IDs
     const uniqueUsers = new Set<string>()
     if (profile?.id) uniqueUsers.add(profile.id)
-    members.forEach(m => uniqueUsers.add(m.user_id))
+    ownerGuests.forEach(g => uniqueUsers.add(g.user_id))
     return uniqueUsers.size
-  }, [profile, members])
+  }, [profile, ownerGuests])
 
   const projectsByWorkspace = useMemo(() => {
     return workspaces.map(ws => ({
@@ -1117,7 +1119,18 @@ export default function ClientDashboardClient({
                               const wsProjects = projects.filter(p => p.workspace_id === ws.id)
                               const wsProjectIds = wsProjects.map(p => p.id)
                               const wsUseCases = useCases.filter(uc => wsProjectIds.includes(uc.project_id))
-                              const wsMembers = members.filter(m => m.workspace_id === ws.id)
+                              // Guests explicitly assigned to this workspace via workspace_members
+                              const granularGuests = members.filter(m => m.workspace_id === ws.id && m.user_id !== ws.owner_id)
+                              // Plus all guests of this owner who have GLOBAL access level
+                              const globalGuests = ownerGuests?.filter(g => g.access_level === 'global') || []
+
+                              // Total active users on this workspace = 1 (Owner) + unique guest ids
+                              const uniqueWsUsers = new Set<string>()
+                              if (ws.owner_id) uniqueWsUsers.add(ws.owner_id)
+                              granularGuests.forEach(g => uniqueWsUsers.add(g.user_id))
+                              globalGuests.forEach(g => uniqueWsUsers.add(g.user_id))
+
+                              const wsUsersCount = uniqueWsUsers.size
                               return (
                                 <tr key={ws.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-850/20 transition-colors">
                                   <td className="px-6 py-4">
@@ -1138,7 +1151,7 @@ export default function ClientDashboardClient({
                                     <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">{wsUseCases.length}</span>
                                   </td>
                                   <td className="px-6 py-4 text-center">
-                                    <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">{wsMembers.length + 1}</span>
+                                    <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">{wsUsersCount}</span>
                                   </td>
                                   <td className="px-6 py-4 text-sm text-neutral-500">
                                     {formatDate(ws.created_at)}

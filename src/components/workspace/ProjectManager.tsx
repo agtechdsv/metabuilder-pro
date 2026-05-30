@@ -23,6 +23,7 @@ import { useI18n } from '@/i18n/I18nContext'
 import { IconPicker } from '@/components/studio/IconPicker'
 import { DynamicIcon } from '@/components/runtime/DynamicIcon'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/Toast'
 
 interface Project {
   id: string
@@ -71,6 +72,7 @@ export function ProjectManager({
   const supabase = createClient()
   const router = useRouter()
   const { t } = useI18n()
+  const { toast } = useToast()
 
   const openDrawer = (project: Project | null = null) => {
     setSelectedProject(project)
@@ -114,7 +116,7 @@ export function ProjectManager({
         if (error) throw error
       } else {
         // Create
-        const { error } = await supabase
+        const { data: newProject, error } = await supabase
           .from('projects')
           .insert({
             name: formData.name,
@@ -122,10 +124,30 @@ export function ProjectManager({
             description: formData.description,
             icon: formData.icon,
             workspace_id: workspaceId,
-            is_active: true
+            is_active: true,
+            theme_config: { enable_downloads: true }
           })
+          .select('id')
+          .single()
 
         if (error) throw error
+
+        if (newProject) {
+          const { error: viewError } = await supabase
+            .from('ui_views')
+            .upsert({
+              project_id: newProject.id,
+              model_id: null,
+              name: 'Central de Downloads',
+              slug: 'downloads',
+              logic_type: 'personalizado',
+              view_type: 'advanced_use_case',
+              layout_config: { is_active: true }
+            }, { onConflict: 'project_id, slug' })
+          if (viewError) {
+            console.error('Error inserting default downloads view:', viewError)
+          }
+        }
       }
 
       // Refresh data
@@ -140,6 +162,7 @@ export function ProjectManager({
       router.refresh()
     } catch (err: any) {
       console.error(err)
+      toast(err.message || 'Erro ao salvar o projeto', 'error')
     } finally {
       setIsSaving(false)
     }
@@ -168,6 +191,7 @@ export function ProjectManager({
       router.refresh()
     } catch (err: any) {
       console.error(err)
+      toast(err.message || 'Erro ao excluir o projeto', 'error')
     } finally {
       setIsDeleting(false)
     }
@@ -188,6 +212,7 @@ export function ProjectManager({
       router.refresh()
     } catch (err: any) {
       console.error(err)
+      toast(err.message || 'Erro ao alterar status do projeto', 'error')
     }
   }
 

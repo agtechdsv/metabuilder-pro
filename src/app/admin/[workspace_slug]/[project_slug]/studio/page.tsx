@@ -98,12 +98,34 @@ export default async function StudioDashboard({ params }: StudioDashboardProps) 
     .select('*')
     .eq('project_id', project.id)
 
+  const viewsList = views || []
+  const hasDownloads = viewsList.some(v => v.slug === 'downloads')
+  if (!hasDownloads) {
+    const { data: newView } = await supabase
+      .from('ui_views')
+      .upsert({
+        project_id: project.id,
+        model_id: null,
+        name: 'Central de Downloads',
+        slug: 'downloads',
+        logic_type: 'personalizado',
+        view_type: 'advanced_use_case',
+        layout_config: { is_active: true }
+      }, { onConflict: 'project_id, slug' })
+      .select()
+      .single()
+
+    if (newView) {
+      viewsList.push(newView)
+    }
+  }
+
   return (
     <StudioDashboardClient 
       workspace={workspace}
       project={project}
       models={models || []}
-      views={views || []}
+      views={viewsList}
       workspace_slug={workspace_slug}
       project_slug={project_slug}
       user={user}
