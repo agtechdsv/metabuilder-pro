@@ -152,7 +152,7 @@ export function ExportDropdown({
           'success',
           {
             label: '📥 Acompanhar na Central de Downloads',
-            onClick: () => { window.location.href = downloadsUrl }
+            onClick: () => { if (window.top) { window.top.location.href = downloadsUrl } else { window.location.href = downloadsUrl } }
           }
         )
       } else {
