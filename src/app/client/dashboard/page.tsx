@@ -24,7 +24,7 @@ export default async function ClientDashboardPage() {
   const isGuest = !isOwner && !profile?.is_super_admin;
 
   // Owners without active subscriptions go to checkout. Guests are allowed through to MetaConnect.
-  if (isOwner && profile.subscription_status !== 'active' && profile.subscription_status !== 'canceled') {
+  if (isOwner && profile?.subscription_status !== 'active' && profile?.subscription_status !== 'canceled') {
     redirect('/checkout')
   }
 
