@@ -112,7 +112,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
 
   // Helper to calculate cycle prices dynamically
   const getCyclePrices = (currentCycle: 'monthly' | 'quarterly' | 'semiannual' | 'yearly', targetLicenses: number = licenses) => {
-    if (!rules) return { total: 0, monthlyEquivalent: 0, months: 1 }
+    if (!rules) return { total: 0, monthlyEquivalent: 0, months: 1, dailyRate: 0 }
 
     const basePrice = Number(rules.base_price) || 450
     let volDiscount = 0
