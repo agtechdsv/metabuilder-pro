@@ -110,16 +110,15 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
     return () => window.removeEventListener('profile-updated', handleProfileUpdate)
   }, [])
 
-  // Helper to calculate cycle prices
   // Helper to calculate cycle prices dynamically
-  const getCyclePrices = (currentCycle: 'monthly' | 'quarterly' | 'semiannual' | 'yearly') => {
+  const getCyclePrices = (currentCycle: 'monthly' | 'quarterly' | 'semiannual' | 'yearly', targetLicenses: number = licenses) => {
     if (!rules) return { total: 0, monthlyEquivalent: 0, months: 1 }
 
     const basePrice = Number(rules.base_price) || 450
     let volDiscount = 0
     if (rules.volume_tiers && rules.volume_tiers.length > 0) {
       const sorted = [...rules.volume_tiers].sort((a: any, b: any) => b.min_licenses - a.min_licenses)
-      const tier = sorted.find((t: any) => licenses >= t.min_licenses)
+      const tier = sorted.find((t: any) => targetLicenses >= t.min_licenses)
       if (tier) volDiscount = tier.discount_percent
     }
     
@@ -135,14 +134,37 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
       cycleDiscount = rules.cycle_discounts[currentCycle] || 0
     }
 
-    const totalValue = (unitPrice * licenses * months) * (1 - cycleDiscount / 100)
+    const totalValue = (unitPrice * targetLicenses * months) * (1 - cycleDiscount / 100)
 
     return {
       total: totalValue,
       monthlyEquivalent: totalValue / months,
-      months
+      months,
+      dailyRate: totalValue / (months * 30)
     }
   }
+
+  const prorataDetails = useMemo(() => {
+    if (!isUpgrade || !profile?.subscription_expires_at || !rules) return null;
+
+    const oldLicenses = profile.subscription_licenses || 1;
+    const oldCycle = profile.subscription_cycle || 'monthly';
+
+    const expiresAt = new Date(profile.subscription_expires_at);
+    const now = new Date();
+    const diffTime = expiresAt.getTime() - now.getTime();
+    const daysRemaining = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+    const oldPrices = getCyclePrices(oldCycle, oldLicenses);
+    const newPrices = getCyclePrices(cycle, licenses);
+
+    const prorataValue = Math.max(5, (newPrices.dailyRate - oldPrices.dailyRate) * daysRemaining);
+
+    return {
+      daysRemaining,
+      prorataValue
+    };
+  }, [isUpgrade, profile, cycle, licenses, rules]);
 
   // Handle billing process calling Edge Function
   const handleSubmitCheckout = async (e: React.FormEvent) => {
@@ -941,11 +963,22 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
 
               {/* Total Line */}
               <div className="border-t border-neutral-150 dark:border-neutral-800/80 pt-4 flex flex-col gap-2">
+                {isUpgrade && licenses < 50 && prorataDetails && prorataDetails.prorataValue > 0 && (
+                  <div className="flex justify-between items-center mb-2 bg-indigo-50 dark:bg-indigo-500/10 p-3 rounded-xl border border-indigo-100 dark:border-indigo-500/20">
+                    <span className="text-xs font-black uppercase tracking-wider text-indigo-800 dark:text-indigo-400">
+                      Cobrança Avulsa Hoje (Prorata)
+                    </span>
+                    <span className="text-xl font-black text-indigo-650 dark:text-indigo-400">
+                      R$ {prorataDetails.prorataValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+                
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-black uppercase tracking-wider text-neutral-400">
                     {isUpgrade ? 'Valor da Assinatura (Próximo Ciclo)' : 'Total do Ciclo'}
                   </span>
-                  <span className="text-2xl font-black text-indigo-650 dark:text-indigo-400">
+                  <span className="text-2xl font-black text-neutral-900 dark:text-white">
                     {licenses >= 50 ? 'Sob Consulta' : `R$ ${getCyclePrices(cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   </span>
                 </div>
@@ -953,9 +986,6 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                   <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl">
                     <p className="text-xs text-amber-800 dark:text-amber-400 font-medium">
                       <strong>Atenção:</strong> Como este é um upgrade, será cobrado hoje apenas um <strong className="font-black uppercase">valor proporcional (prorata)</strong> referente aos dias restantes até a próxima fatura.
-                    </p>
-                    <p className="text-[10px] text-amber-700/80 dark:text-amber-400/80 mt-1">
-                      O valor exato da diferença será calculado e processado automaticamente na próxima etapa de forma segura.
                     </p>
                   </div>
                 )}
