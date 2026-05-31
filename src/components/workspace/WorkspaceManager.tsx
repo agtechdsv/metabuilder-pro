@@ -57,7 +57,7 @@ interface WorkspaceManagerProps {
   initialWorkspaces: Workspace[]
   userName: string
   teamData?: any | null
-  plans?: any[]
+  rules?: any
   user?: any
   profile?: any
   isGuest?: boolean
@@ -68,7 +68,7 @@ export function WorkspaceManager({
   initialWorkspaces,
   userName,
   teamData,
-  plans,
+  rules,
   user,
   profile,
   isGuest = false,
@@ -422,7 +422,7 @@ export function WorkspaceManager({
       />
 
       {/* Modal de Checkout / Assinaturas */}
-      {isCheckoutModalOpen && plans && (
+      {isCheckoutModalOpen && rules && (
         <Modal
           isOpen={isCheckoutModalOpen}
           onClose={() => setIsCheckoutModalOpen(false)}
@@ -431,7 +431,7 @@ export function WorkspaceManager({
         >
           <div className="max-h-[70vh] overflow-y-auto pr-1">
             <CheckoutClient
-              plans={plans}
+              rules={rules}
               user={user}
               profile={profile}
             />

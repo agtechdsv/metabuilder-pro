@@ -7,21 +7,21 @@ import { CheckoutClient } from '@/components/checkout/CheckoutClient'
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ planId?: string; workspace_slug?: string; cycle?: string }>
+  searchParams: Promise<{ licenses?: string; workspace_slug?: string; cycle?: string }>
 }) {
   const supabase = await createClient()
 
   // 1. Verificar autenticação
   const { data: { user } } = await supabase.auth.getUser()
   const resolvedSearchParams = await searchParams
-  const planId = resolvedSearchParams.planId
+  const licensesParam = resolvedSearchParams.licenses
   const workspaceSlug = resolvedSearchParams.workspace_slug
   const cycle = resolvedSearchParams.cycle
 
   if (!user) {
     let redirectUrl = '/login?redirect_to=/checkout'
     const params = new URLSearchParams()
-    if (planId) params.set('planId', planId)
+    if (licensesParam) params.set('licenses', licensesParam)
     if (workspaceSlug) params.set('workspace_slug', workspaceSlug)
     if (cycle) params.set('cycle', cycle)
     const queryString = params.toString()
@@ -38,12 +38,13 @@ export default async function CheckoutPage({
     .eq('id', user.id)
     .single()
 
-  // 3. Buscar planos ativos
-  const { data: plans } = await supabase
-    .from('subscription_plans')
+  // 3. Buscar regras de precificação ativas
+  const { data: rules } = await supabase
+    .from('pricing_rules')
     .select('*')
-    .eq('is_active', true)
-    .order('price', { ascending: true })
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
 
   return (
     <div className="min-h-screen flex flex-col pt-16 bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300 relative overflow-hidden">
@@ -57,8 +58,8 @@ export default async function CheckoutPage({
       
       <main className="w-full mx-auto px-6 py-12 flex-grow max-w-7xl flex items-center justify-center z-10">
         <CheckoutClient 
-          plans={plans || []} 
-          initialPlanId={planId} 
+          rules={rules} 
+          initialLicenses={licensesParam ? parseInt(licensesParam) : 1} 
           initialCycle={cycle as any}
           workspaceSlug={workspaceSlug}
           user={user}

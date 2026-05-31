@@ -49,10 +49,9 @@ serve(async (req) => {
       }
     );
 
-    // Parse request body
     const body = await req.json();
     const {
-      planId,
+      licenses,
       cycle, // monthly, quarterly, semiannual, yearly
       paymentMethod, // card, pix, boleto
       billingName,
@@ -69,48 +68,63 @@ serve(async (req) => {
       workspaceId
     } = body;
 
-    if (!planId || !cycle || !paymentMethod || !billingName || !billingCpfCnpj || !billingEmail || !workspaceId) {
+    if (!licenses || !cycle || !paymentMethod || !billingName || !billingCpfCnpj || !billingEmail || !workspaceId) {
       return new Response(
         JSON.stringify({ error: "Parâmetros obrigatórios ausentes" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Fetch plan details
-    const { data: plan, error: planError } = await supabaseClient
-      .from("subscription_plans")
+    // Fetch pricing rules
+    const { data: rules, error: rulesError } = await supabaseClient
+      .from("pricing_rules")
       .select("*")
-      .eq("id", planId)
+      .order("created_at", { ascending: false })
+      .limit(1)
       .single();
 
-    if (planError || !plan) {
+    if (rulesError || !rules) {
       return new Response(
-        JSON.stringify({ error: "Plano de assinatura não encontrado" }),
+        JSON.stringify({ error: "Regras de precificação não encontradas" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Determine cycle price and Asaas cycle name
-    let cyclePrice = 0;
-    let asaasCycle = "";
-    if (cycle === "monthly") {
-      cyclePrice = Number(plan.price_monthly);
-      asaasCycle = "MONTHLY";
-    } else if (cycle === "quarterly") {
-      cyclePrice = Number(plan.price_quarterly);
+    const basePrice = Number(rules.base_price) || 450;
+    let volDiscount = 0;
+    if (rules.volume_tiers && rules.volume_tiers.length > 0) {
+      const sorted = [...rules.volume_tiers].sort((a: any, b: any) => b.min_licenses - a.min_licenses);
+      const tier = sorted.find((t: any) => licenses >= t.min_licenses);
+      if (tier) volDiscount = tier.discount_percent;
+    }
+    
+    const unitPrice = basePrice * (1 - volDiscount / 100);
+
+    let months = 1;
+    let asaasCycle = "MONTHLY";
+    if (cycle === "quarterly") {
+      months = 3;
       asaasCycle = "QUARTERLY";
     } else if (cycle === "semiannual") {
-      cyclePrice = Number(plan.price_semiannually);
+      months = 6;
       asaasCycle = "SEMIANNUALLY";
     } else if (cycle === "yearly") {
-      cyclePrice = Number(plan.price_yearly);
+      months = 12;
       asaasCycle = "YEARLY";
-    } else {
+    } else if (cycle !== "monthly") {
       return new Response(
         JSON.stringify({ error: "Ciclo de faturamento inválido" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    let cycleDiscount = 0;
+    if (cycle !== "monthly" && rules.cycle_discounts) {
+      cycleDiscount = rules.cycle_discounts[cycle] || 0;
+    }
+
+    const cyclePrice = (unitPrice * licenses * months) * (1 - cycleDiscount / 100);
 
     // Get Asaas config
     const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY")?.trim();
@@ -205,9 +219,8 @@ serve(async (req) => {
     // External reference structure (shortened to fit under Asaas 100-char limit)
     const cycleCode = cycle === "monthly" ? "mo" : cycle === "quarterly" ? "qu" : cycle === "semiannual" ? "se" : "ye";
     const cleanWorkspaceId = workspaceId.replace(/-/g, "");
-    const cleanPlanId = planId.replace(/-/g, "");
     const timestamp = Math.floor(Date.now() / 1000);
-    const externalReference = `w_${cleanWorkspaceId}_p_${cleanPlanId}_c_${cycleCode}_${timestamp}`;
+    const externalReference = `w_${cleanWorkspaceId}_l_${licenses}_c_${cycleCode}_${timestamp}`;
 
     // Setup card details if applicable
     let creditCardPayload = {};
@@ -247,7 +260,7 @@ serve(async (req) => {
       value: cyclePrice,
       nextDueDate: nextDueDate,
       cycle: asaasCycle,
-      description: `MetaBuilderPRO - Assinatura Plano ${plan.name}`,
+      description: `MetaBuilderPRO - Assinatura Pro (${licenses} licenças)`,
       externalReference: externalReference,
       ...creditCardPayload
     };
@@ -296,7 +309,7 @@ serve(async (req) => {
     const { error: insertError } = await supabaseClient.from("payments").insert({
       user_id: user.id,
       workspace_id: workspaceId,
-      plan_id: planId,
+      plan_id: null,
       cycle: cycle,
       amount: cyclePrice,
       status: paymentMethod === "card" && firstPayment?.status === "CONFIRMED" ? "paid" : "pending",
@@ -336,10 +349,11 @@ serve(async (req) => {
       await supabaseClient
         .from("profiles")
         .update({
-          plan_id: planId,
+          plan_id: null,
           subscription_status: "active",
           is_blocked: false,
           subscription_cycle: cycle,
+          subscription_licenses: licenses,
           subscription_expires_at: expirationDate.toISOString()
         })
         .eq("id", user.id);

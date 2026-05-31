@@ -72,13 +72,9 @@ export default async function PlatformAdminPage() {
   // Active Profiles
   const { data: profiles } = await adminSupabase
     .from('profiles')
-    .select('id, email, full_name, is_super_admin, plan_id')
+    .select('id, email, full_name, is_super_admin, subscription_licenses, is_blocked')
 
-  // Plans
-  const { data: plans } = await adminSupabase
-    .from('subscription_plans')
-    .select('*')
-    .order('price', { ascending: true })
+
 
   // Payments
   const { data: payments } = await adminSupabase
@@ -103,7 +99,6 @@ export default async function PlatformAdminPage() {
 
       <main className="w-full mx-auto px-10 pt-6 pb-4 flex-grow">
         <PlatformAdminClient
-          initialPlans={plans || []}
           initialWorkspaces={workspaces || []}
           profiles={profiles || []}
           currentUserEmail={user.email || ''}

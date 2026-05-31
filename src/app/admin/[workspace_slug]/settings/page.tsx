@@ -140,10 +140,13 @@ export default async function SettingsPage({ params }: SettingsPageProps) {
     .select('user_id, project_id')
     .eq('workspace_id', workspace.id)
 
-  // 6. Busca os planos de assinatura
-  const { data: plans } = await admin
-    .from('subscription_plans')
+  // 6. Busca as regras de precificação
+  const { data: rules } = await admin
+    .from('pricing_rules')
     .select('*')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
 
   // 7. Busca os pagamentos do workspace
   const { data: payments } = await admin
@@ -171,7 +174,7 @@ export default async function SettingsPage({ params }: SettingsPageProps) {
           workspaceProjects={projects || []}
           initialMemberProjects={memberProjects || []}
           payments={payments || []}
-          plans={plans || []}
+          rules={rules}
         />
       </main>
       <Footer />

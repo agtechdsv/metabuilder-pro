@@ -53,7 +53,7 @@ interface Profile {
   id: string
   full_name: string | null
   email: string | null
-  plan_id?: string | null
+  subscription_licenses?: number | null
   subscription_status?: string | null
   subscription_cycle?: string | null
   subscription_expires_at?: string | null
@@ -62,17 +62,6 @@ interface Profile {
   is_super_admin?: boolean | null
   card_brand?: string | null
   card_last_digits?: string | null
-}
-
-interface Plan {
-  id: string
-  name: string
-  licenses_count: number
-  price: number
-  price_monthly: number | null
-  price_quarterly: number | null
-  price_semiannually: number | null
-  price_yearly: number | null
 }
 
 interface Workspace {
@@ -111,13 +100,11 @@ interface Payment {
   billing_type: string | null
   invoice_url: string | null
   created_at: string
-  plan_id: string | null
 }
 
 interface ClientDashboardClientProps {
   profile: Profile | null
-  plan: Plan | null
-  plans: Plan[]
+  rules?: any
   workspaces: any[]
   projects: any[]
   useCases: UseCase[]
@@ -434,8 +421,7 @@ type TabId = typeof TABS[number]['id']
 
 export default function ClientDashboardClient({
   profile,
-  plan,
-  plans,
+  rules,
   workspaces,
   projects,
   useCases,
@@ -446,7 +432,7 @@ export default function ClientDashboardClient({
   ownerGuests = [],
 }: ClientDashboardClientProps) {
   const [localProfile, setLocalProfile] = useState(profile)
-  const isGuest = !localProfile?.plan_id && !localProfile?.is_super_admin
+  const isGuest = !localProfile?.is_super_admin && !localProfile?.subscription_licenses
   const [activeTab, setActiveTab] = useState<TabId>(isGuest ? 'metavoice' : 'dashboard')
   const [isCanceling, setIsCanceling] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
@@ -509,7 +495,7 @@ export default function ClientDashboardClient({
   }, [activeTab])
 
   // Plan modification state
-  const [selectedPlanId, setSelectedPlanId] = useState<string>(plan?.id || '')
+  const [selectedLicenses, setSelectedLicenses] = useState<number>(localProfile?.subscription_licenses || 1)
   const [selectedCycle, setSelectedCycle] = useState<string>(localProfile?.subscription_cycle || 'monthly')
   const [isUpdatingPlan, setIsUpdatingPlan] = useState(false)
   const [showPlanConfirmModal, setShowPlanConfirmModal] = useState(false)
@@ -568,14 +554,14 @@ export default function ClientDashboardClient({
   }, [activeTab, localProfile?.asaas_subscription_id])
 
   const handleChangePlan = async () => {
-    if (!selectedPlanId || !selectedCycle) return
+    if (!selectedLicenses || !selectedCycle) return
     setIsUpdatingPlan(true)
     try {
       const supabase = createClient()
       const { data, error } = await supabase.functions.invoke('asaas-update-subscription', {
         body: {
           action: 'changePlan',
-          planId: selectedPlanId,
+          licenses: selectedLicenses,
           cycle: selectedCycle
         }
       })
@@ -587,7 +573,7 @@ export default function ClientDashboardClient({
         // Update local profile state
         setLocalProfile(prev => prev ? {
           ...prev,
-          plan_id: selectedPlanId,
+          subscription_licenses: selectedLicenses,
           subscription_cycle: selectedCycle as any
         } : prev)
 
@@ -718,14 +704,33 @@ export default function ClientDashboardClient({
   }, [payments])
 
   const getPlanPrice = () => {
-    if (!plan) return null
-    switch (localProfile?.subscription_cycle) {
-      case 'monthly': return plan.price_monthly ?? plan.price
-      case 'quarterly': return plan.price_quarterly
-      case 'semiannual': return plan.price_semiannually
-      case 'yearly': return plan.price_yearly
-      default: return plan.price_monthly ?? plan.price
+    if (!rules || !localProfile?.subscription_licenses) return null
+
+    let discountPercent = 0
+    const tiers = [...(rules.volume_tiers || [])].sort((a, b) => b.min_licenses - a.min_licenses)
+    for (const tier of tiers) {
+      if (localProfile.subscription_licenses >= tier.min_licenses) {
+        discountPercent = tier.discount_percent
+        break
+      }
     }
+    
+    let baseValue = rules.base_price * localProfile.subscription_licenses
+    let valueWithVolumeDiscount = baseValue * (1 - discountPercent / 100)
+    
+    const cycle = localProfile.subscription_cycle || 'monthly'
+    let cycleDiscount = 0
+    if (cycle === 'quarterly') cycleDiscount = rules.cycle_discounts?.quarterly || 10
+    if (cycle === 'semiannual') cycleDiscount = rules.cycle_discounts?.semiannual || 15
+    if (cycle === 'yearly') cycleDiscount = rules.cycle_discounts?.yearly || 20
+    
+    let finalValue = valueWithVolumeDiscount * (1 - cycleDiscount / 100)
+    
+    if (cycle === 'quarterly') finalValue *= 3
+    else if (cycle === 'semiannual') finalValue *= 6
+    else if (cycle === 'yearly') finalValue *= 12
+    
+    return finalValue
   }
 
   const canCancel =
@@ -1046,7 +1051,7 @@ export default function ClientDashboardClient({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <LicenseGaugeCard
                   licensesUsed={licensesUsed}
-                  licensesTotal={plan?.licenses_count ?? 0}
+                  licensesTotal={localProfile?.subscription_licenses ?? 0}
                 />
                 <KpiCard
                   label="Workspaces"
@@ -1541,7 +1546,7 @@ export default function ClientDashboardClient({
                         const volumeRule = iclubData.rules.find(r => r.benefit_type === 'volume_license');
                         const target = volumeRule ? volumeRule.target_count : 12;
                         const rewardValue = volumeRule ? Math.round(Number(volumeRule.reward_value)) : 1;
-                        const currentVal = plan?.licenses_count || 1;
+                        const currentVal = localProfile?.subscription_licenses || 1;
                         const progress = Math.min((currentVal / target) * 100, 100);
                         const licensesRemaining = target - (currentVal % target);
 
@@ -1858,7 +1863,7 @@ export default function ClientDashboardClient({
                   </div>
 
                   {/* Masked Card Details */}
-                  {plan && (
+                  {localProfile?.subscription_licenses && localProfile.subscription_licenses > 0 && (
                     <div className="shrink-0">
                       {localProfile?.card_brand && localProfile?.card_last_digits ? (
                         <div className="flex items-center gap-2.5 px-4 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 rounded-2xl text-xs">
@@ -1899,14 +1904,14 @@ export default function ClientDashboardClient({
                   )}
                 </div>
 
-                {plan ? (
+                {localProfile?.subscription_licenses && localProfile.subscription_licenses > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                     {/* Plan */}
                     <div className="p-5 bg-gradient-to-br from-indigo-50 to-indigo-100/50 dark:from-indigo-500/10 dark:to-indigo-500/5 rounded-2xl border border-indigo-100 dark:border-indigo-500/20">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Plano Atual</span>
-                      <h4 className="text-xl font-black text-indigo-700 dark:text-indigo-300 mt-2">{plan.name}</h4>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Licenças Ativas</span>
+                      <h4 className="text-xl font-black text-indigo-700 dark:text-indigo-300 mt-2">{localProfile.subscription_licenses} Licenças</h4>
                       <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-1">
-                        {getPlanPrice() !== null ? `${formatPrice(getPlanPrice()!)} / ${getCycleLabel(localProfile?.subscription_cycle).toLowerCase()}` : '—'}
+                        Baseado em volume
                       </p>
                     </div>
 
@@ -1970,114 +1975,7 @@ export default function ClientDashboardClient({
                 )}
               </div>
 
-              {/* Plan & Cycle Switcher (Upgrade/Downgrade Section) */}
-              {plan && plans.length > 0 && (
-                <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
-                  <div>
-                    <h3 className="text-lg font-bold text-neutral-900 dark:text-white">Alterar Plano ou Ciclo</h3>
-                    <p className="text-xs text-neutral-500 mt-1">Troque de plano ou ciclo de faturamento instantaneamente</p>
-                  </div>
 
-                  {/* Billing Cycle Selector Buttons */}
-                  <div className="flex flex-wrap gap-2 p-1 bg-neutral-100 dark:bg-neutral-950 rounded-2xl border border-neutral-200 dark:border-neutral-850 w-fit">
-                    {(['monthly', 'quarterly', 'semiannual', 'yearly'] as const).map(c => {
-                      const discountLabels: Record<string, string> = {
-                        quarterly: '-10%',
-                        semiannual: '-15%',
-                        yearly: '-20%',
-                      }
-                      return (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => setSelectedCycle(c)}
-                          className={cn(
-                            'px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5',
-                            selectedCycle === c
-                              ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm'
-                              : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
-                          )}
-                        >
-                          <span>{getCycleLabel(c)}</span>
-                          {discountLabels[c] && (
-                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[8px] font-black">
-                              {discountLabels[c]}
-                            </span>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-
-                  {/* Plans Selector Cards Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {plans.map(p => {
-                      const isCurrent = p.id === plan.id && selectedCycle === localProfile?.subscription_cycle
-                      const isSelected = p.id === selectedPlanId
-
-                      let displayPrice = p.price
-                      if (selectedCycle === 'monthly') displayPrice = p.price_monthly || p.price
-                      else if (selectedCycle === 'quarterly') displayPrice = (p.price_quarterly || 0) / 3
-                      else if (selectedCycle === 'semiannual') displayPrice = (p.price_semiannually || 0) / 6
-                      else if (selectedCycle === 'yearly') displayPrice = (p.price_yearly || 0) / 12
-
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => setSelectedPlanId(p.id)}
-                          className={cn(
-                            'p-5 rounded-2xl border text-left transition-all flex flex-col justify-between gap-4 outline-none',
-                            isSelected
-                              ? 'bg-indigo-50/5 dark:bg-indigo-500/5 border-indigo-500 shadow-md ring-1 ring-indigo-500'
-                              : 'bg-neutral-50 dark:bg-neutral-950 hover:bg-neutral-100 dark:hover:bg-neutral-900/50 border-neutral-200 dark:border-neutral-800'
-                          )}
-                        >
-                          <div className="space-y-1 w-full">
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-xs font-black text-neutral-900 dark:text-white uppercase tracking-wider">{p.name}</h4>
-                              {isCurrent && (
-                                <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[8px] font-black uppercase tracking-wider shrink-0">
-                                  Ativo
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-neutral-400">Até {p.licenses_count} licenças ativas</p>
-                          </div>
-
-                          <div className="w-full">
-                            <div className="flex items-baseline gap-1">
-                              <span className="text-xl font-black text-neutral-900 dark:text-white">{formatPrice(displayPrice)}</span>
-                              <span className="text-[9px] text-neutral-400">/mês</span>
-                            </div>
-                            {selectedCycle !== 'monthly' && (
-                              <p className="text-[9px] text-neutral-400 mt-1 leading-normal">
-                                Cobrado {formatPrice(
-                                  selectedCycle === 'quarterly' ? p.price_quarterly! :
-                                    selectedCycle === 'semiannual' ? p.price_semiannually! : p.price_yearly!
-                                )} ao contratar
-                              </p>
-                            )}
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-
-                  {/* Trigger to show inline modal */}
-                  {(selectedPlanId !== plan.id || selectedCycle !== localProfile?.subscription_cycle) && (
-                    <div className="flex justify-end pt-2">
-                      <button
-                        onClick={() => setShowPlanConfirmModal(true)}
-                        className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black shadow-lg shadow-indigo-500/10 transition-all flex items-center gap-2"
-                      >
-                        <Zap className="w-4 h-4 fill-white" />
-                        Confirmar Nova Assinatura
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Payments History */}
               <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden shadow-sm">
@@ -2159,7 +2057,7 @@ export default function ClientDashboardClient({
                     </p>
                   </div>
                 </div>
-              ) : !plan ? (
+              ) : !(localProfile?.subscription_licenses && localProfile.subscription_licenses > 0) ? (
                 /* No active plan */
                 <div className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-8 text-center space-y-4">
                   <ShieldAlert className="w-10 h-10 text-neutral-300 dark:text-neutral-700 mx-auto" />
@@ -2503,72 +2401,6 @@ export default function ClientDashboardClient({
           </div>
         </div>
       </Modal>
-
-      {/* Plan Update Confirmation Modal */}
-      <Modal
-        isOpen={showPlanConfirmModal}
-        onClose={() => setShowPlanConfirmModal(false)}
-        title="Confirmar Alteração de Plano"
-        description="Verifique os detalhes da sua nova assinatura antes de prosseguir."
-        size="md"
-      >
-        <div className="flex flex-col gap-6 mt-2">
-          <div className="p-4 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 rounded-2xl space-y-3">
-            <div>
-              <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Plano Atual</span>
-              <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                {plan?.name} ({getCycleLabel(localProfile?.subscription_cycle)})
-              </p>
-            </div>
-            <div className="border-t border-neutral-100 dark:border-neutral-800 pt-2.5">
-              <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500">Novo Plano Escolhido</span>
-              <p className="text-xs font-black text-indigo-700 dark:text-indigo-400">
-                {plans.find(p => p.id === selectedPlanId)?.name} ({getCycleLabel(selectedCycle)})
-              </p>
-              <p className="text-[10px] text-neutral-500 mt-1 leading-relaxed">
-                Novo valor: {formatPrice(
-                  selectedCycle === 'monthly' ? (plans.find(p => p.id === selectedPlanId)?.price_monthly || plans.find(p => p.id === selectedPlanId)?.price || 0) :
-                    selectedCycle === 'quarterly' ? (plans.find(p => p.id === selectedPlanId)?.price_quarterly || 0) :
-                      selectedCycle === 'semiannual' ? (plans.find(p => p.id === selectedPlanId)?.price_semiannually || 0) :
-                        (plans.find(p => p.id === selectedPlanId)?.price_yearly || 0)
-                )} cobrado de forma recorrente no ciclo selecionado.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2 text-[10px] text-neutral-500 leading-relaxed">
-            <Shield className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-            <p>
-              A alteração de plano será sincronizada instantaneamente no gateway Asaas. Cobranças proporcionais (pro-rata) para cartões de crédito serão lançadas ou creditadas de forma automática pelo sistema de faturamento.
-            </p>
-          </div>
-
-          <div className="flex gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-850">
-            <button
-              type="button"
-              onClick={() => setShowPlanConfirmModal(false)}
-              className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-750 text-neutral-800 dark:text-neutral-200 text-xs font-bold rounded-xl transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleChangePlan}
-              disabled={isUpdatingPlan}
-              className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2"
-            >
-              {isUpdatingPlan ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Atualizando...
-                </>
-              ) : (
-                'Confirmar Alteração'
-              )}
-            </button>
-          </div>
-        </div>
-      </Modal>
-
       {/* Credit Card Update Modal */}
       <Modal
         isOpen={showCardModal}

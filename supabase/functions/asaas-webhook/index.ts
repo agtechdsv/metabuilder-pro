@@ -53,8 +53,20 @@ serve(async (req) => {
       workspaceId: string;
       planId: string;
       cycle: string;
+      licenses: number;
       externalReference: string;
     }
+
+    const extractLicensesFromExtRef = (extRef: string): number => {
+      if (!extRef) return 1;
+      const parts = extRef.split("_");
+      const lIndex = parts.indexOf("l");
+      if (lIndex !== -1 && parts[lIndex + 1]) {
+        return parseInt(parts[lIndex + 1], 10) || 1;
+      }
+      // Try to get it from description if external_reference doesn't have it
+      return 1;
+    };
 
     const resolveContext = async (): Promise<Context | null> => {
 
@@ -77,6 +89,7 @@ serve(async (req) => {
             workspaceId: data.workspace_id,
             planId: data.plan_id,
             cycle: data.cycle,
+            licenses: extractLicensesFromExtRef(data.external_reference),
             externalReference: data.external_reference
           };
         }
@@ -108,6 +121,7 @@ serve(async (req) => {
             workspaceId: ws?.id || "",
             planId: data.plan_id || "",
             cycle: data.subscription_cycle || "",
+            licenses: extractLicensesFromExtRef(payment?.externalReference || ""),
             externalReference: payment?.externalReference || ""
           };
         }
@@ -124,10 +138,20 @@ serve(async (req) => {
         let planId = "";
         let cycleRaw = "";
 
-        if (parts[0] === "u") {
-          userId = parts[1]; workspaceId = parts[3]; planId = parts[5]; cycleRaw = parts[7];
+        let licenses = 1;
+
+        if (extRef.includes("_l_") && extRef.includes("_c_")) {
+          const lIndex = parts.indexOf("l");
+          if (lIndex !== -1 && parts[lIndex + 1]) licenses = parseInt(parts[lIndex + 1]) || 1;
+          const cIndex = parts.indexOf("c");
+          if (cIndex !== -1 && parts[cIndex + 1]) cycleRaw = parts[cIndex + 1];
+          workspaceId = parts[1];
         } else {
-          workspaceId = parts[1]; planId = parts[3]; cycleRaw = parts[5];
+          if (parts[0] === "u") {
+            userId = parts[1]; workspaceId = parts[3]; planId = parts[5]; cycleRaw = parts[7];
+          } else {
+            workspaceId = parts[1]; planId = parts[3]; cycleRaw = parts[5];
+          }
         }
 
         userId = formatUUID(userId);
@@ -152,7 +176,7 @@ serve(async (req) => {
 
         if (userId && workspaceId) {
           console.log(`[S3] Success: user_id=${userId}`);
-          return { userId, workspaceId, planId, cycle, externalReference: extRef };
+          return { userId, workspaceId, planId, cycle, licenses, externalReference: extRef };
         }
       }
 
@@ -190,6 +214,7 @@ serve(async (req) => {
       };
       if (ctx.planId) updatePayload.plan_id = ctx.planId;
       if (ctx.cycle) updatePayload.subscription_cycle = ctx.cycle;
+      if (ctx.licenses) updatePayload.subscription_licenses = ctx.licenses;
 
       const { error: profileError } = await supabase
         .from("profiles")

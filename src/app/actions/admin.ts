@@ -23,85 +23,7 @@ async function checkSuperAdmin() {
   return { supabase, adminSupabase, user }
 }
 
-export async function savePlan(plan: {
-  id?: string
-  name: string
-  licenses_count: number
-  price: number
-  price_monthly?: number
-  price_quarterly?: number
-  price_semiannually?: number
-  price_yearly?: number
-  description: string
-  features: string[]
-  is_active: boolean
-}) {
-  try {
-    const { adminSupabase } = await checkSuperAdmin()
-
-    const planData = {
-      name: plan.name,
-      licenses_count: plan.licenses_count,
-      price: plan.price,
-      price_monthly: plan.price_monthly ?? plan.price,
-      price_quarterly: plan.price_quarterly,
-      price_semiannually: plan.price_semiannually,
-      price_yearly: plan.price_yearly,
-      description: plan.description,
-      features: plan.features,
-      is_active: plan.is_active
-    }
-
-    let error
-    if (plan.id) {
-      // Update
-      const { error: err } = await adminSupabase
-        .from('subscription_plans')
-        .update(planData)
-        .eq('id', plan.id)
-      error = err
-    } else {
-      // Insert
-      const { error: err } = await adminSupabase
-        .from('subscription_plans')
-        .insert(planData)
-      error = err
-    }
-
-    if (error) {
-      console.error('Erro ao salvar plano:', error)
-      return { success: false, error: error.message }
-    }
-
-    revalidatePath('/')
-    revalidatePath('/admin/platform')
-    return { success: true }
-  } catch (err: any) {
-    return { success: false, error: err.message }
-  }
-}
-
-export async function deletePlan(planId: string) {
-  try {
-    const { adminSupabase } = await checkSuperAdmin()
-
-    const { error } = await adminSupabase
-      .from('subscription_plans')
-      .delete()
-      .eq('id', planId)
-
-    if (error) {
-      console.error('Erro ao deletar plano:', error)
-      return { success: false, error: error.message }
-    }
-
-    revalidatePath('/')
-    revalidatePath('/admin/platform')
-    return { success: true }
-  } catch (err: any) {
-    return { success: false, error: err.message }
-  }
-}
+// Removidos savePlan e deletePlan legados
 
 export async function toggleWorkspaceBlock(workspaceId: string, isBlocked: boolean) {
   try {
@@ -123,6 +45,39 @@ export async function toggleWorkspaceBlock(workspaceId: string, isBlocked: boole
     revalidatePath(`/admin/${workspaceId}`) // revalidate paths associated
     return { success: true }
   } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+
+export async function toggleClientBlock(profileId: string, isBlocked: boolean) {
+  try {
+    const { adminSupabase } = await checkSuperAdmin()
+
+    // 1. Block Profile
+    const { error: profileError } = await adminSupabase
+      .from('profiles')
+      .update({
+        is_blocked: isBlocked,
+        subscription_status: isBlocked ? 'blocked' : 'active'
+      })
+      .eq('id', profileId)
+
+    if (profileError) throw profileError
+
+    // 2. Block all their workspaces
+    const { error: wsError } = await adminSupabase
+      .from('workspaces')
+      .update({
+        is_blocked: isBlocked
+      })
+      .eq('owner_id', profileId)
+
+    if (wsError) throw wsError
+
+    revalidatePath('/admin/platform')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao alternar bloqueio de cliente:', err)
     return { success: false, error: err.message }
   }
 }
@@ -301,7 +256,21 @@ export async function deleteClientAdmin(profileId: string) {
   try {
     const { adminSupabase } = await checkSuperAdmin()
 
-    // 1. Delete user from auth.users (triggers cascade deletes on profiles, workspaces, etc.)
+    // 0. Encontrar convidados deste owner e excluí-los (cascade delete em perfis, acessos, etc)
+    const { data: guests } = await adminSupabase
+      .from('owner_guests')
+      .select('user_id')
+      .eq('owner_id', profileId)
+
+    if (guests && guests.length > 0) {
+      for (const guest of guests) {
+        if (guest.user_id) {
+          await adminSupabase.auth.admin.deleteUser(guest.user_id)
+        }
+      }
+    }
+
+    // 1. Delete owner from auth.users (triggers cascade deletes on profiles, workspaces, etc.)
     const { error: authError } = await adminSupabase.auth.admin.deleteUser(profileId)
     if (authError) {
       console.error('Erro ao deletar usuário do auth:', authError)
@@ -322,4 +291,76 @@ export async function deleteClientAdmin(profileId: string) {
   }
 }
 
+// --- Pricing Rules Actions ---
 
+export async function getPricingRules() {
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('pricing_rules')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Erro ao buscar regras de precificação:', error)
+      return { success: false, error: error.message }
+    }
+    
+    return { success: true, rules: data }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+
+export async function savePricingRules(rules: {
+  base_price: number
+  volume_tiers: any[]
+  cycle_discounts: any
+}) {
+  try {
+    const { adminSupabase } = await checkSuperAdmin()
+
+    // check if exists
+    const { data: existing } = await adminSupabase
+      .from('pricing_rules')
+      .select('id')
+      .limit(1)
+
+    let error;
+    if (existing && existing.length > 0) {
+      const { error: updateError } = await adminSupabase
+        .from('pricing_rules')
+        .update({
+          base_price: rules.base_price,
+          volume_tiers: rules.volume_tiers,
+          cycle_discounts: rules.cycle_discounts,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existing[0].id)
+      error = updateError
+    } else {
+      const { error: insertError } = await adminSupabase
+        .from('pricing_rules')
+        .insert({
+          base_price: rules.base_price,
+          volume_tiers: rules.volume_tiers,
+          cycle_discounts: rules.cycle_discounts
+        })
+      error = insertError
+    }
+
+    if (error) {
+      console.error('Erro ao salvar regras de precificação:', error)
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath('/')
+    revalidatePath('/checkout')
+    revalidatePath('/admin/platform')
+    return { success: true }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}

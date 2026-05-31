@@ -46,7 +46,7 @@ serve(async (req) => {
     // Fetch user profile
     const { data: profile, error: profileError } = await supabaseClient
       .from("profiles")
-      .select("id, asaas_subscription_id, asaas_customer_id, plan_id, subscription_cycle")
+      .select("id, asaas_subscription_id, asaas_customer_id, subscription_licenses, subscription_cycle")
       .eq("id", user.id)
       .single();
 
@@ -136,10 +136,10 @@ serve(async (req) => {
     const { action } = body;
 
     if (action === "changePlan") {
-      const { planId, cycle } = body;
-      if (!planId || !cycle) {
+      const { licenses, cycle } = body;
+      if (!licenses || !cycle) {
         return new Response(
-          JSON.stringify({ error: "planId e cycle são obrigatórios" }),
+          JSON.stringify({ error: "licenses e cycle são obrigatórios" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -151,34 +151,54 @@ serve(async (req) => {
         );
       }
 
-      // Fetch target plan details
-      const { data: plan, error: planError } = await supabaseClient
-        .from("subscription_plans")
+      // Fetch pricing rules
+      const { data: rules, error: rulesError } = await supabaseClient
+        .from("pricing_rules")
         .select("*")
-        .eq("id", planId)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .single();
 
-      if (planError || !plan) {
+      if (rulesError || !rules) {
         return new Response(
-          JSON.stringify({ error: "Plano de destino não encontrado" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Regras de precificação não encontradas" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      // Determine cycle price and Asaas cycle name
-      let cyclePrice = 0;
+      const licensesCount = Number(licenses);
+      if (isNaN(licensesCount) || licensesCount < 1) {
+        return new Response(
+          JSON.stringify({ error: "Quantidade de licenças inválida" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Calculate dynamic price
+      let discountPercent = 0;
+      const tiers = [...(rules.volume_tiers || [])].sort((a: any, b: any) => b.min_licenses - a.min_licenses);
+      for (const tier of tiers) {
+        if (licensesCount >= tier.min_licenses) {
+          discountPercent = tier.discount_percent;
+          break;
+        }
+      }
+
+      let baseValue = rules.base_price * licensesCount;
+      let valueWithVolumeDiscount = baseValue * (1 - discountPercent / 100);
+
+      let cycleDiscount = 0;
       let asaasCycle = "";
       if (cycle === "monthly") {
-        cyclePrice = Number(plan.price_monthly || plan.price);
         asaasCycle = "MONTHLY";
       } else if (cycle === "quarterly") {
-        cyclePrice = Number(plan.price_quarterly);
+        cycleDiscount = rules.cycle_discounts?.quarterly || 10;
         asaasCycle = "QUARTERLY";
       } else if (cycle === "semiannual") {
-        cyclePrice = Number(plan.price_semiannually);
+        cycleDiscount = rules.cycle_discounts?.semiannual || 15;
         asaasCycle = "SEMIANNUALLY";
       } else if (cycle === "yearly") {
-        cyclePrice = Number(plan.price_yearly);
+        cycleDiscount = rules.cycle_discounts?.yearly || 20;
         asaasCycle = "YEARLY";
       } else {
         return new Response(
@@ -187,11 +207,17 @@ serve(async (req) => {
         );
       }
 
+      let finalValue = valueWithVolumeDiscount * (1 - cycleDiscount / 100);
+      let cyclePrice = finalValue;
+      if (cycle === "quarterly") cyclePrice *= 3;
+      else if (cycle === "semiannual") cyclePrice *= 6;
+      else if (cycle === "yearly") cyclePrice *= 12;
+
       // Update Subscription in Asaas
       const updatePayload = {
         value: cyclePrice,
         cycle: asaasCycle,
-        description: `MetaBuilderPRO - Assinatura Plano ${plan.name}`,
+        description: `MetaBuilderPRO - Assinatura para ${licensesCount} Licença(s)`,
       };
 
       const asaasRes = await fetch(`${ASAAS_URL}/subscriptions/${profile.asaas_subscription_id}`, {
@@ -227,7 +253,7 @@ serve(async (req) => {
       const { error: updateDbError } = await supabaseClient
         .from("profiles")
         .update({
-          plan_id: planId,
+          subscription_licenses: licensesCount,
           subscription_cycle: cycle,
           subscription_expires_at: expirationDate.toISOString()
         })

@@ -56,7 +56,7 @@ export async function inviteWorkspaceMember(workspaceId: string, workspaceSlug: 
 
     const { data: profileData, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('plan_id, subscription_status, is_super_admin, subscription_plans(licenses_count)')
+      .select('subscription_licenses, subscription_status, is_super_admin')
       .eq('id', ownerId)
       .single()
 
@@ -71,10 +71,10 @@ export async function inviteWorkspaceMember(workspaceId: string, workspaceSlug: 
     let allowedGuests = 0;
     if (profileData.is_super_admin) {
       allowedGuests = 9999;
-    } else if (profileData.subscription_plans) {
+    } else if (profileData.subscription_licenses) {
       const extraLicenses = await getIClubAllowedGuestsExtra(ownerId);
-      // licenses_count inclui o dono. Ex: 5 licenças = 1 dono + 4 convidados.
-      const totalLicenses = ((profileData.subscription_plans as any).licenses_count || 1) + extraLicenses;
+      // subscription_licenses inclui o dono. Ex: 5 licenças = 1 dono + 4 convidados.
+      const totalLicenses = profileData.subscription_licenses + extraLicenses;
       allowedGuests = Math.max(0, totalLicenses - 1);
     }
 
@@ -332,7 +332,7 @@ export async function getStudioTeamData() {
     // 1. Fetch owner profile & subscription plans to check quotas
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('plan_id, subscription_status, is_super_admin, subscription_plans(licenses_count)')
+      .select('subscription_licenses, subscription_status, is_super_admin')
       .eq('id', ownerId)
       .single()
 
@@ -415,9 +415,9 @@ export async function getStudioTeamData() {
     let allowedGuests = 0;
     if (profile.is_super_admin) {
       allowedGuests = 9999;
-    } else if (profile.subscription_plans) {
+    } else if (profile.subscription_licenses) {
       const extraLicenses = await getIClubAllowedGuestsExtra(ownerId);
-      const totalLicenses = ((profile.subscription_plans as any).licenses_count || 1) + extraLicenses;
+      const totalLicenses = profile.subscription_licenses + extraLicenses;
       allowedGuests = Math.max(0, totalLicenses - 1);
     }
 
@@ -458,7 +458,7 @@ export async function inviteStudioGuest(email: string) {
     // Fetch limits
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('plan_id, subscription_status, is_super_admin, subscription_plans(licenses_count)')
+      .select('subscription_licenses, subscription_status, is_super_admin')
       .eq('id', ownerId)
       .single()
 
@@ -471,9 +471,9 @@ export async function inviteStudioGuest(email: string) {
     let allowedGuests = 0;
     if (profile.is_super_admin) {
       allowedGuests = 9999;
-    } else if (profile.subscription_plans) {
+    } else if (profile.subscription_licenses) {
       const extraLicenses = await getIClubAllowedGuestsExtra(ownerId);
-      const totalLicenses = ((profile.subscription_plans as any).licenses_count || 1) + extraLicenses;
+      const totalLicenses = profile.subscription_licenses + extraLicenses;
       allowedGuests = Math.max(0, totalLicenses - 1);
     }
 

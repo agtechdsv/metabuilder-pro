@@ -29,7 +29,7 @@ interface SettingsClientProps {
     id: string
     full_name: string | null
     email: string | null
-    plan_id?: string | null
+    is_super_admin?: boolean | null
     subscription_status?: string | null
     subscription_cycle?: string | null
     subscription_expires_at?: string | null
@@ -41,7 +41,7 @@ interface SettingsClientProps {
   workspaceProjects?: { id: string; name: string }[]
   initialMemberProjects?: { user_id: string; project_id: string }[]
   payments: any[]
-  plans: any[]
+  rules?: any
 }
 
 function getMemberDisplayName(member: Member) {
@@ -66,7 +66,7 @@ export function SettingsClient({
   workspaceProjects, 
   initialMemberProjects,
   payments,
-  plans
+  rules
 }: SettingsClientProps) {
   const [activeTab, setActiveTab] = useState<'team' | 'billing'>('team')
   const [members, setMembers] = useState<Member[]>(initialMembers)
@@ -317,7 +317,7 @@ export function SettingsClient({
           profile={profile}
           isOwner={currentUserRole === 'owner'}
           payments={payments}
-          plans={plans}
+          rules={rules}
         />
       )}
 

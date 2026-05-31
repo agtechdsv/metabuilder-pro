@@ -223,10 +223,10 @@ export async function getPostLoginRedirectPath(userId: string): Promise<string> 
   const supabase = await createClient()
 
   try {
-    // 1. Fetch profile to check if is_super_admin or has plan_id status
+    // 1. Fetch profile to check if is_super_admin or has subscription licenses
     const { data: profile } = await supabase
       .from('profiles')
-      .select('is_super_admin, plan_id, subscription_status')
+      .select('is_super_admin, subscription_licenses, subscription_status')
       .eq('id', userId)
       .single()
 
@@ -265,7 +265,7 @@ export async function getPostLoginRedirectPath(userId: string): Promise<string> 
     }
 
     // 3. User is an Owner (not super admin, not guest)
-    if (profile?.plan_id && profile?.subscription_status === 'active') {
+    if (profile?.subscription_licenses && profile.subscription_licenses > 0 && profile?.subscription_status === 'active') {
       return '/client/dashboard'
     }
   } catch (err) {

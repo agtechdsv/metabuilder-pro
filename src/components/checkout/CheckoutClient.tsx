@@ -21,32 +21,17 @@ import { getOrCreateDefaultWorkspace } from '@/app/actions/checkout'
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 
-interface Plan {
-  id: string
-  name: string
-  licenses_count: number
-  price: number
-  price_monthly?: number | null
-  price_quarterly?: number | null
-  price_semiannually?: number | null
-  price_yearly?: number | null
-  description: string
-  features: any
-}
-
 interface CheckoutClientProps {
-  plans: Plan[]
-  initialPlanId?: string
+  rules: any
+  initialLicenses?: number
   initialCycle?: 'monthly' | 'quarterly' | 'semiannual' | 'yearly'
   workspaceSlug?: string
   user: any
   profile?: any
 }
 
-export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSlug, user, profile }: CheckoutClientProps) {
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(
-    plans.find(p => p.id === initialPlanId) || plans[0] || null
-  )
+export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, workspaceSlug, user, profile }: CheckoutClientProps) {
+  const [licenses, setLicenses] = useState(initialLicenses)
   const [cycle, setCycle] = useState<'monthly' | 'quarterly' | 'semiannual' | 'yearly'>(
     initialCycle && ['monthly', 'quarterly', 'semiannual', 'yearly'].includes(initialCycle)
       ? initialCycle
@@ -75,7 +60,7 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
   const [isProcessing, setIsProcessing] = useState(false)
   const [checkoutStep, setCheckoutStep] = useState<'checkout' | 'success'>('checkout')
   const [successWorkspaceSlug, setSuccessWorkspaceSlug] = useState('')
-  const [countdown, setCountdown] = useState(5)
+  const [countdown, setCountdown] = useState(10)
 
   // Dynamic payment response states (from Asaas Deno function)
   const [showPaymentDetails, setShowPaymentDetails] = useState(false)
@@ -124,30 +109,35 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
   }, [])
 
   // Helper to calculate cycle prices
-  const getCyclePrices = (plan: Plan | null, currentCycle: 'monthly' | 'quarterly' | 'semiannual' | 'yearly') => {
-    if (!plan) return { total: 0, monthlyEquivalent: 0, months: 1 }
+  // Helper to calculate cycle prices dynamically
+  const getCyclePrices = (currentCycle: 'monthly' | 'quarterly' | 'semiannual' | 'yearly') => {
+    if (!rules) return { total: 0, monthlyEquivalent: 0, months: 1 }
 
-    const monthly = Number(plan.price_monthly ?? plan.price)
-    let total = monthly
+    const basePrice = Number(rules.base_price) || 450
+    let volDiscount = 0
+    if (rules.volume_tiers && rules.volume_tiers.length > 0) {
+      const sorted = [...rules.volume_tiers].sort((a: any, b: any) => b.min_licenses - a.min_licenses)
+      const tier = sorted.find((t: any) => licenses >= t.min_licenses)
+      if (tier) volDiscount = tier.discount_percent
+    }
+    
+    const unitPrice = basePrice * (1 - volDiscount / 100)
+
     let months = 1
+    if (currentCycle === 'quarterly') months = 3
+    if (currentCycle === 'semiannual') months = 6
+    if (currentCycle === 'yearly') months = 12
 
-    if (currentCycle === 'monthly') {
-      total = Number(plan.price_monthly ?? plan.price)
-      months = 1
-    } else if (currentCycle === 'quarterly') {
-      total = plan.price_quarterly ? Number(plan.price_quarterly) : Number((monthly * 3 * 0.90).toFixed(2))
-      months = 3
-    } else if (currentCycle === 'semiannual') {
-      total = plan.price_semiannually ? Number(plan.price_semiannually) : Number((monthly * 6 * 0.85).toFixed(2))
-      months = 6
-    } else if (currentCycle === 'yearly') {
-      total = plan.price_yearly ? Number(plan.price_yearly) : Number((monthly * 12 * 0.80).toFixed(2))
-      months = 12
+    let cycleDiscount = 0
+    if (rules.cycle_discounts) {
+      cycleDiscount = rules.cycle_discounts[currentCycle] || 0
     }
 
+    const totalValue = (unitPrice * licenses * months) * (1 - cycleDiscount / 100)
+
     return {
-      total,
-      monthlyEquivalent: total / months,
+      total: totalValue,
+      monthlyEquivalent: totalValue / months,
       months
     }
   }
@@ -155,8 +145,8 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
   // Handle billing process calling Edge Function
   const handleSubmitCheckout = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedPlan) {
-      toast('Selecione um plano.', 'error')
+    if (!rules) {
+      toast('As regras de precificação não estão disponíveis no momento.', 'error')
       return
     }
 
@@ -185,7 +175,7 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
       // Chamar Edge Function 'asaas-checkout'
       const { data, error } = await supabase.functions.invoke('asaas-checkout', {
         body: {
-          planId: selectedPlan.id,
+          licenses: licenses,
           cycle: cycle,
           paymentMethod: paymentMethod,
           billingName: billingName,
@@ -303,14 +293,11 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
     }
   }, [checkoutStep, countdown, router])
 
-  const featuresList = selectedPlan
-    ? (Array.isArray(selectedPlan.features)
-      ? selectedPlan.features
-      : typeof selectedPlan.features === 'string'
-        ? JSON.parse(selectedPlan.features)
-        : []
-      ).filter((feat: string) => !/^\d+\s+licença/i.test(feat.trim()))
-    : []
+  const featuresList = [
+    "Acesso a todas as ferramentas PRO",
+    "Desenvolvimento Ilimitado",
+    "Suporte e Atualizações (IClub)"
+  ]
 
 
   if (checkoutStep === 'success') {
@@ -329,7 +316,7 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
           </span>
           <h2 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">Pagamento Aprovado!</h2>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            O plano <strong className="text-indigo-500 font-extrabold">{selectedPlan?.name}</strong> foi ativado e aplicado a todos os seus workspaces.
+            A licença para <strong className="text-indigo-500 font-extrabold">{licenses} {licenses === 1 ? 'usuário' : 'usuários'}</strong> foi ativada e aplicada a todos os seus workspaces.
           </p>
         </div>
 
@@ -337,9 +324,7 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
           <p><strong>Ambiente de Trabalho:</strong> /client/dashboard</p>
           <p>
             <strong>Valor Contratado:</strong> R${' '}
-            {selectedPlan
-              ? getCyclePrices(selectedPlan, cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-              : '0,00'}{' '}
+            {getCyclePrices(cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
             ({cycle === 'monthly' ? 'Mensal' : cycle === 'quarterly' ? 'Trimestral' : cycle === 'semiannual' ? 'Semestral' : 'Anual'})
           </p>
           <p><strong>Status da Assinatura:</strong> Ativa (Acesso ilimitado e sem restrições)</p>
@@ -375,7 +360,7 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
             {paymentMethod === 'pix' ? 'Pague com Pix' : 'Pague com Boleto'}
           </h2>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            Sua assinatura do plano <strong className="text-indigo-500 font-extrabold">{selectedPlan?.name}</strong> foi gerada. Complete o pagamento para ativar.
+            Sua assinatura para <strong className="text-indigo-500 font-extrabold">{licenses} {licenses === 1 ? 'licença' : 'licenças'}</strong> foi gerada. Complete o pagamento para ativar.
           </p>
         </div>
 
@@ -508,9 +493,29 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
         
         {/* Left Column: Forms */}
-        <div className="lg:col-span-6 space-y-8">
-          
-          <form onSubmit={handleSubmitCheckout} className="space-y-8">
+        {licenses >= 50 ? (
+          <div className="lg:col-span-6 space-y-8 animate-in fade-in slide-in-from-left-4">
+            <div className="bg-neutral-50/50 dark:bg-neutral-950/40 border border-neutral-200/50 dark:border-neutral-800/40 p-8 md:p-12 rounded-3xl space-y-6 shadow-sm text-center flex flex-col items-center justify-center min-h-[500px]">
+              <div className="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-500 mb-2 border border-indigo-500/20">
+                 <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1v2H9V7zm0 4h1v2H9v-2zm0 4h1v2H9v-2zm-3-8h1v2H6V7zm0 4h1v2H6v-2zm0 4h1v2H6v-2zm8-8h1v2h-1V7zm0 4h1v2h-1v-2zm0 4h1v2h-1v-2z" /></svg>
+              </div>
+              <h2 className="text-3xl font-black text-neutral-900 dark:text-white">Plano Enterprise</h2>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-sm">
+                Para volumes de 50 ou mais licenças, oferecemos condições exclusivas, SLA dedicado e suporte prioritário.
+              </p>
+              <a 
+                href={`https://wa.me/5511999999999?text=Ol%C3%A1%2C%20tenho%20interesse%20em%20um%20plano%20Enterprise%20do%20MetaBuilder%20Pro%20para%20${licenses}%20licen%C3%A7as`} 
+                target="_blank" 
+                rel="noreferrer"
+                className="mt-4 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/25"
+              >
+                Falar com Consultor
+              </a>
+            </div>
+          </div>
+        ) : (
+          <div className="lg:col-span-6 space-y-8 animate-in fade-in slide-in-from-left-4">
+            <form onSubmit={handleSubmitCheckout} className="space-y-8">
             
             {/* Step 1: Billing Info */}
             <div className="bg-neutral-50/50 dark:bg-neutral-950/40 border border-neutral-200/50 dark:border-neutral-800/40 p-6 md:p-8 rounded-3xl space-y-6 shadow-sm">
@@ -799,48 +804,32 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
               )}
             </button>
           </form>
-        </div>
+          </div>
+        )}
 
         {/* Right Column: Order Summary */}
         <div className="lg:col-span-6 sticky top-6">
           
-          {/* Plan Selector */}
-          <div className="bg-neutral-100/60 dark:bg-neutral-900/40 backdrop-blur-md border border-neutral-200/50 dark:border-neutral-800/40 p-1.5 rounded-2xl flex items-center gap-1.5 w-full relative z-20 mb-3 shadow-inner">
-            {plans.map((p) => {
-              const isSelected = selectedPlan?.id === p.id
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setSelectedPlan(p)}
-                  className="relative flex-1 py-2.5 rounded-xl text-xs font-black transition-all duration-300 flex flex-col items-center justify-center gap-0.5 outline-none select-none z-10"
-                >
-                  {/* Sliding Background Capsule */}
-                  {isSelected && (
-                    <motion.div
-                      layoutId="activeCheckoutPlanBg"
-                      className="absolute inset-0 bg-white dark:bg-neutral-950 rounded-xl shadow-md border border-neutral-200/40 dark:border-neutral-800/30 z-0"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                  
-                  <span className={`relative z-10 text-[11px] md:text-xs font-black transition-colors ${
-                    isSelected 
-                      ? 'text-indigo-650 dark:text-indigo-400' 
-                      : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white'
-                  }`}>
-                    {p.name}
-                  </span>
-                  <span className={`relative z-10 text-[9px] font-bold transition-colors ${
-                    isSelected 
-                      ? 'text-indigo-650/70 dark:text-indigo-400/65' 
-                      : 'text-neutral-400 dark:text-neutral-500'
-                  }`}>
-                    {p.licenses_count} {p.licenses_count === 1 ? 'Licença' : 'Licenças'}
-                  </span>
-                </button>
-              )
-            })}
+          {/* License Selector */}
+          <div className="bg-neutral-50/50 dark:bg-neutral-950/40 border border-neutral-200/50 dark:border-neutral-800/40 p-6 rounded-3xl mb-4 shadow-sm flex items-center justify-between z-20 relative">
+            <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300">Quantidade de Licenças</span>
+            <div className="flex items-center gap-4">
+              <button 
+                type="button"
+                onClick={() => setLicenses(Math.max(1, licenses - 1))}
+                className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 transition-colors"
+              >
+                -
+              </button>
+              <span className="text-xl font-black text-indigo-600 dark:text-indigo-400 w-8 text-center">{licenses}</span>
+              <button 
+                type="button"
+                onClick={() => setLicenses(licenses + 1)}
+                className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 transition-colors"
+              >
+                +
+              </button>
+            </div>
           </div>
 
           {/* Cycle Selector */}
@@ -853,30 +842,10 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
                 semiannual: 'Semestral',
                 yearly: 'Anual'
               }
-              // Calcular desconto real baseado nos preços do plano selecionado
+              
               let discountLabel = ''
-              if (selectedPlan && c !== 'monthly') {
-                const monthly = Number(selectedPlan.price_monthly ?? selectedPlan.price)
-                if (monthly > 0) {
-                  let totalCyclePrice = 0
-                  let months = 1
-                  if (c === 'quarterly') {
-                    totalCyclePrice = Number(selectedPlan.price_quarterly ?? (monthly * 3 * 0.90))
-                    months = 3
-                  } else if (c === 'semiannual') {
-                    totalCyclePrice = Number(selectedPlan.price_semiannually ?? (monthly * 6 * 0.85))
-                    months = 6
-                  } else if (c === 'yearly') {
-                    totalCyclePrice = Number(selectedPlan.price_yearly ?? (monthly * 12 * 0.80))
-                    months = 12
-                  }
-
-                  const regularPrice = monthly * months
-                  const discountPercent = Math.round(((regularPrice - totalCyclePrice) / regularPrice) * 100)
-                  if (discountPercent > 0) {
-                    discountLabel = `-${discountPercent}%`
-                  }
-                }
+              if (rules?.cycle_discounts?.[c]) {
+                discountLabel = `-${rules.cycle_discounts[c]}%`
               }
 
               return (
@@ -917,59 +886,64 @@ export function CheckoutClient({ plans, initialPlanId, initialCycle, workspaceSl
             </h2>
 
             {/* Selected Plan Details */}
-            {selectedPlan && (
-              <div className="space-y-6">
-                <div className="flex justify-between items-start gap-4">
-                  <div>
-                    <h3 className="text-xl font-black text-indigo-650 dark:text-indigo-400">{selectedPlan.name}</h3>
-                    <p className="text-xs text-neutral-400 mt-1 leading-relaxed">{selectedPlan.description}</p>
-                  </div>
-                  {(() => {
-                    const { total, monthlyEquivalent } = getCyclePrices(selectedPlan, cycle)
-                    return (
-                      <div className="text-right shrink-0">
-                        <span className="text-lg font-black text-neutral-900 dark:text-white">
-                          R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <div className="space-y-6">
+              <div className="flex justify-between items-start gap-4">
+                <div>
+                  <h3 className="text-xl font-black text-indigo-650 dark:text-indigo-400">Plano Pro</h3>
+                  <p className="text-xs text-neutral-400 mt-1 leading-relaxed">Pacote flexível com desconto progressivo por volume e prazo de renovação.</p>
+                </div>
+                {(() => {
+                  const { total, monthlyEquivalent } = getCyclePrices(cycle)
+                  return (
+                    <div className="text-right shrink-0">
+                      {licenses >= 50 ? (
+                        <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">
+                          Sob Consulta
                         </span>
-                        <span className="text-[9px] text-neutral-400 block font-bold mt-0.5">
-                          equiv. R$ {monthlyEquivalent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mês
-                        </span>
-                        {selectedPlan.licenses_count > 1 && (
-                          <span className="text-[9px] text-indigo-500 dark:text-indigo-400 block font-bold mt-0.5">
-                            equiv. R$ {(monthlyEquivalent / selectedPlan.licenses_count).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/licença
+                      ) : (
+                        <>
+                          <span className="text-lg font-black text-neutral-900 dark:text-white">
+                            R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
-                        )}
-
-                      </div>
-                    )
-                  })()}
-                </div>
-
-                <div className="p-4 bg-white dark:bg-neutral-900/60 rounded-2xl border border-neutral-150 dark:border-neutral-800/50 space-y-3">
-                  <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Incluso no plano:</p>
-                  <ul className="space-y-2.5">
-                    <li className="flex items-center gap-2 text-xs font-bold text-neutral-700 dark:text-neutral-200">
-                      <CheckCircle2 className="w-4 h-4 text-indigo-500 shrink-0" />
-                      <span>{selectedPlan.licenses_count} {selectedPlan.licenses_count === 1 ? 'Licença Ativa' : 'Licenças Ativas'}</span>
-                    </li>
-                    {featuresList.map((feat: string, index: number) => (
-                      <li key={index} className="flex items-start gap-2.5 text-xs text-neutral-500 dark:text-neutral-450 leading-tight">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                        <span>{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Total Line */}
-                <div className="border-t border-neutral-150 dark:border-neutral-800/80 pt-4 flex justify-between items-center">
-                  <span className="text-xs font-black uppercase tracking-wider text-neutral-400">Total do Ciclo</span>
-                  <span className="text-2xl font-black text-indigo-650 dark:text-indigo-400">
-                    R$ {getCyclePrices(selectedPlan, cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
+                          <span className="text-[9px] text-neutral-400 block font-bold mt-0.5">
+                            equiv. R$ {monthlyEquivalent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / mês
+                          </span>
+                          {licenses > 1 && (
+                            <span className="text-[9px] text-indigo-500 dark:text-indigo-400 block font-bold mt-0.5">
+                              equiv. R$ {(monthlyEquivalent / licenses).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / licença
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
-            )}
+
+              <div className="p-4 bg-white dark:bg-neutral-900/60 rounded-2xl border border-neutral-150 dark:border-neutral-800/50 space-y-3">
+                <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Incluso no pacote:</p>
+                <ul className="space-y-2.5">
+                  <li className="flex items-center gap-2 text-xs font-bold text-neutral-700 dark:text-neutral-200">
+                    <CheckCircle2 className="w-4 h-4 text-indigo-500 shrink-0" />
+                    <span>{licenses} {licenses === 1 ? 'Licença Ativa' : 'Licenças Ativas'}</span>
+                  </li>
+                  {featuresList.map((feat: string, index: number) => (
+                    <li key={index} className="flex items-start gap-2.5 text-xs text-neutral-500 dark:text-neutral-450 leading-tight">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Total Line */}
+              <div className="border-t border-neutral-150 dark:border-neutral-800/80 pt-4 flex justify-between items-center">
+                <span className="text-xs font-black uppercase tracking-wider text-neutral-400">Total do Ciclo</span>
+                <span className="text-2xl font-black text-indigo-650 dark:text-indigo-400">
+                  {licenses >= 50 ? 'Sob Consulta' : `R$ ${getCyclePrices(cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                </span>
+              </div>
+            </div>
 
             {/* Usage Policies */}
             <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900/60 border border-neutral-150 dark:border-neutral-800/50 flex items-start gap-3">

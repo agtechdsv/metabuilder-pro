@@ -210,7 +210,7 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                   </Link>
                 )}
 
-                {(localProfile?.subscription_status === 'active' || localProfile?.subscription_status === 'canceled') && !localProfile?.is_super_admin && localProfile?.plan_id && (
+                {!localProfile?.is_super_admin && (localProfile?.subscription_licenses > 0) && (
                   <Link
                     href="/client/dashboard"
                     onClick={() => setIsOpen(false)}
@@ -223,7 +223,7 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                   </Link>
                 )}
 
-                {(localProfile?.subscription_status === 'active' || localProfile?.subscription_status === 'canceled') && !localProfile?.is_super_admin && !localProfile?.plan_id && (
+                {!localProfile?.is_super_admin && (!localProfile?.subscription_licenses || localProfile.subscription_licenses === 0) && (
                   <Link
                     href="/client/dashboard?tab=community"
                     onClick={() => setIsOpen(false)}

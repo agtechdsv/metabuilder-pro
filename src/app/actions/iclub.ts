@@ -66,7 +66,7 @@ export async function getIClubDashboardData() {
     // Fetch user's profile to get referral code
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, referral_code, plan_id')
+      .select('id, referral_code')
       .eq('id', user.id)
       .single()
 

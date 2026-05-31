@@ -23,5 +23,5 @@
     "bindPassword": "senha_secreta_do_bind",
     "searchFilter": "(sAMAccountName={{username}})"
   },
-  "downloadPath": "C:\\\\AgTech"
+  "downloadPath": "C:\\AgTech"\\DownloadsMetaBuilder
 }

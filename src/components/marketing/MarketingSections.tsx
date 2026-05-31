@@ -10,32 +10,34 @@ import { BottomCta } from '@/components/landing/BottomCta'
 
 export function MarketingSections() {
   const { t } = useI18n()
-  const [plans, setPlans] = useState<any[]>([])
+  const [rules, setRules] = useState<any>(null)
+  const [licenses, setLicenses] = useState(1)
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'quarterly' | 'semiannual' | 'yearly'>('monthly')
 
   useEffect(() => {
-    const fetchPlans = async () => {
+    const fetchRules = async () => {
       try {
         const supabase = createClient()
         const { data, error } = await supabase
-          .from('subscription_plans')
+          .from('pricing_rules')
           .select('*')
-          .eq('is_active', true)
-          .order('price', { ascending: true })
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
         if (data) {
-          setPlans(data)
+          setRules(data)
         }
       } catch (err) {
-        console.error('Error fetching plans:', err)
+        console.error('Error fetching pricing rules:', err)
       } finally {
         setLoading(false)
       }
     }
 
     const supabase = createClient()
-    fetchPlans()
+    fetchRules()
 
     // Get initial session/user
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -431,12 +433,12 @@ export function MarketingSections() {
             <span className="text-indigo-600">qualquer tamanho de equipe</span>
           </h2>
           <p className="text-xl text-neutral-500 dark:text-neutral-400 font-medium">
-            Escolha o plano ideal e escale conforme a sua necessidade de licenças.
+            Escolha a quantidade de licenças e economize com descontos progressivos por volume e prazos de renovação.
           </p>
         </div>
 
         {/* Billing Cycle Selector */}
-        <div className="flex justify-center mb-16">
+        <div className="flex justify-center mb-12">
           <div className="bg-neutral-100/80 dark:bg-neutral-900/60 backdrop-blur-md border border-neutral-200/50 dark:border-neutral-800/40 p-1.5 rounded-2xl flex items-center gap-1.5 w-full max-w-lg relative z-20 shadow-inner">
             {(['monthly', 'quarterly', 'semiannual', 'yearly'] as const).map((c) => {
               const isSelected = billingCycle === c
@@ -447,10 +449,10 @@ export function MarketingSections() {
                 yearly: 'Anual'
               }
               const discountPercentage = {
-                monthly: '',
-                quarterly: '-10%',
-                semiannual: '-15%',
-                yearly: '-20%'
+                monthly: rules?.cycle_discounts?.monthly ? `-${rules.cycle_discounts.monthly}%` : '',
+                quarterly: rules?.cycle_discounts?.quarterly ? `-${rules.cycle_discounts.quarterly}%` : '',
+                semiannual: rules?.cycle_discounts?.semiannual ? `-${rules.cycle_discounts.semiannual}%` : '',
+                yearly: rules?.cycle_discounts?.yearly ? `-${rules.cycle_discounts.yearly}%` : ''
               }
 
               return (
@@ -488,149 +490,200 @@ export function MarketingSections() {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
           </div>
-        ) : plans.length === 0 ? (
+        ) : !rules ? (
           <div className="text-center py-12 text-neutral-500">
-            Nenhum plano ativo encontrado.
+            Carregando tabela de preços...
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {plans.map((plan) => {
-              // Parse features if string, or use directly if array
-              const featuresList = Array.isArray(plan.features)
-                ? plan.features
-                : typeof plan.features === 'string'
-                  ? JSON.parse(plan.features)
-                  : [];
+          <div className="max-w-4xl mx-auto bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 md:p-12 shadow-2xl flex flex-col md:flex-row gap-12">
+            
+            {/* Left side: Calculator */}
+            <div className="flex-1 space-y-8">
+              <div>
+                <h3 className="text-2xl font-black text-neutral-900 dark:text-white mb-2">Configure seu Plano</h3>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">Arraste o seletor para definir a quantidade de licenças para sua equipe.</p>
+              </div>
 
-              // Helper price resolver
-              const getCyclePrices = (p: any, currentCycle: 'monthly' | 'quarterly' | 'semiannual' | 'yearly') => {
-                const monthly = Number(p.price_monthly ?? p.price)
-                let total = monthly
-                let months = 1
-
-                if (currentCycle === 'monthly') {
-                  total = Number(p.price_monthly ?? p.price)
-                  months = 1
-                } else if (currentCycle === 'quarterly') {
-                  total = p.price_quarterly ? Number(p.price_quarterly) : Number((monthly * 3 * 0.90).toFixed(2))
-                  months = 3
-                } else if (currentCycle === 'semiannual') {
-                  total = p.price_semiannually ? Number(p.price_semiannually) : Number((monthly * 6 * 0.85).toFixed(2))
-                  months = 6
-                } else if (currentCycle === 'yearly') {
-                  total = p.price_yearly ? Number(p.price_yearly) : Number((monthly * 12 * 0.80).toFixed(2))
-                  months = 12
-                }
-
-                return {
-                  total,
-                  monthlyEquivalent: total / months,
-                  months
-                }
-              }
-
-              const { total, monthlyEquivalent, months } = getCyclePrices(plan, billingCycle)
-
-              // Dynamic discount banner
-              let discountLabel = ''
-              if (billingCycle !== 'monthly') {
-                const monthlyPrice = Number(plan.price_monthly ?? plan.price)
-                if (monthlyPrice > 0) {
-                  const regularPrice = monthlyPrice * months
-                  const discountPercent = Math.round(((regularPrice - total) / regularPrice) * 100)
-                  if (discountPercent > 0) {
-                    discountLabel = `Economize ${discountPercent}%`
-                  }
-                }
-              }
-
-              return (
-                <div
-                  key={plan.id}
-                  className={`p-8 rounded-[2.5rem] bg-white dark:bg-neutral-900 border transition-all duration-300 flex flex-col justify-between relative shadow-lg ${plan.licenses_count === 3
-                    ? 'border-indigo-500 ring-2 ring-indigo-500/20 scale-105 z-10 dark:bg-neutral-900/90'
-                    : 'border-neutral-200 dark:border-neutral-800 hover:border-indigo-500/50'
-                    }`}
-                >
-                  {plan.licenses_count === 3 && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                      Mais Popular
-                    </div>
-                  )}
-
-                  <div>
-                    <h3 className="text-2xl font-black dark:text-white mb-2">{plan.name}</h3>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4 min-h-[32px]">{plan.description}</p>
-
-                    {discountLabel && (
-                      <div className="inline-block mb-4 bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border border-emerald-500/25">
-                        {discountLabel}
-                      </div>
-                    )}
-
-                    <div className="mb-6 flex flex-col justify-start">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-4xl font-black text-indigo-600">
-                          R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                        <span className="text-xs font-bold text-neutral-400">
-                          {billingCycle === 'monthly'
-                            ? '/mês'
-                            : billingCycle === 'quarterly'
-                              ? '/trimestre'
-                              : billingCycle === 'semiannual'
-                                ? '/semestre'
-                                : '/ano'}
-                        </span>
-                      </div>
-
-                      {billingCycle !== 'monthly' && (
-                        <div className="text-[11px] font-bold text-neutral-400 mt-1.5">
-                          Equiv. <span className="text-indigo-600 dark:text-indigo-400">R$ {monthlyEquivalent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>/mês
-                        </div>
-                      )}
-
-                      {plan.licenses_count > 1 && (
-                        <div className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 mt-1">
-                          Equiv. <span className="font-extrabold">R$ {(monthlyEquivalent / plan.licenses_count).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>/licença
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="text-[11px] font-black uppercase tracking-widest text-neutral-400 mb-4">
-                      {plan.licenses_count} {plan.licenses_count === 1 ? 'Licença inclusa' : 'Licenças inclusas'}
-                    </div>
-
-                    <ul className="space-y-3 mb-8">
-                      {featuresList.map((feat: string, index: number) => (
-                        <li key={index} className="flex items-start gap-3 text-sm text-neutral-600 dark:text-neutral-400">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                          <span>{feat}</span>
-                        </li>
-                      ))}
-                    </ul>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300">Licenças</span>
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => setLicenses(Math.max(1, licenses - 1))}
+                      className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200"
+                    >
+                      -
+                    </button>
+                    <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 w-12 text-center">{licenses}</span>
+                    <button 
+                      onClick={() => setLicenses(licenses + 1)}
+                      className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200"
+                    >
+                      +
+                    </button>
                   </div>
-
-                  <Link
-                    href={`/checkout?planId=${plan.id}&cycle=${billingCycle}`}
-                    onClick={(e) => {
-                      if (!user) {
-                        e.preventDefault()
-                        window.dispatchEvent(new CustomEvent('open-auth-modal', {
-                          detail: { redirectTo: `/checkout?planId=${plan.id}&cycle=${billingCycle}` }
-                        }))
-                      }
-                    }}
-                    className={`w-full py-4 rounded-2xl text-center font-black text-xs uppercase tracking-widest transition-all duration-300 hover:scale-102 ${plan.licenses_count === 3
-                      ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-500/20'
-                      : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700'
-                      }`}
-                  >
-                    Contratar Plano
-                  </Link>
                 </div>
-              );
-            })}
+
+                <input
+                  type="range"
+                  min="1"
+                  max="50"
+                  value={licenses}
+                  onChange={(e) => setLicenses(Number(e.target.value))}
+                  className="w-full h-2 bg-neutral-200 dark:bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                />
+                
+                {/* Volume Tiers Helper */}
+                <div className="flex gap-2 flex-wrap mt-4">
+                  {rules.volume_tiers?.sort((a: any, b: any) => a.min_licenses - b.min_licenses).map((tier: any, i: number) => {
+                    const isActive = licenses >= tier.min_licenses;
+                    return (
+                      <div key={i} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-wider transition-colors ${
+                        isActive 
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400' 
+                          : 'bg-neutral-100 dark:bg-neutral-800/50 border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400'
+                      }`}>
+                        <span>≥ {tier.min_licenses}</span>
+                        <span className={`px-1.5 py-0.5 rounded-md ${isActive ? 'bg-emerald-500/20' : 'bg-neutral-200 dark:bg-neutral-800'}`}>-{tier.discount_percent}%</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800">
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-3 text-sm text-neutral-600 dark:text-neutral-400">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <span>Acesso a todas as ferramentas PRO</span>
+                  </li>
+                  <li className="flex items-start gap-3 text-sm text-neutral-600 dark:text-neutral-400">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <span>Desenvolvimento Ilimitado</span>
+                  </li>
+                  <li className="flex items-start gap-3 text-sm text-neutral-600 dark:text-neutral-400">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <span>Suporte e Atualizações (IClub)</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Right side: Summary */}
+            <div className="flex-1 bg-neutral-50 dark:bg-neutral-950 p-8 rounded-3xl border border-neutral-200 dark:border-neutral-800 flex flex-col justify-between">
+              {(() => {
+                const base = Number(rules.base_price) || 450
+                let volDiscount = 0
+                if (rules.volume_tiers && rules.volume_tiers.length > 0) {
+                  const sorted = [...rules.volume_tiers].sort((a, b) => b.min_licenses - a.min_licenses)
+                  const tier = sorted.find(t => licenses >= t.min_licenses)
+                  if (tier) volDiscount = tier.discount_percent
+                }
+                
+                const unitPrice = base * (1 - volDiscount / 100)
+                
+                let months = 1
+                if (billingCycle === 'quarterly') months = 3
+                if (billingCycle === 'semiannual') months = 6
+                if (billingCycle === 'yearly') months = 12
+
+                let cycleDiscount = 0
+                if (rules.cycle_discounts) {
+                  cycleDiscount = rules.cycle_discounts[billingCycle] || 0
+                }
+
+                const totalValue = (unitPrice * licenses * months) * (1 - cycleDiscount / 100)
+                const monthlyEq = totalValue / months
+
+                return (
+                  <>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center text-sm font-bold text-neutral-500">
+                        <span>Preço Base Unitário</span>
+                        <span>R$ {base.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      
+                      {volDiscount > 0 && (
+                        <div className="flex justify-between items-center text-sm font-bold text-emerald-500">
+                          <span>Desconto por Volume</span>
+                          <span>-{volDiscount}%</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between items-center text-sm font-bold text-neutral-500">
+                        <span>Valor Final Unitário</span>
+                        <span>R$ {unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      </div>
+
+                      {cycleDiscount > 0 && (
+                        <div className="flex justify-between items-center text-sm font-bold text-emerald-500">
+                          <span>Desconto do Ciclo ({months}x)</span>
+                          <span>-{cycleDiscount}%</span>
+                        </div>
+                      )}
+                      
+                      <div className="border-t border-neutral-200 dark:border-neutral-800 pt-4 mt-4">
+                        <span className="block text-[10px] font-black uppercase text-neutral-400 mb-1">Total a Pagar</span>
+                        {licenses >= 50 ? (
+                          <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400">
+                            Preço Sob Consulta
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-4xl font-black text-indigo-600 dark:text-indigo-400">
+                                R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                              <span className="text-xs font-bold text-neutral-400">
+                                {billingCycle === 'monthly' ? ' / mês' : ` / ${months} meses`}
+                              </span>
+                            </div>
+                            
+                            {billingCycle !== 'monthly' ? (
+                              <div className="text-[11px] font-bold text-neutral-500 mt-2 flex flex-col gap-0.5">
+                                <span>Equivalente a <span className="text-indigo-600 dark:text-indigo-400">R$ {monthlyEq.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> / mês</span>
+                                <span>Equivalente a <span className="text-indigo-600 dark:text-indigo-400">R$ {(monthlyEq / licenses).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> / licença</span>
+                              </div>
+                            ) : (
+                              licenses > 1 && (
+                                <div className="text-[11px] font-bold text-neutral-500 mt-2">
+                                  Equivalente a <span className="text-indigo-600 dark:text-indigo-400">R$ {(totalValue / licenses).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> / licença
+                                </div>
+                              )
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {licenses >= 50 ? (
+                      <Link
+                        href="https://wa.me/5511999999999?text=Ol%C3%A1%2C%20tenho%20interesse%20em%20um%20plano%20Enterprise%20do%20MetaBuilder%20Pro"
+                        target="_blank"
+                        className="mt-8 w-full block py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-center font-black text-xs uppercase tracking-widest transition-all hover:scale-102 shadow-xl shadow-indigo-500/20"
+                      >
+                        Falar com Consultor
+                      </Link>
+                    ) : (
+                      <Link
+                        href={`/checkout?licenses=${licenses}&cycle=${billingCycle}`}
+                        onClick={(e) => {
+                          if (!user) {
+                            e.preventDefault()
+                            window.dispatchEvent(new CustomEvent('open-auth-modal', {
+                              detail: { redirectTo: `/checkout?licenses=${licenses}&cycle=${billingCycle}` }
+                            }))
+                          }
+                        }}
+                        className="mt-8 w-full block py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-center font-black text-xs uppercase tracking-widest transition-all hover:scale-102 shadow-xl shadow-indigo-500/20"
+                      >
+                        Finalizar Contratação
+                      </Link>
+                    )}
+                  </>
+                )
+              })()}
+            </div>
           </div>
         )}
       </section>

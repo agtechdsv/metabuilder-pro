@@ -33,12 +33,14 @@ import {
   User,
   BarChart3,
   Zap,
-  Lightbulb
+  Lightbulb,
+  RefreshCw
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
-import { savePlan, deletePlan, toggleWorkspaceBlock, deleteClientAdmin } from '@/app/actions/admin'
+import { toggleClientBlock, deleteClientAdmin } from '@/app/actions/admin'
 import { Modal } from '@/components/ui/Modal'
+import { useRouter } from 'next/navigation'
 import {
   getAllAppointments,
   updateAppointmentStatus,
@@ -51,21 +53,8 @@ import { getIClubAdminRules, saveIClubAdminRule, deleteIClubAdminRule, IClubRule
 import { MetaVoiceAdminView } from './MetaVoiceAdminView'
 import CommunityHubView from '@/components/client/CommunityHubView'
 import { CliFilesAdminView } from './CliFilesAdminView'
-
-interface Plan {
-  id: string
-  name: string
-  licenses_count: number
-  price: number
-  price_monthly?: number | null
-  price_quarterly?: number | null
-  price_semiannually?: number | null
-  price_yearly?: number | null
-  description: string | null
-  features: string[]
-  is_active: boolean
-  created_at: string
-}
+import { PricingRulesAdmin } from './PricingRulesAdmin'
+// Plan interface removed
 
 interface Workspace {
   id: string
@@ -83,14 +72,13 @@ interface Profile {
   email: string
   full_name: string | null
   is_super_admin?: boolean | null
-  plan_id?: string | null
+  subscription_licenses?: number | null
 }
 
 interface Payment {
   id: string
   user_id: string
   workspace_id: string
-  plan_id: string | null
   cycle: string
   amount: number
   status: string
@@ -125,7 +113,7 @@ interface Appointment {
 
 const TAB_CONFIG = {
   dashboard: { label: 'Dashboard BI', icon: BarChart3, iconColor: 'text-blue-500 dark:text-blue-400' },
-  plans: { label: 'Cadastro de Planos', icon: Layers, iconColor: 'text-emerald-500 dark:text-emerald-400' },
+  plans: { label: 'Regras de Preços', icon: Layers, iconColor: 'text-emerald-500 dark:text-emerald-400' },
   clients: { label: 'Gestão de Clientes', icon: Users, iconColor: 'text-purple-500 dark:text-purple-400' },
   agenda: { label: 'Agenda', icon: Calendar, iconColor: 'text-teal-500 dark:text-teal-400' },
   iclub: { label: 'Gestão do iClub', icon: Zap, iconColor: 'text-indigo-500 dark:text-indigo-400' },
@@ -135,7 +123,6 @@ const TAB_CONFIG = {
 } as const
 
 interface PlatformAdminClientProps {
-  initialPlans: Plan[]
   initialWorkspaces: Workspace[]
   profiles: Profile[]
   currentUserEmail: string
@@ -145,7 +132,6 @@ interface PlatformAdminClientProps {
 }
 
 export default function PlatformAdminClient({
-  initialPlans,
   initialWorkspaces,
   profiles,
   currentUserEmail,
@@ -154,11 +140,23 @@ export default function PlatformAdminClient({
   ownerGuests = []
 }: PlatformAdminClientProps) {
   const { toast } = useToast()
+  const router = useRouter()
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const handleRefresh = () => {
+    setIsRefreshing(true)
+    router.refresh()
+    setTimeout(() => setIsRefreshing(false), 800)
+  }
 
   // State variables
   const [activeTab, setActiveTab] = useState<'dashboard' | 'plans' | 'clients' | 'agenda' | 'iclub' | 'metavoice' | 'community' | 'arquivos'>('dashboard')
-  const [plans, setPlans] = useState<Plan[]>(initialPlans)
+
   const [workspaces, setWorkspaces] = useState<Workspace[]>(initialWorkspaces)
+
+  useEffect(() => {
+    setWorkspaces(initialWorkspaces)
+  }, [initialWorkspaces])
 
   // iClub States
   const [iclubRules, setIclubRules] = useState<IClubRule[]>([])
@@ -587,26 +585,8 @@ Nos vemos em breve!`
   const [dashboardPeriod, setDashboardPeriod] = useState<'all' | 'today' | '7days' | '15days' | '30days' | 'custom'>('all')
   const [dashboardCustomStart, setDashboardCustomStart] = useState('')
   const [dashboardCustomEnd, setDashboardCustomEnd] = useState('')
-  const [dashboardPlan, setDashboardPlan] = useState<string>('all')
+
   const [dashboardClient, setDashboardClient] = useState<string>('all')
-
-  // Plan Modal States
-  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false)
-  const [editingPlan, setEditingPlan] = useState<Partial<Plan> | null>(null)
-
-  // Plan Form Fields
-  const [planName, setPlanName] = useState('')
-  const [planLicenses, setPlanLicenses] = useState(1)
-  const [planPrice, setPlanPrice] = useState(0)
-  const [planPriceMonthly, setPlanPriceMonthly] = useState<number | ''>('')
-  const [planPriceQuarterly, setPlanPriceQuarterly] = useState<number | ''>('')
-  const [planPriceSemiannually, setPlanPriceSemiannually] = useState<number | ''>('')
-  const [planPriceYearly, setPlanPriceYearly] = useState<number | ''>('')
-  const [planDesc, setPlanDesc] = useState('')
-  const [planFeatures, setPlanFeatures] = useState<string[]>([])
-  const [newFeatureText, setNewFeatureText] = useState('')
-  const [planIsActive, setPlanIsActive] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
 
   // Custom Modal States for Actions
   const [isDeletePlanModalOpen, setIsDeletePlanModalOpen] = useState(false)
@@ -621,70 +601,46 @@ Nos vemos em breve!`
   const [clientToDelete, setClientToDelete] = useState<{ id: string, name: string, ownerName: string, ownerId: string, ownerEmail: string } | null>(null)
   const [isDeletingClient, setIsDeletingClient] = useState(false)
 
-  // Map workspace with profile and plan
+  // Map workspace with profile
   const mappedWorkspaces = useMemo(() => {
     return workspaces.map(w => {
       const ownerProfile = profiles.find(p => p.id === w.owner_id)
-      const workspacePlan = plans.find(p => p.id === ownerProfile?.plan_id)
 
       // Calculate monthly equivalent price for MRR
       let planPrice = 0
-      if (workspacePlan) {
-        // Find the latest successful payment for this workspace
-        const wPayments = payments.filter(p =>
-          p.workspace_id === w.id &&
-          p.plan_id === ownerProfile?.plan_id &&
-          (p.status?.toLowerCase() === 'received' ||
-            p.status?.toLowerCase() === 'confirmed' ||
-            p.status?.toLowerCase() === 'active' ||
-            p.status?.toLowerCase() === 'paid')
-        )
+      const wPayments = payments.filter(p =>
+        p.workspace_id === w.id &&
+        (p.status?.toLowerCase() === 'received' ||
+          p.status?.toLowerCase() === 'confirmed' ||
+          p.status?.toLowerCase() === 'active' ||
+          p.status?.toLowerCase() === 'paid')
+      )
 
-        const latestPayment = wPayments.length > 0
-          ? wPayments.reduce((latest, current) => {
-            return new Date(current.created_at) > new Date(latest.created_at) ? current : latest
-          })
-          : null
+      const latestPayment = wPayments.length > 0
+        ? wPayments.reduce((latest, current) => {
+          return new Date(current.created_at) > new Date(latest.created_at) ? current : latest
+        })
+        : null
 
-        if (latestPayment) {
-          const amount = Number(latestPayment.amount)
-          const pCycle = latestPayment.cycle?.toLowerCase()
-          switch (pCycle) {
-            case 'monthly':
-              planPrice = amount
-              break
-            case 'quarterly':
-              planPrice = amount / 3
-              break
-            case 'semiannual':
-            case 'semiannually':
-              planPrice = amount / 6
-              break
-            case 'yearly':
-              planPrice = amount / 12
-              break
-            default:
-              planPrice = amount
-          }
-        } else {
-          // Fallback to the plan's current configurations if no successful payments are recorded yet
-          const basePrice = workspacePlan.price
-          switch (w.subscription_cycle) {
-            case 'monthly':
-              planPrice = workspacePlan.price_monthly ?? basePrice
-              break
-            case 'quarterly':
-              planPrice = (workspacePlan.price_quarterly ?? (basePrice * 3)) / 3
-              break
-            case 'semiannual':
-              planPrice = (workspacePlan.price_semiannually ?? (basePrice * 6)) / 6
-              break
-            case 'yearly':
-              planPrice = (workspacePlan.price_yearly ?? (basePrice * 12)) / 12
-              break
-            default:
-              planPrice = basePrice
-          }
+      if (latestPayment) {
+        const amount = Number(latestPayment.amount)
+        const pCycle = latestPayment.cycle?.toLowerCase()
+        switch (pCycle) {
+          case 'monthly':
+            planPrice = amount
+            break
+          case 'quarterly':
+            planPrice = amount / 3
+            break
+          case 'semiannual':
+          case 'semiannually':
+            planPrice = amount / 6
+            break
+          case 'yearly':
+            planPrice = amount / 12
+            break
+          default:
+            planPrice = amount
         }
       }
 
@@ -696,17 +652,15 @@ Nos vemos em breve!`
 
       return {
         ...w,
-        plan_id: ownerProfile?.plan_id || null,
         ownerName: ownerProfile?.full_name || 'Sem nome',
         ownerEmail: ownerProfile?.email || 'Sem e-mail',
         ownerIsSuperAdmin: ownerProfile?.is_super_admin || false,
-        planName: workspacePlan?.name || 'Gratuito / Nenhum',
+        ownerLicenses: ownerProfile?.subscription_licenses || 0,
         planPrice,
-        planLicenses: workspacePlan?.licenses_count || 0,
         guestCount
-      }
+      } as any
     })
-  }, [workspaces, profiles, plans, payments, workspaceMembers, ownerGuests])
+  }, [workspaces, profiles, payments, workspaceMembers, ownerGuests])
 
   // Filtered workspaces and payments for dashboard calculations
   const filteredDashboardData = useMemo(() => {
@@ -753,15 +707,6 @@ Nos vemos em breve!`
       // Filter by period ( adesão / workspace created_at )
       if (!isDateInPeriod(w.created_at)) return false
 
-      // Filter by plan
-      if (dashboardPlan !== 'all') {
-        if (dashboardPlan === 'free') {
-          if (w.plan_id) return false
-        } else {
-          if (w.plan_id !== dashboardPlan) return false
-        }
-      }
-
       // Filter by client
       if (dashboardClient !== 'all' && w.id !== dashboardClient) {
         return false
@@ -775,15 +720,6 @@ Nos vemos em breve!`
       // Filter by period ( payment created_at )
       if (!isDateInPeriod(p.created_at)) return false
 
-      // Filter by plan
-      if (dashboardPlan !== 'all') {
-        if (dashboardPlan === 'free') {
-          if (p.plan_id) return false
-        } else {
-          if (p.plan_id !== dashboardPlan) return false
-        }
-      }
-
       // Filter by client
       if (dashboardClient !== 'all' && p.workspace_id !== dashboardClient) {
         return false
@@ -796,7 +732,7 @@ Nos vemos em breve!`
       workspaces: workspacesFiltered,
       payments: paymentsFiltered
     }
-  }, [mappedWorkspaces, payments, dashboardPeriod, dashboardCustomStart, dashboardCustomEnd, dashboardPlan, dashboardClient])
+  }, [mappedWorkspaces, payments, dashboardPeriod, dashboardCustomStart, dashboardCustomEnd, dashboardClient])
 
   // BI Metric Calculations
   const metrics = useMemo(() => {
@@ -823,7 +759,7 @@ Nos vemos em breve!`
 
     // MRR: Soma do valor mensal das assinaturas ativas dos profiles (ou workspaces ativos atrelados aos planos)
     const activeMRR = filteredWorkspaces
-      .filter(w => !w.is_blocked && w.plan_id)
+      .filter(w => !w.is_blocked && w.ownerLicenses > 0)
       .reduce((acc, w) => acc + Number(w.planPrice), 0)
 
     // Faturamento (Revenue): Sum of successful payments
@@ -835,10 +771,8 @@ Nos vemos em breve!`
       .reduce((acc, p) => acc + Number(p.amount), 0)
 
     // Taxa de Conversão: Quantos clientes (Profiles) possuem um plano ativo
-    // (Como plan_id ainda não está no objeto profile que vem do banco para o frontend aqui, 
-    // podemos usar a quantidade de clientes que têm algum workspace com plan_id válido, ou idealmente o profile.plan_id)
-    // Para simplificar e manter a precisão com o que temos hoje no frontend:
-    const clientsWithPlan = new Set(filteredWorkspaces.filter(w => w.plan_id).map(w => w.owner_id)).size
+    // (Como plan_id foi removido, usamos as licenças como métrica)
+    const clientsWithPlan = new Set(filteredWorkspaces.filter(w => w.ownerLicenses > 0).map(w => w.owner_id)).size
     const conversionRate = totalClients > 0 ? (clientsWithPlan / totalClients) * 100 : 0
 
     return {
@@ -850,11 +784,12 @@ Nos vemos em breve!`
     }
   }, [filteredDashboardData, profiles, workspaceMembers])
 
-  // Filtered Workspaces for client list
-  const filteredWorkspaces = useMemo(() => {
-    return mappedWorkspaces.filter(w => {
+  // Filtered Clients for client list
+  const filteredClients = useMemo(() => {
+    const clientsMap = new Map<string, any>()
+    mappedWorkspaces.forEach(w => {
       // Exclude workspaces owned by super admins from client list
-      if (w.ownerIsSuperAdmin) return false
+      if (w.ownerIsSuperAdmin) return
 
       const matchesSearch =
         w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -864,135 +799,46 @@ Nos vemos em breve!`
 
       const matchesStatus =
         statusFilter === 'all' ||
-        (statusFilter === 'active' && !w.is_blocked && w.plan_id) ||
+        (statusFilter === 'active' && !w.is_blocked && w.ownerLicenses > 0) ||
         (statusFilter === 'blocked' && w.is_blocked) ||
-        (statusFilter === 'registered' && !w.plan_id)
+        (statusFilter === 'registered' && w.ownerLicenses === 0)
 
-      return matchesSearch && matchesStatus
+      if (matchesSearch && matchesStatus) {
+        if (!clientsMap.has(w.owner_id)) {
+          clientsMap.set(w.owner_id, {
+            ownerId: w.owner_id,
+            ownerName: w.ownerName,
+            ownerEmail: w.ownerEmail,
+            ownerLicenses: w.ownerLicenses,
+            guestCount: w.guestCount,
+            created_at: w.created_at,
+            is_blocked: w.is_blocked,
+            workspaces: []
+          })
+        }
+        clientsMap.get(w.owner_id).workspaces.push(w)
+      }
     })
+    return Array.from(clientsMap.values())
   }, [mappedWorkspaces, searchQuery, statusFilter])
 
-  // Open Plan Modal for edit/create
-  const handleOpenPlanModal = (planToEdit?: Plan) => {
-    if (planToEdit) {
-      setEditingPlan(planToEdit)
-      setPlanName(planToEdit.name)
-      setPlanLicenses(planToEdit.licenses_count)
-      setPlanPrice(planToEdit.price)
-      setPlanPriceMonthly(planToEdit.price_monthly ?? planToEdit.price)
-      setPlanPriceQuarterly(planToEdit.price_quarterly ?? '')
-      setPlanPriceSemiannually(planToEdit.price_semiannually ?? '')
-      setPlanPriceYearly(planToEdit.price_yearly ?? '')
-      setPlanDesc(planToEdit.description || '')
-      setPlanFeatures(planToEdit.features || [])
-      setPlanIsActive(planToEdit.is_active)
-    } else {
-      setEditingPlan(null)
-      setPlanName('')
-      setPlanLicenses(1)
-      setPlanPrice(0)
-      setPlanPriceMonthly('')
-      setPlanPriceQuarterly('')
-      setPlanPriceSemiannually('')
-      setPlanPriceYearly('')
-      setPlanDesc('')
-      setPlanFeatures([])
-      setPlanIsActive(true)
-    }
-    setIsPlanModalOpen(true)
-  }
 
-  // Save/Create Plan Handler
-  const handleSavePlan = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!planName) {
-      toast('Nome do plano é obrigatório', 'info')
-      return
-    }
-
-    setIsSaving(true)
-    const result = await savePlan({
-      id: editingPlan?.id,
-      name: planName,
-      licenses_count: planLicenses,
-      price: planPriceMonthly !== '' ? Number(planPriceMonthly) : planPrice,
-      price_monthly: planPriceMonthly !== '' ? Number(planPriceMonthly) : undefined,
-      price_quarterly: planPriceQuarterly !== '' ? Number(planPriceQuarterly) : undefined,
-      price_semiannually: planPriceSemiannually !== '' ? Number(planPriceSemiannually) : undefined,
-      price_yearly: planPriceYearly !== '' ? Number(planPriceYearly) : undefined,
-      description: planDesc,
-      features: planFeatures,
-      is_active: planIsActive
-    })
-
-    setIsSaving(false)
-
-    if (result.success) {
-      toast(editingPlan ? 'Plano atualizado com sucesso!' : 'Novo plano criado com sucesso!', 'success')
-      setIsPlanModalOpen(false)
-
-      // Update local plans state dynamically
-      if (editingPlan?.id) {
-        setPlans(prev => prev.map(p => p.id === editingPlan.id ? {
-          ...p,
-          name: planName,
-          licenses_count: planLicenses,
-          price: planPriceMonthly !== '' ? Number(planPriceMonthly) : planPrice,
-          price_monthly: planPriceMonthly !== '' ? Number(planPriceMonthly) : undefined,
-          price_quarterly: planPriceQuarterly !== '' ? Number(planPriceQuarterly) : undefined,
-          price_semiannually: planPriceSemiannually !== '' ? Number(planPriceSemiannually) : undefined,
-          price_yearly: planPriceYearly !== '' ? Number(planPriceYearly) : undefined,
-          description: planDesc,
-          features: planFeatures,
-          is_active: planIsActive
-        } : p))
-      } else {
-        // Fetch/Reload from database or refresh page is handled, but updating local helps instant state
-        window.location.reload()
-      }
-    } else {
-      toast(result.error || 'Erro ao salvar o plano', 'error')
-    }
-  }
-
-  // Delete Plan Handler (Trigger Modal)
-  const handleDeletePlan = (planId: string, name: string) => {
-    setPlanToDelete({ id: planId, name })
-    setIsDeletePlanModalOpen(true)
-  }
-
-  // Delete Plan Action (Confirm from Modal)
-  const handleConfirmDeletePlan = async () => {
-    if (!planToDelete) return
-    setIsDeletingPlan(true)
-    const result = await deletePlan(planToDelete.id)
-    setIsDeletingPlan(false)
-    if (result.success) {
-      toast(`Plano "${planToDelete.name}" deletado com sucesso.`, 'success')
-      setPlans(prev => prev.filter(p => p.id !== planToDelete.id))
-      setIsDeletePlanModalOpen(false)
-      setPlanToDelete(null)
-    } else {
-      toast(result.error || 'Erro ao deletar o plano.', 'error')
-    }
-  }
-
-  // Toggle Workspace Block Handler (Trigger Modal)
-  const handleToggleBlock = (workspaceId: string, isBlocked: boolean, wsName: string) => {
-    setWorkspaceToBlock({ id: workspaceId, isBlocked, name: wsName })
+  // Toggle Client Block Handler (Trigger Modal)
+  const handleToggleBlock = (ownerId: string, isBlocked: boolean, clientName: string) => {
+    setWorkspaceToBlock({ id: ownerId, isBlocked, name: clientName })
     setIsBlockModalOpen(true)
   }
 
-  // Toggle Workspace Block Action (Confirm from Modal)
+  // Toggle Client Block Action (Confirm from Modal)
   const handleConfirmToggleBlock = async () => {
     if (!workspaceToBlock) return
     setIsBlockingWorkspace(true)
     const actionLabel = workspaceToBlock.isBlocked ? 'bloquear' : 'desbloquear'
-    const result = await toggleWorkspaceBlock(workspaceToBlock.id, workspaceToBlock.isBlocked)
+    const result = await toggleClientBlock(workspaceToBlock.id, workspaceToBlock.isBlocked)
     setIsBlockingWorkspace(false)
     if (result.success) {
-      toast(`Workspace "${workspaceToBlock.name}" foi ${workspaceToBlock.isBlocked ? 'bloqueado' : 'desbloqueado'} com sucesso!`, 'success')
-      setWorkspaces(prev => prev.map(w => w.id === workspaceToBlock.id ? {
+      toast(`Cliente "${workspaceToBlock.name}" foi ${workspaceToBlock.isBlocked ? 'bloqueado' : 'desbloqueado'} com sucesso!`, 'success')
+      setWorkspaces(prev => prev.map(w => w.owner_id === workspaceToBlock.id ? {
         ...w,
         is_blocked: workspaceToBlock.isBlocked,
         subscription_status: workspaceToBlock.isBlocked ? 'blocked' : 'active'
@@ -1000,13 +846,13 @@ Nos vemos em breve!`
       setIsBlockModalOpen(false)
       setWorkspaceToBlock(null)
     } else {
-      toast(result.error || `Erro ao ${actionLabel} o workspace.`, 'error')
+      toast(result.error || `Erro ao ${actionLabel} o cliente.`, 'error')
     }
   }
 
   // Delete Client Handler (Trigger Modal)
-  const handleDeleteClient = (workspaceId: string, wsName: string, ownerName: string, ownerId: string, ownerEmail: string) => {
-    setClientToDelete({ id: workspaceId, name: wsName, ownerName, ownerId, ownerEmail })
+  const handleDeleteClient = (ownerName: string, ownerId: string, ownerEmail: string) => {
+    setClientToDelete({ id: '', name: '', ownerName, ownerId, ownerEmail })
     setIsDeleteClientModalOpen(true)
   }
 
@@ -1026,101 +872,7 @@ Nos vemos em breve!`
     }
   }
 
-  // Feature Array Handlers
-  const addFeature = () => {
-    if (newFeatureText.trim()) {
-      setPlanFeatures(prev => [...prev, newFeatureText.trim()])
-      setNewFeatureText('')
-    }
-  }
 
-  const removeFeature = (idx: number) => {
-    setPlanFeatures(prev => prev.filter((_, i) => i !== idx))
-  }
-
-  // Render Plan Distribution Custom SVG Chart
-  const renderPlanChart = () => {
-    const { workspaces: filteredWorkspaces } = filteredDashboardData
-
-    // 1. Chart Data for Total de Clientes (Owners)
-    const plansWithClients = plans.map(p => {
-      const wForPlan = filteredWorkspaces.filter(w => w.plan_id === p.id && !w.is_blocked)
-      const count = new Set(wForPlan.map(w => w.owner_id)).size
-      return { name: p.name, count }
-    })
-    const maxClientsCount = Math.max(...plansWithClients.map(p => p.count), 1)
-
-    // 2. Chart Data for Usuários Ativos (Owners + Active Guests)
-    const plansWithUsers = plans.map(p => {
-      const wForPlan = filteredWorkspaces.filter(w => w.plan_id === p.id && !w.is_blocked)
-
-      const activeUserIds = new Set<string>()
-      wForPlan.forEach(w => activeUserIds.add(w.owner_id))
-
-      const planWorkspaceIds = new Set(wForPlan.map(w => w.id))
-      workspaceMembers.forEach(m => {
-        if (planWorkspaceIds.has(m.workspace_id)) {
-          if (profiles.some(prof => prof.id === m.user_id)) {
-            activeUserIds.add(m.user_id)
-          }
-        }
-      })
-      return { name: p.name, count: activeUserIds.size }
-    })
-    const maxUsersCount = Math.max(...plansWithUsers.map(p => p.count), 1)
-
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Chart 1: Clientes */}
-        <div className="bg-white dark:bg-neutral-900/40 p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm flex flex-col justify-between h-[300px]">
-          <div>
-            <h4 className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-4">Distribuição (Total de Clientes)</h4>
-          </div>
-          <div className="flex items-end justify-around h-48 px-2 border-b border-l border-neutral-200 dark:border-neutral-800/80 pt-4">
-            {plansWithClients.map((p, idx) => {
-              const pct = (p.count / maxClientsCount) * 100
-              return (
-                <div key={idx} className="flex flex-col items-center gap-2 w-12 group">
-                  <div className="h-36 w-6 flex items-end justify-center relative">
-                    <div className="relative w-6 bg-gradient-to-t from-indigo-600 to-indigo-400 dark:from-indigo-500 dark:to-purple-500 rounded-t-lg transition-all duration-500" style={{ height: `${Math.max(pct, 5)}%` }}>
-                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-neutral-900 dark:bg-neutral-800 text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                        {p.count}
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-[9px] font-bold text-neutral-500 dark:text-neutral-400 truncate max-w-full">{p.name}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Chart 2: Usuários */}
-        <div className="bg-white dark:bg-neutral-900/40 p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm flex flex-col justify-between h-[300px]">
-          <div>
-            <h4 className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-4">Distribuição (Usuários Ativos)</h4>
-          </div>
-          <div className="flex items-end justify-around h-48 px-2 border-b border-l border-neutral-200 dark:border-neutral-800/80 pt-4">
-            {plansWithUsers.map((p, idx) => {
-              const pct = (p.count / maxUsersCount) * 100
-              return (
-                <div key={idx} className="flex flex-col items-center gap-2 w-12 group">
-                  <div className="h-36 w-6 flex items-end justify-center relative">
-                    <div className="relative w-6 bg-gradient-to-t from-amber-500 to-amber-300 dark:from-amber-600 dark:to-orange-400 rounded-t-lg transition-all duration-500" style={{ height: `${Math.max(pct, 5)}%` }}>
-                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-neutral-900 dark:bg-neutral-800 text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                        {p.count}
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-[9px] font-bold text-neutral-500 dark:text-neutral-400 truncate max-w-full">{p.name}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   const renderSlotButton = (dayDate: Date, slotStr: string, app?: Appointment) => {
     const isPast = new Date(dayDate)
@@ -1220,6 +972,17 @@ Nos vemos em breve!`
                 Monitore o crescimento da plataforma, crie planos e controle o acesso de clientes ativos.
               </p>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="p-2.5 text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-800 rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center justify-center disabled:opacity-50 group active:scale-95 duration-200 shadow-sm"
+              title="Atualizar dados gerais"
+            >
+              <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
+            </button>
           </div>
         </div>
 
@@ -1339,22 +1102,6 @@ Nos vemos em breve!`
                     <option value="15days">Últimos 15 Dias</option>
                     <option value="30days">Últimos 30 Dias</option>
                     <option value="custom">Personalizado</option>
-                  </select>
-                </div>
-
-                {/* Planos */}
-                <div className="flex-1 min-w-[200px] space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Planos</label>
-                  <select
-                    value={dashboardPlan}
-                    onChange={(e) => setDashboardPlan(e.target.value)}
-                    className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-200"
-                  >
-                    <option value="all">Todos os Planos</option>
-                    {plans.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                    <option value="free">Gratuito / Sem Plano</option>
                   </select>
                 </div>
 
@@ -1508,11 +1255,6 @@ Nos vemos em breve!`
             {/* Visual BI Chart Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-              {/* SVG Plan Chart */}
-              <div className="lg:col-span-2">
-                {renderPlanChart()}
-              </div>
-
               {/* Quick Platform Security Health Card */}
               <div className="bg-white dark:bg-neutral-900/40 p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm flex flex-col justify-between h-[300px]">
                 <div>
@@ -1558,7 +1300,7 @@ Nos vemos em breve!`
           </motion.div>
         )}
 
-        {/* Plans Management CRUD */}
+        {/* Pricing Rules Admin */}
         {activeTab === 'plans' && (
           <motion.div
             key="plans"
@@ -1568,87 +1310,7 @@ Nos vemos em breve!`
             transition={{ duration: 0.25 }}
             className="space-y-6"
           >
-            <div className="flex justify-between items-center bg-white dark:bg-neutral-900/40 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
-              <span className="text-xs font-bold text-neutral-500">Gerencie os pacotes que aparecem na Landing Page e no Checkout</span>
-              <button
-                type="button"
-                onClick={() => handleOpenPlanModal()}
-                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md shadow-indigo-500/10 flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Novo Plano</span>
-              </button>
-            </div>
-
-            {/* Plans List Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {plans.map(p => (
-                <div
-                  key={p.id}
-                  className={cn(
-                    "bg-white dark:bg-neutral-900/40 border rounded-[2rem] p-8 shadow-sm flex flex-col justify-between relative backdrop-blur-sm",
-                    p.is_active ? "border-neutral-200 dark:border-neutral-850" : "border-dashed border-neutral-200 dark:border-neutral-800 opacity-60"
-                  )}
-                >
-                  {!p.is_active && (
-                    <span className="absolute top-4 left-4 px-2 py-0.5 bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 text-[8px] font-black uppercase tracking-wider rounded">Inativo</span>
-                  )}
-
-                  {/* Actions buttons */}
-                  <div className="absolute top-4 right-4 flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenPlanModal(p)}
-                      className="p-2 bg-neutral-50 dark:bg-neutral-950 text-neutral-400 hover:text-indigo-500 dark:hover:text-indigo-400 rounded-xl transition-all shadow-sm"
-                      title="Editar plano"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeletePlan(p.id, p.name)}
-                      className="p-2 bg-neutral-50 dark:bg-neutral-950 text-neutral-400 hover:text-red-500 rounded-xl transition-all shadow-sm"
-                      title="Excluir plano"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-4 pt-2">
-                    <div>
-                      <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Licenças: {p.licenses_count}</span>
-                      <h4 className="text-xl font-black text-neutral-900 dark:text-white mt-1">{p.name}</h4>
-                    </div>
-
-                    <div className="flex items-baseline">
-                      <span className="text-sm font-bold text-neutral-500">R$</span>
-                      <span className="text-3xl font-black text-neutral-900 dark:text-white px-1">
-                        {p.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                      <span className="text-[10px] font-bold text-neutral-400">/mês</span>
-                    </div>
-
-                    <p className="text-xs text-neutral-500 leading-relaxed min-h-[2.5rem]">
-                      {p.description || 'Sem descrição.'}
-                    </p>
-
-                    <div className="border-t border-neutral-100 dark:border-neutral-850/60 pt-4 space-y-2">
-                      <span className="text-[8px] font-black uppercase text-neutral-400 tracking-widest block">Benefícios</span>
-                      {p.features && p.features.length > 0 ? (
-                        p.features.map((feat, idx) => (
-                          <div key={idx} className="flex items-center gap-2 text-xs font-medium text-neutral-700 dark:text-neutral-350">
-                            <div className="w-4 h-4 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center flex-shrink-0 text-[10px]">✓</div>
-                            <span className="truncate">{feat}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <span className="text-[10px] italic text-neutral-400">Nenhum benefício cadastrado.</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <PricingRulesAdmin />
           </motion.div>
         )}
 
@@ -1700,67 +1362,70 @@ Nos vemos em breve!`
               </div>
             </div>
 
-            {/* Customers Data Grid Table */}
-            <div className="bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 rounded-[2rem] overflow-hidden shadow-sm backdrop-blur-sm">
+            {/* Clients Table */}
+            <div className="bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-neutral-150 dark:border-neutral-850 bg-neutral-50/50 dark:bg-neutral-950/40 text-[10px] font-black uppercase text-neutral-400 tracking-wider">
-                      <th className="px-6 py-4">Workspace</th>
                       <th className="px-6 py-4">Dono / Email</th>
-                      <th className="px-6 py-4">Plano</th>
                       <th className="px-6 py-4">Licenças</th>
+                      <th className="px-6 py-4">Workspaces</th>
                       <th className="px-6 py-4">Criação</th>
                       <th className="px-6 py-4 text-center">Status</th>
                       <th className="px-6 py-4 text-right">Ação</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100 dark:divide-neutral-850/60">
-                    {filteredWorkspaces.length > 0 ? (
-                      filteredWorkspaces.map(ws => (
-                        <tr key={ws.id} className="text-xs text-neutral-700 dark:text-neutral-350 hover:bg-neutral-50/50 dark:hover:bg-neutral-950/20 transition-all">
-                          <td className="px-6 py-4.5 font-bold text-neutral-900 dark:text-white">
-                            <div>
-                              <span>{ws.name}</span>
-                              <span className="block text-[10px] text-neutral-400 font-mono mt-0.5">/{ws.slug}</span>
-                            </div>
-                          </td>
+                    {filteredClients.length > 0 ? (
+                      filteredClients.map(client => (
+                        <tr key={client.ownerId} className="text-xs text-neutral-700 dark:text-neutral-350 hover:bg-neutral-50/50 dark:hover:bg-neutral-950/20 transition-all">
                           <td className="px-6 py-4.5">
                             <div>
-                              <span className="font-bold text-neutral-800 dark:text-neutral-200">{ws.ownerName}</span>
-                              <span className="block text-[10px] text-neutral-400 mt-0.5">{ws.ownerEmail}</span>
+                              <span className="font-bold text-neutral-800 dark:text-neutral-200">{client.ownerName}</span>
+                              <span className="block text-[10px] text-neutral-400 mt-0.5">{client.ownerEmail}</span>
                             </div>
                           </td>
-                          <td className="px-6 py-4.5 font-bold">
-                            <span className={cn(
-                              "px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider",
-                              ws.plan_id ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400" : "bg-neutral-100 text-neutral-500 dark:bg-neutral-800"
-                            )}>
-                              {ws.planName}
-                            </span>
-                          </td>
                           <td className="px-6 py-4.5 font-mono font-bold text-xs">
-                            {ws.planLicenses > 0 ? `${ws.planLicenses} Contratada(s) / ${1 + ws.guestCount} Consumida(s)` : 'Gratuito'}
+                            {client.ownerLicenses > 0 ? (
+                              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400">
+                                {client.ownerLicenses} Contratada(s) / {1 + client.guestCount} Consumida(s)
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-neutral-100 text-neutral-500 dark:bg-neutral-800">
+                                Gratuito
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4.5 group relative">
+                            <span className="font-bold cursor-default px-3 py-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
+                              {client.workspaces.length}
+                            </span>
+                            <div className="absolute left-6 bottom-full mb-2 hidden group-hover:flex flex-col bg-neutral-900 text-white text-[10px] p-2 rounded z-10 w-max shadow-xl border border-neutral-800">
+                              {client.workspaces.map((w: any) => (
+                                <span key={w.id} className="whitespace-nowrap px-1 py-0.5">{w.name} (/{w.slug})</span>
+                              ))}
+                            </div>
                           </td>
                           <td className="px-6 py-4.5 text-neutral-400">
-                            {new Date(ws.created_at).toLocaleDateString('pt-BR')}
+                            {new Date(client.created_at).toLocaleDateString('pt-BR')}
                           </td>
                           <td className="px-6 py-4.5 text-center">
                             <span className={cn(
                               "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
-                              ws.is_blocked
+                              client.is_blocked
                                 ? "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400"
                                 : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-450"
                             )}>
-                              {ws.is_blocked ? 'Bloqueado' : 'Ativo'}
+                              {client.is_blocked ? 'Bloqueado' : 'Ativo'}
                             </span>
                           </td>
                           <td className="px-6 py-4.5 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              {ws.is_blocked ? (
+                              {client.is_blocked ? (
                                 <button
                                   type="button"
-                                  onClick={() => handleToggleBlock(ws.id, false, ws.name)}
+                                  onClick={() => handleToggleBlock(client.ownerId, false, client.ownerName)}
                                   className="px-3 py-1.5 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 shrink-0"
                                 >
                                   <Unlock className="w-3.5 h-3.5" />
@@ -1769,7 +1434,7 @@ Nos vemos em breve!`
                               ) : (
                                 <button
                                   type="button"
-                                  onClick={() => handleToggleBlock(ws.id, true, ws.name)}
+                                  onClick={() => handleToggleBlock(client.ownerId, true, client.ownerName)}
                                   className="px-3 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 shrink-0"
                                 >
                                   <Lock className="w-3.5 h-3.5" />
@@ -1778,8 +1443,8 @@ Nos vemos em breve!`
                               )}
                               <button
                                 type="button"
-                                onClick={() => handleDeleteClient(ws.id, ws.name, ws.ownerName, ws.owner_id, ws.ownerEmail)}
-                                className="px-3 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 shrink-0"
+                                onClick={() => handleDeleteClient(client.ownerName, client.ownerId, client.ownerEmail)}
+                                className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 text-neutral-500 rounded-lg transition-all flex items-center gap-1.5 font-black text-[9px] uppercase tracking-wider shrink-0"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                                 <span>Excluir</span>
@@ -2396,288 +2061,6 @@ Nos vemos em breve!`
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Save/Edit Plan Modal Dialog */}
-      <AnimatePresence>
-        {isPlanModalOpen && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col"
-            >
-              {/* Modal Header */}
-              <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-850 flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase text-neutral-400 tracking-widest flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-indigo-500" />
-                  {editingPlan ? 'Editar Plano' : 'Novo Plano de Assinatura'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsPlanModalOpen(false)}
-                  className="p-1 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-100 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Modal Form */}
-              <form onSubmit={handleSavePlan} className="flex-grow flex flex-col">
-                <div className="p-6 space-y-4 overflow-y-auto max-h-[65vh]">
-                  {/* Name field */}
-                  <div>
-                    <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-1.5 block">Nome do Plano</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ex: Start, Professional, Enterprise"
-                      value={planName}
-                      onChange={(e) => setPlanName(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-800 dark:text-neutral-100"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Monthly Price field */}
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-1.5 block">Preço Mensal (R$)</label>
-                      <input
-                        type="number"
-                        required
-                        step="0.01"
-                        min="0"
-                        placeholder="450.00"
-                        value={planPriceMonthly}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setPlanPriceMonthly(val === '' ? '' : Number(val));
-                          setPlanPrice(val === '' ? 0 : Number(val));
-                        }}
-                        className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-800 dark:text-neutral-100"
-                      />
-                    </div>
-
-                    {/* Licenses Count field */}
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-1.5 block">Número de Licenças</label>
-                      <input
-                        type="number"
-                        required
-                        min="1"
-                        placeholder="3"
-                        value={planLicenses}
-                        onChange={(e) => setPlanLicenses(Number(e.target.value))}
-                        className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-800 dark:text-neutral-100"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    {/* Quarterly Price field */}
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-1.5 block">Trimestral (R$)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="Opcional"
-                        value={planPriceQuarterly}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setPlanPriceQuarterly(val === '' ? '' : Number(val));
-                        }}
-                        className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-800 dark:text-neutral-100"
-                      />
-                    </div>
-
-                    {/* Semiannual Price field */}
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-1.5 block">Semestral (R$)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="Opcional"
-                        value={planPriceSemiannually}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setPlanPriceSemiannually(val === '' ? '' : Number(val));
-                        }}
-                        className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-800 dark:text-neutral-100"
-                      />
-                    </div>
-
-                    {/* Yearly Price field */}
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-1.5 block">Anual (R$)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="Opcional"
-                        value={planPriceYearly}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setPlanPriceYearly(val === '' ? '' : Number(val));
-                        }}
-                        className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-800 dark:text-neutral-100"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Description field */}
-                  <div>
-                    <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-1.5 block">Descrição do Plano</label>
-                    <textarea
-                      placeholder="Breve descrição dos benefícios ou limite de atuação."
-                      value={planDesc}
-                      onChange={(e) => setPlanDesc(e.target.value)}
-                      rows={2}
-                      className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-800 dark:text-neutral-100"
-                    />
-                  </div>
-
-                  {/* Features manager */}
-                  <div>
-                    <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-1.5 block">Vantagens & Benefícios</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Ex: Suporte Prioritário 24/7"
-                        value={newFeatureText}
-                        onChange={(e) => setNewFeatureText(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault()
-                            addFeature()
-                          }
-                        }}
-                        className="flex-grow px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-800 dark:text-neutral-100"
-                      />
-                      <button
-                        type="button"
-                        onClick={addFeature}
-                        className="px-4 py-2 bg-neutral-900 dark:bg-neutral-800 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider"
-                      >
-                        Add
-                      </button>
-                    </div>
-
-                    <div className="mt-3 space-y-1.5 max-h-[120px] overflow-y-auto pr-1">
-                      {planFeatures.map((feat, idx) => (
-                        <div key={idx} className="flex justify-between items-center p-2 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-850">
-                          <span className="text-xs text-neutral-600 dark:text-neutral-450">{feat}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeFeature(idx)}
-                            className="p-1 text-neutral-400 hover:text-red-500"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Is Active Status checkbox */}
-                  <div className="flex items-center gap-2 pt-2">
-                    <input
-                      type="checkbox"
-                      id="planIsActive"
-                      checked={planIsActive}
-                      onChange={(e) => setPlanIsActive(e.target.checked)}
-                      className="w-4 h-4 rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <label htmlFor="planIsActive" className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                      Disponibilizar plano para venda (Ativo)
-                    </label>
-                  </div>
-                </div>
-
-                {/* Modal Footer Actions */}
-                <div className="px-6 py-4 bg-neutral-50 dark:bg-neutral-900/40 border-t border-neutral-100 dark:border-neutral-850 flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsPlanModalOpen(false)}
-                    className="h-10 px-5 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 font-bold text-xs uppercase tracking-widest border border-neutral-200 dark:border-neutral-700 rounded-xl"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSaving}
-                    className="h-10 px-5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md shadow-indigo-500/20 flex items-center gap-2"
-                  >
-                    {isSaving ? 'Salvando...' : 'Salvar Plano'}
-                  </button>
-                </div>
-              </form>
-
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Confirm Delete Plan Modal */}
-      <Modal
-        isOpen={isDeletePlanModalOpen}
-        onClose={() => {
-          if (!isDeletingPlan) {
-            setIsDeletePlanModalOpen(false)
-            setPlanToDelete(null)
-          }
-        }}
-        title="Excluir Plano de Assinatura"
-        description="Esta ação removerá o plano permanentemente do sistema."
-        size="md"
-      >
-        <div className="space-y-6">
-          <div className="flex items-center gap-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-600 dark:text-red-400">
-            <div className="p-2.5 bg-red-500/20 rounded-xl text-red-600 dark:text-red-400">
-              <AlertTriangle className="w-6 h-6 animate-pulse" />
-            </div>
-            <div>
-              <p className="text-sm font-black">Você tem certeza absoluta?</p>
-              <p className="text-xs opacity-90 mt-0.5">
-                O plano <span className="font-bold">"{planToDelete?.name}"</span> será removido e não poderá mais ser contratado.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              disabled={isDeletingPlan}
-              onClick={() => {
-                setIsDeletePlanModalOpen(false)
-                setPlanToDelete(null)
-              }}
-              className="h-10 px-5 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 font-bold text-xs uppercase tracking-widest border border-neutral-200 dark:border-neutral-750 rounded-xl transition-all"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              disabled={isDeletingPlan}
-              onClick={handleConfirmDeletePlan}
-              className="h-10 px-6 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md shadow-red-500/20 flex items-center gap-2"
-            >
-              {isDeletingPlan ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Excluindo...</span>
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4" />
-                  <span>Confirmar Exclusão</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </Modal>
 
       {/* Confirm Block/Unblock Workspace Modal */}
       <Modal

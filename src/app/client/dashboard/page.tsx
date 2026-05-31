@@ -16,32 +16,25 @@ export default async function ClientDashboardPage() {
   // Fetch full profile
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, email, plan_id, subscription_status, subscription_cycle, subscription_expires_at, asaas_customer_id, asaas_subscription_id, is_super_admin, card_brand, card_last_digits')
+    .select('id, full_name, email, subscription_licenses, subscription_status, subscription_cycle, subscription_expires_at, asaas_customer_id, asaas_subscription_id, is_super_admin, card_brand, card_last_digits')
     .eq('id', user.id)
     .single()
 
-  // Check active subscription status for non-super-admin
-  if (profile && !profile.is_super_admin && profile.subscription_status !== 'active' && profile.subscription_status !== 'canceled') {
+  const isOwner = (profile?.subscription_licenses || 0) > 0;
+  const isGuest = !isOwner && !profile?.is_super_admin;
+
+  // Owners without active subscriptions go to checkout. Guests are allowed through to MetaConnect.
+  if (isOwner && profile.subscription_status !== 'active' && profile.subscription_status !== 'canceled') {
     redirect('/checkout')
   }
 
-  // Fetch the user's subscription plan
-  let plan = null
-  if (profile?.plan_id) {
-    const { data: planData } = await supabase
-      .from('subscription_plans')
-      .select('id, name, licenses_count, price, price_monthly, price_quarterly, price_semiannually, price_yearly')
-      .eq('id', profile.plan_id)
-      .single()
-    plan = planData
-  }
-
-  // Fetch all active subscription plans for switching
-  const { data: activePlans } = await supabase
-    .from('subscription_plans')
-    .select('id, name, licenses_count, price, price_monthly, price_quarterly, price_semiannually, price_yearly')
-    .eq('is_active', true)
-    .order('price', { ascending: true })
+  // Fetch the active pricing rules
+  const { data: rules } = await supabase
+    .from('pricing_rules')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
 
   // Fetch user's workspaces (owner only)
   const { data: workspaces } = await supabase
@@ -111,7 +104,7 @@ export default async function ClientDashboardPage() {
   // Fetch payments for this user
   const { data: payments } = await supabase
     .from('payments')
-    .select('id, amount, status, cycle, billing_type, invoice_url, created_at, plan_id')
+    .select('id, amount, status, cycle, billing_type, invoice_url, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -130,8 +123,7 @@ export default async function ClientDashboardPage() {
       <main className="w-full mx-auto px-6 md:px-10 pt-6 pb-10 flex-grow">
         <ClientDashboardClient
           profile={profile}
-          plan={plan}
-          plans={activePlans || []}
+          rules={rules}
           workspaces={workspaces || []}
           projects={projectsData}
           useCases={useCasesData}

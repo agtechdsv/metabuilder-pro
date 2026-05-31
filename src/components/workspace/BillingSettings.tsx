@@ -18,7 +18,7 @@ interface Profile {
   id: string
   full_name: string | null
   email: string | null
-  plan_id?: string | null
+  subscription_licenses?: number | null
   subscription_status?: string | null
   subscription_cycle?: string | null
   subscription_expires_at?: string | null
@@ -29,8 +29,6 @@ interface Profile {
 interface Payment {
   id: string
   user_id: string
-  workspace_id: string
-  plan_id: string | null
   cycle: string
   amount: number
   status: string
@@ -40,32 +38,22 @@ interface Payment {
   created_at: string
 }
 
-interface Plan {
-  id: string
-  name: string
-  price_monthly: number
-  price_quarterly: number
-  price_semiannually: number
-  price_yearly: number
-  is_active: boolean
-}
-
 interface BillingSettingsProps {
   workspace: Workspace
   profile: Profile
   payments: Payment[]
-  plans: Plan[]
+  rules?: any
   isOwner: boolean
 }
 
-export default function BillingSettings({ workspace, profile: initialProfile, payments, plans, isOwner }: BillingSettingsProps) {
+export default function BillingSettings({ workspace, profile: initialProfile, payments, rules, isOwner }: BillingSettingsProps) {
   const [profile, setProfile] = useState<Profile>(initialProfile)
   const [isCanceling, setIsCanceling] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
 
-  const activePlan = plans.find(p => p.id === profile.plan_id)
+  const hasActiveSubscription = profile.subscription_licenses && profile.subscription_licenses > 0
 
   const getCycleLabel = (cycle?: string | null) => {
     switch (cycle) {
@@ -132,14 +120,33 @@ export default function BillingSettings({ workspace, profile: initialProfile, pa
   }
 
   const getPlanPrice = () => {
-    if (!activePlan) return null
-    switch (profile.subscription_cycle) {
-      case 'monthly': return activePlan.price_monthly
-      case 'quarterly': return activePlan.price_quarterly
-      case 'semiannual': return activePlan.price_semiannually
-      case 'yearly': return activePlan.price_yearly
-      default: return activePlan.price_monthly
+    if (!rules || !profile.subscription_licenses) return null
+
+    let discountPercent = 0
+    const tiers = [...(rules.volume_tiers || [])].sort((a: any, b: any) => b.min_licenses - a.min_licenses)
+    for (const tier of tiers) {
+      if (profile.subscription_licenses >= tier.min_licenses) {
+        discountPercent = tier.discount_percent
+        break
+      }
     }
+    
+    let baseValue = rules.base_price * profile.subscription_licenses
+    let valueWithVolumeDiscount = baseValue * (1 - discountPercent / 100)
+    
+    const cycle = profile.subscription_cycle || 'monthly'
+    let cycleDiscount = 0
+    if (cycle === 'quarterly') cycleDiscount = rules.cycle_discounts?.quarterly || 10
+    if (cycle === 'semiannual') cycleDiscount = rules.cycle_discounts?.semiannual || 15
+    if (cycle === 'yearly') cycleDiscount = rules.cycle_discounts?.yearly || 20
+    
+    let finalValue = valueWithVolumeDiscount * (1 - cycleDiscount / 100)
+    
+    if (cycle === 'quarterly') finalValue *= 3
+    else if (cycle === 'semiannual') finalValue *= 6
+    else if (cycle === 'yearly') finalValue *= 12
+    
+    return finalValue
   }
 
   const formatDate = (dateStr?: string | null) => {
@@ -189,12 +196,12 @@ export default function BillingSettings({ workspace, profile: initialProfile, pa
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-6 md:p-8 shadow-sm">
         <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-6">Resumo da Assinatura</h3>
 
-        {activePlan ? (
+        {hasActiveSubscription ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="p-5 bg-neutral-50 dark:bg-neutral-950 rounded-2xl border border-neutral-100 dark:border-neutral-800 flex flex-col justify-between">
-              <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Plano Atual</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Licenças Ativas</span>
               <div>
-                <h4 className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-2">{activePlan.name}</h4>
+                <h4 className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-2">{profile.subscription_licenses} Licença(s)</h4>
                 <p className="text-xs text-neutral-500 mt-1">
                   {getPlanPrice() !== null ? `${formatPrice(getPlanPrice()!)} / ${getCycleLabel(profile.subscription_cycle).toLowerCase()}` : '-'}
                 </p>
@@ -240,7 +247,7 @@ export default function BillingSettings({ workspace, profile: initialProfile, pa
         )}
 
         {/* Informações de cancelamento de renovação automática */}
-        {activePlan && (
+        {hasActiveSubscription && (
           <div className="mt-8 pt-6 border-t border-neutral-100 dark:border-neutral-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="max-w-xl">
               <h4 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
