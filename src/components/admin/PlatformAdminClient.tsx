@@ -153,10 +153,12 @@ export default function PlatformAdminClient({
   const [activeTab, setActiveTab] = useState<'dashboard' | 'plans' | 'clients' | 'agenda' | 'iclub' | 'metavoice' | 'community' | 'arquivos'>('dashboard')
 
   const [workspaces, setWorkspaces] = useState<Workspace[]>(initialWorkspaces)
+  const [clientProfiles, setClientProfiles] = useState<any[]>(profiles)
 
   useEffect(() => {
     setWorkspaces(initialWorkspaces)
-  }, [initialWorkspaces])
+    setClientProfiles(profiles)
+  }, [initialWorkspaces, profiles])
 
   // iClub States
   const [iclubRules, setIclubRules] = useState<IClubRule[]>([])
@@ -604,7 +606,7 @@ Nos vemos em breve!`
   // Map workspace with profile
   const mappedWorkspaces = useMemo(() => {
     return workspaces.map(w => {
-      const ownerProfile = profiles.find(p => p.id === w.owner_id)
+      const ownerProfile = clientProfiles.find(p => p.id === w.owner_id)
 
       // Calculate monthly equivalent price for MRR
       let planPrice = 0
@@ -656,11 +658,12 @@ Nos vemos em breve!`
         ownerEmail: ownerProfile?.email || 'Sem e-mail',
         ownerIsSuperAdmin: ownerProfile?.is_super_admin || false,
         ownerLicenses: ownerProfile?.subscription_licenses || 0,
+        is_blocked: ownerProfile?.is_blocked || false,
         planPrice,
         guestCount
       } as any
     })
-  }, [workspaces, profiles, payments, workspaceMembers, ownerGuests])
+  }, [workspaces, clientProfiles, payments, workspaceMembers, ownerGuests])
 
   // Filtered workspaces and payments for dashboard calculations
   const filteredDashboardData = useMemo(() => {
@@ -782,7 +785,7 @@ Nos vemos em breve!`
       totalUsers,
       conversionRate
     }
-  }, [filteredDashboardData, profiles, workspaceMembers])
+  }, [filteredDashboardData, clientProfiles, workspaceMembers])
 
   // Filtered Clients for client list
   const filteredClients = useMemo(() => {
@@ -838,11 +841,12 @@ Nos vemos em breve!`
     setIsBlockingWorkspace(false)
     if (result.success) {
       toast(`Cliente "${workspaceToBlock.name}" foi ${workspaceToBlock.isBlocked ? 'bloqueado' : 'desbloqueado'} com sucesso!`, 'success')
-      setWorkspaces(prev => prev.map(w => w.owner_id === workspaceToBlock.id ? {
-        ...w,
+      // Update profile block state
+      setClientProfiles(prev => prev.map(p => p.id === workspaceToBlock.id ? {
+        ...p,
         is_blocked: workspaceToBlock.isBlocked,
         subscription_status: workspaceToBlock.isBlocked ? 'blocked' : 'active'
-      } : w))
+      } : p))
       setIsBlockModalOpen(false)
       setWorkspaceToBlock(null)
     } else {
@@ -1116,7 +1120,7 @@ Nos vemos em breve!`
                     <option value="all">Todos os Clientes</option>
                     {initialWorkspaces
                       .filter(w => {
-                        const ownerProfile = profiles.find(p => p.id === w.owner_id)
+                        const ownerProfile = clientProfiles.find(p => p.id === w.owner_id)
                         return !ownerProfile?.is_super_admin
                       })
                       .map(w => (

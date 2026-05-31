@@ -64,16 +64,8 @@ export async function toggleClientBlock(profileId: string, isBlocked: boolean) {
 
     if (profileError) throw profileError
 
-    // 2. Block all their workspaces
-    const { error: wsError } = await adminSupabase
-      .from('workspaces')
-      .update({
-        is_blocked: isBlocked
-      })
-      .eq('owner_id', profileId)
-
-    if (wsError) throw wsError
-
+    // 2. Workspaces are now blocked implicitly because billing/blocking is at profile level
+    
     revalidatePath('/admin/platform')
     return { success: true }
   } catch (err: any) {
@@ -256,12 +248,27 @@ export async function deleteClientAdmin(profileId: string) {
   try {
     const { adminSupabase } = await checkSuperAdmin()
 
-    // 0. Encontrar convidados deste owner e excluí-los (cascade delete em perfis, acessos, etc)
+    // 0. Encontrar convidados deste owner
     const { data: guests } = await adminSupabase
       .from('owner_guests')
       .select('user_id')
       .eq('owner_id', profileId)
 
+    // Build list of all user IDs that will be deleted (owner + guests)
+    const usersToDelete = [profileId]
+    if (guests && guests.length > 0) {
+      for (const guest of guests) {
+        if (guest.user_id) usersToDelete.push(guest.user_id)
+      }
+    }
+
+    // Limpeza de tabelas que referenciam auth.users mas não possuem ON DELETE CASCADE:
+    // Ex: agent_tasks.created_by
+    for (const userId of usersToDelete) {
+      await adminSupabase.from('agent_tasks').delete().eq('created_by', userId)
+    }
+
+    // 1. Deletar os convidados
     if (guests && guests.length > 0) {
       for (const guest of guests) {
         if (guest.user_id) {
@@ -270,7 +277,7 @@ export async function deleteClientAdmin(profileId: string) {
       }
     }
 
-    // 1. Delete owner from auth.users (triggers cascade deletes on profiles, workspaces, etc.)
+    // 2. Delete owner from auth.users (triggers cascade deletes on profiles, workspaces, etc.)
     const { error: authError } = await adminSupabase.auth.admin.deleteUser(profileId)
     if (authError) {
       console.error('Erro ao deletar usuário do auth:', authError)
