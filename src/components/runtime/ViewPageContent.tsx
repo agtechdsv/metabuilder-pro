@@ -594,6 +594,10 @@ export default function ViewPageContent({
   const isOpen = isModal ? isModalOpen : (isPage ? isPageVisible : isDrawerOpen)
 
   const handleOpenAdd = (initialData: any = {}) => {
+    // Prevent React synthetic events from being used as initialData
+    if (initialData && typeof initialData === 'object' && ('nativeEvent' in initialData || initialData._reactName || typeof initialData.preventDefault === 'function')) {
+      initialData = {}
+    }
     setDrawerMode('create')
     setSelectedRow(initialData)
     setOpen(true)
@@ -774,12 +778,13 @@ export default function ViewPageContent({
     setIsDetailModalOpen(false)
     setIsDetailDrawerOpen(false)
 
-    const fields = detailFields.filter(f => f.model_name === tableName)
+    const fields = detailFields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())
     setDetailFieldsToRender(fields)
     setSelectedDetail({})
     setDetailModalMode('create')
     setCurrentDetailTable(tableName)
     setParentRowIdForDetail(parentId || (selectedRow?.id || selectedRow?.ID))
+    setActiveTabForDetail('master') // GARANTE que o novo registro inicie na aba principal
     
     const model = (project as any)?.models?.find((m: any) => m.db_table_name.toLowerCase() === tableName.toLowerCase())
     const interfaceType = detailsInterfaceTypes?.[model?.id || ''] || (project.ui_config as any)?.details_interface_types?.[model?.id || ''] || 'modal'
@@ -809,7 +814,8 @@ export default function ViewPageContent({
     setIsProcessing(true)
     const subDetails = await fetchDetails(detail, detail.model_name)
     
-    setDetailFieldsToRender(detailFields)
+    const fields = detailFields.filter(f => f.model_name?.toLowerCase() === detail.model_name?.toLowerCase())
+    setDetailFieldsToRender(fields)
     setSelectedDetail({ ...detail, _details: subDetails })
     setDetailModalMode('edit')
     setCurrentDetailTable(detail.model_name)
@@ -987,7 +993,7 @@ export default function ViewPageContent({
 
           const attemptQueryId = attempts === 1 ? queryId : crypto.randomUUID()
 
-          const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
+          const result = await new Promise<{ success: boolean; error?: string; data?: any[] }>((resolve) => {
             const isTemp = !tunnelChannel || !isTunnelReady
             const ch = isTemp ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
             let settled = false
@@ -996,7 +1002,7 @@ export default function ViewPageContent({
               if (payload.payload?.queryId === attemptQueryId) {
                 settled = true
                 cleanup()
-                resolve({ success: payload.payload.success, error: payload.payload.error })
+                resolve({ success: payload.payload.success, error: payload.payload.error, data: payload.payload.data })
               }
             }
 
@@ -1085,6 +1091,9 @@ export default function ViewPageContent({
           'success'
         )
         await new Promise(resolve => setTimeout(resolve, 300))
+      } else {
+        setIsProcessing(false)
+        return
       }
 
       // 1. Busca dados frescos do PAI (o que está "atrás" no histórico)
@@ -1221,8 +1230,13 @@ export default function ViewPageContent({
 
     try {
       const action = drawerMode === 'create' ? 'insert' : 'update'
-      
-      const sendSave = () => {
+
+      const parseGeneratedColError = (err: string): string | null => {
+        const m = err?.match(/[""]([^"""]+)["""]/)
+        return m ? m[1] : null
+      }
+
+
         const pkName = primaryKeyName
         const cleanPkName = pkName.split('.').pop() || 'id'
         
@@ -1254,101 +1268,259 @@ export default function ViewPageContent({
           sanitizedData[k] = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
         }
 
-        // RAW SQL Builder
-        let rawQuery = ''
-        if (action === 'update' && pkValue && Object.keys(sanitizedData).length > 0) {
-          const setClause = Object.entries(sanitizedData)
-            .map(([k, v]) => (v === null || v === '' || String(v).trim() === '') ? `${k} = NULL` : `${k} = '${String(v).replace(/'/g, "''")}'`)
-            .join(', ')
-          rawQuery = `UPDATE ${modelName} SET ${setClause} WHERE ${cleanPkName} = '${String(pkValue).replace(/'/g, "''")}'`
-        } else if (action === 'insert' && Object.keys(sanitizedData).length > 0) {
-          const keys = Object.keys(sanitizedData).join(', ')
-          const values = Object.values(sanitizedData)
-            .map(v => (v === null || v === '' || String(v).trim() === '') ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`)
-            .join(', ')
-          rawQuery = `INSERT INTO ${modelName} (${keys}) VALUES (${values})`
+        const sendWithRetry = async (): Promise<{ success: boolean; data?: any[] }> => {
+        let currentData = { ...sanitizedData }
+        let attempts = 0
+        const MAX_RETRIES = 5
+
+        while (attempts < MAX_RETRIES) {
+          attempts++
+          // RAW SQL Builder
+          let currentQuery = ''
+          if (action === 'update' && pkValue && Object.keys(currentData).length > 0) {
+            const setClause = Object.entries(currentData)
+              .map(([k, v]) => (v === null || v === '' || String(v).trim() === '') ? `${k} = NULL` : `${k} = '${String(v).replace(/'/g, "''")}'`)
+              .join(', ')
+            currentQuery = `UPDATE ${modelName} SET ${setClause} WHERE ${cleanPkName} = '${String(pkValue).replace(/'/g, "''")}' RETURNING *`
+          } else if (action === 'insert' && Object.keys(currentData).length > 0) {
+            const keys = Object.keys(currentData).join(', ')
+            const values = Object.values(currentData)
+              .map(v => (v === null || v === '' || String(v).trim() === '') ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`)
+              .join(', ')
+            currentQuery = `INSERT INTO ${modelName} (${keys}) VALUES (${values}) RETURNING *`
+          }
+
+          const attemptQueryId = attempts === 1 ? queryId : crypto.randomUUID()
+
+          const result = await new Promise<{ success: boolean; error?: string; data?: any[] }>((resolve) => {
+            const isTemp = !tunnelChannel || !isTunnelReady
+            const ch = isTemp ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
+            let settled = false
+
+            const handleResult = (payload: any) => {
+              if (payload.payload?.queryId === attemptQueryId) {
+                settled = true
+                cleanup()
+                resolve({ success: payload.payload.success, error: payload.payload.error, data: payload.payload.data })
+              }
+            }
+
+            const cleanup = () => {
+              try {
+                const bindings = ch.bindings?.broadcast
+                if (Array.isArray(bindings)) {
+                  ch.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult)
+                }
+                if (isTemp) { ch.unsubscribe(); supabase.removeChannel(ch) }
+              } catch (_) {}
+            }
+
+            ch.on('broadcast', { event: `query_result_${attemptQueryId}` }, handleResult)
+            ch.on('broadcast', { event: 'sql_result' }, handleResult)
+
+            const doSend = () => {
+              const payload: any = {
+                queryId: attemptQueryId,
+                table: modelName,
+                tableName: modelName, 
+                action,
+                data: currentData,
+                record: currentData, 
+                query: currentQuery, 
+                sql: currentQuery, 
+                idColumn: cleanPkName,
+                idValue: pkValue,
+                token: project?.secret_token || 'test-token',
+                schemaName: project?.models?.find((m: any) => m.db_table_name === modelName)?.db_schema_name || project?.slug || 'public',
+                slug: project?.slug
+              }
+
+              if (action === 'update' && Object.keys(filters).length > 0) {
+                payload.filters = filters
+                payload.where = filters
+                payload.id = filters[pkName]
+              }
+
+              ch.send({
+                type: 'broadcast',
+                event: 'sql_query',
+                payload
+              })
+            }
+
+            if (isTemp) {
+              ch.subscribe((status: string) => { if (status === 'SUBSCRIBED') doSend() })
+            } else {
+              doSend()
+            }
+
+            setTimeout(() => {
+              if (!settled) {
+                settled = true
+                cleanup()
+                resolve({ success: false, error: 'Timeout' })
+              }
+            }, 9000)
+          })
+
+          if (result.success) {
+            return { success: true, data: result.data }
+          }
+
+          const genCol = parseGeneratedColError(result.error || '')
+          if (genCol && result.error?.includes('DEFAULT')) {
+            delete currentData[genCol]
+            continue
+          }
+
+          toast(result.error || 'Erro ao salvar', 'error')
+          return { success: false }
         }
 
-        const payload: any = {
-          queryId,
-          table: modelName,
-          tableName: modelName, 
-          action,
-          data: sanitizedData,
-          record: sanitizedData, 
-          query: rawQuery, 
-          sql: rawQuery, 
-          idColumn: cleanPkName,
-          idValue: pkValue,
-          token: project?.secret_token || 'test-token',
-          schemaName: project?.models?.find((m: any) => m.db_table_name === modelName)?.db_schema_name || project?.slug || 'public',
-          slug: project?.slug
-        }
-
-        if (action === 'update' && Object.keys(filters).length > 0) {
-          payload.filters = filters
-          payload.where = filters
-          payload.id = filters[pkName]
-        }
-
-        channel.send({
-          type: 'broadcast',
-          event: 'sql_query',
-          payload
-        })
+        toast('Não foi possível salvar após múltiplas tentativas.', 'error')
+        return { success: false }
       }
 
-      if (isTemporary) {
-        channel.subscribe((status: string) => {
-          if (status === 'SUBSCRIBED') {
-            sendSave()
+      const saveResult = await sendWithRetry()
+
+      if (!saveResult.success) {
+        setIsProcessing(false)
+        return
+      }
+
+      // ----------------------------------------------------
+      // SALVAR DETALHES INLINE
+      // ----------------------------------------------------
+      let masterId = pkValue
+      if (action === 'insert' && saveResult.data && saveResult.data.length > 0) {
+        masterId = saveResult.data[0][cleanPkName] || saveResult.data[0][pkName] || saveResult.data[0][cleanPkName.toUpperCase()] || saveResult.data[0].id || saveResult.data[0].ID
+      }
+
+      if (formData._details && formData._details.length > 0) {
+        for (const detail of formData._details) {
+          const detailTableName = detail.model_name
+          if (!detailTableName) continue
+
+          const isNewDetail = detail._isNew
+          
+          const fields = detailFields.filter(f => f.model_name?.toLowerCase() === detailTableName?.toLowerCase())
+          const pkField = fields.find(f => f.is_primary_key) || { db_column_name: 'id' }
+          const detailPkName = pkField.db_column_name.split('.').pop() || 'id'
+          const dPkValue = detail[detailPkName] ?? detail[detailPkName.toUpperCase()] ?? detail.id ?? detail.ID
+
+          const INTERNAL_KEYS = new Set(['_details', 'model_name', 'display_model_name', '_isNew'])
+          const sanitizedDetail: any = {}
+          for (const [k, v] of Object.entries(detail)) {
+            const lowKey = k.toLowerCase()
+            if (INTERNAL_KEYS.has(lowKey) || k.startsWith('_') || k.includes('.') || lowKey === detailPkName.toLowerCase() || lowKey === 'created_at' || lowKey === 'updated_at' || v === undefined || typeof v === 'object') continue
+            sanitizedDetail[k] = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
           }
-        })
-      } else {
-        sendSave()
+
+          if (isNewDetail && logicType === 'master_detail' && joins) {
+            const join = joins.find(j => j.to?.toLowerCase() === detailTableName?.toLowerCase())
+            if (join) {
+               sanitizedDetail[join.foreignKey] = String(masterId)
+            }
+          }
+
+          let detailQuery = ''
+          if (!isNewDetail && dPkValue && Object.keys(sanitizedDetail).length > 0) {
+            const setClause = Object.entries(sanitizedDetail).map(([k, v]) => (v === null || v === '') ? `${k} = NULL` : `${k} = '${String(v).replace(/'/g, "''")}'`).join(', ')
+            detailQuery = `UPDATE ${detailTableName} SET ${setClause} WHERE ${detailPkName} = '${String(dPkValue).replace(/'/g, "''")}'`
+          } else if (isNewDetail && Object.keys(sanitizedDetail).length > 0) {
+            const keys = Object.keys(sanitizedDetail).join(', ')
+            const values = Object.values(sanitizedDetail).map(v => (v === null || v === '') ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`).join(', ')
+            detailQuery = `INSERT INTO ${detailTableName} (${keys}) VALUES (${values})`
+          }
+
+          if (detailQuery) {
+            const detailQueryId = crypto.randomUUID()
+            await new Promise<void>((resolve) => {
+              let settled = false
+              const handleDetailResult = (payload: any) => {
+                if (payload.payload?.queryId === detailQueryId) {
+                  settled = true
+                  cleanupDetail()
+                  resolve()
+                }
+              }
+              const cleanupDetail = () => {
+                try {
+                  const bindings = channel.bindings?.broadcast
+                  if (Array.isArray(bindings)) channel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleDetailResult)
+                } catch (_) {}
+              }
+              channel.on('broadcast', { event: `query_result_${detailQueryId}` }, handleDetailResult)
+              channel.on('broadcast', { event: 'sql_result' }, handleDetailResult)
+              
+              channel.send({
+                type: 'broadcast',
+                event: 'sql_query',
+                payload: {
+                  queryId: detailQueryId,
+                  table: detailTableName,
+                  tableName: detailTableName,
+                  action: isNewDetail ? 'insert' : 'update',
+                  data: sanitizedDetail,
+                  record: sanitizedDetail,
+                  query: detailQuery,
+                  sql: detailQuery,
+                  idColumn: detailPkName,
+                  idValue: dPkValue,
+                  token: project?.secret_token || 'test-token',
+                  schemaName: project?.models?.find((m: any) => m.db_table_name === detailTableName)?.db_schema_name || project?.slug || 'public',
+                  slug: project?.slug
+                }
+              })
+
+              setTimeout(() => {
+                if (!settled) {
+                  settled = true
+                  cleanupDetail()
+                  resolve()
+                }
+              }, 4000)
+            })
+          }
+        }
       }
 
       // Post-save: refresh data and optionally close
-      setTimeout(async () => {
-        setIsProcessing(false)
-        if (isTemporary) {
-          supabase.removeChannel(channel)
-        }
+      setIsProcessing(false)
+      if (isTemporary) {
+        supabase.removeChannel(channel)
+      }
 
-        // Limpar cache para forçar refresh real
-        if (typeof window !== 'undefined') {
-          // Cache is updated silently by fetchData, do not remove it to prevent loader flashing
-        }
-
-        if (isCadastroOnly) {
-          if (action === 'insert') {
-            // No modo "Apenas Cadastro", limpa o formulário para permitir um novo registro
-            setSelectedRow(null)
-            setDrawerMode('create')
-            setIsPageVisible(true)
-            setRefreshKey(prev => prev + 1)
-          } else {
-            // Se foi atualização de um registro no modo modal embed/cadastro, mantém os dados
-            setSelectedRow((prev: any) => prev ? { ...prev, ...formData } : prev)
-            setRefreshKey(prev => prev + 1)
-          }
-        } else if (isPage) {
-          const freshDetails = await fetchDetails(selectedRow, modelName)
-          setSelectedRow((prev: any) => prev ? { ...prev, ...formData, _details: freshDetails } : prev)
+      if (isCadastroOnly) {
+        if (action === 'insert') {
+          // No modo "Apenas Cadastro", limpa o formulário para permitir um novo registro
+          setSelectedRow(null)
+          setDrawerMode('create')
+          setIsPageVisible(true)
           setRefreshKey(prev => prev + 1)
         } else {
-          setOpen(false)
-          setSelectedRow(null)
+          // Se foi atualização de um registro no modo modal embed/cadastro, mantém os dados
+          setSelectedRow((prev: any) => prev ? { ...prev, ...formData } : prev)
           setRefreshKey(prev => prev + 1)
         }
+      } else if (isPage) {
+        const updatedRow = { ...(selectedRow || {}), ...formData, [cleanPkName]: masterId }
+        const freshDetails = await fetchDetails(updatedRow, modelName)
+        setSelectedRow({ ...updatedRow, _details: freshDetails })
+        setDrawerMode('edit')
+        setRefreshKey(prev => prev + 1)
+      } else {
+        setOpen(false)
+        setSelectedRow(null)
+        setRefreshKey(prev => prev + 1)
+      }
 
-        toast(
-          drawerMode === 'create'
-            ? t('runtime.create_success', 'Registro criado com sucesso!')
-            : t('runtime.update_success', 'Registro atualizado com sucesso!'),
-          'success'
-        )
-      }, 1500)
+      toast(
+        drawerMode === 'create'
+          ? t('runtime.create_success', 'Registro criado com sucesso!')
+          : t('runtime.update_success', 'Registro atualizado com sucesso!'),
+        'success'
+      )
 
     } catch (error) {
       console.error('Error saving:', error)
@@ -1493,6 +1665,7 @@ export default function ViewPageContent({
             onAddDetail={handleOpenAddDetail}
             refreshTrigger={refreshKey}
             joins={joins}
+            detailsInterfaceTypes={detailsInterfaceTypes}
             dictionary={dictionary}
             detailsInlineTypes={detailsInlineTypes}
             initialTab={activeTabForDetail}

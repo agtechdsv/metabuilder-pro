@@ -104,12 +104,14 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   const [currentProjectId, setCurrentProjectId] = useState<string>()
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string>()
 
+
+
   // Telemetria (Heartbeat de Produtividade)
   const { logAction, flush } = useTelemetry({
     workspaceId: currentWorkspaceId,
     projectId: currentProjectId,
     uiViewId: initialData?.id,
-    uiViewName: initialData?.name || config.name || 'Novo Caso de Uso'
+    uiViewName: initialData?.name || 'Novo Caso de Uso'
   })
 
   // Estados do Wizard
@@ -146,7 +148,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   }
 
   // Ref e Timeout para debounce dos campos de texto (name, slug, custom_query) e propriedades do Drawer (fields_metadata)
-  const textChangesRef = useRef<{name?: string, slug?: string, custom_query?: string, fields_metadata?: boolean, master_tab_title?: boolean, details_tab_titles?: boolean}>({})
+  const textChangesRef = useRef<{name?: string, slug?: string, custom_query?: string, fields_metadata?: string | boolean, master_tab_title?: boolean, details_tab_titles?: boolean}>({})
   const textTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const flushTextChanges = useCallback(() => {
@@ -249,6 +251,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     ]
   })
 
+
   // Helpers de modo edição
   const isEditMode = !!initialData
   const viewId = initialData?.id
@@ -292,7 +295,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   function createDefaultFieldMeta(fid: string) {
     return {
       label: { text: getFormattedFieldName(fid), font: 'Inter', size: '10px', color: '' },
-      content: { font: 'Inter', size: '12px', color: '', mask: '', required: false },
+      content: { font: 'Inter', size: '12px', color: '', mask: '', required: false, readonly: false },
       component: { type: 'text', rows: 3, width: '100%', options_type: 'fixed', fixed_options: '', rel_table: '', rel_label: '', rel_value: '' },
       viacep: { enabled: false, logradouro: '', bairro: '', cidade: '', uf: '' }
     }
@@ -1646,7 +1649,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
   function createDefaultFieldMeta(fid: string) {
     return {
       label: { text: getFormattedFieldName(fid), font: 'Inter', size: '10px', color: '' },
-      content: { font: 'Inter', size: '12px', color: '', mask: '', required: false },
+      content: { font: 'Inter', size: '12px', color: '', mask: '', required: false, readonly: false },
       component: { type: 'text', rows: 3, width: '100%', options_type: 'fixed', fixed_options: '', rel_table: '', rel_label: '', rel_value: '' },
       viacep: { enabled: false, logradouro: '', bairro: '', cidade: '', uf: '' }
     }
@@ -3800,16 +3803,29 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4 p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-2xl border border-neutral-100 dark:border-neutral-800 cursor-pointer group" onClick={() => updateMeta('content', 'required', !currentFieldMeta.content.required)}>
+                      <div className="flex items-center gap-4 p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-2xl border border-neutral-100 dark:border-neutral-800 cursor-pointer group" onClick={() => updateMeta('content', 'required', !currentFieldMeta.content?.required)}>
                         <div className={cn(
                           "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
-                          currentFieldMeta.content.required ? 'bg-red-500 border-red-500 text-white' : 'border-neutral-300 dark:border-neutral-700'
+                          currentFieldMeta.content?.required ? 'bg-red-500 border-red-500 text-white' : 'border-neutral-300 dark:border-neutral-700'
                         )}>
-                          {currentFieldMeta.content.required && <Plus className="w-3 h-3 rotate-45" />}
+                          {currentFieldMeta.content?.required && <Plus className="w-3 h-3 rotate-45" />}
                         </div>
                         <div className="flex flex-col">
                           <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase tracking-widest">{t('wizard.layout.drawer.required')}</span>
                           <span className="text-[8px] text-neutral-400 font-medium">{t('wizard.layout.drawer.required_desc')}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-2xl border border-neutral-100 dark:border-neutral-800 cursor-pointer group" onClick={() => updateMeta('content', 'readonly', !currentFieldMeta.content?.readonly)}>
+                        <div className={cn(
+                          "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
+                          currentFieldMeta.content?.readonly ? 'bg-amber-500 border-amber-500 text-white' : 'border-neutral-300 dark:border-neutral-700'
+                        )}>
+                          {currentFieldMeta.content?.readonly && <Plus className="w-3 h-3 rotate-45" />}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase tracking-widest">{t('wizard.layout.drawer.readonly', 'Somente Leitura')}</span>
+                          <span className="text-[8px] text-neutral-400 font-medium">{t('wizard.layout.drawer.readonly_desc', 'O usuário não poderá alterar este valor')}</span>
                         </div>
                       </div>
                     </div>
@@ -3909,7 +3925,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                               </select>
                               {currentFieldMeta.component?.rel_table && (
                                 <p className="text-[9px] text-neutral-500 mt-2 italic px-1">
-                                  {enumerations.find(e => e.id === currentFieldMeta.component?.rel_table)?.values?.length || 0} opções disponíveis
+                                  {enumerations.find((e: any) => e.id === currentFieldMeta.component?.rel_table)?.values?.length || 0} opções disponíveis
                                 </p>
                               )}
                             </div>
@@ -4598,7 +4614,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive }:
                       className="w-full flex items-center justify-between bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800"
                     >
                       <div className="flex items-center gap-3">
-                        <DynamicIcon name={editingAction.icon || 'Zap'} className="w-5 h-5 text-indigo-500" />
+                        <DynamicIcon icon={editingAction.icon || 'Zap'} className="w-5 h-5 text-indigo-500" />
                         <span>{editingAction.icon || 'Selecione um ícone...'}</span>
                       </div>
                       <span className="text-[10px] uppercase text-neutral-400 font-bold">Trocar</span>

@@ -23,7 +23,7 @@ interface RecordModalProps {
   onAddDetail?: (tableName: string) => void
   joins?: any[]
   dictionary?: Record<string, string>
-  detailsInlineTypes?: Record<string, 'table' | 'cards'>
+  detailsInlineTypes?: Record<string, any>
   initialTab?: 'master' | string
   onTabChange?: (tab: string) => void
   zIndex?: number

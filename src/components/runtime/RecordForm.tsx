@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, Save, Eye, Pencil, Plus, Trash2, ArrowLeft, Check, ChevronDown, ChevronUp, Zap, Link, Database, Globe } from 'lucide-react'
+import { Loader2, Save, Eye, Pencil, Plus, Trash2, ArrowLeft, Check, ChevronDown, ChevronUp, Zap, Link, Database, Globe, Maximize2, PanelRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
@@ -131,6 +131,7 @@ interface RecordFormProps {
   customActions?: any[]
   onCustomAction?: (action: any, row?: any) => void
   detailsInlineTypes?: Record<string, boolean>
+  detailsInterfaceTypes?: Record<string, string>
   footerBgClass?: string
   projectId?: string
   secretToken?: string
@@ -260,6 +261,7 @@ export default function RecordForm({
   customActions = [],
   onCustomAction,
   detailsInlineTypes = {},
+  detailsInterfaceTypes = {},
   footerBgClass = "bg-white dark:bg-neutral-950",
   projectId,
   secretToken = 'test-token',
@@ -518,6 +520,23 @@ export default function RecordForm({
           } catch (err) {
             console.error(`Error fetching relational options for field ${field.id}:`, err)
           }
+        } else if (isRelationalComp && comp.options_type === 'enumeration' && comp.rel_table) {
+          try {
+            const { data } = await supabase
+              .from('project_enumerations')
+              .select('values')
+              .eq('id', comp.rel_table)
+              .single()
+
+            if (data && data.values) {
+              newOptions[field.id] = data.values.map((v: any) => ({
+                label: v.description || v.value,
+                value: v.value
+              }))
+            }
+          } catch (err) {
+            console.error(`Error fetching enumeration options for field ${field.id}:`, err)
+          }
         }
       }
       setRelationalOptions(newOptions)
@@ -544,10 +563,9 @@ export default function RecordForm({
     ? fields.filter(f => {
       const isMaster = !f.model_id ||
         (currentMasterId && String(f.model_id) === String(currentMasterId)) ||
-        (masterModelName && f.model_name?.toLowerCase() === masterModelName?.toLowerCase())
+        (masterModelName && f.model_name?.toLowerCase().trim() === masterModelName?.toLowerCase().trim())
 
       if (!isMaster) return false
-      // Se estivermos em um modal de detalhe, mostramos todos os campos dele
       return (!!masterModelName || f.zone === 3 || f.zone === '3' || f.zone === undefined || f.zone === null)
     })
     : fields.filter(f => f.zone === 3 || f.zone === '3' || f.zone === undefined || f.zone === null)
@@ -555,7 +573,7 @@ export default function RecordForm({
   const detailFields = logicType === 'master_detail'
     ? fields.filter(f => {
       const isMaster = (currentMasterId && String(f.model_id) === String(currentMasterId)) ||
-        (masterModelName && f.model_name?.toLowerCase() === masterModelName?.toLowerCase())
+        (masterModelName && f.model_name?.toLowerCase().trim() === masterModelName?.toLowerCase().trim())
       return f.model_id && !isMaster
     })
     : []
@@ -565,6 +583,7 @@ export default function RecordForm({
   const detailTables = Array.from(new Set(
     detailFields
       .filter(f => {
+        if (masterModelName && f.model_name?.toLowerCase().trim() === masterModelName?.toLowerCase().trim()) return false;
         // Se não houver joins, mostra tudo (fallback)
         if (!joins || joins.length === 0) return true
         // Verifica se existe um join de masterModelName -> f.model_name
@@ -696,11 +715,11 @@ export default function RecordForm({
       !zoneConfig.content?.color && "text-neutral-900 dark:text-white"
     )
 
-    const options = comp.options_type === 'relational'
+    const options = (comp.options_type === 'relational' || comp.options_type === 'enumeration')
       ? (relationalOptions[field.id] || [])
       : parseFixedOptions(comp.fixed_options)
 
-    const isDisabled = mode === 'view' || field.is_primary_key
+    const isDisabled = mode === 'view' || field.is_primary_key || zoneConfig.content?.readonly === true
 
     return (
       <div className="space-y-2" style={{ width: width }}>
@@ -967,13 +986,45 @@ export default function RecordForm({
               </button>
             )
           })}
-          <button
-            type="button"
-            onClick={() => onAddDetail?.(tableName, parentData.id || parentData.ID)}
-            className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                if (detailsInlineTypes[modelId || ''] !== false) {
+                  const newTempId = `temp-${Date.now()}`
+                  const newRecord = { 
+                    id: newTempId,
+                    model_name: tableName,
+                    _isNew: true 
+                  }
+                  
+                  setFormData((prev: any) => ({
+                    ...prev,
+                    _details: [...(prev._details || []), newRecord]
+                  }))
+                  
+                  const uniqueKey = `detail-${tableName}-${newTempId}`
+                  setExpandedDetails((prev: any) => ({ ...prev, [uniqueKey]: true }))
+                } else {
+                  onAddDetail?.(tableName, parentData.id || parentData.ID)
+                }
+              }}
+              className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
+              title={t('common.add_record', 'Adicionar')}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            {detailsInlineTypes[modelId || ''] !== false && (
+              <button
+                type="button"
+                onClick={() => onAddDetail?.(tableName, parentData.id || parentData.ID)}
+                title={detailsInterfaceTypes[modelId || ''] === 'drawer' ? t('common.open_drawer', 'Abrir Gaveta') : t('common.open_modal', 'Abrir Modal')}
+                className="p-1.5 ml-1 bg-neutral-50 dark:bg-neutral-800 text-neutral-400 hover:text-indigo-600 rounded-lg transition-colors border border-transparent hover:border-indigo-200"
+              >
+                {detailsInterfaceTypes[modelId || ''] === 'drawer' ? <PanelRight className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="space-y-1.5 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
@@ -1105,6 +1156,7 @@ export default function RecordForm({
                                 const type = fieldConfig.component?.type || 'text';
                                 const maskStr = fieldConfig.content?.mask;
                                 const isDateType = type === 'date' || type === 'datetime-local' || type === 'datetime' || type === 'time';
+                                const isInlineDisabled = mode === 'view' || field.is_primary_key || fieldConfig.content?.readonly === true;
 
                                 const handleInlineChange = (rawVal: any) => {
                                   let newVal = rawVal;
@@ -1156,7 +1208,8 @@ export default function RecordForm({
                                     <textarea
                                       value={rawValue || ''}
                                       onChange={(e) => handleInlineChange(e.target.value)}
-                                      className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+                                      disabled={isInlineDisabled}
+                                      className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                       rows={3}
                                     />
                                   );
@@ -1168,7 +1221,8 @@ export default function RecordForm({
                                     <select
                                       value={rawValue || ''}
                                       onChange={(e) => handleInlineChange(e.target.value)}
-                                      className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+                                      disabled={isInlineDisabled}
+                                      className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                       <option value="">Selecione...</option>
                                       {options.map((opt: any) => (
@@ -1198,7 +1252,8 @@ export default function RecordForm({
                                     }
                                     value={displayValue}
                                     onChange={(e) => handleInlineChange(e.target.value)}
-                                    className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+                                    disabled={isInlineDisabled}
+                                    className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                   />
                                 );
                               })()}
