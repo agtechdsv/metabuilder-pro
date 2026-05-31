@@ -40,7 +40,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
     .single()
 
   if (workspaceError || !workspace) notFound()
-  
+
   // Buscar o profile do owner separadamente para evitar erro de FK
   const { data: ownerProfile } = await supabase
     .from('profiles')
@@ -51,7 +51,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
   // 4. Enforce subscription check (Unless Super Admin)
   const isSuperAdmin = profile?.is_super_admin === true
 
-  
+
   let isBlocked = false;
   if (ownerProfile) {
     isBlocked = ownerProfile.is_blocked || ownerProfile.subscription_status === 'blocked' || ownerProfile.subscription_status === 'pending'
@@ -68,7 +68,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
       return (
         <div className="min-h-screen flex flex-col pt-16 bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300">
           <Navbar user={user} profile={profile} />
-          
+
           <main className="flex-grow flex items-center justify-center p-6 relative">
             {/* Ambient gradients */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
@@ -80,26 +80,26 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
               <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
                 <ShieldAlert className="w-8 h-8" />
               </div>
-              
+
               <div className="space-y-3">
                 <span className="text-[10px] font-black uppercase tracking-widest text-red-500 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">
                   Acesso Restrito
                 </span>
                 <h3 className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">Workspace Suspenso</h3>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                  O acesso ao workspace <strong className="text-neutral-900 dark:text-white">/{workspace.slug}</strong> está temporariamente suspenso devido a pendências de pagamento ou assinatura inativa.
+                  O acesso ao workspace <strong className="text-neutral-900 dark:text-white">/{workspace.slug}</strong> está temporariamente suspenso.
                 </p>
                 <div className="p-4 bg-neutral-50 dark:bg-neutral-950/60 rounded-2xl border border-neutral-100 dark:border-neutral-800 text-xs text-neutral-500 dark:text-neutral-450 leading-relaxed text-left flex items-start gap-3 mt-4">
                   <Building2 className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
                   <div>
                     <span className="font-bold text-neutral-850 dark:text-neutral-300 block mb-1">Como regularizar?</span>
-                    Apenas o proprietário deste workspace pode realizar a ativação ou renovação do plano. Se você é um membro, solicite ao proprietário que regularize o faturamento.
+                    Apenas o proprietário deste workspace pode realizar a ativação do plano. Se você é um membro, solicite ao proprietário que entre em contato com o suporte MetaBuilder PRO.
                   </div>
                 </div>
               </div>
 
               <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
-                <Link 
+                <Link
                   href="/workspace"
                   className="flex items-center justify-center gap-2 h-12 px-6 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md active:scale-95"
                 >
@@ -109,7 +109,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
               </div>
             </div>
           </main>
-          
+
           <Footer />
         </div>
       )
