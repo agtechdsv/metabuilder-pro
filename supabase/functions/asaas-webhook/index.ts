@@ -60,7 +60,8 @@ serve(async (req) => {
     const extractLicensesFromExtRef = (extRef: string): number => {
       if (!extRef) return 1;
       const parts = extRef.split("_");
-      const lIndex = parts.indexOf("l");
+      let lIndex = parts.indexOf("l");
+      if (lIndex === -1) lIndex = parts.indexOf("u");
       if (lIndex !== -1 && parts[lIndex + 1]) {
         return parseInt(parts[lIndex + 1], 10) || 1;
       }
@@ -140,8 +141,9 @@ serve(async (req) => {
 
         let licenses = 1;
 
-        if (extRef.includes("_l_") && extRef.includes("_c_")) {
-          const lIndex = parts.indexOf("l");
+        if ((extRef.includes("_l_") || extRef.includes("_u_")) && extRef.includes("_c_")) {
+          let lIndex = parts.indexOf("l");
+          if (lIndex === -1) lIndex = parts.indexOf("u");
           if (lIndex !== -1 && parts[lIndex + 1]) licenses = parseInt(parts[lIndex + 1]) || 1;
           const cIndex = parts.indexOf("c");
           if (cIndex !== -1 && parts[cIndex + 1]) cycleRaw = parts[cIndex + 1];
@@ -206,20 +208,61 @@ serve(async (req) => {
       const expirationDate = new Date();
       expirationDate.setMonth(expirationDate.getMonth() + monthsToAdd);
 
-      // Activate the profile
+      const isUpgradePayment = ctx.externalReference?.includes("_u_");
+      
       const updatePayload: Record<string, any> = {
         subscription_status: "active",
         is_blocked: false,
-        subscription_expires_at: expirationDate.toISOString()
       };
+      
+      if (!isUpgradePayment) {
+        updatePayload.subscription_expires_at = expirationDate.toISOString();
+      }
+      
       if (ctx.planId) updatePayload.plan_id = ctx.planId;
       if (ctx.cycle) updatePayload.subscription_cycle = ctx.cycle;
       if (ctx.licenses) updatePayload.subscription_licenses = ctx.licenses;
 
-      const { error: profileError } = await supabase
+      const { error: profileError, data: oldProfile } = await supabase
         .from("profiles")
         .update(updatePayload)
-        .eq("id", ctx.userId);
+        .eq("id", ctx.userId)
+        .select("asaas_subscription_id")
+        .single();
+        
+      if (isUpgradePayment && oldProfile?.asaas_subscription_id) {
+          const { data: rules } = await supabase.from("pricing_rules").select("*").order("created_at", { ascending: false }).limit(1).single();
+          const basePrice = Number(rules?.base_price) || 450;
+          let volDiscount = 0;
+          if (rules?.volume_tiers && rules.volume_tiers.length > 0) {
+            const sorted = [...rules.volume_tiers].sort((a: any, b: any) => b.min_licenses - a.min_licenses);
+            const tier = sorted.find((t: any) => ctx.licenses >= t.min_licenses);
+            if (tier) volDiscount = tier.discount_percent;
+          }
+          const unitPrice = basePrice * (1 - volDiscount / 100);
+          
+          let cycleDiscount = 0;
+          if (ctx.cycle !== "monthly" && rules?.cycle_discounts) {
+            cycleDiscount = rules.cycle_discounts[ctx.cycle] || 0;
+          }
+          const cyclePrice = (unitPrice * ctx.licenses * monthsToAdd) * (1 - cycleDiscount / 100);
+          
+          let asaasCycle = "MONTHLY";
+          if (ctx.cycle === "quarterly") asaasCycle = "QUARTERLY";
+          else if (ctx.cycle === "semiannual") asaasCycle = "SEMIANNUALLY";
+          else if (ctx.cycle === "yearly") asaasCycle = "YEARLY";
+
+          const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY")?.trim();
+          const ASAAS_URL = Deno.env.get("ASAAS_URL")?.trim() || "https://api.asaas.com/v3";
+          if (ASAAS_API_KEY) {
+            await fetch(`${ASAAS_URL}/subscriptions/${oldProfile.asaas_subscription_id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json", "access_token": ASAAS_API_KEY },
+              body: JSON.stringify({ value: cyclePrice, cycle: asaasCycle })
+            });
+            console.log(`[PAYMENT_RECEIVED] Subscription ${oldProfile.asaas_subscription_id} base value updated for upgrade`);
+          }
+      }
 
       if (profileError) {
         console.error(`[PAYMENT_RECEIVED] Error updating profile ${ctx.userId}:`, profileError);

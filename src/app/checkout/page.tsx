@@ -7,7 +7,7 @@ import { CheckoutClient } from '@/components/checkout/CheckoutClient'
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ licenses?: string; workspace_slug?: string; cycle?: string }>
+  searchParams: Promise<{ licenses?: string; workspace_slug?: string; cycle?: string; mode?: string }>
 }) {
   const supabase = await createClient()
 
@@ -17,6 +17,7 @@ export default async function CheckoutPage({
   const licensesParam = resolvedSearchParams.licenses
   const workspaceSlug = resolvedSearchParams.workspace_slug
   const cycle = resolvedSearchParams.cycle
+  const mode = resolvedSearchParams.mode
 
   if (!user) {
     let redirectUrl = '/login?redirect_to=/checkout'
@@ -64,6 +65,7 @@ export default async function CheckoutPage({
           workspaceSlug={workspaceSlug}
           user={user}
           profile={profile}
+          mode={mode}
         />
       </main>
 

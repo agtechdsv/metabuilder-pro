@@ -494,11 +494,7 @@ export default function ClientDashboardClient({
     }
   }, [activeTab])
 
-  // Plan modification state
-  const [selectedLicenses, setSelectedLicenses] = useState<number>(localProfile?.subscription_licenses || 1)
-  const [selectedCycle, setSelectedCycle] = useState<string>(localProfile?.subscription_cycle || 'monthly')
-  const [isUpdatingPlan, setIsUpdatingPlan] = useState(false)
-  const [showPlanConfirmModal, setShowPlanConfirmModal] = useState(false)
+  // Plan modification state removed (moved to checkout)
 
   // Card update state
   const [showCardModal, setShowCardModal] = useState(false)
@@ -553,40 +549,6 @@ export default function ClientDashboardClient({
     }
   }, [activeTab, localProfile?.asaas_subscription_id])
 
-  const handleChangePlan = async () => {
-    if (!selectedLicenses || !selectedCycle) return
-    setIsUpdatingPlan(true)
-    try {
-      const supabase = createClient()
-      const { data, error } = await supabase.functions.invoke('asaas-update-subscription', {
-        body: {
-          action: 'changePlan',
-          licenses: selectedLicenses,
-          cycle: selectedCycle
-        }
-      })
-      if (error) throw error
-      if (data?.success) {
-        toast('Plano atualizado com sucesso!', 'success')
-        setShowPlanConfirmModal(false)
-
-        // Update local profile state
-        setLocalProfile(prev => prev ? {
-          ...prev,
-          subscription_licenses: selectedLicenses,
-          subscription_cycle: selectedCycle as any
-        } : prev)
-
-        router.refresh()
-      } else {
-        throw new Error(data?.error || 'Erro ao atualizar assinatura.')
-      }
-    } catch (err: any) {
-      toast(err.message || 'Erro ao alterar o plano. Tente novamente.', 'error')
-    } finally {
-      setIsUpdatingPlan(false)
-    }
-  }
 
   const handleUpdateCard = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1902,7 +1864,7 @@ export default function ClientDashboardClient({
                       )}
                       
                       <button
-                        onClick={() => setShowPlanConfirmModal(true)}
+                        onClick={() => router.push('/checkout?mode=upgrade')}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-2xl border border-indigo-500 transition-colors shadow-sm"
                       >
                         <Sliders className="w-4 h-4" /> Alterar Plano
@@ -2409,71 +2371,6 @@ export default function ClientDashboardClient({
         </div>
       </Modal>
 
-      {/* Plan Update Modal */}
-      <Modal
-        isOpen={showPlanConfirmModal}
-        onClose={() => setShowPlanConfirmModal(false)}
-        title="Alterar Plano"
-        description="Ajuste a quantidade de licenças e o ciclo de renovação da sua assinatura."
-        size="md"
-      >
-        <div className="space-y-6 mt-4">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">
-              Quantidade de Licenças
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                min="1"
-                value={selectedLicenses}
-                onChange={(e) => setSelectedLicenses(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm text-neutral-900 dark:text-white focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-            <p className="text-xs text-neutral-500">O valor total será ajustado no próximo ciclo de faturamento.</p>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">
-              Ciclo de Faturamento
-            </label>
-            <select
-              value={selectedCycle}
-              onChange={(e) => setSelectedCycle(e.target.value)}
-              className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm text-neutral-900 dark:text-white focus:border-indigo-500 focus:outline-none"
-            >
-              <option value="monthly">Mensal</option>
-              <option value="quarterly">Trimestral (10% de desconto)</option>
-              <option value="semiannual">Semestral (15% de desconto)</option>
-              <option value="yearly">Anual (20% de desconto)</option>
-            </select>
-          </div>
-
-          <div className="flex gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-            <button
-              onClick={() => setShowPlanConfirmModal(false)}
-              disabled={isUpdatingPlan}
-              className="flex-1 px-4 py-3 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-750 text-neutral-800 dark:text-neutral-200 text-xs font-bold rounded-xl transition-colors disabled:opacity-50"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleChangePlan}
-              disabled={isUpdatingPlan}
-              className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {isUpdatingPlan ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> Processando...
-                </>
-              ) : (
-                'Salvar Alterações'
-              )}
-            </button>
-          </div>
-        </div>
-      </Modal>
       {/* Credit Card Update Modal */}
       <Modal
         isOpen={showCardModal}

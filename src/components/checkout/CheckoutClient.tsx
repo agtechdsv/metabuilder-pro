@@ -28,10 +28,12 @@ interface CheckoutClientProps {
   workspaceSlug?: string
   user: any
   profile?: any
+  mode?: string
 }
 
-export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, workspaceSlug, user, profile }: CheckoutClientProps) {
-  const [licenses, setLicenses] = useState(initialLicenses)
+export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, workspaceSlug, user, profile, mode }: CheckoutClientProps) {
+  const isUpgrade = mode === 'upgrade'
+  const [licenses, setLicenses] = useState(isUpgrade && profile?.subscription_licenses ? Math.max(initialLicenses, profile.subscription_licenses) : initialLicenses)
   const [cycle, setCycle] = useState<'monthly' | 'quarterly' | 'semiannual' | 'yearly'>(
     initialCycle && ['monthly', 'quarterly', 'semiannual', 'yearly'].includes(initialCycle)
       ? initialCycle
@@ -188,7 +190,8 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
           cardName: paymentMethod === 'card' ? cardName : undefined,
           cardExpiry: paymentMethod === 'card' ? cardExpiry : undefined,
           cardCvv: paymentMethod === 'card' ? cardCvv : undefined,
-          workspaceId: workspace.id
+          workspaceId: workspace.id,
+          isUpgrade: isUpgrade
         }
       })
 
@@ -937,11 +940,25 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
               </div>
 
               {/* Total Line */}
-              <div className="border-t border-neutral-150 dark:border-neutral-800/80 pt-4 flex justify-between items-center">
-                <span className="text-xs font-black uppercase tracking-wider text-neutral-400">Total do Ciclo</span>
-                <span className="text-2xl font-black text-indigo-650 dark:text-indigo-400">
-                  {licenses >= 50 ? 'Sob Consulta' : `R$ ${getCyclePrices(cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                </span>
+              <div className="border-t border-neutral-150 dark:border-neutral-800/80 pt-4 flex flex-col gap-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-black uppercase tracking-wider text-neutral-400">
+                    {isUpgrade ? 'Valor da Assinatura (Próximo Ciclo)' : 'Total do Ciclo'}
+                  </span>
+                  <span className="text-2xl font-black text-indigo-650 dark:text-indigo-400">
+                    {licenses >= 50 ? 'Sob Consulta' : `R$ ${getCyclePrices(cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  </span>
+                </div>
+                {isUpgrade && licenses < 50 && (
+                  <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl">
+                    <p className="text-xs text-amber-800 dark:text-amber-400 font-medium">
+                      <strong>Atenção:</strong> Como este é um upgrade, será cobrado hoje apenas um <strong className="font-black uppercase">valor proporcional (prorata)</strong> referente aos dias restantes até a próxima fatura.
+                    </p>
+                    <p className="text-[10px] text-amber-700/80 dark:text-amber-400/80 mt-1">
+                      O valor exato da diferença será calculado e processado automaticamente na próxima etapa de forma segura.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
