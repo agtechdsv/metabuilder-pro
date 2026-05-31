@@ -1862,9 +1862,9 @@ export default function ClientDashboardClient({
                     <p className="text-xs text-neutral-500 mt-1">Status do plano ativo e ciclo contratado</p>
                   </div>
 
-                  {/* Masked Card Details */}
+                  {/* Masked Card Details and Plan Update */}
                   {localProfile?.subscription_licenses && localProfile.subscription_licenses > 0 && (
-                    <div className="shrink-0">
+                    <div className="shrink-0 flex flex-wrap items-center gap-3">
                       {localProfile?.card_brand && localProfile?.card_last_digits ? (
                         <div className="flex items-center gap-2.5 px-4 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 rounded-2xl text-xs">
                           <CreditCard className="w-4 h-4 text-indigo-500" />
@@ -1895,11 +1895,18 @@ export default function ClientDashboardClient({
                             }));
                             setShowCardModal(true);
                           }}
-                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-850 dark:hover:bg-neutral-750 text-neutral-850 dark:text-white text-xs font-bold rounded-xl border border-neutral-200 dark:border-neutral-750 transition-colors"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-850 dark:hover:bg-neutral-750 text-neutral-850 dark:text-white text-xs font-bold rounded-2xl border border-neutral-200 dark:border-neutral-750 transition-colors"
                         >
-                          <CreditCard className="w-4 h-4 text-neutral-500" /> Adicionar Cartão Salvo
+                          <CreditCard className="w-4 h-4 text-neutral-500" /> Adicionar Cartão
                         </button>
                       )}
+                      
+                      <button
+                        onClick={() => setShowPlanConfirmModal(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-2xl border border-indigo-500 transition-colors shadow-sm"
+                      >
+                        <Sliders className="w-4 h-4" /> Alterar Plano
+                      </button>
                     </div>
                   )}
                 </div>
@@ -2397,6 +2404,72 @@ export default function ClientDashboardClient({
               className="px-6 py-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-750 text-neutral-900 dark:text-white text-xs font-bold rounded-xl transition-colors"
             >
               Fechar
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Plan Update Modal */}
+      <Modal
+        isOpen={showPlanConfirmModal}
+        onClose={() => setShowPlanConfirmModal(false)}
+        title="Alterar Plano"
+        description="Ajuste a quantidade de licenças e o ciclo de renovação da sua assinatura."
+        size="md"
+      >
+        <div className="space-y-6 mt-4">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">
+              Quantidade de Licenças
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min="1"
+                value={selectedLicenses}
+                onChange={(e) => setSelectedLicenses(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm text-neutral-900 dark:text-white focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+            <p className="text-xs text-neutral-500">O valor total será ajustado no próximo ciclo de faturamento.</p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">
+              Ciclo de Faturamento
+            </label>
+            <select
+              value={selectedCycle}
+              onChange={(e) => setSelectedCycle(e.target.value)}
+              className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm text-neutral-900 dark:text-white focus:border-indigo-500 focus:outline-none"
+            >
+              <option value="monthly">Mensal</option>
+              <option value="quarterly">Trimestral (10% de desconto)</option>
+              <option value="semiannual">Semestral (15% de desconto)</option>
+              <option value="yearly">Anual (20% de desconto)</option>
+            </select>
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+            <button
+              onClick={() => setShowPlanConfirmModal(false)}
+              disabled={isUpdatingPlan}
+              className="flex-1 px-4 py-3 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-750 text-neutral-800 dark:text-neutral-200 text-xs font-bold rounded-xl transition-colors disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleChangePlan}
+              disabled={isUpdatingPlan}
+              className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isUpdatingPlan ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Processando...
+                </>
+              ) : (
+                'Salvar Alterações'
+              )}
             </button>
           </div>
         </div>
