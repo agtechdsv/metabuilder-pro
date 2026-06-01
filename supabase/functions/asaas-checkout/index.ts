@@ -280,26 +280,32 @@ serve(async (req) => {
       const now = new Date();
       const daysRemaining = Math.max(1, Math.ceil((currentNextDueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
       
-      // Calculate old price
-      let oldVolDiscount = 0;
-      if (rules.volume_tiers && rules.volume_tiers.length > 0) {
-        const sorted = [...rules.volume_tiers].sort((a: any, b: any) => b.min_licenses - a.min_licenses);
-        const tier = sorted.find((t: any) => (profile.subscription_licenses || 1) >= t.min_licenses);
-        if (tier) oldVolDiscount = tier.discount_percent;
-      }
-      const oldUnitPrice = basePrice * (1 - oldVolDiscount / 100);
+      // Calculate old price using profile.subscription_amount if available
       let oldMonths = 1;
       if (profile.subscription_cycle === "quarterly") oldMonths = 3;
       else if (profile.subscription_cycle === "semiannual") oldMonths = 6;
       else if (profile.subscription_cycle === "yearly") oldMonths = 12;
 
-      let oldCycleDiscount = 0;
-      if (profile.subscription_cycle !== "monthly" && rules.cycle_discounts) {
-        oldCycleDiscount = rules.cycle_discounts[profile.subscription_cycle] || 0;
-      }
-      const oldCyclePrice = (oldUnitPrice * (profile.subscription_licenses || 1) * oldMonths) * (1 - oldCycleDiscount / 100);
+      let oldDailyRate = 0;
+      if (profile.subscription_amount && profile.subscription_amount > 0) {
+        oldDailyRate = profile.subscription_amount / (oldMonths * 30);
+      } else {
+        let oldVolDiscount = 0;
+        if (rules.volume_tiers && rules.volume_tiers.length > 0) {
+          const sorted = [...rules.volume_tiers].sort((a: any, b: any) => b.min_licenses - a.min_licenses);
+          const tier = sorted.find((t: any) => (profile.subscription_licenses || 1) >= t.min_licenses);
+          if (tier) oldVolDiscount = tier.discount_percent;
+        }
+        const oldUnitPrice = basePrice * (1 - oldVolDiscount / 100);
 
-      const oldDailyRate = oldCyclePrice / (oldMonths * 30);
+        let oldCycleDiscount = 0;
+        if (profile.subscription_cycle !== "monthly" && rules.cycle_discounts) {
+          oldCycleDiscount = rules.cycle_discounts[profile.subscription_cycle] || 0;
+        }
+        const oldCyclePrice = (oldUnitPrice * (profile.subscription_licenses || 1) * oldMonths) * (1 - oldCycleDiscount / 100);
+
+        oldDailyRate = oldCyclePrice / (oldMonths * 30);
+      }
       const newDailyRate = cyclePrice / (months * 30);
 
       const diff = (newDailyRate - oldDailyRate) * daysRemaining;
@@ -344,7 +350,8 @@ serve(async (req) => {
           .from("profiles")
           .update({
             subscription_cycle: cycle,
-            subscription_licenses: licenses
+            subscription_licenses: licenses,
+            subscription_amount: cyclePrice
           })
           .eq("id", user.id);
 
@@ -455,7 +462,8 @@ serve(async (req) => {
           .from("profiles")
           .update({
             subscription_cycle: cycle,
-            subscription_licenses: licenses
+            subscription_licenses: licenses,
+            subscription_amount: cyclePrice
           })
           .eq("id", user.id);
       } else {
@@ -475,6 +483,7 @@ serve(async (req) => {
             is_blocked: false,
             subscription_cycle: cycle,
             subscription_licenses: licenses,
+            subscription_amount: cyclePrice,
             subscription_expires_at: expirationDate.toISOString()
           })
           .eq("id", user.id);

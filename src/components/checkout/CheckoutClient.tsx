@@ -156,10 +156,21 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
     const diffTime = expiresAt.getTime() - now.getTime();
     const daysRemaining = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
 
-    const oldPrices = getCyclePrices(oldCycle, oldLicenses);
+    let oldDailyRate = 0;
+    if (profile.subscription_amount && profile.subscription_amount > 0) {
+      let oldMonths = 1;
+      if (oldCycle === 'quarterly') oldMonths = 3;
+      else if (oldCycle === 'semiannual') oldMonths = 6;
+      else if (oldCycle === 'yearly') oldMonths = 12;
+      oldDailyRate = profile.subscription_amount / (oldMonths * 30);
+    } else {
+      const oldPrices = getCyclePrices(oldCycle, oldLicenses);
+      oldDailyRate = oldPrices.dailyRate;
+    }
+
     const newPrices = getCyclePrices(cycle, licenses);
 
-    const diff = (newPrices.dailyRate - oldPrices.dailyRate) * daysRemaining;
+    const diff = (newPrices.dailyRate - oldDailyRate) * daysRemaining;
     const prorataValue = diff >= 5 ? diff : 0;
 
     return {

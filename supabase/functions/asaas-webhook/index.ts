@@ -234,6 +234,12 @@ serve(async (req) => {
               body: JSON.stringify({ value: cyclePrice, cycle: asaasCycle })
             });
             console.log(`[PAYMENT_RECEIVED] Subscription ${oldProfile.asaas_subscription_id} base value updated for upgrade`);
+            
+            // Sync the updated base value to our profiles table
+            await supabase
+              .from("profiles")
+              .update({ subscription_amount: cyclePrice })
+              .eq("id", ctx.userId);
           }
       }
 
