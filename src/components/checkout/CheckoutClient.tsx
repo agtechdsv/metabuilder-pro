@@ -158,7 +158,8 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
     const oldPrices = getCyclePrices(oldCycle, oldLicenses);
     const newPrices = getCyclePrices(cycle, licenses);
 
-    const prorataValue = Math.max(5, (newPrices.dailyRate - oldPrices.dailyRate) * daysRemaining);
+    const diff = (newPrices.dailyRate - oldPrices.dailyRate) * daysRemaining;
+    const prorataValue = diff > 0 ? Math.max(5, diff) : 0;
 
     return {
       daysRemaining,
@@ -498,7 +499,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
 
       {/* Close Button */}
       <button 
-        onClick={() => router.push('/')}
+        onClick={() => router.push(isUpgrade ? '/client/dashboard' : '/')}
         className="absolute top-6 right-6 p-2 rounded-2xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-750 text-neutral-400 hover:text-neutral-950 dark:text-neutral-400 dark:hover:text-white transition-all active:scale-90 z-20"
         title="Fechar checkout"
       >

@@ -223,18 +223,7 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                   </Link>
                 )}
 
-                {!localProfile?.is_super_admin && (!localProfile?.subscription_licenses || localProfile.subscription_licenses === 0) && (
-                  <Link
-                    href="/client/dashboard?tab=community"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-300 hover:text-blue-600 dark:hover:text-white transition-all group"
-                  >
-                    <div className="p-2 bg-blue-500/10 rounded-xl group-hover:bg-blue-500/20 transition-all text-blue-500">
-                      <Users className="w-4.5 h-4.5" />
-                    </div>
-                    <span className="text-sm font-bold">MetaConnect</span>
-                  </Link>
-                )}
+
 
                 <button
                   onClick={() => {

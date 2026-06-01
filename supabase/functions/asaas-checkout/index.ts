@@ -302,33 +302,62 @@ serve(async (req) => {
       const oldDailyRate = oldCyclePrice / (oldMonths * 30);
       const newDailyRate = cyclePrice / (months * 30);
 
-      let prorataValue = Math.max(5, (newDailyRate - oldDailyRate) * daysRemaining);
-      
-      // Criar cobrança avulsa (Payment)
-      const paymentPayload = {
-        customer: asaasCustomerId,
-        billingType: asaasBillingType,
-        value: prorataValue,
-        dueDate: nextDueDate,
-        description: `MetaBuilderPRO - Upgrade Prorata (${licenses} licenças)`,
-        externalReference: externalReference,
-        ...creditCardPayload
-      };
-      
-      const paymentRes = await fetch(`${ASAAS_URL}/payments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "access_token": ASAAS_API_KEY },
-        body: JSON.stringify(paymentPayload)
-      });
-      
-      if (!paymentRes.ok) {
-        const errData = await paymentRes.json().catch(() => ({}));
+      const diff = (newDailyRate - oldDailyRate) * daysRemaining;
+
+      if (diff > 0) {
+        let prorataValue = Math.max(5, diff);
+        
+        // Criar cobrança avulsa (Payment)
+        const paymentPayload = {
+          customer: asaasCustomerId,
+          billingType: asaasBillingType,
+          value: prorataValue,
+          dueDate: nextDueDate,
+          description: `MetaBuilderPRO - Upgrade Prorata (${licenses} licenças)`,
+          externalReference: externalReference,
+          ...creditCardPayload
+        };
+        
+        const paymentRes = await fetch(`${ASAAS_URL}/payments`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "access_token": ASAAS_API_KEY },
+          body: JSON.stringify(paymentPayload)
+        });
+        
+        if (!paymentRes.ok) {
+          const errData = await paymentRes.json().catch(() => ({}));
+          return new Response(
+            JSON.stringify({ error: errData.errors?.[0]?.description || "Erro ao criar cobrança de upgrade no Asaas" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        firstPayment = await paymentRes.json();
+      } else {
+        // Downgrade ou mesmo valor: Atualiza direto o valor base e encerra
+        await fetch(`${ASAAS_URL}/subscriptions/${asaasSubscriptionId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "access_token": ASAAS_API_KEY },
+          body: JSON.stringify({ value: cyclePrice, cycle: asaasCycle })
+        });
+
+        await supabaseClient
+          .from("profiles")
+          .update({
+            subscription_cycle: cycle,
+            subscription_licenses: licenses
+          })
+          .eq("id", user.id);
+
         return new Response(
-          JSON.stringify({ error: errData.errors?.[0]?.description || "Erro ao criar cobrança de upgrade no Asaas" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            success: true,
+            subscriptionId: asaasSubscriptionId,
+            paymentId: null,
+            status: "CONFIRMED"
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      firstPayment = await paymentRes.json();
       
     } else {
       // Nova assinatura
