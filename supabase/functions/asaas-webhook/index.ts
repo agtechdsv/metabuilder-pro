@@ -191,6 +191,9 @@ serve(async (req) => {
       
       if (!isUpgradePayment) {
         updatePayload.subscription_expires_at = expirationDate.toISOString();
+        if (payment?.value) {
+          updatePayload.subscription_amount = payment.value;
+        }
       }
       
       if (ctx.cycle) updatePayload.subscription_cycle = ctx.cycle;

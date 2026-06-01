@@ -215,10 +215,10 @@ serve(async (req) => {
     else if (paymentMethod === "pix") asaasBillingType = "PIX";
     else if (paymentMethod === "boleto") asaasBillingType = "BOLETO";
 
-    // Setup due date (today for immediate card billing, today + 3 days for Pix/Boleto first charge)
+    // Setup due date (today for immediate card and pix billing, today + 1 day for Boleto first charge)
     const d = new Date();
-    if (paymentMethod !== "card") {
-      d.setDate(d.getDate() + 3);
+    if (paymentMethod === "boleto") {
+      d.setDate(d.getDate() + 1);
     }
     const nextDueDate = d.toISOString().split("T")[0];
 
@@ -276,9 +276,11 @@ serve(async (req) => {
         );
       }
       subData = await subRes.json();
-      const currentNextDueDate = new Date(subData.nextDueDate);
+      // Garantir que backend e frontend usem a mesma data base para dias restantes
+      const currentNextDueDate = new Date(profile.subscription_expires_at || subData.nextDueDate);
       const now = new Date();
-      const daysRemaining = Math.max(1, Math.ceil((currentNextDueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+      const diffTime = currentNextDueDate.getTime() - now.getTime();
+      const daysRemaining = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
       
       // Calculate old price using profile.subscription_amount if available
       let oldMonths = 1;
@@ -410,10 +412,13 @@ serve(async (req) => {
         firstPayment = paymentsData.data?.[0];
       }
 
-      // Update profile with subscription id
+      // Update profile with subscription id and amount
       await supabaseClient
         .from("profiles")
-        .update({ asaas_subscription_id: asaasSubscriptionId })
+        .update({ 
+          asaas_subscription_id: asaasSubscriptionId,
+          subscription_amount: cyclePrice 
+        })
         .eq("id", user.id);
     }
     
