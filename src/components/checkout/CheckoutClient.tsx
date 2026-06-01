@@ -628,7 +628,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
         
         {/* Left Column: Forms */}
-        {licenses >= 50 ? (
+        {licenses >= 100 ? (
           <div className="lg:col-span-6 space-y-8 animate-in fade-in slide-in-from-left-4">
             <div className="bg-neutral-50/50 dark:bg-neutral-950/40 border border-neutral-200/50 dark:border-neutral-800/40 p-8 md:p-12 rounded-3xl space-y-6 shadow-sm text-center flex flex-col items-center justify-center min-h-[500px]">
               <div className="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-500 mb-2 border border-indigo-500/20">
@@ -1033,7 +1033,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                   const { total, monthlyEquivalent } = getCyclePrices(cycle)
                   return (
                     <div className="text-right shrink-0">
-                      {licenses >= 50 ? (
+                      {licenses >= 100 ? (
                         <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">
                           Sob Consulta
                         </span>
@@ -1075,7 +1075,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
 
               {/* Total Line */}
               <div className="border-t border-neutral-150 dark:border-neutral-800/80 pt-4 flex flex-col gap-2">
-                {isUpgrade && licenses < 50 && prorataDetails && prorataDetails.prorataValue > 0 && (
+                {isUpgrade && licenses < 100 && prorataDetails && prorataDetails.prorataValue > 0 && (
                   <div className="flex justify-between items-center mb-2 bg-indigo-50 dark:bg-indigo-500/10 p-3 rounded-xl border border-indigo-100 dark:border-indigo-500/20">
                     <span className="text-xs font-black uppercase tracking-wider text-indigo-800 dark:text-indigo-400">
                       Cobrança Avulsa Hoje (Prorata)
@@ -1091,10 +1091,10 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                     {isUpgrade ? 'Valor da Assinatura (Próximo Ciclo)' : 'Total do Ciclo'}
                   </span>
                   <span className="text-2xl font-black text-neutral-900 dark:text-white whitespace-nowrap flex-shrink-0 ml-4 text-right">
-                    {licenses >= 50 ? 'Sob Consulta' : `R$ ${getCyclePrices(cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    {licenses >= 100 ? 'Sob Consulta' : `R$ ${getCyclePrices(cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   </span>
                 </div>
-                {isUpgrade && licenses < 50 && (
+                {isUpgrade && licenses < 100 && (
                   <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl">
                     <p className="text-xs text-amber-800 dark:text-amber-400 font-medium">
                       <strong>Atenção:</strong> Como este é um upgrade, será cobrado hoje apenas um <strong className="font-black uppercase">valor proporcional (prorata)</strong> referente aos dias restantes até a próxima fatura.

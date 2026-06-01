@@ -527,7 +527,7 @@ export function MarketingSections() {
                 <input
                   type="range"
                   min="1"
-                  max="50"
+                  max="100"
                   value={licenses}
                   onChange={(e) => setLicenses(Number(e.target.value))}
                   className="w-full h-2 bg-neutral-200 dark:bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-indigo-600"
@@ -624,7 +624,7 @@ export function MarketingSections() {
                       
                       <div className="border-t border-neutral-200 dark:border-neutral-800 pt-4 mt-4">
                         <span className="block text-[10px] font-black uppercase text-neutral-400 mb-1">Total a Pagar</span>
-                        {licenses >= 50 ? (
+                        {licenses >= 100 ? (
                           <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400">
                             Preço Sob Consulta
                           </div>
@@ -656,7 +656,7 @@ export function MarketingSections() {
                       </div>
                     </div>
 
-                    {licenses >= 50 ? (
+                    {licenses >= 100 ? (
                       <Link
                         href="https://wa.me/5511999999999?text=Ol%C3%A1%2C%20tenho%20interesse%20em%20um%20plano%20Enterprise%20do%20MetaBuilder%20Pro"
                         target="_blank"
