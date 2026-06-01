@@ -915,6 +915,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                 </AnimatePresence>
               </div>
             </div>
+            )}
 
             {/* Submit Button */}
             <button
