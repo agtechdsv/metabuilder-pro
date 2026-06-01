@@ -234,7 +234,11 @@ serve(async (req) => {
             await fetch(`${ASAAS_URL}/subscriptions/${oldProfile.asaas_subscription_id}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json", "access_token": ASAAS_API_KEY },
-              body: JSON.stringify({ value: cyclePrice, cycle: asaasCycle })
+              body: JSON.stringify({ 
+                value: cyclePrice, 
+                cycle: asaasCycle,
+                description: `MetaBuilderPRO - Assinatura Pro (${ctx.licenses} licenças)`
+              })
             });
             console.log(`[PAYMENT_RECEIVED] Subscription ${oldProfile.asaas_subscription_id} base value updated for upgrade`);
             

@@ -345,7 +345,11 @@ serve(async (req) => {
         await fetch(`${ASAAS_URL}/subscriptions/${asaasSubscriptionId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", "access_token": ASAAS_API_KEY },
-          body: JSON.stringify({ value: cyclePrice, cycle: asaasCycle })
+          body: JSON.stringify({ 
+            value: cyclePrice, 
+            cycle: asaasCycle,
+            description: `MetaBuilderPRO - Assinatura Pro (${licenses} licenças)`
+          })
         });
 
         await supabaseClient

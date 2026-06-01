@@ -171,6 +171,8 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
     };
   }, [isUpgrade, profile, cycle, licenses, rules]);
 
+  const isDowngradeOrSame = isUpgrade && (prorataDetails?.prorataValue ?? 0) < 5;
+
   // Handle billing process calling Edge Function
   const handleSubmitCheckout = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -189,7 +191,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
       return
     }
 
-    if (paymentMethod === 'card') {
+    if (paymentMethod === 'card' && !isDowngradeOrSame) {
       if (!cardNumber || !cardName || !cardExpiry || !cardCvv || !billingPostalCode || !billingAddressNumber) {
         toast('Preencha todos os campos do cartão de crédito.', 'error')
         return
@@ -238,11 +240,11 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
         throw new Error(data?.error || 'Erro ao processar checkout.')
       }
 
-      // Se transação de cartão foi confirmada/recebida na hora, ativa localmente
-      if (paymentMethod === 'card' && (data.status === 'CONFIRMED' || data.status === 'RECEIVED')) {
+      // Se transação de cartão foi confirmada/recebida na hora, ou se for downgrade (não gerou cobrança)
+      if ((paymentMethod === 'card' || !data.paymentId) && (data.status === 'CONFIRMED' || data.status === 'RECEIVED')) {
         setSuccessWorkspaceSlug(workspace.slug)
         setCheckoutStep('success')
-        toast('Pagamento aprovado e plano ativado!', 'success')
+        toast('Plano atualizado com sucesso!', 'success')
       } else {
         // Pix ou Boleto aguardando faturamento
         setPixQrCode(data.pixQrCode)
@@ -708,8 +710,9 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
               </div>
             </div>
 
-            {/* Step 2: Payment Method */}
-            <div className="bg-neutral-50/50 dark:bg-neutral-950/40 border border-neutral-200/50 dark:border-neutral-800/40 p-6 md:p-8 rounded-3xl space-y-6 shadow-sm">
+            {/* Step 2: Payment Method (Oculto em caso de Downgrade) */}
+            {!isDowngradeOrSame && (
+              <div className="bg-neutral-50/50 dark:bg-neutral-950/40 border border-neutral-200/50 dark:border-neutral-800/40 p-6 md:p-8 rounded-3xl space-y-6 shadow-sm">
               <h2 className="text-lg font-bold flex items-center gap-3 border-b border-neutral-150 dark:border-neutral-850/60 pb-4 text-neutral-900 dark:text-white">
                 <CreditCard className="w-5 h-5 text-indigo-500" />
                 2. Forma de Pagamento (ASAAS Gateway)
