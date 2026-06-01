@@ -50,8 +50,6 @@ serve(async (req) => {
 
     interface Context {
       userId: string;
-      workspaceId: string;
-      planId: string;
       cycle: string;
       licenses: number;
       externalReference: string;
@@ -78,7 +76,7 @@ serve(async (req) => {
         console.log(`[S1] Looking up payments by asaas_payment_id=${payment.id}`);
         const { data, error } = await supabase
           .from("payments")
-          .select("user_id, workspace_id, plan_id, cycle, external_reference")
+          .select("user_id, cycle, external_reference")
           .eq("asaas_payment_id", payment.id)
           .maybeSingle();
 
@@ -87,8 +85,6 @@ serve(async (req) => {
           console.log(`[S1] Success: user_id=${data.user_id}`);
           return {
             userId: data.user_id,
-            workspaceId: data.workspace_id,
-            planId: data.plan_id,
             cycle: data.cycle,
             licenses: extractLicensesFromExtRef(data.external_reference),
             externalReference: data.external_reference
@@ -105,22 +101,15 @@ serve(async (req) => {
         console.log(`[S2] Looking up profiles by asaas_subscription_id=${subId}`);
         const { data, error } = await supabase
           .from("profiles")
-          .select("id, plan_id, subscription_cycle")
+          .select("id, subscription_cycle")
           .eq("asaas_subscription_id", subId)
           .maybeSingle();
 
         if (error) console.error("[S2] DB error:", error);
         if (data?.id) {
           console.log(`[S2] Success: user_id=${data.id}`);
-          const { data: ws } = await supabase
-            .from("workspaces")
-            .select("id")
-            .eq("owner_id", data.id)
-            .maybeSingle();
           return {
             userId: data.id,
-            workspaceId: ws?.id || "",
-            planId: data.plan_id || "",
             cycle: data.subscription_cycle || "",
             licenses: extractLicensesFromExtRef(payment?.externalReference || ""),
             externalReference: payment?.externalReference || ""
@@ -135,8 +124,6 @@ serve(async (req) => {
         console.log(`[S3] Parsing externalReference=${extRef}`);
         const parts = extRef.split("_");
         let userId = "";
-        let workspaceId = "";
-        let planId = "";
         let cycleRaw = "";
 
         let licenses = 1;
@@ -147,18 +134,15 @@ serve(async (req) => {
           if (lIndex !== -1 && parts[lIndex + 1]) licenses = parseInt(parts[lIndex + 1]) || 1;
           const cIndex = parts.indexOf("c");
           if (cIndex !== -1 && parts[cIndex + 1]) cycleRaw = parts[cIndex + 1];
-          workspaceId = parts[1];
         } else {
           if (parts[0] === "u") {
-            userId = parts[1]; workspaceId = parts[3]; planId = parts[5]; cycleRaw = parts[7];
+            userId = parts[1]; cycleRaw = parts[7];
           } else {
-            workspaceId = parts[1]; planId = parts[3]; cycleRaw = parts[5];
+            cycleRaw = parts[5];
           }
         }
 
         userId = formatUUID(userId);
-        workspaceId = formatUUID(workspaceId);
-        planId = formatUUID(planId);
 
         let cycle = cycleRaw;
         if (cycleRaw === "mo") cycle = "monthly";
@@ -166,19 +150,9 @@ serve(async (req) => {
         else if (cycleRaw === "se") cycle = "semiannual";
         else if (cycleRaw === "ye") cycle = "yearly";
 
-        // If userId not in ref, look up workspace owner
-        if (!userId && workspaceId) {
-          const { data: ws } = await supabase
-            .from("workspaces")
-            .select("owner_id")
-            .eq("id", workspaceId)
-            .maybeSingle();
-          if (ws?.owner_id) userId = ws.owner_id;
-        }
-
-        if (userId && workspaceId) {
+        if (userId) {
           console.log(`[S3] Success: user_id=${userId}`);
-          return { userId, workspaceId, planId, cycle, licenses, externalReference: extRef };
+          return { userId, cycle, licenses, externalReference: extRef };
         }
       }
 
@@ -219,7 +193,6 @@ serve(async (req) => {
         updatePayload.subscription_expires_at = expirationDate.toISOString();
       }
       
-      if (ctx.planId) updatePayload.plan_id = ctx.planId;
       if (ctx.cycle) updatePayload.subscription_cycle = ctx.cycle;
       if (ctx.licenses) updatePayload.subscription_licenses = ctx.licenses;
 
@@ -292,8 +265,6 @@ serve(async (req) => {
           // Payment not in DB yet — insert it
           await supabase.from("payments").insert({
             user_id: ctx.userId,
-            workspace_id: ctx.workspaceId || null,
-            plan_id: ctx.planId || null,
             cycle: ctx.cycle || null,
             amount: payment.value || 0,
             status: "paid",

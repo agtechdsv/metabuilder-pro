@@ -304,8 +304,8 @@ serve(async (req) => {
 
       const diff = (newDailyRate - oldDailyRate) * daysRemaining;
 
-      if (diff > 0) {
-        let prorataValue = Math.max(5, diff);
+      if (diff >= 5) {
+        let prorataValue = diff;
         
         // Criar cobrança avulsa (Payment)
         const paymentPayload = {
@@ -415,8 +415,6 @@ serve(async (req) => {
     // Save payment log in DB
     const { error: insertError } = await supabaseClient.from("payments").insert({
       user_id: user.id,
-      workspace_id: workspaceId,
-      plan_id: null,
       cycle: cycle,
       amount: cyclePrice,
       status: paymentMethod === "card" && firstPayment?.status === "CONFIRMED" ? "paid" : "pending",

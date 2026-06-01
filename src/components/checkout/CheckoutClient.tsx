@@ -159,7 +159,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
     const newPrices = getCyclePrices(cycle, licenses);
 
     const diff = (newPrices.dailyRate - oldPrices.dailyRate) * daysRemaining;
-    const prorataValue = diff > 0 ? Math.max(5, diff) : 0;
+    const prorataValue = diff >= 5 ? diff : 0;
 
     return {
       daysRemaining,
@@ -809,7 +809,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isProcessing || !workspace}
+              disabled={isProcessing || !workspace || (isUpgrade && licenses === profile?.subscription_licenses && cycle === profile?.subscription_cycle)}
               className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-3xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all active:scale-[0.99] shadow-xl shadow-indigo-500/25"
             >
               {isProcessing ? (

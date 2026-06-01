@@ -152,7 +152,7 @@ export default async function SettingsPage({ params }: SettingsPageProps) {
   const { data: payments } = await admin
     .from('payments')
     .select('*')
-    .eq('workspace_id', workspace.id)
+    .eq('user_id', workspace.owner_id)
     .order('created_at', { ascending: false })
 
   return (
