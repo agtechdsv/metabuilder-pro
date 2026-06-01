@@ -6,7 +6,6 @@ import { CheckCircle2, ChevronRight, Copy, CreditCard, FileText, Loader2, Lock, 
 import { motion, AnimatePresence } from 'framer-motion'
 import { getOrCreateDefaultWorkspace } from '@/app/actions/checkout'
 import { useToast } from '@/components/ui/Toast'
-import { getCyclePrices } from '@/utils/pricing'
 import { sendPaymentEmail } from '@/app/actions/checkout-email'
 import { createClient } from '@/utils/supabase/client'
 
