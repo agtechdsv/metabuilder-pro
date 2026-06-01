@@ -549,7 +549,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                   const res = await sendPaymentEmail({
                     email: billingEmail,
                     paymentMethod: paymentMethod as 'pix' | 'boleto',
-                    amount: isUpgrade ? prorataCalculated : getCyclePrices(cycle, licenses).total,
+                    amount: isUpgrade ? (prorataDetails?.prorataValue || 0) : getCyclePrices(cycle, licenses).total,
                     invoiceUrl,
                     barCode: paymentMethod === 'pix' ? pixCopiaCola : (identificationField || barCode)
                   })
