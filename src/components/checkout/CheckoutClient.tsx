@@ -969,7 +969,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                     <span className="text-xs font-black uppercase tracking-wider text-indigo-800 dark:text-indigo-400">
                       Cobrança Avulsa Hoje (Prorata)
                     </span>
-                    <span className="text-xl font-black text-indigo-650 dark:text-indigo-400">
+                    <span className="text-xl font-black text-indigo-650 dark:text-indigo-400 whitespace-nowrap flex-shrink-0 ml-4 text-right">
                       R$ {prorataDetails.prorataValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -979,7 +979,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                   <span className="text-xs font-black uppercase tracking-wider text-neutral-400">
                     {isUpgrade ? 'Valor da Assinatura (Próximo Ciclo)' : 'Total do Ciclo'}
                   </span>
-                  <span className="text-2xl font-black text-neutral-900 dark:text-white">
+                  <span className="text-2xl font-black text-neutral-900 dark:text-white whitespace-nowrap flex-shrink-0 ml-4 text-right">
                     {licenses >= 50 ? 'Sob Consulta' : `R$ ${getCyclePrices(cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   </span>
                 </div>
