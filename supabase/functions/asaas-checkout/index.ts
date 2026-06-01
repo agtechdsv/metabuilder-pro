@@ -416,7 +416,7 @@ serve(async (req) => {
     const { error: insertError } = await supabaseClient.from("payments").insert({
       user_id: user.id,
       cycle: cycle,
-      amount: cyclePrice,
+      amount: firstPayment?.value || cyclePrice,
       status: paymentMethod === "card" && firstPayment?.status === "CONFIRMED" ? "paid" : "pending",
       external_reference: externalReference,
       billing_type: asaasBillingType,

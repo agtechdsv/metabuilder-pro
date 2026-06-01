@@ -71,6 +71,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
   const [barCode, setBarCode] = useState<string | null>(null)
   const [identificationField, setIdentificationField] = useState<string | null>(null)
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null)
+  const [pendingPaymentId, setPendingPaymentId] = useState<string | null>(null)
 
   const { toast } = useToast()
   const router = useRouter()
@@ -246,6 +247,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
         setBarCode(data.barCode)
         setIdentificationField(data.identificationField)
         setInvoiceUrl(data.invoiceUrl)
+        setPendingPaymentId(data.paymentId)
         setShowPaymentDetails(true)
         toast('Assinatura gerada. Aguardando pagamento.', 'success')
       }
@@ -264,17 +266,34 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
     let intervalId: any
 
     const checkStatus = async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('subscription_status')
-        .eq('id', user.id)
-        .single()
+      if (isUpgrade && pendingPaymentId) {
+        // Upgrade flow: wait for the specific payment to be paid
+        const { data, error } = await supabase
+          .from('payments')
+          .select('status')
+          .eq('asaas_payment_id', pendingPaymentId)
+          .single()
 
-      if (!error && data && data.subscription_status === 'active') {
-        setSuccessWorkspaceSlug(workspace.slug)
-        setCheckoutStep('success')
-        toast('Pagamento confirmado e plano ativado!', 'success')
-        clearInterval(intervalId)
+        if (!error && data && data.status === 'paid') {
+          setSuccessWorkspaceSlug(workspace.slug)
+          setCheckoutStep('success')
+          toast('Pagamento confirmado e plano atualizado!', 'success')
+          clearInterval(intervalId)
+        }
+      } else if (!isUpgrade) {
+        // New subscription flow: wait for the profile to be active
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('subscription_status')
+          .eq('id', user.id)
+          .single()
+
+        if (!error && data && data.subscription_status === 'active') {
+          setSuccessWorkspaceSlug(workspace.slug)
+          setCheckoutStep('success')
+          toast('Pagamento confirmado e plano ativado!', 'success')
+          clearInterval(intervalId)
+        }
       }
     }
 
@@ -282,32 +301,56 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
     intervalId = setInterval(checkStatus, 3000)
 
     // Realtime do Supabase
-    const channel = supabase
-      .channel(`profile-status-checkout-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${user.id}`,
-        },
-        (payload: any) => {
-          if (payload.new && payload.new.subscription_status === 'active') {
-            setSuccessWorkspaceSlug(workspace.slug)
-            setCheckoutStep('success')
-            toast('Pagamento confirmado e plano ativado!', 'success')
-            clearInterval(intervalId)
+    let channel: any
+    if (isUpgrade && pendingPaymentId) {
+      channel = supabase
+        .channel(`payment-status-checkout-${pendingPaymentId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'payments',
+            filter: `asaas_payment_id=eq.${pendingPaymentId}`,
+          },
+          (payload: any) => {
+            if (payload.new && payload.new.status === 'paid') {
+              setSuccessWorkspaceSlug(workspace.slug)
+              setCheckoutStep('success')
+              toast('Pagamento confirmado e plano atualizado!', 'success')
+              clearInterval(intervalId)
+            }
           }
-        }
-      )
-      .subscribe()
+        )
+        .subscribe()
+    } else if (!isUpgrade) {
+      channel = supabase
+        .channel(`profile-status-checkout-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${user.id}`,
+          },
+          (payload: any) => {
+            if (payload.new && payload.new.subscription_status === 'active') {
+              setSuccessWorkspaceSlug(workspace.slug)
+              setCheckoutStep('success')
+              toast('Pagamento confirmado e plano ativado!', 'success')
+              clearInterval(intervalId)
+            }
+          }
+        )
+        .subscribe()
+    }
 
     return () => {
       clearInterval(intervalId)
-      supabase.removeChannel(channel)
+      if (channel) supabase.removeChannel(channel)
     }
-  }, [workspace, user, showPaymentDetails, checkoutStep])
+  }, [workspace, user, showPaymentDetails, checkoutStep, isUpgrade, pendingPaymentId])
 
   // Redirect countdown
   useEffect(() => {
