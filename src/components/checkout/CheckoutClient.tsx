@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, ChevronRight, Copy, CreditCard, FileText, Loader2, Lock, ShieldCheck, X, Mail } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Copy, CreditCard, FileText, Loader2, Lock, ShieldCheck, X, Mail, ArrowRight, Check, AlertCircle, HelpCircle, QrCode } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getOrCreateDefaultWorkspace } from '@/app/actions/checkout'
 import { useToast } from '@/components/ui/Toast'
