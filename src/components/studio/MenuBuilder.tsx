@@ -116,6 +116,48 @@ export function MenuBuilder({ project, views, isDownloadsActive = true, onSave }
   const [isSaving, setIsSaving] = useState(false)
   const [lastAddedId, setLastAddedId] = useState<string | null>(null)
 
+  // Auto-gerenciar link da Central de Downloads
+  useEffect(() => {
+    const checkExists = (items: MenuItem[]): boolean => items.some(item => item.target === 'downloads' || (item.children && checkExists(item.children)));
+    const removeDownloads = (items: MenuItem[]): MenuItem[] => items.filter(item => item.target !== 'downloads').map(item => ({
+      ...item,
+      children: item.children ? removeDownloads(item.children) : undefined
+    }));
+
+    setMenu(currentMenu => {
+      let newMenu = [...currentMenu];
+      let changed = false;
+
+      if (isDownloadsActive) {
+        if (!checkExists(newMenu)) {
+          newMenu.push({
+            id: 'downloads_auto_' + Math.random().toString(36).substr(2, 9),
+            label: 'Central de Downloads',
+            description: '',
+            icon: 'Layout',
+            type: 'view',
+            target: 'downloads',
+            show_dashboard: true,
+          });
+          changed = true;
+        }
+      } else {
+        const removed = removeDownloads(newMenu);
+        // Compare lengths to see if something was removed
+        if (JSON.stringify(removed) !== JSON.stringify(newMenu)) {
+          newMenu = removed;
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        setTimeout(() => onSave(newMenu).catch(console.error), 0);
+        return newMenu;
+      }
+      return currentMenu;
+    });
+  }, [isDownloadsActive]);
+
   // DND State
   const [activeId, setActiveId] = useState<string | null>(null)
   const activeItem = useMemo(() => activeId ? findItem(menu, activeId) : null, [activeId, menu])

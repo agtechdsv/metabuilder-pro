@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Plus, Trash2, Save, Database, Edit2, List, X } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Save, Database, Edit2, List, X, Download } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
@@ -30,6 +30,74 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
 
   const [editingEnum, setEditingEnum] = useState<Enumeration | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  // Estados de Importação
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+  const [otherProjects, setOtherProjects] = useState<any[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('')
+  const [projectEnums, setProjectEnums] = useState<Enumeration[]>([])
+  const [selectedEnums, setSelectedEnums] = useState<Set<string>>(new Set())
+  const [importLoading, setImportLoading] = useState(false)
+
+  const openImportModal = async () => {
+    setIsImportModalOpen(true)
+    setImportLoading(true)
+    const { data } = await supabase
+      .from('projects')
+      .select('id, name')
+      .eq('workspace_id', project.workspace_id)
+      .neq('id', project.id)
+    setOtherProjects(data || [])
+    setImportLoading(false)
+  }
+
+  useEffect(() => {
+    if (selectedProjectId) {
+      const fetchProjectEnums = async () => {
+        setImportLoading(true)
+        const { data } = await supabase
+          .from('project_enumerations')
+          .select('*')
+          .eq('project_id', selectedProjectId)
+        setProjectEnums(data || [])
+        setImportLoading(false)
+      }
+      fetchProjectEnums()
+    } else {
+      setProjectEnums([])
+    }
+  }, [selectedProjectId, supabase])
+
+  const toggleEnumSelection = (id: string) => {
+    const newSet = new Set(selectedEnums)
+    if (newSet.has(id)) newSet.delete(id)
+    else newSet.add(id)
+    setSelectedEnums(newSet)
+  }
+
+  const handleImport = async () => {
+    if (selectedEnums.size === 0) return
+    setImportLoading(true)
+    const enumsToImport = projectEnums.filter(e => selectedEnums.has(e.id))
+    const newEnums = enumsToImport.map(e => ({
+      project_id: project.id,
+      name: e.name,
+      description: e.description,
+      values: e.values
+    }))
+    
+    const { error } = await supabase.from('project_enumerations').insert(newEnums)
+    if (error) {
+      toast('Erro ao importar', 'error')
+    } else {
+      toast('Importado com sucesso!', 'success')
+      setIsImportModalOpen(false)
+      setSelectedProjectId('')
+      setSelectedEnums(new Set())
+      fetchEnumerations()
+    }
+    setImportLoading(false)
+  }
 
   const fetchEnumerations = async () => {
     setLoading(true)
@@ -153,12 +221,20 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
           </h3>
           <p className="text-xs text-neutral-500 mt-1">Gerencie as listas de valores fixos para usar nos Casos de Uso.</p>
         </div>
-        <button 
-          onClick={openNewModal}
-          className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-bold transition-all shadow-[0_0_25px_rgba(79,70,229,0.4)]"
-        >
-          <Plus className="w-4 h-4" /> Novo Enum
-        </button>
+        <div className="flex gap-3">
+          <button 
+            onClick={openImportModal}
+            className="flex items-center gap-2 px-6 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-full text-xs font-bold transition-all"
+          >
+            <Download className="w-4 h-4" /> Importar
+          </button>
+          <button 
+            onClick={openNewModal}
+            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-bold transition-all shadow-[0_0_25px_rgba(79,70,229,0.4)]"
+          >
+            <Plus className="w-4 h-4" /> Novo Enum
+          </button>
+        </div>
       </div>
 
       <div className="w-full">
@@ -308,6 +384,89 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
               </button>
               <button onClick={saveEnum} className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-colors shadow-lg shadow-indigo-600/20">
                 <Save className="w-4 h-4" /> Salvar Enumeration
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Importação */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-3xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-6 border-b border-neutral-200 dark:border-neutral-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-500/10 rounded-xl">
+                  <Download className="w-5 h-5 text-indigo-500" />
+                </div>
+                <div>
+                  <h3 className="font-black text-lg">Importar Enumerations</h3>
+                  <p className="text-xs text-neutral-500">Copie enums já criados em outros projetos deste workspace.</p>
+                </div>
+              </div>
+              <button onClick={() => setIsImportModalOpen(false)} className="p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Selecione o Projeto de Origem</label>
+                <select
+                  value={selectedProjectId}
+                  onChange={e => setSelectedProjectId(e.target.value)}
+                  className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-colors"
+                >
+                  <option value="">Selecione um projeto...</option>
+                  {otherProjects.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedProjectId && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold">Enumerations Disponíveis</h4>
+                  {importLoading ? (
+                    <div className="text-center py-8">
+                      <div className="w-6 h-6 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    </div>
+                  ) : projectEnums.length === 0 ? (
+                    <div className="text-center py-6 bg-neutral-50 dark:bg-neutral-900/50 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+                      <p className="text-xs text-neutral-500 font-bold">Este projeto não possui enumerations.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[40vh] overflow-y-auto custom-scrollbar">
+                      {projectEnums.map(e => (
+                        <label key={e.id} className="flex items-center gap-3 p-4 border border-neutral-200 dark:border-neutral-800 rounded-xl cursor-pointer hover:border-indigo-500 transition-colors">
+                          <input 
+                            type="checkbox" 
+                            checked={selectedEnums.has(e.id)}
+                            onChange={() => toggleEnumSelection(e.id)}
+                            className="w-4 h-4 accent-indigo-600 rounded"
+                          />
+                          <div>
+                            <span className="text-sm font-bold block">{e.name}</span>
+                            <span className="text-[10px] text-neutral-500 block mt-0.5">{e.values.length} valores cadastrados</span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 rounded-b-3xl flex justify-end gap-3">
+              <button onClick={() => setIsImportModalOpen(false)} className="px-6 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-bold rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                Cancelar
+              </button>
+              <button 
+                onClick={handleImport} 
+                disabled={selectedEnums.size === 0 || importLoading}
+                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-colors shadow-lg shadow-indigo-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {importLoading ? 'Importando...' : `Importar Selecionados (${selectedEnums.size})`}
               </button>
             </div>
           </div>

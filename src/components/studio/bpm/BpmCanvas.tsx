@@ -23,12 +23,18 @@ import dagre from 'dagre';
 
 import { FlowSidebar } from './FlowSidebar';
 import { TriggerNode, ActionNode, ConditionNode } from './nodes/CustomNodes';
-import { Save, Play, Wand2, X } from 'lucide-react';
+import { Save, Play, Wand2, X, ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import ButtonEdge from './edges/ButtonEdge';
 
 const nodeTypes = {
   trigger: TriggerNode,
   action: ActionNode,
   condition: ConditionNode,
+};
+
+const edgeTypes = {
+  buttonedge: ButtonEdge,
 };
 
 const initialNodes: Node[] = [
@@ -88,6 +94,7 @@ function BpmCanvasContent({ title = 'Aprovação de Pedidos', defaultAutoAlign =
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const { fitView } = useReactFlow();
+  const router = useRouter();
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
@@ -103,7 +110,7 @@ function BpmCanvasContent({ title = 'Aprovação de Pedidos', defaultAutoAlign =
     const layouted = getLayoutedElements(nodes, edges);
     setNodes([...layouted.nodes]);
     setEdges([...layouted.edges]);
-    setTimeout(() => fitView({ padding: 0.2, duration: 800 }), 50);
+    setTimeout(() => fitView({ padding: 0.2, duration: 800, maxZoom: 1.5 }), 50);
   }, [nodes, edges, setNodes, setEdges, fitView]);
 
   // Optionally auto-align on first load if setting is true
@@ -116,6 +123,7 @@ function BpmCanvasContent({ title = 'Aprovação de Pedidos', defaultAutoAlign =
   const onConnect = useCallback(
     (params: Connection | Edge) => setEdges((eds) => addEdge({ 
       ...params, 
+      type: 'buttonedge',
       animated: true,
       style: { strokeWidth: 2, stroke: params.sourceHandle === 'false' ? '#ef4444' : (params.sourceHandle === 'true' ? '#10b981' : '#6366f1') }
     } as any, eds)),
@@ -194,6 +202,13 @@ function BpmCanvasContent({ title = 'Aprovação de Pedidos', defaultAutoAlign =
       {/* Top Bar */}
       <div className="h-14 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex items-center justify-between px-6 z-20">
         <div className="flex items-center gap-3">
+          <button 
+            onClick={() => router.back()}
+            className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+            title="Voltar"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
           <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20">
             <Play className="w-4 h-4" />
           </div>
@@ -228,15 +243,20 @@ function BpmCanvasContent({ title = 'Aprovação de Pedidos', defaultAutoAlign =
             onDrop={onDrop}
             onDragOver={onDragOver}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            defaultEdgeOptions={{ type: 'buttonedge' }}
+            deleteKeyCode={['Backspace', 'Delete']}
             fitView
+            fitViewOptions={{ maxZoom: 1.5 }}
             className="bg-neutral-50 dark:bg-[#0a0a0a]"
             minZoom={0.1}
-            maxZoom={2}
+            maxZoom={4}
           >
             <Controls 
               className="bg-white dark:bg-neutral-900 border-none shadow-xl rounded-2xl overflow-hidden flex flex-col gap-1 p-1 m-4" 
               style={{ bottom: 40 }}
               showInteractive={false} 
+              fitViewOptions={{ maxZoom: 1.5 }}
             />
             <MiniMap 
               className="bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 rounded-xl shadow-xl m-4 overflow-hidden" 

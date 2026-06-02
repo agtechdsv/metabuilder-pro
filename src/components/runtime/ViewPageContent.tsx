@@ -225,6 +225,7 @@ export default function ViewPageContent({
   const [parentRowIdForDetail, setParentRowIdForDetail] = useState<any>(null)
   const [itemToDelete, setItemToDelete] = useState<any>(null)
   const [detailHistory, setDetailHistory] = useState<any[]>([])
+  const [activeTabForMaster, setActiveTabForMaster] = useState<string>('master')
   const [activeTabForDetail, setActiveTabForDetail] = useState<string>('master')
   const [detailRefreshKey, setDetailRefreshKey] = useState(0)
 
@@ -603,6 +604,7 @@ export default function ViewPageContent({
     }
     setDrawerMode('create')
     setSelectedRow(initialData)
+    setActiveTabForMaster('master')
     setOpen(true)
   }
 
@@ -758,6 +760,7 @@ export default function ViewPageContent({
     const details = await fetchDetails(row, modelName)
     setSelectedRow({ ...row, _details: details })
     setIsProcessing(false)
+    setActiveTabForMaster('master')
     setOpen(true)
   }
 
@@ -1681,8 +1684,8 @@ export default function ViewPageContent({
             detailsInterfaceTypes={detailsInterfaceTypes}
             dictionary={dictionary}
             detailsInlineTypes={detailsInlineTypes}
-            initialTab={activeTabForDetail}
-            onTabChange={setActiveTabForDetail}
+            initialTab={activeTabForMaster}
+            onTabChange={setActiveTabForMaster}
             projectId={project.id}
             secretToken={project.secret_token}
             tunnelChannel={tunnelChannel}
@@ -1774,8 +1777,8 @@ export default function ViewPageContent({
           joins={joins}
           dictionary={dictionary}
           detailsInlineTypes={detailsInlineTypes}
-          initialTab={activeTabForDetail}
-          onTabChange={setActiveTabForDetail}
+          initialTab={activeTabForMaster}
+          onTabChange={setActiveTabForMaster}
           projectId={project.id}
           secretToken={project.secret_token}
           tunnelChannel={tunnelChannel}
@@ -1809,8 +1812,8 @@ export default function ViewPageContent({
           joins={joins}
           dictionary={dictionary}
           detailsInlineTypes={detailsInlineTypes}
-          initialTab={activeTabForDetail}
-          onTabChange={setActiveTabForDetail}
+          initialTab={activeTabForMaster}
+          onTabChange={setActiveTabForMaster}
           projectId={project.id}
           secretToken={project.secret_token}
           tunnelChannel={tunnelChannel}
