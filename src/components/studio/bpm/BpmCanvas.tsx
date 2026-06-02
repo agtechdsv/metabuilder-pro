@@ -118,7 +118,7 @@ function BpmCanvasContent({ title = 'Aprovação de Pedidos', defaultAutoAlign =
       ...params, 
       animated: true,
       style: { strokeWidth: 2, stroke: params.sourceHandle === 'false' ? '#ef4444' : (params.sourceHandle === 'true' ? '#10b981' : '#6366f1') }
-    }, eds)),
+    } as any, eds)),
     [setEdges]
   );
 
