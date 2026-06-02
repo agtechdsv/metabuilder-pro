@@ -664,6 +664,8 @@ export function StudioDashboardClient({
                       )
                     )}
                   </div>
+                </div>
+              </div>
 
               {/* 3. Card da Central de Downloads (Sistema) */}
               <div className="group relative p-5 bg-gradient-to-br from-blue-600/5 to-cyan-600/5 dark:from-blue-600/10 dark:to-cyan-600/10 border border-blue-500/20 dark:border-blue-500/30 rounded-[1.5rem] hover:border-blue-500 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-1">
