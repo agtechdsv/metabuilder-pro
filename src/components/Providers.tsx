@@ -1,6 +1,7 @@
 import { CustomThemeProvider } from './CustomThemeProvider'
 import { I18nProvider } from '@/i18n/I18nContext'
 import { ToastProvider } from '@/components/ui/Toast'
+import { ProgressBarProvider } from './ProgressBarProvider'
 
 export function Providers({ 
   children,
@@ -13,6 +14,7 @@ export function Providers({
     <CustomThemeProvider defaultTheme="dark" attribute="class">
       <I18nProvider initialLocale={initialLocale}>
         <ToastProvider>
+          <ProgressBarProvider />
           {children}
         </ToastProvider>
       </I18nProvider>

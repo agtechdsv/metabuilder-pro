@@ -23,9 +23,11 @@ import dagre from 'dagre';
 
 import { FlowSidebar } from './FlowSidebar';
 import { TriggerNode, ActionNode, ConditionNode } from './nodes/CustomNodes';
-import { Save, Play, Wand2, X, ArrowLeft } from 'lucide-react';
+import { Save, Play, Wand2, X, ArrowLeft, Loader2, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ButtonEdge from './edges/ButtonEdge';
+import { createClient } from '@/utils/supabase/client';
+import { useToast } from '@/components/ui/Toast';
 
 const nodeTypes = {
   trigger: TriggerNode,
@@ -86,10 +88,14 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
 interface BpmCanvasProps {
   title?: string;
   defaultAutoAlign?: boolean;
+  projectId?: string;
+  useCaseId?: string;
 }
 
-function BpmCanvasContent({ title = 'Aprovação de Pedidos', defaultAutoAlign = false }: BpmCanvasProps) {
+function BpmCanvasContent({ title = 'Aprovação de Pedidos', defaultAutoAlign = false, projectId, useCaseId }: BpmCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  const supabase = createClient();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
@@ -97,6 +103,52 @@ function BpmCanvasContent({ title = 'Aprovação de Pedidos', defaultAutoAlign =
   const router = useRouter();
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  
+  // Workflow DB State
+  const [workflows, setWorkflows] = useState<any[]>([]);
+  const [currentWorkflowId, setCurrentWorkflowId] = useState<string>('new');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch workflows on mount
+  useEffect(() => {
+    if (!projectId || !useCaseId) return;
+    
+    const fetchWorkflows = async () => {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('bpm_workflows')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('trigger_table', useCaseId)
+        .order('created_at', { ascending: false });
+        
+      if (!error && data) {
+        setWorkflows(data);
+      }
+      setIsLoading(false);
+    };
+    
+    fetchWorkflows();
+  }, [projectId, useCaseId]);
+
+  // Handle changing workflow in dropdown
+  useEffect(() => {
+    if (currentWorkflowId === 'new') {
+      setNodes(initialNodes);
+      setEdges([]);
+      setTimeout(() => fitView({ padding: 0.2, duration: 800, maxZoom: 1.5 }), 50);
+      return;
+    }
+
+    const flow = workflows.find(w => w.id === currentWorkflowId);
+    if (flow && flow.flow_data) {
+      const { nodes: savedNodes = [], edges: savedEdges = [] } = flow.flow_data;
+      setNodes(savedNodes.length > 0 ? savedNodes : initialNodes);
+      setEdges(savedEdges);
+      setTimeout(() => fitView({ padding: 0.2, duration: 800, maxZoom: 1.5 }), 50);
+    }
+  }, [currentWorkflowId, workflows]);
 
   useOnSelectionChange({
     onChange: ({ nodes }) => {
@@ -180,11 +232,57 @@ function BpmCanvasContent({ title = 'Aprovação de Pedidos', defaultAutoAlign =
     [reactFlowInstance, setNodes, defaultAutoAlign, handleAutoAlign]
   );
 
-  const handleSave = () => {
-    if (reactFlowInstance) {
-      const flow = reactFlowInstance.toObject();
-      console.log('Flow Saved:', flow);
-      alert('Fluxo salvo com sucesso! Confira o console.');
+  const handleSave = async () => {
+    if (!reactFlowInstance || !projectId || !useCaseId) return;
+
+    setIsSaving(true);
+    const flow = reactFlowInstance.toObject();
+    
+    try {
+      if (currentWorkflowId === 'new') {
+        const name = prompt('Qual o nome deste novo fluxo?', 'Novo Fluxo');
+        if (!name) {
+          setIsSaving(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('bpm_workflows')
+          .insert({
+            project_id: projectId,
+            name: name,
+            trigger_table: useCaseId,
+            flow_data: flow,
+            is_active: true
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        
+        toast('Fluxo criado com sucesso!', 'success');
+        setWorkflows(prev => [data, ...prev]);
+        setCurrentWorkflowId(data.id);
+      } else {
+        const { error } = await supabase
+          .from('bpm_workflows')
+          .update({
+            flow_data: flow,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', currentWorkflowId);
+
+        if (error) throw error;
+        toast('Fluxo atualizado com sucesso!', 'success');
+        
+        // Update local state
+        setWorkflows(prev => prev.map(w => w.id === currentWorkflowId ? { ...w, flow_data: flow } : w));
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast('Erro ao salvar o fluxo.', 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -219,11 +317,25 @@ function BpmCanvasContent({ title = 'Aprovação de Pedidos', defaultAutoAlign =
         </div>
         
         <div className="flex items-center gap-3">
+          <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 rounded-xl p-1">
+            <select
+              value={currentWorkflowId}
+              onChange={(e) => setCurrentWorkflowId(e.target.value)}
+              className="bg-transparent border-none outline-none text-xs font-bold text-neutral-700 dark:text-neutral-300 px-3 py-1.5 cursor-pointer"
+            >
+              <option value="new">--- Criar Novo Fluxo ---</option>
+              {workflows.map(w => (
+                <option key={w.id} value={w.id}>{w.name}</option>
+              ))}
+            </select>
+          </div>
+
           <button 
             onClick={handleSave}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20"
+            disabled={isSaving}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50"
           >
-            <Save className="w-4 h-4" />
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Salvar Fluxo
           </button>
         </div>

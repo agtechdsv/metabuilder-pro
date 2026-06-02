@@ -100,6 +100,8 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
       <BpmCanvas 
         title={canvasTitle} 
         defaultAutoAlign={automationsView?.layout_config?.default_auto_align}
+        projectId={project.id}
+        useCaseId={useCaseId || ''}
       />
     </div>
   );
