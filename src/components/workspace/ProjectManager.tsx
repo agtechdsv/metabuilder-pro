@@ -12,7 +12,8 @@ import {
   Layers,
   Power,
   PowerOff,
-  Settings
+  Settings,
+  RefreshCw
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -74,6 +75,7 @@ export function ProjectManager({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const supabase = createClient()
   const router = useRouter()
@@ -99,6 +101,12 @@ export function ProjectManager({
     setIsDrawerOpen(false)
     setSelectedProject(null)
     setFormData({ name: '', slug: '', description: '', icon: '', is_active: true })
+  }
+
+  const handleRefresh = () => {
+    setIsRefreshing(true)
+    router.refresh()
+    setTimeout(() => setIsRefreshing(false), 800)
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -256,8 +264,18 @@ export function ProjectManager({
             <Layers className="w-6 h-6 text-indigo-500" />
             {t('dashboard.projects.your_projects')}
           </h3>
-          <div className="text-xs font-bold text-neutral-500 uppercase tracking-widest">
-            {projects.length} {t('dashboard.projects.found')}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors group"
+              title="Atualizar"
+            >
+              <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
+            </button>
+            <div className="text-xs font-bold text-neutral-500 uppercase tracking-widest">
+              {projects.length} {t('dashboard.projects.found')}
+            </div>
           </div>
         </div>
 

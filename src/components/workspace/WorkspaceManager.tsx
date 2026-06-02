@@ -18,7 +18,8 @@ import {
   Send,
   Loader2,
   Power,
-  PowerOff
+  PowerOff,
+  RefreshCw
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -85,6 +86,7 @@ export function WorkspaceManager({
   // Team management states
   const [isTeamDrawerOpen, setIsTeamDrawerOpen] = useState(false)
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const supabase = createClient()
   const { toast } = useToast()
@@ -112,6 +114,12 @@ export function WorkspaceManager({
     setIsDrawerOpen(false)
     setSelectedWorkspace(null)
     setFormData({ name: '', slug: '' })
+  }
+
+  const handleRefresh = () => {
+    setIsRefreshing(true)
+    router.refresh()
+    setTimeout(() => setIsRefreshing(false), 800)
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -252,10 +260,20 @@ export function WorkspaceManager({
       </div>
 
       <section className="space-y-6">
-        <h3 className="text-xl font-bold flex items-center gap-3">
-          <Building2 className="w-6 h-6 text-indigo-500" />
-          {t('dashboard.your_workspaces')}
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-bold flex items-center gap-3">
+            <Building2 className="w-6 h-6 text-indigo-500" />
+            {t('dashboard.your_workspaces')}
+          </h3>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors group"
+            title="Atualizar"
+          >
+            <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {workspaces.map((workspace) => (

@@ -20,7 +20,8 @@ import {
   AlertCircle,
   Shield,
   ExternalLink,
-  LayoutGrid
+  LayoutGrid,
+  RefreshCw
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -205,11 +206,18 @@ export function StudioDashboardClient({
   const userViews = views?.filter(view => view.slug !== 'downloads') || []
   const downloadsView = views?.find(view => view.slug === 'downloads')
   const isDownloadsActive = downloadsView ? (downloadsView.layout_config?.is_active !== false) : true
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const refreshData = () => {
     setViewToEdit(null)
     setViewMode('list')
     router.refresh()
+  }
+
+  const handleRefresh = () => {
+    setIsRefreshing(true)
+    router.refresh()
+    setTimeout(() => setIsRefreshing(false), 800)
   }
 
   const handleToggleActive = async (view: any) => {
@@ -518,8 +526,18 @@ export function StudioDashboardClient({
                 <Layers className="w-6 h-6 text-indigo-600 dark:text-indigo-500" />
                 {t('dashboard.projects.studio.use_cases')}
               </h3>
-              <div className="px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-[10px] font-black text-neutral-500 dark:text-neutral-400 uppercase tracking-widest border border-neutral-200 dark:border-neutral-800">
-                {userViews.length} {t('dashboard.projects.studio.created_suffix')}
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors group"
+                  title="Atualizar"
+                >
+                  <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
+                </button>
+                <div className="px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-[10px] font-black text-neutral-500 dark:text-neutral-400 uppercase tracking-widest border border-neutral-200 dark:border-neutral-800">
+                  {userViews.length} {t('dashboard.projects.studio.created_suffix')}
+                </div>
               </div>
             </div>
 
