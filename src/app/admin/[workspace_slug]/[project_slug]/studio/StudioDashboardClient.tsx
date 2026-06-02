@@ -21,7 +21,8 @@ import {
   Shield,
   ExternalLink,
   LayoutGrid,
-  RefreshCw
+  RefreshCw,
+  Workflow
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -203,9 +204,11 @@ export function StudioDashboardClient({
   const [viewToEdit, setViewToEdit] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [viewToDelete, setViewToDelete] = useState<any>(null)
-  const userViews = views?.filter(view => view.slug !== 'downloads') || []
+  const userViews = views?.filter(view => view.slug !== 'downloads' && view.slug !== 'automations') || []
   const downloadsView = views?.find(view => view.slug === 'downloads')
   const isDownloadsActive = downloadsView ? (downloadsView.layout_config?.is_active !== false) : true
+  const automationsView = views?.find(view => view.slug === 'automations')
+  const isAutomationsActive = automationsView ? (automationsView.layout_config?.is_active !== false) : false
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const refreshData = () => {
@@ -258,6 +261,30 @@ export function StudioDashboardClient({
       router.refresh()
     } catch (err: any) {
       toast(t('dashboard.projects.studio.toasts.error_delete') + err.message, 'error')
+    }
+  }
+
+  const handleToggleAutomations = async () => {
+    try {
+      const newActiveState = !isAutomationsActive
+      const { error: viewError } = await supabase
+        .from('ui_views')
+        .upsert({
+          project_id: project.id,
+          model_id: null,
+          name: 'Automações & BPM',
+          slug: 'automations',
+          logic_type: 'personalizado',
+          view_type: 'system',
+          layout_config: { is_active: newActiveState }
+        }, { onConflict: 'project_id, slug' })
+
+      if (viewError) throw viewError
+
+      toast(newActiveState ? 'Módulo de Automações ativado!' : 'Módulo de Automações desativado!', 'success')
+      router.refresh()
+    } catch (err: any) {
+      toast('Erro ao alterar status das automações: ' + err.message, 'error')
     }
   }
 
@@ -589,6 +616,77 @@ export function StudioDashboardClient({
                       >
                         <ExternalLink className="w-4 h-4" /> Visualizar Portal
                       </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Card do BPM/Automações (Sistema) */}
+              <div className="group relative p-5 bg-gradient-to-br from-emerald-600/5 to-teal-600/5 dark:from-emerald-600/10 dark:to-teal-600/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-[1.5rem] hover:border-emerald-500 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-1">
+                <div className="flex flex-col h-full gap-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className={`text-lg font-black tracking-tight transition-colors ${isAutomationsActive ? 'text-neutral-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400' : 'text-neutral-400 italic'}`}>
+                          Automações / BPM
+                        </h4>
+                        <div className="px-2 py-0.5 bg-emerald-600 text-white text-[8px] font-black rounded-lg uppercase tracking-widest shadow-lg shadow-emerald-500/20">
+                          {t('dashboard.projects.system_label')}
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-neutral-400 font-mono flex items-center gap-1.5 tracking-tight">
+                        <span className="opacity-50">/</span>{workspace_slug}/{project_slug}/automations
+                      </p>
+                    </div>
+                    <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                       {canCreate ? (
+                         <button
+                           onClick={handleToggleAutomations}
+                           className={`p-1 rounded-md transition-colors ${isAutomationsActive ? 'text-emerald-500 hover:bg-emerald-500/20' : 'text-neutral-400 hover:bg-neutral-500/10'}`}
+                           title={isAutomationsActive ? t('dashboard.projects.studio.status_active') : t('dashboard.projects.studio.status_inactive')}
+                         >
+                           {isAutomationsActive ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
+                         </button>
+                       ) : (
+                         <span
+                           className={`p-1 rounded-md cursor-default ${isAutomationsActive ? 'text-emerald-500' : 'text-neutral-400'}`}
+                         >
+                           {isAutomationsActive ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
+                         </span>
+                       )}
+                      <Workflow className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  <div className="mt-auto flex gap-3">
+                    {canCreate ? (
+                      <>
+                        <button
+                          onClick={handleToggleAutomations}
+                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-emerald-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-emerald-500/20"
+                        >
+                          <Settings2 className="w-4 h-4" /> {isAutomationsActive ? 'Desativar Módulo' : 'Ativar Módulo'}
+                        </button>
+                        {isAutomationsActive && (
+                          <Link
+                            href={`/${workspace_slug}/${project_slug}/automations`}
+                            target="_blank"
+                            className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-emerald-600 dark:hover:text-white shadow-sm"
+                          >
+                            <ExternalLink className="w-5 h-5" />
+                          </Link>
+                        )}
+                      </>
+                    ) : (
+                      isAutomationsActive && (
+                        <Link
+                          href={`/${workspace_slug}/${project_slug}/automations`}
+                          target="_blank"
+                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-emerald-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-emerald-500/20"
+                        >
+                          <ExternalLink className="w-4 h-4" /> Acessar BPM
+                        </Link>
+                      )
                     )}
                   </div>
                 </div>

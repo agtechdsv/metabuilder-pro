@@ -1,12 +1,82 @@
 import { BpmCanvas } from '@/components/studio/bpm/BpmCanvas';
 import { Metadata } from 'next';
+import { createClient } from '@supabase/supabase-js'
+import { notFound } from 'next/navigation'
+import { AlertCircle } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'Automations & BPM | MetaBuilder PRO',
   description: 'Visual Business Process Management',
 };
 
-export default function AutomationsPage() {
+interface PageProps {
+  params: Promise<{
+    workspace_slug: string
+    project_slug: string
+  }>
+}
+
+export default async function AutomationsPage({ params }: PageProps) {
+  const { workspace_slug, project_slug } = await params
+
+  // 1. Inicializa o cliente Supabase com service_role
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // 2. Busca o Workspace e o Projeto
+  const { data: workspaces } = await supabase
+    .from('workspaces')
+    .select('id')
+    .eq('slug', workspace_slug)
+    .limit(1)
+
+  const workspace = workspaces?.[0]
+  if (!workspace) notFound()
+
+  const { data: projects } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('slug', project_slug)
+    .eq('workspace_id', workspace.id)
+    .limit(1)
+
+  const project = projects?.[0]
+  if (!project) notFound()
+
+  // 3. Verifica se a view de Automations está ativa
+  const { data: automationsView } = await supabase
+    .from('ui_views')
+    .select('layout_config')
+    .eq('slug', 'automations')
+    .eq('project_id', project.id)
+    .maybeSingle()
+
+  const isActive = automationsView?.layout_config?.is_active === true
+
+  if (!isActive) {
+    return (
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 rounded-[2.5rem] bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mb-6 shadow-lg shadow-amber-500/5">
+          <AlertCircle className="w-10 h-10" />
+        </div>
+        <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-2 tracking-tight">
+          Módulo Desativado
+        </h2>
+        <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mb-8 leading-relaxed font-bold">
+          O módulo de Automações e BPM não está habilitado para este projeto. Entre em contato com o administrador do sistema.
+        </p>
+        <a
+          href={`/${workspace_slug}/${project_slug}`}
+          className="px-6 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.98] shadow-lg shadow-indigo-500/20 flex items-center justify-center"
+        >
+          Voltar ao início
+        </a>
+      </div>
+    )
+  }
+
   return (
     <div className="h-screen w-full bg-white dark:bg-neutral-950 overflow-hidden">
       <BpmCanvas />
