@@ -100,6 +100,46 @@ const getFontSize = (size?: string) => {
   return size;
 }
 
+const applyMask = (value: any, mask: string) => {
+  if (!mask || value === null || value === undefined || value === '') return value
+
+  let normalizedMask = mask
+  if (mask.includes('0.000,00')) normalizedMask = '0.000,00'
+  else if (mask.includes('0.000')) normalizedMask = '0.000'
+
+  if (normalizedMask === '0.000') {
+    const num = Number(value)
+    if (!isNaN(num)) return num.toLocaleString('pt-BR')
+    return value
+  }
+
+  if (normalizedMask === '0.000,00') {
+    const num = Number(value)
+    if (!isNaN(num)) return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return value
+  }
+
+  const strVal = String(value)
+  const numbers = strVal.replace(/\D/g, '')
+  let maskedValue = ''
+  let numberIndex = 0
+
+  for (let i = 0; i < mask.length; i++) {
+    if (numberIndex >= numbers.length) break
+
+    if (mask[i] === '0') {
+      maskedValue += numbers[numberIndex]
+      numberIndex++
+    } else {
+      maskedValue += mask[i]
+      if (strVal[numberIndex] === mask[i]) {
+        numberIndex++
+      }
+    }
+  }
+  return maskedValue
+}
+
 export default function DynamicGrid({ 
   fields, 
   data, 
@@ -201,11 +241,16 @@ export default function DynamicGrid({
                }
             }
 
-            const val = typeof finalVal === 'object' && finalVal !== null
+            const zoneConfig = field.config?.grid_config || field.config || {}
+            
+            let val = typeof finalVal === 'object' && finalVal !== null
               ? JSON.stringify(finalVal) 
               : String(finalVal ?? '')
-            
-            const zoneConfig = field.config?.grid_config || field.config || {}
+              
+            const maskStr = zoneConfig.content?.mask || ''
+            if (maskStr) {
+               val = applyMask(val, maskStr)
+            }
             
             return (
               <td 

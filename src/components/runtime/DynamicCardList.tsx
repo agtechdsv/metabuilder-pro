@@ -85,6 +85,52 @@ const getActionColorClasses = (color: string) => {
   }
 }
 
+const getFontSize = (size?: string) => {
+  if (!size) return undefined;
+  if (!isNaN(Number(size))) return `${size}px`;
+  return size;
+}
+
+const applyMask = (value: any, mask: string) => {
+  if (!mask || value === null || value === undefined || value === '') return value
+
+  let normalizedMask = mask
+  if (mask.includes('0.000,00')) normalizedMask = '0.000,00'
+  else if (mask.includes('0.000')) normalizedMask = '0.000'
+
+  if (normalizedMask === '0.000') {
+    const num = Number(value)
+    if (!isNaN(num)) return num.toLocaleString('pt-BR')
+    return value
+  }
+
+  if (normalizedMask === '0.000,00') {
+    const num = Number(value)
+    if (!isNaN(num)) return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return value
+  }
+
+  const strVal = String(value)
+  const numbers = strVal.replace(/\D/g, '')
+  let maskedValue = ''
+  let numberIndex = 0
+
+  for (let i = 0; i < mask.length; i++) {
+    if (numberIndex >= numbers.length) break
+
+    if (mask[i] === '0') {
+      maskedValue += numbers[numberIndex]
+      numberIndex++
+    } else {
+      maskedValue += mask[i]
+      if (strVal[numberIndex] === mask[i]) {
+        numberIndex++
+      }
+    }
+  }
+  return maskedValue
+}
+
 export default function DynamicCardList({ 
   fields, 
   data, 
@@ -230,9 +276,13 @@ export default function DynamicCardList({
             {fields.slice(0, 4).map((field, fIdx) => {
               const rawVal = getNestedValue(row, field.db_column_name)
               const isFirst = fIdx === 0
-              const displayVal = typeof rawVal === 'object' && rawVal !== null ? JSON.stringify(rawVal) : String(rawVal ?? '')
-
               const zoneConfig = field.config?.grid_config || field.config || {}
+              
+              let displayVal = typeof rawVal === 'object' && rawVal !== null ? JSON.stringify(rawVal) : String(rawVal ?? '')
+              const maskStr = zoneConfig.content?.mask || ''
+              if (maskStr) {
+                 displayVal = applyMask(displayVal, maskStr)
+              }
 
               if (isFirst) {
                 return (

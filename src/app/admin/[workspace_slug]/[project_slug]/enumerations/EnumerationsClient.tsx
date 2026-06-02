@@ -39,6 +39,94 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
   const [selectedEnums, setSelectedEnums] = useState<Set<string>>(new Set())
   const [importLoading, setImportLoading] = useState(false)
 
+  // Estados para Geração Automática (Banco de Dados)
+  const [enumSource, setEnumSource] = useState<'manual' | 'database'>('manual')
+  const [dbModels, setDbModels] = useState<any[]>([])
+  const [dbFields, setDbFields] = useState<any[]>([])
+  const [selectedDbModel, setSelectedDbModel] = useState('')
+  const [selectedDbField, setSelectedDbField] = useState('')
+  const [isFetchingDistinct, setIsFetchingDistinct] = useState(false)
+
+  // Busca de Modelos e Fields para a opção de DB
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      const { data: models } = await supabase.from('models').select('*').eq('project_id', project.id).order('db_table_name')
+      const { data: fields } = await supabase.from('fields').select('*').order('db_column_name')
+      if (models) setDbModels(models)
+      if (fields) setDbFields(fields)
+    }
+    fetchMetadata()
+  }, [project.id, supabase])
+
+  // Configuração do Canal do Túnel para receber resultados do DB
+  useEffect(() => {
+    const channelName = `tunnel:${project.id}`
+    const channel = supabase.channel(channelName)
+    
+    channel.on('broadcast', { event: 'sql_result' }, (payload) => {
+      if (payload.payload?.queryId === 'fetch_distinct_enum') {
+        const results = payload.payload.data || []
+        if (results.length > 0) {
+          const newValues = results.map((r: any) => ({
+            value: String(r.value),
+            description: String(r.value)
+          }))
+          setEditingEnum(prev => prev ? { ...prev, values: newValues } : null)
+          toast(`${results.length} valores importados com sucesso!`, 'success')
+        } else {
+          toast('Nenhum valor encontrado.', 'info')
+        }
+        setIsFetchingDistinct(false)
+      }
+    }).subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [project.id, supabase, toast])
+
+  const fetchDistinctValues = async () => {
+    if (!selectedDbModel || !selectedDbField) {
+      toast('Selecione a Tabela e a Coluna primeiro.', 'error')
+      return
+    }
+    
+    setIsFetchingDistinct(true)
+    
+    const model = dbModels.find(m => m.id === selectedDbModel)
+    const field = dbFields.find(f => f.id === selectedDbField)
+    
+    if (!model || !field) return
+
+    const query = `SELECT DISTINCT "${field.db_column_name}" as value FROM "${model.db_table_name}" WHERE "${field.db_column_name}" IS NOT NULL`
+
+    const channelName = `tunnel:${project.id}`
+    const channel = supabase.channel(channelName)
+    
+    await channel.send({
+      type: 'broadcast',
+      event: 'sql_query',
+      payload: {
+        queryId: 'fetch_distinct_enum',
+        action: 'select',
+        query: query,
+        token: project.secret_token,
+        schemaName: model.db_schema_name || 'public'
+      }
+    })
+    
+    // Timeout in case CLI is offline
+    setTimeout(() => {
+      setIsFetchingDistinct(prev => {
+        if (prev) {
+          toast('Tempo esgotado. Verifique se o MetaBuilderPRO CLI está conectado.', 'error')
+          return false
+        }
+        return prev
+      })
+    }, 8000)
+  }
+
   const openImportModal = async () => {
     setIsImportModalOpen(true)
     setImportLoading(true)
@@ -127,6 +215,9 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
       description: '',
       values: []
     })
+    setEnumSource('manual')
+    setSelectedDbModel('')
+    setSelectedDbField('')
     setIsModalOpen(true)
   }
 
@@ -336,7 +427,64 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" checked={enumSource === 'manual'} onChange={() => setEnumSource('manual')} className="accent-indigo-600" />
+                    <span className="text-sm font-bold">Preenchimento Manual</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" checked={enumSource === 'database'} onChange={() => setEnumSource('database')} className="accent-indigo-600" />
+                    <span className="text-sm font-bold">Gerar via Banco (SELECT DISTINCT)</span>
+                  </label>
+                </div>
+
+                {enumSource === 'database' && (
+                  <div className="bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Tabela Alvo</label>
+                        <select 
+                          value={selectedDbModel} 
+                          onChange={e => { setSelectedDbModel(e.target.value); setSelectedDbField(''); }}
+                          className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500"
+                        >
+                          <option value="">Selecione a tabela...</option>
+                          {dbModels.map(m => (
+                            <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Coluna (Field)</label>
+                        <select 
+                          value={selectedDbField} 
+                          onChange={e => setSelectedDbField(e.target.value)}
+                          disabled={!selectedDbModel}
+                          className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 disabled:opacity-50"
+                        >
+                          <option value="">Selecione a coluna...</option>
+                          {dbFields.filter(f => f.model_id === selectedDbModel).map(f => (
+                            <option key={f.id} value={f.id}>{f.display_name || f.db_column_name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={fetchDistinctValues}
+                      disabled={isFetchingDistinct || !selectedDbModel || !selectedDbField}
+                      className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isFetchingDistinct ? (
+                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                         <Database className="w-4 h-4" />
+                      )}
+                      {isFetchingDistinct ? 'Buscando valores no banco de dados...' : 'Carregar Valores Distintos'}
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between mt-4">
                   <div>
                     <h4 className="text-sm font-bold">Valores Fixos</h4>
                     <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold mt-1">Value (salvo no banco) • Description (mostrado ao usuário)</p>

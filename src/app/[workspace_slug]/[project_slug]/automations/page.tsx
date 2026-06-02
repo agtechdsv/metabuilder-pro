@@ -93,7 +93,24 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
     }
   }
 
-  const canvasTitle = useCaseName ? `Automações: ${useCaseName}` : (automationsView?.name || 'Aprovação de Pedidos')
+  // 5. Busca dados de workflows e models (com campos) para o BpmCanvas (evita problemas de RLS no cliente)
+  const [workflowsRes, modelsRes] = await Promise.all([
+    supabase
+      .from('bpm_workflows')
+      .select('*')
+      .eq('project_id', project.id)
+      .eq('use_case_id', useCaseId || '')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('models')
+      .select('*, fields(*)')
+      .eq('project_id', project.id)
+  ]);
+
+  const initialWorkflows = workflowsRes.data || [];
+  const initialModels = modelsRes.data || [];
+
+  const canvasTitle = useCaseName ? `Automações: ${useCaseName}` : (automationsView?.name || 'Aprovação de Pedidos');
 
   return (
     <div className="h-screen w-full bg-white dark:bg-neutral-950 overflow-hidden">
@@ -102,6 +119,8 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
         defaultAutoAlign={automationsView?.layout_config?.default_auto_align}
         projectId={project.id}
         useCaseId={useCaseId || ''}
+        initialWorkflows={initialWorkflows}
+        initialModels={initialModels}
       />
     </div>
   );

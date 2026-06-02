@@ -1,13 +1,13 @@
 {
   "connections": [
     {
-      "projectId": "8e37b276-d59e-41f5-9629-8eddcb2bb82f",
-      "secretToken": "3618f82aa2608dc51235e7372c02a2f6e3a08a7adff8b785f30f5a89c1b00ba6",
+      "projectId": "4f75cd44-1327-4a28-9c0b-efea4ba57ec8",
+      "secretToken": "8c46eb0ae4988fa40acdfd7f795ca93533b9d1957ff114aedb947aedd006bb23",
       "connectionsString": [
         {
-          "name": "build_flow",
+          "name": "erp_showcase",
           "type": "postgres",
-          "connectionString": "postgresql://build_flow:build_flow@localhost:5432/build_flow"
+          "connectionString": "postgresql://erp_showcase:erp_showcase@localhost:5432/erp_showcase"
         }
       ]
     }

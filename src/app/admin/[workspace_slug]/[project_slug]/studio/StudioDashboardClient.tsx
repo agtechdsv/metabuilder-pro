@@ -894,19 +894,6 @@ export function StudioDashboardClient({
         >
           <div className="space-y-6">
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl">
-                <div>
-                  <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Auto-Alinhamento Padrão</h4>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Organizar os nós automaticamente ao desenhar o fluxo.</p>
-                </div>
-                <button 
-                  onClick={() => setBpmConfig((prev: any) => ({ ...prev, default_auto_align: !prev?.default_auto_align }))}
-                  className={`w-12 h-6 rounded-full flex items-center transition-colors p-1 ${bpmConfig?.default_auto_align ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-neutral-700'}`}
-                >
-                  <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${bpmConfig?.default_auto_align ? 'translate-x-6' : 'translate-x-0'}`} />
-                </button>
-              </div>
-
               <div>
                 <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Retenção de Logs (Dias)</label>
                 <select 

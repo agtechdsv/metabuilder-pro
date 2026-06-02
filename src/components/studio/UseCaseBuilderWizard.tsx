@@ -2130,19 +2130,33 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
 
   const updateMeta = (section: 'label' | 'content' | 'component' | 'viacep', key: string, value: any) => {
     if (!editingFieldId) return
-    const newMeta = { ...currentFieldMeta }
+    
+    // O usuário solicitou que todas as instâncias do mesmo campo compartilhem as configurações.
+    // Então, ao atualizar uma propriedade, atualizamos todas as chaves deste field.
+    
+    const baseMeta = getFieldMeta(editingFieldId, null) // get current base meta or default
+    const newMeta = { ...currentFieldMeta } // current meta being edited
     newMeta[section] = { ...newMeta[section], [key]: value }
 
-    const metaKey = editingFieldZone ? `${editingFieldZone}-${editingFieldId}` : editingFieldId
+    const newFieldsMetadata = { ...config.layout_config.fields_metadata }
+    
+    // 1. Atualizar a chave base (para servir de herança quando arrastar para uma nova zona)
+    newFieldsMetadata[editingFieldId] = newMeta
+
+    // 2. Atualizar as zonas existentes
+    const zones = ['form', 'grid', 'filter']
+    zones.forEach(z => {
+      const zKey = `${z}-${editingFieldId}`
+      if (newFieldsMetadata[zKey] !== undefined || editingFieldZone === z) {
+         newFieldsMetadata[zKey] = newMeta
+      }
+    })
 
     setConfig({
       ...config,
       layout_config: {
         ...config.layout_config,
-        fields_metadata: {
-          ...config.layout_config.fields_metadata,
-          [metaKey]: newMeta
-        }
+        fields_metadata: newFieldsMetadata
       }
     })
   }
