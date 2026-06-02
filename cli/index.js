@@ -746,13 +746,11 @@ async function run() {
           const dbType = conn.type || 'postgres';
           tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, 'public', conn.connectionString, configData.supabaseUrl, configData.supabaseAnonKey, configData.ldap, dbType, configData));
         }
-      });
-      
       await Promise.all(tunnelPromises);
       
       // Mantém o processo Node.js vivo para escutar os websockets continuamente
       console.log(chalk.gray(`\nPressione Ctrl+C para encerrar.`));
-      process.stdin.resume();
+      setInterval(() => {}, 1000 * 60 * 60); // Mantém vivo por 1h (renovável)
       return; 
     } 
     else if (mode === 'sync') {
@@ -860,9 +858,8 @@ async function run() {
       process.exit(0);
     } else if (mode === 'tunnel') {
       await startTunnel(answers.projectId, answers.secretToken, 'public', answers.connectionString, null, null, null, answers.dbType);
-      
       console.log(chalk.gray(`\nPressione Ctrl+C para encerrar.`));
-      process.stdin.resume();
+      setInterval(() => {}, 1000 * 60 * 60);
     }
   }
 }
