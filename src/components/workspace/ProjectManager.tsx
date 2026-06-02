@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Database,
   Plus,
@@ -61,6 +61,12 @@ export function ProjectManager({
   showTeamSettings = true
 }: ProjectManagerProps) {
   const [projects, setProjects] = useState<Project[]>(initialProjects)
+  
+  // Sync state when Server Component re-renders with fresh data after router.refresh()
+  useEffect(() => {
+    setProjects(initialProjects)
+  }, [initialProjects])
+
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [formData, setFormData] = useState({ name: '', slug: '', description: '', icon: '', is_active: true })
@@ -150,15 +156,8 @@ export function ProjectManager({
         }
       }
 
-      // Refresh data
-      const { data } = await supabase
-        .from('projects')
-        .select('*, models(count)')
-        .eq('workspace_id', workspaceId)
-        .order('created_at', { ascending: false })
-
-      setProjects(data || [])
       closeDrawer()
+      // Refresh the page data (which will recalculate permissions and update initialProjects)
       router.refresh()
     } catch (err: any) {
       console.error(err)
