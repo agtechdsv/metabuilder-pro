@@ -75,6 +75,15 @@ export default async function LoginPage({ params }: any) {
     )
   }
 
+  // 4. Buscar schema da tabela de auth
+  const { data: models } = await supabase
+    .from('models')
+    .select('db_table_name, db_schema_name')
+    .eq('project_id', project.id)
+  
+  const authModel = models?.find(m => m.db_table_name === auth.db_table_name)
+  const schemaName = authModel?.db_schema_name || 'public'
+
   return (
     <LoginPortalClient
       project={project}
@@ -83,6 +92,7 @@ export default async function LoginPage({ params }: any) {
       locale={locale}
       workspaceSlug={workspace_slug}
       projectSlug={project_slug}
+      schemaName={schemaName}
     />
   )
 }

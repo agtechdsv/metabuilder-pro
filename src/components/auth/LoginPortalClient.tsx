@@ -16,6 +16,7 @@ interface LoginPortalClientProps {
   locale: string
   workspaceSlug: string
   projectSlug: string
+  schemaName?: string
 }
 
 export function LoginPortalClient({
@@ -24,7 +25,8 @@ export function LoginPortalClient({
   visualConfig,
   locale,
   workspaceSlug,
-  projectSlug
+  projectSlug,
+  schemaName
 }: LoginPortalClientProps) {
   const router = useRouter()
   const supabase = createClient()
@@ -100,6 +102,7 @@ export function LoginPortalClient({
               queryId,
               token: project.secret_token,
               action: 'validate_login',
+              schemaName: schemaName || 'public',
               config: {
                 db_table_name: authConfig.db_table_name,
                 db_email_column: authConfig.db_email_column,

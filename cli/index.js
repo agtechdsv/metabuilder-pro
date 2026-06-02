@@ -1,5 +1,24 @@
 #!/usr/bin/env node
 
+// Polyfill para resolver erro do "latin1" no TextDecoder compilado via pkg (usado pelo fast-png / jspdf)
+const originalTextDecoder = global.TextDecoder;
+global.TextDecoder = class TextDecoder extends originalTextDecoder {
+  constructor(encoding = 'utf-8', options) {
+    if (encoding === 'latin1' || encoding === 'iso-8859-1') {
+      super('utf-8', options); // Inicializa com utf-8 para evitar o erro do V8 base
+      this.isLatin1 = true;
+    } else {
+      super(encoding, options);
+    }
+  }
+  decode(input, options) {
+    if (this.isLatin1 && input) {
+      return Buffer.from(input).toString('latin1');
+    }
+    return super.decode(input, options);
+  }
+};
+
 require('dotenv').config({ path: '../.env.local' }); // Para facilitar os testes locais
 const { Client } = require('pg');
 const inquirer = require('inquirer');
@@ -746,11 +765,17 @@ async function run() {
           const dbType = conn.type || 'postgres';
           tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, 'public', conn.connectionString, configData.supabaseUrl, configData.supabaseAnonKey, configData.ldap, dbType, configData));
         }
+      });
       await Promise.all(tunnelPromises);
       
-      // Mantém o processo Node.js vivo para escutar os websockets continuamente
-      console.log(chalk.gray(`\nPressione Ctrl+C para encerrar.`));
-      setInterval(() => {}, 1000 * 60 * 60); // Mantém vivo por 1h (renovável)
+      // Mantém o processo vivo esperando o usuário apertar Enter
+      const rl = require('readline').createInterface({
+        input: process.stdin,
+        output: process.stdout
+      });
+      rl.question(chalk.gray(`\n[ TÚNEL ATIVO ] Pressione ENTER a qualquer momento para encerrar o túnel e fechar a janela...\n`), () => {
+        process.exit(0);
+      });
       return; 
     } 
     else if (mode === 'sync') {
@@ -858,10 +883,21 @@ async function run() {
       process.exit(0);
     } else if (mode === 'tunnel') {
       await startTunnel(answers.projectId, answers.secretToken, 'public', answers.connectionString, null, null, null, answers.dbType);
-      console.log(chalk.gray(`\nPressione Ctrl+C para encerrar.`));
-      setInterval(() => {}, 1000 * 60 * 60);
+      
+      const rl = require('readline').createInterface({
+        input: process.stdin,
+        output: process.stdout
+      });
+      rl.question(chalk.gray(`\n[ TÚNEL ATIVO ] Pressione ENTER a qualquer momento para encerrar o túnel e fechar a janela...\n`), () => {
+        process.exit(0);
+      });
     }
   }
 }
 
-run();
+run().catch(err => {
+  console.error(chalk.red('\n❌ Erro fatal:'), err);
+  // Mantém aberto para visualização do erro
+  const rl = require('readline').createInterface({ input: process.stdin, output: process.stdout });
+  rl.question('\nPressione ENTER para fechar...', () => process.exit(1));
+});
