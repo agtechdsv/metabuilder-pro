@@ -22,7 +22,8 @@ import {
   ExternalLink,
   LayoutGrid,
   RefreshCw,
-  Workflow
+  Workflow,
+  Download
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -37,7 +38,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { MenuBuilder } from '@/components/studio/MenuBuilder'
-import { BrandingConfig } from '@/components/studio/BrandingConfig'
+import { EnumerationsClient } from '../enumerations/EnumerationsClient'
 import { EnumerationsClient } from '../enumerations/EnumerationsClient'
 
 const RETENTION_OPTIONS = [
@@ -200,7 +201,7 @@ export function StudioDashboardClient({
     setIsUpdatingRetention(false)
   }
 
-  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'navigation' | 'branding' | 'enumerations'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'navigation' | 'enumerations'>('list')
   const [viewToEdit, setViewToEdit] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [viewToDelete, setViewToDelete] = useState<any>(null)
@@ -306,17 +307,9 @@ export function StudioDashboardClient({
     }
   }
 
-  const handleSaveBranding = async (data: any) => {
+  const handleToggleDownloads = async () => {
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update(data)
-        .eq('id', project.id)
-
-      if (error) throw error
-
-      // Update downloads view layout_config in ui_views
-      const enableDownloads = data.theme_config?.enable_downloads !== false
+      const newActiveState = !isDownloadsActive
       const { error: viewError } = await supabase
         .from('ui_views')
         .upsert({
@@ -326,17 +319,15 @@ export function StudioDashboardClient({
           slug: 'downloads',
           logic_type: 'personalizado',
           view_type: 'advanced_use_case',
-          layout_config: { is_active: enableDownloads }
+          layout_config: { is_active: newActiveState }
         }, { onConflict: 'project_id, slug' })
 
-      if (viewError) {
-        console.error('Error updating downloads view is_active status:', viewError)
-      }
+      if (viewError) throw viewError
 
-      toast('Identidade visual salva com sucesso!', 'success')
+      toast(newActiveState ? 'Central de Downloads ativada!' : 'Central de Downloads desativada!', 'success')
       router.refresh()
     } catch (err: any) {
-      toast('Erro ao salvar identidade: ' + err.message, 'error')
+      toast('Erro ao alterar status de downloads: ' + err.message, 'error')
     }
   }
 
@@ -385,15 +376,6 @@ export function StudioDashboardClient({
                     )}
                    >
                      Navegação
-                   </button>
-                   <button 
-                    onClick={() => setViewMode('branding')}
-                    className={cn(
-                      "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                      viewMode === 'branding' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
-                    )}
-                   >
-                     Identidade
                    </button>
                    <button 
                     onClick={() => setViewMode('enumerations')}
@@ -531,13 +513,6 @@ export function StudioDashboardClient({
               views={userViews}
               isDownloadsActive={isDownloadsActive}
               onSave={handleSaveNavigation}
-            />
-          </div>
-        ) : viewMode === 'branding' ? (
-          <div className="">
-            <BrandingConfig 
-              project={project}
-              onSave={handleSaveBranding}
             />
           </div>
         ) : viewMode === 'enumerations' ? (
@@ -685,6 +660,75 @@ export function StudioDashboardClient({
                           className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-emerald-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-emerald-500/20"
                         >
                           <ExternalLink className="w-4 h-4" /> Acessar BPM
+                        </Link>
+                      )
+                    )}
+                  </div>
+
+              {/* 3. Card da Central de Downloads (Sistema) */}
+              <div className="group relative p-5 bg-gradient-to-br from-blue-600/5 to-cyan-600/5 dark:from-blue-600/10 dark:to-cyan-600/10 border border-blue-500/20 dark:border-blue-500/30 rounded-[1.5rem] hover:border-blue-500 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-1">
+                <div className="flex flex-col h-full gap-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className={`text-lg font-black tracking-tight transition-colors ${isDownloadsActive ? 'text-neutral-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400' : 'text-neutral-400 italic'}`}>
+                          Central de Downloads
+                        </h4>
+                        <div className="px-2 py-0.5 bg-blue-600 text-white text-[8px] font-black rounded-lg uppercase tracking-widest shadow-lg shadow-blue-500/20">
+                          {t('dashboard.projects.system_label')}
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-neutral-400 font-mono flex items-center gap-1.5 tracking-tight">
+                        <span className="opacity-50">/</span>{workspace_slug}/{project_slug}/downloads
+                      </p>
+                    </div>
+                    <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                       {canCreate ? (
+                         <button
+                           onClick={handleToggleDownloads}
+                           className={`p-1 rounded-md transition-colors ${isDownloadsActive ? 'text-blue-500 hover:bg-blue-500/20' : 'text-neutral-400 hover:bg-neutral-500/10'}`}
+                           title={isDownloadsActive ? t('dashboard.projects.studio.status_active') : t('dashboard.projects.studio.status_inactive')}
+                         >
+                           {isDownloadsActive ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
+                         </button>
+                       ) : (
+                         <span
+                           className={`p-1 rounded-md cursor-default ${isDownloadsActive ? 'text-blue-500' : 'text-neutral-400'}`}
+                         >
+                           {isDownloadsActive ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
+                         </span>
+                       )}
+                      <Download className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  <div className="mt-auto flex gap-3">
+                    {canCreate ? (
+                      <>
+                        <button
+                          onClick={handleToggleDownloads}
+                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-blue-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-blue-500/20"
+                        >
+                          <Settings2 className="w-4 h-4" /> {isDownloadsActive ? 'Desativar Módulo' : 'Ativar Módulo'}
+                        </button>
+                        {isDownloadsActive && (
+                          <Link
+                            href={`/${workspace_slug}/${project_slug}/downloads`}
+                            target="_blank"
+                            className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-blue-600 dark:hover:text-white shadow-sm"
+                          >
+                            <ExternalLink className="w-5 h-5" />
+                          </Link>
+                        )}
+                      </>
+                    ) : (
+                      isDownloadsActive && (
+                        <Link
+                          href={`/${workspace_slug}/${project_slug}/downloads`}
+                          target="_blank"
+                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-blue-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-blue-500/20"
+                        >
+                          <ExternalLink className="w-4 h-4" /> Acessar Downloads
                         </Link>
                       )
                     )}
