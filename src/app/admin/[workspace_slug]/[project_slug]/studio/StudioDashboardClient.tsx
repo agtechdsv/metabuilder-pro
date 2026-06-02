@@ -39,7 +39,6 @@ import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { MenuBuilder } from '@/components/studio/MenuBuilder'
 import { EnumerationsClient } from '../enumerations/EnumerationsClient'
-import { EnumerationsClient } from '../enumerations/EnumerationsClient'
 
 const RETENTION_OPTIONS = [
   { value: '', label: '∞ Manter para Sempre' },
