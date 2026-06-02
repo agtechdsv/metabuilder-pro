@@ -210,6 +210,8 @@ export function StudioDashboardClient({
   const automationsView = views?.find(view => view.slug === 'automations')
   const isAutomationsActive = automationsView ? (automationsView.layout_config?.is_active !== false) : false
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isBpmConfigModalOpen, setIsBpmConfigModalOpen] = useState(false)
+  const [bpmConfig, setBpmConfig] = useState<any>(automationsView?.layout_config || { default_auto_align: false, error_email: '', log_retention: 30, timeout_mins: 5 })
 
   const refreshData = () => {
     setViewToEdit(null)
@@ -242,6 +244,24 @@ export function StudioDashboardClient({
       router.refresh()
     } catch (err: any) {
       toast(t('dashboard.projects.studio.toasts.error_status') + err.message, 'error')
+    }
+  }
+
+  const handleSaveBpmConfig = async () => {
+    if (!automationsView) return
+    try {
+      const { error } = await supabase
+        .from('ui_views')
+        .update({ layout_config: bpmConfig })
+        .eq('id', automationsView.id)
+
+      if (error) throw error
+
+      toast('Configurações do BPM salvas com sucesso!', 'success')
+      setIsBpmConfigModalOpen(false)
+      router.refresh()
+    } catch (err: any) {
+      toast('Erro ao salvar configurações do BPM: ' + err.message, 'error')
     }
   }
 
@@ -636,10 +656,10 @@ export function StudioDashboardClient({
                     {canCreate ? (
                       <>
                         <button
-                          onClick={handleToggleAutomations}
+                          onClick={() => setIsBpmConfigModalOpen(true)}
                           className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-emerald-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-emerald-500/20"
                         >
-                          <Settings2 className="w-4 h-4" /> {isAutomationsActive ? 'Desativar Módulo' : 'Ativar Módulo'}
+                          <Settings2 className="w-4 h-4" /> Configurar Módulo
                         </button>
                         {isAutomationsActive && (
                           <Link
@@ -849,7 +869,7 @@ export function StudioDashboardClient({
                 <p className="text-xs text-neutral-500 mt-1">{t('dashboard.projects.studio.delete_confirm.desc').replace('{name}', viewToDelete?.name || '')}</p>
               </div>
             </div>
-
+            
             <div className="flex flex-col gap-3">
               <button
                 onClick={handleDeleteView}
@@ -862,6 +882,72 @@ export function StudioDashboardClient({
                 className="w-full py-4 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all"
               >
                 {t('dashboard.projects.studio.delete_confirm.cancel')}
+              </button>
+            </div>
+          </div>
+        </Modal>
+
+        <Modal
+          isOpen={isBpmConfigModalOpen}
+          onClose={() => setIsBpmConfigModalOpen(false)}
+          title="Configurações do Módulo BPM"
+        >
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl">
+                <div>
+                  <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Auto-Alinhamento Padrão</h4>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Organizar os nós automaticamente ao desenhar o fluxo.</p>
+                </div>
+                <button 
+                  onClick={() => setBpmConfig((prev: any) => ({ ...prev, default_auto_align: !prev?.default_auto_align }))}
+                  className={`w-12 h-6 rounded-full flex items-center transition-colors p-1 ${bpmConfig?.default_auto_align ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-neutral-700'}`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${bpmConfig?.default_auto_align ? 'translate-x-6' : 'translate-x-0'}`} />
+                </button>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Retenção de Logs (Dias)</label>
+                <select 
+                  value={bpmConfig?.log_retention || 30}
+                  onChange={(e) => setBpmConfig((prev: any) => ({ ...prev, log_retention: Number(e.target.value) }))}
+                  className="w-full h-12 px-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 text-sm focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value={7}>7 dias</option>
+                  <option value={30}>30 dias</option>
+                  <option value={90}>90 dias</option>
+                  <option value={365}>1 ano</option>
+                  <option value={0}>Para sempre</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">E-mail para Notificação de Falhas</label>
+                <input 
+                  type="email"
+                  value={bpmConfig?.error_email || ''}
+                  onChange={(e) => setBpmConfig((prev: any) => ({ ...prev, error_email: e.target.value }))}
+                  placeholder="admin@empresa.com"
+                  className="w-full h-12 px-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 text-sm focus:ring-2 focus:ring-indigo-500 placeholder:text-neutral-400"
+                />
+                <p className="text-[10px] text-neutral-400 mt-1">Este e-mail será notificado se um fluxo cair em loop infinito ou retornar erro.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 justify-end pt-4 border-t border-neutral-100 dark:border-neutral-800">
+              <button
+                onClick={() => setIsBpmConfigModalOpen(false)}
+                className="px-6 h-12 rounded-2xl font-black text-xs uppercase tracking-widest text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveBpmConfig}
+                className="px-6 h-12 rounded-2xl font-black text-xs uppercase tracking-widest bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-2"
+              >
+                <Settings2 className="w-4 h-4" />
+                Salvar Configurações
               </button>
             </div>
           </div>

@@ -14,10 +14,13 @@ interface PageProps {
     workspace_slug: string
     project_slug: string
   }>
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-export default async function AutomationsPage({ params }: PageProps) {
+export default async function AutomationsPage({ params, searchParams }: PageProps) {
   const { workspace_slug, project_slug } = await params
+  const resolvedSearchParams = await searchParams
+  const useCaseId = resolvedSearchParams?.use_case as string | undefined
 
   // 1. Inicializa o cliente Supabase com service_role
   const supabase = createClient(
@@ -48,7 +51,7 @@ export default async function AutomationsPage({ params }: PageProps) {
   // 3. Verifica se a view de Automations está ativa
   const { data: automationsView } = await supabase
     .from('ui_views')
-    .select('layout_config')
+    .select('name, layout_config')
     .eq('slug', 'automations')
     .eq('project_id', project.id)
     .maybeSingle()
@@ -77,9 +80,27 @@ export default async function AutomationsPage({ params }: PageProps) {
     )
   }
 
+  // 4. Busca o caso de uso se estiver no contexto
+  let useCaseName = ''
+  if (useCaseId) {
+    const { data: viewData } = await supabase
+      .from('ui_views')
+      .select('name')
+      .eq('id', useCaseId)
+      .maybeSingle()
+    if (viewData?.name) {
+      useCaseName = viewData.name
+    }
+  }
+
+  const canvasTitle = useCaseName ? `Automações: ${useCaseName}` : (automationsView?.name || 'Aprovação de Pedidos')
+
   return (
     <div className="h-screen w-full bg-white dark:bg-neutral-950 overflow-hidden">
-      <BpmCanvas />
+      <BpmCanvas 
+        title={canvasTitle} 
+        defaultAutoAlign={automationsView?.layout_config?.default_auto_align}
+      />
     </div>
   );
 }

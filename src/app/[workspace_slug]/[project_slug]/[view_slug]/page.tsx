@@ -185,6 +185,62 @@ export default async function SlugPage({ params }: PageProps) {
     }
   }
 
+  let isAutomationsEnabled = false
+  
+  // 4. Verifica permissão de Automações (Default Deny)
+  const { data: automationsView } = await supabase
+    .from('ui_views')
+    .select('id, layout_config')
+    .eq('slug', 'automations')
+    .eq('project_id', project.id)
+    .maybeSingle()
+
+  if (automationsView && automationsView.layout_config?.is_active !== false) {
+    // Se não tiver auth configurado ou o auth for 'none', todo mundo tem acesso.
+    const { data: authConfig } = await supabase
+      .from('project_auth_config')
+      .select('auth_type')
+      .eq('project_id', project.id)
+      .maybeSingle()
+
+    const isNoAuth = !authConfig || authConfig.auth_type === 'none'
+    if (isNoAuth) {
+      isAutomationsEnabled = true
+    } else {
+      const cookieStore = await cookies()
+      const sessionCookie = cookieStore.get(`client_session_${project.id}`)?.value
+      if (sessionCookie) {
+        try {
+          const clientUser = JSON.parse(decodeURIComponent(sessionCookie || ''))
+          const { data: userRole } = await supabase
+            .from('project_user_roles')
+            .select('role_id')
+            .eq('project_id', project.id)
+            .eq('external_user_id', clientUser.id?.toString())
+            .single()
+
+          if (userRole?.role_id) {
+            // Módulo Automações tem Default Deny: requer can_read = true explícito
+            const { data: allowedPermission } = await supabase
+              .from('project_role_permissions')
+              .select('id')
+              .eq('role_id', userRole.role_id)
+              .eq('view_id', automationsView.id)
+              .eq('can_read', true)
+              .limit(1)
+              .maybeSingle()
+
+            if (allowedPermission) {
+              isAutomationsEnabled = true
+            }
+          }
+        } catch (e) {
+          // Ignores error, defaults to false
+        }
+      }
+    }
+  }
+
   if (view && !viewError && view.layout_config?.is_active !== false) {
     const { data: allModels } = await supabase.from('models').select('id, display_name, db_table_name, db_schema_name, fields(*)').eq('project_id', project.id)
     const dictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.display_name }), {}) || {}
@@ -559,6 +615,7 @@ export default async function SlugPage({ params }: PageProps) {
           exportFormats={view.layout_config?.export_formats}
           galleryClickBehavior={view.layout_config?.gallery_click_behavior}
           customActions={view.layout_config?.custom_actions || []}
+          isAutomationsEnabled={isAutomationsEnabled}
           baseUrl={`${baseUrl}/dashboard`}
           breadcrumbs={breadcrumbs}
           description={navDescription}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
@@ -22,13 +22,17 @@ import {
   MoreHorizontal,
   UserPlus,
   Trash2,
-  Unlock
+  Unlock,
+  Pencil,
+  Check,
+  X
 } from 'lucide-react'
 import { Navbar } from '@/components/layout/Navbar'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { Footer } from '@/components/layout/Footer'
 import { useI18n } from '@/i18n/I18nContext'
 import { useToast } from '@/components/ui/Toast'
+import { Modal } from '@/components/ui/Modal'
 
 export default function AuthSettingsPage() {
   const { t } = useI18n()
@@ -83,7 +87,16 @@ export default function AuthSettingsPage() {
   })
 
   const [activeTab, setActiveTab] = useState<'visual' | 'strategy' | 'users'>('strategy')
-  const [usersSubTab, setUsersSubTab] = useState<'list' | 'permissions'>('list')
+  const [usersSubTab, setUsersSubTab] = useState<'list' | 'groups' | 'permissions'>('list')
+  const [editingRoleId, setEditingRoleId] = useState<string | null>(null)
+  const [editingRoleName, setEditingRoleName] = useState('')
+  const [roleToDelete, setRoleToDelete] = useState<{ id: string, name: string } | null>(null)
+
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false)
+  const [userFormData, setUserFormData] = useState<any>({})
+  const [editingUserId, setEditingUserId] = useState<any>(null)
+  const [userToDelete, setUserToDelete] = useState<any>(null)
+  const [isSavingUser, setIsSavingUser] = useState(false)
 
   const supabase = createClient()
   const { toast } = useToast()
@@ -246,6 +259,47 @@ export default function AuthSettingsPage() {
     loadData()
   }, [project_slug, workspace_slug, supabase, router, toast])
 
+  const loadLegacyUsers = useCallback(async () => {
+    if (!project || !authConfig.db_table_name) return
+    setIsLoadingUsers(true)
+    const queryId = crypto.randomUUID()
+    const channelName = `tunnel:${project.id}`
+    const channel = supabase.channel(channelName)
+    let isFinished = false
+    const cleanup = () => { isFinished = true; supabase.removeChannel(channel) }
+
+    channel.on('broadcast', { event: `query_result_${queryId}` }, (payload: any) => {
+      if (isFinished) return
+      cleanup()
+      const { success, data, error } = payload.payload
+      if (success && data) {
+        setLegacyUsers(data)
+      } else {
+        toast('Erro ao buscar usuários: ' + error, 'error')
+      }
+      setIsLoadingUsers(false)
+    })
+
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        const currentModel = models.find(m => m.db_table_name === authConfig.db_table_name)
+        const schemaName = currentModel?.db_schema_name || 'public'
+        await channel.send({
+          type: 'broadcast', event: 'sql_query',
+          payload: { queryId, token: project.secret_token, action: 'get_users', config: authConfig, limit: 50, offset: 0, schemaName }
+        })
+      }
+    })
+
+    setTimeout(() => {
+      if (!isFinished) {
+        cleanup()
+        setIsLoadingUsers(false)
+        toast('Túnel CLI offline. Ligue o MetaBuilder CLI.', 'error')
+      }
+    }, 5000)
+  }, [project, authConfig, models, supabase, toast])
+
   useEffect(() => {
     if (activeTab === 'users' && project) {
       const loadRolesAndPermissions = async () => {
@@ -264,47 +318,10 @@ export default function AuthSettingsPage() {
       loadRolesAndPermissions()
 
       if (authConfig.db_table_name) {
-        const loadLegacyUsers = async () => {
-          setIsLoadingUsers(true)
-          const queryId = crypto.randomUUID()
-          const channelName = `tunnel:${project.id}`
-          const channel = supabase.channel(channelName)
-          let isFinished = false
-          const cleanup = () => { isFinished = true; supabase.removeChannel(channel) }
-
-          channel.on('broadcast', { event: `query_result_${queryId}` }, (payload: any) => {
-            if (isFinished) return
-            cleanup()
-            const { success, data, error } = payload.payload
-            if (success && data) {
-              setLegacyUsers(data)
-            } else {
-              toast('Erro ao buscar usuários: ' + error, 'error')
-            }
-            setIsLoadingUsers(false)
-          })
-
-          channel.subscribe(async (status) => {
-            if (status === 'SUBSCRIBED') {
-              await channel.send({
-                type: 'broadcast', event: 'sql_query',
-                payload: { queryId, token: project.secret_token, action: 'get_users', config: authConfig, limit: 50, offset: 0 }
-              })
-            }
-          })
-
-          setTimeout(() => {
-            if (!isFinished) {
-              cleanup()
-              setIsLoadingUsers(false)
-              toast('Túnel CLI offline. Ligue o MetaBuilder CLI.', 'error')
-            }
-          }, 5000)
-        }
         loadLegacyUsers()
       }
     }
-  }, [activeTab, project, authConfig, supabase, toast])
+  }, [activeTab, project, authConfig, supabase, toast, models])
 
   const handleAssignRole = async (externalUserId: string, roleId: string) => {
     const { error } = await supabase
@@ -324,48 +341,71 @@ export default function AuthSettingsPage() {
     }
   }
 
-  const handleTogglePermission = async (roleId: string, viewId: string) => {
+  const handleTogglePermission = async (roleId: string, viewId: string, isAutomations: boolean = false) => {
     const existing = rolePermissions.find(rp => rp.role_id === roleId && rp.view_id === viewId)
     
     try {
-      if (existing) {
-        if (existing.can_read === false) {
-          // Toggle on (delete block record, so it defaults to true)
-          const { error } = await supabase.from('project_role_permissions').delete().eq('id', existing.id)
-          if (error) {
-            console.error('Error toggling permission on:', error)
-            toast('Erro ao conceder permissão: ' + error.message, 'error')
-          } else {
+      if (isAutomations) {
+        // --- LOGIC FOR AUTOMATIONS (DEFAULT DENY) ---
+        if (existing) {
+          if (existing.can_read === true) {
+            // Toggle off -> Delete the explicit allow record
+            const { error } = await supabase.from('project_role_permissions').delete().eq('id', existing.id)
+            if (error) throw error
             setRolePermissions(prev => prev.filter(rp => rp.id !== existing.id))
+            toast('Permissão removida com sucesso!', 'success')
+          } else {
+            // Toggle on -> Update existing explicit deny to explicit allow
+            const { data, error } = await supabase
+              .from('project_role_permissions')
+              .update({ can_read: true })
+              .eq('id', existing.id)
+              .select()
+              .single()
+            if (error) throw error
+            setRolePermissions(prev => prev.map(rp => rp.id === existing.id ? data : rp))
             toast('Permissão concedida com sucesso!', 'success')
           }
         } else {
-          // Toggle off (update existing record to can_read = false)
-          const { data, error } = await supabase
-            .from('project_role_permissions')
-            .update({ can_read: false })
-            .eq('id', existing.id)
-            .select()
-            .single()
-          if (error) {
-            console.error('Error toggling permission off:', error)
-            toast('Erro ao remover permissão: ' + error.message, 'error')
-          } else if (data) {
+          // Toggle on -> Insert explicit allow
+          const { data, error } = await supabase.from('project_role_permissions').insert({
+            role_id: roleId,
+            view_id: viewId,
+            can_read: true
+          }).select().single()
+          if (error) throw error
+          setRolePermissions(prev => [...prev, data])
+          toast('Permissão concedida com sucesso!', 'success')
+        }
+      } else {
+        // --- LOGIC FOR NORMAL VIEWS (DEFAULT ALLOW) ---
+        if (existing) {
+          if (existing.can_read === false) {
+            // Toggle on -> Delete the explicit deny record
+            const { error } = await supabase.from('project_role_permissions').delete().eq('id', existing.id)
+            if (error) throw error
+            setRolePermissions(prev => prev.filter(rp => rp.id !== existing.id))
+            toast('Permissão concedida com sucesso!', 'success')
+          } else {
+            // Toggle off -> Update existing explicit allow to explicit deny
+            const { data, error } = await supabase
+              .from('project_role_permissions')
+              .update({ can_read: false })
+              .eq('id', existing.id)
+              .select()
+              .single()
+            if (error) throw error
             setRolePermissions(prev => prev.map(rp => rp.id === existing.id ? data : rp))
             toast('Permissão removida com sucesso!', 'success')
           }
-        }
-      } else {
-        // Toggle off (insert record with can_read = false)
-        const { data, error } = await supabase.from('project_role_permissions').insert({
-          role_id: roleId,
-          view_id: viewId,
-          can_read: false
-        }).select().single()
-        if (error) {
-          console.error('Error toggling permission off:', error)
-          toast('Erro ao remover permissão: ' + error.message, 'error')
-        } else if (data) {
+        } else {
+          // Toggle off -> Insert explicit deny
+          const { data, error } = await supabase.from('project_role_permissions').insert({
+            role_id: roleId,
+            view_id: viewId,
+            can_read: false
+          }).select().single()
+          if (error) throw error
           setRolePermissions(prev => [...prev, data])
           toast('Permissão removida com sucesso!', 'success')
         }
@@ -390,6 +430,167 @@ export default function AuthSettingsPage() {
       if (dbRoles) setRoles(dbRoles)
     } else {
       toast('Erro ao criar grupo: ' + error.message, 'error')
+    }
+  }
+
+  const handleUpdateRole = async (roleId: string, newName: string) => {
+    if (!newName) return
+    const { error } = await supabase.from('project_roles').update({ name: newName }).eq('id', roleId)
+    if (!error) {
+      toast('Grupo renomeado com sucesso!', 'success')
+      setEditingRoleId(null)
+      const { data: dbRoles } = await supabase.from('project_roles').select('*').eq('project_id', project.id)
+      if (dbRoles) setRoles(dbRoles)
+    } else {
+      toast('Erro ao renomear grupo: ' + error.message, 'error')
+    }
+  }
+
+  const handleDeleteRole = (roleId: string, roleName: string) => {
+    setRoleToDelete({ id: roleId, name: roleName })
+  }
+
+  const confirmDeleteRole = async () => {
+    if (!roleToDelete) return
+    const roleId = roleToDelete.id
+    
+    // As tabelas dependentes (project_user_roles, project_role_permissions) geralmente tem ON DELETE CASCADE,
+    // mas por segurança faremos a exclusão explicita se não tiver.
+    await supabase.from('project_role_permissions').delete().eq('role_id', roleId)
+    await supabase.from('project_user_roles').delete().eq('role_id', roleId)
+    
+    const { error } = await supabase.from('project_roles').delete().eq('id', roleId)
+    if (!error) {
+      toast('Grupo excluído com sucesso!', 'success')
+      const { data: dbRoles } = await supabase.from('project_roles').select('*').eq('project_id', project.id)
+      if (dbRoles) setRoles(dbRoles)
+    } else {
+      toast('Erro ao excluir grupo: ' + error.message, 'error')
+    }
+    setRoleToDelete(null)
+  }
+
+  const openCreateUserModal = () => {
+    setEditingUserId(null)
+    setUserFormData({})
+    setIsUserModalOpen(true)
+  }
+
+  const openEditUserModal = (user: any) => {
+    const selectedModel = models.find(m => m.db_table_name === authConfig.db_table_name)
+    const pkField = selectedModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+    setEditingUserId(user[pkField])
+    setUserFormData(user)
+    setIsUserModalOpen(true)
+  }
+
+  const handleSaveUser = async () => {
+    setIsSavingUser(true)
+    const selectedModel = models.find(m => m.db_table_name === authConfig.db_table_name)
+    const pkField = selectedModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+
+    try {
+      const dataToSave = { ...userFormData }
+      
+      const passwordField = authConfig.db_password_column
+      if (passwordField && dataToSave[passwordField] && (!editingUserId || dataToSave[passwordField] !== legacyUsers.find(u => u[pkField] === editingUserId)?.[passwordField])) {
+        const hashRes = await fetch('/api/crypto/hash', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: dataToSave[passwordField], type: authConfig.db_password_hash_type || 'plain' })
+        })
+        if (hashRes.ok) {
+          const { hash } = await hashRes.json()
+          dataToSave[passwordField] = hash
+        }
+      }
+
+      const queryId = crypto.randomUUID()
+      const channelName = `tunnel:${project.id}`
+      const channel = supabase.channel(channelName)
+      
+      channel.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          if (editingUserId) {
+            delete dataToSave[pkField]
+            await channel.send({
+              type: 'broadcast',
+              event: 'sql_query',
+              payload: {
+                queryId,
+                token: project.secret_token,
+                action: 'update',
+                table: authConfig.db_table_name,
+                schemaName: selectedModel?.db_schema_name || 'public',
+                idColumn: pkField,
+                idValue: editingUserId,
+                data: dataToSave
+              }
+            })
+          } else {
+            await channel.send({
+              type: 'broadcast',
+              event: 'sql_query',
+              payload: {
+                queryId,
+                token: project.secret_token,
+                action: 'insert',
+                table: authConfig.db_table_name,
+                schemaName: selectedModel?.db_schema_name || 'public',
+                data: dataToSave
+              }
+            })
+          }
+          toast('Operação enviada ao CLI com sucesso!', 'success')
+          setIsUserModalOpen(false)
+          setTimeout(() => {
+            supabase.removeChannel(channel)
+            loadLegacyUsers()
+          }, 1000)
+        }
+      })
+    } catch (err: any) {
+      toast('Erro ao salvar usuário: ' + err.message, 'error')
+    } finally {
+      setIsSavingUser(false)
+    }
+  }
+
+  const confirmDeleteLegacyUser = async () => {
+    if (!userToDelete) return
+    const selectedModel = models.find(m => m.db_table_name === authConfig.db_table_name)
+    const pkField = selectedModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+    
+    try {
+      const queryId = crypto.randomUUID()
+      const channelName = `tunnel:${project.id}`
+      const channel = supabase.channel(channelName)
+
+      channel.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.send({
+            type: 'broadcast',
+            event: 'sql_query',
+            payload: {
+              queryId,
+              token: project.secret_token,
+              action: 'delete',
+              table: authConfig.db_table_name,
+              schemaName: selectedModel?.db_schema_name || 'public',
+              idColumn: pkField,
+              idValue: userToDelete[pkField]
+            }
+          })
+          toast('Exclusão enviada ao CLI com sucesso!', 'success')
+          setUserToDelete(null)
+          setTimeout(() => {
+            supabase.removeChannel(channel)
+            loadLegacyUsers()
+          }, 1000)
+        }
+      })
+    } catch (err: any) {
+      toast('Erro ao excluir usuário: ' + err.message, 'error')
     }
   }
 
@@ -971,6 +1172,12 @@ export default function AuthSettingsPage() {
                   Lista de Usuários
                 </button>
                 <button 
+                  onClick={() => setUsersSubTab('groups')}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${usersSubTab === 'groups' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+                >
+                  Grupos de Acesso
+                </button>
+                <button 
                   onClick={() => setUsersSubTab('permissions')}
                   className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${usersSubTab === 'permissions' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
                 >
@@ -988,6 +1195,15 @@ export default function AuthSettingsPage() {
                       className="w-full h-11 pl-12 pr-4 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 outline-none focus:border-indigo-500 text-sm font-medium transition-all"
                     />
                   </div>
+                  <button onClick={openCreateUserModal} className="flex items-center gap-2 px-6 h-11 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95 whitespace-nowrap">
+                    <UserPlus className="w-4 h-4" />
+                    Criar Usuário
+                  </button>
+                </div>
+              )}
+
+              {usersSubTab === 'groups' && (
+                <div className="flex gap-4 items-center w-full max-w-md justify-end">
                   <button onClick={() => setIsCreatingRole(true)} className="flex items-center gap-2 px-6 h-11 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95 whitespace-nowrap">
                     <ShieldCheck className="w-4 h-4" />
                     Criar Grupo
@@ -1060,9 +1276,20 @@ export default function AuthSettingsPage() {
                               </select>
                             </td>
                             <td className="px-6 py-4 text-right">
-                              <button className="p-2 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition-colors">
-                                <MoreHorizontal className="w-4 h-4 text-neutral-400" />
-                              </button>
+                              <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button 
+                                  onClick={() => openEditUserModal(u)}
+                                  className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={() => setUserToDelete(u)}
+                                  className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -1071,6 +1298,82 @@ export default function AuthSettingsPage() {
                           <td colSpan={4} className="p-12 text-center">
                             <Users className="w-12 h-12 text-neutral-200 dark:text-neutral-800 mx-auto mb-4" />
                             <p className="text-sm font-medium text-neutral-500">Nenhum usuário encontrado no banco legado ou CLI offline.</p>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : usersSubTab === 'groups' ? (
+              <div className="space-y-4 animate-in fade-in duration-300">
+                <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-sm">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">ID</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Nome do Grupo</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                      {roles.length > 0 ? (
+                        roles.map((role) => (
+                          <tr key={role.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors group">
+                            <td className="px-6 py-4">
+                              <span className="text-xs font-medium text-neutral-400 font-mono">{role.id.substring(0, 8)}</span>
+                            </td>
+                            <td className="px-6 py-4">
+                              {editingRoleId === role.id ? (
+                                <div className="flex items-center gap-2">
+                                  <input 
+                                    autoFocus
+                                    type="text" 
+                                    value={editingRoleName}
+                                    onChange={e => setEditingRoleName(e.target.value)}
+                                    className="h-8 px-3 rounded-lg bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 outline-none focus:border-indigo-500 text-sm font-medium w-full max-w-[240px]"
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter') handleUpdateRole(role.id, editingRoleName)
+                                      if (e.key === 'Escape') setEditingRoleId(null)
+                                    }}
+                                  />
+                                  <button onClick={() => handleUpdateRole(role.id, editingRoleName)} className="p-1.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors">
+                                    <Check className="w-4 h-4" />
+                                  </button>
+                                  <button onClick={() => setEditingRoleId(null)} className="p-1.5 bg-neutral-50 dark:bg-neutral-800 text-neutral-500 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors">
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-sm font-bold text-neutral-900 dark:text-white">{role.name}</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button 
+                                  onClick={() => {
+                                    setEditingRoleId(role.id)
+                                    setEditingRoleName(role.name)
+                                  }}
+                                  className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteRole(role.id, role.name)}
+                                  className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={3} className="p-12 text-center">
+                            <ShieldCheck className="w-12 h-12 text-neutral-200 dark:text-neutral-800 mx-auto mb-4" />
+                            <p className="text-sm font-medium text-neutral-500">Nenhum grupo de acesso criado.</p>
                           </td>
                         </tr>
                       )}
@@ -1111,11 +1414,15 @@ export default function AuthSettingsPage() {
                           </td>
                           {roles.map(role => {
                             const permission = rolePermissions.find(rp => rp.role_id === role.id && rp.view_id === view.id)
-                            const hasAccess = !permission || permission.can_read !== false
+                            const isAutomations = view.slug === 'automations'
+                            const hasAccess = isAutomations 
+                              ? (permission && permission.can_read === true)
+                              : (!permission || permission.can_read !== false)
+
                             return (
                               <td key={role.id} className="px-6 py-4 text-center">
                                 <button 
-                                  onClick={() => handleTogglePermission(role.id, view.id)}
+                                  onClick={() => handleTogglePermission(role.id, view.id, isAutomations)}
                                   className={`w-12 h-6 rounded-full transition-all relative inline-block align-middle ${hasAccess ? 'bg-indigo-600' : 'bg-neutral-200 dark:bg-neutral-800'}`}
                                 >
                                   <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${hasAccess ? 'left-7' : 'left-1'}`} />
@@ -1138,6 +1445,127 @@ export default function AuthSettingsPage() {
             )}
           </div>
         )}
+
+        <Modal
+          isOpen={!!roleToDelete}
+          onClose={() => setRoleToDelete(null)}
+          title="Excluir Grupo de Acesso"
+          description="Tem certeza que deseja excluir este grupo? Todas as permissões vinculadas serão perdidas."
+        >
+          {roleToDelete && (
+            <div className="space-y-6">
+              <div className="p-4 bg-rose-50 dark:bg-rose-500/10 rounded-xl flex items-start gap-4 border border-rose-100 dark:border-rose-500/20">
+                <Trash2 className="w-5 h-5 text-rose-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-bold text-rose-900 dark:text-rose-400 mb-1">
+                    Excluindo: {roleToDelete.name}
+                  </p>
+                  <p className="text-xs font-medium text-rose-700 dark:text-rose-300">
+                    Esta ação é irreversível. Qualquer usuário atribuído a este grupo perderá imediatamente os acessos associados.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+                <button
+                  onClick={() => setRoleToDelete(null)}
+                  className="px-6 h-11 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 rounded-xl text-xs font-bold hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDeleteRole}
+                  className="px-6 h-11 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 transition-all shadow-lg shadow-rose-500/20 active:scale-95 flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Sim, Excluir Grupo
+                </button>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        <Modal
+          isOpen={isUserModalOpen}
+          onClose={() => setIsUserModalOpen(false)}
+          title={editingUserId ? "Editar Usuário" : "Criar Usuário"}
+          description={editingUserId ? "Edite as informações do usuário legado." : "Preencha as informações para criar um novo usuário legado."}
+        >
+          <div className="space-y-4">
+            {models.find(m => m.db_table_name === authConfig.db_table_name)?.fields?.map((field: any) => {
+              const isReadOnly = field.is_primary_key || !!field.default_value
+              if (isReadOnly) return null
+              
+              return (
+                <div key={field.id} className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
+                    {field.db_column_name} {field.db_column_name === authConfig.db_password_column && editingUserId && '(Deixe em branco para manter a atual)'}
+                  </label>
+                  <input 
+                    type={field.db_column_name === authConfig.db_password_column ? 'password' : 'text'}
+                    value={userFormData[field.db_column_name] || ''}
+                    onChange={e => setUserFormData({ ...userFormData, [field.db_column_name]: e.target.value })}
+                    className="w-full h-11 px-4 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 outline-none focus:border-indigo-500 text-sm font-medium transition-all"
+                  />
+                </div>
+              )
+            })}
+            
+            <div className="flex items-center justify-end gap-3 pt-4 mt-6 border-t border-neutral-100 dark:border-neutral-800">
+              <button
+                onClick={() => setIsUserModalOpen(false)}
+                className="px-6 h-11 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 rounded-xl text-xs font-bold hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveUser}
+                disabled={isSavingUser}
+                className="px-6 h-11 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                {isSavingUser ? 'Salvando...' : 'Salvar Usuário'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+
+        <Modal
+          isOpen={!!userToDelete}
+          onClose={() => setUserToDelete(null)}
+          title="Excluir Usuário"
+          description="Tem certeza que deseja excluir este usuário da tabela legada?"
+        >
+          {userToDelete && (
+            <div className="space-y-6">
+              <div className="p-4 bg-rose-50 dark:bg-rose-500/10 rounded-xl flex items-start gap-4 border border-rose-100 dark:border-rose-500/20">
+                <Trash2 className="w-5 h-5 text-rose-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-bold text-rose-900 dark:text-rose-400 mb-1">
+                    Excluindo: {userToDelete.nome || userToDelete.name || userToDelete[authConfig.db_email_column]}
+                  </p>
+                  <p className="text-xs font-medium text-rose-700 dark:text-rose-300">
+                    Esta ação é irreversível e o registro será apagado do seu banco de dados via CLI.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+                <button
+                  onClick={() => setUserToDelete(null)}
+                  className="px-6 h-11 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 rounded-xl text-xs font-bold hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDeleteLegacyUser}
+                  className="px-6 h-11 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 transition-all shadow-lg shadow-rose-500/20 active:scale-95 flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Sim, Excluir Usuário
+                </button>
+              </div>
+            </div>
+          )}
+        </Modal>
 
       </main>
     </>

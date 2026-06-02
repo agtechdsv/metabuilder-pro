@@ -1,8 +1,8 @@
 {
   "connections": [
     {
-      "projectId": "4f1a995a-cdff-4397-a62a-6e2f271169f8",
-      "secretToken": "b873684fdc774ac3a1f029dac32dff6047b8df958269924d94936c03e19f360a",
+      "projectId": "8e37b276-d59e-41f5-9629-8eddcb2bb82f",
+      "secretToken": "3618f82aa2608dc51235e7372c02a2f6e3a08a7adff8b785f30f5a89c1b00ba6",
       "connectionsString": [
         {
           "name": "build_flow",
@@ -14,7 +14,7 @@
   ],
   "supabaseUrl": "https://chmstvtepzmjhpyxjjam.supabase.co",
   "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNobXN0dnRlcHptamhweXhqamFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMjk1ODgsImV4cCI6MjA5MzYwNTU4OH0.eMw33Jv7lco6uXWJnz0bdMSbHRAQFW0Ala7K6S_R8To",
-  "apiUrl": "http://localhost:3000/api/metadata/sync",
+  "apiUrl": "http://metabuilderpro.com/api/metadata/sync",
   "ldap": {
     "enabled": false,
     "url": "ldap://10.0.0.15:389",

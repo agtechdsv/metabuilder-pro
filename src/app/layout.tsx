@@ -45,8 +45,10 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <Script id="oauth-redirect" strategy="beforeInteractive">
-          {`
+        <script
+          id="oauth-redirect"
+          dangerouslySetInnerHTML={{
+            __html: `
             try {
               // Capturar código de indicação do iClub
               const urlParams = new URLSearchParams(window.location.search);
@@ -64,8 +66,9 @@ export default async function RootLayout({
                 }
               }
             } catch (e) {}
-          `}
-        </Script>
+            `
+          }}
+        />
       </head>
       <body 
         className="min-h-full flex flex-col bg-white dark:bg-black text-black dark:text-white transition-colors duration-300"

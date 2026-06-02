@@ -9,7 +9,8 @@ import {
   Trash2, 
   Maximize2, 
   Layout, 
-  Database 
+  Database,
+  Workflow
 } from 'lucide-react'
 import { HeaderActions } from '@/components/layout/HeaderActions'
 import RecordDrawer from './RecordDrawer'
@@ -79,6 +80,7 @@ interface ViewPageContentProps {
   exportFormats?: string[]
   galleryClickBehavior?: 'lightbox' | 'thumbnail'
   customActions?: any[]
+  isAutomationsEnabled?: boolean
 }
 
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
@@ -124,7 +126,8 @@ export default function ViewPageContent({
   exportFormats = ['xlsx', 'csv', 'json'],
   analyticsConfig: initialAnalyticsConfig,
   galleryClickBehavior,
-  customActions = []
+  customActions = [],
+  isAutomationsEnabled = false
 }: ViewPageContentProps) {
   const router = useRouter()
   const { t } = useI18n()
@@ -1611,6 +1614,16 @@ export default function ViewPageContent({
         icon={icon}
         actions={(
           <div className="flex items-center gap-3">
+            {isAutomationsEnabled && (
+              <button
+                onClick={() => router.push(`/${workspace.slug}/${project.slug}/automations?use_case=${viewId}`)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-full transition-all text-xs font-bold shadow-sm active:scale-95"
+                title="Configurar automações e regras de negócio desta tela"
+              >
+                <Workflow className="w-4 h-4 text-indigo-500" />
+                <span className="hidden sm:inline">Automações</span>
+              </button>
+            )}
             {logicType !== 'analytics' && project.theme_config?.enable_downloads !== false && canExport && (
               <ExportDropdown 
                 projectId={project.id}
