@@ -749,6 +749,10 @@ async function run() {
       });
       
       await Promise.all(tunnelPromises);
+      
+      // Mantém o processo Node.js vivo para escutar os websockets continuamente
+      console.log(chalk.gray(`\nPressione Ctrl+C para encerrar.`));
+      process.stdin.resume();
       return; 
     } 
     else if (mode === 'sync') {
@@ -856,10 +860,11 @@ async function run() {
       process.exit(0);
     } else if (mode === 'tunnel') {
       await startTunnel(answers.projectId, answers.secretToken, 'public', answers.connectionString, null, null, null, answers.dbType);
+      
+      console.log(chalk.gray(`\nPressione Ctrl+C para encerrar.`));
+      process.stdin.resume();
     }
   }
 }
 
 run();
-
-
