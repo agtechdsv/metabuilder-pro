@@ -23,7 +23,7 @@ import dagre from 'dagre';
 
 import { FlowSidebar } from './FlowSidebar';
 import { TriggerNode, ActionNode, ConditionNode } from './nodes/CustomNodes';
-import { Save, Play, Wand2, X, ArrowLeft, Loader2, Plus, Trash2, Check, Edit2 } from 'lucide-react';
+import { Save, Play, Wand2, X, ArrowLeft, Loader2, Plus, Trash2, Check, Edit2, Box } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Modal } from '@/components/ui/Modal';
 import ButtonEdge from './edges/ButtonEdge';
@@ -92,6 +92,7 @@ interface BpmCanvasProps {
   useCaseId?: string;
   initialWorkflows?: any[];
   initialModels?: any[];
+  initialViews?: any[];
 }
 
 function BpmCanvasContent({ 
@@ -100,8 +101,10 @@ function BpmCanvasContent({
   project, 
   useCaseId,
   initialWorkflows = [],
-  initialModels = []
+  initialModels = [],
+  initialViews = []
 }: BpmCanvasProps) {
+  console.log("=== BPM CANVAS INITIAL VIEWS ===", JSON.stringify(initialViews, null, 2));
   const projectId = project?.id;
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -110,6 +113,7 @@ function BpmCanvasContent({
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const { fitView } = useReactFlow();
+  const [localViews, setLocalViews] = useState(initialViews);
   const router = useRouter();
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -130,6 +134,7 @@ function BpmCanvasContent({
   const [groupUsers, setGroupUsers] = useState<any[]>([]);
   const [isLoadingGroupUsers, setIsLoadingGroupUsers] = useState(false);
   const [selectedUsersInModal, setSelectedUsersInModal] = useState<string[] | 'all'>('all');
+  const [modalSearchTerm, setModalSearchTerm] = useState('');
 
   // Buscar enumerations
   useEffect(() => {
@@ -257,6 +262,7 @@ function BpmCanvasContent({
     setSelectedGroupForModal(grupo);
     setIsLoadingGroupUsers(true);
     setGroupUsers([]);
+    setModalSearchTerm('');
     
     const currentGroupsUsers = selectedNode?.data?.emailGroupsUsers || {};
     const currentSelection = currentGroupsUsers[grupo.name];
@@ -498,6 +504,127 @@ function BpmCanvasContent({
     }));
   };
 
+  const renderActionFilters = () => {
+    if (!selectedNode || !selectedNode.data?.actionModelId) return null;
+    const actionFilters = (selectedNode.data.actionFilters as any[]) || [];
+    
+    return (
+      <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-xl p-3 shadow-sm mt-4">
+        <div className="flex items-center justify-between mb-3 pb-2 border-b border-red-100 dark:border-red-900/50">
+          <span className="text-[9px] font-bold text-red-500 uppercase tracking-widest">Filtros (Quais registros?)</span>
+          <button
+            onClick={() => {
+              updateNodeData(selectedNode.id, { 
+                actionFilters: [...actionFilters, { field: '', operator: '==', value: '' }]
+              });
+            }}
+            className="text-[9px] bg-red-500 text-white px-2 py-1 rounded font-bold uppercase tracking-widest hover:bg-red-600 transition-colors"
+          >
+            + Filtro
+          </button>
+        </div>
+
+        {actionFilters.length === 0 && (
+          <div className="text-[9px] text-red-400 text-center py-2 italic font-semibold">
+            CUIDADO: Nenhum filtro definido. Isso afetará TODOS os registros.
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {actionFilters.map((filt: any, index: number) => (
+            <div key={index} className="relative group/filt border border-red-100 dark:border-red-900/30 rounded p-2 bg-white dark:bg-neutral-950">
+              <button
+                onClick={() => {
+                  const newFilters = [...actionFilters];
+                  newFilters.splice(index, 1);
+                  updateNodeData(selectedNode.id, { actionFilters: newFilters });
+                }}
+                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover/filt:opacity-100 transition-opacity shadow z-10"
+                title="Remover filtro"
+              >
+                <X className="w-3 h-3" />
+              </button>
+              
+              <div className="grid grid-cols-[1fr_auto] gap-2 mb-2">
+                <select 
+                  value={filt.field || ''} 
+                  onChange={(e) => {
+                    const newFilters = [...actionFilters];
+                    newFilters[index].field = e.target.value;
+                    updateNodeData(selectedNode.id, { actionFilters: newFilters });
+                  }}
+                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-red-500"
+                >
+                  <option value="">Campo...</option>
+                  {dbFields.filter(f => f.model_id === selectedNode.data?.actionModelId).map(f => (
+                    <option key={f.id} value={f.db_column_name || f.name}>{f.display_name || f.db_column_name || f.name}</option>
+                  ))}
+                </select>
+
+                <select 
+                  value={filt.operator || '=='} 
+                  onChange={(e) => {
+                    const newFilters = [...actionFilters];
+                    newFilters[index].operator = e.target.value;
+                    updateNodeData(selectedNode.id, { actionFilters: newFilters });
+                  }}
+                  className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-red-500 w-[60px]"
+                >
+                  <option value="==">==</option>
+                  <option value="!=">!=</option>
+                  <option value=">">&gt;</option>
+                  <option value="<">&lt;</option>
+                </select>
+              </div>
+
+              <div className="flex gap-1">
+                <input 
+                  type="text" 
+                  placeholder="Ex: {{trigger.id}} ou valor fixo"
+                  value={filt.value || ''} 
+                  onChange={(e) => {
+                    const newFilters = [...actionFilters];
+                    newFilters[index].value = e.target.value;
+                    updateNodeData(selectedNode.id, { actionFilters: newFilters });
+                  }}
+                  className="flex-1 min-w-0 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-red-500"
+                />
+                <select
+                  value=""
+                  onChange={(e) => {
+                    if (!e.target.value) return;
+                    const newFilters = [...actionFilters];
+                    newFilters[index].value = (newFilters[index].value || '') + `{{${e.target.value}}}`;
+                    updateNodeData(selectedNode.id, { actionFilters: newFilters });
+                    e.target.value = '';
+                  }}
+                  className="w-8 shrink-0 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 text-transparent rounded px-1 py-1 focus:ring-1 focus:ring-red-500 cursor-pointer text-[10px] appearance-none"
+                  style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%23ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
+                  title="Inserir Variável"
+                >
+                  <option value="" className="text-neutral-900 dark:text-neutral-100">+ Var</option>
+                  {[...dbModels].map(m => {
+                    const fields = dbFields.filter(f => f.model_id === m.id);
+                    if (fields.length === 0) return null;
+                    return (
+                      <optgroup key={m.id} label={m.display_name || m.db_table_name || m.name} className="text-left text-indigo-600 dark:text-indigo-400 normal-case tracking-normal text-sm font-bold bg-neutral-50 dark:bg-neutral-900">
+                        {fields.map(f => (
+                          <option key={f.id} value={`${m.db_table_name || m.name}.${f.db_column_name || f.name}`} className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">
+                            {f.display_name || f.db_column_name || f.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full bg-neutral-50 dark:bg-neutral-950">
       <div className="h-14 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex items-center justify-between px-6 z-20">
@@ -634,7 +761,7 @@ function BpmCanvasContent({
                   />
                 </div>
 
-                {selectedNode.type === 'trigger' && (() => {
+                    {selectedNode.type === 'trigger' && (() => {
                   const triggerTypes = (selectedNode.data?.triggerType as string[]) || (selectedNode.data?.triggerType ? [selectedNode.data?.triggerType as string] : []);
                   const requiresModel = triggerTypes.some(t => ['insert', 'update', 'delete'].includes(t));
                   const hasUpdate = triggerTypes.includes('update');
@@ -652,7 +779,7 @@ function BpmCanvasContent({
                           { id: 'insert', label: 'Ao Inserir Registro' },
                           { id: 'update', label: 'Ao Atualizar Registro' },
                           { id: 'delete', label: 'Ao Excluir Registro' },
-                          { id: 'manual', label: 'Ação Manual (Botão na Grid)' },
+                          { id: 'manual', label: 'Ação Customizada (Botão da Interface)' },
                           { id: 'scheduled', label: 'Agendado (Cron Job)' }
                         ].map(evt => {
                           const isChecked = triggerTypes.includes(evt.id);
@@ -755,6 +882,269 @@ function BpmCanvasContent({
                         )}
                       </>
                     )}
+
+                    {triggerTypes.includes('manual') && (() => {
+                      const useCasesWithActions = localViews
+                        .map(v => ({
+                          ...v,
+                          layout_config: typeof v.layout_config === 'string' ? JSON.parse(v.layout_config) : (v.layout_config || {})
+                        }))
+                        .filter(v => v.layout_config?.custom_actions && Array.isArray(v.layout_config.custom_actions) && v.layout_config.custom_actions.length > 0)
+                        .map(v => ({
+                          id: v.id,
+                          name: v.name,
+                          actions: v.layout_config.custom_actions.map((act: any) => {
+                            const activeContexts: string[] = act.contexts
+                              ? (Array.isArray(act.contexts) ? act.contexts : [act.contexts])
+                              : (act.context ? [act.context] : ['row']);
+                            
+                            const contextLabels = activeContexts.map(c => {
+                              if (c === 'row') return 'Ação de Linha';
+                              if (c === 'bulk') return 'Ação Global';
+                              if (c === 'master_top') return 'Global (Mestre)';
+                              if (c === 'detail_top') return 'Global (Detalhe)';
+                              if (c === 'detail_row') return 'Linha (Detalhe)';
+                              if (c === 'form') return 'Formulário';
+                              return c;
+                            }).join(', ');
+
+                            return {
+                              id: act.id || act.label,
+                              name: act.label || 'Ação Sem Nome',
+                              context: contextLabels || 'Ação Global',
+                              icon: act.icon || 'Zap',
+                              color: act.color || 'indigo',
+                              linked_workflows: act.linked_bpm_workflows || []
+                            }
+                          })
+                        }));
+
+                      const toggleCustomAction = async (viewId: string, actId: string) => {
+                        if (!currentWorkflowId || currentWorkflowId === 'new') {
+                          toast('Salve o fluxo primeiro antes de vincular botões.', 'error');
+                          return;
+                        }
+
+                        // Encontra a view e ação
+                        const viewIndex = localViews.findIndex(v => v.id === viewId);
+                        if (viewIndex === -1) return;
+                        const view = localViews[viewIndex];
+                        const layoutConfig = typeof view.layout_config === 'string' ? JSON.parse(view.layout_config) : (view.layout_config || {});
+                        const customActions = layoutConfig.custom_actions || [];
+                        const actionIndex = customActions.findIndex((a: any) => (a.id || a.label) === actId);
+                        if (actionIndex === -1) return;
+
+                        const action = customActions[actionIndex];
+                        const linkedWorkflows = action.linked_bpm_workflows || [];
+                        const isLinked = linkedWorkflows.includes(currentWorkflowId);
+                        
+                        const newLinkedWorkflows = isLinked
+                          ? linkedWorkflows.filter((id: string) => id !== currentWorkflowId)
+                          : [...linkedWorkflows, currentWorkflowId];
+
+                        // Atualiza objeto em memória otimisticamente
+                        const newActions = [...customActions];
+                        newActions[actionIndex] = { ...action, linked_bpm_workflows: newLinkedWorkflows };
+                        const newLayoutConfig = { ...layoutConfig, custom_actions: newActions };
+                        
+                        const newLocalViews = [...localViews];
+                        newLocalViews[viewIndex] = { ...view, layout_config: newLayoutConfig };
+                        setLocalViews(newLocalViews);
+
+                        // Salva no banco de dados
+                        try {
+                          const { error } = await supabase
+                            .from('ui_views')
+                            .update({ layout_config: newLayoutConfig })
+                            .eq('id', viewId);
+                          
+                          if (error) throw error;
+                          toast(isLinked ? 'Botão desvinculado do fluxo!' : 'Botão vinculado ao fluxo!', 'success');
+                        } catch (err: any) {
+                          // Rollback visual em caso de erro
+                          setLocalViews(localViews);
+                          toast('Erro ao vincular botão: ' + err.message, 'error');
+                        }
+                      };
+
+                      return (
+                      <div className="space-y-4 pt-4 border-t border-emerald-500/20 mt-4">
+                        <h5 className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Ações Customizadas Acionadoras</h5>
+                        <p className="text-[9px] text-neutral-500 leading-relaxed mb-4">
+                          Selecione quais botões da interface (criados no Studio) irão disparar este fluxo ao serem clicados.
+                        </p>
+                        
+                        <div className="space-y-3">
+                          {useCasesWithActions.length === 0 && (
+                            <div className="text-center py-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-lg border border-neutral-100 dark:border-neutral-800">
+                              <p className="text-[10px] text-neutral-500">Nenhuma ação customizada encontrada nos Casos de Uso deste projeto.</p>
+                            </div>
+                          )}
+
+                          {useCasesWithActions.map(uc => (
+                            <div key={uc.id} className="bg-neutral-50 dark:bg-neutral-900/50 rounded-lg p-2 border border-neutral-100 dark:border-neutral-800">
+                              <h6 className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mb-2 px-1 flex items-center gap-1">
+                                <Box className="w-3 h-3" /> {uc.name}
+                              </h6>
+                              <div className="space-y-1">
+                                {uc.actions.map(act => {
+                                  const isChecked = act.linked_workflows.includes(currentWorkflowId || '');
+                                  return (
+                                    <label key={act.id} className="flex items-center gap-3 p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md cursor-pointer transition-colors group/action">
+                                      <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all flex-shrink-0 ${isChecked ? "bg-emerald-500 border-emerald-500 text-white" : "border-neutral-300 dark:border-neutral-600 group-hover/action:border-emerald-400"}`}>
+                                        {isChecked && <Check className="w-3 h-3" />}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-bold text-neutral-700 dark:text-neutral-300 truncate leading-none mb-1">{act.name}</p>
+                                        <p className="text-[9px] text-neutral-400 truncate uppercase tracking-widest leading-none">{act.context}</p>
+                                      </div>
+                                      
+                                      <input 
+                                        type="checkbox" 
+                                        className="hidden"
+                                        checked={isChecked}
+                                        onChange={() => toggleCustomAction(uc.id, act.id)}
+                                      />
+
+                                    </label>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      )
+                    })()}
+
+                    {triggerTypes.includes('scheduled') && (() => {
+                      const rawSchedules = selectedNode.data?.triggerSchedules as any[];
+                      // Fallback para quem já tinha configurado antes (retrocompatibilidade) ou novo
+                      const schedules = rawSchedules || [{
+                        id: 'default_1',
+                        type: (selectedNode.data?.triggerScheduleType as string) || 'recurring',
+                        days: (selectedNode.data?.triggerScheduleDays as string[]) || [],
+                        time: (selectedNode.data?.triggerScheduleTime as string) || '',
+                        dateTime: (selectedNode.data?.triggerScheduleDateTime as string) || ''
+                      }];
+
+                      const updateSchedule = (id: string, newProps: any) => {
+                        const newSchedules = schedules.map(s => s.id === id ? { ...s, ...newProps } : s);
+                        updateNodeData(selectedNode.id, { triggerSchedules: newSchedules });
+                      };
+
+                      const removeSchedule = (id: string) => {
+                        const newSchedules = schedules.filter(s => s.id !== id);
+                        updateNodeData(selectedNode.id, { triggerSchedules: newSchedules.length > 0 ? newSchedules : schedules }); // Previne remover o último se quiser
+                      };
+
+                      const addSchedule = () => {
+                        updateNodeData(selectedNode.id, { 
+                          triggerSchedules: [...schedules, { id: Math.random().toString(), type: 'recurring', days: [], time: '', dateTime: '' }] 
+                        });
+                      };
+
+                      return (
+                      <div className="space-y-4 pt-4 border-t border-emerald-500/20 mt-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Configuração de Agendamento</h5>
+                          <button
+                            onClick={addSchedule}
+                            className="text-[9px] bg-emerald-500 text-white px-2 py-1 rounded font-bold uppercase tracking-widest hover:bg-emerald-600 transition-colors shadow-sm shadow-emerald-500/30"
+                          >
+                            + Agendamento
+                          </button>
+                        </div>
+
+                        <div className="space-y-3">
+                          {schedules.map((sched, index) => (
+                            <div key={sched.id} className="relative group/sched border border-emerald-100 dark:border-emerald-900/30 rounded-xl p-3 bg-white dark:bg-neutral-950 shadow-sm">
+                              {schedules.length > 1 && (
+                                <button
+                                  onClick={() => removeSchedule(sched.id)}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover/sched:opacity-100 transition-opacity shadow z-10"
+                                  title="Remover Agendamento"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+
+                              <div className="flex bg-neutral-100 dark:bg-neutral-800 p-1 rounded-lg mb-3">
+                                <button
+                                  onClick={() => updateSchedule(sched.id, { type: 'recurring' })}
+                                  className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors ${sched.type === 'recurring' ? 'bg-white dark:bg-neutral-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}
+                                >
+                                  Recorrente
+                                </button>
+                                <button
+                                  onClick={() => updateSchedule(sched.id, { type: 'once' })}
+                                  className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors ${sched.type === 'once' ? 'bg-white dark:bg-neutral-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}
+                                >
+                                  Apenas uma Vez
+                                </button>
+                              </div>
+
+                              <div className="mb-3">
+                                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-2">Dias da Semana</label>
+                                <div className="flex flex-wrap gap-2">
+                                  {[
+                                    { val: '0', label: 'Dom' },
+                                    { val: '1', label: 'Seg' },
+                                    { val: '2', label: 'Ter' },
+                                    { val: '3', label: 'Qua' },
+                                    { val: '4', label: 'Qui' },
+                                    { val: '5', label: 'Sex' },
+                                    { val: '6', label: 'Sáb' },
+                                  ].map(day => {
+                                    const isSelected = sched.days.includes(day.val);
+                                    return (
+                                      <button
+                                        key={day.val}
+                                        onClick={() => {
+                                          const newDays = isSelected 
+                                            ? sched.days.filter((d: string) => d !== day.val)
+                                            : [...sched.days, day.val];
+                                          updateSchedule(sched.id, { days: newDays });
+                                        }}
+                                        className={`w-9 h-9 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${isSelected ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30' : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-emerald-400 hover:text-emerald-500'}`}
+                                      >
+                                        {day.label}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                                {sched.days.length === 0 && (
+                                  <p className="text-[9px] text-neutral-400 mt-2 italic">* Executa todos os dias.</p>
+                                )}
+                              </div>
+
+                              <div className="mb-2">
+                                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Horário (HH:mm)</label>
+                                <input 
+                                  type="time" 
+                                  value={sched.time} 
+                                  onChange={(e) => updateSchedule(sched.id, { time: e.target.value })}
+                                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500 font-mono"
+                                />
+                              </div>
+
+                              {sched.type === 'once' && (
+                                <div className="pt-3 mt-3 border-t border-emerald-100 dark:border-emerald-900/30">
+                                  <label className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest block mb-1">Ou defina Data e Hora Específica</label>
+                                  <input 
+                                    type="datetime-local" 
+                                    value={sched.dateTime} 
+                                    onChange={(e) => updateSchedule(sched.id, { dateTime: e.target.value })}
+                                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500 font-mono"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      )
+                    })()}
                   </div>
                 )})()}
 
@@ -1193,122 +1583,8 @@ function BpmCanvasContent({
                           </div>
                         )}
 
-                        {/* Filtros ONDE (WHERE) para Update / Delete / Email Dinâmico */}
-                        {(['update', 'delete'].includes(selectedNode.data?.actionType as string) || (selectedNode.data?.actionType === 'email' && selectedNode.data?.emailRecipientType === 'table')) && !!selectedNode.data?.actionModelId && (
-                          <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-xl p-3 shadow-sm mt-4">
-                            <div className="flex items-center justify-between mb-3 pb-2 border-b border-red-100 dark:border-red-900/50">
-                              <span className="text-[9px] font-bold text-red-500 uppercase tracking-widest">Filtros (Quais registros?)</span>
-                              <button
-                                onClick={() => {
-                                  updateNodeData(selectedNode.id, { 
-                                    actionFilters: [...actionFilters, { field: '', operator: '==', value: '' }]
-                                  });
-                                }}
-                                className="text-[9px] bg-red-500 text-white px-2 py-1 rounded font-bold uppercase tracking-widest hover:bg-red-600 transition-colors"
-                              >
-                                + Filtro
-                              </button>
-                            </div>
-
-                            {actionFilters.length === 0 && (
-                              <div className="text-[9px] text-red-400 text-center py-2 italic font-semibold">
-                                CUIDADO: Nenhum filtro definido. Isso afetará TODOS os registros.
-                              </div>
-                            )}
-
-                            <div className="space-y-3">
-                              {actionFilters.map((filt: any, index: number) => (
-                                <div key={index} className="relative group/filt border border-red-100 dark:border-red-900/30 rounded p-2 bg-white dark:bg-neutral-950">
-                                  <button
-                                    onClick={() => {
-                                      const newFilters = [...actionFilters];
-                                      newFilters.splice(index, 1);
-                                      updateNodeData(selectedNode.id, { actionFilters: newFilters });
-                                    }}
-                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover/filt:opacity-100 transition-opacity shadow z-10"
-                                    title="Remover filtro"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                  
-                                  <div className="grid grid-cols-[1fr_auto] gap-2 mb-2">
-                                    <select 
-                                      value={filt.field || ''} 
-                                      onChange={(e) => {
-                                        const newFilters = [...actionFilters];
-                                        newFilters[index].field = e.target.value;
-                                        updateNodeData(selectedNode.id, { actionFilters: newFilters });
-                                      }}
-                                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-red-500"
-                                    >
-                                      <option value="">Campo...</option>
-                                      {dbFields.filter(f => f.model_id === selectedNode.data?.actionModelId).map(f => (
-                                        <option key={f.id} value={f.db_column_name || f.name}>{f.display_name || f.db_column_name || f.name}</option>
-                                      ))}
-                                    </select>
-
-                                    <select 
-                                      value={filt.operator || '=='} 
-                                      onChange={(e) => {
-                                        const newFilters = [...actionFilters];
-                                        newFilters[index].operator = e.target.value;
-                                        updateNodeData(selectedNode.id, { actionFilters: newFilters });
-                                      }}
-                                      className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-red-500 w-[60px]"
-                                    >
-                                      <option value="==">==</option>
-                                      <option value="!=">!=</option>
-                                      <option value=">">&gt;</option>
-                                      <option value="<">&lt;</option>
-                                    </select>
-                                  </div>
-
-                                  <div className="flex gap-1">
-                                    <input 
-                                      type="text" 
-                                      placeholder="Ex: {{trigger.id}} ou valor fixo"
-                                      value={filt.value || ''} 
-                                      onChange={(e) => {
-                                        const newFilters = [...actionFilters];
-                                        newFilters[index].value = e.target.value;
-                                        updateNodeData(selectedNode.id, { actionFilters: newFilters });
-                                      }}
-                                      className="flex-1 min-w-0 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-red-500"
-                                    />
-                                    <select
-                                      value=""
-                                      onChange={(e) => {
-                                        if (!e.target.value) return;
-                                        const newFilters = [...actionFilters];
-                                        newFilters[index].value = (newFilters[index].value || '') + `{{${e.target.value}}}`;
-                                        updateNodeData(selectedNode.id, { actionFilters: newFilters });
-                                        e.target.value = '';
-                                      }}
-                                      className="w-8 shrink-0 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 text-transparent rounded px-1 py-1 focus:ring-1 focus:ring-red-500 cursor-pointer text-[10px] appearance-none"
-                                      style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%23ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
-                                      title="Inserir Variável"
-                                    >
-                                      <option value="" className="text-neutral-900 dark:text-neutral-100">+ Var</option>
-                                      {[...dbModels].map(m => {
-                                        const fields = dbFields.filter(f => f.model_id === m.id);
-                                        if (fields.length === 0) return null;
-                                        return (
-                                          <optgroup key={m.id} label={m.display_name || m.db_table_name || m.name} className="text-left text-indigo-600 dark:text-indigo-400 normal-case tracking-normal text-sm font-bold bg-neutral-50 dark:bg-neutral-900">
-                                            {fields.map(f => (
-                                              <option key={f.id} value={`${m.db_table_name || m.name}.${f.db_column_name || f.name}`} className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">
-                                                {f.display_name || f.db_column_name || f.name}
-                                              </option>
-                                            ))}
-                                          </optgroup>
-                                        );
-                                      })}
-                                    </select>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                        {/* Filtros ONDE (WHERE) para Update / Delete */}
+                        {['update', 'delete'].includes(selectedNode.data?.actionType as string) && !!selectedNode.data?.actionModelId && renderActionFilters()}
                       </div>
                       )
                     })()}
@@ -1411,6 +1687,7 @@ function BpmCanvasContent({
                             <div className="text-[10px] text-neutral-500 italic">
                               Dica: Defina Filtros (abaixo) para não enviar e-mails a todos os registros.
                             </div>
+                            {renderActionFilters()}
                           </div>
                         )}
 
@@ -1682,9 +1959,21 @@ function BpmCanvasContent({
                 <span className="text-sm font-bold text-neutral-900 dark:text-white">Enviar para Todos</span>
               </label>
 
+              {groupUsers.length > 0 && (
+                <div className="pt-2 pb-1 border-t border-neutral-100 dark:border-neutral-800">
+                  <input
+                    type="text"
+                    placeholder="Buscar usuário por nome ou e-mail..."
+                    value={modalSearchTerm}
+                    onChange={(e) => setModalSearchTerm(e.target.value)}
+                    className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+              )}
+
               {groupUsers.length > 0 ? (
-                <div className="pt-2 space-y-2 border-t border-neutral-100 dark:border-neutral-800">
-                  {groupUsers.map(u => {
+                <div className="pt-2 space-y-2">
+                  {groupUsers.filter(u => u.name?.toLowerCase().includes(modalSearchTerm.toLowerCase()) || u.email?.toLowerCase().includes(modalSearchTerm.toLowerCase())).map(u => {
                     const isChecked = selectedUsersInModal === 'all' || (Array.isArray(selectedUsersInModal) && selectedUsersInModal.includes(u.id));
                     return (
                       <label key={u.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${isChecked && selectedUsersInModal !== 'all' ? 'bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50'}`}>

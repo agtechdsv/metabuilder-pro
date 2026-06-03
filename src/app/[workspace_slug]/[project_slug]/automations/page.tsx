@@ -116,7 +116,7 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
   }
 
   // 5. Busca dados de workflows e models (com campos) para o BpmCanvas (evita problemas de RLS no cliente)
-  const [workflowsRes, modelsRes] = await Promise.all([
+  const [workflowsRes, modelsRes, viewsRes] = await Promise.all([
     supabase
       .from('bpm_workflows')
       .select('*')
@@ -126,11 +126,23 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
     supabase
       .from('models')
       .select('*, fields(*)')
+      .eq('project_id', project.id),
+    supabase
+      .from('ui_views')
+      .select('id, name, layout_config, view_type')
       .eq('project_id', project.id)
+      .eq('view_type', 'advanced_use_case')
   ]);
 
   const initialWorkflows = workflowsRes.data || [];
   const initialModels = modelsRes.data || [];
+  const initialViews = viewsRes.data || [];
+  
+  if (viewsRes.error) {
+    console.error("=== VIEWS RES ERROR ===", viewsRes.error);
+  } else {
+    console.log("=== VIEWS RES DATA LENGTH ===", initialViews.length);
+  }
 
   const canvasTitle = useCaseName ? `Automações: ${useCaseName}` : (automationsView?.name || 'Aprovação de Pedidos');
 
@@ -143,6 +155,7 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
         useCaseId={useCaseId || ''}
         initialWorkflows={initialWorkflows}
         initialModels={initialModels}
+        initialViews={initialViews}
       />
     </div>
   );
