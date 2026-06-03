@@ -264,7 +264,7 @@ function BpmCanvasContent({
     setGroupUsers([]);
     setModalSearchTerm('');
     
-    const currentGroupsUsers = selectedNode?.data?.emailGroupsUsers || {};
+    const currentGroupsUsers: any = selectedNode?.data?.emailGroupsUsers || {};
     const currentSelection = currentGroupsUsers[grupo.name];
     setSelectedUsersInModal(currentSelection || 'all');
 
@@ -987,7 +987,7 @@ function BpmCanvasContent({
                                 <Box className="w-3 h-3" /> {uc.name}
                               </h6>
                               <div className="space-y-1">
-                                {uc.actions.map(act => {
+                                {uc.actions.map((act: any) => {
                                   const isChecked = act.linked_workflows.includes(currentWorkflowId || '');
                                   return (
                                     <label key={act.id} className="flex items-center gap-3 p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md cursor-pointer transition-colors group/action">
@@ -1616,7 +1616,7 @@ function BpmCanvasContent({
                               <div className="text-[10px] text-neutral-500 mb-2 leading-tight">Selecione os grupos de acesso. O e-mail será enviado a todos os usuários pertencentes a eles.</div>
                               <div className="flex flex-wrap gap-2">
                                 {roles.length > 0 ? roles.map(grupo => {
-                                  const currentGroupsUsers = selectedNode.data?.emailGroupsUsers || {};
+                                  const currentGroupsUsers: any = selectedNode.data?.emailGroupsUsers || {};
                                   const selection = currentGroupsUsers[grupo.name];
                                   const isSelected = !!selection;
                                   
@@ -2012,7 +2012,7 @@ function BpmCanvasContent({
             <button
               onClick={() => {
                 if (selectedNode && selectedGroupForModal) {
-                  const currentGroupsUsers = { ...(selectedNode.data?.emailGroupsUsers || {}) };
+                  const currentGroupsUsers: Record<string, any> = { ...(selectedNode.data?.emailGroupsUsers || {}) };
                   delete currentGroupsUsers[selectedGroupForModal.name];
                   updateNodeData(selectedNode.id, { emailGroupsUsers: currentGroupsUsers });
                   setSelectedGroupForModal(null);
@@ -2032,7 +2032,7 @@ function BpmCanvasContent({
               <button
                 onClick={() => {
                   if (selectedNode && selectedGroupForModal) {
-                    const currentGroupsUsers = { ...(selectedNode.data?.emailGroupsUsers || {}) };
+                    const currentGroupsUsers: Record<string, any> = { ...(selectedNode.data?.emailGroupsUsers || {}) };
                     currentGroupsUsers[selectedGroupForModal.name] = selectedUsersInModal;
                     updateNodeData(selectedNode.id, { emailGroupsUsers: currentGroupsUsers });
                     setSelectedGroupForModal(null);

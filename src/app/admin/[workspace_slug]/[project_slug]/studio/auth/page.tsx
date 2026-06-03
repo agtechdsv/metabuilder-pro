@@ -368,7 +368,7 @@ export default function AuthSettingsPage() {
             setRoles(mappedRoles)
 
             if (mappedRoles.length > 0) {
-              const { data: dbRolePerms } = await supabase.from('project_role_permissions').select('*').in('role_id', mappedRoles.map(r => r.id))
+              const { data: dbRolePerms } = await supabase.from('project_role_permissions').select('*').in('role_id', mappedRoles.map((r: any) => r.id))
               if (dbRolePerms) setRolePermissions(dbRolePerms)
             }
 
@@ -392,7 +392,7 @@ export default function AuthSettingsPage() {
           if (dbRoles) {
             setRoles(dbRoles)
             if (dbRoles.length > 0) {
-              const { data: dbRolePerms } = await supabase.from('project_role_permissions').select('*').in('role_id', dbRoles.map(r => r.id))
+              const { data: dbRolePerms } = await supabase.from('project_role_permissions').select('*').in('role_id', dbRoles.map((r: any) => r.id))
               if (dbRolePerms) setRolePermissions(dbRolePerms)
             }
           }

@@ -56,7 +56,7 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
     .maybeSingle()
     
   if (config) {
-    project.auth_config = {
+    (project as any).auth_config = {
       ...config,
       sync_legacy_groups: config.ui_config?.sync_legacy_groups || false,
       db_groups_table: config.ui_config?.db_groups_table || '',

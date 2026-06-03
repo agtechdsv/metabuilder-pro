@@ -4154,12 +4154,14 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
 }
 
 function StepActions({ config, setConfig, models, useCases, isDownloadsActive, bpmWorkflows }: any) {
+  const params = useParams()
+  const { workspace_slug, project_slug } = params as { workspace_slug: string, project_slug: string }
   const { t } = useI18n()
   const [isActionModalOpen, setIsActionModalOpen] = useState(false)
   const [editingAction, setEditingAction] = useState<any>(null)
   const [editingActionIndex, setEditingActionIndex] = useState<number | null>(null)
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false)
-  const [activeModalTab, setActiveModalTab] = useState<'general' | 'trigger' | 'appearance'>('general')
+  const [activeModalTab, setActiveModalTab] = useState<'general' | 'trigger' | 'appearance' | 'bpm'>('general')
   const [selectedButtonConfig, setSelectedButtonConfig] = useState<any>(null)
   const [isButtonPropertiesOpen, setIsButtonPropertiesOpen] = useState(false)
 
@@ -5054,7 +5056,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                           </Link>
                         </div>
                       ) : (
-                        bpmWorkflows.map(workflow => {
+                        bpmWorkflows.map((workflow: any) => {
                           const linkedWorkflows = editingAction.linked_bpm_workflows || [];
                           const isChecked = linkedWorkflows.includes(workflow.id);
                           return (
