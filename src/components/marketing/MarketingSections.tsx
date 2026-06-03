@@ -403,6 +403,77 @@ export function MarketingSections() {
         </div>
       </section>
 
+      {/* BPM & Automations Showcase */}
+      <section className="max-w-7xl mx-auto py-20 border-b border-neutral-100 dark:border-neutral-900">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+          
+          <div className="relative order-1 lg:order-1">
+            <div className="p-8 rounded-[3rem] bg-gradient-to-br from-emerald-500/10 to-teal-500/5 dark:from-emerald-900/20 dark:to-teal-900/10 border border-emerald-500/20 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-20">
+                <svg className="w-32 h-32 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={0.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+
+              <div className="space-y-6 relative z-10">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-xl shadow-emerald-500/30">
+                  <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="h-2 w-1/3 bg-emerald-500/20 rounded-full"></div>
+                  <div className="h-2 w-2/3 bg-neutral-200 dark:bg-neutral-800 rounded-full"></div>
+                  <div className="h-2 w-1/2 bg-neutral-200 dark:bg-neutral-800 rounded-full"></div>
+                </div>
+
+                <div className="pt-6 border-t border-emerald-500/20">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white shadow-lg z-10">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg>
+                    </div>
+                    <div className="flex-1 h-px bg-gradient-to-r from-emerald-500/50 to-transparent"></div>
+                    <div className="px-4 py-2 bg-white dark:bg-neutral-900 rounded-xl text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-sm">
+                      Two-Way Sync
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-8 order-2 lg:order-2">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              Motor de Workflows
+            </div>
+            <h2 className="text-4xl md:text-6xl font-black tracking-tighter dark:text-white leading-[1]">
+              A Mágica do <br />
+              <span className="text-emerald-600">BPM & Automação</span>
+            </h2>
+            <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
+              Crie lógicas de negócios complexas desenhando diagramas visuais. Sincronize botões da sua interface diretamente com fluxos invisíveis executados em background. Tudo perfeitamente integrado.
+            </p>
+            <div className="flex gap-4">
+              <div className="flex-1 p-6 rounded-3xl bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
+                <h4 className="text-2xl font-black text-emerald-600 mb-2">100%</h4>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Visual Node-Based</p>
+              </div>
+              <div className="flex-1 p-6 rounded-3xl bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
+                <h4 className="text-2xl font-black text-indigo-600 mb-2">API</h4>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Eventos & Cron Jobs</p>
+              </div>
+            </div>
+            <Link
+              href="/bpm"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:scale-105 shadow-xl shadow-emerald-500/20"
+            >
+              Descubra a Mágica
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <section className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
         <div className="p-12 rounded-[2.5rem] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 space-y-6">
           <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-xl">

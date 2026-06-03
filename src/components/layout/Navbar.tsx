@@ -68,8 +68,9 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
               </h1>
             </Link>
 
-            {(pathname === '/' || pathname?.startsWith('/features')) && (
+            {(pathname === '/' || pathname?.startsWith('/features') || pathname?.startsWith('/bpm')) && (
               <nav className="hidden lg:flex items-center gap-6">
+                <Link href="/bpm" className="text-xs font-black tracking-widest text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors uppercase">BPM & Automação</Link>
                 <Link href="/features/speed" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.speed')}</Link>
                 <Link href="/features/integration" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.integration')}</Link>
                 <Link href="/features/branding" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.branding')}</Link>
