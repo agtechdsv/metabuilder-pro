@@ -23,7 +23,7 @@ import dagre from 'dagre';
 
 import { FlowSidebar } from './FlowSidebar';
 import { TriggerNode, ActionNode, ConditionNode } from './nodes/CustomNodes';
-import { Save, Play, Wand2, X, ArrowLeft, Loader2, Plus, Trash2, Check } from 'lucide-react';
+import { Save, Play, Wand2, X, ArrowLeft, Loader2, Plus, Trash2, Check, Edit2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Modal } from '@/components/ui/Modal';
 import ButtonEdge from './edges/ButtonEdge';
@@ -88,7 +88,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
 interface BpmCanvasProps {
   title?: string;
   defaultAutoAlign?: boolean;
-  projectId?: string;
+  project?: any;
   useCaseId?: string;
   initialWorkflows?: any[];
   initialModels?: any[];
@@ -97,11 +97,12 @@ interface BpmCanvasProps {
 function BpmCanvasContent({ 
   title = 'Aprovação de Pedidos', 
   defaultAutoAlign = false, 
-  projectId, 
+  project, 
   useCaseId,
   initialWorkflows = [],
   initialModels = []
 }: BpmCanvasProps) {
+  const projectId = project?.id;
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const supabase = createClient();
@@ -121,7 +122,14 @@ function BpmCanvasContent({
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [enums, setEnums] = useState<any[]>([]);
-  const [cursorPos, setCursorPos] = useState<{ field: 'actionSubject' | 'actionBody', start: number, end: number } | null>(null);
+  const [roles, setRoles] = useState<any[]>([]);
+  const [cursorPos, setCursorPos] = useState<{ field: 'actionSubject' | 'actionBody' | 'webhookBody', start: number, end: number } | null>(null);
+  
+  // Modal states
+  const [selectedGroupForModal, setSelectedGroupForModal] = useState<{ id: string, name: string } | null>(null);
+  const [groupUsers, setGroupUsers] = useState<any[]>([]);
+  const [isLoadingGroupUsers, setIsLoadingGroupUsers] = useState(false);
+  const [selectedUsersInModal, setSelectedUsersInModal] = useState<string[] | 'all'>('all');
 
   // Buscar enumerations
   useEffect(() => {
@@ -134,7 +142,90 @@ function BpmCanvasContent({
       if (data) setEnums(data);
     };
     fetchEnums();
-  }, [projectId]);
+  }, [projectId, supabase]);
+
+  // Buscar Roles
+  useEffect(() => {
+    let unmounted = false;
+    if (!project) return;
+    const fetchRoles = async () => {
+      const authConfig = project.auth_config || {};
+      if (authConfig.sync_legacy_groups && authConfig.db_groups_table) {
+        try {
+          const currentModel = initialModels.find(m => m.db_table_name === authConfig.db_groups_table);
+          const schemaName = currentModel?.db_schema_name || 'public';
+          
+          const tunnelQuery = () => new Promise<any>((resolve, reject) => {
+            const channelName = `tunnel:${project.id}`;
+            const queryId = crypto.randomUUID();
+            let isFinished = false;
+            const channel = supabase.channel(channelName);
+            
+            const cleanup = () => {
+              if (isFinished) return;
+              isFinished = true;
+              try { supabase.removeChannel(channel) } catch(e){}
+            };
+
+            channel.on('broadcast', { event: `query_result_${queryId}` }, (response: any) => {
+              cleanup();
+              if (response.payload?.success) {
+                resolve(response.payload.data);
+              } else {
+                reject(new Error(response.payload?.error || 'Erro'));
+              }
+            });
+
+            setTimeout(() => {
+              if (unmounted || isFinished) return;
+              
+              const sendQuery = async () => {
+                await channel.send({
+                  type: 'broadcast', event: 'sql_query',
+                  payload: { action: 'select', table: authConfig.db_groups_table, schemaName, limit: 100, offset: 0, queryId, token: project.secret_token }
+                });
+              };
+
+              if (channel.state === 'joined') {
+                sendQuery();
+              } else {
+                channel.subscribe(async (status) => {
+                  if (unmounted || isFinished) return;
+                  if (status === 'SUBSCRIBED') {
+                    await sendQuery();
+                  }
+                });
+              }
+            }, 200);
+
+            setTimeout(() => {
+              if (!isFinished) {
+                cleanup();
+                if (!unmounted) reject(new Error('Timeout'));
+              }
+            }, 6000);
+          });
+
+          const data = await tunnelQuery();
+          if (unmounted) return;
+          const pkField = currentModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id';
+          const nameField = authConfig.db_groups_name_column || 'name';
+          const mappedRoles = data.map((r: any) => ({
+            id: r[pkField]?.toString() || crypto.randomUUID(),
+            name: r[nameField] || 'Grupo'
+          }));
+          setRoles(mappedRoles);
+        } catch(err) {
+          if (!unmounted) console.error(err);
+        }
+      } else {
+        const { data: dbRoles } = await supabase.from('project_roles').select('*').eq('project_id', project.id);
+        if (dbRoles && !unmounted) setRoles(dbRoles);
+      }
+    };
+    fetchRoles();
+    return () => { unmounted = true; };
+  }, [project, initialModels, supabase]);
 
   // Handle changing workflow in dropdown
   useEffect(() => {
@@ -162,6 +253,84 @@ function BpmCanvasContent({
 
   const selectedNode = nodes.find(n => n.id === selectedNodeId);
 
+  const openGroupUsersModal = async (grupo: { id: string, name: string }) => {
+    setSelectedGroupForModal(grupo);
+    setIsLoadingGroupUsers(true);
+    setGroupUsers([]);
+    
+    const currentGroupsUsers = selectedNode?.data?.emailGroupsUsers || {};
+    const currentSelection = currentGroupsUsers[grupo.name];
+    setSelectedUsersInModal(currentSelection || 'all');
+
+    try {
+      const authConfig = project?.auth_config || {};
+      const currentModel = initialModels.find(m => m.db_table_name === authConfig.db_table_name);
+      const pkField = currentModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id';
+      const emailField = authConfig.db_email_column || 'email';
+      const nameField = authConfig.db_name_column || 'name';
+
+      if (authConfig.sync_legacy_groups && authConfig.db_table_name) {
+        let sql = '';
+        if (authConfig.db_user_groups_type === 'n_to_n') {
+          const urTable = authConfig.db_user_roles_table;
+          const userCol = authConfig.db_user_roles_user_id_column;
+          const roleCol = authConfig.db_user_roles_role_id_column;
+          sql = `SELECT u.* FROM "${authConfig.db_table_name}" u INNER JOIN "${urTable}" ur ON CAST(u."${pkField}" AS text) = CAST(ur."${userCol}" AS text) WHERE CAST(ur."${roleCol}" AS text) = '${grupo.id}'`;
+        } else {
+          const roleCol = authConfig.db_user_role_column;
+          sql = `SELECT * FROM "${authConfig.db_table_name}" WHERE CAST("${roleCol}" AS text) = '${grupo.id}'`;
+        }
+
+        const schemaName = currentModel?.db_schema_name || 'public';
+
+        const tunnelQuery = () => new Promise<any>((resolve, reject) => {
+          const channelName = `tunnel:${project!.id}`;
+          const queryId = crypto.randomUUID();
+          let isFinished = false;
+          const channel = supabase.channel(channelName);
+          const cleanup = () => { if (isFinished) return; isFinished = true; try { supabase.removeChannel(channel) } catch(e){} };
+          channel.on('broadcast', { event: `query_result_${queryId}` }, (response: any) => {
+            cleanup();
+            if (response.payload?.success) { resolve(response.payload.data); } else { reject(new Error(response.payload?.error || 'Erro')); }
+          });
+          setTimeout(() => {
+            if (isFinished) return;
+            const sendQ = async () => {
+              await channel.send({ type: 'broadcast', event: 'sql_query', payload: { action: 'select', schemaName, query: sql, limit: 1000, offset: 0, queryId, token: project!.secret_token } });
+            };
+            if (channel.state === 'joined') { sendQ(); } else {
+              channel.subscribe(async (status) => { if (isFinished) return; if (status === 'SUBSCRIBED') await sendQ(); });
+            }
+          }, 200);
+          setTimeout(() => { if (!isFinished) { cleanup(); reject(new Error('Timeout')); } }, 6000);
+        });
+        
+        const data = await tunnelQuery();
+        setGroupUsers(data.map((u: any) => ({
+          id: u[pkField]?.toString(),
+          name: u[nameField] || u[emailField] || 'Usuário',
+          email: u[emailField] || ''
+        })));
+      } else {
+        const { data: dbUsers } = await supabase.from('project_users').select('*').eq('project_id', project!.id);
+        const { data: dbUserRoles } = await supabase.from('project_user_roles').select('*').eq('project_id', project!.id).eq('role_id', grupo.id);
+        const userIds = dbUserRoles?.map(ur => ur.user_id) || [];
+        const filteredUsers = (dbUsers || []).filter(u => userIds.includes(u.id));
+        
+        setGroupUsers(filteredUsers.map(u => ({
+          id: u.id,
+          name: u.name || u.email || 'Usuário',
+          email: u.email
+        })));
+      }
+    } catch (err) {
+      console.error(err);
+      toast('Erro ao buscar usuários do grupo', 'error');
+    } finally {
+      setIsLoadingGroupUsers(false);
+    }
+  };
+
   const handleAutoAlign = useCallback(() => {
     const layouted = getLayoutedElements(nodes, edges);
     setNodes([...layouted.nodes]);
@@ -169,7 +338,6 @@ function BpmCanvasContent({
     setTimeout(() => fitView({ padding: 0.2, duration: 800, maxZoom: 1.5 }), 50);
   }, [nodes, edges, setNodes, setEdges, fitView]);
 
-  // Optionally auto-align on first load if setting is true
   useEffect(() => {
     if (defaultAutoAlign && nodes.length > 1) {
       handleAutoAlign();
@@ -198,8 +366,6 @@ function BpmCanvasContent({
       if (!reactFlowInstance || !reactFlowWrapper.current) return;
 
       const type = event.dataTransfer.getData('application/reactflow');
-      const label = event.dataTransfer.getData('application/reactflow-label');
-
       if (typeof type === 'undefined' || !type) {
         return;
       }
@@ -213,14 +379,14 @@ function BpmCanvasContent({
         id: getId(),
         type,
         position,
-        data: {}, // Inicialmente vazio, o drawer preencherá tudo
+        data: {},
       };
       
       toast(`Nó ${type} solto no canvas!`, 'success');
 
       setNodes((nds) => nds.concat(newNode));
     },
-    [reactFlowInstance, setNodes, defaultAutoAlign, handleAutoAlign]
+    [reactFlowInstance, setNodes]
   );
 
   const handleSave = async () => {
@@ -266,7 +432,6 @@ function BpmCanvasContent({
         if (error) throw error;
         toast('Fluxo atualizado com sucesso!', 'success');
         
-        // Update local state
         setWorkflows(prev => prev.map(w => w.id === currentWorkflowId ? { ...w, flow_data: flow } : w));
       }
     } catch (err: any) {
@@ -274,6 +439,29 @@ function BpmCanvasContent({
       toast('Erro ao salvar o fluxo.', 'error');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleRename = async () => {
+    const wf = workflows.find(w => w.id === currentWorkflowId);
+    if (!wf) return;
+    
+    const newName = window.prompt("Nome do fluxo:", wf.name);
+    if (!newName || newName === wf.name) return;
+
+    try {
+      const { error } = await supabase
+        .from('bpm_workflows')
+        .update({ name: newName, updated_at: new Date().toISOString() })
+        .eq('id', currentWorkflowId);
+
+      if (error) throw error;
+      
+      toast('Fluxo renomeado!', 'success');
+      setWorkflows(prev => prev.map(w => w.id === currentWorkflowId ? { ...w, name: newName } : w));
+    } catch (err: any) {
+      console.error(err);
+      toast('Erro ao renomear.', 'error');
     }
   };
 
@@ -312,7 +500,6 @@ function BpmCanvasContent({
 
   return (
     <div className="flex flex-col h-full bg-neutral-50 dark:bg-neutral-950">
-      {/* Top Bar */}
       <div className="h-14 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex items-center justify-between px-6 z-20">
         <div className="flex items-center gap-3">
           <button 
@@ -336,7 +523,7 @@ function BpmCanvasContent({
             <select
               value={currentWorkflowId}
               onChange={(e) => setCurrentWorkflowId(e.target.value)}
-              className="bg-transparent border-none outline-none text-xs font-bold text-neutral-700 dark:text-neutral-300 px-3 py-1.5 cursor-pointer max-w-[200px]"
+              className="bg-transparent border-none outline-none text-xs font-bold text-neutral-700 dark:text-neutral-300 px-3 py-1.5 cursor-pointer min-w-[200px] max-w-[400px] truncate"
             >
               <option value="new">--- Criar Novo Fluxo ---</option>
               {workflows.map(w => (
@@ -346,13 +533,22 @@ function BpmCanvasContent({
           </div>
 
           {currentWorkflowId !== 'new' && (
-            <button 
-              onClick={handleDelete}
-              className="flex items-center gap-2 px-3 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl text-xs font-bold transition-all"
-              title="Excluir Fluxo"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+            <>
+              <button 
+                onClick={handleRename}
+                className="flex items-center gap-2 px-3 py-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-400 rounded-xl text-xs font-bold transition-all"
+                title="Renomear Fluxo"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={handleDelete}
+                className="flex items-center gap-2 px-3 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl text-xs font-bold transition-all"
+                title="Excluir Fluxo"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
           )}
 
           <button 
@@ -366,7 +562,6 @@ function BpmCanvasContent({
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="flex flex-1 overflow-hidden relative">
         <FlowSidebar />
         <div className="flex-1 h-full relative" ref={reactFlowWrapper} onDrop={onDrop} onDragOver={onDragOver}>
@@ -417,8 +612,7 @@ function BpmCanvasContent({
           </ReactFlow>
         </div>
 
-        {/* Right Sidebar Properties */}
-        <div className={`w-96 h-full bg-white dark:bg-neutral-900 border-l border-neutral-200 dark:border-neutral-800 transition-all duration-300 absolute right-0 top-0 z-40 flex flex-col shadow-2xl ${selectedNode ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className={`w-96 h-full bg-white dark:bg-neutral-900 border-l border-neutral-200 dark:border-neutral-800 transition-all duration-300 absolute right-0 top-0 z-40 flex flex-col shadow-2xl ${selectedNodeId ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800">
             <h3 className="font-bold text-sm tracking-tight text-neutral-900 dark:text-white">Propriedades do Nó</h3>
             <button onClick={() => setSelectedNodeId(null)} className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300">
@@ -824,16 +1018,21 @@ function BpmCanvasContent({
                         <option value="update">Atualizar Registro</option>
                         <option value="delete">Excluir Registro</option>
                         <option value="email">Enviar E-mail</option>
+                        <option value="webhook">Webhook (Chamada de API)</option>
                       </select>
                     </div>
 
-                    {['insert', 'update', 'delete'].includes(selectedNode.data?.actionType as string) && (
+                    {['insert', 'update', 'delete'].includes(selectedNode.data?.actionType as string) && (() => {
+                      const actionFields = (selectedNode.data?.actionFields as any[]) || [];
+                      const actionFilters = (selectedNode.data?.actionFilters as any[]) || [];
+
+                      return (
                       <div className="space-y-4 pt-4 border-t border-indigo-500/20">
                         <div>
                           <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Tabela Alvo</label>
                           <select 
                             value={(selectedNode.data?.actionModelId as string) || ''} 
-                            onChange={(e) => updateNodeData(selectedNode.id, { actionModelId: e.target.value, actionField: '' })}
+                            onChange={(e) => updateNodeData(selectedNode.id, { actionModelId: e.target.value, actionFields: [], actionFilters: [] })}
                             className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
                           >
                             <option value="">Selecione uma tabela...</option>
@@ -842,111 +1041,378 @@ function BpmCanvasContent({
                             ))}
                           </select>
                         </div>
-                      </div>
-                    )}
 
-                    {['insert', 'update'].includes(selectedNode.data?.actionType as string) && (
-                      <div className="space-y-4 pt-2">
-                        <div>
-                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Campo a Alterar/Inserir</label>
-                          <select 
-                            value={(selectedNode.data?.actionField as string) || ''} 
-                            onChange={(e) => updateNodeData(selectedNode.id, { actionField: e.target.value })}
-                            disabled={!selectedNode.data?.actionModelId}
-                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
-                          >
-                            <option value="">Selecione um campo...</option>
-                            {dbFields
-                              .filter(f => f.model_id === selectedNode.data?.actionModelId)
-                              .map(f => (
-                                <option key={f.id} value={f.db_column_name || f.name}>{f.display_name || f.db_column_name || f.name}</option>
+                        {/* Múltiplos Campos para Insert / Update */}
+                        {['insert', 'update'].includes(selectedNode.data?.actionType as string) && !!selectedNode.data?.actionModelId && (
+                          <div className="bg-white dark:bg-neutral-900 border border-indigo-200 dark:border-indigo-900 rounded-xl p-3 shadow-sm mt-4">
+                            <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-100 dark:border-neutral-800">
+                              <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest">Campos para {selectedNode.data?.actionType === 'insert' ? 'Inserir' : 'Atualizar'}</span>
+                              <button
+                                onClick={() => {
+                                  updateNodeData(selectedNode.id, { 
+                                    actionFields: [...actionFields, { field: '', value: '', useEnum: false, enumId: '' }]
+                                  });
+                                }}
+                                className="text-[9px] bg-indigo-500 text-white px-2 py-1 rounded font-bold uppercase tracking-widest hover:bg-indigo-600 transition-colors"
+                              >
+                                + Campo
+                              </button>
+                            </div>
+
+                            {actionFields.length === 0 && (
+                              <div className="text-[9px] text-neutral-400 text-center py-2 italic">
+                                Nenhum campo definido.
+                              </div>
+                            )}
+
+                            <div className="space-y-3">
+                              {actionFields.map((fld: any, index: number) => (
+                                <div key={index} className="relative group/field border border-neutral-100 dark:border-neutral-800 rounded p-2 bg-neutral-50 dark:bg-neutral-950">
+                                  <button
+                                    onClick={() => {
+                                      const newFields = [...actionFields];
+                                      newFields.splice(index, 1);
+                                      updateNodeData(selectedNode.id, { actionFields: newFields });
+                                    }}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover/field:opacity-100 transition-opacity shadow"
+                                    title="Remover campo"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                  
+                                  <div className="grid grid-cols-1 gap-2 mb-2">
+                                    <select 
+                                      value={fld.field || ''} 
+                                      onChange={(e) => {
+                                        const newFields = [...actionFields];
+                                        newFields[index].field = e.target.value;
+                                        updateNodeData(selectedNode.id, { actionFields: newFields });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-indigo-500"
+                                    >
+                                      <option value="">Selecione o campo...</option>
+                                      {dbFields.filter(f => f.model_id === selectedNode.data?.actionModelId).map(f => (
+                                        <option key={f.id} value={f.db_column_name || f.name}>{f.display_name || f.db_column_name || f.name}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-[9px] text-neutral-400">Usar Enum?</span>
+                                    <input 
+                                      type="checkbox" 
+                                      checked={!!fld.useEnum}
+                                      onChange={(e) => {
+                                        const newFields = [...actionFields];
+                                        newFields[index].useEnum = e.target.checked;
+                                        updateNodeData(selectedNode.id, { actionFields: newFields });
+                                      }}
+                                      className="rounded w-3 h-3 bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-indigo-500 focus:ring-indigo-500" 
+                                    />
+                                  </div>
+
+                                  {fld.useEnum ? (
+                                    <div className="space-y-2">
+                                      <select 
+                                        value={fld.enumId || ''}
+                                        onChange={(e) => {
+                                          const newFields = [...actionFields];
+                                          newFields[index].enumId = e.target.value;
+                                          newFields[index].value = '';
+                                          updateNodeData(selectedNode.id, { actionFields: newFields });
+                                        }}
+                                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-indigo-500"
+                                      >
+                                        <option value="">Enum...</option>
+                                        {enums.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
+                                      </select>
+                                      
+                                      {!!fld.enumId && (
+                                        <select 
+                                          value={fld.value || ''}
+                                          onChange={(e) => {
+                                            const newFields = [...actionFields];
+                                            newFields[index].value = e.target.value;
+                                            updateNodeData(selectedNode.id, { actionFields: newFields });
+                                          }}
+                                          className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-indigo-500"
+                                        >
+                                          <option value="">Valor...</option>
+                                          {enums.find(e => e.id === fld.enumId)?.values?.map((v: any) => (
+                                            <option key={v.value} value={v.value}>{v.description ? `${String(v.value)} - ${String(v.description)}` : String(v.value)}</option>
+                                          ))}
+                                        </select>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="flex gap-1">
+                                      <input 
+                                        type="text" 
+                                        placeholder="Ex: {{trigger.id}} ou fixo"
+                                        value={fld.value || ''} 
+                                        onChange={(e) => {
+                                          const newFields = [...actionFields];
+                                          newFields[index].value = e.target.value;
+                                          updateNodeData(selectedNode.id, { actionFields: newFields });
+                                        }}
+                                        className="flex-1 min-w-0 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-indigo-500"
+                                      />
+                                      <select
+                                        value=""
+                                        onChange={(e) => {
+                                          if (!e.target.value) return;
+                                          const newFields = [...actionFields];
+                                          newFields[index].value = (newFields[index].value || '') + `{{${e.target.value}}}`;
+                                          updateNodeData(selectedNode.id, { actionFields: newFields });
+                                          e.target.value = '';
+                                        }}
+                                        className="w-8 shrink-0 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-transparent rounded px-1 py-1 focus:ring-1 focus:ring-indigo-500 cursor-pointer text-[10px] appearance-none"
+                                        style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%236366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
+                                        title="Inserir Variável"
+                                      >
+                                        <option value="" className="text-neutral-900 dark:text-neutral-100">+ Var</option>
+                                        {[...dbModels].map(m => {
+                                          const fields = dbFields.filter(f => f.model_id === m.id);
+                                          if (fields.length === 0) return null;
+                                          return (
+                                            <optgroup key={m.id} label={m.display_name || m.db_table_name || m.name} className="text-left text-indigo-600 dark:text-indigo-400 normal-case tracking-normal text-sm font-bold bg-neutral-50 dark:bg-neutral-900">
+                                              {fields.map(f => (
+                                                <option key={f.id} value={`${m.db_table_name || m.name}.${f.db_column_name || f.name}`} className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">
+                                                  {f.display_name || f.db_column_name || f.name}
+                                                </option>
+                                              ))}
+                                            </optgroup>
+                                          );
+                                        })}
+                                      </select>
+                                    </div>
+                                  )}
+                                </div>
                               ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-0">Valor</label>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[9px] text-neutral-400">Usar Enum?</span>
-                              <input 
-                                type="checkbox" 
-                                checked={!!selectedNode.data?.actionUseEnum}
-                                onChange={(e) => updateNodeData(selectedNode.id, { actionUseEnum: e.target.checked })}
-                                className="rounded bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-indigo-500 focus:ring-indigo-500" 
-                              />
                             </div>
                           </div>
+                        )}
 
-                          {selectedNode.data?.actionUseEnum ? (
-                            <div className="space-y-2">
-                                <select 
-                                   value={(selectedNode.data?.actionEnumId as string) || ''}
-                                   onChange={(e) => updateNodeData(selectedNode.id, { actionEnumId: e.target.value, actionValue: '' })}
-                                   className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
-                                >
-                                   <option value="">Selecione o Enum...</option>
-                                   {enums.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
-                                </select>
-                                
-                                {!!selectedNode.data?.actionEnumId && (
-                                   <select 
-                                     value={(selectedNode.data?.actionValue as string) || ''}
-                                     onChange={(e) => updateNodeData(selectedNode.id, { actionValue: e.target.value })}
-                                     className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
-                                   >
-                                      <option value="">Selecione o Valor...</option>
-                                      {enums.find(e => e.id === selectedNode.data?.actionEnumId)?.values?.map((v: any) => (
-                                         <option key={v.value} value={v.value}>{v.description ? `${String(v.value)} - ${String(v.description)}` : String(v.value)}</option>
-                                      ))}
-                                   </select>
-                                )}
+                        {/* Filtros ONDE (WHERE) para Update / Delete / Email Dinâmico */}
+                        {(['update', 'delete'].includes(selectedNode.data?.actionType as string) || (selectedNode.data?.actionType === 'email' && selectedNode.data?.emailRecipientType === 'table')) && !!selectedNode.data?.actionModelId && (
+                          <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-xl p-3 shadow-sm mt-4">
+                            <div className="flex items-center justify-between mb-3 pb-2 border-b border-red-100 dark:border-red-900/50">
+                              <span className="text-[9px] font-bold text-red-500 uppercase tracking-widest">Filtros (Quais registros?)</span>
+                              <button
+                                onClick={() => {
+                                  updateNodeData(selectedNode.id, { 
+                                    actionFilters: [...actionFilters, { field: '', operator: '==', value: '' }]
+                                  });
+                                }}
+                                className="text-[9px] bg-red-500 text-white px-2 py-1 rounded font-bold uppercase tracking-widest hover:bg-red-600 transition-colors"
+                              >
+                                + Filtro
+                              </button>
                             </div>
-                          ) : (
-                            <input 
-                              type="text" 
-                              placeholder="Ex: aprovado ou {{trigger.id}}"
-                              value={(selectedNode.data?.actionValue as string) || ''} 
-                              onChange={(e) => updateNodeData(selectedNode.id, { actionValue: e.target.value })}
-                              className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
-                            />
-                          )}
-                        </div>
+
+                            {actionFilters.length === 0 && (
+                              <div className="text-[9px] text-red-400 text-center py-2 italic font-semibold">
+                                CUIDADO: Nenhum filtro definido. Isso afetará TODOS os registros.
+                              </div>
+                            )}
+
+                            <div className="space-y-3">
+                              {actionFilters.map((filt: any, index: number) => (
+                                <div key={index} className="relative group/filt border border-red-100 dark:border-red-900/30 rounded p-2 bg-white dark:bg-neutral-950">
+                                  <button
+                                    onClick={() => {
+                                      const newFilters = [...actionFilters];
+                                      newFilters.splice(index, 1);
+                                      updateNodeData(selectedNode.id, { actionFilters: newFilters });
+                                    }}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover/filt:opacity-100 transition-opacity shadow z-10"
+                                    title="Remover filtro"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                  
+                                  <div className="grid grid-cols-[1fr_auto] gap-2 mb-2">
+                                    <select 
+                                      value={filt.field || ''} 
+                                      onChange={(e) => {
+                                        const newFilters = [...actionFilters];
+                                        newFilters[index].field = e.target.value;
+                                        updateNodeData(selectedNode.id, { actionFilters: newFilters });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-red-500"
+                                    >
+                                      <option value="">Campo...</option>
+                                      {dbFields.filter(f => f.model_id === selectedNode.data?.actionModelId).map(f => (
+                                        <option key={f.id} value={f.db_column_name || f.name}>{f.display_name || f.db_column_name || f.name}</option>
+                                      ))}
+                                    </select>
+
+                                    <select 
+                                      value={filt.operator || '=='} 
+                                      onChange={(e) => {
+                                        const newFilters = [...actionFilters];
+                                        newFilters[index].operator = e.target.value;
+                                        updateNodeData(selectedNode.id, { actionFilters: newFilters });
+                                      }}
+                                      className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-red-500 w-[60px]"
+                                    >
+                                      <option value="==">==</option>
+                                      <option value="!=">!=</option>
+                                      <option value=">">&gt;</option>
+                                      <option value="<">&lt;</option>
+                                    </select>
+                                  </div>
+
+                                  <div className="flex gap-1">
+                                    <input 
+                                      type="text" 
+                                      placeholder="Ex: {{trigger.id}} ou valor fixo"
+                                      value={filt.value || ''} 
+                                      onChange={(e) => {
+                                        const newFilters = [...actionFilters];
+                                        newFilters[index].value = e.target.value;
+                                        updateNodeData(selectedNode.id, { actionFilters: newFilters });
+                                      }}
+                                      className="flex-1 min-w-0 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-red-500"
+                                    />
+                                    <select
+                                      value=""
+                                      onChange={(e) => {
+                                        if (!e.target.value) return;
+                                        const newFilters = [...actionFilters];
+                                        newFilters[index].value = (newFilters[index].value || '') + `{{${e.target.value}}}`;
+                                        updateNodeData(selectedNode.id, { actionFilters: newFilters });
+                                        e.target.value = '';
+                                      }}
+                                      className="w-8 shrink-0 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 text-transparent rounded px-1 py-1 focus:ring-1 focus:ring-red-500 cursor-pointer text-[10px] appearance-none"
+                                      style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%23ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
+                                      title="Inserir Variável"
+                                    >
+                                      <option value="" className="text-neutral-900 dark:text-neutral-100">+ Var</option>
+                                      {[...dbModels].map(m => {
+                                        const fields = dbFields.filter(f => f.model_id === m.id);
+                                        if (fields.length === 0) return null;
+                                        return (
+                                          <optgroup key={m.id} label={m.display_name || m.db_table_name || m.name} className="text-left text-indigo-600 dark:text-indigo-400 normal-case tracking-normal text-sm font-bold bg-neutral-50 dark:bg-neutral-900">
+                                            {fields.map(f => (
+                                              <option key={f.id} value={`${m.db_table_name || m.name}.${f.db_column_name || f.name}`} className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">
+                                                {f.display_name || f.db_column_name || f.name}
+                                              </option>
+                                            ))}
+                                          </optgroup>
+                                        );
+                                      })}
+                                    </select>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
+                      )
+                    })()}
 
                     {selectedNode.data?.actionType === 'email' && (
                       <div className="space-y-4 pt-4 border-t border-indigo-500/20">
                         <div>
-                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Tabela Alvo (Puxar e-mail de)</label>
-                          <select 
-                            value={(selectedNode.data?.actionModelId as string) || ''} 
-                            onChange={(e) => updateNodeData(selectedNode.id, { actionModelId: e.target.value, actionEmailField: '' })}
-                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
-                          >
-                            <option value="">Selecione uma tabela...</option>
-                            {dbModels.map(m => (
-                              <option key={m.id} value={m.id}>{m.display_name || m.db_table_name || m.name}</option>
-                            ))}
-                          </select>
+                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-2">Destinatários</label>
+                          <div className="flex bg-neutral-100 dark:bg-neutral-800 p-1 rounded-lg">
+                            <button
+                              onClick={() => updateNodeData(selectedNode.id, { emailRecipientType: 'system' })}
+                              className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors ${(!selectedNode.data?.emailRecipientType || selectedNode.data?.emailRecipientType === 'system') ? 'bg-white dark:bg-neutral-700 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+                            >
+                              Grupos / Usuários
+                            </button>
+                            <button
+                              onClick={() => updateNodeData(selectedNode.id, { emailRecipientType: 'table' })}
+                              className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors ${selectedNode.data?.emailRecipientType === 'table' ? 'bg-white dark:bg-neutral-700 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+                            >
+                              Tabela Dinâmica
+                            </button>
+                          </div>
                         </div>
 
-                        <div>
-                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Campo de E-mail</label>
-                          <select 
-                            value={(selectedNode.data?.actionEmailField as string) || ''} 
-                            onChange={(e) => updateNodeData(selectedNode.id, { actionEmailField: e.target.value })}
-                            disabled={!selectedNode.data?.actionModelId}
-                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
-                          >
-                            <option value="">Selecione o campo de e-mail...</option>
-                            {dbFields
-                              .filter(f => f.model_id === selectedNode.data?.actionModelId)
-                              .map(f => (
-                                <option key={f.id} value={f.db_column_name || f.name}>{f.display_name || f.db_column_name || f.name}</option>
-                              ))}
-                          </select>
-                        </div>
+                        {(!selectedNode.data?.emailRecipientType || selectedNode.data?.emailRecipientType === 'system') && (
+                          <div className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-xl p-3 space-y-3">
+                            <div>
+                              <label className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest block mb-1">Enviar para Grupos de Acesso</label>
+                              <div className="text-[10px] text-neutral-500 mb-2 leading-tight">Selecione os grupos de acesso. O e-mail será enviado a todos os usuários pertencentes a eles.</div>
+                              <div className="flex flex-wrap gap-2">
+                                {roles.length > 0 ? roles.map(grupo => {
+                                  const currentGroupsUsers = selectedNode.data?.emailGroupsUsers || {};
+                                  const selection = currentGroupsUsers[grupo.name];
+                                  const isSelected = !!selection;
+                                  
+                                  let statusText = '';
+                                  if (isSelected) {
+                                    statusText = selection === 'all' ? '(Todos)' : `(${selection.length} sel.)`;
+                                  }
+
+                                  return (
+                                    <button
+                                      key={grupo.id}
+                                      onClick={() => openGroupUsersModal(grupo)}
+                                      className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all border flex items-center gap-1 ${isSelected ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20' : 'bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-indigo-300'}`}
+                                    >
+                                      {grupo.name}
+                                      {statusText && <span className={isSelected ? 'text-indigo-200 font-normal' : 'text-neutral-400 font-normal'}>{statusText}</span>}
+                                    </button>
+                                  );
+                                }) : <span className="text-[10px] text-neutral-400">Nenhum grupo encontrado</span>}
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <label className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest block mb-1 mt-4">E-mails/IDs de Usuários Específicos</label>
+                              <input 
+                                type="text"
+                                placeholder="Ex: admin@empresa.com, {{trigger.user_id}}"
+                                value={(selectedNode.data?.emailSpecificUsers as string) || ''}
+                                onChange={(e) => updateNodeData(selectedNode.id, { emailSpecificUsers: e.target.value })}
+                                className="w-full bg-white dark:bg-neutral-900 border border-indigo-200 dark:border-indigo-900/50 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedNode.data?.emailRecipientType === 'table' && (
+                          <div className="bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800/50 rounded-xl p-3 space-y-3">
+                            <div>
+                              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Tabela Alvo (Puxar e-mail de)</label>
+                              <select 
+                                value={(selectedNode.data?.actionModelId as string) || ''} 
+                                onChange={(e) => updateNodeData(selectedNode.id, { actionModelId: e.target.value, actionEmailField: '' })}
+                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
+                              >
+                                <option value="">Selecione uma tabela...</option>
+                                {dbModels.map(m => (
+                                  <option key={m.id} value={m.id}>{m.display_name || m.db_table_name || m.name}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Campo de E-mail</label>
+                              <select 
+                                value={(selectedNode.data?.actionEmailField as string) || ''} 
+                                onChange={(e) => updateNodeData(selectedNode.id, { actionEmailField: e.target.value })}
+                                disabled={!selectedNode.data?.actionModelId}
+                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                              >
+                                <option value="">Selecione o campo de e-mail...</option>
+                                {dbFields
+                                  .filter(f => f.model_id === selectedNode.data?.actionModelId)
+                                  .map(f => (
+                                    <option key={f.id} value={f.db_column_name || f.name}>{f.display_name || f.db_column_name || f.name}</option>
+                                  ))}
+                              </select>
+                            </div>
+                            <div className="text-[10px] text-neutral-500 italic">
+                              Dica: Defina Filtros (abaixo) para não enviar e-mails a todos os registros.
+                            </div>
+                          </div>
+                        )}
 
                         <div>
                           <div className="flex items-center justify-between mb-1">
@@ -1069,6 +1535,111 @@ function BpmCanvasContent({
                         </div>
                       </div>
                     )}
+
+                    {selectedNode.data?.actionType === 'webhook' && (
+                      <div className="space-y-4 pt-4 border-t border-indigo-500/20">
+                        <div>
+                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Método HTTP</label>
+                          <select 
+                            value={(selectedNode.data?.webhookMethod as string) || 'POST'} 
+                            onChange={(e) => updateNodeData(selectedNode.id, { webhookMethod: e.target.value })}
+                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 font-mono"
+                          >
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="PATCH">PATCH</option>
+                            <option value="DELETE">DELETE</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">URL da API</label>
+                          <input 
+                            type="text" 
+                            placeholder="https://api.exemplo.com/v1/..."
+                            value={(selectedNode.data?.webhookUrl as string) || ''} 
+                            onChange={(e) => updateNodeData(selectedNode.id, { webhookUrl: e.target.value })}
+                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1 flex items-center justify-between">
+                            <span>Headers (JSON Opcional)</span>
+                          </label>
+                          <textarea 
+                            rows={3}
+                            placeholder={'{\n  "Authorization": "Bearer token"\n}'}
+                            value={(selectedNode.data?.webhookHeaders as string) || ''} 
+                            onChange={(e) => updateNodeData(selectedNode.id, { webhookHeaders: e.target.value })}
+                            className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 resize-none font-mono text-[10px]"
+                          />
+                        </div>
+
+                        {['POST', 'PUT', 'PATCH'].includes((selectedNode.data?.webhookMethod as string) || 'POST') && (
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-0">Body (JSON)</label>
+                              <select 
+                                value=""
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (!val) return;
+                                  const currentText = (selectedNode.data?.webhookBody as string) || '';
+                                  let newText = currentText + `{{${val}}}`;
+                                  if (cursorPos && cursorPos.field === 'webhookBody') {
+                                    newText = currentText.substring(0, cursorPos.start) + `{{${val}}}` + currentText.substring(cursorPos.end);
+                                  }
+                                  updateNodeData(selectedNode.id, { webhookBody: newText });
+                                  e.target.value = '';
+                                  setCursorPos(null);
+                                }}
+                                className="bg-transparent border-none text-[9px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-24 text-right p-0"
+                              >
+                                <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">+ Variável</option>
+                                {[...dbModels]
+                                  .sort((a, b) => {
+                                    const nameA = a.display_name || a.db_table_name || a.name;
+                                    const nameB = b.display_name || b.db_table_name || b.name;
+                                    return nameA.localeCompare(nameB);
+                                  })
+                                  .map(m => {
+                                    const tableName = m.display_name || m.db_table_name || m.name;
+                                    const fields = dbFields.filter(f => f.model_id === m.id);
+                                    if (fields.length === 0) return null;
+                                    
+                                    return (
+                                      <optgroup key={m.id} label={tableName} className="text-left text-indigo-600 dark:text-indigo-400 normal-case tracking-normal text-sm font-bold bg-neutral-50 dark:bg-neutral-900">
+                                        {[...fields]
+                                          .sort((a, b) => {
+                                            const nameA = a.display_name || a.db_column_name || a.name;
+                                            const nameB = b.display_name || b.db_column_name || b.name;
+                                            return nameA.localeCompare(nameB);
+                                          })
+                                          .map(f => (
+                                            <option key={f.id} value={`${m.db_table_name || m.name}.${f.db_column_name || f.name}`} className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">
+                                              {f.display_name || f.db_column_name || f.name}
+                                            </option>
+                                          ))}
+                                      </optgroup>
+                                    );
+                                  })
+                                }
+                              </select>
+                            </div>
+                            <textarea 
+                              rows={6}
+                              placeholder={'{\n  "cliente_id": "{{orders.customer_id}}"\n}'}
+                              value={(selectedNode.data?.webhookBody as string) || ''} 
+                              onChange={(e) => updateNodeData(selectedNode.id, { webhookBody: e.target.value })}
+                              onBlur={(e) => setCursorPos({ field: 'webhookBody', start: e.target.selectionStart || 0, end: e.target.selectionEnd || 0 })}
+                              className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 resize-none font-mono text-[10px]"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1078,6 +1649,115 @@ function BpmCanvasContent({
         </div>
       </div>
       
+      {/* Modal de Seleção de Usuários por Grupo */}
+      <Modal
+        isOpen={!!selectedGroupForModal}
+        onClose={() => setSelectedGroupForModal(null)}
+        title={`Usuários: ${selectedGroupForModal?.name}`}
+        description="Selecione quais usuários deste grupo receberão o e-mail."
+        size="md"
+        zIndex={200}
+      >
+        <div className="space-y-4">
+          {isLoadingGroupUsers ? (
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+              <p className="text-sm text-neutral-500">Buscando usuários...</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+              <label className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/50 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
+                <input
+                  type="checkbox"
+                  checked={selectedUsersInModal === 'all'}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedUsersInModal('all');
+                    } else {
+                      setSelectedUsersInModal([]);
+                    }
+                  }}
+                  className="w-4 h-4 text-indigo-600 rounded border-neutral-300 focus:ring-indigo-600"
+                />
+                <span className="text-sm font-bold text-neutral-900 dark:text-white">Enviar para Todos</span>
+              </label>
+
+              {groupUsers.length > 0 ? (
+                <div className="pt-2 space-y-2 border-t border-neutral-100 dark:border-neutral-800">
+                  {groupUsers.map(u => {
+                    const isChecked = selectedUsersInModal === 'all' || (Array.isArray(selectedUsersInModal) && selectedUsersInModal.includes(u.id));
+                    return (
+                      <label key={u.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${isChecked && selectedUsersInModal !== 'all' ? 'bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50'}`}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          disabled={selectedUsersInModal === 'all'}
+                          onChange={(e) => {
+                            if (selectedUsersInModal === 'all') return;
+                            const current = Array.isArray(selectedUsersInModal) ? selectedUsersInModal : [];
+                            if (e.target.checked) {
+                              setSelectedUsersInModal([...current, u.id]);
+                            } else {
+                              setSelectedUsersInModal(current.filter(id => id !== u.id));
+                            }
+                          }}
+                          className="w-4 h-4 text-indigo-600 rounded border-neutral-300 focus:ring-indigo-600 disabled:opacity-50"
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-neutral-900 dark:text-white">{u.name}</span>
+                          {u.email && <span className="text-xs text-neutral-500">{u.email}</span>}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-sm text-neutral-500 border border-dashed rounded-xl border-neutral-200 dark:border-neutral-800">
+                  Nenhum usuário encontrado neste grupo.
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-between items-center pt-4 border-t border-neutral-100 dark:border-neutral-800 mt-4">
+            <button
+              onClick={() => {
+                if (selectedNode && selectedGroupForModal) {
+                  const currentGroupsUsers = { ...(selectedNode.data?.emailGroupsUsers || {}) };
+                  delete currentGroupsUsers[selectedGroupForModal.name];
+                  updateNodeData(selectedNode.id, { emailGroupsUsers: currentGroupsUsers });
+                  setSelectedGroupForModal(null);
+                }
+              }}
+              className="text-sm text-red-600 hover:text-red-700 font-medium px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+            >
+              Remover Grupo
+            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSelectedGroupForModal(null)}
+                className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedNode && selectedGroupForModal) {
+                    const currentGroupsUsers = { ...(selectedNode.data?.emailGroupsUsers || {}) };
+                    currentGroupsUsers[selectedGroupForModal.name] = selectedUsersInModal;
+                    updateNodeData(selectedNode.id, { emailGroupsUsers: currentGroupsUsers });
+                    setSelectedGroupForModal(null);
+                  }
+                }}
+                className="px-4 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
       {/* Modal de Exclusão */}
       <Modal
         isOpen={isDeleteModalOpen}

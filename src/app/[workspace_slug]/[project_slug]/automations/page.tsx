@@ -40,12 +40,34 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
 
   const { data: projects } = await supabase
     .from('projects')
-    .select('id')
+    .select('id, secret_token')
     .eq('slug', project_slug)
     .eq('workspace_id', workspace.id)
     .limit(1)
 
   const project = projects?.[0]
+  if (!project) notFound()
+
+  // Fetch auth config properly
+  const { data: config } = await supabase
+    .from('project_auth_config')
+    .select('*')
+    .eq('project_id', project.id)
+    .maybeSingle()
+    
+  if (config) {
+    project.auth_config = {
+      ...config,
+      sync_legacy_groups: config.ui_config?.sync_legacy_groups || false,
+      db_groups_table: config.ui_config?.db_groups_table || '',
+      db_groups_name_column: config.ui_config?.db_groups_name_column || '',
+      db_user_groups_type: config.ui_config?.db_user_groups_type || '1_to_n',
+      db_user_role_column: config.ui_config?.db_user_role_column || '',
+      db_user_roles_table: config.ui_config?.db_user_roles_table || '',
+      db_user_roles_user_id_column: config.ui_config?.db_user_roles_user_id_column || '',
+      db_user_roles_role_id_column: config.ui_config?.db_user_roles_role_id_column || '',
+    };
+  }
   if (!project) notFound()
 
   // 3. Verifica se a view de Automations está ativa
@@ -117,7 +139,7 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
       <BpmCanvas 
         title={canvasTitle} 
         defaultAutoAlign={automationsView?.layout_config?.default_auto_align}
-        projectId={project.id}
+        project={project}
         useCaseId={useCaseId || ''}
         initialWorkflows={initialWorkflows}
         initialModels={initialModels}

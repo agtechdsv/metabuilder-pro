@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
-import { Zap, Play, CheckCircle2, GitMerge, Trash2, Mail, Edit, PlusCircle, Clock, MousePointer2 } from 'lucide-react';
+import { Zap, Play, CheckCircle2, GitMerge, Trash2, Mail, Edit, PlusCircle, Clock, MousePointer2, Webhook } from 'lucide-react';
 
 // Common style for node wrappers
 const nodeStyle = "px-4 py-3 rounded-xl border shadow-sm min-w-[220px] bg-white dark:bg-neutral-900 transition-all relative group";
@@ -71,9 +71,30 @@ export const ActionNode = memo(({ id, data, selected }: NodeProps) => {
   let desc = 'Configure na aba lateral';
 
   if (type === 'email') { title = 'Enviar E-mail'; desc = 'Notificação'; Icon = Mail; }
-  else if (type === 'update') { title = 'Atualizar Registro'; desc = 'Ação de Banco'; Icon = Edit; }
-  else if (type === 'insert') { title = 'Inserir Registro'; desc = 'Ação de Banco'; Icon = PlusCircle; }
-  else if (type === 'delete') { title = 'Excluir Registro'; desc = 'Ação de Banco'; Icon = Trash2; }
+  else if (type === 'update') { 
+    const fields = (data.actionFields as any[])?.length || 0;
+    title = 'Atualizar Registro'; 
+    desc = fields > 0 ? `${fields} campo(s)` : 'Ação de Banco'; 
+    Icon = Edit; 
+  }
+  else if (type === 'insert') { 
+    const fields = (data.actionFields as any[])?.length || 0;
+    title = 'Inserir Registro'; 
+    desc = fields > 0 ? `${fields} campo(s)` : 'Ação de Banco'; 
+    Icon = PlusCircle; 
+  }
+  else if (type === 'delete') { 
+    const filters = (data.actionFilters as any[])?.length || 0;
+    title = 'Excluir Registro'; 
+    desc = filters > 0 ? `${filters} filtro(s)` : 'Cuidado: Sem filtros'; 
+    Icon = Trash2; 
+  }
+  else if (type === 'webhook') { 
+    const method = data.webhookMethod as string || 'POST';
+    title = 'Chamada de API'; 
+    desc = `${method} Webhook`; 
+    Icon = Webhook; 
+  }
 
   return (
     <div className={`${nodeStyle} ${selected ? 'border-indigo-500 shadow-indigo-500/20 ring-2 ring-indigo-500/20' : 'border-indigo-500/50 shadow-indigo-500/10'} ${!type && 'border-red-500 border-dashed'}`}>

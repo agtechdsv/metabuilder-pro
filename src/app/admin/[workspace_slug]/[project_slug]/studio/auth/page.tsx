@@ -66,7 +66,15 @@ export default function AuthSettingsPage() {
     db_password_hash_type: 'bcrypt',
     ldap_server_url: '',
     ldap_base_dn: '',
-    allow_signup: false
+    allow_signup: false,
+    sync_legacy_groups: false,
+    db_groups_table: '',
+    db_groups_name_column: '',
+    db_user_groups_type: '1_to_n',
+    db_user_role_column: '',
+    db_user_roles_table: '',
+    db_user_roles_user_id_column: '',
+    db_user_roles_role_id_column: ''
   })
   
   const [visualConfig, setVisualConfig] = useState({
@@ -135,7 +143,15 @@ export default function AuthSettingsPage() {
         if (config) {
           setAuthConfig({
             ...config,
-            allow_signup: config.ui_config?.allow_signup || false
+            allow_signup: config.ui_config?.allow_signup || false,
+            sync_legacy_groups: config.ui_config?.sync_legacy_groups || false,
+            db_groups_table: config.ui_config?.db_groups_table || '',
+            db_groups_name_column: config.ui_config?.db_groups_name_column || '',
+            db_user_groups_type: config.ui_config?.db_user_groups_type || '1_to_n',
+            db_user_role_column: config.ui_config?.db_user_role_column || '',
+            db_user_roles_table: config.ui_config?.db_user_roles_table || '',
+            db_user_roles_user_id_column: config.ui_config?.db_user_roles_user_id_column || '',
+            db_user_roles_role_id_column: config.ui_config?.db_user_roles_role_id_column || ''
           })
           if (config.ui_config) {
             setVisualConfig(prev => ({
@@ -259,85 +275,200 @@ export default function AuthSettingsPage() {
     loadData()
   }, [project_slug, workspace_slug, supabase, router, toast])
 
+  const executeTunnelQuery = useCallback((payload: any): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      if (!project) return reject(new Error('Projeto não definido'))
+      const channelName = `tunnel:${project.id}`
+      const queryId = crypto.randomUUID()
+      let isFinished = false
+      const channel = supabase.channel(channelName)
+
+      const cleanup = () => {
+        isFinished = true
+        try { supabase.removeChannel(channel) } catch(e){}
+      }
+
+      channel.on('broadcast', { event: `query_result_${queryId}` }, (response: any) => {
+        if (isFinished) return
+        cleanup()
+        if (response.payload?.success) {
+          resolve(response.payload.data)
+        } else {
+          reject(new Error(response.payload?.error || 'Erro desconhecido'))
+        }
+      })
+
+      channel.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.send({
+            type: 'broadcast', event: 'sql_query',
+            payload: { ...payload, queryId, token: project.secret_token }
+          })
+        }
+      })
+
+      setTimeout(() => {
+        if (!isFinished) {
+          cleanup()
+          reject(new Error('Túnel CLI offline. Ligue o MetaBuilder CLI.'))
+        }
+      }, 5000)
+    })
+  }, [project, supabase])
+
   const loadLegacyUsers = useCallback(async () => {
     if (!project || !authConfig.db_table_name) return
     setIsLoadingUsers(true)
-    const queryId = crypto.randomUUID()
-    const channelName = `tunnel:${project.id}`
-    const channel = supabase.channel(channelName)
-    let isFinished = false
-    const cleanup = () => { isFinished = true; supabase.removeChannel(channel) }
-
-    channel.on('broadcast', { event: `query_result_${queryId}` }, (payload: any) => {
-      if (isFinished) return
-      cleanup()
-      const { success, data, error } = payload.payload
-      if (success && data) {
-        setLegacyUsers(data)
-      } else {
-        toast('Erro ao buscar usuários: ' + error, 'error')
+    
+    try {
+      const currentModel = models.find(m => m.db_table_name === authConfig.db_table_name)
+      const schemaName = currentModel?.db_schema_name || 'public'
+      
+      const data = await executeTunnelQuery({
+        action: 'get_users',
+        config: authConfig,
+        limit: 100,
+        offset: 0,
+        schemaName
+      })
+      
+      setLegacyUsers(data || [])
+      
+      if (authConfig.sync_legacy_groups && authConfig.db_user_groups_type === '1_to_n') {
+        const pkField = currentModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+        const mappedUR = (data || []).map((u: any) => ({
+          id: 'virtual_' + crypto.randomUUID(),
+          external_user_id: u[pkField]?.toString(),
+          role_id: u[authConfig.db_user_role_column]?.toString()
+        })).filter((ur: any) => ur.role_id)
+        setUserRoles(mappedUR)
       }
+    } catch (err: any) {
+      toast('Erro ao buscar usuários do banco legado: ' + err.message, 'error')
+    } finally {
       setIsLoadingUsers(false)
-    })
-
-    channel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        const currentModel = models.find(m => m.db_table_name === authConfig.db_table_name)
-        const schemaName = currentModel?.db_schema_name || 'public'
-        await channel.send({
-          type: 'broadcast', event: 'sql_query',
-          payload: { queryId, token: project.secret_token, action: 'get_users', config: authConfig, limit: 50, offset: 0, schemaName }
-        })
-      }
-    })
-
-    setTimeout(() => {
-      if (!isFinished) {
-        cleanup()
-        setIsLoadingUsers(false)
-        toast('Túnel CLI offline. Ligue o MetaBuilder CLI.', 'error')
-      }
-    }, 5000)
-  }, [project, authConfig, models, supabase, toast])
+    }
+  }, [project, authConfig, models, executeTunnelQuery, toast])
 
   useEffect(() => {
     if (activeTab === 'users' && project) {
       const loadRolesAndPermissions = async () => {
-        // Carregar as roles criadas no Supabase para este projeto (independente do banco legado)
-        const { data: dbRoles } = await supabase.from('project_roles').select('*').eq('project_id', project.id)
-        if (dbRoles) {
-          setRoles(dbRoles)
-          if (dbRoles.length > 0) {
-            const { data: dbRolePerms } = await supabase.from('project_role_permissions').select('*').in('role_id', dbRoles.map(r => r.id))
-            if (dbRolePerms) setRolePermissions(dbRolePerms)
-          }
-        }
-        const { data: dbUserRoles } = await supabase.from('project_user_roles').select('*').eq('project_id', project.id)
-        if (dbUserRoles) setUserRoles(dbUserRoles)
-      }
-      loadRolesAndPermissions()
+        if (authConfig.sync_legacy_groups && authConfig.db_groups_table) {
+          try {
+            const currentModel = models.find(m => m.db_table_name === authConfig.db_groups_table)
+            const schemaName = currentModel?.db_schema_name || 'public'
+            const data = await executeTunnelQuery({ action: 'select', table: authConfig.db_groups_table, schemaName })
+            
+            const pkField = currentModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+            const nameField = authConfig.db_groups_name_column || 'name'
+            const mappedRoles = data.map((r: any) => ({
+              id: r[pkField]?.toString() || crypto.randomUUID(),
+              name: r[nameField] || 'Grupo'
+            }))
+            setRoles(mappedRoles)
 
-      if (authConfig.db_table_name) {
-        loadLegacyUsers()
+            if (mappedRoles.length > 0) {
+              const { data: dbRolePerms } = await supabase.from('project_role_permissions').select('*').in('role_id', mappedRoles.map(r => r.id))
+              if (dbRolePerms) setRolePermissions(dbRolePerms)
+            }
+
+            if (authConfig.db_user_groups_type === 'n_to_n' && authConfig.db_user_roles_table) {
+              const urModel = models.find(m => m.db_table_name === authConfig.db_user_roles_table)
+              const urSchemaName = urModel?.db_schema_name || 'public'
+              const urData = await executeTunnelQuery({ action: 'select', table: authConfig.db_user_roles_table, schemaName: urSchemaName })
+              const urPk = urModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+              const mappedUR = urData.map((ur: any) => ({
+                id: ur[urPk]?.toString() || crypto.randomUUID(),
+                external_user_id: ur[authConfig.db_user_roles_user_id_column]?.toString(),
+                role_id: ur[authConfig.db_user_roles_role_id_column]?.toString()
+              }))
+              setUserRoles(mappedUR)
+            }
+          } catch(err: any) {
+            toast('Erro ao buscar grupos legados: ' + err.message, 'error')
+          }
+        } else {
+          const { data: dbRoles } = await supabase.from('project_roles').select('*').eq('project_id', project.id)
+          if (dbRoles) {
+            setRoles(dbRoles)
+            if (dbRoles.length > 0) {
+              const { data: dbRolePerms } = await supabase.from('project_role_permissions').select('*').in('role_id', dbRoles.map(r => r.id))
+              if (dbRolePerms) setRolePermissions(dbRolePerms)
+            }
+          }
+          const { data: dbUserRoles } = await supabase.from('project_user_roles').select('*').eq('project_id', project.id)
+          if (dbUserRoles) setUserRoles(dbUserRoles)
+        }
       }
+      
+      const initLoad = async () => {
+        await loadRolesAndPermissions()
+        if (authConfig.db_table_name) {
+          await loadLegacyUsers()
+        }
+      }
+      
+      initLoad()
     }
-  }, [activeTab, project, authConfig, supabase, toast, models])
+  }, [activeTab, project, authConfig, supabase, toast, models, loadLegacyUsers])
 
   const handleAssignRole = async (externalUserId: string, roleId: string) => {
-    const { error } = await supabase
-      .from('project_user_roles')
-      .upsert({
-        project_id: project.id,
-        external_user_id: externalUserId.toString(),
-        role_id: roleId
-      }, { onConflict: 'project_id, external_user_id' })
-      
-    if (!error) {
-      toast('Grupo atualizado com sucesso!', 'success')
-      const { data: dbUserRoles } = await supabase.from('project_user_roles').select('*').eq('project_id', project.id)
-      if (dbUserRoles) setUserRoles(dbUserRoles)
+    if (authConfig.sync_legacy_groups) {
+      try {
+        if (authConfig.db_user_groups_type === 'n_to_n') {
+          const urModel = models.find(m => m.db_table_name === authConfig.db_user_roles_table)
+          const urPk = urModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+          const schemaName = urModel?.db_schema_name || 'public'
+          const existingUR = userRoles.find(ur => ur.external_user_id === externalUserId.toString())
+          
+          if (existingUR && existingUR.id && !existingUR.id.toString().startsWith('virtual_')) {
+            await executeTunnelQuery({
+              action: 'update',
+              table: authConfig.db_user_roles_table,
+              schemaName, idColumn: urPk, idValue: existingUR.id,
+              data: { [authConfig.db_user_roles_role_id_column]: roleId }
+            })
+          } else {
+            await executeTunnelQuery({
+              action: 'insert',
+              table: authConfig.db_user_roles_table,
+              schemaName,
+              data: {
+                [authConfig.db_user_roles_user_id_column]: externalUserId,
+                [authConfig.db_user_roles_role_id_column]: roleId
+              }
+            })
+          }
+        } else {
+          const uModel = models.find(m => m.db_table_name === authConfig.db_table_name)
+          const schemaName = uModel?.db_schema_name || 'public'
+          const pkField = uModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+          await executeTunnelQuery({
+            action: 'update',
+            table: authConfig.db_table_name,
+            schemaName, idColumn: pkField, idValue: externalUserId,
+            data: { [authConfig.db_user_role_column]: roleId }
+          })
+        }
+        toast('Grupo atualizado com sucesso no banco legado!', 'success')
+        setUserRoles(prev => {
+          const arr = prev.filter(ur => ur.external_user_id !== externalUserId.toString())
+          return [...arr, { id: crypto.randomUUID(), external_user_id: externalUserId.toString(), role_id: roleId }]
+        })
+      } catch(err: any) {
+        toast('Erro ao atualizar grupo legado: ' + err.message, 'error')
+      }
     } else {
-      toast('Erro ao atualizar grupo: ' + error.message, 'error')
+      const { error } = await supabase.from('project_user_roles').upsert({
+        project_id: project.id, external_user_id: externalUserId.toString(), role_id: roleId
+      }, { onConflict: 'project_id, external_user_id' })
+      if (!error) {
+        toast('Grupo atualizado com sucesso!', 'success')
+        const { data: dbUserRoles } = await supabase.from('project_user_roles').select('*').eq('project_id', project.id)
+        if (dbUserRoles) setUserRoles(dbUserRoles)
+      } else {
+        toast('Erro ao atualizar grupo: ' + error.message, 'error')
+      }
     }
   }
 
@@ -418,31 +549,77 @@ export default function AuthSettingsPage() {
 
   const handleCreateRole = async () => {
     if (!newRoleName) return
-    const { error } = await supabase.from('project_roles').insert({
-      project_id: project.id,
-      name: newRoleName
-    })
-    if (!error) {
-      toast('Grupo criado com sucesso!', 'success')
-      setNewRoleName('')
-      setIsCreatingRole(false)
-      const { data: dbRoles } = await supabase.from('project_roles').select('*').eq('project_id', project.id)
-      if (dbRoles) setRoles(dbRoles)
+    if (authConfig.sync_legacy_groups) {
+      try {
+        const rModel = models.find(m => m.db_table_name === authConfig.db_groups_table)
+        const schemaName = rModel?.db_schema_name || 'public'
+        await executeTunnelQuery({
+          action: 'insert', table: authConfig.db_groups_table, schemaName,
+          data: { [authConfig.db_groups_name_column]: newRoleName }
+        })
+        toast('Grupo criado com sucesso no banco legado!', 'success')
+        setNewRoleName('')
+        setIsCreatingRole(false)
+        const data = await executeTunnelQuery({ action: 'select', table: authConfig.db_groups_table, schemaName })
+        const pkField = rModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+        const mappedRoles = data.map((r: any) => ({
+          id: r[pkField]?.toString() || crypto.randomUUID(),
+          name: r[authConfig.db_groups_name_column] || 'Grupo'
+        }))
+        setRoles(mappedRoles)
+      } catch(err: any) {
+        toast('Erro ao criar grupo legado: ' + err.message, 'error')
+      }
     } else {
-      toast('Erro ao criar grupo: ' + error.message, 'error')
+      const { error } = await supabase.from('project_roles').insert({
+        project_id: project.id, name: newRoleName
+      })
+      if (!error) {
+        toast('Grupo criado com sucesso!', 'success')
+        setNewRoleName('')
+        setIsCreatingRole(false)
+        const { data: dbRoles } = await supabase.from('project_roles').select('*').eq('project_id', project.id)
+        if (dbRoles) setRoles(dbRoles)
+      } else {
+        toast('Erro ao criar grupo: ' + error.message, 'error')
+      }
     }
   }
 
   const handleUpdateRole = async (roleId: string, newName: string) => {
     if (!newName) return
-    const { error } = await supabase.from('project_roles').update({ name: newName }).eq('id', roleId)
-    if (!error) {
-      toast('Grupo renomeado com sucesso!', 'success')
-      setEditingRoleId(null)
-      const { data: dbRoles } = await supabase.from('project_roles').select('*').eq('project_id', project.id)
-      if (dbRoles) setRoles(dbRoles)
+    if (authConfig.sync_legacy_groups) {
+      try {
+        const rModel = models.find(m => m.db_table_name === authConfig.db_groups_table)
+        const schemaName = rModel?.db_schema_name || 'public'
+        const pkField = rModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+        
+        await executeTunnelQuery({
+          action: 'update', table: authConfig.db_groups_table, schemaName,
+          idColumn: pkField, idValue: roleId,
+          data: { [authConfig.db_groups_name_column]: newName }
+        })
+        toast('Grupo renomeado com sucesso no banco legado!', 'success')
+        setEditingRoleId(null)
+        const data = await executeTunnelQuery({ action: 'select', table: authConfig.db_groups_table, schemaName })
+        const mappedRoles = data.map((r: any) => ({
+          id: r[pkField]?.toString() || crypto.randomUUID(),
+          name: r[authConfig.db_groups_name_column] || 'Grupo'
+        }))
+        setRoles(mappedRoles)
+      } catch(err: any) {
+        toast('Erro ao renomear grupo legado: ' + err.message, 'error')
+      }
     } else {
-      toast('Erro ao renomear grupo: ' + error.message, 'error')
+      const { error } = await supabase.from('project_roles').update({ name: newName }).eq('id', roleId)
+      if (!error) {
+        toast('Grupo renomeado com sucesso!', 'success')
+        setEditingRoleId(null)
+        const { data: dbRoles } = await supabase.from('project_roles').select('*').eq('project_id', project.id)
+        if (dbRoles) setRoles(dbRoles)
+      } else {
+        toast('Erro ao renomear grupo: ' + error.message, 'error')
+      }
     }
   }
 
@@ -454,20 +631,42 @@ export default function AuthSettingsPage() {
     if (!roleToDelete) return
     const roleId = roleToDelete.id
     
-    // As tabelas dependentes (project_user_roles, project_role_permissions) geralmente tem ON DELETE CASCADE,
-    // mas por segurança faremos a exclusão explicita se não tiver.
-    await supabase.from('project_role_permissions').delete().eq('role_id', roleId)
-    await supabase.from('project_user_roles').delete().eq('role_id', roleId)
-    
-    const { error } = await supabase.from('project_roles').delete().eq('id', roleId)
-    if (!error) {
-      toast('Grupo excluído com sucesso!', 'success')
-      const { data: dbRoles } = await supabase.from('project_roles').select('*').eq('project_id', project.id)
-      if (dbRoles) setRoles(dbRoles)
+    if (authConfig.sync_legacy_groups) {
+      try {
+        const rModel = models.find(m => m.db_table_name === authConfig.db_groups_table)
+        const schemaName = rModel?.db_schema_name || 'public'
+        const pkField = rModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+        
+        await supabase.from('project_role_permissions').delete().eq('role_id', roleId)
+        await executeTunnelQuery({
+          action: 'delete', table: authConfig.db_groups_table, schemaName,
+          idColumn: pkField, idValue: roleId
+        })
+        toast('Grupo excluído com sucesso do banco legado!', 'success')
+        const data = await executeTunnelQuery({ action: 'select', table: authConfig.db_groups_table, schemaName })
+        const mappedRoles = data.map((r: any) => ({
+          id: r[pkField]?.toString() || crypto.randomUUID(),
+          name: r[authConfig.db_groups_name_column] || 'Grupo'
+        }))
+        setRoles(mappedRoles)
+      } catch(err: any) {
+        toast('Erro ao excluir grupo legado: ' + err.message, 'error')
+      }
+      setRoleToDelete(null)
     } else {
-      toast('Erro ao excluir grupo: ' + error.message, 'error')
+      await supabase.from('project_role_permissions').delete().eq('role_id', roleId)
+      await supabase.from('project_user_roles').delete().eq('role_id', roleId)
+      
+      const { error } = await supabase.from('project_roles').delete().eq('id', roleId)
+      if (!error) {
+        toast('Grupo excluído com sucesso!', 'success')
+        const { data: dbRoles } = await supabase.from('project_roles').select('*').eq('project_id', project.id)
+        if (dbRoles) setRoles(dbRoles)
+      } else {
+        toast('Erro ao excluir grupo: ' + error.message, 'error')
+      }
+      setRoleToDelete(null)
     }
-    setRoleToDelete(null)
   }
 
   const openCreateUserModal = () => {
@@ -612,7 +811,15 @@ export default function AuthSettingsPage() {
           ldap_base_dn: authConfig.ldap_base_dn,
           ui_config: {
             ...visualConfig,
-            allow_signup: authConfig.allow_signup
+            allow_signup: authConfig.allow_signup,
+            sync_legacy_groups: authConfig.sync_legacy_groups,
+            db_groups_table: authConfig.db_groups_table,
+            db_groups_name_column: authConfig.db_groups_name_column,
+            db_user_groups_type: authConfig.db_user_groups_type,
+            db_user_role_column: authConfig.db_user_role_column,
+            db_user_roles_table: authConfig.db_user_roles_table,
+            db_user_roles_user_id_column: authConfig.db_user_roles_user_id_column,
+            db_user_roles_role_id_column: authConfig.db_user_roles_role_id_column
           }
         })
 
@@ -849,6 +1056,132 @@ export default function AuthSettingsPage() {
                         <option value="plain">{t('dashboard.projects.studio.auth.plain')}</option>
                       </select>
                     </div>
+                  </div>
+
+                  {/* Legacy Groups Sync */}
+                  <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Sincronizar Grupos de Acesso Legado</h4>
+                        <p className="text-[10px] text-neutral-500 dark:text-neutral-400">Permite gerenciar as roles de usuários vindas do seu banco de dados atual.</p>
+                      </div>
+                      <button 
+                        onClick={() => setAuthConfig({...authConfig, sync_legacy_groups: !authConfig.sync_legacy_groups})}
+                        className={`w-12 h-6 rounded-full transition-all relative ${authConfig.sync_legacy_groups ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-800'}`}
+                      >
+                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${authConfig.sync_legacy_groups ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    {authConfig.sync_legacy_groups && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-neutral-100 dark:bg-neutral-900/50 p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+                        <div className="space-y-3">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tabela de Grupos/Roles</label>
+                          <select 
+                            value={authConfig.db_groups_table || ''}
+                            onChange={(e) => setAuthConfig({...authConfig, db_groups_table: e.target.value})}
+                            className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
+                          >
+                            <option value="">Selecione a tabela...</option>
+                            {models.map(m => (
+                              <option key={m.id} value={m.db_table_name}>{m.db_table_name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-3">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Coluna de Nome do Grupo</label>
+                          <select 
+                            value={authConfig.db_groups_name_column || ''}
+                            onChange={(e) => setAuthConfig({...authConfig, db_groups_name_column: e.target.value})}
+                            className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
+                          >
+                            <option value="">Selecione a coluna...</option>
+                            {models.find(m => m.db_table_name === authConfig.db_groups_table)?.fields?.map((f: any) => (
+                              <option key={f.id} value={f.name || f.db_column_name}>
+                                {f.label || f.name || f.db_column_name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-3 md:col-span-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tipo de Relacionamento (Com Usuário)</label>
+                          <select 
+                            value={authConfig.db_user_groups_type || '1_to_n'}
+                            onChange={(e) => setAuthConfig({...authConfig, db_user_groups_type: e.target.value})}
+                            className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
+                          >
+                            <option value="1_to_n">Coluna direta na Tabela de Usuários (Ex: role_id)</option>
+                            <option value="n_to_n">Tabela Intermediária (Ex: user_roles) N:N</option>
+                          </select>
+                        </div>
+
+                        {authConfig.db_user_groups_type === '1_to_n' && (
+                          <div className="space-y-3 md:col-span-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Coluna de Grupo na Tabela Usuários</label>
+                            <select 
+                              value={authConfig.db_user_role_column || ''}
+                              onChange={(e) => setAuthConfig({...authConfig, db_user_role_column: e.target.value})}
+                              className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
+                            >
+                              <option value="">Selecione a coluna...</option>
+                              {models.find(m => m.db_table_name === authConfig.db_table_name)?.fields?.map((f: any) => (
+                                <option key={f.id} value={f.name || f.db_column_name}>
+                                  {f.label || f.name || f.db_column_name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {authConfig.db_user_groups_type === 'n_to_n' && (
+                          <>
+                            <div className="space-y-3 md:col-span-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tabela de Relacionamento (N:N)</label>
+                              <select 
+                                value={authConfig.db_user_roles_table || ''}
+                                onChange={(e) => setAuthConfig({...authConfig, db_user_roles_table: e.target.value})}
+                                className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
+                              >
+                                <option value="">Selecione a tabela...</option>
+                                {models.map(m => (
+                                  <option key={m.id} value={m.db_table_name}>{m.db_table_name}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="space-y-3">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Coluna de User ID</label>
+                              <select 
+                                value={authConfig.db_user_roles_user_id_column || ''}
+                                onChange={(e) => setAuthConfig({...authConfig, db_user_roles_user_id_column: e.target.value})}
+                                className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
+                              >
+                                <option value="">Selecione a coluna...</option>
+                                {models.find(m => m.db_table_name === authConfig.db_user_roles_table)?.fields?.map((f: any) => (
+                                  <option key={f.id} value={f.name || f.db_column_name}>
+                                    {f.label || f.name || f.db_column_name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="space-y-3">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Coluna de Role ID</label>
+                              <select 
+                                value={authConfig.db_user_roles_role_id_column || ''}
+                                onChange={(e) => setAuthConfig({...authConfig, db_user_roles_role_id_column: e.target.value})}
+                                className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
+                              >
+                                <option value="">Selecione a coluna...</option>
+                                {models.find(m => m.db_table_name === authConfig.db_user_roles_table)?.fields?.map((f: any) => (
+                                  <option key={f.id} value={f.name || f.db_column_name}>
+                                    {f.label || f.name || f.db_column_name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
