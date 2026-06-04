@@ -252,12 +252,12 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
       // Isolamento: Se o comando for para outro schema, este túnel o ignora silenciosamente
       const expectedSchema = connectionName || 'public';
       const incomingSchema = schemaName || 'public';
-      if (incomingSchema !== expectedSchema) {
+      if (incomingSchema !== expectedSchema && action !== 'sync_bpm') {
         console.log(chalk.yellow(`[ IGNORADO ] Comando destinado ao schema '${incomingSchema}', mas este agente atende '${expectedSchema}'.`));
         return; // Ignora o broadcast, outro agente responderá
       }
 
-      console.log(chalk.yellow(`[ EXEC ] Comando Recebido no schema '${expectedSchema}': ${action === 'validate_login' ? 'Validar Login' : `Buscar dados da tabela '${table}'`}`));
+      console.log(chalk.yellow(`[ EXEC ] Comando Recebido no schema '${expectedSchema}': ${action === 'validate_login' ? 'Validar Login' : (action === 'sync_bpm' ? 'Sincronizar BPM' : `Buscar dados da tabela '${table}'`)}`));
 
       try {
         const safeTable = table ? table.replace(/[^a-zA-Z0-9_]/g, '') : '';
@@ -786,6 +786,7 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
         } else if (action === 'trigger_bpm') {
           const { workflows, rowData, tableName } = payload.payload;
           const safeTable = (tableName || table || '').replace(/[^a-zA-Z0-9_]/g, '');
+
           if (workflows && workflows.length > 0 && bpmEngine) {
              await bpmEngine.processCustomAction(workflows, safeTable, rowData);
           }
@@ -812,6 +813,13 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
           
           result = { rows: [] };
           console.log(chalk.green(`[ OK ] BPM TRIGGER ACTION executada para fluxos customizados.`));
+        } else if (action === 'sync_bpm') {
+          if (bpmEngine) {
+             console.log(chalk.yellow(`[BPM] Sincronização forçada dos fluxos recebida.`));
+             await bpmEngine.syncWorkflows();
+          }
+          result = { rows: [] };
+          console.log(chalk.green(`[ OK ] Fluxos BPM sincronizados com sucesso.`));
         } else {
           throw new Error('Ação não suportada');
         }

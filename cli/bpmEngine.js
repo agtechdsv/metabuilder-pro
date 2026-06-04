@@ -85,17 +85,36 @@ class BpmEngine {
     // 2. Buscar as foreign keys na tabela de trigger
     const extraData = {};
     for (const table of extraTables) {
-       const fkName = table.endsWith('s') ? table.slice(0, -1) + '_id' : table + '_id';
-       if (triggerData[fkName]) {
+       let fkName = table.endsWith('s') ? table.slice(0, -1) + '_id' : table + '_id';
+       
+       // Fallbacks se o fkName padrão não existir em triggerData
+       let fkValue = triggerData ? triggerData[fkName] : null;
+       
+       if (!fkValue) {
+          if (triggerData && triggerData[`${table}_id`]) { fkName = `${table}_id`; fkValue = triggerData[fkName]; }
+          else if (triggerData && triggerData['id_' + table]) { fkName = 'id_' + table; fkValue = triggerData[fkName]; }
+          else if (actionData && actionData[fkName]) { fkValue = actionData[fkName]; }
+          else if (actionData && actionData[`${table}_id`]) { fkName = `${table}_id`; fkValue = actionData[fkName]; }
+          else if (actionData && actionData['id_' + table]) { fkName = 'id_' + table; fkValue = actionData[fkName]; }
+       }
+
+       console.log(chalk.gray(`[BPM-DEBUG] Tentando resolver tabela extra '${table}'. Usando fkName='${fkName}'. Valor='${fkValue}'`));
+
+       if (fkValue) {
           try {
              const sql = `SELECT * FROM "${table}" WHERE "id" = $1 LIMIT 1`;
-             const rows = await this.executeQuery(sql, [triggerData[fkName]]);
+             const rows = await this.executeQuery(sql, [fkValue]);
              if (rows.length > 0) {
                 extraData[table] = rows[0];
+                console.log(chalk.gray(`[BPM-DEBUG] Dados extras carregados para '${table}' com sucesso!`));
+             } else {
+                console.log(chalk.gray(`[BPM-DEBUG] Nenhum registro encontrado na tabela '${table}' com id=${triggerData[fkName]}`));
              }
           } catch(e) {
              console.log(chalk.gray(`[BPM-DEBUG] Erro ao buscar FK ${fkName} na tabela ${table}: ${e.message}`));
           }
+       } else {
+          console.log(chalk.gray(`[BPM-DEBUG] FK '${fkName}' não encontrada nos dados de origem: ${JSON.stringify(triggerData)}`));
        }
     }
 
@@ -166,6 +185,8 @@ class BpmEngine {
         case '>=': isRuleTrue = Number(actualValue) >= Number(expectedValue); break;
         case '<=': isRuleTrue = Number(actualValue) <= Number(expectedValue); break;
       }
+      
+      console.log(chalk.cyan(`[BPM-CONDITION] Regra: Campo '${field}' (${actualValue}) ${operator} Valor Esperado (${expectedValue}) => Resultado: ${isRuleTrue}`));
 
       if (group.logic === 'AND') {
         isGroupTrue = isGroupTrue && isRuleTrue;
@@ -174,6 +195,7 @@ class BpmEngine {
       }
     }
 
+    console.log(chalk.cyan(`[BPM-CONDITION] Grupo Final resultou em: ${isGroupTrue}`));
     return isGroupTrue;
   }
 
@@ -385,6 +407,7 @@ class BpmEngine {
 
   async processEvent(tableName, actionType, rowData) {
     console.log(chalk.gray(`[BPM-DEBUG] processEvent chamado: tableName=${tableName}, actionType=${actionType}`));
+    
     if (!this.workflows || this.workflows.length === 0) {
       console.log(chalk.gray(`[BPM-DEBUG] Nenhum fluxo ativo encontrado.`));
       return;
@@ -423,6 +446,7 @@ class BpmEngine {
 
   async processCustomAction(workflowIds, tableName, rowData) {
     console.log(chalk.gray(`[BPM-DEBUG] processCustomAction chamado para fluxos: ${workflowIds.join(', ')}`));
+    
     if (!this.workflows || this.workflows.length === 0) {
       console.log(chalk.gray(`[BPM-DEBUG] Nenhum fluxo ativo encontrado.`));
       return;
@@ -448,7 +472,17 @@ class BpmEngine {
 
       console.log(chalk.cyan(`[BPM] Disparando fluxo customizado "${flow.name}" via Ação de Interface...`));
       try {
-         await this.traverseGraph(flowData, triggerNode, tableName, rowData);
+         // Garantir que temos o rowData completo caso a interface tenha enviado parcial
+         let fullRowData = { ...rowData };
+         if (fullRowData && fullRowData.id) {
+            try {
+               const sql = `SELECT * FROM "${tableName}" WHERE "id" = $1 LIMIT 1`;
+               const rows = await this.executeQuery(sql, [fullRowData.id]);
+               if (rows.length > 0) fullRowData = { ...fullRowData, ...rows[0] };
+            } catch(e) {}
+         }
+
+         await this.traverseGraph(flowData, triggerNode, tableName, fullRowData);
       } catch(e) {
          console.error(chalk.red(`[BPM] Falha na execução customizada do fluxo ${flow.name}:`), e);
       }

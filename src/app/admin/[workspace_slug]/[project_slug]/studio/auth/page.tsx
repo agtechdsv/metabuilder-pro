@@ -370,7 +370,7 @@ export default function AuthSettingsPage() {
             if (mappedRoles.length > 0) {
               // Sincroniza os papéis legados na tabela project_roles do Supabase para evitar erro de Foreign Key
               await supabase.from('project_roles').upsert(
-                mappedRoles.map(r => ({ id: r.id, project_id: project.id, name: r.name })),
+                mappedRoles.map((r: any) => ({ id: r.id, project_id: project.id, name: r.name })),
                 { onConflict: 'id' }
               )
 

@@ -492,6 +492,29 @@ function BpmCanvasContent({
         .eq('id', currentWorkflowId);
 
       if (error) throw error;
+      
+      // Forçar atualização do motor CLI no cliente
+      try {
+        const channel = supabase.channel(`tunnel:${projectId}`);
+        channel.subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await channel.send({
+              type: 'broadcast',
+              event: 'sql_query',
+              payload: {
+                action: 'sync_bpm',
+                token: project?.secret_token || 'test-token',
+                schemaName: project?.slug || 'public',
+                queryId: crypto.randomUUID()
+              }
+            });
+            setTimeout(() => { supabase.removeChannel(channel) }, 3000);
+          }
+        });
+      } catch(e) {
+        console.error('Erro ao notificar o CLI:', e);
+      }
+      
       toast('Fluxo publicado e ativado em Produção!', 'success');
       
       setWorkflows(prev => prev.map(w => w.id === currentWorkflowId ? { ...w, flow_data: flow, draft_flow_data: null, is_active: true } : w));
@@ -1762,7 +1785,7 @@ function BpmCanvasContent({
                             Configurar E-mail
                           </button>
                           
-                          {(selectedNode.data?.actionSubject || selectedNode.data?.actionBody) && (
+                          {Boolean(selectedNode.data?.actionSubject || selectedNode.data?.actionBody) && (
                             <div className="mt-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-3 text-xs">
                               <div className="font-bold text-neutral-700 dark:text-neutral-300 mb-1 flex items-center gap-1">
                                 <span className="text-neutral-400 text-[10px] uppercase">Assunto:</span> 
@@ -2016,7 +2039,7 @@ function BpmCanvasContent({
         isOpen={!!editingEmailNode}
         onClose={() => setEditingEmailNode(null)}
         title="Configurar E-mail"
-        maxWidth="max-w-2xl"
+        size="2xl"
       >
         <div className="space-y-4">
           <div className="bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800">
