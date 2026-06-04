@@ -324,7 +324,14 @@ export default function ViewPageContent({
           schemaName: project?.slug || 'public'
         }
         tunnelChannel.send({ type: 'broadcast', event: 'sql_query', payload })
-        toast(`Disparando automação BPM...`, 'info')
+        
+        // Atualização silenciosa da tela após 1.5s para dar tempo ao fluxo de processar
+        setTimeout(() => {
+          setRefreshKey(prev => prev + 1)
+          setRelationalRefreshKey(prev => prev + 1)
+          setDetailRefreshKey(prev => prev + 1)
+          toast('Ação executada com sucesso!', 'success')
+        }, 1500)
       }
     }
 
@@ -352,6 +359,9 @@ export default function ViewPageContent({
       toast(`Executando ação: ${action.label}...`, 'info')
     } 
     else if (action.trigger_type === 'usecase') {
+      if (!action.usecase_slug) {
+        return; // Just BPM was intended
+      }
       const slug = interpolate(action.usecase_slug)
       const params = interpolate(action.usecase_params) || ''
       const selectedFields = action.usecase_selected_fields || []

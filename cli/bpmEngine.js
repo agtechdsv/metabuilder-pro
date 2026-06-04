@@ -105,10 +105,10 @@ class BpmEngine {
       if (parts.length === 2) {
         const table = parts[0];
         const field = parts[1];
-        if (table === triggerTable && triggerData[field] !== undefined) {
+        if (table === triggerTable && triggerData && triggerData[field] !== undefined) {
           return triggerData[field];
         }
-        if (actionTable && table === actionTable && actionData && actionData[field] !== undefined) {
+        if (table === actionTable && actionData && actionData[field] !== undefined) {
           return actionData[field];
         }
         if (extraData[table] && extraData[table][field] !== undefined) {

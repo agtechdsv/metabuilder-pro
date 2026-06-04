@@ -785,9 +785,31 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
           console.log(chalk.green(`[ OK ] CUSTOM ACTION executada.`));
         } else if (action === 'trigger_bpm') {
           const { workflows, rowData, tableName } = payload.payload;
+          const safeTable = (tableName || table || '').replace(/[^a-zA-Z0-9_]/g, '');
           if (workflows && workflows.length > 0 && bpmEngine) {
-             await bpmEngine.processCustomAction(workflows, tableName || table, rowData);
+             await bpmEngine.processCustomAction(workflows, safeTable, rowData);
           }
+          
+          let finalData = rowData;
+          try {
+             const pkValue = rowData.id || rowData.ID || rowData.Id;
+             if (dbType === 'postgres' && pkValue) {
+               const res = await pgClient.query(`SELECT * FROM "${safeTable}" WHERE "id" = $1`, [pkValue]);
+               if (res.rows.length > 0) finalData = res.rows[0];
+             } else if (dbType === 'oracle' && pkValue) {
+               const res = await oracleConnection.execute(`SELECT * FROM "${safeTable}" WHERE "id" = :1`, [pkValue], { outFormat: oracledb.OUT_FORMAT_OBJECT });
+               if (res.rows && res.rows.length > 0) finalData = res.rows[0];
+             }
+          } catch(e) {
+             console.error('[BPM] Falha ao re-buscar dados atualizados:', e.message);
+          }
+          
+          channel.send({
+             type: 'broadcast',
+             event: 'bpm_workflow_completed',
+             payload: { table: safeTable, action: 'CUSTOM', data: finalData }
+          });
+          
           result = { rows: [] };
           console.log(chalk.green(`[ OK ] BPM TRIGGER ACTION executada para fluxos customizados.`));
         } else {

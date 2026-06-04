@@ -196,7 +196,12 @@ export default function ViewContainer({
           schemaName: project?.slug || 'public'
         }
         tunnelChannel.send({ type: 'broadcast', event: 'sql_query', payload })
-        toast(`Disparando automação BPM...`, 'info')
+        
+        // Atualização silenciosa da tela após 1.5s para dar tempo ao fluxo de processar
+        setTimeout(() => {
+          setRefreshTrigger(prev => prev + 1)
+          toast('Ação executada com sucesso!', 'success')
+        }, 1500)
       }
     }
 
@@ -228,6 +233,9 @@ export default function ViewContainer({
       toast(`Executando ação: ${action.label}...`, 'info')
     } 
     else if (action.trigger_type === 'usecase') {
+      if (!action.usecase_slug) {
+        return; // Just BPM was intended
+      }
       const slug = interpolate(action.usecase_slug)
       const params = interpolate(action.usecase_params) || ''
       
