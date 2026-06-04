@@ -842,7 +842,6 @@ function BpmCanvasContent({
                           { id: 'insert', label: 'Ao Inserir Registro' },
                           { id: 'update', label: 'Ao Atualizar Registro' },
                           { id: 'delete', label: 'Ao Excluir Registro' },
-                          { id: 'manual', label: 'Ação Customizada (Botão da Interface)' },
                           { id: 'scheduled', label: 'Agendado (Cron Job)' }
                         ].map(evt => {
                           const isChecked = triggerTypes.includes(evt.id);
@@ -946,7 +945,7 @@ function BpmCanvasContent({
                       </>
                     )}
 
-                    {triggerTypes.includes('manual') && (() => {
+                    {(() => {
                       const useCasesWithActions = localViews
                         .map(v => ({
                           ...v,

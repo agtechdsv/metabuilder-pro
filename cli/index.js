@@ -783,6 +783,13 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
           }
           result = execResult;
           console.log(chalk.green(`[ OK ] CUSTOM ACTION executada.`));
+        } else if (action === 'trigger_bpm') {
+          const { workflows, rowData, tableName } = payload.payload;
+          if (workflows && workflows.length > 0 && bpmEngine) {
+             await bpmEngine.processCustomAction(workflows, tableName || table, rowData);
+          }
+          result = { rows: [] };
+          console.log(chalk.green(`[ OK ] BPM TRIGGER ACTION executada para fluxos customizados.`));
         } else {
           throw new Error('Ação não suportada');
         }

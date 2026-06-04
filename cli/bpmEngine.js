@@ -420,6 +420,40 @@ class BpmEngine {
       }
     }
   }
+
+  async processCustomAction(workflowIds, tableName, rowData) {
+    console.log(chalk.gray(`[BPM-DEBUG] processCustomAction chamado para fluxos: ${workflowIds.join(', ')}`));
+    if (!this.workflows || this.workflows.length === 0) {
+      console.log(chalk.gray(`[BPM-DEBUG] Nenhum fluxo ativo encontrado.`));
+      return;
+    }
+
+    const targetedWorkflows = this.workflows.filter(w => workflowIds.includes(w.id));
+    if (targetedWorkflows.length === 0) {
+       console.log(chalk.gray(`[BPM-DEBUG] Nenhum dos fluxos solicitados está ativo ou existe.`));
+       return;
+    }
+
+    for (const flow of targetedWorkflows) {
+      const flowData = flow.flow_data;
+      if (!flowData || !flowData.nodes) continue;
+      
+      const triggerNodes = flowData.nodes.filter(n => n.type === 'trigger');
+      const triggerNode = triggerNodes.length > 0 ? triggerNodes[0] : null;
+
+      if (!triggerNode) {
+         console.log(chalk.gray(`[BPM-DEBUG] Fluxo ${flow.name} não possui nó de gatilho.`));
+         continue;
+      }
+
+      console.log(chalk.cyan(`[BPM] Disparando fluxo customizado "${flow.name}" via Ação de Interface...`));
+      try {
+         await this.traverseGraph(flowData, triggerNode, tableName, rowData);
+      } catch(e) {
+         console.error(chalk.red(`[BPM] Falha na execução customizada do fluxo ${flow.name}:`), e);
+      }
+    }
+  }
 }
 
 module.exports = { BpmEngine };

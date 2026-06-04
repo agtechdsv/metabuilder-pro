@@ -183,6 +183,23 @@ export default function ViewContainer({
       })
     }
 
+    if (action.linked_bpm_workflows && action.linked_bpm_workflows.length > 0) {
+      if (!tunnelChannel || !isTunnelReady) {
+        toast('Túnel com banco de dados não está pronto para automações.', 'error')
+      } else {
+        const payload: any = {
+          action: 'trigger_bpm',
+          workflows: action.linked_bpm_workflows,
+          rowData: rowData || {},
+          token: project?.secret_token || 'test-token',
+          tableName: modelName,
+          schemaName: project?.slug || 'public'
+        }
+        tunnelChannel.send({ type: 'broadcast', event: 'sql_query', payload })
+        toast(`Disparando automação BPM...`, 'info')
+      }
+    }
+
     if (action.trigger_type === 'sql') {
       if (!tunnelChannel || !isTunnelReady) {
         toast('Túnel com banco de dados não está pronto.', 'error')
