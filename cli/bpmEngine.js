@@ -311,6 +311,14 @@ class BpmEngine {
              }
           }
           
+          let specificEmails = '';
+          if (data.emailSpecificUsers) {
+             specificEmails = await this.replaceVariables(data.emailSpecificUsers, triggerTable, triggerData, actionTable, targetRow);
+          }
+          if (specificEmails) {
+             to = to ? `${to},${specificEmails}` : specificEmails;
+          }
+          
           if (!to) {
              to = process.env.SMTP_USER || 'contato@metabuilderpro.com';
           }

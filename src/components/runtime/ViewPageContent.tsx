@@ -401,6 +401,32 @@ export default function ViewPageContent({
       }
     })
 
+    channel.on('broadcast', { event: 'bpm_workflow_completed' }, (payload) => {
+      console.log('[MetaBuilder] 🔄 BPM Workflow Completed! Silently refreshing UI...', payload)
+      // Atualiza as listagens
+      setRefreshKey(prev => prev + 1)
+      setRelationalRefreshKey(prev => prev + 1)
+      setDetailRefreshKey(prev => prev + 1)
+
+      const bpmTable = payload.payload?.table
+      const bpmData = payload.payload?.data
+
+      // Atualiza o registro aberto (se houver) sem fechar a tela
+      if (bpmData && bpmTable === modelName) {
+        setSelectedRow((prev: any) => {
+          if (!prev) return prev
+          const pkValue = bpmData[primaryKeyName] || bpmData.id || bpmData.ID || bpmData[primaryKeyName?.toUpperCase()]
+          const prevPkValue = prev[primaryKeyName] || prev.id || prev.ID || prev[primaryKeyName?.toUpperCase()]
+          
+          if (String(prevPkValue) === String(pkValue)) {
+            console.log('[MetaBuilder] 🔄 Atualizando formulário aberto com dados do BPM')
+            return { ...prev, ...bpmData, _details: prev._details }
+          }
+          return prev
+        })
+      }
+    })
+
     return () => {
       console.log(`[MetaBuilder] 🔌 Fechando Túnel Centralizado.`)
       channel.unsubscribe()

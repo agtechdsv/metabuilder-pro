@@ -23,6 +23,7 @@ import dagre from 'dagre';
 
 import { FlowSidebar } from './FlowSidebar';
 import { TriggerNode, ActionNode, ConditionNode } from './nodes/CustomNodes';
+import RichTextEditor from './RichTextEditor';
 import { Save, Play, Wand2, X, ArrowLeft, Loader2, Plus, Trash2, Check, Edit2, Box } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Modal } from '@/components/ui/Modal';
@@ -136,6 +137,18 @@ function BpmCanvasContent({
   const [isLoadingGroupUsers, setIsLoadingGroupUsers] = useState(false);
   const [selectedUsersInModal, setSelectedUsersInModal] = useState<string[] | 'all'>('all');
   const [modalSearchTerm, setModalSearchTerm] = useState('');
+  const [editingEmailNode, setEditingEmailNode] = useState<string | null>(null);
+  const [tempEmailData, setTempEmailData] = useState<{ subject: string, body: string }>({ subject: '', body: '' });
+
+  useEffect(() => {
+    if (editingEmailNode) {
+      const node = reactFlowInstance?.getNode(editingEmailNode);
+      setTempEmailData({
+        subject: (node?.data?.actionSubject as string) || '',
+        body: (node?.data?.actionBody as string) || ''
+      });
+    }
+  }, [editingEmailNode, reactFlowInstance]);
 
   // Buscar enumerations
   useEffect(() => {
@@ -1741,124 +1754,26 @@ function BpmCanvasContent({
                           </div>
                         )}
 
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-0">Assunto</label>
-                            <select 
-                              value=""
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (!val) return;
-                                const currentText = (selectedNode.data?.actionSubject as string) || '';
-                                let newText = currentText + ` {{${val}}}`; // Default para o final
-                                if (cursorPos && cursorPos.field === 'actionSubject') {
-                                  newText = currentText.substring(0, cursorPos.start) + `{{${val}}}` + currentText.substring(cursorPos.end);
-                                }
-                                updateNodeData(selectedNode.id, { actionSubject: newText });
-                                e.target.value = '';
-                                setCursorPos(null);
-                              }}
-                              className="bg-transparent border-none text-[9px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-24 text-right p-0"
-                            >
-                              <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">+ Variável</option>
-                              {[...dbModels]
-                                .sort((a, b) => {
-                                  const nameA = a.display_name || a.db_table_name || a.name;
-                                  const nameB = b.display_name || b.db_table_name || b.name;
-                                  return nameA.localeCompare(nameB);
-                                })
-                                .map(m => {
-                                  const tableName = m.display_name || m.db_table_name || m.name;
-                                  const fields = dbFields.filter(f => f.model_id === m.id);
-                                  if (fields.length === 0) return null;
-                                  
-                                  return (
-                                    <optgroup key={m.id} label={tableName} className="text-left text-indigo-600 dark:text-indigo-400 normal-case tracking-normal text-sm font-bold bg-neutral-50 dark:bg-neutral-900">
-                                      {[...fields]
-                                        .sort((a, b) => {
-                                          const nameA = a.display_name || a.db_column_name || a.name;
-                                          const nameB = b.display_name || b.db_column_name || b.name;
-                                          return nameA.localeCompare(nameB);
-                                        })
-                                        .map(f => (
-                                          <option key={f.id} value={`${m.db_table_name || m.name}.${f.db_column_name || f.name}`} className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">
-                                            {f.display_name || f.db_column_name || f.name}
-                                          </option>
-                                        ))}
-                                    </optgroup>
-                                  );
-                                })
-                              }
-                            </select>
-                          </div>
-                          <input 
-                            type="text" 
-                            placeholder="Ex: Confirmação do Pedido {{orders.id}}"
-                            value={(selectedNode.data?.actionSubject as string) || ''} 
-                            onChange={(e) => updateNodeData(selectedNode.id, { actionSubject: e.target.value })}
-                            onBlur={(e) => setCursorPos({ field: 'actionSubject', start: e.target.selectionStart || 0, end: e.target.selectionEnd || 0 })}
-                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
-                          />
-                        </div>
-
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-0">Corpo (HTML/Texto)</label>
-                            <select 
-                              value=""
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (!val) return;
-                                const currentText = (selectedNode.data?.actionBody as string) || '';
-                                let newText = currentText + ` {{${val}}}`; // Default para o final
-                                if (cursorPos && cursorPos.field === 'actionBody') {
-                                  newText = currentText.substring(0, cursorPos.start) + `{{${val}}}` + currentText.substring(cursorPos.end);
-                                }
-                                updateNodeData(selectedNode.id, { actionBody: newText });
-                                e.target.value = '';
-                                setCursorPos(null);
-                              }}
-                              className="bg-transparent border-none text-[9px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-24 text-right p-0"
-                            >
-                              <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">+ Variável</option>
-                              {[...dbModels]
-                                .sort((a, b) => {
-                                  const nameA = a.display_name || a.db_table_name || a.name;
-                                  const nameB = b.display_name || b.db_table_name || b.name;
-                                  return nameA.localeCompare(nameB);
-                                })
-                                .map(m => {
-                                  const tableName = m.display_name || m.db_table_name || m.name;
-                                  const fields = dbFields.filter(f => f.model_id === m.id);
-                                  if (fields.length === 0) return null;
-                                  
-                                  return (
-                                    <optgroup key={m.id} label={tableName} className="text-left text-indigo-600 dark:text-indigo-400 normal-case tracking-normal text-sm font-bold bg-neutral-50 dark:bg-neutral-900">
-                                      {[...fields]
-                                        .sort((a, b) => {
-                                          const nameA = a.display_name || a.db_column_name || a.name;
-                                          const nameB = b.display_name || b.db_column_name || b.name;
-                                          return nameA.localeCompare(nameB);
-                                        })
-                                        .map(f => (
-                                          <option key={f.id} value={`${m.db_table_name || m.name}.${f.db_column_name || f.name}`} className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">
-                                            {f.display_name || f.db_column_name || f.name}
-                                          </option>
-                                        ))}
-                                    </optgroup>
-                                  );
-                                })
-                              }
-                            </select>
-                          </div>
-                          <textarea 
-                            rows={4}
-                            placeholder="Olá {{customers.nome}}, seu pedido foi recebido!"
-                            value={(selectedNode.data?.actionBody as string) || ''} 
-                            onChange={(e) => updateNodeData(selectedNode.id, { actionBody: e.target.value })}
-                            onBlur={(e) => setCursorPos({ field: 'actionBody', start: e.target.selectionStart || 0, end: e.target.selectionEnd || 0 })}
-                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 resize-none"
-                          />
+                        <div className="pt-2">
+                          <button
+                            onClick={() => setEditingEmailNode(selectedNode.id)}
+                            className="w-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 font-bold text-[10px] uppercase tracking-widest py-3 rounded-lg flex items-center justify-center gap-2 transition-all"
+                          >
+                            <Edit2 size={14} />
+                            Configurar E-mail
+                          </button>
+                          
+                          {(selectedNode.data?.actionSubject || selectedNode.data?.actionBody) && (
+                            <div className="mt-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-3 text-xs">
+                              <div className="font-bold text-neutral-700 dark:text-neutral-300 mb-1 flex items-center gap-1">
+                                <span className="text-neutral-400 text-[10px] uppercase">Assunto:</span> 
+                                <span className="truncate">{selectedNode.data?.actionSubject as string || 'Sem assunto'}</span>
+                              </div>
+                              <div className="text-neutral-500 line-clamp-2 mt-2 border-t border-neutral-100 dark:border-neutral-800 pt-2 text-[11px] leading-relaxed">
+                                {((selectedNode.data?.actionBody as string) || 'Sem corpo de e-mail').replace(/<[^>]*>?/gm, '')}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -2093,6 +2008,125 @@ function BpmCanvasContent({
                 Confirmar
               </button>
             </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de Configuração de E-mail */}
+      <Modal
+        isOpen={!!editingEmailNode}
+        onClose={() => setEditingEmailNode(null)}
+        title="Configurar E-mail"
+        maxWidth="max-w-2xl"
+      >
+        <div className="space-y-4">
+          <div className="bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800">
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest block mb-1">Assunto</label>
+              <select 
+                value=""
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (!val) return;
+                  const currentText = tempEmailData.subject;
+                  let newText = currentText + ` {{${val}}}`;
+                  if (cursorPos && cursorPos.field === 'actionSubject') {
+                    newText = currentText.substring(0, cursorPos.start) + `{{${val}}}` + currentText.substring(cursorPos.end);
+                  }
+                  setTempEmailData(prev => ({ ...prev, subject: newText }));
+                  e.target.value = '';
+                  setCursorPos(null);
+                }}
+                className="bg-transparent border-none text-[10px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-28 text-right p-0"
+              >
+                <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">+ Variável</option>
+                {[...dbModels].sort((a, b) => (a.display_name || a.db_table_name || a.name).localeCompare(b.display_name || b.db_table_name || b.name)).map(m => {
+                  const tableName = m.display_name || m.db_table_name || m.name;
+                  const fields = dbFields.filter(f => f.model_id === m.id);
+                  if (fields.length === 0) return null;
+                  return (
+                    <optgroup key={m.id} label={tableName} className="text-left text-indigo-600 dark:text-indigo-400 normal-case tracking-normal text-sm font-bold bg-neutral-50 dark:bg-neutral-900">
+                      {[...fields].sort((a, b) => (a.display_name || a.db_column_name || a.name).localeCompare(b.display_name || b.db_column_name || b.name)).map(f => (
+                        <option key={f.id} value={`${m.db_table_name || m.name}.${f.db_column_name || f.name}`} className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">
+                          {f.display_name || f.db_column_name || f.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
+              </select>
+            </div>
+            <input 
+              type="text" 
+              placeholder="Ex: Confirmação do Pedido {{orders.id}}"
+              value={tempEmailData.subject} 
+              onChange={(e) => setTempEmailData(prev => ({ ...prev, subject: e.target.value }))}
+              onBlur={(e) => setCursorPos({ field: 'actionSubject', start: e.target.selectionStart || 0, end: e.target.selectionEnd || 0 })}
+              className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div className="bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest block mb-1">Corpo (HTML/Texto)</label>
+              <select 
+                value=""
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (!val) return;
+                  // Como o RichText usa contentEditable, a posição do cursor não é fácil de pegar com selectionStart, vamos inserir no final
+                  const newText = tempEmailData.body + ` {{${val}}}`;
+                  setTempEmailData(prev => ({ ...prev, body: newText }));
+                  e.target.value = '';
+                }}
+                className="bg-transparent border-none text-[10px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-28 text-right p-0"
+              >
+                <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">+ Variável</option>
+                {[...dbModels].sort((a, b) => (a.display_name || a.db_table_name || a.name).localeCompare(b.display_name || b.db_table_name || b.name)).map(m => {
+                  const tableName = m.display_name || m.db_table_name || m.name;
+                  const fields = dbFields.filter(f => f.model_id === m.id);
+                  if (fields.length === 0) return null;
+                  return (
+                    <optgroup key={m.id} label={tableName} className="text-left text-indigo-600 dark:text-indigo-400 normal-case tracking-normal text-sm font-bold bg-neutral-50 dark:bg-neutral-900">
+                      {[...fields].sort((a, b) => (a.display_name || a.db_column_name || a.name).localeCompare(b.display_name || b.db_column_name || b.name)).map(f => (
+                        <option key={f.id} value={`${m.db_table_name || m.name}.${f.db_column_name || f.name}`} className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">
+                          {f.display_name || f.db_column_name || f.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
+              </select>
+            </div>
+            <RichTextEditor 
+              value={tempEmailData.body}
+              onChange={(val) => setTempEmailData(prev => ({ ...prev, body: val }))}
+              placeholder="Olá {{customers.nome}}, seu pedido foi recebido!"
+            />
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              onClick={() => setEditingEmailNode(null)}
+              className="flex-1 px-4 py-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-xl font-bold transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => {
+                if (editingEmailNode) {
+                  updateNodeData(editingEmailNode, {
+                    actionSubject: tempEmailData.subject,
+                    actionBody: tempEmailData.body
+                  });
+                  setEditingEmailNode(null);
+                }
+              }}
+              className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+            >
+              <Check size={18} />
+              Salvar Configuração
+            </button>
           </div>
         </div>
       </Modal>

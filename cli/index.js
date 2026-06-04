@@ -638,7 +638,24 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
             result = await pgClient.query(sql, params);
           }
           if (bpmEngine && result.rows && result.rows.length > 0) {
-            bpmEngine.processEvent(safeTable, 'INSERT', result.rows[0]);
+            bpmEngine.processEvent(safeTable, 'INSERT', result.rows[0]).then(async () => {
+              let finalData = result.rows[0];
+              try {
+                if (dbType === 'postgres' && result.rows[0].id) {
+                  const res = await pgClient.query(`SELECT * FROM "${safeTable}" WHERE "id" = $1`, [result.rows[0].id]);
+                  if (res.rows.length > 0) finalData = res.rows[0];
+                }
+              } catch (e) {
+                console.error('[BPM] Falha ao re-buscar dados inseridos:', e.message);
+              }
+              channel.send({
+                type: 'broadcast',
+                event: 'bpm_workflow_completed',
+                payload: { table: safeTable, action: 'INSERT', data: finalData }
+              });
+            }).catch(err => {
+              console.error(chalk.red(`[BPM] Erro ao processar INSERT:`), err);
+            });
           }
           console.log(chalk.green(`[ OK ] INSERT: 1 linha criada.`));
         }
@@ -684,7 +701,25 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
               }
               result = updateResult;
               if (bpmEngine && result.rows && result.rows.length > 0) {
-                bpmEngine.processEvent(safeTable, 'UPDATE', result.rows[0]);
+                bpmEngine.processEvent(safeTable, 'UPDATE', result.rows[0]).then(async () => {
+                  let finalData = result.rows[0];
+                  try {
+                    if (dbType === 'postgres') {
+                      const res = await pgClient.query(`SELECT * FROM "${safeTable}" WHERE "${safeIdCol}" = $1`, [idValue]);
+                      if (res.rows.length > 0) finalData = res.rows[0];
+                    }
+                  } catch (e) {
+                    console.error('[BPM] Falha ao re-buscar dados atualizados:', e.message);
+                  }
+
+                  channel.send({
+                    type: 'broadcast',
+                    event: 'bpm_workflow_completed',
+                    payload: { table: safeTable, action: 'UPDATE', data: finalData }
+                  });
+                }).catch(err => {
+                  console.error(chalk.red(`[BPM] Erro ao processar UPDATE:`), err);
+                });
               }
               console.log(chalk.green(`[ OK ] UPDATE: 1 linha atualizada.`));
               break; // Sucesso — sai do loop
