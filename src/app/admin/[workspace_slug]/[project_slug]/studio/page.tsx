@@ -30,7 +30,11 @@ export default async function StudioDashboard({ params }: StudioDashboardProps) 
     .eq('slug', workspace_slug)
     .single()
 
-  if (workspaceError || !workspace) notFound()
+  if (workspaceError || !workspace) {
+    console.error('Workspace error in studio/page.tsx:', workspaceError)
+    console.error('Workspace data:', workspace)
+    notFound()
+  }
 
   // 2. Resolve Project
   const { data: project, error: projectError } = await supabase
@@ -40,7 +44,11 @@ export default async function StudioDashboard({ params }: StudioDashboardProps) 
     .eq('workspace_id', workspace.id)
     .single()
 
-  if (projectError || !project) notFound()
+  if (projectError || !project) {
+    console.error('Project error in studio/page.tsx:', projectError)
+    console.error('Project data:', project)
+    notFound()
+  }
 
   // 3. Busca a role do usuário no workspace e permissões granulares de projeto
   const { data: memberData, error: memberError } = await supabase

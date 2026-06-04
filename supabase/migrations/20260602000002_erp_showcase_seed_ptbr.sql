@@ -5,6 +5,59 @@
 -- 1. LIMPEZA DOS DADOS EXISTENTES (CUIDADO: Apaga todos os dados das tabelas do ERP)
 TRUNCATE TABLE deliveries, tasks, projects, order_items, orders, customers, products, product_categories, employees, departments CASCADE;
 
+-- ==============================================================================
+-- 3. AUTENTICAÇÃO E CONTROLE DE ACESSO (RBAC)
+-- ==============================================================================
+
+-- Tabela de Usuários (users)
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    full_name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Tabela de Papéis/Cargos (roles)
+CREATE TABLE roles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Tabela de Relação Usuários <-> Papéis (user_roles)
+CREATE TABLE user_roles (
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
+    assigned_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (user_id, role_id)
+);
+
+-- ==============================================================================
+-- INSERTS / SEED DATA PARA RBAC
+-- ==============================================================================
+
+-- Inserindo Roles (Papéis)
+INSERT INTO roles (id, name, description) VALUES
+    ('11111111-1111-4111-8111-111111111111', 'Administrador', 'Acesso total ao sistema e painel de configurações'),
+    ('22222222-2222-4222-8222-222222222222', 'Gerente', 'Gerencia equipes, realiza aprovações e visualiza relatórios'),
+    ('33333333-3333-4333-8333-333333333333', 'Funcionário', 'Acesso operacional padrão para atividades diárias do ERP');
+
+-- Inserindo Users (Usuários) - Senha para todos: senha123
+INSERT INTO users (id, full_name, email, password_hash) VALUES
+    ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Carlos Silva', 'carlos@erp.com.br', '$2b$10$SufJn4Q0dn6/gi1CGCd09uZM7tkrzctaId8OaM9/yQweJyhEKDCqG'),
+    ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'Mariana Costa', 'mariana@erp.com.br', '$2b$10$SufJn4Q0dn6/gi1CGCd09uZM7tkrzctaId8OaM9/yQweJyhEKDCqG'),
+    ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'João Souza', 'joao@erp.com.br', '$2b$10$SufJn4Q0dn6/gi1CGCd09uZM7tkrzctaId8OaM9/yQweJyhEKDCqG');
+
+-- Inserindo a Relação (Quem possui qual papel no sistema)
+INSERT INTO user_roles (user_id, role_id) VALUES
+    ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '11111111-1111-4111-8111-111111111111'), -- Carlos Silva é Administrador
+    ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '22222222-2222-4222-8222-222222222222'), -- Mariana Costa é Gerente
+    ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '33333333-3333-4333-8333-333333333333'); -- João Souza é Funcionário
+
+
 -- 2. GERAÇÃO DE DADOS MOCKADOS (HIGH VOLUME) - PORTUGUÊS BR
 DO $$
 DECLARE

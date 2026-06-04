@@ -124,6 +124,7 @@ function BpmCanvasContent({
   const [dbFields, setDbFields] = useState<any[]>(() => initialModels.flatMap(m => m.fields || []));
   const [currentWorkflowId, setCurrentWorkflowId] = useState<string>('new');
   const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [enums, setEnums] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
@@ -242,11 +243,18 @@ function BpmCanvasContent({
     }
 
     const flow = workflows.find(w => w.id === currentWorkflowId);
-    if (flow && flow.flow_data) {
-      const { nodes: savedNodes = [], edges: savedEdges = [] } = flow.flow_data;
-      setNodes(savedNodes.length > 0 ? savedNodes : initialNodes);
-      setEdges(savedEdges);
-      setTimeout(() => fitView({ padding: 0.2, duration: 800, maxZoom: 1.5 }), 50);
+    if (flow) {
+      const activeFlowData = flow.draft_flow_data || flow.flow_data;
+      if (activeFlowData) {
+        const { nodes: savedNodes = [], edges: savedEdges = [] } = activeFlowData;
+        setNodes(savedNodes.length > 0 ? savedNodes : initialNodes);
+        setEdges(savedEdges);
+        setTimeout(() => fitView({ padding: 0.2, duration: 800, maxZoom: 1.5 }), 50);
+      } else {
+        setNodes(initialNodes);
+        setEdges([]);
+        setTimeout(() => fitView({ padding: 0.2, duration: 800, maxZoom: 1.5 }), 50);
+      }
     }
   }, [currentWorkflowId, workflows]);
 
@@ -415,36 +423,70 @@ function BpmCanvasContent({
             project_id: projectId,
             name: name,
             use_case_id: useCaseId,
-            flow_data: flow,
-            is_active: true
+            draft_flow_data: flow,
+            is_active: false
           })
           .select()
           .single();
 
         if (error) throw error;
         
-        toast('Fluxo criado com sucesso!', 'success');
+        toast('Rascunho criado com sucesso!', 'success');
         setWorkflows(prev => [data, ...prev]);
         setCurrentWorkflowId(data.id);
       } else {
         const { error } = await supabase
           .from('bpm_workflows')
           .update({
-            flow_data: flow,
+            draft_flow_data: flow,
             updated_at: new Date().toISOString()
           })
           .eq('id', currentWorkflowId);
 
         if (error) throw error;
-        toast('Fluxo atualizado com sucesso!', 'success');
+        toast('Rascunho atualizado com sucesso!', 'success');
         
-        setWorkflows(prev => prev.map(w => w.id === currentWorkflowId ? { ...w, flow_data: flow } : w));
+        setWorkflows(prev => prev.map(w => w.id === currentWorkflowId ? { ...w, draft_flow_data: flow } : w));
       }
     } catch (err: any) {
       console.error(err);
-      toast('Erro ao salvar o fluxo.', 'error');
+      toast('Erro ao salvar o rascunho.', 'error');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!reactFlowInstance || !projectId || !useCaseId) return;
+    
+    if (currentWorkflowId === 'new') {
+      toast('Salve o fluxo como rascunho antes de publicar.', 'error');
+      return;
+    }
+
+    setIsPublishing(true);
+    const flow = reactFlowInstance.toObject();
+
+    try {
+      const { error } = await supabase
+        .from('bpm_workflows')
+        .update({
+          flow_data: flow,
+          draft_flow_data: null,
+          is_active: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentWorkflowId);
+
+      if (error) throw error;
+      toast('Fluxo publicado e ativado em Produção!', 'success');
+      
+      setWorkflows(prev => prev.map(w => w.id === currentWorkflowId ? { ...w, flow_data: flow, draft_flow_data: null, is_active: true } : w));
+    } catch (err: any) {
+      console.error(err);
+      toast('Erro ao publicar o fluxo.', 'error');
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -680,11 +722,19 @@ function BpmCanvasContent({
 
           <button 
             onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50"
+            disabled={isSaving || isPublishing}
+            className="flex items-center gap-2 px-4 py-2 bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Salvar Fluxo
+            Salvar Rascunho
+          </button>
+          <button 
+            onClick={handlePublish}
+            disabled={isSaving || isPublishing || currentWorkflowId === 'new'}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50"
+          >
+            {isPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+            Publicar
           </button>
         </div>
       </div>

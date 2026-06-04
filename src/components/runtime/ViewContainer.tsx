@@ -292,7 +292,7 @@ export default function ViewContainer({
       for (const field of uniqueFields) {
         const config = field.config?.filter_config || field.config?.grid_config || field.config
         const comp = config?.component
-        const isRelationalComp = comp?.type && (['select', 'radio', 'checkbox', 'Combo (Select)'].includes(comp.type) || comp.options_type === 'relational')
+        const isRelationalComp = comp?.type && (['select', 'radio', 'checkbox', 'Combo (Select)'].includes(comp.type) || comp.options_type === 'relational' || comp.options_type === 'enumeration')
         if (isRelationalComp && comp.options_type === 'relational' && comp.rel_table) {
           try {
             console.log(`[MetaBuilder] Fetching filter options for ${field.display_name} from ${comp.rel_table}`)
@@ -369,6 +369,23 @@ export default function ViewContainer({
           } catch (err) {
             console.error(`Error fetching relational options for filter field ${field.id}:`, err)
           }
+        } else if (isRelationalComp && comp.options_type === 'enumeration' && comp.rel_table) {
+          try {
+            const { data } = await supabase
+              .from('project_enumerations')
+              .select('values')
+              .eq('id', comp.rel_table)
+              .single()
+
+            if (data && data.values) {
+              newOptions[field.id] = data.values.map((v: any) => ({
+                label: v.description || v.value,
+                value: v.value
+              }))
+            }
+          } catch (err) {
+            console.error(`Error fetching enumeration options for filter field ${field.id}:`, err)
+          }
         }
       }
       setRelationalOptions(newOptions)
@@ -435,6 +452,7 @@ export default function ViewContainer({
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(viewMode === 'list' ? 15 : 10)
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null)
+  const [totalServerRows, setTotalServerRows] = useState<number>(0)
 
   // Recupera do cache inicial se necessário (redundante com useState inicial mas bom para sincronia)
   useEffect(() => {
@@ -483,17 +501,26 @@ export default function ViewContainer({
       queryConfigsRef.current.delete(qId)
 
       if (payload.payload.success) {
-        let resultData = payload.payload.data.map((row: any) => ({
-          ...row,
-          _key: crypto.randomUUID()
-        }))
-        console.log('[MetaBuilder Debug] First row keys:', resultData[0] ? Object.keys(resultData[0]) : 'no rows')
-        console.log('[MetaBuilder Debug] First row data:', resultData[0])
+        if (payload.payload.action === 'count_records') {
+           setTotalServerRows(payload.payload.total || 0)
+           activeQueriesRef.current.delete(qId)
+           return
+        }
 
-        if (logicType === 'master_detail') {
+        const currentConfigs = queryConfigsRef.current.get(qId)
+        const shouldAppend = currentConfigs?.append
+        
+        let resultData = payload.payload.data || []
+        
+        // Agrupar mestre/detalhe
+        if (logicType === 'master_detail' && joins && joins.length > 0) {
+          const primaryKeyName = formFields.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+          
           const grouped: Record<string, any> = {}
           resultData.forEach((row: any) => {
-            const pkValue = String(row[primaryKeyName] || row.id || row.ID)
+            const pkValue = row[primaryKeyName] || row.id || row.ID
+            if (!pkValue) return
+            
             if (!grouped[pkValue]) {
               grouped[pkValue] = { ...row, _details: [] }
             }
@@ -501,6 +528,11 @@ export default function ViewContainer({
           })
           resultData = Object.values(grouped)
         }
+        
+        resultData = resultData.map((row: any) => ({
+          ...row,
+          _key: crypto.randomUUID()
+        }))
 
         if (shouldAppend) {
           setData(prev => {
@@ -845,7 +877,18 @@ export default function ViewContainer({
             }
 
             const columns = selectExprs.length > 0 ? selectExprs.join(', ') : '*'
-          const rawQuery = `SELECT ${columns} FROM ${modelName} ${buildJoinsSql(joins)}`
+          
+          const currentOffset = append ? data.length : (currentPage - 1) * itemsPerPage;
+          let rawQuery = '';
+          if (logicType === 'master_detail') {
+            rawQuery = `SELECT ${columns} FROM (
+  SELECT * FROM "${modelName}"
+  __WHERE_PLACEHOLDER__
+  LIMIT ${itemsPerPage} OFFSET ${currentOffset}
+) AS "${modelName}" ${buildJoinsSql(joins)}`
+          } else {
+            rawQuery = `SELECT ${columns} FROM "${modelName}" ${buildJoinsSql(joins)}`
+          }
 
           const currentModel = project?.models?.find((m: any) => m.db_table_name === modelName)
           const actualSchemaName = currentModel?.db_schema_name || project?.slug || 'public'
@@ -860,12 +903,30 @@ export default function ViewContainer({
             sql: rawQuery,
             token: project?.secret_token || 'test-token',
             joins: joins,
-            limit: 100,
-            offset: append ? data.length : 0
+            limit: logicType === 'master_detail' ? null : itemsPerPage,
+            offset: logicType === 'master_detail' ? null : currentOffset
           }
 
           if (currentFilters && Object.keys(currentFilters).length > 0) {
             payload.filters = currentFilters
+          }
+
+          // Count payload
+          const countQueryId = crypto.randomUUID()
+          activeQueriesRef.current.add(countQueryId)
+          const countPayload: any = {
+            queryId: countQueryId,
+            table: modelName,
+            tableName: modelName,
+            schemaName: actualSchemaName,
+            action: 'count_records',
+            query: `SELECT COUNT(DISTINCT "${modelName}"."id") as total FROM "${modelName}" ${buildJoinsSql(joins)} __WHERE_PLACEHOLDER__`,
+            sql: '',
+            token: project?.secret_token || 'test-token',
+            joins: joins
+          }
+          if (currentFilters && Object.keys(currentFilters).length > 0) {
+            countPayload.filters = currentFilters
           }
 
           // Pequeno delay para garantir que o canal de broadcast esteja "quente"
@@ -877,6 +938,14 @@ export default function ViewContainer({
               event: 'sql_query',
               payload
             })
+            
+            if (!append) {
+              tunnelChannel.send({
+                type: 'broadcast',
+                event: 'sql_query',
+                payload: countPayload
+              })
+            }
           }, 200)
           
           // Timeout de segurança
@@ -1055,6 +1124,27 @@ export default function ViewContainer({
     fetchData({}, true) // Limpar força o refresh
   }
 
+  // Cache global para evitar fetch no re-mount por troca de idioma
+  useEffect(() => {
+    // Only fetch if tunnel is ready, we haven't fetched yet, and we aren't loading from cache
+    if (isTunnelReady && tunnelChannel && !hasFetchedInitial && data.length === 0) {
+      console.log(`[MetaBuilder] Túnel pronto. Disparando busca inicial para ${modelName}...`)
+      setHasFetchedInitial(true)
+      fetchData(currentFiltersRef.current)
+    }
+  }, [isTunnelReady, tunnelChannel, hasFetchedInitial, data.length])
+
+  const isFirstRenderPag = useRef(true)
+  useEffect(() => {
+    if (isFirstRenderPag.current) {
+      isFirstRenderPag.current = false
+      return
+    }
+    if (isTunnelReady) {
+      fetchDataRef.current(currentFiltersRef.current, true)
+    }
+  }, [currentPage, itemsPerPage])
+
   useEffect(() => {
     if (refreshTrigger > 0 && fetchDataRef.current) {
       console.log(`[MetaBuilder] Refreshing data because modal was closed...`)
@@ -1082,12 +1172,10 @@ export default function ViewContainer({
     return 0
   })
 
-  // Lógica de Paginação Local
-  const totalPages = Math.ceil(sortedData.length / itemsPerPage)
-  const paginatedData = sortedData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  )
+  // Lógica de Paginação Local substituída pela Server Side
+  const totalPages = totalServerRows > 0 ? Math.ceil(totalServerRows / itemsPerPage) : Math.ceil(sortedData.length / itemsPerPage)
+  const paginatedData = sortedData // data já vem paginada do servidor
+
 
   const handleSort = (columnName: string) => {
     let direction: 'asc' | 'desc' = 'asc'
@@ -1196,7 +1284,7 @@ export default function ViewContainer({
                       {(() => {
                         const comp = zoneConfig.component || { type: 'text' }
                         const fieldType = comp.type || 'text'
-                      const options = comp.options_type === 'relational' 
+                      const options = (comp.options_type === 'relational' || comp.options_type === 'enumeration') 
                         ? (relationalOptions[field.id] || [])
                         : parseFixedOptions(comp.fixed_options)
                       

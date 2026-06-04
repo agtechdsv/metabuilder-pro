@@ -106,11 +106,19 @@ export default async function SlugPage({ params }: PageProps) {
 
   // RBAC Permission Check
   if (view) {
-    const { data: authConfig } = await supabase
+    const rawAuthConfig = await supabase
       .from('project_auth_config')
-      .select('auth_type')
+      .select('*')
       .eq('project_id', project.id)
       .maybeSingle()
+      .then(res => res.data)
+
+    const uiConfig = rawAuthConfig?.ui_config as any || {}
+    const authConfig = {
+      ...(rawAuthConfig as any || {}),
+      sync_legacy_groups: uiConfig.sync_legacy_groups || false,
+      db_user_role_column: uiConfig.db_user_role_column || '',
+    }
 
     const isNoAuth = !authConfig || authConfig.auth_type === 'none'
 
@@ -126,20 +134,29 @@ export default async function SlugPage({ params }: PageProps) {
       try {
         const clientUser = JSON.parse(decodeURIComponent(sessionCookie || ''))
         
-        // 1. Busca o papel do usuário no projeto
-        const { data: userRole } = await supabase
-          .from('project_user_roles')
-          .select('role_id')
-          .eq('project_id', project.id)
-          .eq('external_user_id', clientUser.id?.toString())
-          .single()
+        let roleId = null
+        if (authConfig?.sync_legacy_groups) {
+          const roleKey = authConfig.db_user_role_column || 'role_id'
+          roleId = clientUser[roleKey]
+        }
         
-        if (userRole?.role_id) {
+        if (!roleId) {
+          // 1. Busca o papel do usuário no projeto
+          const { data: userRole } = await supabase
+            .from('project_user_roles')
+            .select('role_id')
+            .eq('project_id', project.id)
+            .eq('external_user_id', clientUser.id?.toString())
+            .single()
+          roleId = userRole?.role_id
+        }
+        
+        if (roleId) {
           // 2. Busca se essa view está explicitamente desabilitada para este papel
           const { data: deniedPermission } = await supabase
             .from('project_role_permissions')
             .select('id')
-            .eq('role_id', userRole.role_id)
+            .eq('role_id', roleId)
             .eq('view_id', view.id)
             .eq('can_read', false)
             .limit(1)
@@ -197,11 +214,19 @@ export default async function SlugPage({ params }: PageProps) {
 
   if (automationsView && automationsView.layout_config?.is_active !== false) {
     // Se não tiver auth configurado ou o auth for 'none', todo mundo tem acesso.
-    const { data: authConfig } = await supabase
+    const rawAuthConfig = await supabase
       .from('project_auth_config')
-      .select('auth_type')
+      .select('*')
       .eq('project_id', project.id)
       .maybeSingle()
+      .then(res => res.data)
+
+    const uiConfig = rawAuthConfig?.ui_config as any || {}
+    const authConfig = {
+      ...(rawAuthConfig as any || {}),
+      sync_legacy_groups: uiConfig.sync_legacy_groups || false,
+      db_user_role_column: uiConfig.db_user_role_column || '',
+    }
 
     const isNoAuth = !authConfig || authConfig.auth_type === 'none'
     if (isNoAuth) {
@@ -212,19 +237,29 @@ export default async function SlugPage({ params }: PageProps) {
       if (sessionCookie) {
         try {
           const clientUser = JSON.parse(decodeURIComponent(sessionCookie || ''))
-          const { data: userRole } = await supabase
-            .from('project_user_roles')
-            .select('role_id')
-            .eq('project_id', project.id)
-            .eq('external_user_id', clientUser.id?.toString())
-            .single()
+          let roleId = null
+          
+          if (authConfig?.sync_legacy_groups) {
+            const roleKey = authConfig.db_user_role_column || 'role_id'
+            roleId = clientUser[roleKey]
+          }
+          
+          if (!roleId) {
+            const { data: userRole } = await supabase
+              .from('project_user_roles')
+              .select('role_id')
+              .eq('project_id', project.id)
+              .eq('external_user_id', clientUser.id?.toString())
+              .single()
+            roleId = userRole?.role_id
+          }
 
-          if (userRole?.role_id) {
+          if (roleId) {
             // Módulo Automações tem Default Deny: requer can_read = true explícito
             const { data: allowedPermission } = await supabase
               .from('project_role_permissions')
               .select('id')
-              .eq('role_id', userRole.role_id)
+              .eq('role_id', roleId)
               .eq('view_id', automationsView.id)
               .eq('can_read', true)
               .limit(1)

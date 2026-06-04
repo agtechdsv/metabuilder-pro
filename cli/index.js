@@ -30,6 +30,7 @@ const crypto = require('crypto');
 const ldap = require('ldapjs');
 const oracledb = require('oracledb');
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
+const { BpmEngine } = require('./bpmEngine');
 
 // Configurações do Supabase lidas do ambiente ou perguntadas depois
 let SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -219,6 +220,16 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
   
   console.log(chalk.green(`✓ Conexão contínua estabelecida com sucesso! (${connectionName || 'public'})`));
 
+  let bpmEngine = null;
+  try {
+    if (dbType === 'postgres') {
+      bpmEngine = new BpmEngine(supabase, pgClient, oracleConnection, dbType, { id: projectId, secret_token: secretToken }, finalSupabaseUrl);
+      await bpmEngine.init();
+    }
+  } catch (err) {
+    console.error(chalk.red('[ Motor BPM ] Falha ao inicializar motor de automações:'), err.message);
+  }
+
   const channelName = `tunnel:${projectId}`;
   const channel = supabase.channel(channelName);
 
@@ -301,8 +312,15 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
           if (payload.payload.query) {
             sql = payload.payload.query;
             if (whereClause) {
-               // Insere o whereClause ou usa AND se já existir WHERE
-               sql += (sql.toLowerCase().includes(' where ') ? ' AND ' + conditions.join(' AND ') : whereClause);
+               // Se a query contiver o placeholder, injetamos exatamente lá (útil para subqueries paginadas)
+               if (sql.includes('__WHERE_PLACEHOLDER__')) {
+                 sql = sql.replace('__WHERE_PLACEHOLDER__', whereClause);
+               } else {
+                 sql += (sql.toLowerCase().includes(' where ') ? ' AND ' + conditions.join(' AND ') : whereClause);
+               }
+            } else {
+               // Remove o placeholder caso não haja filtros
+               sql = sql.replace('__WHERE_PLACEHOLDER__', '');
             }
             // Só acrescenta LIMIT/OFFSET se a query ainda não tiver (evita "LIMIT x LIMIT y")
             const sqlLower = sql.toLowerCase();
@@ -354,8 +372,74 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
             result = await pgClient.query(sql, params);
           }
           console.log(chalk.green(`[ OK ] SELECT: Retornou ${result.rows.length} linhas (Limit: ${limit}, Offset: ${offset}).`));
-        }
-        else if (action === 'validate_login') {
+        } else if (action === 'count_records') {
+          const filters = payload.payload.filters;
+          const joins = payload.payload.joins || [];
+          let whereClause = '';
+          const rawQueryStr = (payload.payload.query || '').toLowerCase();
+          
+          if (filters && Object.keys(filters).length > 0) {
+            const conditions = [];
+            let i = 1;
+            for (const [key, value] of Object.entries(filters)) {
+              if (value !== undefined && value !== '') {
+                let tablePart = safeTable;
+                let columnPart = key;
+                if (key.includes('.')) {
+                  const parts = key.split('.');
+                  tablePart = parts[0].replace(/[^a-zA-Z0-9_]/g, '');
+                  columnPart = parts[1].replace(/[^a-zA-Z0-9_]/g, '');
+                } else {
+                  columnPart = key.replace(/[^a-zA-Z0-9_]/g, '');
+                }
+                
+                const isJoinedStr = rawQueryStr.includes(`join "${tablePart.toLowerCase()}"`) || rawQueryStr.includes(`join ${tablePart.toLowerCase()}`);
+                const isJoinedCli = (joins || []).some((j) => {
+                   return j.to === tablePart || j.from === tablePart || j.toTable === tablePart || j.table === tablePart;
+                });
+                
+                if (tablePart === safeTable || isJoinedStr || isJoinedCli) {
+                  conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) ILIKE $${i}`);
+                  params.push(`%${value}%`);
+                  i++;
+                }
+              }
+            }
+            if (conditions.length > 0) {
+              whereClause = ` WHERE ${conditions.join(' AND ')}`;
+            }
+          }
+
+          if (payload.payload.query) {
+            sql = payload.payload.query;
+            if (whereClause) {
+               if (sql.includes('__WHERE_PLACEHOLDER__')) {
+                 sql = sql.replace('__WHERE_PLACEHOLDER__', whereClause);
+               } else {
+                 sql += (sql.toLowerCase().includes(' where ') ? ' AND ' + conditions.join(' AND ') : whereClause);
+               }
+            } else {
+               sql = sql.replace('__WHERE_PLACEHOLDER__', '');
+            }
+          } else {
+            sql = `SELECT COUNT(*) as total FROM "${safeTable}"`;
+            if (whereClause) sql += whereClause;
+          }
+
+          console.log(chalk.cyan(`[ SQL ] Executando COUNT: ${sql}`));
+          
+          if (dbType === 'oracle') {
+            const oraRes = await oracleConnection.execute(sql, params, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+            result = { rows: oraRes.rows };
+          } else {
+            result = await pgClient.query(sql, params);
+          }
+          
+          const totalRows = result.rows.length > 0 ? parseInt(result.rows[0].total || result.rows[0].TOTAL || result.rows[0].count || 0) : 0;
+          console.log(chalk.green(`[ OK ] COUNT: Retornou total de ${totalRows} linhas.`));
+          
+          result.totalRows = totalRows; // We will extract this at the end
+        } else if (action === 'validate_login') {
           const { config, credentials } = payload.payload;
           if (!config) {
             throw new Error('Configuração de autenticação não encontrada para o projeto.');
@@ -552,6 +636,9 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
           } else {
             result = await pgClient.query(sql, params);
           }
+          if (bpmEngine && result.rows && result.rows.length > 0) {
+            bpmEngine.processEvent(safeTable, 'INSERT', result.rows[0]);
+          }
           console.log(chalk.green(`[ OK ] INSERT: 1 linha criada.`));
         }
         else if (action === 'update') {
@@ -595,6 +682,9 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
                  updateResult = await pgClient.query(sql, params);
               }
               result = updateResult;
+              if (bpmEngine && result.rows && result.rows.length > 0) {
+                bpmEngine.processEvent(safeTable, 'UPDATE', result.rows[0]);
+              }
               console.log(chalk.green(`[ OK ] UPDATE: 1 linha atualizada.`));
               break; // Sucesso — sai do loop
             } catch (updateErr) {
@@ -665,8 +755,13 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
         const responsePayload = {
           queryId,
           success: true,
+          action: action,
           data: result.rows
         };
+        
+        if (action === 'count_records') {
+          responsePayload.total = result.totalRows;
+        }
 
         // Evento Genérico (para o Dashboard BI)
         await channel.send({

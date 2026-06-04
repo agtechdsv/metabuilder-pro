@@ -65,12 +65,19 @@ export default async function DownloadsPage({ params }: PageProps) {
     }
   }
 
-  // >>> NOVO: Busca config de autenticação do projeto
-  const { data: authConfig } = await supabase
+  const rawAuthConfig = await supabase
     .from('project_auth_config')
-    .select('auth_type')
+    .select('*')
     .eq('project_id', project.id)
     .maybeSingle()
+    .then(res => res.data)
+
+  const uiConfig = rawAuthConfig?.ui_config as any || {}
+  const authConfig = {
+    ...(rawAuthConfig as any || {}),
+    sync_legacy_groups: uiConfig.sync_legacy_groups || false,
+    db_user_role_column: uiConfig.db_user_role_column || '',
+  }
 
   const isNoAuth = !authConfig || authConfig.auth_type === 'none'
 
@@ -103,20 +110,30 @@ export default async function DownloadsPage({ params }: PageProps) {
 
   if (!isNoAuth) {
     if (viewRow) {
-      // Busca o papel do usuário no projeto
-      const { data: userRole } = await supabase
-        .from('project_user_roles')
-        .select('role_id')
-        .eq('project_id', project.id)
-        .eq('external_user_id', userId)
-        .maybeSingle()
+      let roleId = null
+      
+      if (authConfig?.sync_legacy_groups && clientUser) {
+        const roleKey = authConfig.db_user_role_column || 'role_id'
+        roleId = clientUser[roleKey]
+      }
 
-      if (userRole?.role_id) {
+      if (!roleId) {
+        // Busca o papel do usuário no projeto
+        const { data: userRole } = await supabase
+          .from('project_user_roles')
+          .select('role_id')
+          .eq('project_id', project.id)
+          .eq('external_user_id', userId)
+          .maybeSingle()
+        roleId = userRole?.role_id
+      }
+
+      if (roleId) {
         // Verifica se o downloads está explicitamente negado (can_read = false)
         const { data: deniedPermission } = await supabase
           .from('project_role_permissions')
           .select('id')
-          .eq('role_id', userRole.role_id)
+          .eq('role_id', roleId)
           .eq('view_id', viewRow.id)
           .eq('can_read', false)
           .maybeSingle()

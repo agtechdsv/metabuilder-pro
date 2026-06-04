@@ -51,7 +51,18 @@ export default async function LoginPage({ params }: any) {
     .maybeSingle()
 
   const visual = config?.ui_config as any || {}
-  const auth = config as any || { auth_type: 'none' }
+  const auth = {
+    ...(config as any || { auth_type: 'none' }),
+    allow_signup: visual.allow_signup || false,
+    sync_legacy_groups: visual.sync_legacy_groups || false,
+    db_groups_table: visual.db_groups_table || '',
+    db_groups_name_column: visual.db_groups_name_column || '',
+    db_user_groups_type: visual.db_user_groups_type || '1_to_n',
+    db_user_role_column: visual.db_user_role_column || '',
+    db_user_roles_table: visual.db_user_roles_table || '',
+    db_user_roles_user_id_column: visual.db_user_roles_user_id_column || '',
+    db_user_roles_role_id_column: visual.db_user_roles_role_id_column || ''
+  }
   const allowSignup = visual.allow_signup || false
   
   if (auth.auth_type === 'none') {

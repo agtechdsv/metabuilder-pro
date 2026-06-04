@@ -34,7 +34,11 @@ export default async function StudioLayout({ children, params }: StudioLayoutPro
     .eq('slug', workspace_slug)
     .single()
 
-  if (workspaceError || !workspace) notFound()
+  if (workspaceError || !workspace) {
+    console.error('Workspace error in studio/layout.tsx:', workspaceError)
+    console.error('Workspace data:', workspace)
+    notFound()
+  }
 
   // 2. Resolve Project
   const { data: project, error: projectError } = await supabase

@@ -78,7 +78,7 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
     .eq('project_id', project.id)
     .maybeSingle()
 
-  const isActive = automationsView?.layout_config?.is_active === true
+  const isActive = automationsView?.layout_config?.is_active !== false
 
   if (!isActive) {
     return (

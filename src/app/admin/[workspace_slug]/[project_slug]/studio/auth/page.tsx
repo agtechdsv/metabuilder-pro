@@ -368,6 +368,12 @@ export default function AuthSettingsPage() {
             setRoles(mappedRoles)
 
             if (mappedRoles.length > 0) {
+              // Sincroniza os papéis legados na tabela project_roles do Supabase para evitar erro de Foreign Key
+              await supabase.from('project_roles').upsert(
+                mappedRoles.map(r => ({ id: r.id, project_id: project.id, name: r.name })),
+                { onConflict: 'id' }
+              )
+
               const { data: dbRolePerms } = await supabase.from('project_role_permissions').select('*').in('role_id', mappedRoles.map((r: any) => r.id))
               if (dbRolePerms) setRolePermissions(dbRolePerms)
             }
@@ -421,11 +427,13 @@ export default function AuthSettingsPage() {
           const schemaName = urModel?.db_schema_name || 'public'
           const existingUR = userRoles.find(ur => ur.external_user_id === externalUserId.toString())
           
-          if (existingUR && existingUR.id && !existingUR.id.toString().startsWith('virtual_')) {
+          if (existingUR) {
             await executeTunnelQuery({
               action: 'update',
               table: authConfig.db_user_roles_table,
-              schemaName, idColumn: urPk, idValue: existingUR.id,
+              schemaName, 
+              idColumn: authConfig.db_user_roles_user_id_column, 
+              idValue: externalUserId.toString(),
               data: { [authConfig.db_user_roles_role_id_column]: roleId }
             })
           } else {
@@ -1588,7 +1596,9 @@ export default function AuthSettingsPage() {
                                   {(u[authConfig.db_email_column] || 'US').substring(0, 2)}
                                 </div>
                                 <div>
-                                  <p className="text-sm font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 transition-colors">{u.nome || u.name || 'Usuário ' + u.id}</p>
+                                  <p className="text-sm font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 transition-colors">
+                                    {u.full_name || u.nome || u.name || (u[authConfig.db_email_column] ? u[authConfig.db_email_column].split('@')[0] : 'Usuário ' + u.id)}
+                                  </p>
                                   <p className="text-[10px] text-neutral-500">ID Local: {u.id || '-'}</p>
                                 </div>
                               </div>

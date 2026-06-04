@@ -79,11 +79,19 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
   }
 
   // 4. Resolve project_auth_config
-  const { data: authConfig } = await supabase
+  const rawAuthConfig = await supabase
     .from('project_auth_config')
-    .select('auth_type')
+    .select('*')
     .eq('project_id', project.id)
     .maybeSingle()
+    .then(res => res.data)
+
+  const uiConfig = rawAuthConfig?.ui_config as any || {}
+  const authConfig = {
+    ...(rawAuthConfig as any || {}),
+    sync_legacy_groups: uiConfig.sync_legacy_groups || false,
+    db_user_role_column: uiConfig.db_user_role_column || '',
+  }
 
   const isNoAuth = !authConfig || authConfig.auth_type === 'none'
 
@@ -101,20 +109,29 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
     try {
       const clientUser = JSON.parse(decodeURIComponent(sessionCookie))
       
-      // Busca o papel do usuário no projeto
-      const { data: userRole } = await supabase
-        .from('project_user_roles')
-        .select('role_id')
-        .eq('project_id', project.id)
-        .eq('external_user_id', clientUser.id?.toString())
-        .single()
+      let roleId = null
+      if (authConfig?.sync_legacy_groups) {
+        const roleKey = authConfig.db_user_role_column || 'role_id'
+        roleId = clientUser[roleKey]
+      }
       
-      if (userRole?.role_id) {
+      if (!roleId) {
+        // Busca o papel do usuário no projeto
+        const { data: userRole } = await supabase
+          .from('project_user_roles')
+          .select('role_id')
+          .eq('project_id', project.id)
+          .eq('external_user_id', clientUser.id?.toString())
+          .single()
+        roleId = userRole?.role_id
+      }
+      
+      if (roleId) {
         // Busca as permissões explicitamente desabilitadas deste papel (can_read = false)
         const { data: deniedPermissions } = await supabase
           .from('project_role_permissions')
           .select('view_id')
-          .eq('role_id', userRole.role_id)
+          .eq('role_id', roleId)
           .eq('can_read', false)
         
         const deniedViewIds = deniedPermissions ? deniedPermissions.map(p => p.view_id) : []

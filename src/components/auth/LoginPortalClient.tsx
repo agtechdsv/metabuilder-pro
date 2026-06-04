@@ -104,10 +104,7 @@ export function LoginPortalClient({
               action: 'validate_login',
               schemaName: schemaName || 'public',
               config: {
-                db_table_name: authConfig.db_table_name,
-                db_email_column: authConfig.db_email_column,
-                db_password_column: authConfig.db_password_column,
-                db_password_hash_type: authConfig.db_password_hash_type
+                ...authConfig
               },
               credentials: {
                 email,
