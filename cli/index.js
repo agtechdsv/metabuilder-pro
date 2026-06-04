@@ -223,7 +223,8 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
   let bpmEngine = null;
   try {
     if (dbType === 'postgres') {
-      bpmEngine = new BpmEngine(supabase, pgClient, oracleConnection, dbType, { id: projectId, secret_token: secretToken }, finalSupabaseUrl);
+      const baseApiUrl = configData.apiUrl ? configData.apiUrl.replace('/api/metadata/sync', '') : 'http://localhost:3000';
+      bpmEngine = new BpmEngine(supabase, pgClient, oracleConnection, dbType, { id: projectId, secret_token: secretToken }, baseApiUrl);
       await bpmEngine.init();
     }
   } catch (err) {

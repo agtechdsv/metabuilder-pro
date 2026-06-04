@@ -47,22 +47,60 @@ class BpmEngine {
   }
 
   async syncModels() {
-    const { data } = await this.supabase
+    const { data, error } = await this.supabase
       .from('models')
-      .select('id, db_table_name, name')
+      .select('id, db_table_name, display_name')
       .eq('project_id', this.project.id);
+    
+    if (error) {
+       console.error(chalk.red('[BPM-DEBUG] Erro ao sincronizar models:'), error);
+    }
     this.models = data || [];
+    console.log(chalk.gray(`[BPM-DEBUG] syncModels carregou ${this.models.length} modelos para o projeto ${this.project.id}`));
   }
 
   getModelTable(modelId) {
     const model = this.models.find(m => m.id === modelId);
-    return model ? (model.db_table_name || model.name) : null;
+    console.log(chalk.gray(`[BPM-DEBUG] getModelTable chamou com modelId=${modelId}. Encontrado=${!!model}`));
+    return model ? (model.db_table_name || model.display_name) : null;
   }
 
-  replaceVariables(text, triggerTable, triggerData, actionTable = null, actionData = null) {
+  async replaceVariables(text, triggerTable, triggerData, actionTable = null, actionData = null) {
     if (typeof text !== 'string') return text;
-    return text.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
-      // Ex: orders.id
+    
+    // 1. Encontrar quais tabelas extras estão sendo referenciadas
+    const regex = /\{\{([^}]+)\}\}/g;
+    let match;
+    const extraTables = new Set();
+    while ((match = regex.exec(text)) !== null) {
+      const parts = match[1].split('.');
+      if (parts.length === 2) {
+         const table = parts[0];
+         if (table !== triggerTable && table !== actionTable) {
+            extraTables.add(table);
+         }
+      }
+    }
+
+    // 2. Buscar as foreign keys na tabela de trigger
+    const extraData = {};
+    for (const table of extraTables) {
+       const fkName = table.endsWith('s') ? table.slice(0, -1) + '_id' : table + '_id';
+       if (triggerData[fkName]) {
+          try {
+             const sql = `SELECT * FROM "${table}" WHERE "id" = $1 LIMIT 1`;
+             const rows = await this.executeQuery(sql, [triggerData[fkName]]);
+             if (rows.length > 0) {
+                extraData[table] = rows[0];
+             }
+          } catch(e) {
+             console.log(chalk.gray(`[BPM-DEBUG] Erro ao buscar FK ${fkName} na tabela ${table}: ${e.message}`));
+          }
+       }
+    }
+
+    // 3. Substituir no texto final
+    return text.replace(regex, (match, path) => {
       const parts = path.split('.');
       if (parts.length === 2) {
         const table = parts[0];
@@ -72,6 +110,9 @@ class BpmEngine {
         }
         if (actionTable && table === actionTable && actionData && actionData[field] !== undefined) {
           return actionData[field];
+        }
+        if (extraData[table] && extraData[table][field] !== undefined) {
+          return extraData[table][field];
         }
       }
       return match; // Mantém original se não achar
@@ -147,7 +188,7 @@ class BpmEngine {
       if (!filt.field) continue;
       const field = `"${filt.field.replace(/[^a-zA-Z0-9_]/g, '')}"`;
       const op = filt.operator === '==' ? '=' : filt.operator;
-      const val = this.replaceVariables(filt.value, triggerTable, triggerData);
+      const val = await this.replaceVariables(filt.value, triggerTable, triggerData);
       
       if (this.dbType === 'oracle') {
         clauses.push(`${field} ${op} :${paramIndex}`);
@@ -165,10 +206,11 @@ class BpmEngine {
 
   async runNodeAction(node, triggerTable, triggerData) {
     const data = node.data || {};
-    const actionTable = this.getModelTable(data.actionModelId);
+    const actionTable = data.actionModelId ? this.getModelTable(data.actionModelId) : null;
     
-    if (!actionTable) {
-      console.log(chalk.red(`[BPM] Erro: Tabela alvo da ação não encontrada no dicionário de dados.`));
+    // Para update, a tabela é obrigatória. Para email, depende do tipo de destinatário.
+    if (data.actionType === 'update' && !actionTable) {
+      console.log(chalk.red(`[BPM] Erro: Tabela alvo do UPDATE não encontrada no dicionário.`));
       return;
     }
 
@@ -188,7 +230,7 @@ class BpmEngine {
 
       for (const f of fieldsToUpdate) {
         if (!f.field) continue;
-        const val = this.replaceVariables(f.value, triggerTable, triggerData);
+        const val = await this.replaceVariables(f.value, triggerTable, triggerData);
         if (this.dbType === 'oracle') {
           setClauses.push(`"${f.field}" = :${pIdx}`);
         } else {
@@ -223,29 +265,55 @@ class BpmEngine {
       // 1. Busca os registros alvo para ler o e-mail ou variáveis
       let targetRows = [null]; // Fallback se não tiver tabela alvo, roda 1 vez
       
-      if (where) {
+      if (actionTable && where) {
          const sql = `SELECT * FROM "${actionTable}" ${where}`;
          console.log(chalk.blue(`[BPM] Buscando alvos para e-mail: ${sql} | ${JSON.stringify(params)}`));
          targetRows = await this.executeQuery(sql, params);
       }
 
-      if (targetRows.length === 0) {
+      if (data.emailRecipientType === 'table' && targetRows.length === 0) {
         console.log(chalk.yellow(`[BPM] Nenhum registro encontrado para disparar o e-mail.`));
         return;
       }
 
       for (const targetRow of targetRows) {
-        const subject = this.replaceVariables(data.actionSubject, triggerTable, triggerData, actionTable, targetRow);
-        const body = this.replaceVariables(data.actionBody, triggerTable, triggerData, actionTable, targetRow);
+        const subject = await this.replaceVariables(data.actionSubject, triggerTable, triggerData, actionTable, targetRow);
+        const body = await this.replaceVariables(data.actionBody, triggerTable, triggerData, actionTable, targetRow);
         
         let to = '';
         if (data.emailRecipientType === 'table' && targetRow && data.actionEmailField) {
           to = targetRow[data.actionEmailField];
         } else if (data.emailRecipientType === 'custom') {
-          to = this.replaceVariables(data.customEmailField, triggerTable, triggerData);
+          to = await this.replaceVariables(data.customEmailField, triggerTable, triggerData);
         } else if (data.emailRecipientType === 'system') {
-          // Simplificado: idealmente buscaria os usuários do grupo no projeto
-          to = 'admin@exemplo.com'; //TODO: Mapear sistema real de grupos
+          const userIds = [];
+          if (data.emailGroupsUsers) {
+             for (const groupUsers of Object.values(data.emailGroupsUsers)) {
+                if (Array.isArray(groupUsers)) {
+                   userIds.push(...groupUsers);
+                }
+             }
+          }
+          
+          if (userIds.length > 0) {
+             try {
+               const { data: authConfig } = await this.supabase.from('project_auth_config').select('*').eq('project_id', this.project.id).maybeSingle();
+               if (authConfig && authConfig.db_table_name) {
+                 const tableName = authConfig.db_table_name;
+                 const emailField = authConfig.db_email_column || 'email';
+                 const placeholders = userIds.map((_, i) => this.dbType === 'oracle' ? `:${i+1}` : `$${i+1}`).join(',');
+                 const sql = `SELECT "${emailField}" FROM "${tableName}" WHERE "id" IN (${placeholders})`;
+                 const rows = await this.executeQuery(sql, userIds);
+                 to = rows.map(r => r[emailField]).filter(Boolean).join(',');
+               }
+             } catch(e) {
+               console.error('[BPM] Erro ao buscar emails dos grupos:', e.message);
+             }
+          }
+          
+          if (!to) {
+             to = process.env.SMTP_USER || 'contato@metabuilderpro.com';
+          }
         }
 
         if (!to) {
@@ -271,57 +339,69 @@ class BpmEngine {
   }
 
   async traverseGraph(flowData, startNode, triggerTable, triggerData) {
-    let currentNode = startNode;
-    let maxSteps = 20;
+    const queue = [startNode];
+    let maxSteps = 100;
 
-    while (currentNode && maxSteps > 0) {
+    while (queue.length > 0 && maxSteps > 0) {
       maxSteps--;
+      const currentNode = queue.shift();
 
       if (currentNode.type === 'condition') {
         const isTrue = this.evaluateCondition(currentNode, triggerTable, triggerData);
         const edges = flowData.edges.filter(e => e.source === currentNode.id && e.sourceHandle === String(isTrue));
         
-        if (edges.length > 0) {
-          currentNode = flowData.nodes.find(n => n.id === edges[0].target);
-        } else {
-          currentNode = null;
+        for (const edge of edges) {
+           const targetNode = flowData.nodes.find(n => n.id === edge.target);
+           if (targetNode) queue.push(targetNode);
         }
       } 
       else if (currentNode.type === 'action') {
         await this.runNodeAction(currentNode, triggerTable, triggerData);
         const edges = flowData.edges.filter(e => e.source === currentNode.id);
         
-        if (edges.length > 0) {
-          currentNode = flowData.nodes.find(n => n.id === edges[0].target);
-        } else {
-          currentNode = null;
+        for (const edge of edges) {
+           const targetNode = flowData.nodes.find(n => n.id === edge.target);
+           if (targetNode) queue.push(targetNode);
         }
       }
       else {
          // trigger node
          const edges = flowData.edges.filter(e => e.source === currentNode.id);
-         if (edges.length > 0) {
-           currentNode = flowData.nodes.find(n => n.id === edges[0].target);
-         } else {
-           currentNode = null;
+         for (const edge of edges) {
+            const targetNode = flowData.nodes.find(n => n.id === edge.target);
+            if (targetNode) queue.push(targetNode);
          }
       }
     }
   }
 
   async processEvent(tableName, actionType, rowData) {
-    if (!this.workflows || this.workflows.length === 0) return;
+    console.log(chalk.gray(`[BPM-DEBUG] processEvent chamado: tableName=${tableName}, actionType=${actionType}`));
+    if (!this.workflows || this.workflows.length === 0) {
+      console.log(chalk.gray(`[BPM-DEBUG] Nenhum fluxo ativo encontrado.`));
+      return;
+    }
 
     for (const flow of this.workflows) {
       const flowData = flow.flow_data;
-      if (!flowData || !flowData.nodes) continue;
+      if (!flowData || !flowData.nodes) {
+         console.log(chalk.gray(`[BPM-DEBUG] Fluxo ${flow.name} sem flowData válido.`));
+         continue;
+      }
 
       const triggerNodes = flowData.nodes.filter(n => n.type === 'trigger');
+      console.log(chalk.gray(`[BPM-DEBUG] Fluxo ${flow.name} tem ${triggerNodes.length} trigger(s).`));
+      
       for (const triggerNode of triggerNodes) {
-        const triggerTypes = triggerNode.data?.triggerType || [];
+        let rawTypes = triggerNode.data?.triggerType || [];
+        if (typeof rawTypes === 'string') rawTypes = [rawTypes];
+        
+        const triggerTypes = rawTypes.map(t => String(t).toUpperCase());
         const triggerTable = this.getModelTable(triggerNode.data?.triggerModelId);
 
-        if (triggerTable === tableName && triggerTypes.includes(actionType)) {
+        console.log(chalk.gray(`[BPM-DEBUG] Avaliando Trigger: table=${triggerTable} (esperado=${tableName}), types=[${triggerTypes.join(',')}] (esperado=${actionType})`));
+
+        if (triggerTable === tableName && triggerTypes.includes(actionType.toUpperCase())) {
           console.log(chalk.cyan(`[BPM] Disparando fluxo "${flow.name}" para a tabela ${tableName}...`));
           try {
              await this.traverseGraph(flowData, triggerNode, tableName, rowData);
