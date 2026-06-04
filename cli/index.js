@@ -568,6 +568,39 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
             const userObj = { ...userRow };
             delete userObj[safePasswordCol];
             
+            // Se for N to N, precisamos buscar o papel na tabela de junção
+            if (config.db_user_groups_type === 'n_to_n' && config.db_user_roles_table) {
+              const safeUrTable = config.db_user_roles_table.replace(/[^a-zA-Z0-9_]/g, '');
+              const safeUrUserCol = (config.db_user_roles_user_id_column || 'user_id').replace(/[^a-zA-Z0-9_]/g, '');
+              const safeUrRoleCol = (config.db_user_roles_role_id_column || 'role_id').replace(/[^a-zA-Z0-9_]/g, '');
+              const targetRoleKey = config.db_user_role_column || 'role_id'; // Chave esperada pelo frontend
+              
+              const pkCol = 'id'; // assumindo que id_local se mapeie primariamente via id ou similar. O ideal seria o frontend passar, mas 'id' atende a maioria.
+              const userIdVal = userObj[pkCol] || userObj['ID'] || userObj['Id'];
+
+              if (userIdVal) {
+                const urSql = dbType === 'oracle' 
+                  ? `SELECT "${safeUrRoleCol}" FROM "${safeUrTable}" WHERE "${safeUrUserCol}" = :1` 
+                  : `SELECT "${safeUrRoleCol}" FROM "${safeUrTable}" WHERE "${safeUrUserCol}" = $1`;
+                
+                try {
+                  let urResult;
+                  if (dbType === 'oracle') {
+                    const oraRes = await oracleConnection.execute(urSql, [userIdVal], { outFormat: oracledb.OUT_FORMAT_OBJECT });
+                    urResult = { rows: oraRes.rows };
+                  } else {
+                    urResult = await pgClient.query(urSql, [userIdVal]);
+                  }
+                  
+                  if (urResult.rows.length > 0) {
+                    userObj[targetRoleKey] = urResult.rows[0][safeUrRoleCol] || urResult.rows[0][safeUrRoleCol.toLowerCase()];
+                  }
+                } catch (urErr) {
+                  console.error(chalk.yellow(`[ AVISO ] Falha ao buscar papel N:N para o usuário '${email}': ${urErr.message}`));
+                }
+              }
+            }
+            
             result = { rows: [userObj] };
             console.log(chalk.green(`[ OK ] LOGIN: Usuário '${email}' autenticado com sucesso.`));
           }
@@ -750,6 +783,8 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
           const { idColumn, idValue } = payload.payload;
           const safeIdCol = idColumn.replace(/[^a-zA-Z0-9_]/g, '');
           
+          let deletedRowData = { [safeIdCol]: idValue };
+
           if (dbType === 'oracle') {
             sql = `DELETE FROM "${safeTable}" WHERE "${safeIdCol}" = :1`;
             params = [idValue];
@@ -759,8 +794,17 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
             sql = `DELETE FROM "${safeTable}" WHERE "${safeIdCol}" = $1 RETURNING *`;
             params = [idValue];
             result = await pgClient.query(sql, params);
+            if (result.rows.length > 0) {
+              deletedRowData = result.rows[0];
+            }
           }
           console.log(chalk.green(`[ OK ] DELETE: 1 linha removida.`));
+
+          if (bpmEngine) {
+            bpmEngine.processEvent(safeTable, 'record_deleted', deletedRowData).catch(err => {
+              console.error(chalk.red(`[BPM] Erro ao processar DELETE:`), err);
+            });
+          }
         } else if (action === 'execute_custom') {
           sql = payload.payload.query || payload.payload.sql;
           params = payload.payload.params || [];

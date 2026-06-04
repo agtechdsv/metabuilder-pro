@@ -1,6 +1,7 @@
 const chalk = require('chalk');
 const axios = require('axios');
 const oracledb = require('oracledb');
+const cron = require('node-cron');
 
 class BpmEngine {
   constructor(supabase, pgClient, oracleConnection, dbType, project, apiUrl) {
@@ -12,6 +13,7 @@ class BpmEngine {
     this.apiUrl = apiUrl || 'http://localhost:3000'; // Fallback se não definido
     this.workflows = [];
     this.models = [];
+    this.scheduledJobs = [];
   }
 
   async init() {
@@ -44,6 +46,80 @@ class BpmEngine {
       .not('flow_data', 'is', null);
 
     this.workflows = data || [];
+    this.clearScheduledJobs();
+    this.initScheduledJobs();
+  }
+
+  clearScheduledJobs() {
+    for (const job of this.scheduledJobs) {
+      if (job && typeof job.stop === 'function') {
+        job.stop();
+      }
+    }
+    this.scheduledJobs = [];
+    console.log(chalk.gray(`[BPM] Todos os agendamentos antigos foram limpos.`));
+  }
+
+  initScheduledJobs() {
+    let cronCount = 0;
+    
+    for (const flow of this.workflows) {
+      const flowData = flow.flow_data;
+      if (!flowData || !flowData.nodes) continue;
+
+      const triggerNodes = flowData.nodes.filter(n => n.type === 'trigger');
+      for (const triggerNode of triggerNodes) {
+        let rawTypes = triggerNode.data?.triggerType || [];
+        if (typeof rawTypes === 'string') rawTypes = [rawTypes];
+        const triggerTypes = rawTypes.map(t => String(t).toUpperCase());
+
+        if (triggerTypes.includes('SCHEDULED')) {
+          const rawSchedules = triggerNode.data?.triggerSchedules || [];
+          
+          for (const sched of rawSchedules) {
+            let cronStr = '';
+            
+            if (sched.type === 'recurring') {
+              // days: [0, 1, 2] (Dom, Seg, Ter)
+              const days = (sched.days && sched.days.length > 0) ? sched.days.join(',') : '*';
+              const time = sched.time || '00:00';
+              const [hour, min] = time.split(':');
+              
+              cronStr = `${min || '0'} ${hour || '0'} * * ${days}`;
+            } else if (sched.type === 'once') {
+              // dateTime: "2026-06-04T18:30"
+              const dt = new Date(sched.dateTime);
+              if (!isNaN(dt.getTime())) {
+                const min = dt.getMinutes();
+                const hour = dt.getHours();
+                const day = dt.getDate();
+                const month = dt.getMonth() + 1;
+                cronStr = `${min} ${hour} ${day} ${month} *`;
+              }
+            }
+
+            if (cronStr) {
+              const job = cron.schedule(cronStr, async () => {
+                console.log(chalk.cyan(`\n[BPM] ⏰ Agendamento disparado para o fluxo "${flow.name}"!`));
+                const triggerTable = this.getModelTable(triggerNode.data?.triggerModelId);
+                try {
+                  await this.traverseGraph(flowData, triggerNode, triggerTable || 'global', {});
+                } catch(e) {
+                  console.error(chalk.red(`[BPM] Falha na execução do fluxo agendado ${flow.name}:`), e);
+                }
+              });
+              
+              this.scheduledJobs.push(job);
+              cronCount++;
+            }
+          }
+        }
+      }
+    }
+    
+    if (cronCount > 0) {
+      console.log(chalk.green(`[BPM] ${cronCount} gatilho(s) agendado(s) configurado(s) com sucesso.`));
+    }
   }
 
   async syncModels() {
@@ -283,6 +359,84 @@ class BpmEngine {
       console.log(chalk.blue(`[BPM] Executando Update: ${sql} | Parametros: ${JSON.stringify(finalParams)}`));
       await this.executeQuery(sql, finalParams);
     } 
+    else if (data.actionType === 'insert') {
+      const fieldsToInsert = data.actionFields || [];
+      if (fieldsToInsert.length === 0) {
+        console.log(chalk.yellow(`[BPM] Cuidado: INSERT ignorado pois não há campos mapeados.`));
+        return;
+      }
+
+      const columns = [];
+      const values = [];
+      const insertParams = [];
+      let pIdx = 1;
+
+      for (const f of fieldsToInsert) {
+        if (!f.field) continue;
+        const val = await this.replaceVariables(f.value, triggerTable, triggerData);
+        columns.push(`"${f.field}"`);
+        if (this.dbType === 'oracle') {
+          values.push(`:${pIdx}`);
+        } else {
+          values.push(`$${pIdx}`);
+        }
+        insertParams.push(val);
+        pIdx++;
+      }
+
+      const sql = `INSERT INTO "${actionTable}" (${columns.join(', ')}) VALUES (${values.join(', ')})`;
+      console.log(chalk.blue(`[BPM] Executando Insert: ${sql} | Parametros: ${JSON.stringify(insertParams)}`));
+      await this.executeQuery(sql, insertParams);
+    }
+    else if (data.actionType === 'delete') {
+      if (!where) {
+         console.log(chalk.yellow(`[BPM] Cuidado: DELETE ignorado por falta de filtros de segurança.`));
+         return; // Evita delete sem WHERE global
+      }
+
+      const sql = `DELETE FROM "${actionTable}" ${where}`;
+      console.log(chalk.red(`[BPM] Executando Delete: ${sql} | Parametros: ${JSON.stringify(params)}`));
+      await this.executeQuery(sql, params);
+    } 
+    else if (data.actionType === 'webhook') {
+      let finalUrl = await this.replaceVariables(data.webhookUrl || '', triggerTable, triggerData);
+      const method = (data.webhookMethod || 'POST').toUpperCase();
+      let finalHeadersStr = await this.replaceVariables(data.webhookHeaders || '', triggerTable, triggerData);
+      let finalBodyStr = await this.replaceVariables(data.webhookBody || '', triggerTable, triggerData);
+      
+      if (!finalUrl) {
+        console.log(chalk.yellow(`[BPM] Cuidado: Webhook ignorado por falta de URL.`));
+        return;
+      }
+
+      let headers = {};
+      try {
+        if (finalHeadersStr.trim()) headers = JSON.parse(finalHeadersStr);
+      } catch(e) {
+        console.log(chalk.yellow(`[BPM] Falha ao fazer parse do Webhook Headers (JSON inválido). Usando vazio.`));
+      }
+
+      let bodyData = null;
+      try {
+        if (finalBodyStr.trim()) bodyData = JSON.parse(finalBodyStr);
+      } catch(e) {
+        bodyData = finalBodyStr; // Manda como texto plano se não for JSON válido
+      }
+
+      console.log(chalk.cyan(`[BPM] Disparando Webhook [${method}] para: ${finalUrl}`));
+      
+      try {
+        const response = await axios({
+          method: method,
+          url: finalUrl,
+          headers: headers,
+          data: ['POST', 'PUT', 'PATCH'].includes(method) ? bodyData : undefined
+        });
+        console.log(chalk.green(`[ OK ] Webhook Retornou: ${response.status} ${response.statusText}`));
+      } catch (webhookErr) {
+        console.log(chalk.red(`[ ERRO ] Falha no Webhook: ${webhookErr.message}`));
+      }
+    }
     else if (data.actionType === 'email') {
       // 1. Busca os registros alvo para ler o e-mail ou variáveis
       let targetRows = [null]; // Fallback se não tiver tabela alvo, roda 1 vez
