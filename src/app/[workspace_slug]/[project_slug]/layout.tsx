@@ -215,7 +215,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
           .select('role_id')
           .eq('project_id', project.id)
           .eq('external_user_id', clientUser.id?.toString())
-          .single()
+          .maybeSingle()
         roleId = userRole?.role_id
       }
       

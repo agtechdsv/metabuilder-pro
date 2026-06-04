@@ -147,7 +147,7 @@ export default async function SlugPage({ params }: PageProps) {
             .select('role_id')
             .eq('project_id', project.id)
             .eq('external_user_id', clientUser.id?.toString())
-            .single()
+            .maybeSingle()
           roleId = userRole?.role_id
         }
         
@@ -250,7 +250,7 @@ export default async function SlugPage({ params }: PageProps) {
               .select('role_id')
               .eq('project_id', project.id)
               .eq('external_user_id', clientUser.id?.toString())
-              .single()
+              .maybeSingle()
             roleId = userRole?.role_id
           }
 
