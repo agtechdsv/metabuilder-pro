@@ -144,6 +144,18 @@ export default function SyncResolutionClient({
             ).map(([tableName, group]: [string, any]) => {
               
               const parentModel = group.model;
+              
+              // Se a tabela parent foi deletada inteira, não precisamos mostrar os fields
+              if (tableMappings[parentModel?.id] === '_DELETE_') return null;
+
+              // Identifica se a tabela inteira sumiu (está na aba Tabelas)
+              const isMissingModel = missingModels.some((m: any) => m.id === parentModel?.id);
+
+              // Se a tabela sumiu e o usuário ainda não escolheu uma ação para ela, não exibe os campos
+              if (isMissingModel && !tableMappings[parentModel?.id]) {
+                return null;
+              }
+
               // Se a tabela parent foi renomeada, buscamos as colunas da tabela nova
               const targetTableName = parentModel && tableMappings[parentModel.id] 
                 ? tableMappings[parentModel.id] 
