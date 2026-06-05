@@ -3211,6 +3211,8 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
               </div>
             </div>
           )}
+            </div>
+          )}
 
           {/* ZONA: ANALYTICS (BI) CONFIG */}
           {config.logic_type === 'analytics' && (
@@ -3516,8 +3518,6 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
             </DroppableZone>
             </div>
             )}
-            </div>
-          )}
 
           {/* ZONA: FORMULÁRIO (RECURSIVO) */}
           {(config.logic_type.includes('cadastro') || 
