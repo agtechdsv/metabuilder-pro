@@ -1060,10 +1060,18 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       // 1. Criar/Atualizar a View Principal
       const { data: projectData } = await supabase.from('projects').select('id').eq('slug', project_slug).single()
 
+      const validFieldIds = new Set(models.flatMap((m: any) => m.fields?.map((f: any) => f.id) || []))
+
+      const filterValid = (arr: string[]) => (arr || []).filter(fid => validFieldIds.has(fid))
+
+      const validFormFields = filterValid(config.layout_config.form_fields)
+      const validGridFields = filterValid(config.layout_config.grid_fields)
+      const validFilterFields = filterValid(config.layout_config.filter_fields)
+
       const allFieldIds = new Set([
-        ...(config.layout_config.form_fields || []),
-        ...(config.layout_config.grid_fields || []),
-        ...(config.layout_config.filter_fields || []),
+        ...validFormFields,
+        ...validGridFields,
+        ...validFilterFields,
       ])
 
       const populatedFieldsMeta = { ...config.layout_config.fields_metadata }
@@ -1074,6 +1082,13 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         }
       })
 
+      const cleanLayoutConfig = {
+        ...config.layout_config,
+        form_fields: validFormFields,
+        grid_fields: validGridFields,
+        filter_fields: validFilterFields,
+      }
+
       const viewPayload = {
         project_id: projectData?.id,
         name: config.name,
@@ -1083,7 +1098,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         tables_config: config.selected_models,
         query_type: config.query_type,
         custom_query: config.custom_query,
-        layout_config: { ...config.layout_config, fields_metadata: populatedFieldsMeta, is_active: true },
+        layout_config: { ...cleanLayoutConfig, fields_metadata: populatedFieldsMeta, is_active: true },
         buttons_config: config.buttons_config,
         view_type: 'advanced_use_case',
         model_id: config.selected_models[0], // Define a primeira tabela como modelo principal
@@ -1182,9 +1197,9 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         }
       }
 
-      config.layout_config.filter_fields?.forEach((fid: string) => addOrUpdateComponent(fid, 'filter'))
-      config.layout_config.grid_fields?.forEach((fid: string) => addOrUpdateComponent(fid, 'grid'))
-      config.layout_config.form_fields?.forEach((fid: string) => addOrUpdateComponent(fid, 'form'))
+      validFilterFields.forEach((fid: string) => addOrUpdateComponent(fid, 'filter'))
+      validGridFields.forEach((fid: string) => addOrUpdateComponent(fid, 'grid'))
+      validFormFields.forEach((fid: string) => addOrUpdateComponent(fid, 'form'))
 
       const componentsToInsert = Object.values(componentMap)
 
