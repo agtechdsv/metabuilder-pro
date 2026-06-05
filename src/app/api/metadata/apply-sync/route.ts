@@ -236,6 +236,70 @@ export async function POST(request: Request) {
         return newText;
       };
 
+      const updateNodes = (nodes: any[]) => {
+        let hasNodeChanges = false;
+        nodes.forEach((node: any) => {
+           if (!node.data) return;
+           let nodeChanged = false;
+
+           const replaceColName = (modelId: string, col: string) => {
+              let newName = col;
+              Object.entries(mappedFields).forEach(([fieldId, newColName]) => {
+                 const oldField = oldFieldNames[fieldId];
+                 // Use rule's modelId if it exists, otherwise fall back to trigger/action modelId
+                 if (oldField && oldField.col === col && (!modelId || modelId === oldField.modelId)) {
+                    newName = newColName as string;
+                    nodeChanged = true;
+                 }
+              });
+              return newName;
+           };
+
+           if (node.data.actionEmailField) {
+              node.data.actionEmailField = replaceColName(node.data.actionModelId, node.data.actionEmailField);
+           }
+
+           if (node.data.actionFilters && Array.isArray(node.data.actionFilters)) {
+              node.data.actionFilters.forEach((filter: any) => {
+                 if (filter.field) filter.field = replaceColName(node.data.actionModelId, filter.field);
+                 if (typeof filter.value === 'string') filter.value = updateBpmTextVariables(filter.value);
+              });
+           }
+
+           if (node.data.actionFields && Array.isArray(node.data.actionFields)) {
+              node.data.actionFields.forEach((field: any) => {
+                 if (field.field) field.field = replaceColName(node.data.actionModelId, field.field);
+                 if (typeof field.value === 'string') field.value = updateBpmTextVariables(field.value);
+              });
+           }
+
+           if (node.data.conditionGroups && Array.isArray(node.data.conditionGroups)) {
+              node.data.conditionGroups.forEach((group: any) => {
+                 if (group.rules && Array.isArray(group.rules)) {
+                    group.rules.forEach((rule: any) => {
+                       // A regra de condição salva seu próprio modelId
+                       if (rule.field) rule.field = replaceColName(rule.modelId || node.data.triggerModelId, rule.field);
+                    });
+                 }
+              });
+           }
+
+           const textKeys = ['actionSubject', 'actionBody', 'customEmailField', 'webhookUrl', 'webhookHeaders', 'webhookBody', 'emailSpecificUsers'];
+           textKeys.forEach(key => {
+              if (node.data[key] && typeof node.data[key] === 'string') {
+                 const updated = updateBpmTextVariables(node.data[key]);
+                 if (updated !== node.data[key]) {
+                    node.data[key] = updated;
+                    nodeChanged = true;
+                 }
+              }
+           });
+
+           if (nodeChanged) hasNodeChanges = true;
+        });
+        return hasNodeChanges;
+      };
+
       const updateComponentBlock = (component: any) => {
         if (!component || !component.rel_table) return false;
         let blockChanged = false;
@@ -317,70 +381,6 @@ export async function POST(request: Request) {
                }
             });
           }
-
-          const updateNodes = (nodes: any[]) => {
-            let hasNodeChanges = false;
-            nodes.forEach((node: any) => {
-               if (!node.data) return;
-               let nodeChanged = false;
-
-               const replaceColName = (modelId: string, col: string) => {
-                  let newName = col;
-                  Object.entries(mappedFields).forEach(([fieldId, newColName]) => {
-                     const oldField = oldFieldNames[fieldId];
-                     // Use rule's modelId if it exists, otherwise fall back to trigger/action modelId
-                     if (oldField && oldField.col === col && (!modelId || modelId === oldField.modelId)) {
-                        newName = newColName as string;
-                        nodeChanged = true;
-                     }
-                  });
-                  return newName;
-               };
-
-               if (node.data.actionEmailField) {
-                  node.data.actionEmailField = replaceColName(node.data.actionModelId, node.data.actionEmailField);
-               }
-
-               if (node.data.actionFilters && Array.isArray(node.data.actionFilters)) {
-                  node.data.actionFilters.forEach((filter: any) => {
-                     if (filter.field) filter.field = replaceColName(node.data.actionModelId, filter.field);
-                     if (typeof filter.value === 'string') filter.value = updateBpmTextVariables(filter.value);
-                  });
-               }
-
-               if (node.data.actionFields && Array.isArray(node.data.actionFields)) {
-                  node.data.actionFields.forEach((field: any) => {
-                     if (field.field) field.field = replaceColName(node.data.actionModelId, field.field);
-                     if (typeof field.value === 'string') field.value = updateBpmTextVariables(field.value);
-                  });
-               }
-
-               if (node.data.conditionGroups && Array.isArray(node.data.conditionGroups)) {
-                  node.data.conditionGroups.forEach((group: any) => {
-                     if (group.rules && Array.isArray(group.rules)) {
-                        group.rules.forEach((rule: any) => {
-                           // A regra de condição salva seu próprio modelId
-                           if (rule.field) rule.field = replaceColName(rule.modelId || node.data.triggerModelId, rule.field);
-                        });
-                     }
-                  });
-               }
-
-               const textKeys = ['actionSubject', 'actionBody', 'customEmailField', 'webhookUrl', 'webhookHeaders', 'webhookBody', 'emailSpecificUsers'];
-               textKeys.forEach(key => {
-                  if (node.data[key] && typeof node.data[key] === 'string') {
-                     const updated = updateBpmTextVariables(node.data[key]);
-                     if (updated !== node.data[key]) {
-                        node.data[key] = updated;
-                        nodeChanged = true;
-                     }
-                  }
-               });
-
-               if (nodeChanged) hasNodeChanges = true;
-            });
-            return hasNodeChanges;
-          };
 
           if (newConfig.nodes && Array.isArray(newConfig.nodes)) {
              if (updateNodes(newConfig.nodes)) {
