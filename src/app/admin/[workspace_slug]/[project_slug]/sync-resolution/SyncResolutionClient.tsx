@@ -152,6 +152,12 @@ export default function SyncResolutionClient({
               const targetTablePayload = incomingPayload.find((t: any) => t.name === targetTableName);
               const newColumns = targetTablePayload?.columns?.map((c:any) => c.name) || [];
 
+              const trulyMissingFields = group.fields.filter((field: any) => !newColumns.includes(field.db_column_name));
+
+              if (trulyMissingFields.length === 0) {
+                return null;
+              }
+
               return (
                 <div key={tableName} className="bg-gray-50/50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden">
                   <div className="bg-gray-100/80 dark:bg-gray-800/80 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
@@ -164,7 +170,7 @@ export default function SyncResolutionClient({
                     </h3>
                   </div>
                   <div className="p-4 space-y-3">
-                    {group.fields.map((field: any) => (
+                    {trulyMissingFields.map((field: any) => (
                       <div key={field.id} className="flex items-center gap-4 bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
                         <div className="w-1/3">
                           <span className="font-mono text-sm line-through text-red-500">{field.db_column_name}</span>
