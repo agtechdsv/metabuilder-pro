@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
@@ -14,7 +14,8 @@ import {
   Key, 
   Check, 
   Info,
-  Loader2
+  Loader2,
+  RefreshCw
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -38,7 +39,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
   // Edit states
   const [modelDisplayName, setModelDisplayName] = useState('')
   const [modelDescription, setModelDescription] = useState('')
-  const [fieldEdits, setFieldEdits] = useState<Record<string, { display_name: string, description: string }>>({})
+  const [fieldEdits, setFieldEdits] = useState<Record<string, { display_name: string }>>({})
 
   // Select first model by default if models list is available
   useEffect(() => {
@@ -46,6 +47,36 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
       setSelectedModelId(models[0].id)
     }
   }, [models])
+
+  const fetchFields = useCallback(async () => {
+    if (!selectedModelId) return
+    setLoadingFields(true)
+    try {
+      const { data, error } = await supabase
+        .from('fields')
+        .select('*')
+        .eq('model_id', selectedModelId)
+        .order('order_index', { ascending: true })
+
+      if (error) throw error
+
+      if (data) {
+        setFields(data)
+        const edits: Record<string, { display_name: string }> = {}
+        data.forEach(f => {
+          edits[f.id] = {
+            display_name: f.display_name || f.db_column_name
+          }
+        })
+        setFieldEdits(edits)
+      }
+    } catch (err: any) {
+      console.error('Error fetching fields:', err)
+      toast('Erro ao buscar colunas da tabela: ' + err.message, 'error')
+    } finally {
+      setLoadingFields(false)
+    }
+  }, [selectedModelId, supabase, toast])
 
   // Load fields and model info when selectedModelId changes
   useEffect(() => {
@@ -57,38 +88,8 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
       setModelDescription(currentModel.description || '')
     }
 
-    const fetchFields = async () => {
-      setLoadingFields(true)
-      try {
-        const { data, error } = await supabase
-          .from('fields')
-          .select('*')
-          .eq('model_id', selectedModelId)
-          .order('order_index', { ascending: true })
-
-        if (error) throw error
-
-        if (data) {
-          setFields(data)
-          const edits: Record<string, { display_name: string, description: string }> = {}
-          data.forEach(f => {
-            edits[f.id] = {
-              display_name: f.display_name || f.db_column_name,
-              description: f.description || ''
-            }
-          })
-          setFieldEdits(edits)
-        }
-      } catch (err: any) {
-        console.error('Error fetching fields:', err)
-        toast('Erro ao buscar colunas da tabela: ' + err.message, 'error')
-      } finally {
-        setLoadingFields(false)
-      }
-    }
-
     fetchFields()
-  }, [selectedModelId, models, supabase])
+  }, [selectedModelId, models, fetchFields])
 
   const handleSave = async () => {
     if (!selectedModelId) return
@@ -112,15 +113,14 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
         if (!edit) return Promise.resolve({ error: null })
         
         // Skip if nothing changed
-        if (edit.display_name === (f.display_name || f.db_column_name) && edit.description === (f.description || '')) {
+        if (edit.display_name === (f.display_name || f.db_column_name)) {
           return Promise.resolve({ error: null })
         }
 
         return supabase
           .from('fields')
           .update({
-            display_name: edit.display_name,
-            description: edit.description
+            display_name: edit.display_name
           })
           .eq('id', f.id)
       })
@@ -142,7 +142,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
     }
   }
 
-  const handleFieldChange = (fieldId: string, key: 'display_name' | 'description', value: string) => {
+  const handleFieldChange = (fieldId: string, key: 'display_name', value: string) => {
     setFieldEdits(prev => ({
       ...prev,
       [fieldId]: {
@@ -243,23 +243,34 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                       <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-0.5">Schema: {selectedModel.db_schema_name || 'public'}</p>
                     </div>
                   </div>
-                  <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-505 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)]"
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Salvando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4" />
-                        <span>Salvar Tabela</span>
-                      </>
-                    )}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={fetchFields}
+                      disabled={loadingFields}
+                      type="button"
+                      className="p-2.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-full transition-all flex items-center justify-center group shadow-sm"
+                      title="Atualizar"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${loadingFields ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500 ease-out'}`} />
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-505 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)]"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Salvando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          <span>Salvar Tabela</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -306,7 +317,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                 ) : (
                   <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
                     {fields.map(f => {
-                      const edit = fieldEdits[f.id] || { display_name: '', description: '' }
+                      const edit = fieldEdits[f.id] || { display_name: '' }
                       return (
                         <div key={f.id} className="p-5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-850 rounded-2xl space-y-4">
                           {/* Column Identification */}
@@ -331,29 +342,17 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                               )}
                             </div>
                           </div>
-
+ 
                           {/* Editable Inputs */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                              <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Label na UI</label>
-                              <input
-                                type="text"
-                                value={edit.display_name}
-                                onChange={e => handleFieldChange(f.id, 'display_name', e.target.value)}
-                                placeholder={f.db_column_name}
-                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Descrição/Helptext</label>
-                              <input
-                                type="text"
-                                value={edit.description}
-                                onChange={e => handleFieldChange(f.id, 'description', e.target.value)}
-                                placeholder="Tooltip ou ajuda ao preencher..."
-                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
-                              />
-                            </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Label na UI</label>
+                            <input
+                              type="text"
+                              value={edit.display_name}
+                              onChange={e => handleFieldChange(f.id, 'display_name', e.target.value)}
+                              placeholder={f.db_column_name}
+                              className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+                            />
                           </div>
                         </div>
                       )
