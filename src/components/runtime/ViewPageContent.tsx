@@ -1221,8 +1221,6 @@ export default function ViewPageContent({
   const handleConfirmDeleteDetail = async () => {
     setIsProcessing(true)
     const queryId = crypto.randomUUID()
-    const isTemporary = !tunnelChannel || !isTunnelReady
-    const channel = isTemporary ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
 
     try {
       const tableName = itemToDelete.model_name
@@ -1233,48 +1231,91 @@ export default function ViewPageContent({
       
       const rawQuery = `DELETE FROM ${tableName} WHERE ${detailPkName} = '${String(pkValue).replace(/'/g, "''")}'`
 
-      const sendDelete = () => {
-        channel.send({
-          type: 'broadcast',
-          event: 'sql_query',
-          payload: {
-            queryId,
-            table: tableName,
-            action: 'delete',
-            sql: rawQuery,
-            idColumn: detailPkName,
-            idValue: pkValue,
-            token: project?.secret_token || 'test-token',
-            schemaName: project?.models?.find((m: any) => m.db_table_name === tableName)?.db_schema_name || project?.slug || 'public',
-            slug: project?.slug
-          }
-        })
+      const payload = {
+        queryId,
+        table: tableName,
+        action: 'delete',
+        sql: rawQuery,
+        idColumn: detailPkName,
+        idValue: pkValue,
+        token: project?.secret_token || 'test-token',
+        schemaName: project?.models?.find((m: any) => m.db_table_name === tableName)?.db_schema_name || project?.slug || 'public',
+        slug: project?.slug
       }
 
-      if (isTemporary) {
-        channel.subscribe((status: string) => {
-          if (status === 'SUBSCRIBED') {
-            sendDelete()
-          }
-        })
-      } else {
-        sendDelete()
-      }
+      const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
+        const isTemp = !tunnelChannel || !isTunnelReady
+        const ch = isTemp ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
+        let settled = false
 
-      setTimeout(async () => {
-        setIsDetailDeleteModalOpen(false)
-        setItemToDelete(null)
-        if (isTemporary) {
-          supabase.removeChannel(channel)
+        const handleResult = (payload: any) => {
+          if (payload.payload?.queryId === queryId) {
+            settled = true
+            cleanup()
+            resolve({ success: payload.payload.success, error: payload.payload.error })
+          }
         }
-        
+
+        const cleanup = () => {
+          try {
+            const bindings = ch.bindings?.broadcast
+            if (Array.isArray(bindings)) {
+              ch.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult)
+            }
+            if (isTemp) {
+              ch.unsubscribe()
+              supabase.removeChannel(ch)
+            }
+          } catch (_) {}
+        }
+
+        ch.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
+        ch.on('broadcast', { event: 'sql_result' }, handleResult)
+
+        const doSend = () => {
+          ch.send({
+            type: 'broadcast',
+            event: 'sql_query',
+            payload
+          })
+        }
+
+        if (isTemp) {
+          ch.subscribe((status: string) => {
+            if (status === 'SUBSCRIBED') {
+              doSend()
+            }
+          })
+        } else {
+          doSend()
+        }
+
+        setTimeout(() => {
+          if (!settled) {
+            settled = true
+            cleanup()
+            resolve({ success: false, error: 'Timeout' })
+          }
+        }, 9000)
+      })
+
+      setIsDetailDeleteModalOpen(false)
+      setItemToDelete(null)
+      setIsProcessing(false)
+
+      if (result.success) {
         if (selectedRow) {
           const updatedDetails = await fetchDetails(selectedRow, modelName)
           setSelectedRow({ ...selectedRow, _details: updatedDetails })
         }
-        setIsProcessing(false)
         toast(t('runtime.delete_success', 'Registro excluído com sucesso!'), 'success')
-      }, 1500)
+      } else {
+        let errorMsg = result.error || 'Erro ao excluir o detalhe.'
+        if (errorMsg.includes('foreign key constraint') || errorMsg.includes('violates foreign key') || errorMsg.includes('chave estrangeira')) {
+          errorMsg = t('runtime.delete_fk_error', 'Não é possível excluir este registro pois ele possui relacionamentos ativos (chave estrangeira).')
+        }
+        toast(errorMsg, 'error')
+      }
     } catch (error) {
       console.error('Error deleting detail:', error)
       setIsProcessing(false)
@@ -1590,8 +1631,6 @@ export default function ViewPageContent({
   const handleDelete = async () => {
     setIsProcessing(true)
     const queryId = crypto.randomUUID()
-    const isTemporary = !tunnelChannel || !isTunnelReady
-    const channel = isTemporary ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
 
     try {
       const pkName = primaryKeyName
@@ -1628,33 +1667,75 @@ export default function ViewPageContent({
         payload.id = filters[pkName]
       }
 
-      const sendDelete = () => {
-        channel.send({
-          type: 'broadcast',
-          event: 'sql_query',
-          payload
-        })
-      }
+      const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
+        const isTemp = !tunnelChannel || !isTunnelReady
+        const ch = isTemp ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
+        let settled = false
 
-      if (isTemporary) {
-        channel.subscribe((status: string) => {
-          if (status === 'SUBSCRIBED') {
-            sendDelete()
+        const handleResult = (payload: any) => {
+          if (payload.payload?.queryId === queryId) {
+            settled = true
+            cleanup()
+            resolve({ success: payload.payload.success, error: payload.payload.error })
           }
-        })
-      } else {
-        sendDelete()
-      }
-
-      setTimeout(() => {
-        setIsDeleteModalOpen(false)
-        setIsProcessing(false)
-        if (isTemporary) {
-          supabase.removeChannel(channel)
         }
+
+        const cleanup = () => {
+          try {
+            const bindings = ch.bindings?.broadcast
+            if (Array.isArray(bindings)) {
+              ch.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult)
+            }
+            if (isTemp) {
+              ch.unsubscribe()
+              supabase.removeChannel(ch)
+            }
+          } catch (_) {}
+        }
+
+        ch.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
+        ch.on('broadcast', { event: 'sql_result' }, handleResult)
+
+        const doSend = () => {
+          ch.send({
+            type: 'broadcast',
+            event: 'sql_query',
+            payload
+          })
+        }
+
+        if (isTemp) {
+          ch.subscribe((status: string) => {
+            if (status === 'SUBSCRIBED') {
+              doSend()
+            }
+          })
+        } else {
+          doSend()
+        }
+
+        setTimeout(() => {
+          if (!settled) {
+            settled = true
+            cleanup()
+            resolve({ success: false, error: 'Timeout' })
+          }
+        }, 9000)
+      })
+
+      setIsDeleteModalOpen(false)
+      setIsProcessing(false)
+
+      if (result.success) {
         setRefreshKey(prev => prev + 1)
         toast(t('runtime.delete_success', 'Registro excluído com sucesso!'), 'success')
-      }, 1500)
+      } else {
+        let errorMsg = result.error || 'Erro ao excluir o registro.'
+        if (errorMsg.includes('foreign key constraint') || errorMsg.includes('violates foreign key') || errorMsg.includes('chave estrangeira')) {
+          errorMsg = t('runtime.delete_fk_error', 'Não é possível excluir este registro pois ele possui relacionamentos ativos (chave estrangeira).')
+        }
+        toast(errorMsg, 'error')
+      }
     } catch (error) {
       console.error('Error deleting:', error)
       setIsProcessing(false)

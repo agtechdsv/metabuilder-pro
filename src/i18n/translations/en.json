@@ -420,7 +420,8 @@
     "back_to_list": "Back to List",
     "create_success": "Record created successfully!",
     "update_success": "Record updated successfully!",
-    "delete_success": "Record deleted successfully!"
+    "delete_success": "Record deleted successfully!",
+    "delete_fk_error": "Cannot delete this record because it has active relationships (foreign key constraint)."
   },
   "wizard": {
     "title": "Use Case Builder",

@@ -420,7 +420,8 @@
     "back_to_list": "Voltar a la Lista",
     "create_success": "¡Registro creado con éxito!",
     "update_success": "¡Registro actualizado con éxito!",
-    "delete_success": "¡Registro eliminado con éxito!"
+    "delete_success": "¡Registro eliminado con éxito!",
+    "delete_fk_error": "No se puede eliminar este registro porque tiene relaciones activas (restricción de clave extranjera)."
   },
   "wizard": {
     "title": "Use Case Builder",

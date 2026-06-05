@@ -420,7 +420,8 @@
     "back_to_list": "Voltar para Lista",
     "create_success": "Registro criado com sucesso!",
     "update_success": "Registro atualizado com sucesso!",
-    "delete_success": "Registro excluído com sucesso!"
+    "delete_success": "Registro excluído com sucesso!",
+    "delete_fk_error": "Não é possível excluir este registro pois ele possui relacionamentos ativos (chave estrangeira)."
   },
   "wizard": {
     "title": "Use Case Builder",
