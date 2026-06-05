@@ -263,6 +263,39 @@ export async function POST(request: Request) {
                }
             });
           }
+
+          if (newConfig.fields_metadata) {
+            Object.values(newConfig.fields_metadata).forEach((meta: any) => {
+              if (meta.component && meta.component.rel_table) {
+                // Update table
+                Object.entries(mappedTables).forEach(([modelId, newTableName]) => {
+                  const oldTableName = oldTableNames[modelId];
+                  if (meta.component.rel_table === oldTableName) {
+                    meta.component.rel_table = newTableName;
+                    hasChanges = true;
+                  }
+                });
+                
+                // Update columns
+                Object.entries(mappedFields).forEach(([fieldId, newColName]) => {
+                  const oldField = oldFieldNames[fieldId];
+                  if (!oldField) return;
+                  const newTableNameForThisField = mappedTables[oldField.modelId] || oldField.table;
+                  
+                  if (meta.component.rel_table === oldField.table || meta.component.rel_table === newTableNameForThisField) {
+                    if (meta.component.rel_label === oldField.col) {
+                      meta.component.rel_label = newColName;
+                      hasChanges = true;
+                    }
+                    if (meta.component.rel_value === oldField.col) {
+                      meta.component.rel_value = newColName;
+                      hasChanges = true;
+                    }
+                  }
+                });
+              }
+            });
+          }
           
           if (hasChanges) {
              await supabase.from('ui_views').update({ layout_config: newConfig }).eq('id', view.id);

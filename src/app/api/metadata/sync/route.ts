@@ -54,15 +54,27 @@ export async function POST(request: Request) {
 
     const missingTables = existingTableNames.filter(name => !incomingTableNames.includes(name))
     
-    // Comparar colunas das tabelas que NÃO estão missing
+    // Buscar e comparar colunas
     let hasMissingFields = false;
     const missingFieldsMap: Record<string, string[]> = {}; // table -> [field1, field2]
 
     for (const existingModel of existingModels) {
-      if (missingTables.includes(existingModel.db_table_name)) continue;
-
       const incomingTable = metadata.find((t: any) => t.name === existingModel.db_table_name);
-      if (!incomingTable) continue;
+
+      if (!incomingTable) {
+        // A tabela sumiu (pode ter sido deletada ou renomeada). 
+        // Todas as colunas dela também estão "missing" e devem permitir mapeamento caso a tabela seja mapeada.
+        const { data: existingFields } = await supabase
+          .from('fields')
+          .select('id, db_column_name')
+          .eq('model_id', existingModel.id);
+          
+        if (existingFields && existingFields.length > 0) {
+          hasMissingFields = true;
+          missingFieldsMap[existingModel.db_table_name] = existingFields.map(f => f.db_column_name);
+        }
+        continue;
+      }
 
       const { data: existingFields } = await supabase
         .from('fields')
