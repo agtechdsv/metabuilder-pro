@@ -224,6 +224,18 @@ export default function SyncResolutionClient({
             (missingModels.some(m => !tableMappings[m.id])) ||
             (missingFields.some(f => {
               if (tableMappings[f.model_id] === '_DELETE_') return false; // ignorado
+              
+              const parentModel = allModels.find(m => m.id === f.model_id);
+              if (parentModel) {
+                const targetTableName = tableMappings[f.model_id] || parentModel.db_table_name;
+                const targetTablePayload = incomingPayload.find((t: any) => t.name === targetTableName);
+                const newColumns = targetTablePayload?.columns?.map((c:any) => c.name) || [];
+                
+                if (newColumns.includes(f.db_column_name)) {
+                  return false; // ignorado pois matchou automaticamente
+                }
+              }
+
               return !fieldMappings[f.id];
             }))
           }
