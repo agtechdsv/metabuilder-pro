@@ -94,8 +94,8 @@ export async function POST(request: Request) {
             project_id: projectId,
             db_schema_name: targetSchema,
             db_table_name: table.name,
-            is_missing: false 
-            // display_name mantido por padrão caso já exista
+            display_name: table.name,
+            is_missing: false
           },
           { onConflict: 'project_id,db_schema_name,db_table_name' }
         )
@@ -123,6 +123,7 @@ export async function POST(request: Request) {
             {
               model_id: modelId,
               db_column_name: col.name,
+              display_name: col.name,
               data_type: col.type,
               is_primary_key: col.isPrimary,
               is_nullable: col.isNullable,
