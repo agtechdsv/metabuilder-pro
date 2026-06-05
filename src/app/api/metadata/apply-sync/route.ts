@@ -213,6 +213,37 @@ export async function POST(request: Request) {
         }
       }
 
+      const updateComponentBlock = (component: any) => {
+        if (!component || !component.rel_table) return false;
+        let blockChanged = false;
+        
+        Object.entries(mappedTables).forEach(([modelId, newTableName]) => {
+          const oldTableName = oldTableNames[modelId];
+          if (component.rel_table === oldTableName) {
+            component.rel_table = newTableName;
+            blockChanged = true;
+          }
+        });
+        
+        Object.entries(mappedFields).forEach(([fieldId, newColName]) => {
+          const oldField = oldFieldNames[fieldId];
+          if (!oldField) return;
+          const newTableNameForThisField = mappedTables[oldField.modelId] || oldField.table;
+          
+          if (component.rel_table === oldField.table || component.rel_table === newTableNameForThisField) {
+            if (component.rel_label === oldField.col) {
+              component.rel_label = newColName;
+              blockChanged = true;
+            }
+            if (component.rel_value === oldField.col) {
+              component.rel_value = newColName;
+              blockChanged = true;
+            }
+          }
+        });
+        return blockChanged;
+      };
+
       // Buscar as views do projeto e alterar
       const { data: uiViews } = await supabase.from('ui_views').select('id, layout_config').eq('project_id', projectId);
       
@@ -266,39 +297,37 @@ export async function POST(request: Request) {
 
           if (newConfig.fields_metadata) {
             Object.values(newConfig.fields_metadata).forEach((meta: any) => {
-              if (meta.component && meta.component.rel_table) {
-                // Update table
-                Object.entries(mappedTables).forEach(([modelId, newTableName]) => {
-                  const oldTableName = oldTableNames[modelId];
-                  if (meta.component.rel_table === oldTableName) {
-                    meta.component.rel_table = newTableName;
-                    hasChanges = true;
-                  }
-                });
-                
-                // Update columns
-                Object.entries(mappedFields).forEach(([fieldId, newColName]) => {
-                  const oldField = oldFieldNames[fieldId];
-                  if (!oldField) return;
-                  const newTableNameForThisField = mappedTables[oldField.modelId] || oldField.table;
-                  
-                  if (meta.component.rel_table === oldField.table || meta.component.rel_table === newTableNameForThisField) {
-                    if (meta.component.rel_label === oldField.col) {
-                      meta.component.rel_label = newColName;
-                      hasChanges = true;
-                    }
-                    if (meta.component.rel_value === oldField.col) {
-                      meta.component.rel_value = newColName;
-                      hasChanges = true;
-                    }
-                  }
-                });
+              if (updateComponentBlock(meta.component)) {
+                hasChanges = true;
               }
             });
           }
           
           if (hasChanges) {
              await supabase.from('ui_views').update({ layout_config: newConfig }).eq('id', view.id);
+          }
+        }
+      }
+
+      // Atualizar também a tabela desnormalizada ui_components
+      const viewIds = uiViews?.map(v => v.id) || [];
+      if (viewIds.length > 0) {
+        const { data: uiComponents } = await supabase.from('ui_components').select('id, config').in('view_id', viewIds);
+        
+        if (uiComponents && uiComponents.length > 0) {
+          for (const comp of uiComponents) {
+            if (!comp.config) continue;
+            let compHasChanges = false;
+            let newConfig = typeof comp.config === 'object' ? { ...comp.config } : {};
+            
+            if (updateComponentBlock(newConfig.component)) compHasChanges = true;
+            if (newConfig.form_config && updateComponentBlock(newConfig.form_config.component)) compHasChanges = true;
+            if (newConfig.grid_config && updateComponentBlock(newConfig.grid_config.component)) compHasChanges = true;
+            if (newConfig.filter_config && updateComponentBlock(newConfig.filter_config.component)) compHasChanges = true;
+
+            if (compHasChanges) {
+              await supabase.from('ui_components').update({ config: newConfig }).eq('id', comp.id);
+            }
           }
         }
       }
