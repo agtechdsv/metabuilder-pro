@@ -129,49 +129,69 @@ export default function SyncResolutionClient({
       {missingFields.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h2 className="text-xl font-semibold mb-4 border-b pb-2">Colunas Ausentes (Fields)</h2>
-          <div className="space-y-4">
-            {missingFields.map(field => {
-              // Achar a tabela a que este field pertence para sugerir as colunas novas dela
-              const parentModel = allModels.find(m => m.id === field.model_id)
-              // Se a tabela parent foi deletada inteira, não precisamos mostrar os fields
-              if (tableMappings[field.model_id] === '_DELETE_') {
-                return null;
-              }
-
+          <div className="space-y-6">
+            {Object.entries(
+              missingFields.reduce((acc, field) => {
+                const parentModel = allModels.find(m => m.id === field.model_id)
+                // Se a tabela parent foi deletada inteira, não precisamos mostrar os fields
+                if (tableMappings[field.model_id] === '_DELETE_') return acc;
+                
+                const tableName = parentModel?.db_table_name || 'Desconhecida';
+                if (!acc[tableName]) acc[tableName] = { model: parentModel, fields: [] };
+                acc[tableName].fields.push(field);
+                return acc;
+              }, {} as Record<string, { model: any, fields: any[] }>)
+            ).map(([tableName, group]) => {
+              
+              const parentModel = group.model;
               // Se a tabela parent foi renomeada, buscamos as colunas da tabela nova
-              const targetTableName = tableMappings[field.model_id] 
-                ? tableMappings[field.model_id] 
-                : parentModel?.db_table_name; // ou o nome atual se não mudou
+              const targetTableName = parentModel && tableMappings[parentModel.id] 
+                ? tableMappings[parentModel.id] 
+                : tableName; // ou o nome atual se não mudou
 
               const targetTablePayload = incomingPayload.find((t: any) => t.name === targetTableName);
               const newColumns = targetTablePayload?.columns?.map((c:any) => c.name) || [];
 
               return (
-                <div key={field.id} className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <div className="w-1/3">
-                    <span className="text-xs text-gray-500 block mb-1">{parentModel?.db_table_name}</span>
-                    <span className="font-mono text-sm line-through text-red-500">{field.db_column_name}</span>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-gray-400" />
-                  <div className="w-2/3">
-                    <select
-                      className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500/50"
-                      value={fieldMappings[field.id] || ''}
-                      onChange={(e) => handleFieldMapping(field.id, e.target.value)}
-                    >
-                      <option value="" disabled>-- Selecione uma Ação --</option>
-                      <option value="_DELETE_">🗑️ Confirmar Exclusão (Perderá lógicas de forms)</option>
-                      {newColumns.length > 0 && (
-                        <optgroup label={`Renomear para Coluna em ${targetTableName}:`}>
-                          {newColumns.map((cName: string) => (
-                            <option key={cName} value={cName}>🔄 Renomear para: {cName}</option>
-                          ))}
-                        </optgroup>
+                <div key={tableName} className="bg-gray-50/50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden">
+                  <div className="bg-gray-100/80 dark:bg-gray-800/80 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                      <span className="p-1 bg-white dark:bg-gray-700 rounded-md shadow-sm text-xs">Tabela</span>
+                      {tableName}
+                      {targetTableName !== tableName && (
+                        <span className="text-xs text-indigo-500 font-normal">→ Renomeada para {targetTableName}</span>
                       )}
-                    </select>
+                    </h3>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    {group.fields.map(field => (
+                      <div key={field.id} className="flex items-center gap-4 bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+                        <div className="w-1/3">
+                          <span className="font-mono text-sm line-through text-red-500">{field.db_column_name}</span>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-gray-400" />
+                        <div className="w-2/3">
+                          <select
+                            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500/50"
+                            value={fieldMappings[field.id] || ''}
+                            onChange={(e) => handleFieldMapping(field.id, e.target.value)}
+                          >
+                            <option value="" disabled>-- Selecione uma Ação --</option>
+                            <option value="_DELETE_">🗑️ Confirmar Exclusão (Perderá lógicas de forms)</option>
+                            {newColumns.length > 0 && (
+                              <optgroup label={`Renomear para Coluna em ${targetTableName}:`}>
+                                {newColumns.map((cName: string) => (
+                                  <option key={cName} value={cName}>🔄 Renomear para: {cName}</option>
+                                ))}
+                              </optgroup>
+                            )}
+                          </select>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              )
+              );
             })}
           </div>
         </div>

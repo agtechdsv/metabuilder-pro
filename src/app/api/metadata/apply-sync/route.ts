@@ -183,6 +183,87 @@ export async function POST(request: Request) {
       }
     }
 
+    // 4.4 Atualizar Views que usavam os nomes antigos
+    if (Object.keys(mappedTables).length > 0 || Object.keys(mappedFields).length > 0) {
+      // Carregar nomes antigos
+      const oldTableNames: Record<string, string> = {}
+      if (Object.keys(mappedTables).length > 0) {
+        const { data: mData } = await supabase.from('models').select('id, db_table_name').in('id', Object.keys(mappedTables));
+        if (mData) mData.forEach(m => oldTableNames[m.id] = m.db_table_name);
+      }
+
+      const oldFieldNames: Record<string, { modelId: string, table: string, col: string }> = {}
+      if (Object.keys(mappedFields).length > 0) {
+        const { data: fData } = await supabase.from('fields').select('id, db_column_name, model_id').in('id', Object.keys(mappedFields));
+        if (fData && fData.length > 0) {
+          const { data: modelsForF } = await supabase.from('models').select('id, db_table_name').in('id', fData.map(f => f.model_id));
+          const modelLookup: Record<string, string> = {};
+          if (modelsForF) modelsForF.forEach(m => modelLookup[m.id] = m.db_table_name);
+
+          fData.forEach(f => {
+            oldFieldNames[f.id] = { modelId: f.model_id, table: modelLookup[f.model_id] || '', col: f.db_column_name };
+          });
+        }
+      }
+
+      // Buscar as views do projeto e alterar
+      const { data: uiViews } = await supabase.from('ui_views').select('id, layout_config').eq('project_id', projectId);
+      
+      if (uiViews && uiViews.length > 0) {
+        for (const view of uiViews) {
+          if (!view.layout_config) continue;
+          let hasChanges = false;
+          let newConfig = typeof view.layout_config === 'object' ? { ...view.layout_config } : {};
+          
+          if (newConfig.joins && Array.isArray(newConfig.joins)) {
+            newConfig.joins.forEach((join: any) => {
+               // Update tables
+               Object.entries(mappedTables).forEach(([modelId, newTableName]) => {
+                  const oldTableName = oldTableNames[modelId];
+                  if (join.from === oldTableName) { join.from = newTableName; hasChanges = true; }
+                  if (join.to === oldTableName) { join.to = newTableName; hasChanges = true; }
+               });
+               
+               // Update columns
+               Object.entries(mappedFields).forEach(([fieldId, newColName]) => {
+                  const oldField = oldFieldNames[fieldId];
+                  if (!oldField) return;
+                  const newTableNameForThisField = mappedTables[oldField.modelId] || oldField.table;
+                  
+                  if ((join.from === oldField.table || join.from === newTableNameForThisField) && join.localKey === oldField.col) {
+                     join.localKey = newColName;
+                     hasChanges = true;
+                  }
+                  if ((join.to === oldField.table || join.to === newTableNameForThisField) && join.foreignKey === oldField.col) {
+                     join.foreignKey = newColName;
+                     hasChanges = true;
+                  }
+               });
+            });
+          }
+
+          if (newConfig.custom_actions && Array.isArray(newConfig.custom_actions)) {
+            newConfig.custom_actions.forEach((act: any) => {
+               if (act.usecase_selected_fields && Array.isArray(act.usecase_selected_fields)) {
+                  act.usecase_selected_fields = act.usecase_selected_fields.map((f: string) => {
+                     let newName = f;
+                     Object.entries(mappedFields).forEach(([fieldId, newColName]) => {
+                        const oldField = oldFieldNames[fieldId];
+                        if (oldField && oldField.col === f) { newName = newColName as string; hasChanges = true; }
+                     });
+                     return newName;
+                  });
+               }
+            });
+          }
+          
+          if (hasChanges) {
+             await supabase.from('ui_views').update({ layout_config: newConfig }).eq('id', view.id);
+          }
+        }
+      }
+    }
+
     // 5. Finalizar Limpeza
     // Todas as tabelas que ainda sobraram com is_missing = true e não foram deletadas manualmente, 
     // devem ser deletadas agora (são fantasmas não resolvidos)
