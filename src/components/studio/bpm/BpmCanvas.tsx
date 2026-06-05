@@ -2181,7 +2181,7 @@ function BpmCanvasContent({
         isOpen={isPreviewEmailOpen}
         onClose={() => setIsPreviewEmailOpen(false)}
         title="Pré-visualização do E-mail"
-        size="3xl"
+        size="4xl"
         zIndex={200}
       >
         <div className="space-y-4">
