@@ -2,6 +2,7 @@ const chalk = require('chalk');
 const axios = require('axios');
 const oracledb = require('oracledb');
 const cron = require('node-cron');
+const { wrapEmailInTemplate } = require('./emailTemplates');
 
 class BpmEngine {
   constructor(supabase, pgClient, oracleConnection, dbType, project, apiUrl) {
@@ -101,7 +102,7 @@ class BpmEngine {
             if (cronStr) {
               const job = cron.schedule(cronStr, async () => {
                 console.log(chalk.cyan(`\n[BPM] ⏰ Agendamento disparado para o fluxo "${flow.name}"!`));
-                const triggerTable = this.getModelTable(triggerNode.data?.triggerModelId);
+                const triggerTable = await this.getModelTable(triggerNode.data?.triggerModelId);
                 try {
                   await this.traverseGraph(flowData, triggerNode, triggerTable || 'global', {});
                 } catch(e) {
@@ -135,8 +136,13 @@ class BpmEngine {
     console.log(chalk.gray(`[BPM-DEBUG] syncModels carregou ${this.models.length} modelos para o projeto ${this.project.id}`));
   }
 
-  getModelTable(modelId) {
-    const model = this.models.find(m => m.id === modelId);
+  async getModelTable(modelId) {
+    if (!modelId) return null;
+    let model = this.models.find(m => m.id === modelId);
+    if (!model) {
+      await this.syncModels();
+      model = this.models.find(m => m.id === modelId);
+    }
     console.log(chalk.gray(`[BPM-DEBUG] getModelTable chamou com modelId=${modelId}. Encontrado=${!!model}`));
     return model ? (model.db_table_name || model.display_name) : null;
   }
@@ -304,7 +310,7 @@ class BpmEngine {
 
   async runNodeAction(node, triggerTable, triggerData) {
     const data = node.data || {};
-    const actionTable = data.actionModelId ? this.getModelTable(data.actionModelId) : null;
+    const actionTable = data.actionModelId ? await this.getModelTable(data.actionModelId) : null;
     
     // Para update, a tabela é obrigatória. Para email, depende do tipo de destinatário.
     if (data.actionType === 'update' && !actionTable) {
@@ -505,14 +511,17 @@ class BpmEngine {
           continue;
         }
 
-        console.log(chalk.magenta(`[BPM] Disparando e-mail via API para: ${to}`));
+        const templateType = data.emailTemplate || 'free';
+        const finalHtml = wrapEmailInTemplate(templateType, body.replace(/\n/g, '<br/>'));
+
+        console.log(chalk.magenta(`[BPM] Disparando e-mail via API para: ${to} (Template: ${templateType})`));
         try {
           await axios.post(`${this.apiUrl}/api/automations/email`, {
             project_id: this.project.id,
             token: this.project.secret_token,
             to,
             subject,
-            html: body.replace(/\n/g, '<br/>')
+            html: finalHtml
           });
           console.log(chalk.green(`[BPM] E-mail disparado com sucesso!`));
         } catch (err) {
@@ -582,7 +591,7 @@ class BpmEngine {
         if (typeof rawTypes === 'string') rawTypes = [rawTypes];
         
         const triggerTypes = rawTypes.map(t => String(t).toUpperCase());
-        const triggerTable = this.getModelTable(triggerNode.data?.triggerModelId);
+        const triggerTable = await this.getModelTable(triggerNode.data?.triggerModelId);
 
         console.log(chalk.gray(`[BPM-DEBUG] Avaliando Trigger: table=${triggerTable} (esperado=${tableName}), types=[${triggerTypes.join(',')}] (esperado=${actionType})`));
 

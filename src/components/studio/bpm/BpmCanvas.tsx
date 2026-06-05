@@ -30,6 +30,7 @@ import { Modal } from '@/components/ui/Modal';
 import ButtonEdge from './edges/ButtonEdge';
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/components/ui/Toast';
+import { wrapEmailInTemplate, EmailTemplateType } from '@/utils/emailTemplates';
 
 const nodeTypes = {
   trigger: TriggerNode,
@@ -138,14 +139,16 @@ function BpmCanvasContent({
   const [selectedUsersInModal, setSelectedUsersInModal] = useState<string[] | 'all'>('all');
   const [modalSearchTerm, setModalSearchTerm] = useState('');
   const [editingEmailNode, setEditingEmailNode] = useState<string | null>(null);
-  const [tempEmailData, setTempEmailData] = useState<{ subject: string, body: string }>({ subject: '', body: '' });
+  const [tempEmailData, setTempEmailData] = useState<{ subject: string, body: string, template: EmailTemplateType }>({ subject: '', body: '', template: 'free' });
+  const [isPreviewEmailOpen, setIsPreviewEmailOpen] = useState(false);
 
   useEffect(() => {
     if (editingEmailNode) {
       const node = reactFlowInstance?.getNode(editingEmailNode);
       setTempEmailData({
         subject: (node?.data?.actionSubject as string) || '',
-        body: (node?.data?.actionBody as string) || ''
+        body: (node?.data?.actionBody as string) || '',
+        template: (node?.data?.emailTemplate as EmailTemplateType) || 'free'
       });
     }
   }, [editingEmailNode, reactFlowInstance]);
@@ -2043,6 +2046,18 @@ function BpmCanvasContent({
       >
         <div className="space-y-4">
           <div className="bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800">
+            <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest block mb-2">Template Visual</label>
+            <select 
+              value={tempEmailData.template}
+              onChange={(e) => setTempEmailData(prev => ({ ...prev, template: e.target.value as EmailTemplateType }))}
+              className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-500 mb-4"
+            >
+              <option value="free">📝 Texto Livre (Padrão)</option>
+              <option value="modern">🚀 Moderno (Card Central c/ Cabeçalho Degradê)</option>
+              <option value="alert">🚨 Alerta / Aprovação (Ação Requerida)</option>
+              <option value="classic">📄 Clássico Corporativo</option>
+            </select>
+
             <div className="flex items-center justify-between mb-1">
               <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest block mb-1">Assunto</label>
               <select 
@@ -2129,6 +2144,13 @@ function BpmCanvasContent({
 
           <div className="flex items-center gap-3 pt-2">
             <button
+              onClick={() => setIsPreviewEmailOpen(true)}
+              className="flex-none px-4 py-3 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+              title="Pré-visualizar e-mail"
+            >
+              👁️ Preview
+            </button>
+            <button
               onClick={() => setEditingEmailNode(null)}
               className="flex-1 px-4 py-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-xl font-bold transition-colors"
             >
@@ -2139,7 +2161,8 @@ function BpmCanvasContent({
                 if (editingEmailNode) {
                   updateNodeData(editingEmailNode, {
                     actionSubject: tempEmailData.subject,
-                    actionBody: tempEmailData.body
+                    actionBody: tempEmailData.body,
+                    emailTemplate: tempEmailData.template
                   });
                   setEditingEmailNode(null);
                 }
@@ -2148,6 +2171,33 @@ function BpmCanvasContent({
             >
               <Check size={18} />
               Salvar Configuração
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de Preview de E-mail */}
+      <Modal
+        isOpen={isPreviewEmailOpen}
+        onClose={() => setIsPreviewEmailOpen(false)}
+        title="Pré-visualização do E-mail"
+        size="3xl"
+        zIndex={200}
+      >
+        <div className="space-y-4">
+          <div className="bg-neutral-100 dark:bg-neutral-900 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800" style={{ height: '600px' }}>
+            <iframe 
+              srcDoc={wrapEmailInTemplate(tempEmailData.template, tempEmailData.body || '<p>Digite algo no corpo do e-mail para visualizar.</p>')} 
+              className="w-full h-full border-none"
+              title="Email Preview"
+            />
+          </div>
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={() => setIsPreviewEmailOpen(false)}
+              className="px-6 py-3 text-sm font-bold text-white bg-neutral-800 hover:bg-neutral-900 dark:bg-neutral-700 dark:hover:bg-neutral-600 rounded-xl transition-colors shadow-sm"
+            >
+              Fechar Preview
             </button>
           </div>
         </div>
