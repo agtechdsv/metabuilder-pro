@@ -141,7 +141,7 @@ export default function SyncResolutionClient({
                 acc[tableName].fields.push(field);
                 return acc;
               }, {} as Record<string, { model: any, fields: any[] }>)
-            ).map(([tableName, group]) => {
+            ).map(([tableName, group]: [string, any]) => {
               
               const parentModel = group.model;
               // Se a tabela parent foi renomeada, buscamos as colunas da tabela nova
@@ -164,7 +164,7 @@ export default function SyncResolutionClient({
                     </h3>
                   </div>
                   <div className="p-4 space-y-3">
-                    {group.fields.map(field => (
+                    {group.fields.map((field: any) => (
                       <div key={field.id} className="flex items-center gap-4 bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
                         <div className="w-1/3">
                           <span className="font-mono text-sm line-through text-red-500">{field.db_column_name}</span>
