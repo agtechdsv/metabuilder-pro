@@ -50,6 +50,11 @@ export default async function StudioLayout({ children, params }: StudioLayoutPro
 
   if (projectError || !project) notFound()
 
+  // 3. Guardian: Block UI if there are pending sync resolutions
+  if (project.sync_status === 'draft_pending') {
+    redirect(`/admin/${workspace_slug}/${project_slug}/sync-resolution`)
+  }
+
   return (
     <div className="flex bg-white dark:bg-[#050505]">
       {/* Sidebar - Persists across studio pages */}

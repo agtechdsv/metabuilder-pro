@@ -26,6 +26,10 @@ export default async function EnumerationsPage(props: { params: Promise<{ worksp
 
   if (!project) redirect(`/admin/${params.workspace_slug}`)
 
+  if (project.sync_status === 'draft_pending') {
+    redirect(`/admin/${params.workspace_slug}/${params.project_slug}/sync-resolution`)
+  }
+
   return (
     <EnumerationsClient 
       workspace={workspace} 

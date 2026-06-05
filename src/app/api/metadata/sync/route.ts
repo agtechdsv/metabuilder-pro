@@ -40,13 +40,99 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Token secreto inválido' }, { status: 403 })
     }
 
-    // 2. Mapas de memória para resolver as chaves estrangeiras depois
-    const modelIdMap: Record<string, string> = {} // { "nome_tabela": "uuid_model" }
-    const fieldIdMap: Record<string, Record<string, string>> = {} // { "uuid_model": { "nome_coluna": "uuid_field" } }
+    // 2. Buscar estado atual para comparar (Introspection Diffing)
+    const { data: existingModels, error: fetchModelsError } = await supabase
+      .from('models')
+      .select('id, db_table_name')
+      .eq('project_id', projectId)
+      .eq('db_schema_name', targetSchema)
 
-    // 3. Processar Models e Fields (Primeira Passagem)
+    if (fetchModelsError) throw fetchModelsError
+
+    const existingTableNames = existingModels.map(m => m.db_table_name)
+    const incomingTableNames = metadata.map((t: any) => t.name)
+
+    const missingTables = existingTableNames.filter(name => !incomingTableNames.includes(name))
+    
+    // Comparar colunas das tabelas que NÃO estão missing
+    let hasMissingFields = false;
+    const missingFieldsMap: Record<string, string[]> = {}; // table -> [field1, field2]
+
+    for (const existingModel of existingModels) {
+      if (missingTables.includes(existingModel.db_table_name)) continue;
+
+      const incomingTable = metadata.find((t: any) => t.name === existingModel.db_table_name);
+      if (!incomingTable) continue;
+
+      const { data: existingFields } = await supabase
+        .from('fields')
+        .select('id, db_column_name')
+        .eq('model_id', existingModel.id);
+
+      if (existingFields) {
+        const existingColNames = existingFields.map(f => f.db_column_name);
+        const incomingColNames = incomingTable.columns.map((c: any) => c.name);
+        const missingCols = existingColNames.filter(name => !incomingColNames.includes(name));
+        
+        if (missingCols.length > 0) {
+          hasMissingFields = true;
+          missingFieldsMap[existingModel.db_table_name] = missingCols;
+        }
+      }
+    }
+
+    // 3. SAFE SYNC DRAFT LOGIC
+    // Se houve deleções estruturais, abortamos o Upsert Direto e criamos um Draft!
+    if (missingTables.length > 0 || hasMissingFields) {
+      console.log(`[Safe Sync] Conflitos detectados no projeto ${projectId}. Tabelas sumidas: ${missingTables.length}. Campos sumidos: ${hasMissingFields}`);
+      
+      // Salva o payload no projeto e trava o status
+      await supabase
+        .from('projects')
+        .update({
+          sync_status: 'draft_pending',
+          last_sync_payload: metadata
+        })
+        .eq('id', projectId);
+
+      // Marca visualmente as tabelas como missing
+      if (missingTables.length > 0) {
+        await supabase
+          .from('models')
+          .update({ is_missing: true })
+          .eq('project_id', projectId)
+          .eq('db_schema_name', targetSchema)
+          .in('db_table_name', missingTables);
+      }
+
+      // Marca visualmente os campos como missing
+      for (const [tableName, cols] of Object.entries(missingFieldsMap)) {
+        const modelId = existingModels.find(m => m.db_table_name === tableName)?.id;
+        if (modelId && cols.length > 0) {
+          await supabase
+            .from('fields')
+            .update({ is_missing: true })
+            .eq('model_id', modelId)
+            .in('db_column_name', cols);
+        }
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        draftCreated: true,
+        message: 'Divergências detectadas. Draft criado para resolução manual (Match Manual).'
+      });
+    }
+
+    // 4. FAST-PATH (Somente Adições e Atualizações Seguras)
+    // Se chegou aqui, nada foi deletado no banco do cliente. Podemos atualizar em tempo real.
+    console.log(`[Safe Sync] Nenhuma exclusão perigosa detectada no projeto ${projectId}. Aplicando Fast-Path...`);
+
+    const modelIdMap: Record<string, string> = {} 
+    const fieldIdMap: Record<string, Record<string, string>> = {} 
+
     for (const table of metadata) {
-      // 3.1. Upsert Model (Antiga tables_metadata)
+      // 4.1. Upsert Model
       const { data: modelData, error: modelError } = await supabase
         .from('models')
         .upsert(
@@ -54,8 +140,8 @@ export async function POST(request: Request) {
             project_id: projectId,
             db_schema_name: targetSchema,
             db_table_name: table.name,
-            display_name: table.name, // Por padrão, usa o mesmo nome
-            // display_name_plural, description, is_view usarão os valores default do seu banco
+            display_name: table.name,
+            is_missing: false // Garante que não está missing
           },
           { onConflict: 'project_id,db_schema_name,db_table_name' }
         )
@@ -68,15 +154,14 @@ export async function POST(request: Request) {
       modelIdMap[table.name] = modelId
       fieldIdMap[modelId] = {}
 
-      // 3.2. Upsert Fields (Antiga columns_metadata)
+      // 4.2. Upsert Fields
       let orderIndex = 0;
       for (const col of table.columns) {
-        // Define um widget padrão baseado no tipo de dados
         let uiWidget = 'text_input'
         if (['integer', 'bigint', 'numeric', 'real'].includes(col.type)) uiWidget = 'number_input'
         if (['date', 'timestamp', 'timestamp without time zone'].includes(col.type)) uiWidget = 'date_picker'
         if (col.type === 'boolean') uiWidget = 'checkbox'
-        if (col.type === 'uuid') uiWidget = 'uuid_input' // Opcional, para refinar
+        if (col.type === 'uuid') uiWidget = 'uuid_input'
 
         const { data: fieldData, error: fieldError } = await supabase
           .from('fields')
@@ -90,7 +175,8 @@ export async function POST(request: Request) {
               is_nullable: col.isNullable,
               default_value: col.defaultValue ? String(col.defaultValue) : null,
               ui_widget: uiWidget,
-              order_index: orderIndex++
+              order_index: orderIndex++,
+              is_missing: false
             },
             { onConflict: 'model_id,db_column_name' }
           )
@@ -103,7 +189,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 4. Processar Relacionamentos (Segunda Passagem)
+    // 4.3. Processar Relacionamentos Seguros
     for (const table of metadata) {
       if (!table.relations || table.relations.length === 0) continue
       
@@ -115,12 +201,9 @@ export async function POST(request: Request) {
         const toFieldId = fieldIdMap[refModelId]?.[rel.referencedColumn]
 
         if (refModelId && fromFieldId && toFieldId) {
-          // Uma chave estrangeira padrão em banco de dados relacional
-          // normalmente representa uma relação N:1 (many_to_one) do ponto de vista da tabela filha.
           const relationType = 'many_to_one'
           const relationName = `fk_${table.name}_${rel.referencedTable}`
 
-          // Verifica se já existe para não duplicar
           const { data: existingRel } = await supabase
             .from('relations')
             .select('id')
@@ -130,7 +213,7 @@ export async function POST(request: Request) {
             .single()
 
           if (!existingRel) {
-            const { error: relError } = await supabase
+            await supabase
               .from('relations')
               .insert({
                 project_id: projectId,
@@ -141,54 +224,24 @@ export async function POST(request: Request) {
                 to_field_id: toFieldId,
                 relation_type: relationType
               })
-
-            if (relError) {
-              console.error(`Aviso: Falha ao inserir relação ${relationName}:`, relError.message)
-            }
           }
         }
       }
     }
 
-    // 5. Garbage Collection (Limpeza de Fantasmas)
-    // Deleta tabelas e colunas que existem no MetaBuilderPRO mas não vieram no payload atual
-    const incomingTables = metadata.map((t: any) => t.name)
-    if (incomingTables.length > 0) {
-      // 5.1 Limpar Tabelas Excluídas (Cascade vai apagar fields e relations automaticamente)
-      const { error: deleteModelsError } = await supabase
-        .from('models')
-        .delete()
-        .eq('project_id', projectId)
-        .eq('db_schema_name', targetSchema)
-        .not('db_table_name', 'in', `(${incomingTables.join(',')})`)
-      
-      if (deleteModelsError) {
-        console.error('Aviso: Erro ao deletar tabelas fantasmas:', deleteModelsError)
-      }
-
-      // 5.2 Limpar Colunas Excluídas (Para as tabelas que sobraram)
-      for (const table of metadata) {
-        const modelId = modelIdMap[table.name]
-        if (!modelId) continue
-        
-        const incomingColumns = table.columns.map((c: any) => c.name)
-        if (incomingColumns.length > 0) {
-          const { error: deleteFieldsError } = await supabase
-            .from('fields')
-            .delete()
-            .eq('model_id', modelId)
-            .not('db_column_name', 'in', `(${incomingColumns.join(',')})`)
-          
-          if (deleteFieldsError) {
-            console.error(`Aviso: Erro ao deletar colunas fantasmas na tabela ${table.name}:`, deleteFieldsError)
-          }
-        }
-      }
-    }
+    // Libera o projeto caso estivesse travado
+    await supabase
+      .from('projects')
+      .update({
+        sync_status: 'synced',
+        last_sync_payload: null
+      })
+      .eq('id', projectId);
 
     return NextResponse.json({ 
       success: true, 
-      message: `${metadata.length} models processados e sincronizados com sucesso.` 
+      draftCreated: false,
+      message: `${metadata.length} models processados e sincronizados com sucesso (Fast-Path).` 
     })
 
   } catch (error: any) {
