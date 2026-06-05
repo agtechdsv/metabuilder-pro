@@ -4180,7 +4180,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
     const filterIds = layout.filter_fields || []
     const gridIds = layout.grid_fields || []
     const formIds = layout.form_fields || []
-    const masterId = layout.master_model_id
+    const masterId = layout.master_model_id || config.selected_models?.[0] || ''
 
     const filterFields: any[] = []
     const gridFields: any[] = []

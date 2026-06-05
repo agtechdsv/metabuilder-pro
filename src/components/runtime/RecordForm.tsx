@@ -628,7 +628,15 @@ export default function RecordForm({
       const isMasterZone = !mainModelName || mainModelName.toLowerCase() === masterModelName?.toLowerCase();
       const zoneStr = isMasterZone ? 'master' : 'detail';
       
-      return targets.includes(`${zoneStr}:${field.db_column_name}`);
+      if (targets.includes(`${zoneStr}:${field.db_column_name}`)) return true;
+
+      // Fallback: se não for mestre-detalhe, aceita tanto master: quanto detail: para o campo,
+      // pois tudo é renderizado no formulário principal de qualquer forma.
+      if (logicType !== 'master_detail') {
+        return targets.includes(`master:${field.db_column_name}`) || targets.includes(`detail:${field.db_column_name}`);
+      }
+
+      return false;
     }) || [];
 
     const leftActions = fieldCustomActions.filter((a: any) => a.group_position === 'left');
