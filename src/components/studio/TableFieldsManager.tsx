@@ -15,7 +15,8 @@ import {
   Check, 
   Info,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  ShieldCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -23,6 +24,15 @@ interface TableFieldsManagerProps {
   project: any
   models: any[]
   onSaveSuccess?: () => void
+}
+
+interface FieldEdit {
+  display_name: string
+  is_visible_in_list: boolean
+  is_visible_in_form: boolean
+  is_searchable: boolean
+  is_sortable: boolean
+  order_index: number
 }
 
 export function TableFieldsManager({ project, models, onSaveSuccess }: TableFieldsManagerProps) {
@@ -39,7 +49,10 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
   // Edit states
   const [modelDisplayName, setModelDisplayName] = useState('')
   const [modelDescription, setModelDescription] = useState('')
-  const [fieldEdits, setFieldEdits] = useState<Record<string, { display_name: string }>>({})
+  const [modelCanCreate, setModelCanCreate] = useState(true)
+  const [modelCanUpdate, setModelCanUpdate] = useState(true)
+  const [modelCanDelete, setModelCanDelete] = useState(true)
+  const [fieldEdits, setFieldEdits] = useState<Record<string, FieldEdit>>({})
 
   // Select first model by default if models list is available
   useEffect(() => {
@@ -62,10 +75,15 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
 
       if (data) {
         setFields(data)
-        const edits: Record<string, { display_name: string }> = {}
+        const edits: Record<string, FieldEdit> = {}
         data.forEach(f => {
           edits[f.id] = {
-            display_name: f.display_name || f.db_column_name
+            display_name: f.display_name || f.db_column_name || '',
+            is_visible_in_list: f.is_visible_in_list !== false,
+            is_visible_in_form: f.is_visible_in_form !== false,
+            is_searchable: f.is_searchable === true,
+            is_sortable: f.is_sortable !== false,
+            order_index: typeof f.order_index === 'number' ? f.order_index : 0
           }
         })
         setFieldEdits(edits)
@@ -86,6 +104,9 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
     if (currentModel) {
       setModelDisplayName(currentModel.display_name || currentModel.db_table_name)
       setModelDescription(currentModel.description || '')
+      setModelCanCreate(currentModel.can_create !== false)
+      setModelCanUpdate(currentModel.can_update !== false)
+      setModelCanDelete(currentModel.can_delete !== false)
     }
 
     fetchFields()
@@ -96,12 +117,15 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
     setIsSaving(true)
 
     try {
-      // 1. Update model display_name & description
+      // 1. Update model display_name, description & permissions
       const { error: modelErr } = await supabase
         .from('models')
         .update({
           display_name: modelDisplayName,
-          description: modelDescription
+          description: modelDescription,
+          can_create: modelCanCreate,
+          can_update: modelCanUpdate,
+          can_delete: modelCanDelete
         })
         .eq('id', selectedModelId)
 
@@ -113,14 +137,27 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
         if (!edit) return Promise.resolve({ error: null })
         
         // Skip if nothing changed
-        if (edit.display_name === (f.display_name || f.db_column_name)) {
+        const hasChanged = 
+          edit.display_name !== (f.display_name || f.db_column_name) ||
+          edit.is_visible_in_list !== (f.is_visible_in_list !== false) ||
+          edit.is_visible_in_form !== (f.is_visible_in_form !== false) ||
+          edit.is_searchable !== (f.is_searchable === true) ||
+          edit.is_sortable !== (f.is_sortable !== false) ||
+          edit.order_index !== (typeof f.order_index === 'number' ? f.order_index : 0)
+
+        if (!hasChanged) {
           return Promise.resolve({ error: null })
         }
 
         return supabase
           .from('fields')
           .update({
-            display_name: edit.display_name
+            display_name: edit.display_name,
+            is_visible_in_list: edit.is_visible_in_list,
+            is_visible_in_form: edit.is_visible_in_form,
+            is_searchable: edit.is_searchable,
+            is_sortable: edit.is_sortable,
+            order_index: edit.order_index
           })
           .eq('id', f.id)
       })
@@ -142,14 +179,24 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
     }
   }
 
-  const handleFieldChange = (fieldId: string, key: 'display_name', value: string) => {
-    setFieldEdits(prev => ({
-      ...prev,
-      [fieldId]: {
-        ...prev[fieldId],
-        [key]: value
+  const handleFieldChange = (fieldId: string, key: keyof FieldEdit, value: any) => {
+    setFieldEdits(prev => {
+      const current = prev[fieldId] || {
+        display_name: '',
+        is_visible_in_list: true,
+        is_visible_in_form: true,
+        is_searchable: false,
+        is_sortable: true,
+        order_index: 0
       }
-    }))
+      return {
+        ...prev,
+        [fieldId]: {
+          ...current,
+          [key]: value
+        }
+      }
+    })
   }
 
   const filteredModels = models.filter(m => 
@@ -272,7 +319,6 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                     </button>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
@@ -283,7 +329,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                       value={modelDisplayName}
                       onChange={e => setModelDisplayName(e.target.value)}
                       placeholder="Ex: Departamentos"
-                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-colors"
+                      className="w-full bg-neutral-50 dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-2">
@@ -295,8 +341,58 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                       value={modelDescription}
                       onChange={e => setModelDescription(e.target.value)}
                       placeholder="Ex: Setores organizacionais da empresa..."
-                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-colors"
+                      className="w-full bg-neutral-50 dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-colors"
                     />
+                  </div>
+                </div>
+
+                {/* Permissões da Tabela */}
+                <div className="bg-neutral-50 dark:bg-neutral-955 border border-neutral-100 dark:border-neutral-800/80 rounded-2xl p-5 space-y-4">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-indigo-500" /> Ações/Permissões da Tabela
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Can Create */}
+                    <label className="flex items-center justify-between p-3.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-500 transition-all group">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Permitir Criação</span>
+                        <span className="text-[9px] text-neutral-400">Pode adicionar novos registros</span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={modelCanCreate}
+                        onChange={e => setModelCanCreate(e.target.checked)}
+                        className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+                      />
+                    </label>
+
+                    {/* Can Update */}
+                    <label className="flex items-center justify-between p-3.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-500 transition-all group">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Permitir Edição</span>
+                        <span className="text-[9px] text-neutral-400">Pode editar registros existentes</span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={modelCanUpdate}
+                        onChange={e => setModelCanUpdate(e.target.checked)}
+                        className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+                      />
+                    </label>
+
+                    {/* Can Delete */}
+                    <label className="flex items-center justify-between p-3.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-500 transition-all group">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Permitir Exclusão</span>
+                        <span className="text-[9px] text-neutral-400">Pode remover registros da tabela</span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={modelCanDelete}
+                        onChange={e => setModelCanDelete(e.target.checked)}
+                        className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+                      />
+                    </label>
                   </div>
                 </div>
               </div>
@@ -317,9 +413,16 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                 ) : (
                   <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
                     {fields.map(f => {
-                      const edit = fieldEdits[f.id] || { display_name: '' }
+                      const edit = fieldEdits[f.id] || {
+                        display_name: '',
+                        is_visible_in_list: true,
+                        is_visible_in_form: true,
+                        is_searchable: false,
+                        is_sortable: true,
+                        order_index: 0
+                      }
                       return (
-                        <div key={f.id} className="p-5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-850 rounded-2xl space-y-4">
+                        <div key={f.id} className="p-5 bg-neutral-50 dark:bg-neutral-955 border border-neutral-100 dark:border-neutral-850 rounded-2xl space-y-4">
                           {/* Column Identification */}
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-2.5">
@@ -344,15 +447,81 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                           </div>
  
                           {/* Editable Inputs */}
-                          <div className="space-y-1.5">
-                            <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Label na UI</label>
-                            <input
-                              type="text"
-                              value={edit.display_name}
-                              onChange={e => handleFieldChange(f.id, 'display_name', e.target.value)}
-                              placeholder={f.db_column_name}
-                              className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
-                            />
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="md:col-span-3 space-y-1.5">
+                              <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Label na UI</label>
+                              <input
+                                type="text"
+                                value={edit.display_name}
+                                onChange={e => handleFieldChange(f.id, 'display_name', e.target.value)}
+                                placeholder={f.db_column_name}
+                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Ordem (order_index)</label>
+                              <input
+                                type="number"
+                                value={edit.order_index}
+                                onChange={e => handleFieldChange(f.id, 'order_index', parseInt(e.target.value) || 0)}
+                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Checkboxes Config */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                            {/* is_visible_in_list */}
+                            <label className="flex items-center gap-2 p-2 bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-800 rounded-xl cursor-pointer hover:border-indigo-500/50 transition-all">
+                              <input
+                                type="checkbox"
+                                checked={edit.is_visible_in_list}
+                                onChange={e => handleFieldChange(f.id, 'is_visible_in_list', e.target.checked)}
+                                className="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer"
+                              />
+                              <div className="flex flex-col">
+                                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Visível na Lista</span>
+                              </div>
+                            </label>
+
+                            {/* is_visible_in_form */}
+                            <label className="flex items-center gap-2 p-2 bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-800 rounded-xl cursor-pointer hover:border-indigo-500/50 transition-all">
+                              <input
+                                type="checkbox"
+                                checked={edit.is_visible_in_form}
+                                onChange={e => handleFieldChange(f.id, 'is_visible_in_form', e.target.checked)}
+                                className="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer"
+                              />
+                              <div className="flex flex-col">
+                                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Visível no Form</span>
+                              </div>
+                            </label>
+
+                            {/* is_searchable */}
+                            <label className="flex items-center gap-2 p-2 bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-800 rounded-xl cursor-pointer hover:border-indigo-500/50 transition-all">
+                              <input
+                                type="checkbox"
+                                checked={edit.is_searchable}
+                                onChange={e => handleFieldChange(f.id, 'is_searchable', e.target.checked)}
+                                className="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer"
+                              />
+                              <div className="flex flex-col">
+                                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Pesquisável</span>
+                              </div>
+                            </label>
+
+                            {/* is_sortable */}
+                            <label className="flex items-center gap-2 p-2 bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-800 rounded-xl cursor-pointer hover:border-indigo-500/50 transition-all">
+                              <input
+                                type="checkbox"
+                                checked={edit.is_sortable}
+                                onChange={e => handleFieldChange(f.id, 'is_sortable', e.target.checked)}
+                                className="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer"
+                              />
+                              <div className="flex flex-col">
+                                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Ordenável</span>
+                              </div>
+                            </label>
                           </div>
                         </div>
                       )

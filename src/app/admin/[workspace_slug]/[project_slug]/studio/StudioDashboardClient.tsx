@@ -598,7 +598,7 @@ export function StudioDashboardClient({
             <TableFieldsManager
               project={project}
               models={models}
-              onSaveSuccess={refreshData}
+              onSaveSuccess={() => router.refresh()}
             />
           </div>
         ) : (
