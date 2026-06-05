@@ -43,6 +43,28 @@ export async function POST(request: Request) {
       .single();
 
     const targetSchema = existingModelSchema?.db_schema_name || 'public';
+
+    // 1.8 CAPTURAR NOMES ANTIGOS ANTES DA ATUALIZAÇÃO
+    const oldTableNames: Record<string, string> = {}
+    if (mappedTables && Object.keys(mappedTables).length > 0) {
+      const { data: mData } = await supabase.from('models').select('id, db_table_name').in('id', Object.keys(mappedTables));
+      if (mData) mData.forEach(m => oldTableNames[m.id] = m.db_table_name);
+    }
+
+    const oldFieldNames: Record<string, { modelId: string, table: string, col: string }> = {}
+    if (mappedFields && Object.keys(mappedFields).length > 0) {
+      const { data: fData } = await supabase.from('fields').select('id, db_column_name, model_id').in('id', Object.keys(mappedFields));
+      if (fData && fData.length > 0) {
+        const { data: modelsForF } = await supabase.from('models').select('id, db_table_name').in('id', fData.map(f => f.model_id));
+        const modelLookup: Record<string, string> = {};
+        if (modelsForF) modelsForF.forEach(m => modelLookup[m.id] = m.db_table_name);
+
+        fData.forEach(f => {
+          oldFieldNames[f.id] = { modelId: f.model_id, table: modelLookup[f.model_id] || '', col: f.db_column_name };
+        });
+      }
+    }
+
     // 2. Aplicar Mapeamentos (RENAMES)
     // Se o usuário disse "O model X virou Y", atualizamos o banco antes de rodar o Upsert
     if (mappedTables && Object.keys(mappedTables).length > 0) {
@@ -192,27 +214,6 @@ export async function POST(request: Request) {
 
     // 4.4 Atualizar Views que usavam os nomes antigos
     if (Object.keys(mappedTables).length > 0 || Object.keys(mappedFields).length > 0) {
-      // Carregar nomes antigos
-      const oldTableNames: Record<string, string> = {}
-      if (Object.keys(mappedTables).length > 0) {
-        const { data: mData } = await supabase.from('models').select('id, db_table_name').in('id', Object.keys(mappedTables));
-        if (mData) mData.forEach(m => oldTableNames[m.id] = m.db_table_name);
-      }
-
-      const oldFieldNames: Record<string, { modelId: string, table: string, col: string }> = {}
-      if (Object.keys(mappedFields).length > 0) {
-        const { data: fData } = await supabase.from('fields').select('id, db_column_name, model_id').in('id', Object.keys(mappedFields));
-        if (fData && fData.length > 0) {
-          const { data: modelsForF } = await supabase.from('models').select('id, db_table_name').in('id', fData.map(f => f.model_id));
-          const modelLookup: Record<string, string> = {};
-          if (modelsForF) modelsForF.forEach(m => modelLookup[m.id] = m.db_table_name);
-
-          fData.forEach(f => {
-            oldFieldNames[f.id] = { modelId: f.model_id, table: modelLookup[f.model_id] || '', col: f.db_column_name };
-          });
-        }
-      }
-
       const updateComponentBlock = (component: any) => {
         if (!component || !component.rel_table) return false;
         let blockChanged = false;
