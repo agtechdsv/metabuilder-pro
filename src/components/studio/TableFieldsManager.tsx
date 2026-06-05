@@ -81,7 +81,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
             display_name: f.display_name || f.db_column_name || '',
             is_visible_in_list: f.is_visible_in_list !== false,
             is_visible_in_form: f.is_visible_in_form !== false,
-            is_searchable: f.is_searchable === true,
+            is_searchable: f.is_searchable !== false,
             is_sortable: f.is_sortable !== false,
             order_index: typeof f.order_index === 'number' ? f.order_index : 0
           }
@@ -185,16 +185,24 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
         display_name: '',
         is_visible_in_list: true,
         is_visible_in_form: true,
-        is_searchable: false,
+        is_searchable: true,
         is_sortable: true,
         order_index: 0
       }
+
+      const updated = {
+        ...current,
+        [key]: value
+      }
+
+      // Se desmarcar "Visível no Grid" (is_visible_in_list), desmarca também "Ordenável" (is_sortable)
+      if (key === 'is_visible_in_list' && value === false) {
+        updated.is_sortable = false
+      }
+
       return {
         ...prev,
-        [fieldId]: {
-          ...current,
-          [key]: value
-        }
+        [fieldId]: updated
       }
     })
   }

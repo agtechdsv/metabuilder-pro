@@ -316,7 +316,7 @@ export default async function SlugPage({ params }: PageProps) {
     
     // Transforma os componentes em fields para o Grid (Zona Grid)
     displayFields = allComponents
-      .filter((c: any) => c.is_visible !== false && (c.config?.zones?.includes('grid') || !c.config?.zones))
+      .filter((c: any) => c.is_visible !== false && (c.config?.zones?.includes('grid') || !c.config?.zones) && c.field?.is_visible_in_list !== false)
       .sort((a: any, b: any) => {
         const idxA = gridFieldsOrder.indexOf(a.field.id)
         const idxB = gridFieldsOrder.indexOf(b.field.id)
@@ -340,7 +340,7 @@ export default async function SlugPage({ params }: PageProps) {
 
     // Extrai os campos do Formulário (Zona Form)
     const formFields = allComponents
-      .filter((c: any) => c.is_visible !== false && c.config?.zones?.includes('form'))
+      .filter((c: any) => c.is_visible !== false && c.config?.zones?.includes('form') && c.field?.is_visible_in_form !== false)
       .sort((a: any, b: any) => {
         const idxA = formFieldsOrder.indexOf(a.field.id)
         const idxB = formFieldsOrder.indexOf(b.field.id)
@@ -364,7 +364,7 @@ export default async function SlugPage({ params }: PageProps) {
 
     // Extrai os campos de Filtro (Zona Filter)
     const filterFields = allComponents
-      .filter((c: any) => c.is_visible !== false && c.config?.zones?.includes('filter'))
+      .filter((c: any) => c.is_visible !== false && c.config?.zones?.includes('filter') && c.field?.is_searchable !== false)
       .sort((a: any, b: any) => {
         const idxA = filterFieldsOrder.indexOf(a.field.id)
         const idxB = filterFieldsOrder.indexOf(b.field.id)

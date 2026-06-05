@@ -77,7 +77,7 @@ CREATE TABLE public.fields (
     ui_widget TEXT DEFAULT 'text_input', -- text_input, number_input, date_picker, select, toggle, relation_picker
     is_visible_in_list BOOLEAN DEFAULT TRUE, -- Show in the data grid?
     is_visible_in_form BOOLEAN DEFAULT TRUE, -- Show in the create/edit form?
-    is_searchable BOOLEAN DEFAULT FALSE,
+    is_searchable BOOLEAN DEFAULT TRUE,
     is_sortable BOOLEAN DEFAULT TRUE,
     order_index INTEGER DEFAULT 0, -- Order in forms/tables
     
