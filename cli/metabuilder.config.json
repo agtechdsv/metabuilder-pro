@@ -1,8 +1,8 @@
 {
   "connections": [
     {
-      "projectId": "4c74fb52-41a7-4c3a-838c-21f7bb788422",
-      "secretToken": "8a129658d1e31fea93d433e81d92e5b45c3f61784bd89bbdd83cb494d68fcf01",
+      "projectId": "de4082a9-6d23-4445-939b-96c5100e9361",
+      "secretToken": "88a76e83b1b1cb3b3d7cdfbb1e9ec9cd407cdb2b8d63b5021bf0c8b943b30cc5",
       "connectionsString": [
         {
           "name": "erp",
@@ -13,8 +13,8 @@
     }
   ],
   "supabaseUrl": "https://chmstvtepzmjhpyxjjam.supabase.co",
-  "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNobXN0dnRlcHptamhweXhqamFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMjk1ODgsImV4cCI6MjA5MzYwNTU4OH0.eMw33Jv7lco6uXWJnz0bdMSbHRAQFW0Ala7K6S_R8To",
-  "apiUrl": "http://localhost:3000/api/metadata/sync",
+  "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNobXN0dnRlcHptamhweXhqamFtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODAyOTU4OCwiZXhwIjoyMDkzNjA1NTg4fQ.B-s9eb_TgABJWBuBxgIQIqNjtw2Q3e7UXcdhXsx-Ijc",
+  "apiUrl": "http://metabuilderpro.com/api/metadata/sync",
   "ldap": {
     "enabled": false,
     "url": "ldap://10.0.0.15:389",
