@@ -34,8 +34,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Nenhum payload de sync pendente encontrado.' }, { status: 400 })
     }
 
-    const targetSchema = 'public'; // Pode ser parametrizado no futuro
+    // 1.5 Obter targetSchema dos models existentes para não hardcodar como 'public'
+    const { data: existingModelSchema } = await supabase
+      .from('models')
+      .select('db_schema_name')
+      .eq('project_id', projectId)
+      .limit(1)
+      .single();
 
+    const targetSchema = existingModelSchema?.db_schema_name || 'public';
     // 2. Aplicar Mapeamentos (RENAMES)
     // Se o usuário disse "O model X virou Y", atualizamos o banco antes de rodar o Upsert
     if (mappedTables && Object.keys(mappedTables).length > 0) {
