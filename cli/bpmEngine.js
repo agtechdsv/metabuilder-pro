@@ -463,16 +463,48 @@ class BpmEngine {
         const body = await this.replaceVariables(data.actionBody, triggerTable, triggerData, actionTable, targetRow);
         
         let to = '';
-        if (data.emailRecipientType === 'table' && targetRow && data.actionEmailField) {
+        let recipientType = data.emailRecipientType || 'system';
+
+        if (recipientType === 'table' && targetRow && data.actionEmailField) {
           to = targetRow[data.actionEmailField];
-        } else if (data.emailRecipientType === 'custom') {
+        } else if (recipientType === 'custom') {
           to = await this.replaceVariables(data.customEmailField, triggerTable, triggerData);
-        } else if (data.emailRecipientType === 'system') {
+        } else if (recipientType === 'system') {
           const userIds = [];
           if (data.emailGroupsUsers) {
-             for (const groupUsers of Object.values(data.emailGroupsUsers)) {
+             for (const [groupName, groupUsers] of Object.entries(data.emailGroupsUsers)) {
                 if (Array.isArray(groupUsers)) {
                    userIds.push(...groupUsers);
+                } else if (groupUsers === 'all') {
+                   try {
+                     const { data: authConfig } = await this.supabase.from('project_auth_config').select('*').eq('project_id', this.project.id).maybeSingle();
+                     if (authConfig && authConfig.db_groups_table && authConfig.db_user_groups_table) {
+                        const groupsTable = authConfig.db_groups_table;
+                        const groupsNameCol = authConfig.db_groups_name_column || 'name';
+                        const userGroupsTable = authConfig.db_user_groups_table;
+                        const userGroupsUserCol = authConfig.db_user_groups_user_column || 'user_id';
+                        const userGroupsGroupCol = authConfig.db_user_groups_group_column || 'group_id';
+                        
+                        const groupSql = `SELECT * FROM "${groupsTable}" WHERE "${groupsNameCol}" = $1 LIMIT 1`;
+                        const groupRows = await this.executeQuery(groupSql, [groupName]);
+                        if (groupRows.length > 0) {
+                           const groupId = groupRows[0].id || groupRows[0][groupsTable + '_id'] || groupRows[0]['id_' + groupsTable];
+                           if (groupId) {
+                             const usersSql = `SELECT "${userGroupsUserCol}" FROM "${userGroupsTable}" WHERE "${userGroupsGroupCol}" = $1`;
+                             const usersRows = await this.executeQuery(usersSql, [groupId]);
+                             userIds.push(...usersRows.map(r => r[userGroupsUserCol]));
+                           }
+                        }
+                     } else {
+                        const { data: role } = await this.supabase.from('project_roles').select('id').eq('project_id', this.project.id).eq('name', groupName).maybeSingle();
+                        if (role) {
+                           const { data: userRoles } = await this.supabase.from('project_user_roles').select('user_id').eq('role_id', role.id);
+                           if (userRoles) userIds.push(...userRoles.map(r => r.user_id));
+                        }
+                     }
+                   } catch(err) {
+                      console.error('[BPM] Erro ao resolver grupo "all":', err.message);
+                   }
                 }
              }
           }
@@ -489,7 +521,7 @@ class BpmEngine {
                  to = rows.map(r => r[emailField]).filter(Boolean).join(',');
                }
              } catch(e) {
-               console.error('[BPM] Erro ao buscar emails dos grupos:', e.message);
+               console.error('[BPM] Erro ao buscar emails dos IDs:', e.message);
              }
           }
           
