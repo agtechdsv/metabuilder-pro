@@ -106,7 +106,7 @@ export default function SyncResolutionClient({
                 <ArrowRight className="h-5 w-5 text-gray-400" />
                 <div className="w-2/3">
                   <select
-                    className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-primary/50"
+                    className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500/50"
                     value={tableMappings[model.id] || ''}
                     onChange={(e) => handleTableMapping(model.id, e.target.value)}
                   >
@@ -155,7 +155,7 @@ export default function SyncResolutionClient({
                   <ArrowRight className="h-5 w-5 text-gray-400" />
                   <div className="w-2/3">
                     <select
-                      className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-primary/50"
+                      className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500/50"
                       value={fieldMappings[field.id] || ''}
                       onChange={(e) => handleFieldMapping(field.id, e.target.value)}
                     >
@@ -189,7 +189,7 @@ export default function SyncResolutionClient({
               return !fieldMappings[f.id];
             }))
           }
-          className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
             <span>Aplicando...</span>
