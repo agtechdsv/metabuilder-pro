@@ -318,8 +318,9 @@ export async function POST(request: Request) {
             });
           }
 
-          if (newConfig.nodes && Array.isArray(newConfig.nodes)) {
-            newConfig.nodes.forEach((node: any) => {
+          const updateNodes = (nodes: any[]) => {
+            let hasNodeChanges = false;
+            nodes.forEach((node: any) => {
                if (!node.data) return;
                let nodeChanged = false;
 
@@ -327,6 +328,7 @@ export async function POST(request: Request) {
                   let newName = col;
                   Object.entries(mappedFields).forEach(([fieldId, newColName]) => {
                      const oldField = oldFieldNames[fieldId];
+                     // Use rule's modelId if it exists, otherwise fall back to trigger/action modelId
                      if (oldField && oldField.col === col && (!modelId || modelId === oldField.modelId)) {
                         newName = newColName as string;
                         nodeChanged = true;
@@ -357,7 +359,8 @@ export async function POST(request: Request) {
                   node.data.conditionGroups.forEach((group: any) => {
                      if (group.rules && Array.isArray(group.rules)) {
                         group.rules.forEach((rule: any) => {
-                           if (rule.field) rule.field = replaceColName(node.data.triggerModelId, rule.field);
+                           // A regra de condição salva seu próprio modelId
+                           if (rule.field) rule.field = replaceColName(rule.modelId || node.data.triggerModelId, rule.field);
                         });
                      }
                   });
@@ -374,8 +377,15 @@ export async function POST(request: Request) {
                   }
                });
 
-               if (nodeChanged) hasChanges = true;
+               if (nodeChanged) hasNodeChanges = true;
             });
+            return hasNodeChanges;
+          };
+
+          if (newConfig.nodes && Array.isArray(newConfig.nodes)) {
+             if (updateNodes(newConfig.nodes)) {
+                 hasChanges = true;
+             }
           }
 
           if (newConfig.fields_metadata) {
@@ -413,6 +423,35 @@ export async function POST(request: Request) {
             }
           }
         }
+      }
+
+      // Atualizar também fluxos BPM que usam campos e tabelas (Tabela bpm_workflows)
+      const { data: bpmWorkflows } = await supabase.from('bpm_workflows').select('id, flow_data, draft_flow_data').eq('project_id', projectId);
+      if (bpmWorkflows && bpmWorkflows.length > 0) {
+         for (const wf of bpmWorkflows) {
+            let wfHasChanges = false;
+            const updatePayload: any = {};
+
+            if (wf.flow_data && wf.flow_data.nodes && Array.isArray(wf.flow_data.nodes)) {
+               const clonedNodes = JSON.parse(JSON.stringify(wf.flow_data.nodes)); // deep copy safely
+               if (updateNodes(clonedNodes)) {
+                  updatePayload.flow_data = { ...wf.flow_data, nodes: clonedNodes };
+                  wfHasChanges = true;
+               }
+            }
+
+            if (wf.draft_flow_data && wf.draft_flow_data.nodes && Array.isArray(wf.draft_flow_data.nodes)) {
+               const clonedNodes = JSON.parse(JSON.stringify(wf.draft_flow_data.nodes));
+               if (updateNodes(clonedNodes)) {
+                  updatePayload.draft_flow_data = { ...wf.draft_flow_data, nodes: clonedNodes };
+                  wfHasChanges = true;
+               }
+            }
+
+            if (wfHasChanges) {
+               await supabase.from('bpm_workflows').update(updatePayload).eq('id', wf.id);
+            }
+         }
       }
     }
 
