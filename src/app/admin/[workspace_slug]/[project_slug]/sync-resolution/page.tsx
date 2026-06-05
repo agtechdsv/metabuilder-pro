@@ -38,26 +38,27 @@ export default async function SyncResolutionPage(props: { params: Promise<{ work
     .eq('project_id', project.id)
     .eq('is_missing', true)
 
-  // 4. Fetch Missing Fields
+  // Modelos que não estão mais no payload
+  const missingModels = existingModels || [];
+
+  // Busca todas as tabelas (models) do projeto para podermos verificar os fields
+  const { data: allModels } = await supabase
+    .from('models')
+    .select('id, db_table_name')
+    .eq('project_id', project.id);
+
+  const allDbTables = allModels?.map(m => m.db_table_name) || [];
+
+  // 4. Fetch Missing Fields (de todos os models do projeto, não apenas dos models ausentes)
   const { data: existingFields } = await supabase
     .from('fields')
     .select('id, db_column_name, display_name, model_id')
     .eq('is_missing', true)
-    .in('model_id', existingModels?.map(m => m.id) || [])
+    .in('model_id', allModels?.map(m => m.id) || [])
 
   const incomingPayload = project.last_sync_payload;
   const incomingTableNames = incomingPayload.map((t: any) => t.name);
-  
-  // Modelos que não estão mais no payload
-  const missingModels = existingModels || [];
-  
-  // Tabelas novas que vieram no payload mas não existem no banco
-  // Para sabermos se existem, temos que pegar TODOS os models do projeto
-  const { data: allModels } = await supabase
-    .from('models')
-    .select('db_table_name')
-    .eq('project_id', project.id);
-  const allDbTables = allModels?.map(m => m.db_table_name) || [];
+
 
   const newTables = incomingTableNames.filter((name: string) => !allDbTables.includes(name));
 
@@ -76,6 +77,7 @@ export default async function SyncResolutionPage(props: { params: Promise<{ work
         projectId={project.id}
         missingModels={missingModels}
         missingFields={existingFields || []}
+        allModels={allModels || []}
         incomingPayload={incomingPayload}
         newTables={newTables}
         workspaceSlug={params.workspace_slug}

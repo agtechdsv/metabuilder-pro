@@ -8,6 +8,7 @@ export default function SyncResolutionClient({
   projectId,
   missingModels,
   missingFields,
+  allModels,
   incomingPayload,
   newTables,
   workspaceSlug,
@@ -16,6 +17,7 @@ export default function SyncResolutionClient({
   projectId: string,
   missingModels: any[],
   missingFields: any[],
+  allModels: any[],
   incomingPayload: any[],
   newTables: string[],
   workspaceSlug: string,
@@ -130,7 +132,7 @@ export default function SyncResolutionClient({
           <div className="space-y-4">
             {missingFields.map(field => {
               // Achar a tabela a que este field pertence para sugerir as colunas novas dela
-              const parentModel = missingModels.find(m => m.id === field.model_id)
+              const parentModel = allModels.find(m => m.id === field.model_id)
               // Se a tabela parent foi deletada inteira, não precisamos mostrar os fields
               if (tableMappings[field.model_id] === '_DELETE_') {
                 return null;
