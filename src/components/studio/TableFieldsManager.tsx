@@ -469,8 +469,21 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                             </div>
                           </div>
 
-                          {/* Checkboxes Config */}
+                                            {/* Checkboxes Config */}
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                            {/* is_searchable */}
+                            <label className="flex items-center gap-2 p-2 bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-800 rounded-xl cursor-pointer hover:border-indigo-500/50 transition-all">
+                              <input
+                                type="checkbox"
+                                checked={edit.is_searchable}
+                                onChange={e => handleFieldChange(f.id, 'is_searchable', e.target.checked)}
+                                className="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer"
+                              />
+                              <div className="flex flex-col">
+                                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Visível no Filtro</span>
+                              </div>
+                            </label>
+
                             {/* is_visible_in_list */}
                             <label className="flex items-center gap-2 p-2 bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-800 rounded-xl cursor-pointer hover:border-indigo-500/50 transition-all">
                               <input
@@ -480,7 +493,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                                 className="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer"
                               />
                               <div className="flex flex-col">
-                                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Visível na Lista</span>
+                                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Visível no Grid</span>
                               </div>
                             </label>
 
@@ -494,19 +507,6 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                               />
                               <div className="flex flex-col">
                                 <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Visível no Form</span>
-                              </div>
-                            </label>
-
-                            {/* is_searchable */}
-                            <label className="flex items-center gap-2 p-2 bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-800 rounded-xl cursor-pointer hover:border-indigo-500/50 transition-all">
-                              <input
-                                type="checkbox"
-                                checked={edit.is_searchable}
-                                onChange={e => handleFieldChange(f.id, 'is_searchable', e.target.checked)}
-                                className="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer"
-                              />
-                              <div className="flex flex-col">
-                                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Pesquisável</span>
                               </div>
                             </label>
 

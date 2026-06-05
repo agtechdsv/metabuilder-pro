@@ -1417,7 +1417,7 @@ export default function ViewContainer({
                   {displayFields.filter(f => !f.hidden).map((field) => (
                     <th 
                       key={field.id} 
-                      onClick={() => handleSort(field.db_column_name)}
+                      onClick={() => field.is_sortable !== false && handleSort(field.db_column_name)}
                       style={{
                         fontFamily: getFontFamily(field.config?.label?.font),
                         fontSize: getFontSize(field.config?.label?.size),
@@ -1426,16 +1426,21 @@ export default function ViewContainer({
                         fontStyle: field.config?.label?.italic ? 'italic' : undefined,
                         textTransform: field.config?.label?.uppercase ? 'uppercase' : undefined,
                       }}
-                      className="px-6 py-4 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] whitespace-nowrap cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors group/th"
+                      className={cn(
+                        "px-6 py-4 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] whitespace-nowrap transition-colors",
+                        field.is_sortable !== false ? "cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-800 group/th" : "cursor-default"
+                      )}
                     >
                       <div className="flex items-center gap-2">
                         {field.display_name}
                         {field.is_primary_key && <span className="text-indigo-500" title={t('runtime.primary_key')}>🔑</span>}
-                        <div className="opacity-0 group-hover/th:opacity-100 transition-opacity">
-                          {sortConfig && sortConfig.key === field.db_column_name ? (
-                            sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                          ) : <ArrowUpDown className="w-3 h-3" />}
-                        </div>
+                        {field.is_sortable !== false && (
+                          <div className="opacity-0 group-hover/th:opacity-100 transition-opacity">
+                            {sortConfig && sortConfig.key === field.db_column_name ? (
+                              sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                            ) : <ArrowUpDown className="w-3 h-3" />}
+                          </div>
+                        )}
                       </div>
                     </th>
                   ))}

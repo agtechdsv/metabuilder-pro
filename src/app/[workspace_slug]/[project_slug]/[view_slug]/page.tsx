@@ -334,6 +334,7 @@ export default async function SlugPage({ params }: PageProps) {
         sql_expression: resolveSqlExpression(c.field),
         is_primary_key: c.field.is_primary_key,
         data_type: c.field.data_type,
+        is_sortable: c.field.is_sortable,
         config: c.config
       }))
 
