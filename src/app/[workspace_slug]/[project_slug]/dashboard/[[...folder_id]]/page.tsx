@@ -93,7 +93,7 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
     db_user_role_column: uiConfig.db_user_role_column || '',
   }
 
-  const isNoAuth = !authConfig || authConfig.auth_type === 'none'
+  const isNoAuth = !rawAuthConfig || rawAuthConfig.auth_type === 'none'
 
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get(`client_session_${project.id}`)?.value

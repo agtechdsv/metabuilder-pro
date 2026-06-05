@@ -79,7 +79,7 @@ export default async function DownloadsPage({ params }: PageProps) {
     db_user_role_column: uiConfig.db_user_role_column || '',
   }
 
-  const isNoAuth = !authConfig || authConfig.auth_type === 'none'
+  const isNoAuth = !rawAuthConfig || rawAuthConfig.auth_type === 'none'
 
   // 4. Se não estiver autenticado de nenhuma forma, renderiza "Acesso Restrito"
   if (!userId && !isNoAuth) {

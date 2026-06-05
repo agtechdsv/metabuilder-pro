@@ -188,7 +188,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
     db_user_role_column: uiConfig.db_user_role_column || '',
   }
 
-  const isNoAuth = !authConfig || authConfig.auth_type === 'none'
+  const isNoAuth = !rawAuthConfig || rawAuthConfig.auth_type === 'none'
 
   const cookieStore = await cookies()
   const locale = cookieStore.get('app-language')?.value || 'pt'

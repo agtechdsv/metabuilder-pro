@@ -120,7 +120,7 @@ export default async function SlugPage({ params }: PageProps) {
       db_user_role_column: uiConfig.db_user_role_column || '',
     }
 
-    const isNoAuth = !authConfig || authConfig.auth_type === 'none'
+    const isNoAuth = !rawAuthConfig || rawAuthConfig.auth_type === 'none'
 
     const cookieStore = await cookies()
     const sessionCookie = cookieStore.get(`client_session_${project.id}`)?.value
@@ -228,7 +228,7 @@ export default async function SlugPage({ params }: PageProps) {
       db_user_role_column: uiConfig.db_user_role_column || '',
     }
 
-    const isNoAuth = !authConfig || authConfig.auth_type === 'none'
+    const isNoAuth = !rawAuthConfig || rawAuthConfig.auth_type === 'none'
     if (isNoAuth) {
       isAutomationsEnabled = true
     } else {
