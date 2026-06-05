@@ -5,6 +5,7 @@ import React, { useState, useTransition, useEffect } from 'react'
 import {
   LayoutDashboard,
   Database,
+  Table,
   Settings2,
   Eye,
   Plus,
@@ -23,7 +24,8 @@ import {
   LayoutGrid,
   RefreshCw,
   Workflow,
-  Download
+  Download,
+  Menu
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -39,6 +41,7 @@ import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { MenuBuilder } from '@/components/studio/MenuBuilder'
 import { EnumerationsClient } from '../enumerations/EnumerationsClient'
+import { TableFieldsManager } from '@/components/studio/TableFieldsManager'
 
 const RETENTION_OPTIONS = [
   { value: '', label: '∞ Manter para Sempre' },
@@ -200,7 +203,7 @@ export function StudioDashboardClient({
     setIsUpdatingRetention(false)
   }
 
-  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'navigation' | 'enumerations'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'navigation' | 'enumerations' | 'metadata'>('list')
   const [viewToEdit, setViewToEdit] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [viewToDelete, setViewToDelete] = useState<any>(null)
@@ -326,6 +329,47 @@ export function StudioDashboardClient({
     }
   }
 
+  const handleAddToMenu = async (view: any) => {
+    try {
+      const currentMenu = project.navigation || []
+      
+      const exists = currentMenu.some((item: any) => item.type === 'view' && item.target === view.slug)
+      if (exists) {
+        toast('Este caso de uso já está adicionado ao menu!', 'info')
+        return
+      }
+
+      const newId = Math.random().toString(36).substr(2, 9)
+      const newItem = {
+        id: `view_${newId}`,
+        label: view.name,
+        description: '',
+        icon: 'Layout',
+        type: 'view',
+        target: view.slug,
+        show_dashboard: true
+      }
+
+      const updatedMenu = [...currentMenu, newItem]
+
+      const { error } = await supabase
+        .from('projects')
+        .update({ 
+          navigation: updatedMenu 
+        })
+        .eq('id', project.id)
+
+      if (error) throw error
+
+      project.navigation = updatedMenu
+
+      toast('Caso de uso adicionado ao menu com sucesso!', 'success')
+      router.refresh()
+    } catch (err: any) {
+      toast('Erro ao adicionar ao menu: ' + err.message, 'error')
+    }
+  }
+
   const handleToggleDownloads = async () => {
     try {
       const newActiveState = !isDownloadsActive
@@ -397,14 +441,23 @@ export function StudioDashboardClient({
                      Navegação
                    </button>
                    <button 
-                    onClick={() => setViewMode('enumerations')}
-                    className={cn(
-                      "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
-                      viewMode === 'enumerations' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
-                    )}
-                   >
-                     <Database className="w-3.5 h-3.5" /> Enums
-                   </button>
+                     onClick={() => setViewMode('enumerations')}
+                     className={cn(
+                       "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
+                       viewMode === 'enumerations' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
+                     )}
+                    >
+                      <Database className="w-3.5 h-3.5" /> Enums
+                    </button>
+                    <button 
+                     onClick={() => setViewMode('metadata')}
+                     className={cn(
+                       "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
+                       viewMode === 'metadata' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
+                     )}
+                    >
+                      <Table className="w-3.5 h-3.5" /> Tabela / Campos
+                    </button>
                  </>
                )}
             </div>
@@ -538,6 +591,14 @@ export function StudioDashboardClient({
           <div className="">
             <EnumerationsClient 
               project={project}
+            />
+          </div>
+        ) : viewMode === 'metadata' ? (
+          <div className="">
+            <TableFieldsManager
+              project={project}
+              models={models}
+              onSaveSuccess={refreshData}
             />
           </div>
         ) : (
@@ -794,17 +855,28 @@ export function StudioDashboardClient({
                         </p>
                       </div>
 
-                      {canDelete && (
-                        <button
-                          onClick={() => {
-                            setViewToDelete(view)
-                            setIsDeleteModalOpen(true)
-                          }}
-                          className="p-2 text-neutral-300 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {canCreate && (
+                          <button
+                            onClick={() => handleAddToMenu(view)}
+                            className="p-2 text-neutral-300 hover:text-indigo-500 hover:bg-indigo-500/10 rounded-xl transition-all"
+                            title="Adicionar ao Menu"
+                          >
+                            <Menu className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => {
+                              setViewToDelete(view)
+                              setIsDeleteModalOpen(true)
+                            }}
+                            className="p-2 text-neutral-300 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     <div className="pt-2 flex gap-3">

@@ -1614,8 +1614,13 @@ function StepTables({ config, setConfig, models }: any) {
                         <div className="w-6 h-6 rounded-full border-2 border-neutral-200 dark:border-neutral-700 group-hover:border-indigo-300 transition-colors"></div>
                       )}
                     </div>
-                    <h4 className="font-bold text-base text-neutral-900 dark:text-white">{m.display_name || m.db_table_name}</h4>
-                    <p className="text-[10px] text-neutral-400 font-mono mt-1 uppercase tracking-widest">{m.db_table_name}</p>
+                    <h4 className="font-bold text-base text-neutral-900 dark:text-white leading-tight">{m.display_name || m.db_table_name}</h4>
+                    <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-mono mt-1 uppercase tracking-widest block">{m.db_table_name}</p>
+                    {m.description && (
+                      <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-2 line-clamp-2 leading-normal border-t border-neutral-100 dark:border-neutral-800/40 pt-1.5">
+                        {m.description}
+                      </p>
+                    )}
                   </button>
                 )
               })}

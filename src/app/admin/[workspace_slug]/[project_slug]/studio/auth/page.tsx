@@ -25,7 +25,8 @@ import {
   Unlock,
   Pencil,
   Check,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react'
 import { Navbar } from '@/components/layout/Navbar'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
@@ -350,73 +351,93 @@ export default function AuthSettingsPage() {
     }
   }, [project, authConfig, models, executeTunnelQuery, toast])
 
-  useEffect(() => {
-    if (activeTab === 'users' && project) {
-      const loadRolesAndPermissions = async () => {
-        if (authConfig.sync_legacy_groups && authConfig.db_groups_table) {
-          try {
-            const currentModel = models.find(m => m.db_table_name === authConfig.db_groups_table)
-            const schemaName = currentModel?.db_schema_name || 'public'
-            const data = await executeTunnelQuery({ action: 'select', table: authConfig.db_groups_table, schemaName })
-            
-            const pkField = currentModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
-            const nameField = authConfig.db_groups_name_column || 'name'
-            const mappedRoles = data.map((r: any) => ({
-              id: r[pkField]?.toString() || crypto.randomUUID(),
-              name: r[nameField] || 'Grupo'
-            }))
-            setRoles(mappedRoles)
+  const loadRolesAndPermissions = useCallback(async () => {
+    if (!project) return
+    if (authConfig.sync_legacy_groups && authConfig.db_groups_table) {
+      try {
+        const currentModel = models.find(m => m.db_table_name === authConfig.db_groups_table)
+        const schemaName = currentModel?.db_schema_name || 'public'
+        const data = await executeTunnelQuery({ action: 'select', table: authConfig.db_groups_table, schemaName })
+        
+        const pkField = currentModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+        const nameField = authConfig.db_groups_name_column || 'name'
+        const mappedRoles = data.map((r: any) => ({
+          id: r[pkField]?.toString() || crypto.randomUUID(),
+          name: r[nameField] || 'Grupo'
+        }))
+        setRoles(mappedRoles)
 
-            if (mappedRoles.length > 0) {
-              // Sincroniza os papéis legados na tabela project_roles do Supabase para evitar erro de Foreign Key
-              await supabase.from('project_roles').upsert(
-                mappedRoles.map((r: any) => ({ id: r.id, project_id: project.id, name: r.name })),
-                { onConflict: 'id' }
-              )
+        if (mappedRoles.length > 0) {
+          // Sincroniza os papéis legados na tabela project_roles do Supabase para evitar erro de Foreign Key
+          await supabase.from('project_roles').upsert(
+            mappedRoles.map((r: any) => ({ id: r.id, project_id: project.id, name: r.name })),
+            { onConflict: 'id' }
+          )
 
-              const { data: dbRolePerms } = await supabase.from('project_role_permissions').select('*').in('role_id', mappedRoles.map((r: any) => r.id))
-              if (dbRolePerms) setRolePermissions(dbRolePerms)
-            }
+          const { data: dbRolePerms } = await supabase.from('project_role_permissions').select('*').in('role_id', mappedRoles.map((r: any) => r.id))
+          if (dbRolePerms) setRolePermissions(dbRolePerms)
+        }
 
-            if (authConfig.db_user_groups_type === 'n_to_n' && authConfig.db_user_roles_table) {
-              const urModel = models.find(m => m.db_table_name === authConfig.db_user_roles_table)
-              const urSchemaName = urModel?.db_schema_name || 'public'
-              const urData = await executeTunnelQuery({ action: 'select', table: authConfig.db_user_roles_table, schemaName: urSchemaName })
-              const urPk = urModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
-              const mappedUR = urData.map((ur: any) => ({
-                id: ur[urPk]?.toString() || crypto.randomUUID(),
-                external_user_id: ur[authConfig.db_user_roles_user_id_column]?.toString(),
-                role_id: ur[authConfig.db_user_roles_role_id_column]?.toString()
-              }))
-              setUserRoles(mappedUR)
-            }
-          } catch(err: any) {
-            toast('Erro ao buscar grupos legados: ' + err.message, 'error')
-          }
-        } else {
-          const { data: dbRoles } = await supabase.from('project_roles').select('*').eq('project_id', project.id)
-          if (dbRoles) {
-            setRoles(dbRoles)
-            if (dbRoles.length > 0) {
-              const { data: dbRolePerms } = await supabase.from('project_role_permissions').select('*').in('role_id', dbRoles.map((r: any) => r.id))
-              if (dbRolePerms) setRolePermissions(dbRolePerms)
-            }
-          }
-          const { data: dbUserRoles } = await supabase.from('project_user_roles').select('*').eq('project_id', project.id)
-          if (dbUserRoles) setUserRoles(dbUserRoles)
+        if (authConfig.db_user_groups_type === 'n_to_n' && authConfig.db_user_roles_table) {
+          const urModel = models.find(m => m.db_table_name === authConfig.db_user_roles_table)
+          const urSchemaName = urModel?.db_schema_name || 'public'
+          const urData = await executeTunnelQuery({ action: 'select', table: authConfig.db_user_roles_table, schemaName: urSchemaName })
+          const urPk = urModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+          const mappedUR = urData.map((ur: any) => ({
+            id: ur[urPk]?.toString() || crypto.randomUUID(),
+            external_user_id: ur[authConfig.db_user_roles_user_id_column]?.toString(),
+            role_id: ur[authConfig.db_user_roles_role_id_column]?.toString()
+          }))
+          setUserRoles(mappedUR)
+        }
+      } catch(err: any) {
+        toast('Erro ao buscar grupos legados: ' + err.message, 'error')
+      }
+    } else {
+      const { data: dbRoles } = await supabase.from('project_roles').select('*').eq('project_id', project.id)
+      if (dbRoles) {
+        setRoles(dbRoles)
+        if (dbRoles.length > 0) {
+          const { data: dbRolePerms } = await supabase.from('project_role_permissions').select('*').in('role_id', dbRoles.map((r: any) => r.id))
+          if (dbRolePerms) setRolePermissions(dbRolePerms)
         }
       }
-      
+      const { data: dbUserRoles } = await supabase.from('project_user_roles').select('*').eq('project_id', project.id)
+      if (dbUserRoles) setUserRoles(dbUserRoles)
+    }
+  }, [project, authConfig, models, executeTunnelQuery, supabase, toast])
+
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const handleRefreshData = async () => {
+    setIsRefreshing(true)
+    try {
+      if (usersSubTab === 'list') {
+        if (authConfig.db_table_name) {
+          await loadLegacyUsers()
+        }
+      } else {
+        await loadRolesAndPermissions()
+      }
+      toast('Dados atualizados com sucesso!', 'success')
+    } catch (err: any) {
+      toast('Erro ao atualizar dados: ' + err.message, 'error')
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'users' && project) {
       const initLoad = async () => {
         await loadRolesAndPermissions()
         if (authConfig.db_table_name) {
           await loadLegacyUsers()
         }
       }
-      
       initLoad()
     }
-  }, [activeTab, project, authConfig, supabase, toast, models, loadLegacyUsers])
+  }, [activeTab, project, authConfig.db_table_name, loadRolesAndPermissions, loadLegacyUsers])
 
   const handleAssignRole = async (externalUserId: string, roleId: string) => {
     if (authConfig.sync_legacy_groups) {
@@ -1505,24 +1526,35 @@ export default function AuthSettingsPage() {
         ) : (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-2xl border border-neutral-200 dark:border-neutral-800">
-                <button 
-                  onClick={() => setUsersSubTab('list')}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${usersSubTab === 'list' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+                  <button 
+                    onClick={() => setUsersSubTab('list')}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${usersSubTab === 'list' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+                  >
+                    Lista de Usuários
+                  </button>
+                  <button 
+                    onClick={() => setUsersSubTab('groups')}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${usersSubTab === 'groups' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+                  >
+                    Grupos de Acesso
+                  </button>
+                  <button 
+                    onClick={() => setUsersSubTab('permissions')}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${usersSubTab === 'permissions' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+                  >
+                    Permissões de Telas
+                  </button>
+                </div>
+
+                <button
+                  onClick={handleRefreshData}
+                  disabled={isRefreshing}
+                  className="p-2.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl transition-all flex items-center justify-center group shadow-sm"
+                  title="Atualizar"
                 >
-                  Lista de Usuários
-                </button>
-                <button 
-                  onClick={() => setUsersSubTab('groups')}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${usersSubTab === 'groups' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
-                >
-                  Grupos de Acesso
-                </button>
-                <button 
-                  onClick={() => setUsersSubTab('permissions')}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${usersSubTab === 'permissions' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
-                >
-                  Permissões de Telas
+                  <RefreshCw className={`w-4 h-4 transition-transform duration-500 ease-out ${isRefreshing ? 'animate-spin' : 'group-hover:rotate-180'}`} />
                 </button>
               </div>
 

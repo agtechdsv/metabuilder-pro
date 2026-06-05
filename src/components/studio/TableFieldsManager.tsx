@@ -1,0 +1,378 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/utils/supabase/client'
+import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/i18n/I18nContext'
+import { 
+  Database, 
+  Search, 
+  Table, 
+  Tag, 
+  FileText, 
+  Save, 
+  Key, 
+  Check, 
+  Info,
+  Loader2
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+interface TableFieldsManagerProps {
+  project: any
+  models: any[]
+  onSaveSuccess?: () => void
+}
+
+export function TableFieldsManager({ project, models, onSaveSuccess }: TableFieldsManagerProps) {
+  const { t } = useI18n()
+  const { toast } = useToast()
+  const supabase = createClient()
+
+  const [selectedModelId, setSelectedModelId] = useState<string>('')
+  const [fields, setFields] = useState<any[]>([])
+  const [loadingFields, setLoadingFields] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Edit states
+  const [modelDisplayName, setModelDisplayName] = useState('')
+  const [modelDescription, setModelDescription] = useState('')
+  const [fieldEdits, setFieldEdits] = useState<Record<string, { display_name: string, description: string }>>({})
+
+  // Select first model by default if models list is available
+  useEffect(() => {
+    if (models.length > 0 && !selectedModelId) {
+      setSelectedModelId(models[0].id)
+    }
+  }, [models])
+
+  // Load fields and model info when selectedModelId changes
+  useEffect(() => {
+    if (!selectedModelId) return
+
+    const currentModel = models.find(m => m.id === selectedModelId)
+    if (currentModel) {
+      setModelDisplayName(currentModel.display_name || currentModel.db_table_name)
+      setModelDescription(currentModel.description || '')
+    }
+
+    const fetchFields = async () => {
+      setLoadingFields(true)
+      try {
+        const { data, error } = await supabase
+          .from('fields')
+          .select('*')
+          .eq('model_id', selectedModelId)
+          .order('order_index', { ascending: true })
+
+        if (error) throw error
+
+        if (data) {
+          setFields(data)
+          const edits: Record<string, { display_name: string, description: string }> = {}
+          data.forEach(f => {
+            edits[f.id] = {
+              display_name: f.display_name || f.db_column_name,
+              description: f.description || ''
+            }
+          })
+          setFieldEdits(edits)
+        }
+      } catch (err: any) {
+        console.error('Error fetching fields:', err)
+        toast('Erro ao buscar colunas da tabela: ' + err.message, 'error')
+      } finally {
+        setLoadingFields(false)
+      }
+    }
+
+    fetchFields()
+  }, [selectedModelId, models, supabase])
+
+  const handleSave = async () => {
+    if (!selectedModelId) return
+    setIsSaving(true)
+
+    try {
+      // 1. Update model display_name & description
+      const { error: modelErr } = await supabase
+        .from('models')
+        .update({
+          display_name: modelDisplayName,
+          description: modelDescription
+        })
+        .eq('id', selectedModelId)
+
+      if (modelErr) throw modelErr
+
+      // 2. Update modified fields
+      const promises = fields.map(f => {
+        const edit = fieldEdits[f.id]
+        if (!edit) return Promise.resolve({ error: null })
+        
+        // Skip if nothing changed
+        if (edit.display_name === (f.display_name || f.db_column_name) && edit.description === (f.description || '')) {
+          return Promise.resolve({ error: null })
+        }
+
+        return supabase
+          .from('fields')
+          .update({
+            display_name: edit.display_name,
+            description: edit.description
+          })
+          .eq('id', f.id)
+      })
+
+      const results = await Promise.all(promises)
+      const hasError = results.some(r => r.error)
+
+      if (hasError) {
+        toast('Erro ao salvar algumas colunas.', 'error')
+      } else {
+        toast('Tabela e colunas atualizadas com sucesso!', 'success')
+        onSaveSuccess?.()
+      }
+    } catch (err: any) {
+      console.error('Error saving model/fields metadata:', err)
+      toast('Erro ao salvar alterações: ' + err.message, 'error')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleFieldChange = (fieldId: string, key: 'display_name' | 'description', value: string) => {
+    setFieldEdits(prev => ({
+      ...prev,
+      [fieldId]: {
+        ...prev[fieldId],
+        [key]: value
+      }
+    }))
+  }
+
+  const filteredModels = models.filter(m => 
+    m.db_table_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (m.display_name || '').toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const selectedModel = models.find(m => m.id === selectedModelId)
+
+  return (
+    <div className="w-full animate-in fade-in duration-300">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h3 className="text-xl font-black flex items-center gap-3 text-neutral-900 dark:text-white tracking-tight">
+            <Database className="w-6 h-6 text-indigo-600 dark:text-indigo-500" />
+            Estrutura de Tabelas e Campos
+          </h3>
+          <p className="text-xs text-neutral-500 mt-1">Configure o display_name (nomes amigáveis) e descrições para suas tabelas e colunas do banco de dados.</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Column: Tables List */}
+        <div className="lg:col-span-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 space-y-4">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Buscar tabelas..."
+              className="w-full bg-neutral-50 dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-2xl pl-11 pr-4 py-3 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+            />
+          </div>
+
+          <div className="space-y-1.5 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
+            {filteredModels.length === 0 ? (
+              <div className="text-center py-8 text-neutral-500 text-xs font-bold">
+                Nenhuma tabela encontrada.
+              </div>
+            ) : (
+              filteredModels.map(m => {
+                const isSelected = m.id === selectedModelId
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => setSelectedModelId(m.id)}
+                    className={cn(
+                      "w-full text-left p-4 rounded-2xl border transition-all flex items-center gap-3 group",
+                      isSelected 
+                        ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/10" 
+                        : "bg-white dark:bg-neutral-900 border-neutral-100 dark:border-neutral-800 hover:bg-neutral-55 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
+                    )}
+                  >
+                    <div className={cn(
+                      "p-2.5 rounded-xl transition-all",
+                      isSelected ? "bg-white/10 text-white" : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 group-hover:bg-indigo-500/10 group-hover:text-indigo-500"
+                    )}>
+                      <Table className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-black uppercase tracking-wider block truncate">{m.db_table_name}</span>
+                      <span className={cn(
+                        "text-[10px] block mt-0.5 truncate",
+                        isSelected ? "text-white/70" : "text-neutral-400"
+                      )}>
+                        {m.display_name || m.db_table_name}
+                      </span>
+                    </div>
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Properties & Fields Editor */}
+        <div className="lg:col-span-8 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 lg:p-8 space-y-8 min-h-[40vh]">
+          {selectedModel ? (
+            <>
+              {/* Table Metadata Section */}
+              <div className="space-y-5">
+                <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800/50 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-500/10 rounded-xl">
+                      <Table className="w-5 h-5 text-indigo-500" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-sm uppercase tracking-wider">{selectedModel.db_table_name}</h4>
+                      <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-0.5">Schema: {selectedModel.db_schema_name || 'public'}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-505 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)]"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Salvando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>Salvar Tabela</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5 text-indigo-500" /> Nome Amigável (Display Name)
+                    </label>
+                    <input
+                      type="text"
+                      value={modelDisplayName}
+                      onChange={e => setModelDisplayName(e.target.value)}
+                      placeholder="Ex: Departamentos"
+                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-colors"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-indigo-500" /> Descrição da Tabela
+                    </label>
+                    <input
+                      type="text"
+                      value={modelDescription}
+                      onChange={e => setModelDescription(e.target.value)}
+                      placeholder="Ex: Setores organizacionais da empresa..."
+                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-colors"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Fields List Section */}
+              <div className="space-y-5 pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-neutral-500 flex items-center gap-2">
+                    <Database className="w-4 h-4 text-indigo-500" /> Colunas Detectadas ({fields.length})
+                  </h4>
+                </div>
+
+                {loadingFields ? (
+                  <div className="text-center py-12">
+                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
+                    <p className="text-neutral-500 mt-4 font-bold text-xs">Carregando colunas...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+                    {fields.map(f => {
+                      const edit = fieldEdits[f.id] || { display_name: '', description: '' }
+                      return (
+                        <div key={f.id} className="p-5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-850 rounded-2xl space-y-4">
+                          {/* Column Identification */}
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                              <span className="text-xs font-black text-neutral-900 dark:text-white uppercase tracking-wider">{f.db_column_name}</span>
+                              <span className="px-2 py-0.5 bg-neutral-200/50 dark:bg-neutral-800 text-[9px] font-mono text-neutral-600 dark:text-neutral-400 rounded border border-neutral-200 dark:border-neutral-700">
+                                {f.data_type}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              {f.is_primary_key && (
+                                <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[9px] font-black uppercase tracking-wider rounded border border-indigo-500/20 flex items-center gap-1">
+                                  <Key className="w-2.5 h-2.5" /> PK
+                                </span>
+                              )}
+                              {!f.is_nullable && (
+                                <span className="px-2 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[9px] font-black uppercase tracking-wider rounded border border-amber-500/20">
+                                  Required
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Editable Inputs */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Label na UI</label>
+                              <input
+                                type="text"
+                                value={edit.display_name}
+                                onChange={e => handleFieldChange(f.id, 'display_name', e.target.value)}
+                                placeholder={f.db_column_name}
+                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Descrição/Helptext</label>
+                              <input
+                                type="text"
+                                value={edit.description}
+                                onChange={e => handleFieldChange(f.id, 'description', e.target.value)}
+                                placeholder="Tooltip ou ajuda ao preencher..."
+                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center py-20 text-neutral-400 dark:text-neutral-600 gap-4">
+              <Table className="w-12 h-12 opacity-50" />
+              <div>
+                <h4 className="font-bold text-sm">Nenhuma tabela selecionada</h4>
+                <p className="text-xs mt-1">Selecione uma tabela à esquerda para visualizar e editar seus metadados.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

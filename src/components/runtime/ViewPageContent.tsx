@@ -1218,6 +1218,46 @@ export default function ViewPageContent({
     }
   }
 
+  const getFkErrorMessage = (errorMsg: string, fallbackMsg: string) => {
+    const regex = /(?:on table|na tabela)\s+(?:"[^"]+"\.)?"([^"]+)"/gi;
+    const matches = [...errorMsg.matchAll(regex)];
+    const tables = matches.map(m => m[1]);
+
+    if (tables.length >= 2) {
+      const parentTable = tables[0];
+      const childTable = tables[1];
+
+      const parentModel = project?.models?.find(
+        (m: any) => m.db_table_name?.toLowerCase() === parentTable.toLowerCase()
+      );
+      const childModel = project?.models?.find(
+        (m: any) => m.db_table_name?.toLowerCase() === childTable.toLowerCase()
+      );
+
+      const parentName = parentModel?.display_name || parentTable;
+      const childName = childModel?.display_name || childTable;
+
+      return `Não é possível excluir este ${parentName} pois ele possui relacionamento(s) ativo(s) com ${childName}.`;
+    }
+    
+    if (tables.length === 1) {
+      const parentModel = project?.models?.find(
+        (m: any) => m.db_table_name?.toLowerCase() === modelName.toLowerCase()
+      );
+      const childTable = tables[0];
+      const childModel = project?.models?.find(
+        (m: any) => m.db_table_name?.toLowerCase() === childTable.toLowerCase()
+      );
+      
+      const parentName = parentModel?.display_name || modelName;
+      const childName = childModel?.display_name || childTable;
+      
+      return `Não é possível excluir este ${parentName} pois ele possui relacionamento(s) ativo(s) com ${childName}.`;
+    }
+
+    return fallbackMsg;
+  }
+
   const handleConfirmDeleteDetail = async () => {
     setIsProcessing(true)
     const queryId = crypto.randomUUID()
@@ -1312,7 +1352,8 @@ export default function ViewPageContent({
       } else {
         let errorMsg = result.error || 'Erro ao excluir o detalhe.'
         if (errorMsg.includes('foreign key constraint') || errorMsg.includes('violates foreign key') || errorMsg.includes('chave estrangeira')) {
-          errorMsg = t('runtime.delete_fk_error', 'Não é possível excluir este registro pois ele possui relacionamentos ativos (chave estrangeira).')
+          const defaultFkError = t('runtime.delete_fk_error', 'Não é possível excluir este registro pois ele possui relacionamentos ativos (chave estrangeira).')
+          errorMsg = getFkErrorMessage(errorMsg, defaultFkError)
         }
         toast(errorMsg, 'error')
       }
@@ -1732,7 +1773,8 @@ export default function ViewPageContent({
       } else {
         let errorMsg = result.error || 'Erro ao excluir o registro.'
         if (errorMsg.includes('foreign key constraint') || errorMsg.includes('violates foreign key') || errorMsg.includes('chave estrangeira')) {
-          errorMsg = t('runtime.delete_fk_error', 'Não é possível excluir este registro pois ele possui relacionamentos ativos (chave estrangeira).')
+          const defaultFkError = t('runtime.delete_fk_error', 'Não é possível excluir este registro pois ele possui relacionamentos ativos (chave estrangeira).')
+          errorMsg = getFkErrorMessage(errorMsg, defaultFkError)
         }
         toast(errorMsg, 'error')
       }
