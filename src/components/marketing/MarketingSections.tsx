@@ -403,6 +403,48 @@ export function MarketingSections() {
         </div>
       </section>
 
+      {/* Sync Resolution Showcase */}
+      <section className="max-w-7xl mx-auto py-20 border-t border-neutral-100 dark:border-neutral-900">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+          <div className="space-y-8 order-2 lg:order-1">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-400 text-[10px] font-black uppercase tracking-widest">
+              <Database className="w-3.5 h-3.5" />
+              Sincronização Inteligente
+            </div>
+            <h2 className="text-4xl md:text-6xl font-black tracking-tighter dark:text-white leading-[1]">
+              Não Perca Nada com a <br />
+              <span className="text-cyan-600">Resolução de Conflitos</span>
+            </h2>
+            <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
+              Renomeou uma tabela no seu banco de dados legado? Deletou uma coluna? O MetaBuilder detecta as mudanças automaticamente e permite que você remapeie todos os seus casos de uso, filtros, gráficos e automações BPM com um único clique. Nenhuma refatoração manual necessária.
+            </p>
+            <div className="flex gap-4">
+              <div className="flex-1 p-6 rounded-3xl bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
+                <h4 className="text-2xl font-black text-cyan-600 mb-2">100%</h4>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">À Prova de Falhas</p>
+              </div>
+              <div className="flex-1 p-6 rounded-3xl bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
+                <h4 className="text-2xl font-black text-indigo-600 mb-2">0</h4>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Refatoração Manual</p>
+              </div>
+            </div>
+            <Link
+              href="/features/sync-resolution"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:scale-105 shadow-xl shadow-cyan-500/20"
+            >
+              Conheça a Ferramenta
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="relative order-1 lg:order-2">
+            <div className="p-2 rounded-[2rem] bg-gradient-to-br from-cyan-500/20 to-blue-500/10 dark:from-cyan-900/40 dark:to-blue-900/20 shadow-2xl relative overflow-hidden">
+                <img src="/sync-resolution-demo.png" alt="Tela de Resolução de Sincronização" className="w-full h-auto rounded-[1.5rem] border border-cyan-500/20 shadow-inner" />
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* BPM & Automations Showcase */}
       <section className="max-w-7xl mx-auto py-20 border-b border-neutral-100 dark:border-neutral-900">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
