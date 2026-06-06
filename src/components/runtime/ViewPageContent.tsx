@@ -1797,10 +1797,10 @@ export default function ViewPageContent({
               <button
                 onClick={() => router.push(`/${workspace.slug}/${project.slug}/automations?use_case=${viewId}`)}
                 className="flex items-center gap-2 px-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-full transition-all text-xs font-bold shadow-sm active:scale-95"
-                title="Configurar automações e regras de negócio desta tela"
+                title={t('runtime.automations')}
               >
                 <Workflow className="w-4 h-4 text-indigo-500" />
-                <span className="hidden sm:inline">Automações</span>
+                <span className="hidden sm:inline">{t('runtime.automations')}</span>
               </button>
             )}
             {logicType !== 'analytics' && project.theme_config?.enable_downloads !== false && canExport && (

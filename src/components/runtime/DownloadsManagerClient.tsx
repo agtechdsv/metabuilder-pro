@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface DownloadJob {
   id: string
@@ -57,6 +58,7 @@ export function DownloadsManagerClient({
 }: DownloadsManagerClientProps) {
   const supabase = createClient()
   const { toast } = useToast()
+  const { t } = useI18n()
 
   const [jobs, setJobs] = useState<DownloadJob[]>([])
   const [filter, setFilter] = useState<'all' | 'completed' | 'processing' | 'failed'>('all')
@@ -306,12 +308,12 @@ export function DownloadsManagerClient({
           </div>
           <div className="flex flex-col">
             <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
-              Gerenciador de Downloads
+              {t('runtime.downloads_title')}
             </h1>
             <div className="flex items-center gap-2 mt-1">
               <div className="w-8 h-1 bg-indigo-600 rounded-full" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-                Central de Exportações Assíncronas
+                {t('runtime.downloads_subtitle')}
               </span>
             </div>
           </div>
@@ -328,7 +330,7 @@ export function DownloadsManagerClient({
             ) : (
               <Trash2 className="w-4 h-4" />
             )}
-            Limpar Histórico
+            {t('runtime.downloads_clear_history')}
           </button>
         )}
       </div>
@@ -342,15 +344,15 @@ export function DownloadsManagerClient({
             </div>
             <div className="flex flex-col gap-1.5">
               <h4 className="text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                Política de Retenção de Arquivos Automática
+                {t('runtime.downloads_retention_title')}
               </h4>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-3xl leading-normal font-medium">
-                Por razões de privacidade e conformidade, os arquivos gerados serão mantidos pelo tempo definido na <strong>política de retenção configurada pelo administrador do projeto</strong>. Após esse prazo (ex: 24 horas), eles serão excluídos automaticamente de forma física do servidor local. Se nenhuma limpeza estiver configurada, os arquivos devem ser geridos manualmente.
+                {t('runtime.downloads_retention_desc')}
               </p>
             </div>
           </div>
           <div className="px-4 py-2 bg-amber-500/20 rounded-xl text-[9px] font-black uppercase tracking-widest text-amber-800 dark:text-amber-400 self-start md:self-center border border-amber-500/20 flex-shrink-0">
-            Autolimpeza Ativa
+            {t('runtime.downloads_autoclean')}
           </div>
         </div>
 
@@ -360,7 +362,7 @@ export function DownloadsManagerClient({
           <div className="bg-white/60 dark:bg-neutral-900/60 backdrop-blur-xl border border-neutral-200/50 dark:border-neutral-800/50 rounded-3xl p-6 flex items-center justify-between shadow-xl shadow-neutral-100/50 dark:shadow-none hover:translate-y-[-2px] transition-all duration-300">
             <div className="flex flex-col gap-1">
               <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400">
-                Total Solicitado
+                {t('runtime.downloads_total')}
               </span>
               <span className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
                 {totalCount}
@@ -375,7 +377,7 @@ export function DownloadsManagerClient({
           <div className="bg-white/60 dark:bg-neutral-900/60 backdrop-blur-xl border border-neutral-200/50 dark:border-neutral-800/50 rounded-3xl p-6 flex items-center justify-between shadow-xl shadow-neutral-100/50 dark:shadow-none hover:translate-y-[-2px] transition-all duration-300">
             <div className="flex flex-col gap-1">
               <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400">
-                Exportações Concluídas
+                {t('runtime.downloads_completed')}
               </span>
               <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
                 {completedCount}
@@ -390,7 +392,7 @@ export function DownloadsManagerClient({
           <div className="bg-white/60 dark:bg-neutral-900/60 backdrop-blur-xl border border-neutral-200/50 dark:border-neutral-800/50 rounded-3xl p-6 flex items-center justify-between shadow-xl shadow-neutral-100/50 dark:shadow-none hover:translate-y-[-2px] transition-all duration-300">
             <div className="flex flex-col gap-1">
               <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400">
-                Em Processamento
+                {t('runtime.downloads_processing')}
               </span>
               <span className="text-3xl font-black text-indigo-600 dark:text-indigo-400 tracking-tight">
                 {processingCount}
@@ -405,7 +407,7 @@ export function DownloadsManagerClient({
           <div className="bg-white/60 dark:bg-neutral-900/60 backdrop-blur-xl border border-neutral-200/50 dark:border-neutral-800/50 rounded-3xl p-6 flex items-center justify-between shadow-xl shadow-neutral-100/50 dark:shadow-none hover:translate-y-[-2px] transition-all duration-300">
             <div className="flex flex-col gap-1">
               <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400">
-                Falhas
+                {t('runtime.downloads_failed')}
               </span>
               <span className="text-3xl font-black text-red-600 dark:text-red-400 tracking-tight">
                 {failedCount}
@@ -430,7 +432,7 @@ export function DownloadsManagerClient({
                     : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
                 }`}
               >
-                Todos ({totalCount})
+                {t('runtime.downloads_tab_all')} ({totalCount})
               </button>
               <button
                 onClick={() => setFilter('completed')}
@@ -440,7 +442,7 @@ export function DownloadsManagerClient({
                     : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
                 }`}
               >
-                Concluídos ({completedCount})
+                {t('runtime.downloads_tab_completed')} ({completedCount})
               </button>
               <button
                 onClick={() => setFilter('processing')}
@@ -450,7 +452,7 @@ export function DownloadsManagerClient({
                     : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
                 }`}
               >
-                Processando ({processingCount})
+                {t('runtime.downloads_tab_processing')} ({processingCount})
               </button>
               <button
                 onClick={() => setFilter('failed')}
@@ -460,12 +462,12 @@ export function DownloadsManagerClient({
                     : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
                 }`}
               >
-                Falhas ({failedCount})
+                {t('runtime.downloads_tab_failed')} ({failedCount})
               </button>
             </div>
             
             <div className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
-              {filteredJobs.length} {filteredJobs.length === 1 ? 'arquivo listado' : 'arquivos listados'}
+              {filteredJobs.length} {filteredJobs.length === 1 ? t('runtime.downloads_files_listed') : t('runtime.downloads_files_listed_plural')}
             </div>
           </div>
 
@@ -476,10 +478,10 @@ export function DownloadsManagerClient({
                 <Download className="w-8 h-8" />
               </div>
               <h3 className="text-sm font-black text-neutral-700 dark:text-neutral-300 uppercase tracking-widest">
-                Nenhuma exportação encontrada
+                {t('runtime.downloads_no_exports')}
               </h3>
               <p className="text-xs text-neutral-400 mt-2 max-w-xs leading-normal">
-                Clique no botão "Exportar" em qualquer painel ou grade de visualização para gerar planilhas e relatórios assíncronos.
+                {t('runtime.downloads_no_exports_hint')}
               </p>
             </div>
           ) : (
@@ -547,7 +549,7 @@ export function DownloadsManagerClient({
                           </span>
                         </div>
                         <span className="text-[10px] text-neutral-400 font-bold font-mono tracking-tight truncate max-w-md">
-                          {job.file_name || 'Gerando nome de arquivo...'}
+                          {job.file_name || t('runtime.downloads_generating_name')}
                         </span>
                         
                         <div className="flex items-center gap-3.5 mt-1 text-[9px] text-neutral-400 font-semibold uppercase tracking-wider flex-wrap">
@@ -558,7 +560,7 @@ export function DownloadsManagerClient({
                           {isCompleted && (
                             <>
                               <span>•</span>
-                              <span>{job.record_count ?? 0} registros</span>
+                              <span>{job.record_count ?? 0} {t('runtime.downloads_records')}</span>
                               <span>•</span>
                               <span>{formatBytes(job.file_size)}</span>
                             </>
@@ -572,7 +574,7 @@ export function DownloadsManagerClient({
                         <div className="flex items-center justify-center bg-indigo-50 dark:bg-indigo-950/20 px-4 py-2.5 rounded-xl border border-indigo-200/40">
                           <Loader2 className="w-4 h-4 text-indigo-500 animate-spin mr-2" />
                           <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 animate-pulse">
-                            Em andamento...
+                            {t('runtime.downloads_in_progress')}
                           </span>
                         </div>
                       )}
@@ -581,7 +583,7 @@ export function DownloadsManagerClient({
                         <div className="flex items-center gap-2 self-start lg:self-end">
                           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
                           <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-1.5 rounded-xl border border-emerald-250/20">
-                            Disponível para download
+                            {t('runtime.downloads_available')}
                           </span>
                         </div>
                       )}
@@ -589,10 +591,10 @@ export function DownloadsManagerClient({
                       {isFailed && (
                         <div className="flex flex-col gap-1 w-full text-left lg:text-right">
                           <span className="text-[9px] font-black uppercase tracking-widest text-red-500 self-start lg:self-end bg-red-50 dark:bg-red-950/20 px-3 py-1.5 rounded-xl border border-red-250/20">
-                            Falha no processamento
+                            {t('runtime.downloads_failed_processing')}
                           </span>
                           <span className="text-[9px] text-red-400 font-medium leading-normal italic line-clamp-2 max-w-xs mt-1">
-                            {job.error_message || 'Erro inesperado ao consultar o banco de dados.'}
+                            {job.error_message || t('runtime.downloads_unexpected_error')}
                           </span>
                         </div>
                       )}
@@ -606,7 +608,7 @@ export function DownloadsManagerClient({
                           className="flex items-center gap-2 py-3 px-5 bg-gradient-to-tr from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-emerald-600/25"
                         >
                           <Download className="w-4 h-4" />
-                          Baixar Arquivo
+                          {t('runtime.downloads_download_file')}
                         </a>
                       ) : (
                         <button
@@ -614,7 +616,7 @@ export function DownloadsManagerClient({
                           className="flex items-center gap-2 py-3 px-5 bg-neutral-100 dark:bg-neutral-800 text-neutral-400 rounded-2xl text-[10px] font-black uppercase tracking-widest opacity-60 cursor-not-allowed"
                         >
                           <Download className="w-4 h-4" />
-                          Aguardando...
+                          {t('runtime.downloads_waiting')}
                         </button>
                       )}
 
@@ -643,17 +645,17 @@ export function DownloadsManagerClient({
             </div>
             
             <h3 className="text-lg font-black text-neutral-900 dark:text-white uppercase tracking-wider">
-              {confirmDialog.type === 'single' ? 'Excluir Exportação' : 'Limpar Histórico'}
+              {confirmDialog.type === 'single' ? t('runtime.downloads_confirm_delete') : t('runtime.downloads_confirm_clear')}
             </h3>
             
             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2.5 leading-relaxed font-medium">
               {confirmDialog.type === 'single' ? (
                 <>
-                  Você tem certeza que deseja remover permanentemente os dados exportados de <strong>"{confirmDialog.viewName}"</strong>? O arquivo será excluído definitivamente do histórico e do servidor de arquivos.
+                  {t('runtime.downloads_confirm_delete_desc').replace('{name}', confirmDialog.viewName || '')}
                 </>
               ) : (
                 <>
-                  Esta ação removerá <strong>todos os registros concluídos e falhas</strong> de exportações deste projeto. Todos os arquivos gerados serão excluídos definitivamente de nossos servidores.
+                  {t('runtime.downloads_confirm_clear_desc')}
                 </>
               )}
             </p>
@@ -664,7 +666,7 @@ export function DownloadsManagerClient({
                 disabled={isDeletingConfirm || isClearing}
                 className="py-3 px-5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
               >
-                Cancelar
+                {t('runtime.cancel')}
               </button>
               <button
                 onClick={() => {
@@ -682,7 +684,7 @@ export function DownloadsManagerClient({
                 ) : (
                   <Trash2 className="w-4 h-4" />
                 )}
-                Confirmar
+                {t('runtime.downloads_confirm_btn')}
               </button>
             </div>
           </div>

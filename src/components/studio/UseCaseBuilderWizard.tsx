@@ -3849,7 +3849,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                             }}
                             className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none cursor-pointer"
                           >
-                            <option value="">{t('common.none', 'Nenhuma')}</option>
+                            <option value="">{t('wizard.layout.drawer.masks.none', 'Nenhuma')}</option>
                             <option value="000.000.000-00">{t('wizard.layout.drawer.masks.cpf', 'CPF (000.000.000-00)')}</option>
                             <option value="00.000.000/0000-00">{t('wizard.layout.drawer.masks.cnpj', 'CNPJ (00.000.000/0000-00)')}</option>
                             <option value="00000-000">{t('wizard.layout.drawer.masks.cep', 'CEP (00000-000)')}</option>

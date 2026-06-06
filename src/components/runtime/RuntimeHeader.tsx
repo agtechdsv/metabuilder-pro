@@ -6,6 +6,7 @@ import { HeaderActions } from '@/components/layout/HeaderActions'
 import { useSearchParams } from 'next/navigation'
 import { DynamicIcon } from './DynamicIcon'
 import { X } from 'lucide-react'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface Breadcrumb {
   label: string
@@ -20,6 +21,7 @@ interface RuntimeHeaderProps {
 }
 
 export function RuntimeHeader({ viewName, subtitle, icon, actions }: RuntimeHeaderProps) {
+  const { t } = useI18n()
   const searchParams = useSearchParams()
   const isEmbedded = searchParams?.get('embedded') === 'true'
 
@@ -36,7 +38,7 @@ export function RuntimeHeader({ viewName, subtitle, icon, actions }: RuntimeHead
           <div className="flex items-center gap-2 mt-1">
             <div className="w-8 h-1 bg-indigo-600 rounded-full" />
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-              {subtitle || "Sistema MetaBuilder"}
+              {subtitle || t('runtime.system_name')}
             </span>
           </div>
         </div>

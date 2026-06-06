@@ -3,6 +3,7 @@
 import { Pencil, Trash2, Search, Zap, Link, Database, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { DynamicIcon } from '@/components/runtime/DynamicIcon'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface DynamicGridProps {
   fields: any[]
@@ -151,6 +152,7 @@ export default function DynamicGrid({
   onCustomAction,
   relationalOptions = {}
 }: DynamicGridProps) {
+  const { t } = useI18n()
   const canView = buttonsConfig.find((b: any) => b.id === 'view')?.visible === true
   const canEdit = buttonsConfig.find((b: any) => b.id === 'edit')?.visible === true
   const canDelete = buttonsConfig.find((b: any) => b.id === 'delete')?.visible === true
@@ -208,7 +210,7 @@ export default function DynamicGrid({
     return (
       <tr>
         <td colSpan={fields.length + 2} className="px-6 py-16 text-center text-neutral-500">
-          Nenhum registro encontrado nesta tabela.
+          {t('runtime.no_records_in_table')}
         </td>
       </tr>
     )
@@ -278,7 +280,7 @@ export default function DynamicGrid({
             <div className="flex items-center justify-end gap-1.5">
               {canView && (
                 <button 
-                  title={btnView?.custom_label !== undefined && btnView.custom_label !== '' ? btnView.custom_label : "Visualizar"}
+                  title={btnView?.custom_label !== undefined && btnView.custom_label !== '' ? btnView.custom_label : t('runtime.view')}
                   onClick={() => onView?.(row)}
                   style={getButtonStyles(btnView)}
                   className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all active:scale-90 shadow-sm"
@@ -288,7 +290,7 @@ export default function DynamicGrid({
               )}
               {canEdit && (
                 <button 
-                  title={btnEdit?.custom_label !== undefined && btnEdit.custom_label !== '' ? btnEdit.custom_label : "Editar"}
+                  title={btnEdit?.custom_label !== undefined && btnEdit.custom_label !== '' ? btnEdit.custom_label : t('runtime.edit')}
                   onClick={() => onEdit?.(row)}
                   style={getButtonStyles(btnEdit)}
                   className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-neutral-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-90 shadow-sm"
@@ -298,7 +300,7 @@ export default function DynamicGrid({
               )}
               {canDelete && (
                 <button 
-                  title={btnDelete?.custom_label !== undefined && btnDelete.custom_label !== '' ? btnDelete.custom_label : "Excluir"}
+                  title={btnDelete?.custom_label !== undefined && btnDelete.custom_label !== '' ? btnDelete.custom_label : t('runtime.delete')}
                   onClick={() => onDelete?.(row)}
                   style={getButtonStyles(btnDelete)}
                   className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-red-500 border border-neutral-200 dark:border-neutral-700 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all active:scale-90 shadow-sm"

@@ -424,7 +424,7 @@ function StepTables({ config, setConfig, models }: any) {
           <div key={schema} className="space-y-4">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-600 flex items-center gap-2">
               <Database className="w-4 h-4" />
-              Banco: {schema}
+              {t('runtime.builder_database')}: {schema}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {groupedModels[schema].map((m: any) => {
@@ -535,19 +535,19 @@ function StepLayout({ config, setConfig, models }: any) {
                             onClick={() => toggleField(f.id, 'filter_fields')}
                             className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-tighter transition-all ${config.layout_config.filter_fields.includes(f.id) ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'}`}
                           >
-                            Filtro
+                            {t('runtime.builder_filter')}
                           </button>
                           <button
                             onClick={() => toggleField(f.id, 'grid_fields')}
                             className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-tighter transition-all ${config.layout_config.grid_fields.includes(f.id) ? 'bg-emerald-600 text-white' : 'bg-neutral-100 dark:border-neutral-800 text-neutral-400'}`}
                           >
-                            Grid
+                            {t('runtime.builder_grid')}
                           </button>
                           <button
                             onClick={() => toggleField(f.id, 'form_fields')}
                             className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-tighter transition-all ${config.layout_config.form_fields.includes(f.id) ? 'bg-amber-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'}`}
                           >
-                            Form
+                            {t('runtime.builder_form')}
                           </button>
                         </div>
                       </div>
@@ -598,7 +598,7 @@ function StepLayout({ config, setConfig, models }: any) {
                   <table className="w-full text-[10px] text-left">
                     <thead className="bg-neutral-100 dark:bg-neutral-800 font-black uppercase text-neutral-500">
                       <tr>
-                        <th className="px-4 py-2">Campo</th>
+                        <th className="px-4 py-2">{t('runtime.builder_field')}</th>
                         <th className="px-4 py-2 w-10"></th>
                       </tr>
                     </thead>

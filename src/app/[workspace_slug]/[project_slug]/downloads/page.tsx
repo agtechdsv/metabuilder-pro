@@ -4,6 +4,8 @@ import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { AlertCircle } from 'lucide-react'
 import { DownloadsManagerClient } from '@/components/runtime/DownloadsManagerClient'
+import { getLocale } from '@/i18n/get-locale'
+import { getTranslations } from '@/i18n/get-translations'
 
 interface PageProps {
   params: Promise<{
@@ -14,6 +16,8 @@ interface PageProps {
 
 export default async function DownloadsPage({ params }: PageProps) {
   const { workspace_slug, project_slug } = await params
+  const locale = await getLocale()
+  const t = await getTranslations(locale)
 
   // 1. Inicializa o cliente Supabase com service_role para evitar restrições de RLS
   const supabase = createClient(
@@ -89,10 +93,10 @@ export default async function DownloadsPage({ params }: PageProps) {
           <AlertCircle className="w-8 h-8" />
         </div>
         <h2 className="text-xl font-black text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
-          Acesso Restrito
+          {t('runtime.downloads_restricted_title')}
         </h2>
         <p className="text-xs text-neutral-400 mt-2 max-w-sm">
-          Por favor, faça login no sistema para visualizar seu histórico de downloads e exportações assíncronas.
+          {t('runtime.downloads_restricted_desc')}
         </p>
       </div>
     )
@@ -156,16 +160,16 @@ export default async function DownloadsPage({ params }: PageProps) {
           <AlertCircle className="w-10 h-10" />
         </div>
         <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-2 tracking-tight">
-          Acesso Negado
+          {t('runtime.downloads_denied_title')}
         </h2>
         <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mb-8 leading-relaxed font-bold">
-          Você não possui permissões necessárias para visualizar a Central de Downloads.
+          {t('runtime.downloads_denied_desc')}
         </p>
         <a
           href={`/${workspace_slug}/${project_slug}`}
           className="px-6 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.98] shadow-lg shadow-indigo-500/20 flex items-center justify-center"
         >
-          Voltar ao início
+          {t('runtime.downloads_back_home')}
         </a>
       </div>
     )

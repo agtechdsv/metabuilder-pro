@@ -7,6 +7,7 @@ import {
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { DynamicIcon } from './DynamicIcon'
+import { useI18n } from '@/i18n/I18nContext'
 
 import { RuntimeHeader } from './RuntimeHeader'
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
@@ -35,6 +36,7 @@ interface DynamicDashboardProps {
 
 
 export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, subtitle, icon }: DynamicDashboardProps) {
+  const { t } = useI18n()
   return (
     <div className="space-y-6">
       <RuntimeHeader 
@@ -75,7 +77,7 @@ export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, sub
                     {item.label}
                   </h3>
                   <p className="text-xs text-neutral-500 dark:text-neutral-500 font-medium uppercase tracking-widest">
-                    {isFolder ? 'Menu / Pasta' : item.type === 'view' ? 'Caso de Uso' : 'Link Externo'}
+                    {isFolder ? t('runtime.dashboard_folder') : item.type === 'view' ? t('runtime.dashboard_use_case') : t('runtime.dashboard_external')}
                   </p>
                   {item.description && (
                     <p className="text-[10px] text-neutral-400 dark:text-neutral-500 line-clamp-1 italic mt-1">
@@ -86,7 +88,7 @@ export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, sub
 
                 <div className="mt-auto flex items-center justify-between pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
                    <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 group-hover:text-indigo-500 transition-colors">
-                     {isFolder ? 'Explorar' : 'Acessar'}
+                     {isFolder ? t('runtime.dashboard_explore') : t('runtime.dashboard_open')}
                    </span>
                    <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">
                      <ArrowRight className="w-4 h-4" />

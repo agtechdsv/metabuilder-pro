@@ -210,7 +210,7 @@ export function LoginPortalClient({
                       {passLabel}
                     </label>
                     <a href="#" className="text-[9px] font-bold text-indigo-600 hover:text-indigo-500 uppercase tracking-tighter">
-                      Esqueceu a senha?
+                      {t('runtime.login_forgot_password')}
                     </a>
                   </div>
                   <div className="relative group">
@@ -252,7 +252,7 @@ export function LoginPortalClient({
               {allowSignup && (
                 <div className="mt-8 text-center">
                   <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">
-                    Não tem uma conta? <a href="#" className="text-indigo-600 hover:underline">Criar conta</a>
+                    {t('runtime.login_no_account')} <a href="#" className="text-indigo-600 hover:underline">{t('runtime.login_create_account')}</a>
                   </p>
                 </div>
               )}
@@ -261,7 +261,7 @@ export function LoginPortalClient({
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-px bg-neutral-100 dark:bg-neutral-800" />
                   <span className="text-[9px] font-black text-neutral-300 dark:text-neutral-700 uppercase tracking-widest">
-                    Powered by MetaBuilder
+                    {t('runtime.login_powered_by')}
                   </span>
                   <div className="w-8 h-px bg-neutral-100 dark:bg-neutral-800" />
                 </div>

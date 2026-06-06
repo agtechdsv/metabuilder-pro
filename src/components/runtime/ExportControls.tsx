@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface ExportDropdownProps {
   projectId: string
@@ -41,6 +42,7 @@ export function ExportDropdown({
   exportFormats = ['xlsx', 'csv', 'json'],
   selectedRecord
 }: ExportDropdownProps) {
+  const { t } = useI18n()
   const [isOpen, setIsOpen] = useState(false)
   const [isInitializing, setIsInitializing] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -184,7 +186,7 @@ export function ExportDropdown({
         ) : (
           <Download className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
         )}
-        Exportar
+        {t('runtime.export_btn')}
         <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />
       </button>
 
@@ -193,7 +195,7 @@ export function ExportDropdown({
           <div className="bg-white/80 dark:bg-neutral-900/90 backdrop-blur-xl border border-neutral-200/50 dark:border-neutral-800/50 rounded-2xl shadow-2xl overflow-hidden p-2">
             <div className="px-3 py-2 border-b border-neutral-100 dark:border-neutral-800/80 mb-1">
               <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400">
-                Selecione o Formato
+                {t('runtime.export_select_format')}
               </span>
             </div>
             
@@ -206,8 +208,8 @@ export function ExportDropdown({
                   <FileSpreadsheet className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col">
-                  <span>Planilha Excel (.xlsx)</span>
-                  <span className="text-[9px] font-medium text-neutral-400">Ideal para relatórios e análises</span>
+                  <span>{t('runtime.export_xlsx')}</span>
+                  <span className="text-[9px] font-medium text-neutral-400">{t('runtime.export_xlsx_hint')}</span>
                 </div>
               </button>
             )}
@@ -221,8 +223,8 @@ export function ExportDropdown({
                   <FileText className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col">
-                  <span>Arquivo CSV (.csv)</span>
-                  <span className="text-[9px] font-medium text-neutral-400">Ideal para sistemas e integrações</span>
+                  <span>{t('runtime.export_csv')}</span>
+                  <span className="text-[9px] font-medium text-neutral-400">{t('runtime.export_csv_hint')}</span>
                 </div>
               </button>
             )}
@@ -236,8 +238,8 @@ export function ExportDropdown({
                   <FileJson className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col">
-                  <span>Formato JSON (.json)</span>
-                  <span className="text-[9px] font-medium text-neutral-400">Exportação de dados estruturados</span>
+                  <span>{t('runtime.export_json')}</span>
+                  <span className="text-[9px] font-medium text-neutral-400">{t('runtime.export_json_hint')}</span>
                 </div>
               </button>
             )}
@@ -251,8 +253,8 @@ export function ExportDropdown({
                   <File className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col">
-                  <span>Documento PDF (.pdf)</span>
-                  <span className="text-[9px] font-medium text-neutral-400">Ideal para impressão e compartilhamento</span>
+                  <span>{t('runtime.export_pdf')}</span>
+                  <span className="text-[9px] font-medium text-neutral-400">{t('runtime.export_pdf_hint')}</span>
                 </div>
               </button>
             )}
@@ -266,8 +268,8 @@ export function ExportDropdown({
                   <Activity className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col">
-                  <span>Arquivo OFX (.ofx)</span>
-                  <span className="text-[9px] font-medium text-neutral-400">Padrão para sistemas financeiros</span>
+                  <span>{t('runtime.export_ofx')}</span>
+                  <span className="text-[9px] font-medium text-neutral-400">{t('runtime.export_ofx_hint')}</span>
                 </div>
               </button>
             )}

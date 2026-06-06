@@ -14,6 +14,7 @@ import {
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import { DynamicIcon } from './DynamicIcon'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface MenuItem {
   id: string
@@ -37,6 +38,7 @@ interface DynamicSidebarProps {
 
 
 export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation = [], isCollapsed, setIsCollapsed }: DynamicSidebarProps) {
+  const { t } = useI18n()
   const projectIcon = project.icon || 'Box'
   const pathname = usePathname()
   const router = useRouter()
@@ -65,7 +67,7 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
   }
 
   const displayName = clientUser?.nome || clientUser?.name || clientUser?.email || 'Usuário Cliente'
-  const displayEmail = clientUser?.email || 'Sair do Sistema'
+  const displayEmail = clientUser?.email || t('runtime.sidebar_logout')
   const avatarLetter = displayName.charAt(0).toUpperCase()
 
   const toggleExpand = (e: React.MouseEvent, id: string) => {
@@ -257,7 +259,7 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
         ) : (
           <div className="py-10 text-center space-y-2 opacity-30">
             <Layers className="w-8 h-8 mx-auto" />
-            <p className="text-[10px] font-black uppercase tracking-widest">Sem Menu</p>
+            <p className="text-[10px] font-black uppercase tracking-widest">{t('runtime.sidebar_no_menu')}</p>
           </div>
         )}
       </nav>
@@ -285,7 +287,7 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
                     onClick={handleLogout}
                     className="text-[9px] text-neutral-400 hover:text-red-500 text-left transition-colors truncate"
                   >
-                    {clientUser ? 'Sair do Sistema' : 'Entrar'}
+                    {clientUser ? t('runtime.sidebar_logout') : t('runtime.sidebar_login')}
                   </button>
                 </motion.div>
              )}
@@ -294,7 +296,7 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
            {!isCollapsed && (
              <button 
                onClick={handleLogout}
-               title="Sair do Sistema"
+               title={t('runtime.sidebar_logout')}
                className="p-1.5 text-neutral-400 hover:text-red-500 transition-colors"
              >
                <LogOut className="w-4 h-4" />
