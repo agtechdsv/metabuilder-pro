@@ -1,12 +1,14 @@
 import { memo } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 import { Zap, Play, CheckCircle2, GitMerge, Trash2, Mail, Edit, PlusCircle, Clock, MousePointer2, Webhook } from 'lucide-react';
+import { useI18n } from '@/i18n/I18nContext';
 
 // Common style for node wrappers
 const nodeStyle = "px-4 py-3 rounded-xl border shadow-sm min-w-[220px] bg-white dark:bg-neutral-900 transition-all relative group";
 
 const DeleteButton = ({ id, selected }: { id: string, selected: boolean }) => {
   const { deleteElements } = useReactFlow();
+  const { t } = useI18n();
   
   if (!selected) return null;
   
@@ -17,7 +19,7 @@ const DeleteButton = ({ id, selected }: { id: string, selected: boolean }) => {
         deleteElements({ nodes: [{ id }] });
       }}
       className="absolute -top-3 -right-3 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110 z-10"
-      title="Excluir Nó"
+      title={t('bpm.nodes.delete_node')}
     >
       <Trash2 className="w-4 h-4" />
     </button>
@@ -25,21 +27,22 @@ const DeleteButton = ({ id, selected }: { id: string, selected: boolean }) => {
 };
 
 export const TriggerNode = memo(({ id, data, selected }: NodeProps) => {
+  const { t } = useI18n();
   const types = (data.triggerType as string[]) || (data.triggerType ? [data.triggerType as string] : []);
   let Icon = Zap;
-  let title = 'Gatilho não configurado';
-  let desc = 'Configure na aba lateral';
+  let title = t('bpm.nodes.trigger_not_configured');
+  let desc = t('bpm.nodes.configure_sidebar');
 
   if (types.length === 1) {
     const type = types[0];
-    if (type === 'insert') { title = 'Ao Inserir Registro'; desc = 'Gatilho de Banco'; Icon = PlusCircle; }
-    else if (type === 'update') { title = 'Ao Atualizar Registro'; desc = 'Gatilho de Banco'; Icon = Edit; }
-    else if (type === 'delete') { title = 'Ao Excluir Registro'; desc = 'Gatilho de Banco'; Icon = Trash2; }
-    else if (type === 'manual') { title = 'Ação Manual'; desc = 'Por botão'; Icon = MousePointer2; }
-    else if (type === 'scheduled') { title = 'Agendado'; desc = 'Cron Job'; Icon = Clock; }
+    if (type === 'insert') { title = t('bpm.nodes.on_insert'); desc = t('bpm.nodes.db_trigger'); Icon = PlusCircle; }
+    else if (type === 'update') { title = t('bpm.nodes.on_update'); desc = t('bpm.nodes.db_trigger'); Icon = Edit; }
+    else if (type === 'delete') { title = t('bpm.nodes.on_delete'); desc = t('bpm.nodes.db_trigger'); Icon = Trash2; }
+    else if (type === 'manual') { title = t('bpm.nodes.manual_action'); desc = t('bpm.nodes.by_button'); Icon = MousePointer2; }
+    else if (type === 'scheduled') { title = t('bpm.nodes.scheduled'); desc = t('bpm.nodes.cron_job'); Icon = Clock; }
   } else if (types.length > 1) {
-    title = 'Múltiplos Gatilhos';
-    desc = `${types.length} eventos configurados`;
+    title = t('bpm.nodes.multiple_triggers');
+    desc = t('bpm.nodes.events_configured').replace('{count}', String(types.length));
     Icon = Zap;
   }
 
@@ -65,34 +68,35 @@ export const TriggerNode = memo(({ id, data, selected }: NodeProps) => {
 });
 
 export const ActionNode = memo(({ id, data, selected }: NodeProps) => {
+  const { t } = useI18n();
   const type = data.actionType as string;
   let Icon = Play;
-  let title = 'Ação não configurada';
-  let desc = 'Configure na aba lateral';
+  let title = t('bpm.nodes.action_not_configured');
+  let desc = t('bpm.nodes.configure_sidebar');
 
-  if (type === 'email') { title = 'Enviar E-mail'; desc = 'Notificação'; Icon = Mail; }
+  if (type === 'email') { title = t('bpm.nodes.send_email'); desc = t('bpm.nodes.notification'); Icon = Mail; }
   else if (type === 'update') { 
     const fields = (data.actionFields as any[])?.length || 0;
-    title = 'Atualizar Registro'; 
-    desc = fields > 0 ? `${fields} campo(s)` : 'Ação de Banco'; 
+    title = t('bpm.nodes.update_record'); 
+    desc = fields > 0 ? t('bpm.nodes.fields_count').replace('{count}', String(fields)) : t('bpm.nodes.db_action'); 
     Icon = Edit; 
   }
   else if (type === 'insert') { 
     const fields = (data.actionFields as any[])?.length || 0;
-    title = 'Inserir Registro'; 
-    desc = fields > 0 ? `${fields} campo(s)` : 'Ação de Banco'; 
+    title = t('bpm.nodes.insert_record'); 
+    desc = fields > 0 ? t('bpm.nodes.fields_count').replace('{count}', String(fields)) : t('bpm.nodes.db_action'); 
     Icon = PlusCircle; 
   }
   else if (type === 'delete') { 
     const filters = (data.actionFilters as any[])?.length || 0;
-    title = 'Excluir Registro'; 
-    desc = filters > 0 ? `${filters} filtro(s)` : 'Cuidado: Sem filtros'; 
+    title = t('bpm.nodes.delete_record'); 
+    desc = filters > 0 ? t('bpm.nodes.filters_count').replace('{count}', String(filters)) : t('bpm.nodes.warning_no_filters'); 
     Icon = Trash2; 
   }
   else if (type === 'webhook') { 
     const method = data.webhookMethod as string || 'POST';
-    title = 'Chamada de API'; 
-    desc = `${method} Webhook`; 
+    title = t('bpm.nodes.api_call'); 
+    desc = `${method} ${t('bpm.nodes.webhook')}`; 
     Icon = Webhook; 
   }
 
@@ -119,12 +123,15 @@ export const ActionNode = memo(({ id, data, selected }: NodeProps) => {
 });
 
 export const ConditionNode = memo(({ id, data, selected }: NodeProps) => {
+  const { t } = useI18n();
   const groups = (data.conditionGroups as any[]) || [];
   const totalRules = groups.reduce((acc, g) => acc + (g.rules?.length || 0), 0);
 
   let Icon = GitMerge;
-  let title = totalRules > 0 ? 'Múltiplas Condições' : 'Condição (If/Else)';
-  let desc = totalRules > 0 ? `${totalRules} Regras em ${groups.length} Grupo(s)` : 'Configure a lógica If/Else';
+  let title = totalRules > 0 ? t('bpm.nodes.multiple_triggers') : t('bpm.nodes.condition_ifelse');
+  let desc = totalRules > 0 
+    ? t('bpm.nodes.rules_groups_count').replace('{rules}', String(totalRules)).replace('{groups}', String(groups.length))
+    : t('bpm.nodes.configure_logic');
 
   return (
     <div className={`${nodeStyle} ${selected ? 'border-amber-500 shadow-amber-500/20 ring-2 ring-amber-500/20' : 'border-amber-500/50 shadow-amber-500/10'}`}>
@@ -153,7 +160,7 @@ export const ConditionNode = memo(({ id, data, selected }: NodeProps) => {
         style={{ left: '30%' }}
       >
         <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest">
-          Sim
+          {t('bpm.nodes.yes')}
         </div>
       </Handle>
       
@@ -166,7 +173,7 @@ export const ConditionNode = memo(({ id, data, selected }: NodeProps) => {
         style={{ left: '70%' }}
       >
         <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] font-black text-red-600 dark:text-red-500 uppercase tracking-widest">
-          Não
+          {t('bpm.nodes.no')}
         </div>
       </Handle>
     </div>

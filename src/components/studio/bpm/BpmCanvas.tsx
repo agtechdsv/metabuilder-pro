@@ -31,6 +31,7 @@ import ButtonEdge from './edges/ButtonEdge';
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/components/ui/Toast';
 import { wrapEmailInTemplate, EmailTemplateType } from '@/utils/emailTemplates';
+import { useI18n } from '@/i18n/I18nContext';
 
 const nodeTypes = {
   trigger: TriggerNode,
@@ -106,6 +107,7 @@ function BpmCanvasContent({
   initialModels = [],
   initialViews = []
 }: BpmCanvasProps) {
+  const { t } = useI18n();
   console.log("=== BPM CANVAS INITIAL VIEWS ===", JSON.stringify(initialViews, null, 2));
   const projectId = project?.id;
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -355,7 +357,7 @@ function BpmCanvasContent({
       }
     } catch (err) {
       console.error(err);
-      toast('Erro ao buscar usuários do grupo', 'error');
+      toast(t('bpm.canvas.toasts.get_users_error', 'Erro ao buscar usuários do grupo'), 'error');
     } finally {
       setIsLoadingGroupUsers(false);
     }
@@ -412,7 +414,7 @@ function BpmCanvasContent({
         data: {},
       };
       
-      toast(`Nó ${type} solto no canvas!`, 'success');
+      toast(t('bpm.canvas.toasts.node_dropped', 'Nó {type} solto no canvas!').replace('{type}', type), 'success');
 
       setNodes((nds) => nds.concat(newNode));
     },
@@ -427,7 +429,7 @@ function BpmCanvasContent({
     
     try {
       if (currentWorkflowId === 'new') {
-        const name = prompt('Qual o nome deste novo fluxo?', 'Novo Fluxo');
+        const name = prompt(t('bpm.canvas.prompts.new_flow_name', 'Qual o nome deste novo fluxo?'), t('bpm.canvas.prompts.new_flow_default', 'Novo Fluxo'));
         if (!name) {
           setIsSaving(false);
           return;
@@ -447,7 +449,7 @@ function BpmCanvasContent({
 
         if (error) throw error;
         
-        toast('Rascunho criado com sucesso!', 'success');
+        toast(t('bpm.canvas.toasts.draft_created', 'Rascunho criado com sucesso!'), 'success');
         setWorkflows(prev => [data, ...prev]);
         setCurrentWorkflowId(data.id);
       } else {
@@ -460,13 +462,13 @@ function BpmCanvasContent({
           .eq('id', currentWorkflowId);
 
         if (error) throw error;
-        toast('Rascunho atualizado com sucesso!', 'success');
+        toast(t('bpm.canvas.toasts.draft_updated', 'Rascunho atualizado com sucesso!'), 'success');
         
         setWorkflows(prev => prev.map(w => w.id === currentWorkflowId ? { ...w, draft_flow_data: flow } : w));
       }
     } catch (err: any) {
       console.error(err);
-      toast('Erro ao salvar o rascunho.', 'error');
+      toast(t('bpm.canvas.toasts.save_draft_error', 'Erro ao salvar o rascunho.'), 'error');
     } finally {
       setIsSaving(false);
     }
@@ -476,7 +478,7 @@ function BpmCanvasContent({
     if (!reactFlowInstance || !projectId || !useCaseId) return;
     
     if (currentWorkflowId === 'new') {
-      toast('Salve o fluxo como rascunho antes de publicar.', 'error');
+      toast(t('bpm.canvas.toasts.save_draft_before_publish', 'Salve o fluxo como rascunho antes de publicar.'), 'error');
       return;
     }
 
@@ -518,12 +520,12 @@ function BpmCanvasContent({
         console.error('Erro ao notificar o CLI:', e);
       }
       
-      toast('Fluxo publicado e ativado em Produção!', 'success');
+      toast(t('bpm.canvas.toasts.flow_published', 'Fluxo publicado e ativado em Produção!'), 'success');
       
       setWorkflows(prev => prev.map(w => w.id === currentWorkflowId ? { ...w, flow_data: flow, draft_flow_data: null, is_active: true } : w));
     } catch (err: any) {
       console.error(err);
-      toast('Erro ao publicar o fluxo.', 'error');
+      toast(t('bpm.canvas.toasts.publish_flow_error', 'Erro ao publicar o fluxo.'), 'error');
     } finally {
       setIsPublishing(false);
     }
@@ -533,7 +535,7 @@ function BpmCanvasContent({
     const wf = workflows.find(w => w.id === currentWorkflowId);
     if (!wf) return;
     
-    const newName = window.prompt("Nome do fluxo:", wf.name);
+    const newName = window.prompt(t('bpm.canvas.prompts.flow_name', 'Nome do fluxo:'), wf.name);
     if (!newName || newName === wf.name) return;
 
     try {
@@ -544,11 +546,11 @@ function BpmCanvasContent({
 
       if (error) throw error;
       
-      toast('Fluxo renomeado!', 'success');
+      toast(t('bpm.canvas.toasts.flow_renamed', 'Fluxo renomeado!'), 'success');
       setWorkflows(prev => prev.map(w => w.id === currentWorkflowId ? { ...w, name: newName } : w));
     } catch (err: any) {
       console.error(err);
-      toast('Erro ao renomear.', 'error');
+      toast(t('bpm.canvas.toasts.rename_error', 'Erro ao renomear.'), 'error');
     }
   };
 
@@ -567,12 +569,12 @@ function BpmCanvasContent({
         
       if (error) throw error;
       
-      toast('Fluxo excluído com sucesso!', 'success');
+      toast(t('bpm.canvas.toasts.flow_deleted', 'Fluxo excluído com sucesso!'), 'success');
       setWorkflows(prev => prev.filter(w => w.id !== currentWorkflowId));
       setCurrentWorkflowId('new');
     } catch (err: any) {
       console.error(err);
-      toast('Erro ao excluir o fluxo.', 'error');
+      toast(t('bpm.canvas.toasts.delete_flow_error', 'Erro ao excluir o fluxo.'), 'error');
     }
   };
 
@@ -592,7 +594,7 @@ function BpmCanvasContent({
     return (
       <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-xl p-3 shadow-sm mt-4">
         <div className="flex items-center justify-between mb-3 pb-2 border-b border-red-100 dark:border-red-900/50">
-          <span className="text-[9px] font-bold text-red-500 uppercase tracking-widest">Filtros (Quais registros?)</span>
+          <span className="text-[9px] font-bold text-red-500 uppercase tracking-widest">{t('bpm.canvas.filters_title')}</span>
           <button
             onClick={() => {
               updateNodeData(selectedNode.id, { 
@@ -601,13 +603,13 @@ function BpmCanvasContent({
             }}
             className="text-[9px] bg-red-500 text-white px-2 py-1 rounded font-bold uppercase tracking-widest hover:bg-red-600 transition-colors"
           >
-            + Filtro
+            {t('bpm.canvas.add_filter')}
           </button>
         </div>
 
         {actionFilters.length === 0 && (
           <div className="text-[9px] text-red-400 text-center py-2 italic font-semibold">
-            CUIDADO: Nenhum filtro definido. Isso afetará TODOS os registros.
+            {t('bpm.canvas.warning_no_filters')}
           </div>
         )}
 
@@ -636,7 +638,7 @@ function BpmCanvasContent({
                   }}
                   className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-red-500"
                 >
-                  <option value="">Campo...</option>
+                  <option value="">{t('bpm.canvas.field_placeholder')}</option>
                   {dbFields.filter(f => f.model_id === selectedNode.data?.actionModelId).map(f => (
                     <option key={f.id} value={f.db_column_name || f.name}>{f.display_name || f.db_column_name || f.name}</option>
                   ))}
@@ -661,7 +663,7 @@ function BpmCanvasContent({
               <div className="flex gap-1">
                 <input 
                   type="text" 
-                  placeholder="Ex: {{trigger.id}} ou valor fixo"
+                  placeholder={t('bpm.canvas.value_hint_placeholder')}
                   value={filt.value || ''} 
                   onChange={(e) => {
                     const newFilters = [...actionFilters];
@@ -681,9 +683,9 @@ function BpmCanvasContent({
                   }}
                   className="w-8 shrink-0 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 text-transparent rounded px-1 py-1 focus:ring-1 focus:ring-red-500 cursor-pointer text-[10px] appearance-none"
                   style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%23ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
-                  title="Inserir Variável"
+                  title={t('bpm.canvas.insert_variable')}
                 >
-                  <option value="" className="text-neutral-900 dark:text-neutral-100">+ Var</option>
+                  <option value="" className="text-neutral-900 dark:text-neutral-100">{t('bpm.canvas.plus_var')}</option>
                   {[...dbModels].map(m => {
                     const fields = dbFields.filter(f => f.model_id === m.id);
                     if (fields.length === 0) return null;
@@ -713,7 +715,7 @@ function BpmCanvasContent({
           <button 
             onClick={() => router.back()}
             className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-            title="Voltar"
+            title={t('bpm.canvas.back')}
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -733,7 +735,7 @@ function BpmCanvasContent({
               onChange={(e) => setCurrentWorkflowId(e.target.value)}
               className="bg-transparent border-none outline-none text-xs font-bold text-neutral-700 dark:text-neutral-300 px-3 py-1.5 cursor-pointer min-w-[200px] max-w-[400px] truncate"
             >
-              <option value="new">--- Criar Novo Fluxo ---</option>
+              <option value="new">{t('bpm.canvas.create_new_flow')}</option>
               {workflows.map(w => (
                 <option key={w.id} value={w.id}>{w.name}</option>
               ))}
@@ -745,14 +747,14 @@ function BpmCanvasContent({
               <button 
                 onClick={handleRename}
                 className="flex items-center gap-2 px-3 py-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-400 rounded-xl text-xs font-bold transition-all"
-                title="Renomear Fluxo"
+                title={t('bpm.canvas.rename_flow')}
               >
                 <Edit2 className="w-4 h-4" />
               </button>
               <button 
                 onClick={handleDelete}
                 className="flex items-center gap-2 px-3 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl text-xs font-bold transition-all"
-                title="Excluir Fluxo"
+                title={t('bpm.canvas.delete_flow')}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -765,7 +767,7 @@ function BpmCanvasContent({
             className="flex items-center gap-2 px-4 py-2 bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Salvar Rascunho
+            {t('bpm.canvas.save_draft')}
           </button>
           <button 
             onClick={handlePublish}
@@ -773,7 +775,7 @@ function BpmCanvasContent({
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50"
           >
             {isPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            Publicar
+            {t('bpm.canvas.publish')}
           </button>
         </div>
       </div>
@@ -818,11 +820,11 @@ function BpmCanvasContent({
             <Panel position="top-right" className="m-4 z-50">
               <button
                 onClick={handleAutoAlign}
-                title="Reorganizar e Alinhar Tudo"
+                title={t('bpm.canvas.auto_align_title')}
                 className="px-4 py-3 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md rounded-2xl border border-indigo-200 dark:border-indigo-900/50 shadow-xl flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all hover:scale-105 active:scale-95"
               >
                 <Wand2 className="w-5 h-5" />
-                Auto Align
+                {t('bpm.canvas.auto_align')}
               </button>
             </Panel>
           </ReactFlow>
@@ -830,7 +832,7 @@ function BpmCanvasContent({
 
         <div className={`w-96 h-full bg-white dark:bg-neutral-900 border-l border-neutral-200 dark:border-neutral-800 transition-all duration-300 absolute right-0 top-0 z-40 flex flex-col shadow-2xl ${selectedNodeId ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800">
-            <h3 className="font-bold text-sm tracking-tight text-neutral-900 dark:text-white">Propriedades do Nó</h3>
+            <h3 className="font-bold text-sm tracking-tight text-neutral-900 dark:text-white">{t('bpm.canvas.node_properties')}</h3>
             <button onClick={() => setSelectedNodeId(null)} className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300">
               <X className="w-5 h-5" />
             </button>
@@ -840,10 +842,10 @@ function BpmCanvasContent({
             {selectedNode && (
               <>
                 <div>
-                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-2">Rótulo (Opcional)</label>
+                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-2">{t('bpm.canvas.label_optional')}</label>
                   <input 
                     type="text" 
-                    placeholder="Deixe em branco para auto"
+                    placeholder={t('bpm.canvas.leave_blank_auto')}
                     value={(selectedNode.data?.label as string) || ''} 
                     onChange={(e) => updateNodeData(selectedNode.id, { label: e.target.value })}
                     className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
@@ -858,17 +860,17 @@ function BpmCanvasContent({
                   return (
                   <div className="space-y-4 p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl">
                     <h4 className="text-xs font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest flex items-center gap-2">
-                      Configuração do Gatilho
+                      {t('bpm.canvas.trigger_config')}
                     </h4>
                     
                     <div>
-                      <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-2">Eventos (Pode selecionar mais de um)</label>
+                      <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-2">{t('bpm.canvas.events_multi')}</label>
                       <div className="space-y-2">
                         {[
-                          { id: 'insert', label: 'Ao Inserir Registro' },
-                          { id: 'update', label: 'Ao Atualizar Registro' },
-                          { id: 'delete', label: 'Ao Excluir Registro' },
-                          { id: 'scheduled', label: 'Agendado (Cron Job)' }
+                          { id: 'insert', label: t('bpm.nodes.on_insert') },
+                          { id: 'update', label: t('bpm.nodes.on_update') },
+                          { id: 'delete', label: t('bpm.nodes.on_delete') },
+                          { id: 'scheduled', label: t('bpm.canvas.scheduled_cron') }
                         ].map(evt => {
                           const isChecked = triggerTypes.includes(evt.id);
                           return (
@@ -897,13 +899,13 @@ function BpmCanvasContent({
 
                     {requiresModel && (
                       <div>
-                        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Tabela Alvo</label>
+                        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.target_table')}</label>
                         <select 
                           value={(selectedNode.data?.triggerModelId as string) || ''} 
                           onChange={(e) => updateNodeData(selectedNode.id, { triggerModelId: e.target.value, triggerField: '' })}
                           className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500"
                         >
-                          <option value="">Selecione a tabela...</option>
+                          <option value="">{t('bpm.canvas.select_table')}</option>
                           {dbModels.map(m => (
                             <option key={m.id} value={m.id}>{m.display_name || m.db_table_name || m.name}</option>
                           ))}
@@ -915,7 +917,7 @@ function BpmCanvasContent({
                       <>
                         <div>
                           <div className="flex items-center justify-between mb-1">
-                            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-0">Restringir a um Campo?</label>
+                            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-0">{t('bpm.canvas.restrict_to_field')}</label>
                             <input 
                               type="checkbox" 
                               checked={!!selectedNode.data?.triggerSpecificField}
@@ -928,14 +930,14 @@ function BpmCanvasContent({
                         {selectedNode.data?.triggerSpecificField && (
                           <div className="space-y-4 pt-2 border-t border-emerald-500/20 mt-4">
                             <div>
-                              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Qual Campo?</label>
+                              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.which_field')}</label>
                               <select 
                                 value={(selectedNode.data?.triggerField as string) || ''} 
                                 onChange={(e) => updateNodeData(selectedNode.id, { triggerField: e.target.value })}
                                 disabled={!selectedNode.data?.triggerModelId}
                                 className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500 disabled:opacity-50"
                               >
-                                <option value="">Selecione o campo...</option>
+                                <option value="">{t('bpm.canvas.select_field')}</option>
                                 {dbFields
                                   .filter(f => f.model_id === selectedNode.data?.triggerModelId)
                                   .map(f => (
@@ -946,20 +948,20 @@ function BpmCanvasContent({
                             
                             <div className="grid grid-cols-2 gap-2">
                               <div>
-                                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">De (Opcional)</label>
+                                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.from_optional')}</label>
                                 <input 
                                   type="text" 
-                                  placeholder="Qualquer"
+                                  placeholder={t('bpm.canvas.any')}
                                   value={(selectedNode.data?.triggerFromValue as string) || ''} 
                                   onChange={(e) => updateNodeData(selectedNode.id, { triggerFromValue: e.target.value })}
                                   className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500"
                                 />
                               </div>
                               <div>
-                                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Para (Opcional)</label>
+                                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.to_optional')}</label>
                                 <input 
                                   type="text" 
-                                  placeholder="Qualquer"
+                                  placeholder={t('bpm.canvas.any')}
                                   value={(selectedNode.data?.triggerToValue as string) || ''} 
                                   onChange={(e) => updateNodeData(selectedNode.id, { triggerToValue: e.target.value })}
                                   className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500"
@@ -987,19 +989,19 @@ function BpmCanvasContent({
                               : (act.context ? [act.context] : ['row']);
                             
                             const contextLabels = activeContexts.map(c => {
-                              if (c === 'row') return 'Ação de Linha';
-                              if (c === 'bulk') return 'Ação Global';
-                              if (c === 'master_top') return 'Global (Mestre)';
-                              if (c === 'detail_top') return 'Global (Detalhe)';
-                              if (c === 'detail_row') return 'Linha (Detalhe)';
-                              if (c === 'form') return 'Formulário';
+                              if (c === 'row') return t('wizard.actions.contexts.row');
+                              if (c === 'bulk') return t('wizard.actions.contexts.bulk');
+                              if (c === 'master_top') return t('wizard.actions.contexts.master_top');
+                              if (c === 'detail_top') return t('wizard.actions.contexts.detail_top');
+                              if (c === 'detail_row') return t('wizard.actions.contexts.detail_row');
+                              if (c === 'form') return t('wizard.actions.contexts.field_group');
                               return c;
                             }).join(', ');
 
                             return {
                               id: act.id || act.label,
-                              name: act.label || 'Ação Sem Nome',
-                              context: contextLabels || 'Ação Global',
+                              name: act.label || t('bpm.canvas.action_no_name', 'Ação Sem Nome'),
+                              context: contextLabels || t('bpm.canvas.action_global', 'Ação Global'),
                               icon: act.icon || 'Zap',
                               color: act.color || 'indigo',
                               linked_workflows: act.linked_bpm_workflows || []
@@ -1009,7 +1011,7 @@ function BpmCanvasContent({
 
                       const toggleCustomAction = async (viewId: string, actId: string) => {
                         if (!currentWorkflowId || currentWorkflowId === 'new') {
-                          toast('Salve o fluxo primeiro antes de vincular botões.', 'error');
+                          toast(t('bpm.canvas.toasts.save_flow_first', 'Salve o fluxo primeiro antes de vincular botões.'), 'error');
                           return;
                         }
 
@@ -1047,25 +1049,25 @@ function BpmCanvasContent({
                             .eq('id', viewId);
                           
                           if (error) throw error;
-                          toast(isLinked ? 'Botão desvinculado do fluxo!' : 'Botão vinculado ao fluxo!', 'success');
+                          toast(isLinked ? t('bpm.canvas.toasts.button_unlinked', 'Botão desvinculado do fluxo!') : t('bpm.canvas.toasts.button_linked', 'Botão vinculado ao fluxo!'), 'success');
                         } catch (err: any) {
                           // Rollback visual em caso de erro
                           setLocalViews(localViews);
-                          toast('Erro ao vincular botão: ' + err.message, 'error');
+                          toast(t('bpm.canvas.toasts.link_button_error', 'Erro ao vincular botão: ') + err.message, 'error');
                         }
                       };
 
                       return (
                       <div className="space-y-4 pt-4 border-t border-emerald-500/20 mt-4">
-                        <h5 className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Ações Customizadas Acionadoras</h5>
+                        <h5 className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">{t('bpm.canvas.trigger_custom_actions')}</h5>
                         <p className="text-[9px] text-neutral-500 leading-relaxed mb-4">
-                          Selecione quais botões da interface (criados no Studio) irão disparar este fluxo ao serem clicados.
+                          {t('bpm.canvas.trigger_custom_actions_desc')}
                         </p>
                         
                         <div className="space-y-3">
                           {useCasesWithActions.length === 0 && (
                             <div className="text-center py-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-lg border border-neutral-100 dark:border-neutral-800">
-                              <p className="text-[10px] text-neutral-500">Nenhuma ação customizada encontrada nos Casos de Uso deste projeto.</p>
+                              <p className="text-[10px] text-neutral-500">{t('bpm.canvas.no_custom_actions')}</p>
                             </div>
                           )}
 
@@ -1135,12 +1137,12 @@ function BpmCanvasContent({
                       return (
                       <div className="space-y-4 pt-4 border-t border-emerald-500/20 mt-4">
                         <div className="flex items-center justify-between mb-2">
-                          <h5 className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Configuração de Agendamento</h5>
+                          <h5 className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{t('bpm.canvas.schedule_config')}</h5>
                           <button
                             onClick={addSchedule}
                             className="text-[9px] bg-emerald-500 text-white px-2 py-1 rounded font-bold uppercase tracking-widest hover:bg-emerald-600 transition-colors shadow-sm shadow-emerald-500/30"
                           >
-                            + Agendamento
+                            {t('bpm.canvas.add_schedule')}
                           </button>
                         </div>
 
@@ -1151,7 +1153,7 @@ function BpmCanvasContent({
                                 <button
                                   onClick={() => removeSchedule(sched.id)}
                                   className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover/sched:opacity-100 transition-opacity shadow z-10"
-                                  title="Remover Agendamento"
+                                  title={t('bpm.canvas.remove_schedule')}
                                 >
                                   <X className="w-3 h-3" />
                                 </button>
@@ -1162,27 +1164,27 @@ function BpmCanvasContent({
                                   onClick={() => updateSchedule(sched.id, { type: 'recurring' })}
                                   className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors ${sched.type === 'recurring' ? 'bg-white dark:bg-neutral-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}
                                 >
-                                  Recorrente
+                                  {t('bpm.canvas.recurring')}
                                 </button>
                                 <button
                                   onClick={() => updateSchedule(sched.id, { type: 'once' })}
                                   className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors ${sched.type === 'once' ? 'bg-white dark:bg-neutral-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}
                                 >
-                                  Apenas uma Vez
+                                  {t('bpm.canvas.once')}
                                 </button>
                               </div>
 
                               <div className="mb-3">
-                                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-2">Dias da Semana</label>
+                                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-2">{t('bpm.canvas.days_of_week')}</label>
                                 <div className="flex flex-wrap gap-2">
                                   {[
-                                    { val: '0', label: 'Dom' },
-                                    { val: '1', label: 'Seg' },
-                                    { val: '2', label: 'Ter' },
-                                    { val: '3', label: 'Qua' },
-                                    { val: '4', label: 'Qui' },
-                                    { val: '5', label: 'Sex' },
-                                    { val: '6', label: 'Sáb' },
+                                    { val: '0', label: t('bpm.canvas.days.sunday') },
+                                    { val: '1', label: t('bpm.canvas.days.monday') },
+                                    { val: '2', label: t('bpm.canvas.days.tuesday') },
+                                    { val: '3', label: t('bpm.canvas.days.wednesday') },
+                                    { val: '4', label: t('bpm.canvas.days.thursday') },
+                                    { val: '5', label: t('bpm.canvas.days.friday') },
+                                    { val: '6', label: t('bpm.canvas.days.saturday') },
                                   ].map(day => {
                                     const isSelected = sched.days.includes(day.val);
                                     return (
@@ -1202,12 +1204,12 @@ function BpmCanvasContent({
                                   })}
                                 </div>
                                 {sched.days.length === 0 && (
-                                  <p className="text-[9px] text-neutral-400 mt-2 italic">* Executa todos os dias.</p>
+                                  <p className="text-[9px] text-neutral-400 mt-2 italic">{t('bpm.canvas.executes_every_day')}</p>
                                 )}
                               </div>
 
                               <div className="mb-2">
-                                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Horário (HH:mm)</label>
+                                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.time_hh_mm')}</label>
                                 <input 
                                   type="time" 
                                   value={sched.time} 
@@ -1218,7 +1220,7 @@ function BpmCanvasContent({
 
                               {sched.type === 'once' && (
                                 <div className="pt-3 mt-3 border-t border-emerald-100 dark:border-emerald-900/30">
-                                  <label className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest block mb-1">Ou defina Data e Hora Específica</label>
+                                  <label className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest block mb-1">{t('bpm.canvas.or_specific_datetime')}</label>
                                   <input 
                                     type="datetime-local" 
                                     value={sched.dateTime} 
@@ -1243,7 +1245,7 @@ function BpmCanvasContent({
                   <div className="space-y-4 p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl">
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-xs font-black text-amber-600 dark:text-amber-500 uppercase tracking-widest flex items-center gap-2">
-                        Lógica If / Else
+                        {t('bpm.canvas.logic_ifelse_title')}
                       </h4>
                       <button
                         onClick={() => {
@@ -1254,14 +1256,15 @@ function BpmCanvasContent({
                         }}
                         className="text-[9px] bg-amber-500 text-white px-2 py-1 rounded font-bold uppercase tracking-widest hover:bg-amber-600 transition-colors"
                       >
-                        + Grupo
+                        {t('bpm.canvas.add_group')}
                       </button>
                     </div>
 
                     {groups.length === 0 && (
-                      <div className="text-[10px] text-neutral-500 text-center py-6 border border-dashed border-amber-500/30 rounded-xl">
-                        Nenhuma condição definida.<br/>Clique em <strong>+ GRUPO</strong> para começar.
-                      </div>
+                      <div 
+                        className="text-[10px] text-neutral-500 text-center py-6 border border-dashed border-amber-500/30 rounded-xl"
+                        dangerouslySetInnerHTML={{ __html: t('bpm.canvas.no_conditions') }}
+                      />
                     )}
 
                     <div className="space-y-4">
@@ -1278,8 +1281,8 @@ function BpmCanvasContent({
                                 }}
                                 className="bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-[9px] font-bold uppercase rounded px-2 py-0.5 border border-amber-300 dark:border-amber-700 focus:ring-0 cursor-pointer"
                               >
-                                <option value="AND">E (AND)</option>
-                                <option value="OR">OU (OR)</option>
+                                <option value="AND">{t('bpm.canvas.and_gate')}</option>
+                                <option value="OR">{t('bpm.canvas.or_gate')}</option>
                               </select>
                             </div>
                           )}
@@ -1287,7 +1290,7 @@ function BpmCanvasContent({
                           <div className="bg-white dark:bg-neutral-900 border border-amber-200 dark:border-amber-900 rounded-xl p-3 shadow-sm">
                             <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-100 dark:border-neutral-800">
                               <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest">Regras devem ser:</span>
+                                <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest">{t('bpm.canvas.rules_must_be')}</span>
                                 <select
                                   value={group.logic}
                                   onChange={(e) => {
@@ -1297,8 +1300,8 @@ function BpmCanvasContent({
                                   }}
                                   className="bg-transparent border-none text-[10px] font-black text-amber-600 dark:text-amber-500 p-0 pr-4 focus:ring-0 cursor-pointer"
                                 >
-                                  <option value="AND">Todas (AND)</option>
-                                  <option value="OR">Qualquer (OR)</option>
+                                  <option value="AND">{t('bpm.canvas.all_and')}</option>
+                                  <option value="OR">{t('bpm.canvas.any_or')}</option>
                                 </select>
                               </div>
                               <div className="flex items-center gap-1">
@@ -1309,7 +1312,7 @@ function BpmCanvasContent({
                                     updateNodeData(selectedNode.id, { conditionGroups: newGroups });
                                   }}
                                   className="text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 p-1.5 rounded transition-colors"
-                                  title="Adicionar Regra"
+                                  title={t('bpm.canvas.add_rule')}
                                 >
                                   <Plus className="w-3.5 h-3.5" />
                                 </button>
@@ -1319,7 +1322,7 @@ function BpmCanvasContent({
                                     updateNodeData(selectedNode.id, { conditionGroups: newGroups });
                                   }}
                                   className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 p-1.5 rounded transition-colors"
-                                  title="Excluir Grupo"
+                                  title={t('bpm.canvas.delete_group')}
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -1329,15 +1332,15 @@ function BpmCanvasContent({
                             <div className="space-y-3">
                               {(!group.rules || group.rules.length === 0) && (
                                 <div className="text-[10px] text-neutral-400 text-center py-2">
-                                  Nenhuma regra neste grupo.
+                                  {t('bpm.canvas.no_rules_in_group')}
                                 </div>
                               )}
                               
                               {group.rules?.map((rule: any, rIndex: number) => (
                                 <div key={rule.id} className="relative">
                                   {rIndex > 0 && (
-                                    <div className="absolute -top-2.5 left-3 text-[8px] font-bold text-amber-500 bg-white dark:bg-neutral-900 px-1 z-10">
-                                      {group.logic === 'AND' ? 'E' : 'OU'}
+                                    <div className="absolute -top-2.5 left-3 text-[8px] font-bold text-amber-500 bg-white dark:bg-neutral-950 px-1 z-10">
+                                      {group.logic === 'AND' ? t('bpm.canvas.and_gate') : t('bpm.canvas.or_gate')}
                                     </div>
                                   )}
                                   <div className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg p-2 pt-3 space-y-2 relative group/rule">
@@ -1364,7 +1367,7 @@ function BpmCanvasContent({
                                         }}
                                         className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1.5 text-[10px] focus:ring-1 focus:ring-amber-500"
                                       >
-                                        <option value="">Tabela...</option>
+                                        <option value="">{t('bpm.canvas.table_select')}</option>
                                         {dbModels.map(m => <option key={m.id} value={m.id}>{m.display_name || m.db_table_name || m.name}</option>)}
                                       </select>
 
@@ -1378,7 +1381,7 @@ function BpmCanvasContent({
                                         disabled={!rule.modelId}
                                         className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1.5 text-[10px] focus:ring-1 focus:ring-amber-500 disabled:opacity-50"
                                       >
-                                        <option value="">Campo...</option>
+                                        <option value="">{t('bpm.canvas.field_select')}</option>
                                         {dbFields.filter(f => f.model_id === rule.modelId).map(f => (
                                           <option key={f.id} value={f.db_column_name || f.name}>{f.display_name || f.db_column_name || f.name}</option>
                                         ))}
@@ -1395,18 +1398,18 @@ function BpmCanvasContent({
                                         }}
                                         className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1.5 text-[10px] focus:ring-1 focus:ring-amber-500"
                                       >
-                                        <option value="==">== (Igual)</option>
-                                        <option value="!=">!= (Dif)</option>
-                                        <option value=">">&gt; (Maior)</option>
-                                        <option value=">=">&gt;=</option>
-                                        <option value="<">&lt; (Menor)</option>
-                                        <option value="<=">&lt;=</option>
-                                        <option value="contains">Contém</option>
+                                        <option value="==">{t('bpm.canvas.op_equal')}</option>
+                                        <option value="!=">{t('bpm.canvas.op_not_equal')}</option>
+                                        <option value=">">{t('bpm.canvas.op_greater')}</option>
+                                        <option value=">=">{t('bpm.canvas.op_greater_equal')}</option>
+                                        <option value="<">{t('bpm.canvas.op_less')}</option>
+                                        <option value="<=">{t('bpm.canvas.op_less_equal')}</option>
+                                        <option value="contains">{t('bpm.canvas.op_contains')}</option>
                                       </select>
 
                                       <div className="space-y-2">
                                         <div className="flex items-center gap-2 justify-end mb-1">
-                                          <span className="text-[9px] text-neutral-400">Usar Enum?</span>
+                                          <span className="text-[9px] text-neutral-400">{t('bpm.canvas.use_enum')}</span>
                                           <input 
                                             type="checkbox" 
                                             checked={!!rule.useEnum}
@@ -1477,26 +1480,25 @@ function BpmCanvasContent({
                     </div>
                   </div>
                 )})()}
-                
-                {selectedNode.type === 'action' && (
+                               {selectedNode.type === 'action' && (
                   <div className="space-y-4 p-4 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl">
                     <h4 className="text-xs font-black text-indigo-600 dark:text-indigo-500 uppercase tracking-widest flex items-center gap-2">
-                      Configuração da Ação
+                      {t('bpm.canvas.action_config')}
                     </h4>
 
                     <div>
-                      <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Tipo de Ação</label>
+                      <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.action_type')}</label>
                       <select 
                         value={(selectedNode.data?.actionType as string) || ''} 
                         onChange={(e) => updateNodeData(selectedNode.id, { actionType: e.target.value })}
                         className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
                       >
-                        <option value="">Selecione a ação...</option>
-                        <option value="insert">Inserir Registro</option>
-                        <option value="update">Atualizar Registro</option>
-                        <option value="delete">Excluir Registro</option>
-                        <option value="email">Enviar E-mail</option>
-                        <option value="webhook">Webhook (Chamada de API)</option>
+                        <option value="">{t('bpm.canvas.select_action')}</option>
+                        <option value="insert">{t('bpm.canvas.insert_record')}</option>
+                        <option value="update">{t('bpm.canvas.update_record')}</option>
+                        <option value="delete">{t('bpm.canvas.delete_record')}</option>
+                        <option value="email">{t('bpm.canvas.send_email')}</option>
+                        <option value="webhook">{t('bpm.canvas.webhook_api_call')}</option>
                       </select>
                     </div>
 
@@ -1507,13 +1509,13 @@ function BpmCanvasContent({
                       return (
                       <div className="space-y-4 pt-4 border-t border-indigo-500/20">
                         <div>
-                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Tabela Alvo</label>
+                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.target_table')}</label>
                           <select 
                             value={(selectedNode.data?.actionModelId as string) || ''} 
                             onChange={(e) => updateNodeData(selectedNode.id, { actionModelId: e.target.value, actionFields: [], actionFilters: [] })}
                             className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
                           >
-                            <option value="">Selecione uma tabela...</option>
+                            <option value="">{t('bpm.canvas.select_table_option')}</option>
                             {dbModels.map(m => (
                               <option key={m.id} value={m.id}>{m.display_name || m.db_table_name || m.name}</option>
                             ))}
@@ -1524,7 +1526,11 @@ function BpmCanvasContent({
                         {['insert', 'update'].includes(selectedNode.data?.actionType as string) && !!selectedNode.data?.actionModelId && (
                           <div className="bg-white dark:bg-neutral-900 border border-indigo-200 dark:border-indigo-900 rounded-xl p-3 shadow-sm mt-4">
                             <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-100 dark:border-neutral-800">
-                              <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest">Campos para {selectedNode.data?.actionType === 'insert' ? 'Inserir' : 'Atualizar'}</span>
+                              <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest">
+                                {selectedNode.data?.actionType === 'insert' 
+                                  ? t('bpm.canvas.fields_to_insert') 
+                                  : t('bpm.canvas.fields_to_update')}
+                              </span>
                               <button
                                 onClick={() => {
                                   updateNodeData(selectedNode.id, { 
@@ -1533,13 +1539,13 @@ function BpmCanvasContent({
                                 }}
                                 className="text-[9px] bg-indigo-500 text-white px-2 py-1 rounded font-bold uppercase tracking-widest hover:bg-indigo-600 transition-colors"
                               >
-                                + Campo
+                                {t('bpm.canvas.add_field')}
                               </button>
                             </div>
 
                             {actionFields.length === 0 && (
                               <div className="text-[9px] text-neutral-400 text-center py-2 italic">
-                                Nenhum campo definido.
+                                {t('bpm.canvas.no_fields_defined')}
                               </div>
                             )}
 
@@ -1568,7 +1574,7 @@ function BpmCanvasContent({
                                       }}
                                       className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-indigo-500"
                                     >
-                                      <option value="">Selecione o campo...</option>
+                                      <option value="">{t('bpm.canvas.select_field_option')}</option>
                                       {dbFields.filter(f => f.model_id === selectedNode.data?.actionModelId).map(f => (
                                         <option key={f.id} value={f.db_column_name || f.name}>{f.display_name || f.db_column_name || f.name}</option>
                                       ))}
@@ -1576,7 +1582,7 @@ function BpmCanvasContent({
                                   </div>
 
                                   <div className="flex items-center justify-between mb-1">
-                                    <span className="text-[9px] text-neutral-400">Usar Enum?</span>
+                                    <span className="text-[9px] text-neutral-400">{t('bpm.canvas.use_enum')}</span>
                                     <input 
                                       type="checkbox" 
                                       checked={!!fld.useEnum}
@@ -1601,7 +1607,7 @@ function BpmCanvasContent({
                                         }}
                                         className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-indigo-500"
                                       >
-                                        <option value="">Enum...</option>
+                                        <option value="">{t('bpm.canvas.enum_select_option')}</option>
                                         {enums.map(en => <option key={en.id} value={en.id}>{en.name}</option>)}
                                       </select>
                                       
@@ -1615,7 +1621,7 @@ function BpmCanvasContent({
                                           }}
                                           className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-indigo-500"
                                         >
-                                          <option value="">Valor...</option>
+                                          <option value="">{t('bpm.canvas.value_select_option')}</option>
                                           {enums.find(e => e.id === fld.enumId)?.values?.map((v: any) => (
                                             <option key={v.value} value={v.value}>{v.description ? `${String(v.value)} - ${String(v.description)}` : String(v.value)}</option>
                                           ))}
@@ -1626,7 +1632,7 @@ function BpmCanvasContent({
                                     <div className="flex gap-1">
                                       <input 
                                         type="text" 
-                                        placeholder="Ex: {{trigger.id}} ou fixo"
+                                        placeholder={t('bpm.canvas.field_value_placeholder')}
                                         value={fld.value || ''} 
                                         onChange={(e) => {
                                           const newFields = [...actionFields];
@@ -1646,9 +1652,9 @@ function BpmCanvasContent({
                                         }}
                                         className="w-8 shrink-0 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-transparent rounded px-1 py-1 focus:ring-1 focus:ring-indigo-500 cursor-pointer text-[10px] appearance-none"
                                         style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%236366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
-                                        title="Inserir Variável"
+                                        title={t('bpm.canvas.insert_variable')}
                                       >
-                                        <option value="" className="text-neutral-900 dark:text-neutral-100">+ Var</option>
+                                        <option value="" className="text-neutral-900 dark:text-neutral-100">{t('bpm.canvas.plus_var')}</option>
                                         {[...dbModels].map(m => {
                                           const fields = dbFields.filter(f => f.model_id === m.id);
                                           if (fields.length === 0) return null;
@@ -1680,19 +1686,19 @@ function BpmCanvasContent({
                     {selectedNode.data?.actionType === 'email' && (
                       <div className="space-y-4 pt-4 border-t border-indigo-500/20">
                         <div>
-                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-2">Destinatários</label>
+                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-2">{t('bpm.canvas.recipients')}</label>
                           <div className="flex bg-neutral-100 dark:bg-neutral-800 p-1 rounded-lg">
                             <button
                               onClick={() => updateNodeData(selectedNode.id, { emailRecipientType: 'system' })}
                               className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors ${(!selectedNode.data?.emailRecipientType || selectedNode.data?.emailRecipientType === 'system') ? 'bg-white dark:bg-neutral-700 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
                             >
-                              Grupos / Usuários
+                              {t('bpm.canvas.groups_users')}
                             </button>
                             <button
                               onClick={() => updateNodeData(selectedNode.id, { emailRecipientType: 'table' })}
                               className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors ${selectedNode.data?.emailRecipientType === 'table' ? 'bg-white dark:bg-neutral-700 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
                             >
-                              Tabela Dinâmica
+                              {t('bpm.canvas.dynamic_table')}
                             </button>
                           </div>
                         </div>
@@ -1700,8 +1706,8 @@ function BpmCanvasContent({
                         {(!selectedNode.data?.emailRecipientType || selectedNode.data?.emailRecipientType === 'system') && (
                           <div className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-xl p-3 space-y-3">
                             <div>
-                              <label className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest block mb-1">Enviar para Grupos de Acesso</label>
-                              <div className="text-[10px] text-neutral-500 mb-2 leading-tight">Selecione os grupos de acesso. O e-mail será enviado a todos os usuários pertencentes a eles.</div>
+                              <label className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest block mb-1">{t('bpm.canvas.send_to_access_groups')}</label>
+                              <div className="text-[10px] text-neutral-500 mb-2 leading-tight">{t('bpm.canvas.send_to_access_groups_desc')}</div>
                               <div className="flex flex-wrap gap-2">
                                 {roles.length > 0 ? roles.map(grupo => {
                                   const currentGroupsUsers: any = selectedNode.data?.emailGroupsUsers || {};
@@ -1710,7 +1716,7 @@ function BpmCanvasContent({
                                   
                                   let statusText = '';
                                   if (isSelected) {
-                                    statusText = selection === 'all' ? '(Todos)' : `(${selection.length} sel.)`;
+                                    statusText = selection === 'all' ? `(${t('bpm.canvas.send_to_all')})` : `(${selection.length} sel.)`;
                                   }
 
                                   return (
@@ -1723,15 +1729,15 @@ function BpmCanvasContent({
                                       {statusText && <span className={isSelected ? 'text-indigo-200 font-normal' : 'text-neutral-400 font-normal'}>{statusText}</span>}
                                     </button>
                                   );
-                                }) : <span className="text-[10px] text-neutral-400">Nenhum grupo encontrado</span>}
+                                }) : <span className="text-[10px] text-neutral-400">{t('bpm.canvas.no_groups_found', 'Nenhum grupo encontrado')}</span>}
                               </div>
                             </div>
                             
                             <div>
-                              <label className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest block mb-1 mt-4">E-mails/IDs de Usuários Específicos</label>
+                              <label className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest block mb-1 mt-4">{t('bpm.canvas.specific_emails')}</label>
                               <input 
                                 type="text"
-                                placeholder="Ex: admin@empresa.com, {{trigger.user_id}}"
+                                placeholder={t('bpm.canvas.specific_emails_placeholder')}
                                 value={(selectedNode.data?.emailSpecificUsers as string) || ''}
                                 onChange={(e) => updateNodeData(selectedNode.id, { emailSpecificUsers: e.target.value })}
                                 className="w-full bg-white dark:bg-neutral-900 border border-indigo-200 dark:border-indigo-900/50 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
@@ -1743,13 +1749,13 @@ function BpmCanvasContent({
                         {selectedNode.data?.emailRecipientType === 'table' && (
                           <div className="bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800/50 rounded-xl p-3 space-y-3">
                             <div>
-                              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Tabela Alvo (Puxar e-mail de)</label>
+                              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.target_table_email')}</label>
                               <select 
                                 value={(selectedNode.data?.actionModelId as string) || ''} 
                                 onChange={(e) => updateNodeData(selectedNode.id, { actionModelId: e.target.value, actionEmailField: '' })}
                                 className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
                               >
-                                <option value="">Selecione uma tabela...</option>
+                                <option value="">{t('bpm.canvas.select_table_option')}</option>
                                 {dbModels.map(m => (
                                   <option key={m.id} value={m.id}>{m.display_name || m.db_table_name || m.name}</option>
                                 ))}
@@ -1757,14 +1763,14 @@ function BpmCanvasContent({
                             </div>
 
                             <div>
-                              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Campo de E-mail</label>
+                              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.email_field')}</label>
                               <select 
                                 value={(selectedNode.data?.actionEmailField as string) || ''} 
                                 onChange={(e) => updateNodeData(selectedNode.id, { actionEmailField: e.target.value })}
                                 disabled={!selectedNode.data?.actionModelId}
                                 className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
                               >
-                                <option value="">Selecione o campo de e-mail...</option>
+                                <option value="">{t('bpm.canvas.select_email_field')}</option>
                                 {dbFields
                                   .filter(f => f.model_id === selectedNode.data?.actionModelId)
                                   .map(f => (
@@ -1773,7 +1779,7 @@ function BpmCanvasContent({
                               </select>
                             </div>
                             <div className="text-[10px] text-neutral-500 italic">
-                              Dica: Defina Filtros (abaixo) para não enviar e-mails a todos os registros.
+                              {t('bpm.canvas.email_filters_hint')}
                             </div>
                             {renderActionFilters()}
                           </div>
@@ -1785,17 +1791,17 @@ function BpmCanvasContent({
                             className="w-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 font-bold text-[10px] uppercase tracking-widest py-3 rounded-lg flex items-center justify-center gap-2 transition-all"
                           >
                             <Edit2 size={14} />
-                            Configurar E-mail
+                            {t('bpm.canvas.configure_email')}
                           </button>
                           
                           {Boolean(selectedNode.data?.actionSubject || selectedNode.data?.actionBody) && (
                             <div className="mt-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-3 text-xs">
                               <div className="font-bold text-neutral-700 dark:text-neutral-300 mb-1 flex items-center gap-1">
-                                <span className="text-neutral-400 text-[10px] uppercase">Assunto:</span> 
-                                <span className="truncate">{selectedNode.data?.actionSubject as string || 'Sem assunto'}</span>
+                                <span className="text-neutral-400 text-[10px] uppercase">{t('bpm.canvas.subject_label')}</span> 
+                                <span className="truncate">{selectedNode.data?.actionSubject as string || t('bpm.canvas.no_subject')}</span>
                               </div>
                               <div className="text-neutral-500 line-clamp-2 mt-2 border-t border-neutral-100 dark:border-neutral-800 pt-2 text-[11px] leading-relaxed">
-                                {((selectedNode.data?.actionBody as string) || 'Sem corpo de e-mail').replace(/<[^>]*>?/gm, '')}
+                                {((selectedNode.data?.actionBody as string) || t('bpm.canvas.no_body')).replace(/<[^>]*>?/gm, '')}
                               </div>
                             </div>
                           )}
@@ -1806,7 +1812,7 @@ function BpmCanvasContent({
                     {selectedNode.data?.actionType === 'webhook' && (
                       <div className="space-y-4 pt-4 border-t border-indigo-500/20">
                         <div>
-                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">Método HTTP</label>
+                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.http_method')}</label>
                           <select 
                             value={(selectedNode.data?.webhookMethod as string) || 'POST'} 
                             onChange={(e) => updateNodeData(selectedNode.id, { webhookMethod: e.target.value })}
@@ -1821,7 +1827,7 @@ function BpmCanvasContent({
                         </div>
 
                         <div>
-                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">URL da API</label>
+                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.api_url')}</label>
                           <input 
                             type="text" 
                             placeholder="https://api.exemplo.com/v1/..."
@@ -1833,7 +1839,7 @@ function BpmCanvasContent({
 
                         <div>
                           <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1 flex items-center justify-between">
-                            <span>Headers (JSON Opcional)</span>
+                            <span>{t('bpm.canvas.headers_optional')}</span>
                           </label>
                           <textarea 
                             rows={3}
@@ -1847,7 +1853,7 @@ function BpmCanvasContent({
                         {['POST', 'PUT', 'PATCH'].includes((selectedNode.data?.webhookMethod as string) || 'POST') && (
                           <div>
                             <div className="flex items-center justify-between mb-1">
-                              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-0">Body (JSON)</label>
+                              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-0">{t('bpm.canvas.body_json')}</label>
                               <select 
                                 value=""
                                 onChange={(e) => {
@@ -1864,7 +1870,7 @@ function BpmCanvasContent({
                                 }}
                                 className="bg-transparent border-none text-[9px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-24 text-right p-0"
                               >
-                                <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">+ Variável</option>
+                                <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">{t('bpm.canvas.plus_variable')}</option>
                                 {[...dbModels]
                                   .sort((a, b) => {
                                     const nameA = a.display_name || a.db_table_name || a.name;
@@ -1920,8 +1926,8 @@ function BpmCanvasContent({
       <Modal
         isOpen={!!selectedGroupForModal}
         onClose={() => setSelectedGroupForModal(null)}
-        title={`Usuários: ${selectedGroupForModal?.name}`}
-        description="Selecione quais usuários deste grupo receberão o e-mail."
+        title={t('bpm.canvas.users_group').replace('{name}', selectedGroupForModal?.name || '')}
+        description={t('bpm.canvas.select_users_desc')}
         size="md"
         zIndex={200}
       >
@@ -1929,7 +1935,7 @@ function BpmCanvasContent({
           {isLoadingGroupUsers ? (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
               <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-              <p className="text-sm text-neutral-500">Buscando usuários...</p>
+              <p className="text-sm text-neutral-500">{t('bpm.canvas.searching_users')}</p>
             </div>
           ) : (
             <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
@@ -1946,14 +1952,14 @@ function BpmCanvasContent({
                   }}
                   className="w-4 h-4 text-indigo-600 rounded border-neutral-300 focus:ring-indigo-600"
                 />
-                <span className="text-sm font-bold text-neutral-900 dark:text-white">Enviar para Todos</span>
+                <span className="text-sm font-bold text-neutral-900 dark:text-white">{t('bpm.canvas.send_to_all')}</span>
               </label>
 
               {groupUsers.length > 0 && (
                 <div className="pt-2 pb-1 border-t border-neutral-100 dark:border-neutral-800">
                   <input
                     type="text"
-                    placeholder="Buscar usuário por nome ou e-mail..."
+                    placeholder={t('bpm.canvas.search_user_placeholder')}
                     value={modalSearchTerm}
                     onChange={(e) => setModalSearchTerm(e.target.value)}
                     className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-500"
@@ -1992,7 +1998,7 @@ function BpmCanvasContent({
                 </div>
               ) : (
                 <div className="text-center py-8 text-sm text-neutral-500 border border-dashed rounded-xl border-neutral-200 dark:border-neutral-800">
-                  Nenhum usuário encontrado neste grupo.
+                  {t('bpm.canvas.no_users_found_group')}
                 </div>
               )}
             </div>
@@ -2010,14 +2016,14 @@ function BpmCanvasContent({
               }}
               className="text-sm text-red-600 hover:text-red-700 font-medium px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
             >
-              Remover Grupo
+              {t('bpm.canvas.remove_group')}
             </button>
             <div className="flex gap-2">
               <button
                 onClick={() => setSelectedGroupForModal(null)}
                 className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors"
               >
-                Cancelar
+                {t('common.cancel')}
               </button>
               <button
                 onClick={() => {
@@ -2030,7 +2036,7 @@ function BpmCanvasContent({
                 }}
                 className="px-4 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
               >
-                Confirmar
+                {t('common.confirm')}
               </button>
             </div>
           </div>
@@ -2041,25 +2047,25 @@ function BpmCanvasContent({
       <Modal
         isOpen={!!editingEmailNode}
         onClose={() => setEditingEmailNode(null)}
-        title="Configurar E-mail"
+        title={t('bpm.canvas.configure_email')}
         size="2xl"
       >
         <div className="space-y-4">
           <div className="bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800">
-            <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest block mb-2">Template Visual</label>
+            <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest block mb-2">{t('bpm.canvas.visual_template')}</label>
             <select 
               value={tempEmailData.template}
               onChange={(e) => setTempEmailData(prev => ({ ...prev, template: e.target.value as EmailTemplateType }))}
               className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-500 mb-4"
             >
-              <option value="free">📝 Texto Livre (Padrão)</option>
-              <option value="modern">🚀 Moderno (Card Central c/ Cabeçalho Degradê)</option>
-              <option value="alert">🚨 Alerta / Aprovação (Ação Requerida)</option>
-              <option value="classic">📄 Clássico Corporativo</option>
+              <option value="free">{t('bpm.canvas.template_free')}</option>
+              <option value="modern">{t('bpm.canvas.template_modern')}</option>
+              <option value="alert">{t('bpm.canvas.template_alert')}</option>
+              <option value="classic">{t('bpm.canvas.template_classic')}</option>
             </select>
 
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest block mb-1">Assunto</label>
+              <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.subject')}</label>
               <select 
                 value=""
                 onChange={(e) => {
@@ -2076,7 +2082,7 @@ function BpmCanvasContent({
                 }}
                 className="bg-transparent border-none text-[10px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-28 text-right p-0"
               >
-                <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">+ Variável</option>
+                <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">{t('bpm.canvas.plus_variable')}</option>
                 {[...dbModels].sort((a, b) => (a.display_name || a.db_table_name || a.name).localeCompare(b.display_name || b.db_table_name || b.name)).map(m => {
                   const tableName = m.display_name || m.db_table_name || m.name;
                   const fields = dbFields.filter(f => f.model_id === m.id);
@@ -2095,7 +2101,7 @@ function BpmCanvasContent({
             </div>
             <input 
               type="text" 
-              placeholder="Ex: Confirmação do Pedido {{orders.id}}"
+              placeholder={t('bpm.canvas.subject_placeholder')}
               value={tempEmailData.subject} 
               onChange={(e) => setTempEmailData(prev => ({ ...prev, subject: e.target.value }))}
               onBlur={(e) => setCursorPos({ field: 'actionSubject', start: e.target.selectionStart || 0, end: e.target.selectionEnd || 0 })}
@@ -2105,7 +2111,7 @@ function BpmCanvasContent({
 
           <div className="bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest block mb-1">Corpo (HTML/Texto)</label>
+              <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.body_html_text')}</label>
               <select 
                 value=""
                 onChange={(e) => {
@@ -2118,7 +2124,7 @@ function BpmCanvasContent({
                 }}
                 className="bg-transparent border-none text-[10px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-28 text-right p-0"
               >
-                <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">+ Variável</option>
+                <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">{t('bpm.canvas.plus_variable')}</option>
                 {[...dbModels].sort((a, b) => (a.display_name || a.db_table_name || a.name).localeCompare(b.display_name || b.db_table_name || b.name)).map(m => {
                   const tableName = m.display_name || m.db_table_name || m.name;
                   const fields = dbFields.filter(f => f.model_id === m.id);
@@ -2138,7 +2144,7 @@ function BpmCanvasContent({
             <RichTextEditor 
               value={tempEmailData.body}
               onChange={(val) => setTempEmailData(prev => ({ ...prev, body: val }))}
-              placeholder="Olá {{customers.nome}}, seu pedido foi recebido!"
+              placeholder={t('bpm.canvas.body_placeholder')}
             />
           </div>
 
@@ -2146,15 +2152,15 @@ function BpmCanvasContent({
             <button
               onClick={() => setIsPreviewEmailOpen(true)}
               className="flex-none px-4 py-3 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
-              title="Pré-visualizar e-mail"
+              title={t('bpm.canvas.preview')}
             >
-              👁️ Preview
+              {t('bpm.canvas.preview')}
             </button>
             <button
               onClick={() => setEditingEmailNode(null)}
               className="flex-1 px-4 py-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-xl font-bold transition-colors"
             >
-              Cancelar
+              {t('common.cancel')}
             </button>
             <button
               onClick={() => {
@@ -2170,7 +2176,7 @@ function BpmCanvasContent({
               className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
             >
               <Check size={18} />
-              Salvar Configuração
+              {t('bpm.canvas.save_config')}
             </button>
           </div>
         </div>
@@ -2180,14 +2186,14 @@ function BpmCanvasContent({
       <Modal
         isOpen={isPreviewEmailOpen}
         onClose={() => setIsPreviewEmailOpen(false)}
-        title="Pré-visualização do E-mail"
+        title={t('bpm.canvas.email_preview_title')}
         size="4xl"
         zIndex={200}
       >
         <div className="space-y-4">
           <div className="bg-neutral-100 dark:bg-neutral-900 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800" style={{ height: '600px' }}>
             <iframe 
-              srcDoc={wrapEmailInTemplate(tempEmailData.template, tempEmailData.body || '<p>Digite algo no corpo do e-mail para visualizar.</p>')} 
+              srcDoc={wrapEmailInTemplate(tempEmailData.template, tempEmailData.body || `<p>${t('bpm.canvas.type_something_preview')}</p>`)} 
               className="w-full h-full border-none"
               title="Email Preview"
             />
@@ -2197,7 +2203,7 @@ function BpmCanvasContent({
               onClick={() => setIsPreviewEmailOpen(false)}
               className="px-6 py-3 text-sm font-bold text-white bg-neutral-800 hover:bg-neutral-900 dark:bg-neutral-700 dark:hover:bg-neutral-600 rounded-xl transition-colors shadow-sm"
             >
-              Fechar Preview
+              {t('bpm.canvas.close_preview')}
             </button>
           </div>
         </div>
@@ -2207,15 +2213,15 @@ function BpmCanvasContent({
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
-        title="Excluir Fluxo"
-        description="Tem certeza que deseja excluir este fluxo?"
+        title={t('bpm.canvas.delete_flow_title')}
+        description={t('bpm.canvas.delete_flow_confirm')}
       >
         <div className="space-y-6">
           <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl flex gap-4 text-red-600 dark:text-red-400">
             <Trash2 className="w-5 h-5 shrink-0" />
             <div className="text-sm">
-              <p className="font-bold mb-1">Atenção!</p>
-              <p>Esta ação é irreversível e excluirá todo o conteúdo deste fluxo.</p>
+              <p className="font-bold mb-1">{t('common.attention')}</p>
+              <p>{t('bpm.canvas.delete_flow_warning')}</p>
             </div>
           </div>
           
@@ -2224,13 +2230,13 @@ function BpmCanvasContent({
               onClick={() => setIsDeleteModalOpen(false)}
               className="flex-1 px-4 py-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-xl font-bold transition-colors"
             >
-              Cancelar
+              {t('common.cancel')}
             </button>
             <button
               onClick={confirmDelete}
               className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition-colors"
             >
-              Sim, Excluir Fluxo
+              {t('bpm.canvas.yes_delete_flow')}
             </button>
           </div>
         </div>

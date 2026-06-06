@@ -1058,7 +1058,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     setIsSaving(true)
     try {
       // 1. Criar/Atualizar a View Principal
-      const { data: projectData } = await supabase.from('projects').select('id').eq('slug', project_slug).single()
+      const { data: projectData } = await supabase.from('projects').select('id, navigation').eq('slug', project_slug).single()
 
       const validFieldIds = new Set(models.flatMap((m: any) => m.fields?.map((f: any) => f.id) || []))
 
@@ -1141,6 +1141,29 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       }
 
       if (viewError) throw viewError
+
+      // Se o slug do caso de uso mudou, atualiza as referências no menu de navegação do projeto
+      const hasSlugChanged = initialData && initialData.slug && initialData.slug !== config.slug
+      if (hasSlugChanged && projectData?.navigation && Array.isArray(projectData.navigation)) {
+        const updateMenuTarget = (items: any[]): any[] => {
+          return items.map((item: any) => {
+            let updatedItem = { ...item }
+            if (updatedItem.type === 'view' && updatedItem.target === initialData.slug) {
+              updatedItem.target = config.slug
+            }
+            if (updatedItem.children && Array.isArray(updatedItem.children)) {
+              updatedItem.children = updateMenuTarget(updatedItem.children)
+            }
+            return updatedItem
+          })
+        }
+        const updatedNavigation = updateMenuTarget(projectData.navigation)
+        
+        await supabase
+          .from('projects')
+          .update({ navigation: updatedNavigation })
+          .eq('id', projectData.id)
+      }
 
       // 2. Limpar componentes antigos desta view
       await supabase.from('ui_components').delete().eq('view_id', view.id)
