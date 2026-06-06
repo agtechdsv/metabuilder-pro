@@ -2059,5 +2059,22 @@
     "confirm_booking_btn": "Confirm Appointment",
     "google_meet_desc": "Video conference via Google Meet",
     "zero_trust_desc": "Zero-Trust Privacy"
+  },
+  "sync_resolution": {
+    "title": "Sync Notice",
+    "desc": "MetaBuilderPRO detected tables or columns that have disappeared from your database since the last sync. This usually happens when a table has been renamed in the legacy database. Please map the changes below so that your Flows and Use Cases are not lost.",
+    "apply_error": "Error applying synchronization",
+    "missing_tables": "Missing Tables (Models)",
+    "select_action": "Select an Action",
+    "confirm_delete_model": "Confirm Definite Deletion (Will lose flows)",
+    "rename_to_new_table_group": "Rename to New Table:",
+    "rename_to": "Rename to",
+    "missing_columns": "Missing Columns (Fields)",
+    "table_label": "Table",
+    "renamed_to": "Renamed to",
+    "confirm_delete_field": "Confirm Deletion (Will lose form logics)",
+    "rename_to_column_group": "Rename to Column in {table}:",
+    "applying": "Applying...",
+    "apply_and_sync": "Apply Resolutions and Sync"
   }
 }

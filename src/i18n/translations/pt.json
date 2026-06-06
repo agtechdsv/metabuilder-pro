@@ -2059,5 +2059,22 @@
     "confirm_booking_btn": "Confirmar Agendamento",
     "google_meet_desc": "Videoconferência via Google Meet",
     "zero_trust_desc": "Privacidade Zero-Trust"
+  },
+  "sync_resolution": {
+    "title": "Aviso de Sincronização",
+    "desc": "O MetaBuilderPRO detectou tabelas ou colunas que sumiram do seu banco de dados desde a última sincronização. Isso geralmente acontece quando uma tabela foi renomeada no banco de dados legado. Por favor, mapeie as alterações abaixo para que seus Fluxos e Casos de Uso não sejam perdidos.",
+    "apply_error": "Erro ao aplicar sincronização",
+    "missing_tables": "Tabelas Ausentes (Models)",
+    "select_action": "Selecione uma Ação",
+    "confirm_delete_model": "Confirmar Exclusão Definitiva (Perderá fluxos)",
+    "rename_to_new_table_group": "Renomear para Tabela Nova:",
+    "rename_to": "Renomear para",
+    "missing_columns": "Colunas Ausentes (Fields)",
+    "table_label": "Tabela",
+    "renamed_to": "Renomeada para",
+    "confirm_delete_field": "Confirmar Exclusão (Perderá lógicas de forms)",
+    "rename_to_column_group": "Renomear para Coluna em {table}:",
+    "applying": "Aplicando...",
+    "apply_and_sync": "Aplicar Resoluções e Sincronizar"
   }
 }

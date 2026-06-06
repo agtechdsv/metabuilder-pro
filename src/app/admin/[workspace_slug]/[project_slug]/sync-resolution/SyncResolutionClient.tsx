@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Trash2, CheckCircle, AlertTriangle } from 'lucide-react'
+import { ArrowRight, CheckCircle, AlertTriangle } from 'lucide-react'
+import { useI18n } from '@/i18n/I18nContext'
 
 export default function SyncResolutionClient({
   projectId,
@@ -24,6 +25,7 @@ export default function SyncResolutionClient({
   projectSlug: string
 }) {
   const router = useRouter()
+  const { t } = useI18n()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -74,7 +76,7 @@ export default function SyncResolutionClient({
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erro ao aplicar sincronização')
+      if (!res.ok) throw new Error(data.error || t('sync_resolution.apply_error', 'Erro ao aplicar sincronização'))
 
       router.push(`/admin/${workspaceSlug}/${projectSlug}/studio`)
       router.refresh()
@@ -86,6 +88,16 @@ export default function SyncResolutionClient({
 
   return (
     <div className="space-y-8">
+      {/* Header and description */}
+      <div className="mb-8 mt-2">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          {t('sync_resolution.title', 'Aviso de Sincronização')}
+        </h1>
+        <p className="text-gray-500 dark:text-gray-400">
+          {t('sync_resolution.desc', 'O MetaBuilderPRO detectou tabelas ou colunas que sumiram do seu banco de dados desde a última sincronização. Isso geralmente acontece quando uma tabela foi renomeada no banco de dados legado. Por favor, mapeie as alterações abaixo para que seus Fluxos e Casos de Uso não sejam perdidos.')}
+        </p>
+      </div>
+
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-lg flex items-center gap-3">
           <AlertTriangle className="h-5 w-5" />
@@ -96,7 +108,9 @@ export default function SyncResolutionClient({
       {/* Tabe Mappings */}
       {missingModels.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <h2 className="text-xl font-semibold mb-4 border-b pb-2">Tabelas Ausentes (Models)</h2>
+          <h2 className="text-xl font-semibold mb-4 border-b pb-2">
+            {t('sync_resolution.missing_tables', 'Tabelas Ausentes (Models)')}
+          </h2>
           <div className="space-y-4">
             {missingModels.map(model => (
               <div key={model.id} className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
@@ -110,11 +124,11 @@ export default function SyncResolutionClient({
                     value={tableMappings[model.id] || ''}
                     onChange={(e) => handleTableMapping(model.id, e.target.value)}
                   >
-                    <option value="" disabled>-- Selecione uma Ação --</option>
-                    <option value="_DELETE_">🗑️ Confirmar Exclusão Definitiva (Perderá fluxos)</option>
-                    <optgroup label="Renomear para Tabela Nova:">
+                    <option value="" disabled>-- {t('sync_resolution.select_action', 'Selecione uma Ação')} --</option>
+                    <option value="_DELETE_">🗑️ {t('sync_resolution.confirm_delete_model', 'Confirmar Exclusão Definitiva (Perderá fluxos)')}</option>
+                    <optgroup label={t('sync_resolution.rename_to_new_table_group', 'Renomear para Tabela Nova:')}>
                       {newTables.map(tName => (
-                        <option key={tName} value={tName}>🔄 Renomear para: {tName}</option>
+                        <option key={tName} value={tName}>🔄 {t('sync_resolution.rename_to', 'Renomear para')}: {tName}</option>
                       ))}
                     </optgroup>
                   </select>
@@ -128,7 +142,9 @@ export default function SyncResolutionClient({
       {/* Field Mappings */}
       {missingFields.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <h2 className="text-xl font-semibold mb-4 border-b pb-2">Colunas Ausentes (Fields)</h2>
+          <h2 className="text-xl font-semibold mb-4 border-b pb-2">
+            {t('sync_resolution.missing_columns', 'Colunas Ausentes (Fields)')}
+          </h2>
           <div className="space-y-6">
             {Object.entries(
               missingFields.reduce((acc, field) => {
@@ -174,10 +190,14 @@ export default function SyncResolutionClient({
                 <div key={tableName} className="bg-gray-50/50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden">
                   <div className="bg-gray-100/80 dark:bg-gray-800/80 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
                     <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                      <span className="p-1 bg-white dark:bg-gray-700 rounded-md shadow-sm text-xs">Tabela</span>
+                      <span className="p-1 bg-white dark:bg-gray-700 rounded-md shadow-sm text-xs">
+                        {t('sync_resolution.table_label', 'Tabela')}
+                      </span>
                       {tableName}
                       {targetTableName !== tableName && (
-                        <span className="text-xs text-indigo-500 font-normal">→ Renomeada para {targetTableName}</span>
+                        <span className="text-xs text-indigo-500 font-normal">
+                          → {t('sync_resolution.renamed_to', 'Renomeada para')} {targetTableName}
+                        </span>
                       )}
                     </h3>
                   </div>
@@ -194,12 +214,12 @@ export default function SyncResolutionClient({
                             value={fieldMappings[field.id] || ''}
                             onChange={(e) => handleFieldMapping(field.id, e.target.value)}
                           >
-                            <option value="" disabled>-- Selecione uma Ação --</option>
-                            <option value="_DELETE_">🗑️ Confirmar Exclusão (Perderá lógicas de forms)</option>
+                            <option value="" disabled>-- {t('sync_resolution.select_action', 'Selecione uma Ação')} --</option>
+                            <option value="_DELETE_">🗑️ {t('sync_resolution.confirm_delete_field', 'Confirmar Exclusão (Perderá lógicas de forms)')}</option>
                             {newColumns.length > 0 && (
-                              <optgroup label={`Renomear para Coluna em ${targetTableName}:`}>
+                              <optgroup label={t('sync_resolution.rename_to_column_group', 'Renomear para Coluna em {table}:').replace('{table}', targetTableName)}>
                                 {newColumns.map((cName: string) => (
-                                  <option key={cName} value={cName}>🔄 Renomear para: {cName}</option>
+                                  <option key={cName} value={cName}>🔄 {t('sync_resolution.rename_to', 'Renomear para')}: {cName}</option>
                                 ))}
                               </optgroup>
                             )}
@@ -242,11 +262,11 @@ export default function SyncResolutionClient({
           className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
-            <span>Aplicando...</span>
+            <span>{t('sync_resolution.applying', 'Aplicando...')}</span>
           ) : (
             <>
               <CheckCircle className="h-5 w-5" />
-              <span>Aplicar Resoluções e Sincronizar</span>
+              <span>{t('sync_resolution.apply_and_sync', 'Aplicar Resoluções e Sincronizar')}</span>
             </>
           )}
         </button>

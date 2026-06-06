@@ -78,16 +78,7 @@ export default async function SyncResolutionPage(props: { params: Promise<{ work
       <div className="pl-20 min-h-screen flex flex-col pt-16 bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300 w-full overflow-hidden">
         <Navbar user={user} profile={profile} isStudio={true} />
         
-        <div className="container mx-auto p-6 max-w-5xl flex-1">
-          <div className="mb-8 mt-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Aviso de Sincronização</h1>
-            <p className="text-gray-500 dark:text-gray-400">
-              O MetaBuilderPRO detectou tabelas ou colunas que sumiram do seu banco de dados desde a última sincronização. 
-              Isso geralmente acontece quando uma tabela foi renomeada no banco de dados legado.
-              Por favor, mapeie as alterações abaixo para que seus Fluxos e Casos de Uso não sejam perdidos.
-            </p>
-          </div>
-
+        <div className="container mx-auto p-6 max-w-5xl flex-1 mt-8">
           <SyncResolutionClient 
             projectId={project.id}
             missingModels={missingModels}
