@@ -44,23 +44,25 @@ import { EnumerationsClient } from '../enumerations/EnumerationsClient'
 import { TableFieldsManager } from '@/components/studio/TableFieldsManager'
 
 const RETENTION_OPTIONS = [
-  { value: '', label: '∞ Manter para Sempre' },
-  { value: '1', label: '1 Hora' },
-  { value: '6', label: '6 Horas' },
-  { value: '12', label: '12 Horas' },
-  { value: '24', label: '24 Horas' },
-  { value: '72', label: '3 Dias' },
-  { value: '168', label: '7 Dias' },
+  { value: '', labelKey: 'dashboard.projects.studio.stats.retention.forever' },
+  { value: '1', labelKey: 'dashboard.projects.studio.stats.retention.1h' },
+  { value: '6', labelKey: 'dashboard.projects.studio.stats.retention.6h' },
+  { value: '12', labelKey: 'dashboard.projects.studio.stats.retention.12h' },
+  { value: '24', labelKey: 'dashboard.projects.studio.stats.retention.24h' },
+  { value: '72', labelKey: 'dashboard.projects.studio.stats.retention.3d' },
+  { value: '168', labelKey: 'dashboard.projects.studio.stats.retention.7d' },
 ]
 
 function RetentionDropdown({
   value,
   onChange,
-  disabled
+  disabled,
+  t
 }: {
   value: string
   onChange: (v: string) => void
   disabled: boolean
+  t: any
 }) {
   const [open, setOpen] = useState(false)
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 })
@@ -103,7 +105,7 @@ function RetentionDropdown({
           "truncate",
           value === '' ? "text-emerald-600 dark:text-emerald-400" : "text-indigo-600 dark:text-indigo-400"
         )}>
-          {selected.label}
+          {t(selected.labelKey)}
         </span>
         <svg
           className={cn("w-3 h-3 text-neutral-400 transition-transform flex-shrink-0", open && "rotate-180")}
@@ -137,7 +139,7 @@ function RetentionDropdown({
                 opt.value === '' && opt.value !== value && "text-emerald-600 dark:text-emerald-400"
               )}
             >
-              {opt.label}
+              {t(opt.labelKey)}
               {opt.value === value && (
                 <span className="float-right text-indigo-500">✓</span>
               )}
@@ -196,9 +198,9 @@ export function StudioDashboardClient({
       .update({ download_retention_hours: numValue })
       .eq('id', project.id)
     if (error) {
-      toast('Erro ao atualizar retenção de downloads.', 'error')
+      toast(t('dashboard.projects.studio.toasts.retention_error'), 'error')
     } else {
-      toast('Política de retenção atualizada!', 'success')
+      toast(t('dashboard.projects.studio.toasts.retention_success'), 'success')
     }
     setIsUpdatingRetention(false)
   }
@@ -260,11 +262,11 @@ export function StudioDashboardClient({
 
       if (error) throw error
 
-      toast('Configurações do BPM salvas com sucesso!', 'success')
+      toast(t('dashboard.projects.studio.toasts.bpm_config_success'), 'success')
       setIsBpmConfigModalOpen(false)
       router.refresh()
     } catch (err: any) {
-      toast('Erro ao salvar configurações do BPM: ' + err.message, 'error')
+      toast(t('dashboard.projects.studio.toasts.bpm_config_error') + err.message, 'error')
     }
   }
 
@@ -304,10 +306,10 @@ export function StudioDashboardClient({
 
       if (viewError) throw viewError
 
-      toast(newActiveState ? 'Módulo de Automações ativado!' : 'Módulo de Automações desativado!', 'success')
+      toast(newActiveState ? t('dashboard.projects.studio.toasts.automations_active_success') : t('dashboard.projects.studio.toasts.automations_inactive_success'), 'success')
       router.refresh()
     } catch (err: any) {
-      toast('Erro ao alterar status das automações: ' + err.message, 'error')
+      toast(t('dashboard.projects.studio.toasts.automations_status_error') + err.message, 'error')
     }
   }
 
@@ -322,10 +324,10 @@ export function StudioDashboardClient({
 
       if (error) throw error
 
-      toast('Menu de navegação salvo com sucesso!', 'success')
+      toast(t('dashboard.projects.studio.toasts.navigation_save_success'), 'success')
       router.refresh()
     } catch (err: any) {
-      toast('Erro ao salvar menu: ' + err.message, 'error')
+      toast(t('dashboard.projects.studio.toasts.navigation_save_error') + err.message, 'error')
     }
   }
 
@@ -335,7 +337,7 @@ export function StudioDashboardClient({
       
       const exists = currentMenu.some((item: any) => item.type === 'view' && item.target === view.slug)
       if (exists) {
-        toast('Este caso de uso já está adicionado ao menu!', 'info')
+        toast(t('dashboard.projects.studio.toasts.use_case_already_in_menu'), 'info')
         return
       }
 
@@ -363,10 +365,10 @@ export function StudioDashboardClient({
 
       project.navigation = updatedMenu
 
-      toast('Caso de uso adicionado ao menu com sucesso!', 'success')
+      toast(t('dashboard.projects.studio.toasts.use_case_added_to_menu'), 'success')
       router.refresh()
     } catch (err: any) {
-      toast('Erro ao adicionar ao menu: ' + err.message, 'error')
+      toast(t('dashboard.projects.studio.toasts.use_case_add_to_menu_error') + err.message, 'error')
     }
   }
 
@@ -387,10 +389,10 @@ export function StudioDashboardClient({
 
       if (viewError) throw viewError
 
-      toast(newActiveState ? 'Central de Downloads ativada!' : 'Central de Downloads desativada!', 'success')
+      toast(newActiveState ? t('dashboard.projects.studio.toasts.downloads_active_success') : t('dashboard.projects.studio.toasts.downloads_inactive_success'), 'success')
       router.refresh()
     } catch (err: any) {
-      toast('Erro ao alterar status de downloads: ' + err.message, 'error')
+      toast(t('dashboard.projects.studio.toasts.downloads_status_error') + err.message, 'error')
     }
   }
 
@@ -516,24 +518,24 @@ export function StudioDashboardClient({
                 
                 {/* Linha 1: ID do Projeto */}
                 <div className="flex items-center justify-between pt-1 border-t border-neutral-100 dark:border-neutral-800/50 pt-2">
-                  <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">ID Projeto:</span>
+                  <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">{t('dashboard.projects.project_id')}:</span>
                   <div className="flex items-center gap-2">
                     <code className="text-[8px] text-neutral-400 font-mono bg-neutral-100 dark:bg-black/40 px-1.5 py-0.5 rounded truncate max-w-[80px]" title={project.id}>{project.id}</code>
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(project.id)
-                        toast("ID do Projeto copiado!", 'success')
+                        toast(t('dashboard.projects.studio.token_copied'), 'success')
                       }}
                       className="text-[8px] font-black text-indigo-600 dark:text-indigo-400 uppercase hover:underline"
                     >
-                      Copiar
+                      {t('dashboard.projects.copy')}
                     </button>
                   </div>
                 </div>
 
                 {/* Linha 2: Token Secreto */}
                 <div className="flex items-center justify-between pt-1 border-t border-neutral-100 dark:border-neutral-800/50 pt-2">
-                  <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">Token Secreto:</span>
+                  <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">{t('dashboard.projects.secret_token')}:</span>
                   <div className="flex items-center gap-2">
                     <code className="text-[8px] text-neutral-400 font-mono bg-neutral-100 dark:bg-black/40 px-1.5 py-0.5 rounded truncate max-w-[80px]" title={project.secret_token || ''}>
                       {project.secret_token ? `${project.secret_token.substring(0, 8)}...` : 'N/A'}
@@ -542,25 +544,26 @@ export function StudioDashboardClient({
                       onClick={() => {
                         if (project.secret_token) {
                           navigator.clipboard.writeText(project.secret_token)
-                          toast("Token Secreto copiado!", 'success')
+                          toast(t('dashboard.projects.studio.secret_token_copied'), 'success')
                         } else {
-                          toast("Nenhum token disponível.", 'error')
+                          toast(t('dashboard.projects.studio.no_token_available'), 'error')
                         }
                       }}
                       className="text-[8px] font-black text-indigo-600 dark:text-indigo-400 uppercase hover:underline"
                     >
-                      Copiar
+                      {t('dashboard.projects.copy')}
                     </button>
                   </div>
                 </div>
 
                 {/* Linha 3: Retenção de Downloads */}
                 <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800/50">
-                  <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider block mb-1.5">Retenção de Exports:</span>
+                  <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider block mb-1.5">{t('dashboard.projects.studio.stats.export_retention')}</span>
                   <RetentionDropdown
                     value={retention}
                     onChange={updateRetention}
                     disabled={isUpdatingRetention}
+                    t={t}
                   />
                 </div>
               </div>
@@ -669,7 +672,7 @@ export function StudioDashboardClient({
                         target="_blank"
                         className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-indigo-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-indigo-500/20"
                       >
-                        <ExternalLink className="w-4 h-4" /> Visualizar Portal
+                        <ExternalLink className="w-4 h-4" /> {t('dashboard.projects.studio.view_portal')}
                       </Link>
                     )}
                   </div>
@@ -739,7 +742,7 @@ export function StudioDashboardClient({
                           target="_blank"
                           className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-emerald-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-emerald-500/20"
                         >
-                          <ExternalLink className="w-4 h-4" /> Acessar BPM
+                          <ExternalLink className="w-4 h-4" /> {t('dashboard.projects.studio.access_bpm')}
                         </Link>
                       )
                     )}
@@ -810,7 +813,7 @@ export function StudioDashboardClient({
                           target="_blank"
                           className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-blue-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-blue-500/20"
                         >
-                          <ExternalLink className="w-4 h-4" /> Acessar Downloads
+                          <ExternalLink className="w-4 h-4" /> {t('dashboard.projects.studio.access_downloads')}
                         </Link>
                       )
                     )}
@@ -860,7 +863,7 @@ export function StudioDashboardClient({
                           <button
                             onClick={() => handleAddToMenu(view)}
                             className="p-2 text-neutral-300 hover:text-indigo-500 hover:bg-indigo-500/10 rounded-xl transition-all"
-                            title="Adicionar ao Menu"
+                            title={t('dashboard.projects.studio.add_to_menu')}
                           >
                             <Menu className="w-4 h-4" />
                           </button>
@@ -905,7 +908,7 @@ export function StudioDashboardClient({
                           target="_blank"
                           className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
                         >
-                          <ArrowRight className="w-4 h-4" /> Acessar Caso de Uso
+                          <ArrowRight className="w-4 h-4" /> {t('dashboard.projects.studio.access_use_case')}
                         </Link>
                       )}
                     </div>
@@ -962,35 +965,35 @@ export function StudioDashboardClient({
         <Modal
           isOpen={isBpmConfigModalOpen}
           onClose={() => setIsBpmConfigModalOpen(false)}
-          title="Configurações do Módulo BPM"
+          title={t('dashboard.projects.studio.bpm_modal.title')}
         >
           <div className="space-y-6">
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Retenção de Logs (Dias)</label>
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">{t('dashboard.projects.studio.bpm_modal.log_retention')}</label>
                 <select 
                   value={bpmConfig?.log_retention || 30}
                   onChange={(e) => setBpmConfig((prev: any) => ({ ...prev, log_retention: Number(e.target.value) }))}
                   className="w-full h-12 px-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 text-sm focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value={7}>7 dias</option>
-                  <option value={30}>30 dias</option>
-                  <option value={90}>90 dias</option>
-                  <option value={365}>1 ano</option>
-                  <option value={0}>Para sempre</option>
+                  <option value={7}>{t('dashboard.projects.studio.bpm_modal.days_7')}</option>
+                  <option value={30}>{t('dashboard.projects.studio.bpm_modal.days_30')}</option>
+                  <option value={90}>{t('dashboard.projects.studio.bpm_modal.days_90')}</option>
+                  <option value={365}>{t('dashboard.projects.studio.bpm_modal.year_1')}</option>
+                  <option value={0}>{t('dashboard.projects.studio.bpm_modal.forever')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">E-mail para Notificação de Falhas</label>
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">{t('dashboard.projects.studio.bpm_modal.error_email')}</label>
                 <input 
                   type="email"
                   value={bpmConfig?.error_email || ''}
                   onChange={(e) => setBpmConfig((prev: any) => ({ ...prev, error_email: e.target.value }))}
-                  placeholder="admin@empresa.com"
+                  placeholder={t('dashboard.projects.studio.bpm_modal.error_email_placeholder')}
                   className="w-full h-12 px-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 text-sm focus:ring-2 focus:ring-indigo-500 placeholder:text-neutral-400"
                 />
-                <p className="text-[10px] text-neutral-400 mt-1">Este e-mail será notificado se um fluxo cair em loop infinito ou retornar erro.</p>
+                <p className="text-[10px] text-neutral-400 mt-1">{t('dashboard.projects.studio.bpm_modal.error_email_hint')}</p>
               </div>
             </div>
             
@@ -999,14 +1002,14 @@ export function StudioDashboardClient({
                 onClick={() => setIsBpmConfigModalOpen(false)}
                 className="px-6 h-12 rounded-2xl font-black text-xs uppercase tracking-widest text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
               >
-                Cancelar
+                {t('dashboard.projects.studio.bpm_modal.cancel')}
               </button>
               <button
                 onClick={handleSaveBpmConfig}
                 className="px-6 h-12 rounded-2xl font-black text-xs uppercase tracking-widest bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-2"
               >
                 <Settings2 className="w-4 h-4" />
-                Salvar Configurações
+                {t('dashboard.projects.studio.bpm_modal.save')}
               </button>
             </div>
           </div>

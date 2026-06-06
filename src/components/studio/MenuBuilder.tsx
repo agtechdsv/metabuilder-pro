@@ -345,8 +345,8 @@ export function MenuBuilder({ project, views, isDownloadsActive = true, onSave }
     <div className="flex flex-col h-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-sm">
       <div className="p-6 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-900/50">
         <div>
-          <h3 className="text-sm font-black uppercase tracking-[0.2em] text-neutral-900 dark:text-white">Gerador de Menu de Navegação</h3>
-          <p className="text-[10px] text-neutral-400 font-medium mt-1 uppercase tracking-widest">Organize como seus usuários navegarão no App</p>
+          <h3 className="text-sm font-black uppercase tracking-[0.2em] text-neutral-900 dark:text-white">{t('dashboard.projects.studio.navigation_menu_generator')}</h3>
+          <p className="text-[10px] text-neutral-400 font-medium mt-1 uppercase tracking-widest">{t('dashboard.projects.studio.navigation_menu_desc')}</p>
         </div>
         <button
           onClick={handleSaveData}
@@ -354,7 +354,7 @@ export function MenuBuilder({ project, views, isDownloadsActive = true, onSave }
           className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50"
         >
           {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-          Salvar Estrutura
+          {t('dashboard.projects.studio.save_structure')}
         </button>
       </div>
 
@@ -386,7 +386,7 @@ export function MenuBuilder({ project, views, isDownloadsActive = true, onSave }
             {menu.length === 0 && (
               <div className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-neutral-100 dark:border-neutral-800 rounded-[2rem] text-neutral-300">
                 <Layout className="w-12 h-12 opacity-10 mb-4" />
-                <p className="text-xs font-black uppercase tracking-widest">Nenhum item no menu</p>
+                <p className="text-xs font-black uppercase tracking-widest">{t('dashboard.projects.studio.no_menu_items')}</p>
               </div>
             )}
           </div>
@@ -408,13 +408,13 @@ export function MenuBuilder({ project, views, isDownloadsActive = true, onSave }
             onClick={() => handleAddItem(null, 'view')}
             className="flex-1 flex items-center justify-center gap-2 py-4 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:border-indigo-500 hover:text-indigo-600 transition-all group"
           >
-            <LinkIcon className="w-4 h-4 group-hover:scale-110 transition-transform" /> Adicionar Link
+            <LinkIcon className="w-4 h-4 group-hover:scale-110 transition-transform" /> {t('dashboard.projects.studio.add_link')}
           </button>
           <button
             onClick={() => handleAddItem(null, 'folder')}
             className="flex-1 flex items-center justify-center gap-2 py-4 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:border-emerald-500 hover:text-emerald-600 transition-all group"
           >
-            <FolderPlus className="w-4 h-4 group-hover:scale-110 transition-transform" /> Criar Menu
+            <FolderPlus className="w-4 h-4 group-hover:scale-110 transition-transform" /> {t('dashboard.projects.studio.create_menu')}
           </button>
         </div>
       </div>
@@ -449,6 +449,7 @@ function SortableMenuNode(props: any) {
 
 // O MenuNodeBase contém a UI do item. Ele é separado para poder ser usado pelo SortableMenuNode e pelo DragOverlay.
 function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemove, onAddChild, lastAddedId, dragListeners, dragAttributes, isOverlay }: any) {
+  const { t } = useI18n()
   const [isExpanded, setIsExpanded] = useState(true)
   const [showAddMenu, setShowAddMenu] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
@@ -483,7 +484,7 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
             onClick={() => onUpdate && setShowIconPicker(true)}
             disabled={isOverlay}
             className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-neutral-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all group/icon disabled:opacity-50"
-            title="Alterar Ícone"
+            title={t('dashboard.projects.studio.change_icon')}
           >
             <DynamicIcon icon={item.icon} size={16} className="group-hover/icon:scale-110 transition-transform" />
           </button>
@@ -504,14 +505,14 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
               value={item.label}
               onChange={e => onUpdate?.(item.id, { label: e.target.value })}
               readOnly={isOverlay}
-              placeholder={item.type === 'folder' ? 'Nome do Menu...' : 'Nome do Link...'}
+              placeholder={item.type === 'folder' ? t('dashboard.projects.studio.menu_name_placeholder') : t('dashboard.projects.studio.link_name_placeholder')}
               className="bg-transparent border-b border-transparent focus:border-indigo-500 outline-none text-sm font-bold text-neutral-900 dark:text-white"
             />
             <input
               value={item.description || ''}
               onChange={e => onUpdate?.(item.id, { description: e.target.value })}
               readOnly={isOverlay}
-              placeholder="Descrição curta..."
+              placeholder={t('dashboard.projects.studio.short_desc_placeholder')}
               className="bg-transparent border-b border-transparent focus:border-indigo-500 outline-none text-[9px] font-medium text-neutral-400"
             />
           </div>
@@ -526,7 +527,7 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
                 const updates: any = { target: selectedSlug }
 
                 if (!item.label) {
-                  if (selectedSlug === 'downloads') updates.label = 'Central de Downloads'
+                  if (selectedSlug === 'downloads') updates.label = t('dashboard.projects.studio.downloads_center')
                   else if (selectedView) updates.label = selectedView.name
                 }
                 onUpdate(item.id, updates)
@@ -534,9 +535,9 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
               disabled={isOverlay}
               className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-1.5 text-xs font-bold outline-none disabled:opacity-50"
             >
-              <option value="">Selecionar Caso de Uso...</option>
+              <option value="">{t('dashboard.projects.studio.select_use_case')}</option>
               {isDownloadsActive !== false && (
-                <option value="downloads">📁 Central de Downloads (Utilitário)</option>
+                <option value="downloads">📁 {t('dashboard.projects.studio.downloads_center')} ({t('dashboard.projects.studio.utility')})</option>
               )}
               {views.map((v: any) => (
                 <option key={v.id} value={v.slug}>{v.name}</option>
@@ -561,13 +562,13 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
                   onClick={() => setShowAddMenu(!showAddMenu)}
                   disabled={isOverlay}
                   className={cn(
-                    "p-2 rounded-xl transition-all flex items-center gap-1",
-                    showAddMenu ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-neutral-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+                     "p-2 rounded-xl transition-all flex items-center gap-1",
+                     showAddMenu ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-neutral-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950"
                   )}
-                  title="Adicionar..."
+                  title={t('dashboard.projects.studio.add') + '...'}
                 >
                   <Plus className="w-4 h-4" />
-                  <span className="text-[10px] font-black uppercase tracking-widest pr-1">Adicionar</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest pr-1">{t('dashboard.projects.studio.add')}</span>
                 </button>
 
                 {showAddMenu && (
@@ -597,7 +598,7 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
                 className="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer disabled:opacity-50"
                 id={`dash-${item.id}`}
               />
-              <label htmlFor={`dash-${item.id}`} className="text-[9px] font-black tracking-widest text-neutral-400 cursor-pointer select-none">Disponibilizar DashBoard</label>
+              <label htmlFor={`dash-${item.id}`} className="text-[9px] font-black tracking-widest text-neutral-400 cursor-pointer select-none">{t('dashboard.projects.studio.make_dashboard_available')}</label>
             </div>
 
             {onRemove && (
@@ -639,7 +640,7 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
             ))}
           </SortableContext>
           {(!item.children || item.children.length === 0) && (
-            <DroppableEmptyFolder id={item.id} />
+            <DroppableEmptyFolder id={item.id} t={t} />
           )}
         </div>
       )}
@@ -647,7 +648,7 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
   )
 }
 
-function DroppableEmptyFolder({ id }: { id: string }) {
+function DroppableEmptyFolder({ id, t }: { id: string; t: any }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `empty-folder-${id}`
   })
@@ -660,7 +661,7 @@ function DroppableEmptyFolder({ id }: { id: string }) {
         isOver ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20" : "border-neutral-100 dark:border-neutral-800"
       )}
     >
-      <p className="text-[10px] text-neutral-400 italic font-bold">Arraste itens para dentro deste menu</p>
+      <p className="text-[10px] text-neutral-400 italic font-bold">{t('dashboard.projects.studio.drag_items_here')}</p>
     </div>
   )
 }

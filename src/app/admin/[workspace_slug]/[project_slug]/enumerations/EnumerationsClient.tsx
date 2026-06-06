@@ -72,9 +72,9 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
             description: String(r.value)
           }))
           setEditingEnum(prev => prev ? { ...prev, values: newValues } : null)
-          toast(`${results.length} valores importados com sucesso!`, 'success')
+          toast(t('dashboard.projects.studio.enums.import_success').replace('{count}', String(results.length)), 'success')
         } else {
-          toast('Nenhum valor encontrado.', 'info')
+          toast(t('dashboard.projects.studio.enums.no_value_found'), 'info')
         }
         setIsFetchingDistinct(false)
       }
@@ -83,11 +83,11 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [project.id, supabase, toast])
+  }, [project.id, supabase, toast, t])
 
   const fetchDistinctValues = async () => {
     if (!selectedDbModel || !selectedDbField) {
-      toast('Selecione a Tabela e a Coluna primeiro.', 'error')
+      toast(t('dashboard.projects.studio.enums.select_table_column_error'), 'error')
       return
     }
     
@@ -119,7 +119,7 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
     setTimeout(() => {
       setIsFetchingDistinct(prev => {
         if (prev) {
-          toast('Tempo esgotado. Verifique se o MetaBuilderPRO CLI está conectado.', 'error')
+          toast(t('dashboard.projects.studio.enums.timeout_error'), 'error')
           return false
         }
         return prev
@@ -176,9 +176,9 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
     
     const { error } = await supabase.from('project_enumerations').insert(newEnums)
     if (error) {
-      toast('Erro ao importar', 'error')
+      toast(t('dashboard.projects.studio.enums.import_error'), 'error')
     } else {
-      toast('Importado com sucesso!', 'success')
+      toast(t('dashboard.projects.studio.enums.import_success_simple'), 'success')
       setIsImportModalOpen(false)
       setSelectedProjectId('')
       setSelectedEnums(new Set())
@@ -196,7 +196,7 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
       .order('created_at', { ascending: false })
 
     if (error) {
-      toast('Erro ao buscar enumerations', 'error')
+      toast(t('dashboard.projects.studio.enums.fetch_error'), 'error')
     } else {
       setEnumerations(data || [])
     }
@@ -227,19 +227,19 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
   }
 
   const deleteEnum = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este Enumeration?')) return
+    if (!confirm(t('dashboard.projects.studio.enums.delete_confirm_msg'))) return
     const { error } = await supabase.from('project_enumerations').delete().eq('id', id)
     if (error) {
-      toast('Erro ao excluir', 'error')
+      toast(t('dashboard.projects.studio.enums.delete_error'), 'error')
     } else {
-      toast('Excluído com sucesso!', 'success')
+      toast(t('dashboard.projects.studio.enums.delete_success'), 'success')
       fetchEnumerations()
     }
   }
 
   const saveEnum = async () => {
     if (!editingEnum?.name) {
-      toast('O nome é obrigatório.', 'error')
+      toast(t('dashboard.projects.studio.enums.name_required'), 'error')
       return
     }
 
@@ -252,9 +252,9 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
       }).eq('id', editingEnum.id)
 
       if (error) {
-        toast('Erro ao atualizar.', 'error')
+        toast(t('dashboard.projects.studio.enums.update_error'), 'error')
       } else {
-        toast('Atualizado com sucesso!', 'success')
+        toast(t('dashboard.projects.studio.enums.update_success'), 'success')
         setIsModalOpen(false)
         fetchEnumerations()
       }
@@ -268,9 +268,9 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
       })
 
       if (error) {
-        toast('Erro ao criar.', 'error')
+        toast(t('dashboard.projects.studio.enums.create_error'), 'error')
       } else {
-        toast('Criado com sucesso!', 'success')
+        toast(t('dashboard.projects.studio.enums.create_success'), 'success')
         setIsModalOpen(false)
         fetchEnumerations()
       }
@@ -308,22 +308,22 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
         <div>
           <h3 className="text-xl font-black flex items-center gap-3 text-neutral-900 dark:text-white tracking-tight">
             <Database className="w-6 h-6 text-indigo-600 dark:text-indigo-500" />
-            Enumerations Globais
+            {t('dashboard.projects.studio.enums.title')}
           </h3>
-          <p className="text-xs text-neutral-500 mt-1">Gerencie as listas de valores fixos para usar nos Casos de Uso.</p>
+          <p className="text-xs text-neutral-500 mt-1">{t('dashboard.projects.studio.enums.subtitle')}</p>
         </div>
         <div className="flex gap-3">
           <button 
             onClick={openImportModal}
             className="flex items-center gap-2 px-6 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-full text-xs font-bold transition-all"
           >
-            <Download className="w-4 h-4" /> Importar
+            <Download className="w-4 h-4" /> {t('dashboard.projects.studio.enums.import')}
           </button>
           <button 
             onClick={openNewModal}
             className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-bold transition-all shadow-[0_0_25px_rgba(79,70,229,0.4)]"
           >
-            <Plus className="w-4 h-4" /> Novo Enum
+            <Plus className="w-4 h-4" /> {t('dashboard.projects.studio.enums.new_enum')}
           </button>
         </div>
       </div>
@@ -332,18 +332,18 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
         {loading ? (
           <div className="text-center py-20">
             <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="text-neutral-500 mt-4 font-bold text-xs">Carregando enumerations...</p>
+            <p className="text-neutral-500 mt-4 font-bold text-xs">{t('dashboard.projects.studio.enums.loading')}</p>
           </div>
         ) : enumerations.length === 0 ? (
           <div className="text-center py-20 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-3xl">
             <List className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
-            <h3 className="text-lg font-bold">Nenhum Enumeration configurado</h3>
-            <p className="text-sm text-neutral-500 mt-2">Crie listas fixas globais para usar em campos de Select e Radio de qualquer Caso de Uso do projeto.</p>
+            <h3 className="text-lg font-bold">{t('dashboard.projects.studio.enums.empty_title')}</h3>
+            <p className="text-sm text-neutral-500 mt-2">{t('dashboard.projects.studio.enums.empty_subtitle')}</p>
             <button 
               onClick={openNewModal}
               className="mt-6 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-bold transition-all inline-flex items-center gap-2"
             >
-              <Plus className="w-4 h-4" /> Criar Primeiro Enum
+              <Plus className="w-4 h-4" /> {t('dashboard.projects.studio.enums.create_first')}
             </button>
           </div>
         ) : (
@@ -373,7 +373,7 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
                   ))}
                   {e.values.length > 3 && (
                     <span className="px-2 py-1 bg-neutral-100 dark:bg-neutral-800 rounded-md text-[10px] font-bold text-neutral-700 dark:text-neutral-300">
-                      +{e.values.length - 3} itens
+                      +{e.values.length - 3} {t('dashboard.projects.studio.enums.items_count')}
                     </span>
                   )}
                 </div>
@@ -393,8 +393,8 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
                   <List className="w-5 h-5 text-indigo-500" />
                 </div>
                 <div>
-                  <h3 className="font-black text-lg">{editingEnum.id ? 'Editar Enumeration' : 'Novo Enumeration'}</h3>
-                  <p className="text-xs text-neutral-500">Configure os valores que ficarão disponíveis globalmente neste projeto.</p>
+                  <h3 className="font-black text-lg">{editingEnum.id ? t('dashboard.projects.studio.enums.edit_title') : t('dashboard.projects.studio.enums.new_title')}</h3>
+                  <p className="text-xs text-neutral-500">{t('dashboard.projects.studio.enums.configure_desc')}</p>
                 </div>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors">
@@ -405,7 +405,7 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
             <div className="p-6 overflow-y-auto flex-1 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Nome do Enum <span className="text-red-500">*</span></label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">{t('dashboard.projects.studio.enums.name_label')} <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={editingEnum.name}
@@ -415,7 +415,7 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Descrição Opcional</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">{t('dashboard.projects.studio.enums.desc_label')}</label>
                   <input
                     type="text"
                     value={editingEnum.description || ''}
@@ -430,11 +430,11 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="radio" checked={enumSource === 'manual'} onChange={() => setEnumSource('manual')} className="accent-indigo-600" />
-                    <span className="text-sm font-bold">Preenchimento Manual</span>
+                    <span className="text-sm font-bold">{t('dashboard.projects.studio.enums.manual_source')}</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="radio" checked={enumSource === 'database'} onChange={() => setEnumSource('database')} className="accent-indigo-600" />
-                    <span className="text-sm font-bold">Gerar via Banco (SELECT DISTINCT)</span>
+                    <span className="text-sm font-bold">{t('dashboard.projects.studio.enums.db_source')}</span>
                   </label>
                 </div>
 
@@ -442,27 +442,27 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
                   <div className="bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Tabela Alvo</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">{t('dashboard.projects.studio.enums.target_table')}</label>
                         <select 
                           value={selectedDbModel} 
                           onChange={e => { setSelectedDbModel(e.target.value); setSelectedDbField(''); }}
                           className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500"
                         >
-                          <option value="">Selecione a tabela...</option>
+                          <option value="">{t('dashboard.projects.studio.enums.select_table')}</option>
                           {dbModels.map(m => (
                             <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>
                           ))}
                         </select>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Coluna (Field)</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">{t('dashboard.projects.studio.enums.target_column')}</label>
                         <select 
                           value={selectedDbField} 
                           onChange={e => setSelectedDbField(e.target.value)}
                           disabled={!selectedDbModel}
                           className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 disabled:opacity-50"
                         >
-                          <option value="">Selecione a coluna...</option>
+                          <option value="">{t('dashboard.projects.studio.enums.select_column')}</option>
                           {dbFields.filter(f => f.model_id === selectedDbModel).map(f => (
                             <option key={f.id} value={f.id}>{f.display_name || f.db_column_name}</option>
                           ))}
@@ -479,25 +479,25 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
                       ) : (
                          <Database className="w-4 h-4" />
                       )}
-                      {isFetchingDistinct ? 'Buscando valores no banco de dados...' : 'Carregar Valores Distintos'}
+                      {isFetchingDistinct ? t('dashboard.projects.studio.enums.fetching_values') : t('dashboard.projects.studio.enums.load_distinct')}
                     </button>
                   </div>
                 )}
 
                 <div className="flex items-center justify-between mt-4">
                   <div>
-                    <h4 className="text-sm font-bold">Valores Fixos</h4>
-                    <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold mt-1">Value (salvo no banco) • Description (mostrado ao usuário)</p>
+                    <h4 className="text-sm font-bold">{t('dashboard.projects.studio.enums.fixed_values')}</h4>
+                    <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold mt-1">{t('dashboard.projects.studio.enums.fixed_values_hint')}</p>
                   </div>
                   <button onClick={addEnumValue} className="px-4 py-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-xs font-bold rounded-lg transition-colors flex items-center gap-2">
-                    <Plus className="w-3 h-3" /> Adicionar Valor
+                    <Plus className="w-3 h-3" /> {t('dashboard.projects.studio.enums.add_value')}
                   </button>
                 </div>
 
                 <div className="space-y-2">
                   {editingEnum.values.length === 0 ? (
                     <div className="text-center py-8 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl">
-                      <p className="text-xs text-neutral-500 font-bold">Nenhum valor adicionado ainda.</p>
+                      <p className="text-xs text-neutral-500 font-bold">{t('dashboard.projects.studio.enums.no_values_added')}</p>
                     </div>
                   ) : (
                     editingEnum.values.map((v, i) => (
@@ -528,10 +528,10 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
 
             <div className="p-6 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 rounded-b-3xl flex justify-end gap-3">
               <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-bold rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
-                Cancelar
+                {t('dashboard.projects.studio.enums.cancel')}
               </button>
               <button onClick={saveEnum} className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-colors shadow-lg shadow-indigo-600/20">
-                <Save className="w-4 h-4" /> Salvar Enumeration
+                <Save className="w-4 h-4" /> {t('dashboard.projects.studio.enums.save_enum')}
               </button>
             </div>
           </div>
@@ -548,8 +548,8 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
                   <Download className="w-5 h-5 text-indigo-500" />
                 </div>
                 <div>
-                  <h3 className="font-black text-lg">Importar Enumerations</h3>
-                  <p className="text-xs text-neutral-500">Copie enums já criados em outros projetos deste workspace.</p>
+                  <h3 className="font-black text-lg">{t('dashboard.projects.studio.enums.import_title')}</h3>
+                  <p className="text-xs text-neutral-500">{t('dashboard.projects.studio.enums.import_desc')}</p>
                 </div>
               </div>
               <button onClick={() => setIsImportModalOpen(false)} className="p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors">
@@ -559,13 +559,13 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
 
             <div className="p-6 overflow-y-auto flex-1 space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Selecione o Projeto de Origem</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">{t('dashboard.projects.studio.enums.select_source_project')}</label>
                 <select
                   value={selectedProjectId}
                   onChange={e => setSelectedProjectId(e.target.value)}
                   className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-colors"
                 >
-                  <option value="">Selecione um projeto...</option>
+                  <option value="">{t('dashboard.projects.studio.enums.select_project')}</option>
                   {otherProjects.map(p => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
@@ -574,14 +574,14 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
 
               {selectedProjectId && (
                 <div className="space-y-3">
-                  <h4 className="text-sm font-bold">Enumerations Disponíveis</h4>
+                  <h4 className="text-sm font-bold">{t('dashboard.projects.studio.enums.available_enums')}</h4>
                   {importLoading ? (
                     <div className="text-center py-8">
                       <div className="w-6 h-6 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
                     </div>
                   ) : projectEnums.length === 0 ? (
                     <div className="text-center py-6 bg-neutral-50 dark:bg-neutral-900/50 rounded-2xl border border-neutral-200 dark:border-neutral-800">
-                      <p className="text-xs text-neutral-500 font-bold">Este projeto não possui enumerations.</p>
+                      <p className="text-xs text-neutral-500 font-bold">{t('dashboard.projects.studio.enums.project_no_enums')}</p>
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-[40vh] overflow-y-auto custom-scrollbar">
@@ -595,7 +595,7 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
                           />
                           <div>
                             <span className="text-sm font-bold block">{e.name}</span>
-                            <span className="text-[10px] text-neutral-500 block mt-0.5">{e.values.length} valores cadastrados</span>
+                            <span className="text-[10px] text-neutral-500 block mt-0.5">{e.values.length} {t('dashboard.projects.studio.enums.registered_values')}</span>
                           </div>
                         </label>
                       ))}
@@ -607,14 +607,14 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
 
             <div className="p-6 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 rounded-b-3xl flex justify-end gap-3">
               <button onClick={() => setIsImportModalOpen(false)} className="px-6 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-bold rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
-                Cancelar
+                {t('dashboard.projects.studio.enums.cancel')}
               </button>
               <button 
                 onClick={handleImport} 
                 disabled={selectedEnums.size === 0 || importLoading}
                 className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-colors shadow-lg shadow-indigo-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {importLoading ? 'Importando...' : `Importar Selecionados (${selectedEnums.size})`}
+                {importLoading ? t('dashboard.projects.studio.enums.importing') : t('dashboard.projects.studio.enums.import_selected').replace('{count}', String(selectedEnums.size))}
               </button>
             </div>
           </div>
