@@ -17,10 +17,13 @@ import {
   Video,
   Info
 } from 'lucide-react'
-import { useTheme } from '@/components/CustomThemeProvider'
 import { getOccupiedSlots, createAppointment } from '@/app/actions/agenda'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { useI18n } from '@/i18n/I18nContext'
+import { Navbar } from '@/components/layout/Navbar'
+import { Footer } from '@/components/layout/Footer'
+import { createClient } from '@/utils/supabase/client'
 
 export default function AppointmentPage() {
   return (
@@ -35,7 +38,34 @@ export default function AppointmentPage() {
 }
 
 function AppointmentPageContent() {
-  const { theme, setTheme } = useTheme()
+  const { language, t } = useI18n()
+  const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUser(user)
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+          .then(({ data }) => {
+            setProfile(data)
+          })
+      }
+    })
+  }, [])
+
+  const localeMap = {
+    pt: 'pt-BR',
+    en: 'en-US',
+    es: 'es-ES'
+  }
+  const currentLocale = localeMap[language] || 'pt-BR'
+
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1) // 1: Day, 2: Time, 3: Form, 4: Success
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -218,7 +248,7 @@ function AppointmentPageContent() {
 
   // Format date helper (ex: Segunda-feira, 25 de Maio)
   const formatFriendlyDate = (date: Date) => {
-    return date.toLocaleDateString('pt-BR', {
+    return date.toLocaleDateString(currentLocale, {
       weekday: 'long',
       day: 'numeric',
       month: 'long'
@@ -226,19 +256,10 @@ function AppointmentPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black text-neutral-900 dark:text-white relative overflow-hidden flex flex-col items-center justify-center px-4 py-12 transition-colors duration-300">
-      
-      {/* Botão de Tema flutuante */}
-      <div className="absolute top-6 right-6 z-20">
-        <button
-          type="button"
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="p-3 rounded-full bg-neutral-100 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer shadow-lg"
-          title="Alternar Tema"
-        >
-          {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-        </button>
-      </div>
+    <div className="min-h-screen pt-16 flex flex-col bg-white dark:bg-black text-neutral-900 dark:text-white relative overflow-hidden transition-colors duration-300">
+      <Navbar user={user} profile={profile} />
+
+      <main className="flex-grow flex flex-col items-center justify-center px-4 py-12 relative z-10 w-full">
 
       {/* Decorative gradient glowing spheres */}
       <div className="absolute top-[-10%] left-[-15%] w-[50%] h-[50%] bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none"></div>
@@ -255,13 +276,13 @@ function AppointmentPageContent() {
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 dark:bg-indigo-500/15 border border-indigo-500/20 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em]"
           >
             <Video className="w-3.5 h-3.5" />
-            Demonstração Técnica Individual (30 min)
+            {t('scheduling.video_demo', 'Demonstração Técnica Individual (30 min)')}
           </motion.div>
           <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-neutral-900 via-neutral-700 to-neutral-500 dark:from-white dark:via-neutral-200 dark:to-neutral-400">
-            Agenda do <span className="text-indigo-500">Fundador</span>
+            {t('scheduling.founder_agenda_title_part1', 'Agenda do')} <span className="text-indigo-500">{t('scheduling.founder_agenda_title_part2', 'Fundador')}</span>
           </h1>
           <p className="text-neutral-600 dark:text-neutral-400 text-sm md:text-base max-w-lg">
-            Agende uma demonstração prática exclusiva do MetaBuilderPRO com Alexandre Moura e veja como a engine funciona com seus dados.
+            {t('scheduling.desc', 'Agende uma demonstração prática exclusiva do MetaBuilderPRO com Alexandre Moura e veja como a engine funciona com seus dados.')}
           </p>
         </div>
 
@@ -295,9 +316,9 @@ function AppointmentPageContent() {
                   <CheckCircle2 className="w-10 h-10" />
                 </div>
                 <div className="space-y-2">
-                  <h2 className="text-2xl md:text-3xl font-black text-neutral-900 dark:text-white">Demonstração Agendada!</h2>
+                  <h2 className="text-2xl md:text-3xl font-black text-neutral-900 dark:text-white">{t('scheduling.success_title', 'Demonstração Agendada!')}</h2>
                   <p className="text-neutral-500 dark:text-neutral-400 text-sm max-w-md mx-auto">
-                    Seu horário foi bloqueado na agenda do fundador. O link da sala de videoconferência foi gerado.
+                    {t('scheduling.success_desc', 'Seu horário foi bloqueado na agenda do fundador. O link da sala de videoconferência foi gerado.')}
                   </p>
                 </div>
                 
@@ -306,27 +327,27 @@ function AppointmentPageContent() {
                   <div className="flex items-center gap-3 border-b border-neutral-200/50 dark:border-neutral-800/50 pb-3">
                     <Calendar className="w-5 h-5 text-indigo-500" />
                     <div>
-                      <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Data Selecionada</span>
+                      <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">{t('scheduling.selected_date', 'Data Selecionada')}</span>
                       <p className="text-sm font-bold capitalize text-neutral-900 dark:text-white">{selectedDate && formatFriendlyDate(selectedDate)}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 border-b border-neutral-200/50 dark:border-neutral-800/50 pb-3">
                     <Clock className="w-5 h-5 text-indigo-500" />
                     <div>
-                      <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Horário (Duração 30 min)</span>
-                      <p className="text-sm font-bold text-neutral-900 dark:text-white">{selectedSlot}h às {selectedSlot && (() => {
+                      <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">{t('scheduling.selected_time', 'Horário (Duração 30 min)')}</span>
+                      <p className="text-sm font-bold text-neutral-900 dark:text-white">{t('scheduling.duration_format', '{start}h às {end}h').replace('{start}', selectedSlot || '').replace('{end}', selectedSlot ? (() => {
                         const [h, m] = selectedSlot.split(':').map(Number)
                         const finalM = m + 30
                         if (finalM >= 60) return `${String(h + 1).padStart(2, '0')}:00`
                         return `${String(h).padStart(2, '0')}:${String(finalM).padStart(2, '0')}`
-                      })()}h</p>
+                      })() : '')}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <Video className="w-5 h-5 text-indigo-500" />
                     <div>
-                      <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Local da Reunião</span>
-                      <p className="text-sm font-bold text-neutral-900 dark:text-white">O link da reunião será enviado por e-mail antecipadamente</p>
+                      <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">{t('scheduling.meeting_location', 'Local da Reunião')}</span>
+                      <p className="text-sm font-bold text-neutral-900 dark:text-white">{t('scheduling.meeting_location_desc', 'O link da reunião será enviado por e-mail antecipadamente')}</p>
                     </div>
                   </div>
                 </div>
@@ -338,13 +359,13 @@ function AppointmentPageContent() {
                     rel="noreferrer"
                     className="px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm transition-colors inline-flex items-center justify-center gap-2"
                   >
-                    Acompanhar no YouTube
+                    {t('scheduling.follow_youtube', 'Acompanhar no YouTube')}
                   </a>
                   <Link 
                     href="/"
                     className="px-6 py-3 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold text-sm transition-colors border border-neutral-200 dark:border-neutral-700 flex items-center justify-center"
                   >
-                    Voltar ao Início
+                    {t('scheduling.back_home', 'Voltar ao Início')}
                   </Link>
                 </div>
               </motion.div>
@@ -362,19 +383,19 @@ function AppointmentPageContent() {
                     className="flex flex-col gap-6"
                   >
                     <div className="flex flex-col gap-2">
-                      <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Passo 1 de 3</span>
-                      <h2 className="text-xl md:text-2xl font-black text-neutral-900 dark:text-white">Escolha um dia disponível</h2>
+                      <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">{t('scheduling.step_1_of_3', 'Passo 1 de 3')}</span>
+                      <h2 className="text-xl md:text-2xl font-black text-neutral-900 dark:text-white">{t('scheduling.choose_day', 'Escolha um dia disponível')}</h2>
                       <p className="text-xs text-neutral-500 dark:text-neutral-450 leading-relaxed">
-                        Selecione uma data para ver os horários de 30 minutos disponíveis na agenda.
+                        {t('scheduling.choose_day_desc', 'Selecione uma data para ver os horários de 30 minutos disponíveis na agenda.')}
                       </p>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[300px] overflow-y-auto pr-1">
                       {availableDays.map((dateObj, idx) => {
                         const isSelected = selectedDate ? formatDateToYMD(selectedDate) === formatDateToYMD(dateObj) : false
-                        const dayName = dateObj.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')
+                        const dayName = dateObj.toLocaleDateString(currentLocale, { weekday: 'short' }).replace('.', '')
                         const dayNum = dateObj.getDate()
-                        const monthName = dateObj.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')
+                        const monthName = dateObj.toLocaleDateString(currentLocale, { month: 'short' }).replace('.', '')
 
                         return (
                           <button
@@ -401,7 +422,7 @@ function AppointmentPageContent() {
                         onClick={() => router.back()}
                         className="px-5 py-3 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-750 text-neutral-700 dark:text-neutral-300 font-bold text-sm transition-all flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 cursor-pointer"
                       >
-                        Cancelar
+                        {t('scheduling.cancel', 'Cancelar')}
                       </button>
                       <button
                         type="button"
@@ -409,7 +430,7 @@ function AppointmentPageContent() {
                         onClick={handleNextDayStep}
                         className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-750 disabled:opacity-50 text-white font-bold text-sm transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/10 cursor-pointer"
                       >
-                        Próximo <ChevronRight className="w-4 h-4" />
+                        {t('scheduling.next', 'Próximo')} <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>
                   </motion.div>
@@ -425,24 +446,24 @@ function AppointmentPageContent() {
                     className="flex flex-col gap-6"
                   >
                     <div className="flex flex-col gap-2">
-                      <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Passo 2 de 3</span>
+                      <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">{t('scheduling.step_2_of_3', 'Passo 2 de 3')}</span>
                       <div className="flex items-center gap-2 text-neutral-500">
                         <Calendar className="w-4 h-4 text-indigo-500" />
                         <span className="text-xs font-black capitalize text-neutral-900 dark:text-white">{formatFriendlyDate(selectedDate)}</span>
                       </div>
-                      <h2 className="text-xl md:text-2xl font-black text-neutral-900 dark:text-white">Selecione um horário</h2>
+                      <h2 className="text-xl md:text-2xl font-black text-neutral-900 dark:text-white">{t('scheduling.select_slot', 'Selecione um horário')}</h2>
                     </div>
 
                     {/* Fuso Horário alert info */}
                     <div className="p-3 bg-indigo-500/5 border border-indigo-500/20 text-neutral-600 dark:text-indigo-300 rounded-xl text-[10px] md:text-xs flex items-center gap-2 leading-relaxed">
                       <Info className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-                      <span>Os horários disponíveis correspondem ao seu fuso horário local e respeitam a grade comercial do fundador.</span>
+                      <span>{t('scheduling.timezone_warning', 'Os horários disponíveis correspondem ao seu fuso horário local e respeitam a grade comercial do fundador.')}</span>
                     </div>
 
                     {isLoadingSlots ? (
                       <div className="py-12 flex flex-col items-center justify-center gap-3 text-neutral-500">
                         <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"></div>
-                        <span className="text-xs font-semibold uppercase tracking-wider">Verificando slots disponíveis...</span>
+                        <span className="text-xs font-semibold uppercase tracking-wider">{t('scheduling.checking_slots', 'Verificando slots disponíveis...')}</span>
                       </div>
                     ) : (
                       (() => {
@@ -453,8 +474,8 @@ function AppointmentPageContent() {
                           return (
                             <div className="py-12 text-center text-neutral-500 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col gap-2 items-center justify-center">
                               <Clock className="w-8 h-8 text-neutral-400" />
-                              <p className="text-sm font-bold text-neutral-900 dark:text-white">Nenhum horário disponível para este dia.</p>
-                              <p className="text-xs text-neutral-400">Por favor, volte e escolha outra data no calendário.</p>
+                              <p className="text-sm font-bold text-neutral-900 dark:text-white">{t('scheduling.no_slots_available', 'Nenhum horário disponível para este dia.')}</p>
+                              <p className="text-xs text-neutral-400">{t('scheduling.choose_another_day', 'Por favor, volte e escolha outra data no calendário.')}</p>
                             </div>
                           )
                         }
@@ -489,7 +510,7 @@ function AppointmentPageContent() {
                         onClick={handlePrevStep}
                         className="px-5 py-3 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-750 text-neutral-700 dark:text-neutral-300 font-bold text-sm transition-all flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 cursor-pointer"
                       >
-                        <ChevronLeft className="w-4 h-4" /> Voltar
+                        <ChevronLeft className="w-4 h-4" /> {t('scheduling.prev', 'Voltar')}
                       </button>
                       <button
                         type="button"
@@ -497,7 +518,7 @@ function AppointmentPageContent() {
                         onClick={handleNextSlotStep}
                         className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-750 disabled:opacity-50 text-white font-bold text-sm transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/10 cursor-pointer"
                       >
-                        Próximo <ChevronRight className="w-4 h-4" />
+                        {t('scheduling.next', 'Próximo')} <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>
                   </motion.div>
@@ -513,7 +534,7 @@ function AppointmentPageContent() {
                     className="flex flex-col gap-6"
                   >
                     <div className="flex flex-col gap-2">
-                      <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Passo 3 de 3</span>
+                      <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">{t('scheduling.step_3_of_3', 'Passo 3 de 3')}</span>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-neutral-500 text-xs">
                         <div className="flex items-center gap-1.5">
                           <Calendar className="w-3.5 h-3.5 text-indigo-500" />
@@ -521,24 +542,24 @@ function AppointmentPageContent() {
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Clock className="w-3.5 h-3.5 text-indigo-500" />
-                          <span className="font-black text-neutral-900 dark:text-white">{selectedSlot}h (Duração 30 min)</span>
+                          <span className="font-black text-neutral-900 dark:text-white">{selectedSlot}h ({t('scheduling.selected_time', 'Duração 30 min')})</span>
                         </div>
                       </div>
-                      <h2 className="text-xl md:text-2xl font-black text-neutral-900 dark:text-white">Confirme seus dados de contato</h2>
+                      <h2 className="text-xl md:text-2xl font-black text-neutral-900 dark:text-white">{t('scheduling.confirm_details', 'Confirme seus dados de contato')}</h2>
                     </div>
 
                     <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
                       {/* Name */}
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider flex items-center gap-2">
-                          <User className="w-3.5 h-3.5" /> Nome Completo *
+                          <User className="w-3.5 h-3.5" /> {t('scheduling.full_name_label', 'Nome Completo *')}
                         </label>
                         <input 
                           type="text" 
                           required
                           value={fullName}
                           onChange={e => setFullName(e.target.value)}
-                          placeholder="Ex: João Silva" 
+                          placeholder={t('scheduling.name_placeholder', 'Ex: João Silva')} 
                           className="w-full bg-white dark:bg-neutral-950/80 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600"
                         />
                       </div>
@@ -546,7 +567,7 @@ function AppointmentPageContent() {
                       {/* Corporate Email */}
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider flex items-center gap-2">
-                          <Mail className="w-3.5 h-3.5" /> E-mail Corporativo *
+                          <Mail className="w-3.5 h-3.5" /> {t('scheduling.email_label', 'E-mail Corporativo *')}
                         </label>
                         <input 
                           type="email" 
@@ -554,7 +575,7 @@ function AppointmentPageContent() {
                           value={email}
                           onChange={e => setEmail(e.target.value)}
                           onBlur={() => setEmailTouched(true)}
-                          placeholder="Ex: joao@suaempresa.com" 
+                          placeholder={t('scheduling.email_placeholder', 'Ex: joao@suaempresa.com')} 
                           className={`w-full bg-white dark:bg-neutral-950/80 border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 transition-all text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 ${
                             showEmailError 
                               ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
@@ -562,16 +583,16 @@ function AppointmentPageContent() {
                           }`}
                         />
                         {showEmailError ? (
-                          <span className="text-[10px] text-red-400 mt-0.5">Por favor, insira um e-mail válido.</span>
+                          <span className="text-[10px] text-red-400 mt-0.5">{t('scheduling.email_error', 'Por favor, insira um e-mail válido.')}</span>
                         ) : (
-                          <span className="text-[10px] text-neutral-500 italic mt-0.5">Utilize o e-mail da sua empresa para podermos alinhar o contexto técnico.</span>
+                          <span className="text-[10px] text-neutral-500 italic mt-0.5">{t('scheduling.email_hint', 'Utilize o e-mail da sua empresa para podermos alinhar o contexto técnico.')}</span>
                         )}
                       </div>
 
                       {/* WhatsApp */}
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider flex items-center gap-2">
-                          <Phone className="w-3.5 h-3.5" /> WhatsApp com DDD *
+                          <Phone className="w-3.5 h-3.5" /> {t('scheduling.phone_label', 'WhatsApp com DDD *')}
                         </label>
                         <input 
                           type="tel" 
@@ -579,7 +600,7 @@ function AppointmentPageContent() {
                           value={phone}
                           onChange={handlePhoneChange}
                           onBlur={() => setPhoneTouched(true)}
-                          placeholder="Ex: (11) 99999-9999" 
+                          placeholder={t('scheduling.phone_placeholder', 'Ex: (11) 99999-9999')} 
                           className={`w-full bg-white dark:bg-neutral-950/80 border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 transition-all text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 ${
                             showPhoneError 
                               ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
@@ -587,7 +608,7 @@ function AppointmentPageContent() {
                           }`}
                         />
                         {showPhoneError && (
-                          <span className="text-[10px] text-red-400 mt-0.5">Por favor, insira um número de WhatsApp com DDD válido.</span>
+                          <span className="text-[10px] text-red-400 mt-0.5">{t('scheduling.phone_error', 'Por favor, insira um número de WhatsApp com DDD válido.')}</span>
                         )}
                       </div>
 
@@ -603,14 +624,14 @@ function AppointmentPageContent() {
                           onClick={handlePrevStep}
                           className="px-5 py-3 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-750 text-neutral-700 dark:text-neutral-300 font-bold text-sm transition-all flex items-center gap-2 border border-neutral-200 dark:border-neutral-700 cursor-pointer"
                         >
-                          <ChevronLeft className="w-4 h-4" /> Voltar
+                          <ChevronLeft className="w-4 h-4" /> {t('scheduling.prev', 'Voltar')}
                         </button>
                         <button
                           type="submit"
                           disabled={!isFormValid || isSubmitting}
                           className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-750 disabled:opacity-50 text-white font-bold text-sm transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/10 cursor-pointer"
                         >
-                          {isSubmitting ? 'Confirmando...' : 'Confirmar Agendamento'} 
+                          {isSubmitting ? t('scheduling.confirming_btn', 'Confirmando...') : t('scheduling.confirm_booking_btn', 'Confirmar Agendamento')} 
                           {!isSubmitting && <CheckCircle2 className="w-4 h-4" />}
                         </button>
                       </div>
@@ -625,13 +646,13 @@ function AppointmentPageContent() {
 
         {/* Footer info */}
         <div className="flex items-center justify-center gap-4 text-xs text-neutral-500 dark:text-neutral-600">
-          <span>© 2026 MetaBuilderPRO</span>
+          <span>{t('scheduling.google_meet_desc', 'Videoconferência via Google Meet')}</span>
           <span>•</span>
-          <span>Videoconferência via Google Meet</span>
-          <span>•</span>
-          <span>Privacidade Zero-Trust</span>
+          <span>{t('scheduling.zero_trust_desc', 'Privacidade Zero-Trust')}</span>
         </div>
       </div>
+      </main>
+      <Footer />
     </div>
   )
 }
