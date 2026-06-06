@@ -74,6 +74,7 @@
     "saved": "Saved!",
     "loading": "Loading...",
     "success": "Saved successfully!",
+    "error_save": "Error saving changes: ",
     "enterprise": "Enterprise",
     "logged_in_as": "Logged User",
     "all": "All",
@@ -190,6 +191,17 @@
       "confirm_delete_view": "Confirm view deletion?",
       "delete_view_desc": "This action will permanently remove the interface. Database data will not be affected.",
       "yes_delete_view": "Yes, delete view",
+      "next_steps": "Next Steps",
+      "step1": "Start the CLI Agent on your server or local machine",
+      "step2": "Wait for the status to turn green indicating connection established",
+      "step3": "Create new Use Cases in MetaBuilder Studio",
+      "step4": "Publish and share the URL of the generated system",
+      "connection_established": "Connection Established",
+      "connection_desc": "The CLI Agent is running locally and responding to commands.",
+      "agent_status": "Agent Status",
+      "project_id": "Project ID",
+      "secret_token": "Secret Token",
+      "copy": "Copy",
       "studio": {
         "title": "MetaBuilder Studio",
         "subtitle": "Configure your application screens. Choose synchronized tables and define how data should be displayed to your users.",
@@ -320,6 +332,33 @@
           "primary_key": "PRIMARY KEY",
           "loading_studio": "Loading Studio..."
         },
+        "sidebar": {
+          "dashboard": "Control Dashboard",
+          "data": "Data Structure",
+          "auth": "Login Portal",
+          "settings": "Settings"
+        },
+        "login": {
+          "title": "Login Portal",
+          "subtitle": "Visual Personalization of the Login Screen",
+          "view_portal": "View Portal",
+          "publish": "Publish Screen",
+          "main_texts": "Main Texts",
+          "page_title": "Page Title",
+          "page_title_placeholder": "e.g., Client Area",
+          "page_subtitle": "Page Subtitle",
+          "brand_icon": "Brand Icon (SVG)",
+          "field_config": "Field Configuration",
+          "user_label": "User Label",
+          "user_placeholder": "User Placeholder",
+          "pass_label": "Password Label",
+          "pass_placeholder": "Password Placeholder",
+          "styles_colors": "Styles & Colors",
+          "button_color": "Button Color",
+          "button_text": "Button Text",
+          "container_theme": "Container Theme",
+          "live_preview": "Live Preview"
+        },
         "builder": {
           "title": "Use Case Builder",
           "subtitle": "New Use Case",
@@ -361,7 +400,16 @@
           "next_step": "Next Step",
           "saving": "Saving...",
           "error_save": "Error saving use case: ",
-          "fill_name_slug": "Please fill in the name and slug of the screen."
+          "fill_name_slug": "Please fill in the name and slug of the screen.",
+          "screen_name_placeholder": "Ex: Contract Management"
+        },
+        "wizard": {
+          "buttons": {
+            "add": "Add New",
+            "edit": "Edit Record",
+            "delete": "Delete Record",
+            "export": "Export Data"
+          }
         }
       }
     }
@@ -627,7 +675,9 @@
       "use_cases": "Logics",
       "pricing": "Pricing",
       "control_center": "Control Center",
-      "zero_trust": "Zero-Trust"
+      "zero_trust": "Zero-Trust",
+      "bpm": "BPM & Automation",
+      "sync_resolution": "Auto Sync"
     },
     "hero": {
       "badge": "The Software Engine of the Future",
@@ -932,6 +982,163 @@
       "desc": "Track and audit engineering productivity in real-time. Monitor Cycle Time, rework rate, active vs. idle dev time, and manage workspaces, billing, and active user licenses.",
       "interactive_title": "Control Center Modules",
       "interactive_desc": "Navigate through the Control Center tabs below to simulate how managers track productivity and subscription status."
+    }
+  },
+  "settings": {
+    "team_tab": "Team & Permissions",
+    "billing_tab": "Billing",
+    "title": "Workspace Members",
+    "subtitle": "Manage who has access to this workspace's projects.",
+    "member": "member",
+    "members": "members",
+    "no_email": "No email",
+    "invite_title": "Invite New Member",
+    "user_email": "User Email",
+    "access_level": "Access Level",
+    "role_developer": "Developer (Create and edit projects)",
+    "role_admin": "Admin (Full access except delete workspace)",
+    "sending": "Sending...",
+    "send_invite": "Send Invitation",
+    "invite_hint": "The user will receive an email to access the platform.",
+    "only_admins": "Only Administrators or the Workspace Owner can invite new members.",
+    "remove_title": "Remove Member",
+    "remove_desc": "Are you sure you want to remove this team member?",
+    "yes_remove": "Yes, remove",
+    "allowed_projects": "Allowed Projects",
+    "allowed_projects_desc": "Select the projects this member can view and act on.",
+    "no_projects": "No projects found in this workspace.",
+    "done": "Done"
+  },
+  "wizard": {
+    "title": "Use Case Wizard",
+    "edit_mode": "Edit Use Case",
+    "new_mode": "New Use Case",
+    "logic": {
+      "title": "What is the logic of your use case?",
+      "subtitle": "Define the main behavior of this screen in MetaBuilder.",
+      "screen_name": "Screen Name",
+      "screen_name_placeholder": "Ex: Contract Management",
+      "slug_label": "Friendly URL (Slug)",
+      "slug_placeholder": "Ex: contracts",
+      "enable_args": "Enable Arguments (Search filters in URL)",
+      "types": {
+        "pesquisa": {
+          "title": "Search Only",
+          "desc": "Focused on searching and viewing data."
+        },
+        "cadastro": {
+          "title": "Registration Only",
+          "desc": "Direct form for inserting data."
+        },
+        "pesquisa_cadastro": {
+          "title": "Search + Registration",
+          "desc": "Full flow: search, listing, and form."
+        },
+        "master_detail": {
+          "title": "Master-Detail",
+          "desc": "Relational structure with linked sub-tables."
+        },
+        "kanban": {
+          "title": "Kanban",
+          "desc": "Visual board of cards organized by columns."
+        },
+        "mapa_mental": {
+          "title": "Mind Map",
+          "desc": "Visualizer of data hierarchies."
+        },
+        "personalizado": {
+          "title": "Custom",
+          "desc": "Custom query for complex scenarios."
+        }
+      }
+    },
+    "tables": {
+      "title": "Which tables make up this case?",
+      "subtitle": "You can select one or more tables. Join logic will be configured next.",
+      "selected_warning": "You selected more than one table. Remember to configure relationships (Joins)."
+    },
+    "layout": {
+      "title": "Draw the Screen Layout",
+      "subtitle": "Organize fields into specific zones. A field can be in more than one zone.",
+      "widget_title": "Widget Title",
+      "relationships": "Relationships (Joins)",
+      "relationships_desc": "Configure how tables relate to fetch the correct metrics.",
+      "reset_formatting": "Reset Formatting",
+      "reset_confirm": "Do you want to reset all custom formatting for all fields? This action cannot be undone.",
+      "available_fields": "Available Fields",
+      "kanban": {
+        "title": "Kanban Configuration",
+        "group_field": "Grouping Field",
+        "group_placeholder": "Select field...",
+        "group_desc": "Select the column to be used to organize Kanban columns (usually an enum or foreign key)."
+      },
+      "master_detail": {
+        "title": "Master-Detail Structure",
+        "subtitle": "Define the master-detail relationship."
+      },
+      "zones": {
+        "zone_01": "Zone 1",
+        "filter": "Zone 01: Search Filters",
+        "zone_02": "Zone 2",
+        "grid": "Zone 02: Listing (Grid/Table)",
+        "zone_03": "Zone 3",
+        "form": "Zone 03: Edit Form"
+      },
+      "display_options": {
+        "list": "List",
+        "card": "Cards",
+        "both": "Both"
+      },
+      "drawer": {
+        "title": "Properties",
+        "label_config": "Label Configuration",
+        "font": "Font",
+        "font_default": "Inter (Default)",
+        "size": "Size",
+        "text_color": "Text Color",
+        "display_text": "Display Text",
+        "content_config": "Content Configuration",
+        "mask": "Mask (Input Mask)",
+        "required": "Required Field",
+        "required_desc": "Validate if field is filled",
+        "content_color": "Content Color"
+      }
+    },
+    "actions": {
+      "title": "Query & Final Actions",
+      "subtitle": "Configure how data will be retrieved and which buttons will be available.",
+      "dynamic_query": {
+        "title": "Dynamic Query (Automatic)",
+        "desc": "MetaBuilder generates Joins and Selects based on table relationships."
+      },
+      "raw_sql": {
+        "title": "Manual SQL (Raw SQL)",
+        "desc": "You write raw SQL for greater control and performance."
+      },
+      "interface_buttons": "Interface Buttons",
+      "data_strategy": "Data Strategy",
+      "sql_editor": "SQL Editor"
+    },
+    "buttons": {
+      "updating": "Updating...",
+      "saving": "Saving...",
+      "update": "Update Use Case",
+      "finish": "Finish Use Case",
+      "prev": "Back Step",
+      "next": "Next Step",
+      "error_save": "Error saving use case",
+      "validation": {
+        "grid_required": "Select at least one field for Grid listing.",
+        "form_required": "Select at least one field for Form.",
+        "filter_required": "You have enabled arguments. Select at least one Filter field.",
+        "name_slug_required": "Please fill in the name and slug for the use case."
+      }
+    },
+    "steps": {
+      "logic": "Logic",
+      "tables": "Tables",
+      "layout": "Fields & Layout",
+      "actions": "Actions & Query"
     }
   }
 }

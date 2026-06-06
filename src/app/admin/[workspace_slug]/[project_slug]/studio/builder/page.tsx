@@ -63,7 +63,7 @@ export default function UseCaseBuilder() {
       { id: 'add', label: t('dashboard.projects.studio.wizard.buttons.add'), icon: 'plus', action: 'create', visible: true },
       { id: 'edit', label: t('dashboard.projects.studio.wizard.buttons.edit'), icon: 'edit', action: 'update', visible: true },
       { id: 'delete', label: t('dashboard.projects.studio.wizard.buttons.delete'), icon: 'trash', action: 'delete', visible: true },
-      { id: 'export', label: 'Exportar Dados', icon: 'download', action: 'export', visible: true }
+      { id: 'export', label: t('dashboard.projects.studio.wizard.buttons.export'), icon: 'download', action: 'export', visible: true }
     ]
   })
 

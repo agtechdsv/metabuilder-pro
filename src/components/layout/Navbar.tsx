@@ -70,8 +70,8 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
 
             {(pathname === '/' || pathname?.startsWith('/features') || pathname?.startsWith('/bpm')) && (
               <nav className="hidden lg:flex items-center gap-6">
-                <Link href="/bpm" className="text-xs font-black tracking-widest text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors uppercase">BPM & Automação</Link>
-                <Link href="/features/sync-resolution" className="text-xs font-black tracking-widest text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 transition-colors uppercase">Sync Automático</Link>
+                <Link href="/bpm" className="text-xs font-black tracking-widest text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors uppercase">{t('marketing_v2.navbar.bpm')}</Link>
+                <Link href="/features/sync-resolution" className="text-xs font-black tracking-widest text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 transition-colors uppercase">{t('marketing_v2.navbar.sync_resolution')}</Link>
                 <Link href="/features/speed" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.speed')}</Link>
                 <Link href="/features/integration" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.integration')}</Link>
                 <Link href="/features/branding" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.branding')}</Link>
@@ -94,7 +94,7 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 transition-all active:scale-95 group"
               >
                 <LogIn className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-                <span>Entrar</span>
+                <span>{t('common.login')}</span>
               </button>
             )}
           </div>

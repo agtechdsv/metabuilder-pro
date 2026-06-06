@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { useRouter } from 'next/navigation'
 import BillingSettings from './BillingSettings'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface Member {
   id: string
@@ -68,6 +69,7 @@ export function SettingsClient({
   payments,
   rules
 }: SettingsClientProps) {
+  const { t } = useI18n()
   const [activeTab, setActiveTab] = useState<'team' | 'billing'>('team')
   const [members, setMembers] = useState<Member[]>(initialMembers)
   const [memberProjects, setMemberProjects] = useState(initialMemberProjects || [])
@@ -155,14 +157,14 @@ export function SettingsClient({
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'team' ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
         >
           <Users className="w-4 h-4" />
-          Equipe e Permissões
+          {t('settings.team_tab')}
         </button>
         <button 
           onClick={() => setActiveTab('billing')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'billing' ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
         >
           <CreditCard className="w-4 h-4" />
-          Faturamento
+          {t('settings.billing_tab')}
         </button>
       </div>
 
@@ -174,12 +176,12 @@ export function SettingsClient({
             <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-sm">
               <div className="p-6 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold text-neutral-900 dark:text-white">Membros do Workspace</h3>
-                  <p className="text-xs text-neutral-500 mt-1">Gerencie quem tem acesso aos projetos deste Workspace.</p>
+                  <h3 className="text-lg font-bold text-neutral-900 dark:text-white">{t('settings.title')}</h3>
+                  <p className="text-xs text-neutral-500 mt-1">{t('settings.subtitle')}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="px-3 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 text-xs font-bold rounded-full">
-                    {members.length} {members.length === 1 ? 'membro' : 'membros'}
+                    {members.length} {members.length === 1 ? t('settings.member') : t('settings.members')}
                   </div>
                   <button 
                     onClick={() => {
@@ -207,7 +209,7 @@ export function SettingsClient({
                         </div>
                         <div>
                           <p className="text-sm font-bold text-neutral-900 dark:text-white">{displayName}</p>
-                          <p className="text-xs text-neutral-500 mt-0.5">{member.profiles?.email || 'Sem e-mail'}</p>
+                          <p className="text-xs text-neutral-500 mt-0.5">{member.profiles?.email || t('settings.no_email')}</p>
                         </div>
                       </div>
                     <div className="flex items-center gap-4">
@@ -253,13 +255,13 @@ export function SettingsClient({
                 <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-600">
                   <UserPlus className="w-5 h-5" />
                 </div>
-                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Convidar Novo Membro</h3>
+                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">{t('settings.invite_title')}</h3>
               </div>
 
               {canManageTeam ? (
                 <form onSubmit={handleInvite} className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">E-mail do Usuário</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">{t('settings.user_email')}</label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                       <input 
@@ -274,7 +276,7 @@ export function SettingsClient({
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Nível de Acesso</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">{t('settings.access_level')}</label>
                     <div className="relative">
                       <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                       <select 
@@ -282,8 +284,8 @@ export function SettingsClient({
                         onChange={e => setInviteRole(e.target.value)}
                         className="w-full h-11 pl-10 pr-4 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm focus:border-indigo-500 outline-none transition-all appearance-none dark:text-white"
                       >
-                        <option value="developer">Developer (Cria e edita projetos)</option>
-                        <option value="admin">Admin (Acesso total exceto deletar workspace)</option>
+                        <option value="developer">{t('settings.role_developer')}</option>
+                        <option value="admin">{t('settings.role_admin')}</option>
                       </select>
                     </div>
                   </div>
@@ -293,16 +295,16 @@ export function SettingsClient({
                     disabled={isInviting}
                     className="w-full h-11 mt-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-neutral-400 disabled:dark:bg-neutral-800 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
                   >
-                    {isInviting ? 'Enviando...' : 'Enviar Convite'}
+                    {isInviting ? t('settings.sending') : t('settings.send_invite')}
                   </button>
                   <p className="text-[10px] text-neutral-500 text-center leading-relaxed mt-2">
-                    O usuário receberá um e-mail para acessar a plataforma.
+                    {t('settings.invite_hint')}
                   </p>
                 </form>
               ) : (
                 <div className="p-4 bg-neutral-50 dark:bg-neutral-950 rounded-xl border border-neutral-200 dark:border-neutral-800 text-center">
                   <Shield className="w-6 h-6 text-neutral-400 mx-auto mb-2" />
-                  <p className="text-xs text-neutral-500 font-medium">Apenas Administradores ou o Dono do Workspace podem convidar novos membros.</p>
+                  <p className="text-xs text-neutral-500 font-medium">{t('settings.only_admins')}</p>
                 </div>
               )}
             </div>
@@ -325,8 +327,8 @@ export function SettingsClient({
       <Modal
         isOpen={!!memberToRemove}
         onClose={() => setMemberToRemove(null)}
-        title="Remover Membro"
-        description="Tem certeza que deseja remover este membro da equipe?"
+        title={t('settings.remove_title')}
+        description={t('settings.remove_desc')}
         size="sm"
       >
         <div className="flex items-center gap-4 mt-6">
@@ -334,13 +336,13 @@ export function SettingsClient({
             onClick={() => setMemberToRemove(null)}
             className="flex-1 px-4 py-3 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white font-bold rounded-xl transition-colors"
           >
-            Cancelar
+            {t('common.cancel')}
           </button>
           <button
             onClick={confirmRemove}
             className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-red-500/20"
           >
-            Sim, remover
+            {t('settings.yes_remove')}
           </button>
         </div>
       </Modal>
@@ -349,13 +351,13 @@ export function SettingsClient({
       <Modal
         isOpen={!!memberToManageProjects}
         onClose={() => setMemberToManageProjects(null)}
-        title="Projetos Permitidos"
-        description="Selecione os projetos que este membro pode visualizar e atuar."
+        title={t('settings.allowed_projects')}
+        description={t('settings.allowed_projects_desc')}
         size="md"
       >
         <div className="mt-6 space-y-4">
           {!workspaceProjects?.length ? (
-            <p className="text-sm text-neutral-500 text-center py-4">Nenhum projeto encontrado neste workspace.</p>
+            <p className="text-sm text-neutral-500 text-center py-4">{t('settings.no_projects')}</p>
           ) : (
             workspaceProjects.map(project => {
               const isAssigned = memberProjects.some(mp => mp.user_id === memberToManageProjects && mp.project_id === project.id)
@@ -390,7 +392,7 @@ export function SettingsClient({
               onClick={() => setMemberToManageProjects(null)}
               className="px-6 py-2.5 bg-neutral-900 dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black font-bold rounded-xl transition-colors shadow-lg"
             >
-              Concluído
+              {t('settings.done')}
             </button>
           </div>
         </div>

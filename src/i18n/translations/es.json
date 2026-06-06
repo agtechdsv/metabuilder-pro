@@ -74,6 +74,7 @@
     "saved": "¡Guardado!",
     "loading": "Cargando...",
     "success": "¡Guardado con éxito!",
+    "error_save": "Error al guardar los cambios: ",
     "enterprise": "Enterprise",
     "logged_in_as": "Usuario Conectado",
     "all": "Todos",
@@ -188,8 +189,19 @@
       "personalize_visual": "Personalizar Visual",
       "system_label": "Sistema",
       "confirm_delete_view": "¿Confirmar eliminación de la vista?",
-      "delete_view_desc": "Esta ação removerá permanentemente a interface. Os dados no banco não serão afetados.",
+      "delete_view_desc": "Esta acción eliminará permanentemente la interfaz. Los datos en la base de datos no se verán afectados.",
       "yes_delete_view": "Sí, eliminar vista",
+      "next_steps": "Próximos Pasos",
+      "step1": "Inicie el Agente CLI en su servidor o máquina local",
+      "step2": "Espere a que el estado se vuelva verde indicando conexión establecida",
+      "step3": "Cree nuevos Casos de Uso en MetaBuilder Studio",
+      "step4": "Publique y comparta la URL del sistema generado",
+      "connection_established": "Conexión Establecida",
+      "connection_desc": "El Agente CLI se está ejecutando localmente y respondiendo a los comandos.",
+      "agent_status": "Estado del Agente",
+      "project_id": "ID del Proyecto",
+      "secret_token": "Token Secreto",
+      "copy": "Copiar",
       "studio": {
         "title": "MetaBuilder Studio",
         "subtitle": "Configure as telas do seu aplicativo. Escolha as tabelas sincronizadas e defina como os dados devem ser exibidos para os seus usuários.",
@@ -320,6 +332,33 @@
           "primary_key": "CLAVE PRIMARIA",
           "loading_studio": "Cargando Studio..."
         },
+        "sidebar": {
+          "dashboard": "Panel de Control",
+          "data": "Estructura de Datos",
+          "auth": "Portal de Login",
+          "settings": "Configuraciones"
+        },
+        "login": {
+          "title": "Portal de Login",
+          "subtitle": "Personalización Visual de la Pantalla de Login",
+          "view_portal": "Ver Portal",
+          "publish": "Publicar Pantalla",
+          "main_texts": "Textos Principales",
+          "page_title": "Título de la Página",
+          "page_title_placeholder": "Ej: Área del Cliente",
+          "page_subtitle": "Subtítulo de la Página",
+          "brand_icon": "Icono de Marca (SVG)",
+          "field_config": "Configuración de Campos",
+          "user_label": "Etiqueta Usuario",
+          "user_placeholder": "Placeholder Usuario",
+          "pass_label": "Etiqueta Contraseña",
+          "pass_placeholder": "Placeholder Contraseña",
+          "styles_colors": "Estilos y Colores",
+          "button_color": "Color del Botón",
+          "button_text": "Texto del Botón",
+          "container_theme": "Tema del Contenedor",
+          "live_preview": "Vista Previa"
+        },
         "builder": {
           "title": "Use Case Builder",
           "subtitle": "Nuevo Caso de Uso",
@@ -360,8 +399,17 @@
           "back_step": "Volver Paso",
           "next_step": "Próximo Paso",
           "saving": "Guardando...",
-          "error_save": "Erro ao salvar caso de uso: ",
-          "fill_name_slug": "Por favor, complete el nome e o slug da tela."
+          "error_save": "Error al guardar el caso de uso: ",
+          "fill_name_slug": "Por favor, complete el nombre y el slug de la pantalla.",
+          "screen_name_placeholder": "Ej: Gestión de Contratos"
+        },
+        "wizard": {
+          "buttons": {
+            "add": "Agregar Nuevo",
+            "edit": "Editar Registro",
+            "delete": "Eliminar Registro",
+            "export": "Exportar Datos"
+          }
         }
       }
     }
@@ -370,12 +418,12 @@
     "new_record": "Nuevo Registro",
     "search_placeholder": "Buscar registros...",
     "filters": "Filtros",
-    "mapped_columns": "{count} colunas mapeadas",
+    "mapped_columns": "{count} columnas mapeadas",
     "actions": "Acciones",
     "forgot_password": "¿Olvidó su contraseña?",
     "powered_by": "Powered by MetaBuilder",
     "project_inactive": "Proyecto Inactivo",
-    "project_inactive_desc": "Esta aplicação foi temporariamente desativada pelo administrador do workspace."
+    "project_inactive_desc": "Esta aplicación fue desactivada temporalmente por el administrador del espacio de trabajo."
   },
   "runtime": {
     "dashboard": "Dashboard",
@@ -627,7 +675,9 @@
       "use_cases": "Lógicas",
       "pricing": "Planes",
       "control_center": "Central de Control",
-      "zero_trust": "Zero-Trust"
+      "zero_trust": "Zero-Trust",
+      "bpm": "BPM y Automatización",
+      "sync_resolution": "Sincronización Automática"
     },
     "hero": {
       "badge": "El motor de software del futuro",
@@ -932,6 +982,163 @@
       "desc": "Monitoree y audite la productividad de ingeniería en tiempo real. Vea el Cycle Time, tasa de retrabajo, tiempo activo de cada DEV y gestione workspaces, facturación y licencias.",
       "interactive_title": "Módulos de la Central de Control",
       "interactive_desc": "Navegue por las pestañas de la Central de Control abajo para simular cómo los gestores supervisan el rendimiento y la facturación."
+    }
+  },
+  "settings": {
+    "team_tab": "Equipo y Permisos",
+    "billing_tab": "Facturación",
+    "title": "Miembros del Espacio de Trabajo",
+    "subtitle": "Gestione quién tiene acceso a los proyectos de este Espacio de Trabajo.",
+    "member": "miembro",
+    "members": "miembros",
+    "no_email": "Sin correo electrónico",
+    "invite_title": "Invitar Nuevo Miembro",
+    "user_email": "Correo del Usuario",
+    "access_level": "Nivel de Acceso",
+    "role_developer": "Developer (Crea y edita proyectos)",
+    "role_admin": "Admin (Acceso total excepto eliminar el espacio de trabajo)",
+    "sending": "Enviando...",
+    "send_invite": "Enviar Invitación",
+    "invite_hint": "El usuario recibirá un correo electrónico para acceder a la plataforma.",
+    "only_admins": "Solo los Administradores o el Propietario del Espacio de Trabajo pueden invitar a nuevos miembros.",
+    "remove_title": "Eliminar Miembro",
+    "remove_desc": "¿Está seguro de que desea eliminar a este miembro del equipo?",
+    "yes_remove": "Sí, eliminar",
+    "allowed_projects": "Proyectos Permitidos",
+    "allowed_projects_desc": "Seleccione los proyectos que este miembro puede ver y actuar.",
+    "no_projects": "No se encontraron proyectos en este espacio de trabajo.",
+    "done": "Concluido"
+  },
+  "wizard": {
+    "title": "Asistente de Casos de Uso",
+    "edit_mode": "Editar Caso de Uso",
+    "new_mode": "Nuevo Caso de Uso",
+    "logic": {
+      "title": "¿Cuál es la lógica de su caso de uso?",
+      "subtitle": "Defina el comportamiento principal de esta pantalla en MetaBuilder.",
+      "screen_name": "Nombre de la Pantalla",
+      "screen_name_placeholder": "Ej: Gestión de Contratos",
+      "slug_label": "URL Amigable (Slug)",
+      "slug_placeholder": "Ej: contratos",
+      "enable_args": "Habilitar Argumentos (Filtros de búsqueda en la URL)",
+      "types": {
+        "pesquisa": {
+          "title": "Solo Búsqueda",
+          "desc": "Centrado en buscar y visualizar datos."
+        },
+        "cadastro": {
+          "title": "Solo Registro",
+          "desc": "Formulario directo para insertar datos."
+        },
+        "pesquisa_cadastro": {
+          "title": "Búsqueda + Registro",
+          "desc": "Flujo completo: búsqueda, listado y formulario."
+        },
+        "master_detail": {
+          "title": "Maestro-Detalle",
+          "desc": "Estructura relacional con sub-tablas vinculadas."
+        },
+        "kanban": {
+          "title": "Kanban",
+          "desc": "Tablero visual de tarjetas organizado por columnas."
+        },
+        "mapa_mental": {
+          "title": "Mapa Mental",
+          "desc": "Visualizador de jerarquías de datos."
+        },
+        "personalizado": {
+          "title": "Personalizado",
+          "desc": "Consulta personalizada para escenarios complejos."
+        }
+      }
+    },
+    "tables": {
+      "title": "¿Qué tablas componen este caso?",
+      "subtitle": "Puede seleccionar una o más tablas. La lógica de Join se configurará a continuación.",
+      "selected_warning": "Seleccionó más de una tabla. Recuerde configurar las relaciones (Joins)."
+    },
+    "layout": {
+      "title": "Diseñe el Diseño de la Pantalla",
+      "subtitle": "Organize los campos en zonas específicas. Un campo puede estar en más de una zona.",
+      "widget_title": "Título del Widget",
+      "relationships": "Relaciones (Joins)",
+      "relationships_desc": "Configure cómo se relacionan las tablas para obtener las métricas correctas.",
+      "reset_formatting": "Restablecer Formato",
+      "reset_confirm": "¿Desea restablecer todo el formato personalizado para todos los campos? Esta acción no se puede deshacer.",
+      "available_fields": "Campos Disponibles",
+      "kanban": {
+        "title": "Configuración de Kanban",
+        "group_field": "Campo de Agrupamiento",
+        "group_placeholder": "Seleccione campo...",
+        "group_desc": "Seleccione la columna que se utilizará para organizar las columnas del Kanban (normalmente un enum o clave foránea)."
+      },
+      "master_detail": {
+        "title": "Estructura Maestro-Detalle",
+        "subtitle": "Defina la relación maestro-detalle."
+      },
+      "zones": {
+        "zone_01": "Zona 1",
+        "filter": "Zona 01: Filtros de Búsqueda",
+        "zone_02": "Zona 2",
+        "grid": "Zona 02: Listagem (Grid/Tabla)",
+        "zone_03": "Zona 3",
+        "form": "Zona 03: Formulario de Edición"
+      },
+      "display_options": {
+        "list": "Lista",
+        "card": "Tarjetas",
+        "both": "Ambos"
+      },
+      "drawer": {
+        "title": "Propiedades",
+        "label_config": "Configuración de la Etiqueta",
+        "font": "Fuente",
+        "font_default": "Inter (Predeterminado)",
+        "size": "Tamaño",
+        "text_color": "Color de Texto",
+        "display_text": "Texto de Visualización",
+        "content_config": "Configuración de Contenido",
+        "mask": "Máscara (Input Mask)",
+        "required": "Campo Obligatorio",
+        "required_desc": "Validar si el campo está completo",
+        "content_color": "Color de Contenido"
+      }
+    },
+    "actions": {
+      "title": "Consulta y Acciones Finales",
+      "subtitle": "Configure cómo se recuperarán los datos y qué botones estarán disponibles.",
+      "dynamic_query": {
+        "title": "Consulta Dinámica (Automática)",
+        "desc": "MetaBuilder genera Joins y Selects basados en las relaciones de las tablas."
+      },
+      "raw_sql": {
+        "title": "SQL Manual (Raw SQL)",
+        "desc": "Usted escribe el SQL puro para mayor control y rendimiento."
+      },
+      "interface_buttons": "Botones de Interfaz",
+      "data_strategy": "Estrategia de Datos",
+      "sql_editor": "SQL Editor"
+    },
+    "buttons": {
+      "updating": "Actualizando...",
+      "saving": "Guardando...",
+      "update": "Actualizar Caso de Uso",
+      "finish": "Finalizar Caso de Uso",
+      "prev": "Volver Paso",
+      "next": "Próximo Paso",
+      "error_save": "Error al guardar el caso de uso",
+      "validation": {
+        "grid_required": "Seleccione al menos un campo para el listado (Grid).",
+        "form_required": "Seleccione al menos un campo para el Formulario.",
+        "filter_required": "Ha habilitado argumentos. Seleccione al menos un campo de Filtro.",
+        "name_slug_required": "Por favor, complete el nombre y el slug del caso de uso."
+      }
+    },
+    "steps": {
+      "logic": "Lógica",
+      "tables": "Tablas",
+      "layout": "Campos y Diseño",
+      "actions": "Acciones y Consulta"
     }
   }
 }
