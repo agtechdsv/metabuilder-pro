@@ -13,11 +13,12 @@ import {
   Power,
   PowerOff,
   Settings,
-  RefreshCw
+  RefreshCw,
+  Loader2
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Drawer } from '@/components/ui/Drawer'
 import { Modal } from '@/components/ui/Modal'
 import { useI18n } from '@/i18n/I18nContext'
@@ -25,6 +26,7 @@ import { IconPicker } from '@/components/studio/IconPicker'
 import { DynamicIcon } from '@/components/runtime/DynamicIcon'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
+
 
 interface Project {
   id: string
@@ -76,11 +78,19 @@ export function ProjectManager({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [navigatingSlug, setNavigatingSlug] = useState<string | null>(null)
 
   const supabase = createClient()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
   const { t } = useI18n()
   const { toast } = useToast()
+
+  useEffect(() => {
+    setNavigatingSlug(null)
+  }, [searchParams, pathname])
+
 
   const openDrawer = (project: Project | null = null) => {
     setSelectedProject(project)
@@ -280,94 +290,132 @@ export function ProjectManager({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-          {projects.map((project) => (
-            <div
-              key={project.id}
-              className="group relative p-5 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] hover:border-indigo-500/50 transition-all shadow-sm hover:shadow-xl dark:shadow-none"
-            >
-              <div className="flex flex-col h-full gap-4">
-                <div className="flex items-start justify-between">
-                  <Link href={`/admin/${workspaceSlug}/${project.slug}/studio`} className="space-y-3 flex-1">
-                    <div className="p-3 bg-neutral-100 dark:bg-neutral-800 rounded-2xl w-fit group-hover:bg-indigo-500/10 transition-colors flex items-center justify-center min-w-[48px] min-h-[48px]">
-                      <div className="text-neutral-400 group-hover:text-indigo-500 transition-colors">
-                        <DynamicIcon icon={project.icon || 'Box'} size={24} />
+          {projects.map((project) => {
+            const isNavigating = navigatingSlug === project.slug;
+            return (
+              <div
+                key={project.id}
+                className={cn(
+                  "group relative p-5 bg-white dark:bg-neutral-950 border rounded-[2rem] transition-all shadow-sm hover:shadow-xl dark:shadow-none",
+                  isNavigating
+                    ? "border-indigo-500 bg-indigo-50/10 dark:bg-indigo-950/20 shadow-lg scale-[0.98] pointer-events-none"
+                    : "border-neutral-200 dark:border-neutral-800 hover:border-indigo-500/50"
+                )}
+              >
+                <div className="flex flex-col h-full gap-4">
+                  <div className="flex items-start justify-between">
+                    <Link
+                      href={`/admin/${workspaceSlug}/${project.slug}/studio`}
+                      onClick={() => setNavigatingSlug(project.slug)}
+                      className="space-y-3 flex-1"
+                    >
+                      <div className={cn(
+                        "p-3 rounded-2xl w-fit transition-colors flex items-center justify-center min-w-[48px] min-h-[48px] border",
+                        isNavigating
+                          ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-500"
+                          : "bg-neutral-100 dark:bg-neutral-800 border-transparent group-hover:bg-indigo-500/10"
+                      )}>
+                        <div className={cn(
+                          "transition-colors",
+                          isNavigating ? "text-indigo-500 animate-spin" : "text-neutral-400 group-hover:text-indigo-500"
+                        )}>
+                          {isNavigating ? (
+                            <Loader2 className="w-6 h-6" />
+                          ) : (
+                            <DynamicIcon icon={project.icon || 'Box'} size={24} />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-white transition-colors">{project.name}</h4>
-                      <p className="text-xs text-neutral-500 font-mono mt-0.5">/{project.slug}</p>
-                      {project.description && (
-                        <p className="text-xs text-neutral-500 dark:text-neutral-600 mt-2 line-clamp-2 leading-relaxed">
-                          {project.description}
-                        </p>
+                      <div>
+                        <h4 className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-white transition-colors">{project.name}</h4>
+                        <p className="text-xs text-neutral-500 font-mono mt-0.5">/{project.slug}</p>
+                        {project.description && (
+                          <p className="text-xs text-neutral-500 dark:text-neutral-600 mt-2 line-clamp-2 leading-relaxed">
+                            {project.description}
+                          </p>
+                        )}
+                      </div>
+                    </Link>
+
+                    <div className="flex flex-col items-end gap-4">
+                      <div className={`px-4 py-1.5 text-[10px] font-bold rounded-full border uppercase tracking-widest transition-all ${project.is_active
+                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                        : 'bg-red-500/10 text-red-500 border-red-500/20'
+                        }`}>
+                        {project.is_active ? t('dashboard.projects.status_active') : t('dashboard.projects.status_inactive')}
+                      </div>
+
+                      {!isNavigating && (project.can_edit || project.can_deactivate || project.can_delete) && (
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {project.can_deactivate && (
+                            <button
+                              onClick={() => toggleActive(project)}
+                              className={`p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ${project.is_active ? 'text-neutral-500 hover:text-red-400' : 'text-neutral-500 hover:text-emerald-400'}`}
+                              title={project.is_active ? t('dashboard.projects.toggle_inactive') : t('dashboard.projects.toggle_active')}
+                            >
+                              {project.is_active ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
+                            </button>
+                          )}
+                          {project.can_edit && (
+                            <button
+                              onClick={() => openDrawer(project)}
+                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
+                              title={t('dashboard.projects.edit_project')}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          )}
+                          {project.can_delete && (
+                            <button
+                              onClick={() => openDeleteModal(project)}
+                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400"
+                              title={t('dashboard.projects.delete_project')}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
-                  </Link>
+                  </div>
 
-                  <div className="flex flex-col items-end gap-4">
-                    <div className={`px-4 py-1.5 text-[10px] font-bold rounded-full border uppercase tracking-widest transition-all ${project.is_active
-                      ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                      : 'bg-red-500/10 text-red-500 border-red-500/20'
-                      }`}>
-                      {project.is_active ? t('dashboard.projects.status_active') : t('dashboard.projects.status_inactive')}
-                    </div>
-
-                    {(project.can_edit || project.can_deactivate || project.can_delete) && (
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {project.can_deactivate && (
-                          <button
-                            onClick={() => toggleActive(project)}
-                            className={`p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ${project.is_active ? 'text-neutral-500 hover:text-red-400' : 'text-neutral-500 hover:text-emerald-400'}`}
-                            title={project.is_active ? t('dashboard.projects.toggle_inactive') : t('dashboard.projects.toggle_active')}
-                          >
-                            {project.is_active ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
-                          </button>
-                        )}
-                        {project.can_edit && (
-                          <button
-                            onClick={() => openDrawer(project)}
-                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
-                            title={t('dashboard.projects.edit_project')}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                        )}
-                        {project.can_delete && (
-                          <button
-                            onClick={() => openDeleteModal(project)}
-                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400"
-                            title={t('dashboard.projects.delete_project')}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
+                  <div className="flex items-center justify-between pt-6 border-t border-neutral-100 dark:border-neutral-800/50">
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-neutral-400" />
+                        <span className="text-xs font-bold text-neutral-400 tracking-tighter">
+                          {project.models?.[0]?.count || 0} {t('dashboard.projects.tables')}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-6 border-t border-neutral-100 dark:border-neutral-800/50">
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-neutral-400" />
-                      <span className="text-xs font-bold text-neutral-400 tracking-tighter">
-                        {project.models?.[0]?.count || 0} {t('dashboard.projects.tables')}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <Layers className="w-4 h-4 text-neutral-400" />
+                        <span className="text-xs font-bold text-neutral-400 tracking-tighter">
+                          {t('dashboard.projects.use_cases')}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-neutral-400" />
-                      <span className="text-xs font-bold text-neutral-400 tracking-tighter">
-                        {t('dashboard.projects.use_cases')}
-                      </span>
-                    </div>
+                    <Link
+                      href={`/admin/${workspaceSlug}/${project.slug}/studio`}
+                      onClick={() => setNavigatingSlug(project.slug)}
+                      className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm dark:shadow-none",
+                        isNavigating
+                          ? "bg-indigo-600 animate-pulse"
+                          : "bg-neutral-100 dark:bg-neutral-800 group-hover:bg-indigo-600"
+                      )}
+                    >
+                      {isNavigating ? (
+                        <Loader2 className="w-5 h-5 text-white animate-spin" />
+                      ) : (
+                        <ChevronRight className="w-5 h-5 text-neutral-400 group-hover:text-white" />
+                      )}
+                    </Link>
                   </div>
-                  <Link href={`/admin/${workspaceSlug}/${project.slug}/studio`} className="w-10 h-10 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center group-hover:bg-indigo-600 transition-all shadow-sm dark:shadow-none">
-                    <ChevronRight className="w-5 h-5 text-neutral-400 group-hover:text-white" />
-                  </Link>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
+
 
           {/* Add New Card */}
           {canCreate && (

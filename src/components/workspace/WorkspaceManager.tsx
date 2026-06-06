@@ -24,7 +24,7 @@ import {
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Drawer } from '@/components/ui/Drawer'
 import { Modal } from '@/components/ui/Modal'
 import { useI18n } from '@/i18n/I18nContext'
@@ -82,6 +82,7 @@ export function WorkspaceManager({
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [navigatingSlug, setNavigatingSlug] = useState<string | null>(null)
 
   // Team management states
   const [isTeamDrawerOpen, setIsTeamDrawerOpen] = useState(false)
@@ -92,6 +93,7 @@ export function WorkspaceManager({
   const { toast } = useToast()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const pathname = usePathname()
   const { t } = useI18n()
 
   const canCreateWorkspace = !isGuest || initialGuestAccessLevel === 'global'
@@ -100,7 +102,11 @@ export function WorkspaceManager({
     if (searchParams.get('tab') === 'team') {
       setIsTeamDrawerOpen(true)
     }
-  }, [searchParams])
+    // Reset loading state when page has loaded (in case we come back)
+    setNavigatingSlug(null)
+  }, [searchParams, pathname])
+
+
 
 
 
@@ -276,62 +282,97 @@ export function WorkspaceManager({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {workspaces.map((workspace) => (
-            <div
-              key={workspace.id}
-              className="group relative bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] hover:border-indigo-500/50 transition-all duration-500 overflow-hidden shadow-sm hover:shadow-xl dark:shadow-none"
-            >
-              {/* Efeito de Glow no Hover */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-[60px] group-hover:bg-indigo-600/20 transition-all"></div>
+          {workspaces.map((workspace) => {
+            const isNavigating = navigatingSlug === workspace.slug;
+            return (
+              <div
+                key={workspace.id}
+                className={cn(
+                  "group relative bg-white dark:bg-neutral-950 border rounded-[2.5rem] transition-all duration-500 overflow-hidden shadow-sm hover:shadow-xl dark:shadow-none",
+                  isNavigating
+                    ? "border-indigo-500 bg-indigo-50/10 dark:bg-indigo-950/20 shadow-lg scale-[0.98] pointer-events-none"
+                    : "border-neutral-200 dark:border-neutral-800 hover:border-indigo-500/50"
+                )}
+              >
+                {/* Efeito de Glow no Hover */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-[60px] group-hover:bg-indigo-600/20 transition-all"></div>
 
-              <div className="p-6 h-full flex flex-col justify-between gap-6 relative z-10">
-                <div className="flex justify-between items-start">
-                  <Link href={`/admin/${workspace.slug}`} className="space-y-3 flex-1">
-                    <div className="w-12 h-12 bg-neutral-100 dark:bg-neutral-800 rounded-xl flex items-center justify-center border border-neutral-200 dark:border-neutral-700 group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 transition-all">
-                      <Building2 className="w-6 h-6 text-neutral-400 group-hover:text-indigo-400" />
-                    </div>
-                    <div className="space-y-0.5">
-                      <h4 className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-white transition-colors">{workspace.name}</h4>
-                      <p className="text-xs text-neutral-500 font-mono">/{workspace.slug}</p>
+                <div className="p-6 h-full flex flex-col justify-between gap-6 relative z-10">
+                  <div className="flex justify-between items-start">
+                    <Link
+                      href={`/admin/${workspace.slug}`}
+                      onClick={() => setNavigatingSlug(workspace.slug)}
+                      className="space-y-3 flex-1"
+                    >
+                      <div className={cn(
+                        "w-12 h-12 rounded-xl flex items-center justify-center border transition-all",
+                        isNavigating
+                          ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-500"
+                          : "bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20"
+                      )}>
+                        {isNavigating ? (
+                          <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+                        ) : (
+                          <Building2 className="w-6 h-6 text-neutral-400 group-hover:text-indigo-400" />
+                        )}
+                      </div>
+                      <div className="space-y-0.5">
+                        <h4 className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-white transition-colors">{workspace.name}</h4>
+                        <p className="text-xs text-neutral-500 font-mono">/{workspace.slug}</p>
+                      </div>
+                    </Link>
+
+                    {/* Exibe para quem tem permissão de editar ou excluir */}
+                    {!isNavigating && (workspace.can_edit || workspace.can_delete) && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {workspace.can_edit && (
+                          <button
+                            onClick={() => openDrawer(workspace)}
+                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
+                            title={t('dashboard.edit_workspace')}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        )}
+                        {workspace.can_delete && (
+                          <button
+                            onClick={() => openDeleteModal(workspace)}
+                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400"
+                            title={t('dashboard.delete_workspace')}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <Link
+                    href={`/admin/${workspace.slug}`}
+                    onClick={() => setNavigatingSlug(workspace.slug)}
+                    className="flex items-center justify-between pt-4 border-t border-neutral-100 dark:border-neutral-800/50"
+                  >
+                    <span className="text-xs font-bold text-neutral-500 tracking-tighter">
+                      {workspace.projects?.[0]?.count || 0} {t('dashboard.projects_count')}
+                    </span>
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                      isNavigating
+                        ? "bg-indigo-600 animate-pulse"
+                        : "bg-neutral-100 dark:bg-neutral-800 group-hover:bg-indigo-600"
+                    )}>
+                      {isNavigating ? (
+                        <Loader2 className="w-4 h-4 text-white animate-spin" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-neutral-500 group-hover:text-white" />
+                      )}
                     </div>
                   </Link>
-
-                  {/* Exibe para quem tem permissão de editar ou excluir */}
-                  {(workspace.can_edit || workspace.can_delete) && (
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {workspace.can_edit && (
-                        <button
-                          onClick={() => openDrawer(workspace)}
-                          className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
-                          title={t('dashboard.edit_workspace')}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                      )}
-                      {workspace.can_delete && (
-                        <button
-                          onClick={() => openDeleteModal(workspace)}
-                          className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400"
-                          title={t('dashboard.delete_workspace')}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  )}
                 </div>
-
-                <Link href={`/admin/${workspace.slug}`} className="flex items-center justify-between pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
-                  <span className="text-xs font-bold text-neutral-500 tracking-tighter">
-                    {workspace.projects?.[0]?.count || 0} {t('dashboard.projects_count')}
-                  </span>
-                  <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:bg-indigo-600 transition-all">
-                    <ChevronRight className="w-4 h-4 text-neutral-500 group-hover:text-white" />
-                  </div>
-                </Link>
               </div>
-            </div>
-          ))}
+            );
+          })}
+
 
           {/* Add New Card */}
           {canCreateWorkspace && (

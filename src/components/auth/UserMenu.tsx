@@ -6,9 +6,10 @@ import { signOut, updateAvatar, resetAvatar } from '@/app/auth/actions'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { ProfileDrawer } from '@/components/profile/ProfileDrawer'
+
 
 import { useI18n } from '@/i18n/I18nContext'
 
@@ -23,14 +24,22 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [imgError, setImgError] = useState(false)
   const [localProfile, setLocalProfile] = useState(initialProfile)
+  const [isNavigatingWorkspace, setIsNavigatingWorkspace] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { t } = useI18n()
 
   useEffect(() => {
     setLocalProfile(initialProfile)
   }, [initialProfile])
+
+  useEffect(() => {
+    setIsNavigatingWorkspace(false)
+  }, [pathname, searchParams])
+
 
   const metadata = user?.user_metadata || {}
 
@@ -187,15 +196,31 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                 {(localProfile?.is_super_admin || localProfile?.subscription_status === 'active' || localProfile?.subscription_status === 'canceled') && (
                   <Link
                     href="/workspace"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-300 hover:text-blue-600 dark:hover:text-white transition-all group"
+                    onClick={() => {
+                      setIsOpen(false)
+                      setIsNavigatingWorkspace(true)
+                    }}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-300 hover:text-blue-600 dark:hover:text-white transition-all group",
+                      isNavigatingWorkspace && "pointer-events-none opacity-80"
+                    )}
                   >
-                    <div className="p-2 bg-blue-500/10 rounded-xl group-hover:bg-blue-500/20 transition-all text-blue-500">
-                      <LayoutDashboard className="w-4.5 h-4.5" />
+                    <div className={cn(
+                      "p-2 rounded-xl transition-all",
+                      isNavigatingWorkspace 
+                        ? "bg-blue-500/20 text-blue-500 animate-pulse" 
+                        : "bg-blue-500/10 group-hover:bg-blue-500/20 text-blue-500"
+                    )}>
+                      {isNavigatingWorkspace ? (
+                        <Loader2 className="w-4.5 h-4.5 animate-spin" />
+                      ) : (
+                        <LayoutDashboard className="w-4.5 h-4.5" />
+                      )}
                     </div>
                     <span className="text-sm font-bold">{t('common.dashboard')}</span>
                   </Link>
                 )}
+
 
                 {localProfile?.is_super_admin && (
                   <Link
