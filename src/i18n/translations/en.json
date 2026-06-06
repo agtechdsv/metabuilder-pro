@@ -91,7 +91,8 @@
     "logged_in_as": "Logged User",
     "all": "All",
     "back_to_home": "Back to Home",
-    "runtime_online": "RUNTIME ONLINE"
+    "runtime_online": "RUNTIME ONLINE",
+    "clear_all": "Clear All"
   },
   "hero": {
     "badge": "Next-Gen Metadata Engine",
@@ -307,6 +308,43 @@
           "error_email_hint": "This email will be notified if a flow falls into an infinite loop or returns an error.",
           "cancel": "Cancel",
           "save": "Save Configurations"
+        },
+        "metadata": {
+          "title": "Table & Field Structure",
+          "subtitle": "Configure the display_name (friendly names) and descriptions for your database tables and columns.",
+          "search_placeholder": "Search tables...",
+          "no_tables": "No tables found.",
+          "refresh_tooltip": "Refresh",
+          "saving": "Saving...",
+          "save_table": "Save Table",
+          "friendly_name": "Friendly Name (Display Name)",
+          "friendly_name_placeholder": "Ex: Departments",
+          "table_description": "Table Description",
+          "description_placeholder": "Ex: Organizational sectors of the company...",
+          "required": "Required",
+          "actions_permissions": "Table Actions/Permissions",
+          "allow_creation": "Allow Creation",
+          "allow_creation_desc": "Can add new records",
+          "allow_edition": "Allow Editing",
+          "allow_edition_desc": "Can edit existing records",
+          "allow_deletion": "Allow Deletion",
+          "allow_deletion_desc": "Can remove records from the table",
+          "detected_columns": "Detected Columns ({count})",
+          "loading_columns": "Loading columns...",
+          "ui_label": "Label on UI",
+          "order_index": "Order (order_index)",
+          "visible_filter": "Visible in Filter",
+          "visible_grid": "Visible in Grid",
+          "visible_form": "Visible in Form",
+          "sortable": "Sortable",
+          "no_table_selected": "No table selected",
+          "select_table_desc": "Select a table on the left to view and edit its metadata.",
+          "toasts": {
+            "fetch_error": "Error fetching table columns: ",
+            "save_partial_error": "Error saving some columns.",
+            "save_success": "Table and columns updated successfully!",
+            "save_error": "Error saving changes: "
+          }
         },
         "stats": {
           "synced_tables": "Synced Tables",
@@ -609,201 +647,6 @@
     "update_success": "Record updated successfully!",
     "delete_success": "Record deleted successfully!",
     "delete_fk_error": "Cannot delete this record because it has active relationships (foreign key constraint)."
-  },
-  "wizard": {
-    "title": "Use Case Builder",
-    "edit_mode": "Editing Use Case",
-    "new_mode": "New Use Case",
-    "steps": {
-      "logic": "Logic",
-      "tables": "Tables",
-      "layout": "Fields & Layout",
-      "actions": "Actions & Query"
-    },
-    "buttons": {
-      "prev": "Back",
-      "next": "Next",
-      "update": "Update",
-      "finish": "Finish",
-      "saving": "Saving...",
-      "updating": "Updating...",
-      "error_save": "Error saving: ",
-      "validation": {
-        "name_slug_required": "Name and slug are required.",
-        "grid_required": "Select fields for the grid.",
-        "form_required": "Select fields for the form.",
-        "filter_required": "Select fields for the filter."
-      }
-    },
-    "logic": {
-      "title": "What is the logic of your use case?",
-      "subtitle": "Define the main behavior of this screen in MetaBuilder.",
-      "types": {
-        "pesquisa": {
-          "title": "Search Only",
-          "desc": "Focused on searching and viewing data."
-        },
-        "pesquisa_cadastro": {
-          "title": "Search + Registration",
-          "desc": "Full flow: search, listing, and form."
-        },
-        "cadastro": {
-          "title": "Registration Only",
-          "desc": "Direct form for data insertion."
-        },
-        "mapa_mental": {
-          "title": "Mind Map",
-          "desc": "Hierarchical visualization and connections between data."
-        },
-        "kanban": {
-          "title": "Kanban",
-          "desc": "Manage workflow by columns and status."
-        },
-        "timeline": {
-          "title": "Timeline / Feed",
-          "desc": "Visualize records in chronological order based on dates."
-        },
-        "map": {
-          "title": "Map View (Geospatial)",
-          "desc": "Visualize records through interactive markers and coordinates on a map."
-        },
-        "personalizado": {
-          "title": "Custom",
-          "desc": "Custom logic and unique workflows."
-        },
-        "gantt": {
-          "title": "Gantt Chart",
-          "desc": "Manage schedules and projects with an interactive chart."
-        },
-        "master_detail": {
-          "title": "Master-Detail",
-          "desc": "Deep relational explorer with tabs and data groupings."
-        },
-        "galeria": {
-          "title": "Gallery / Assets",
-          "desc": "Gallery of media, images, and documents with download and redirection actions."
-        }
-      },
-      "screen_name": "Screen Name",
-      "screen_name_placeholder": "Ex: Contract Management",
-      "slug_label": "Friendly URL (Slug)",
-      "slug_placeholder": "contracts",
-      "enable_args": "Enable Arguments (Search filters in URL)"
-    },
-    "tables": {
-      "title": "Which tables make up this case?",
-      "subtitle": "You can select one or more tables. Join logic will be configured next.",
-      "selected_warning": "You selected {count} tables. In the next step, we will define the relationships (Joins) between them."
-    },
-    "layout": {
-      "title": "Design the Screen Layout",
-      "subtitle": "Organize fields into specific zones. A field can be in more than one zone.",
-      "available_fields": "Available Fields",
-      "relationships": "Relationships",
-      "relationships_desc": "You selected multiple tables. Define how they connect (Joins).",
-      "select_table": "Select Table...",
-      "select_field": "Select Field...",
-      "add_relationship": "Add Relationship",
-      "kanban": {
-        "title": "Kanban Configuration",
-        "group_field": "Grouping Field (Columns)",
-        "group_placeholder": "Select a field to define the columns...",
-        "group_desc": "This field will determine the Kanban columns (e.g., Status, Stage)."
-      },
-      "timeline": {
-        "title": "Timeline Configuration",
-        "date_field": "Date Field (Required)",
-        "date_placeholder": "Select the date...",
-        "title_field": "Title Field (Required)",
-        "title_placeholder": "Select the title...",
-        "desc_field": "Description Field (Optional)",
-        "desc_placeholder": "Select the description...",
-        "icon_field": "Icon/Status Field (Optional)",
-        "icon_placeholder": "Select icon field..."
-      },
-      "gantt": {
-        "title": "Gantt Chart Configuration",
-        "title_field": "Title Field (Task) - Required",
-        "start_date_field": "Start Date - Required",
-        "end_date_field": "End Date - Required",
-        "progress_field": "Progress % - Optional"
-      },
-      "map": {
-        "title": "Map Configuration (Leaflet)",
-        "lat_field": "Latitude (Y) - Required",
-        "lng_field": "Longitude (X) - Required",
-        "title_field": "Marker Title (Required)",
-        "desc_field": "Popup Description (Optional)"
-      },
-      "master_detail": {
-        "title": "Master-Detail Configuration",
-        "subtitle": "Define the hierarchy and navigation style of the data."
-      },
-      "mindmap": {
-        "config_title": "Mind Map Configuration",
-        "central_field": "Central Field (Root Node)",
-        "select_central": "Select central field...",
-        "central_desc": "This field will be the root of your mind map. The fields selected in Zone 02 will form the next levels."
-      },
-      "zones": {
-        "filter": "Filter",
-        "grid": "Grid",
-        "form": "Form",
-        "kanban_card": "Card Fields",
-        "card": "Card",
-        "mindmap_nodes": "Map Fields (Levels)",
-        "node": "Node",
-        "zone_01": "Zone 01",
-        "zone_02": "Zone 02",
-        "zone_03": "Zone 03"
-      },
-      "display_options": {
-        "list": "List",
-        "card": "Cards",
-        "both": "Both"
-      },
-      "table": {
-        "field": "Field",
-        "action": "Action"
-      },
-      "drawer": {
-        "title": "Properties",
-        "label_config": "Label Configuration",
-        "content_config": "Content Configuration",
-        "display_text": "Display Text",
-        "font": "Font",
-        "font_default": "Inter (Default)",
-        "size": "Size",
-        "text_color": "Text Color",
-        "content_color": "Content Color",
-        "mask": "Input Mask",
-        "required": "Required Field",
-        "required_desc": "Validate if the field is filled"
-      },
-      "reset_formatting": "Reset Formatting",
-      "reset_confirm": "Do you want to reset all custom formatting for all fields? This action cannot be undone."
-    },
-    "actions": {
-      "title": "Query & Final Actions",
-      "subtitle": "Configure how data will be retrieved and which buttons will be available.",
-      "data_strategy": "Data Strategy",
-      "dynamic_query": {
-        "title": "Dynamic Query (Automatic)",
-        "desc": "MetaBuilder generates Joins and Selects based on table relationships."
-      },
-      "raw_sql": {
-        "title": "Manual SQL (Raw SQL)",
-        "desc": "You write raw SQL for greater control and performance."
-      },
-      "interface_buttons": "Interface Buttons",
-      "sql_editor": "SQL Editor",
-      "validation": {
-        "grid_required": "Select at least one field for the Grid listing.",
-        "filter_required": "You have enabled arguments. Select at least one Filter field.",
-        "form_required": "Select at least one field for the Form.",
-        "name_slug_required": "Please fill in the name and slug for the use case."
-      }
-    }
   },
   "marketing_v2": {
     "navbar": {
@@ -1492,6 +1335,25 @@
       "slug_label": "Friendly URL (Slug)",
       "slug_placeholder": "Ex: contracts",
       "enable_args": "Enable Arguments (Search filters in URL)",
+      "selected": "Selected",
+      "categories": {
+        "dados": {
+          "title": "Data Management & Registries",
+          "desc": "Interfaces focused on insertion, listing, and relationships."
+        },
+        "projetos": {
+          "title": "Projects, Deadlines & Timelines",
+          "desc": "Visual control of tasks, events, and progress."
+        },
+        "mapas": {
+          "title": "Mapping, Flows & Spatial",
+          "desc": "Interfaces for geospatial display or interconnected diagrams."
+        },
+        "outros": {
+          "title": "Intelligence, Media & Others",
+          "desc": "Analytical dashboards, galleries, and custom logics."
+        }
+      },
       "types": {
         "pesquisa": {
           "title": "Search Only",
@@ -1520,6 +1382,34 @@
         "personalizado": {
           "title": "Custom",
           "desc": "Custom query for complex scenarios."
+        },
+        "timeline": {
+          "title": "Timeline / Feed",
+          "desc": "Visualize records on a chronological timeline based on a date."
+        },
+        "gantt": {
+          "title": "Gantt Chart",
+          "desc": "Manage schedules and projects with a Gantt chart."
+        },
+        "scheduler": {
+          "title": "Scheduler / Calendar",
+          "desc": "Appointments, deadlines, commitments, and tasks in a calendar."
+        },
+        "blueprint": {
+          "title": "Flowchart (Blueprint)",
+          "desc": "Map interconnected processes and workflows dynamically."
+        },
+        "map": {
+          "title": "Map View (Geospatial)",
+          "desc": "Visualize records using interactive markers and coordinates on the map."
+        },
+        "analytics": {
+          "title": "Dashboard (BI)",
+          "desc": "Performance indicators, charts, and KPIs."
+        },
+        "galeria": {
+          "title": "Gallery / Assets",
+          "desc": "Gallery of media, images, and documents with download and redirects."
         }
       }
     },
@@ -1537,6 +1427,12 @@
       "reset_formatting": "Reset Formatting",
       "reset_confirm": "Do you want to reset all custom formatting for all fields? This action cannot be undone.",
       "available_fields": "Available Fields",
+      "add_table": "Add Table",
+      "drag_fields_here": "Drag fields from \"{table}\" here",
+      "drag_to_add_all": "Drag to add all",
+      "master": "Master",
+      "detail": "Detail",
+      "subdetail": "Sub-Detail",
       "kanban": {
         "title": "Kanban Configuration",
         "group_field": "Grouping Field",
@@ -1545,15 +1441,16 @@
       },
       "master_detail": {
         "title": "Master-Detail Structure",
-        "subtitle": "Define the master-detail relationship."
+        "subtitle": "Define the master-detail relationship.",
+        "inline_in_list": "In list"
       },
       "zones": {
         "zone_01": "Zone 1",
-        "filter": "Zone 01: Search Filters",
+        "filter": "Search Filters",
         "zone_02": "Zone 2",
-        "grid": "Zone 02: Listing (Grid/Table)",
+        "grid": "Listing (Grid/Table)",
         "zone_03": "Zone 3",
-        "form": "Zone 03: Edit Form"
+        "form": "Edit Form"
       },
       "display_options": {
         "list": "List",
@@ -1562,6 +1459,8 @@
       },
       "drawer": {
         "title": "Properties",
+        "tab_basic": "Basic / General",
+        "tab_styles": "Appearance / Styles",
         "label_config": "Label Configuration",
         "font": "Font",
         "font_default": "Inter (Default)",
@@ -1572,7 +1471,45 @@
         "mask": "Mask (Input Mask)",
         "required": "Required Field",
         "required_desc": "Validate if field is filled",
-        "content_color": "Content Color"
+        "readonly": "Read Only",
+        "readonly_desc": "The user will not be able to edit this value",
+        "content_color": "Content Color",
+        "component_config": "Component Configuration",
+        "component_type": "Component Type",
+        "width": "Width",
+        "apply_styles_zone": "Apply formatting to all in this zone ({zone})",
+        "zone_filter": "Filter",
+        "zone_grid": "Grid",
+        "zone_form": "Form",
+        "fixed_options": "Options (Label:Value, separated by commas)",
+        "options_source": "Data Source",
+        "options_select_placeholder": "Select...",
+        "source_fixed": "Fixed Values",
+        "source_enum": "Global Enum",
+        "source_relational": "Relationship",
+        "select_enumeration": "Select Enumeration",
+        "options_available": "{count} options available",
+        "rel_table": "Related Table",
+        "rel_label": "Label (Display)",
+        "rel_value": "Value (ID)",
+        "rows": "Rows",
+        "component_types": {
+          "text": "Text Input",
+          "textarea": "Text Area (Textarea)",
+          "number": "Number",
+          "select": "Combo (Select)",
+          "radio": "Radio Buttons",
+          "checkbox": "Checkbox Group",
+          "switch": "Switch (On/Off)",
+          "date": "Date"
+        },
+        "masks": {
+          "phone": "Phone/Mobile ((00) 00000-0000)",
+          "date": "Date (00/00/0000)",
+          "integer": "Integer with Thousand (0.000)",
+          "decimal": "Decimal with Thousand (0.000,00)",
+          "custom": "Custom..."
+        }
       }
     },
     "actions": {
@@ -1588,7 +1525,108 @@
       },
       "interface_buttons": "Interface Buttons",
       "data_strategy": "Data Strategy",
-      "sql_editor": "SQL Editor"
+      "sql_editor": "SQL Editor",
+      "export_data_title": "Data Export",
+      "export_data_bg": "Data Export (Background)",
+      "export_data_desc": "Allows users to export data from this screen with asynchronous background processing.",
+      "allowed_formats": "Allowed Formats",
+      "display_text": "Display Text",
+      "font": "Font",
+      "size": "Size",
+      "text_transform": "Text Transform",
+      "button_preview": "Button Preview",
+      "text_color": "Text Color",
+      "bg_color": "Button Color (Background)",
+      "custom_action_edit": "Edit Custom Action",
+      "custom_action_new": "New Custom Action",
+      "tab_identification": "Identification & Appearance",
+      "tab_behavior": "Behavior (Trigger)",
+      "tab_bpm": "BPM / Automation",
+      "button_name": "Button Name",
+      "icon": "Icon",
+      "change": "Change",
+      "color": "Color",
+      "colors": {
+        "indigo": "Indigo (Default)",
+        "emerald": "Green (Success/Approve)",
+        "red": "Red (Danger/Reject)",
+        "amber": "Yellow (Warning)",
+        "purple": "Purple (Special)"
+      },
+      "context": "Context",
+      "contexts": {
+        "row": "Row Action (Search)",
+        "bulk": "Bulk Action (Search Top)",
+        "master_top": "Global Action (Master Top)",
+        "detail_top": "Global Action (Detail Top)",
+        "detail_row": "Row Action (Detail)",
+        "field_group": "Grouped to Field (Form)"
+      },
+      "target_fields": "Target Fields (Select one or more)",
+      "position": "Position",
+      "left": "Left",
+      "right": "Right",
+      "trigger_type": "Action Type (Trigger)",
+      "sql_command": "SQL Command",
+      "sql_variables_hint": "You can use variables using double curly braces: {{id}}",
+      "target_usecase": "Target Use Case",
+      "open_mode": "Open Mode",
+      "open_modes": {
+        "page": "Same Screen (Default)",
+        "modal": "Modal (Centered)",
+        "drawer": "Drawer (Sidebar)"
+      },
+      "fields_as_params": "Record Fields as Parameters",
+      "additional_params": "Additional Static Parameters (URL Filters)",
+      "additional_params_hint": "Ex: status=active&type=1",
+      "method": "Method",
+      "api_url": "API / Webhook URL",
+      "api_body": "Body (JSON Payload)",
+      "bpm_integration_title": "BPM Integration",
+      "bpm_integration_desc": "Select which automated workflows (BPM) will be triggered when the user clicks this button. You can also configure this link directly in the Automations screen.",
+      "available_workflows": "Available Workflows",
+      "no_workflows": "No automation flows created in this project.",
+      "create_first_flow": "Create First Flow",
+      "save_action": "Save Action",
+      "transform": {
+        "none": "Normal",
+        "uppercase": "UPPER",
+        "capitalize": "Initials",
+        "lowercase": "lower"
+      },
+      "custom_actions": "Custom Actions",
+      "add_action": "Add Action",
+      "no_custom_actions": "No custom actions configured",
+      "button_properties": "Button Properties",
+      "multiple_selection": "multiple selection",
+      "sql_procedure": "SQL / Procedure",
+      "select_usecase": "Select a use case...",
+      "no_models_selected": "No tables selected in step 1.",
+      "text_color_placeholder": "Hexadecimal text color (ex: #ffffff)",
+      "bg_color_placeholder": "Hexadecimal background color (ex: #6366f1)",
+      "action_interface_label": "Action Interface (Create/Edit)",
+      "new_action": "New Action",
+      "select_icon_placeholder": "Select an icon...",
+      "trigger_usecase": "Another Screen",
+      "trigger_rest": "REST API",
+      "filters_args": "Filters (Arguments)",
+      "grid_listing": "Grid (Listing)",
+      "master_form": "Master (Form)",
+      "details_form": "Details (Form)",
+      "btn_search": "Search",
+      "btn_clear": "Clear",
+      "btn_view": "View",
+      "btn_add": "New Record",
+      "btn_edit": "Edit",
+      "btn_delete": "Delete",
+      "interface_options": {
+        "drawer_title": "Drawer (Sidebar)",
+        "drawer_desc": "Forms will open in a sliding sidebar drawer.",
+        "modal_title": "Modal (Centered)",
+        "modal_desc": "Forms will open in a centered modal window with a dimmed background.",
+        "page_title": "Same Screen (Page)",
+        "page_desc": "The form will be displayed on the same screen, replacing the current list."
+      }
     },
     "buttons": {
       "updating": "Updating...",

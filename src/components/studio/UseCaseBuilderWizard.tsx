@@ -2443,7 +2443,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                         <DraggableItem id={`table-source-${m.id}`} className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 p-2.5 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-indigo-300 transition-all">
                            <div className="flex items-center gap-2">
                              <Table className="w-3 h-3 text-indigo-500" />
-                             <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Adicionar Tabela</span>
+                             <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">{t('wizard.layout.add_table', 'Adicionar Tabela')}</span>
                            </div>
                            <Plus className="w-3 h-3 text-indigo-400 group-hover:scale-125 transition-transform" />
                         </DraggableItem>
@@ -4543,7 +4543,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
       </div>
 
       <div className="space-y-6">
-        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Exportação de Dados</label>
+        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.export_data_title', 'Exportação de Dados')}</label>
         
         <div className="space-y-4">
           <button
@@ -4572,8 +4572,8 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                 <Download className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-bold text-base text-neutral-900 dark:text-white">Exportação de Dados (Background)</h4>
-                <p className="text-[10px] text-neutral-400 mt-1 leading-relaxed">Permite que os usuários exportem os dados desta tela com processamento assíncrono.</p>
+                <h4 className="font-bold text-base text-neutral-900 dark:text-white">{t('wizard.actions.export_data_bg', 'Exportação de Dados (Background)')}</h4>
+                <p className="text-[10px] text-neutral-400 mt-1 leading-relaxed">{t('wizard.actions.export_data_desc', 'Permite que os usuários exportem os dados desta tela com processamento assíncrono.')}</p>
               </div>
             </div>
             <div className={cn(
@@ -4589,7 +4589,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
 
           {(config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false) && (
             <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-4 animate-in slide-in-from-top-4 fade-in duration-300">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Formatos Permitidos</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.actions.allowed_formats', 'Formatos Permitidos')}</label>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 {[
                   { id: 'xlsx', label: 'Excel (XLSX)', icon: Table, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-500/10', border: 'border-emerald-200 dark:border-emerald-500/20' },
@@ -5013,22 +5013,22 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                       </div>
                       
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Modo de Abertura</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.open_mode', 'Modo de Abertura')}</label>
                         <select
                           value={editingAction.usecase_open_mode || 'page'}
                           onChange={e => setEditingAction({ ...editingAction, usecase_open_mode: e.target.value })}
-                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-500 outline-none transition-all"
+                          className="w-full bg-white dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-500 outline-none transition-all"
                         >
-                          <option value="page">Mesma Tela (Navegação Padrão)</option>
-                          <option value="modal">Modal (Centralizado)</option>
-                          <option value="drawer">Drawer (Lateral)</option>
+                          <option value="page">{t('wizard.actions.open_modes.page', 'Mesma Tela (Navegação Padrão)')}</option>
+                          <option value="modal">{t('wizard.actions.open_modes.modal', 'Modal (Centralizado)')}</option>
+                          <option value="drawer">{t('wizard.actions.open_modes.drawer', 'Drawer (Lateral)')}</option>
                         </select>
                       </div>
                     </div>
                     <div className="space-y-4 mt-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campos do Registro como Parâmetros</label>
-                        <div className="space-y-4 p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl max-h-48 overflow-y-auto custom-scrollbar">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.fields_as_params', 'Campos do Registro como Parâmetros')}</label>
+                        <div className="space-y-4 p-4 bg-white dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl max-h-48 overflow-y-auto custom-scrollbar">
                           {models?.filter((m: any) => config.selected_models?.includes(m.id)).map((model: any) => (
                             <div key={model.id} className="space-y-2">
                               <div className="flex items-center gap-2 mb-1">
@@ -5066,18 +5066,18 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                             </div>
                           ))}
                           {(!models || models.filter((m: any) => config.selected_models?.includes(m.id)).length === 0) && (
-                            <p className="text-[10px] text-neutral-400 p-1">Nenhum modelo selecionado no passo 1.</p>
+                            <p className="text-[10px] text-neutral-400 p-1">{t('wizard.actions.no_models_selected', 'Nenhum modelo selecionado no passo 1.')}</p>
                           )}
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Parâmetros Adicionais Fixos (Filtros na URL)</label>
-                        <p className="text-[9px] text-neutral-500 ml-1 mb-2">Ex: status=ativo&tipo=1</p>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.additional_params', 'Parâmetros Adicionais Fixos (Filtros na URL)')}</label>
+                        <p className="text-[9px] text-neutral-500 ml-1 mb-2">{t('wizard.actions.additional_params_hint', 'Ex: status=ativo&tipo=1')}</p>
                         <input
                           type="text"
                           value={editingAction.usecase_params}
                           onChange={e => setEditingAction({ ...editingAction, usecase_params: e.target.value })}
-                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-mono focus:border-indigo-500 outline-none transition-all"
+                          className="w-full bg-white dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-mono focus:border-indigo-500 outline-none transition-all"
                           placeholder="status=ativo"
                         />
                       </div>
@@ -5089,11 +5089,11 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                   <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300 bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
                     <div className="flex gap-4">
                       <div className="space-y-2 w-1/3">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Método</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.method', 'Método')}</label>
                         <select
                           value={editingAction.rest_method}
                           onChange={e => setEditingAction({ ...editingAction, rest_method: e.target.value })}
-                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-all"
+                          className="w-full bg-white dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-all"
                         >
                           <option value="GET">GET</option>
                           <option value="POST">POST</option>
@@ -5102,23 +5102,23 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                         </select>
                       </div>
                       <div className="space-y-2 flex-1">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">URL da API / Webhook</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.api_url', 'URL da API / Webhook')}</label>
                         <input
                           type="text"
                           value={editingAction.rest_url}
                           onChange={e => setEditingAction({ ...editingAction, rest_url: e.target.value })}
-                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-mono focus:border-indigo-500 outline-none transition-all"
+                          className="w-full bg-white dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-mono focus:border-indigo-500 outline-none transition-all"
                           placeholder="https://api.exemplo.com/hook/{{id}}"
                         />
                       </div>
                     </div>
                     {['POST', 'PUT', 'PATCH'].includes(editingAction.rest_method) && (
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Body (JSON Payload)</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.api_body', 'Body (JSON Payload)')}</label>
                         <textarea
                           value={editingAction.rest_body}
                           onChange={e => setEditingAction({ ...editingAction, rest_body: e.target.value })}
-                          className="w-full h-32 bg-neutral-950 text-indigo-400 font-mono text-xs p-4 rounded-2xl outline-none resize-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                          className="w-full h-32 bg-neutral-955 text-indigo-400 font-mono text-xs p-4 rounded-2xl outline-none resize-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
                           placeholder={'{\n  "id": "{{id}}",\n  "status": "aprovado"\n}'}
                         />
                       </div>
@@ -5137,21 +5137,21 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                       <Workflow className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-100 mb-1">Integração com BPM</h4>
+                      <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-100 mb-1">{t('wizard.actions.bpm_integration_title', 'Integração com BPM')}</h4>
                       <p className="text-xs text-emerald-700 dark:text-emerald-300/80 leading-relaxed">
-                        Selecione quais fluxos automatizados (BPM) serão disparados quando o usuário clicar neste botão. Você também pode configurar esta ligação diretamente na tela de Automações.
+                        {t('wizard.actions.bpm_integration_desc', 'Selecione quais fluxos automatizados (BPM) serão disparados quando o usuário clicar neste botão. Você também pode configurar esta ligação diretamente na tela de Automações.')}
                       </p>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Workflows Disponíveis</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.available_workflows', 'Workflows Disponíveis')}</label>
                     <div className="grid grid-cols-1 gap-2 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl max-h-[300px] overflow-y-auto custom-scrollbar">
                       {bpmWorkflows.length === 0 ? (
                         <div className="text-center py-6">
-                          <p className="text-xs text-neutral-500">Nenhum fluxo de automação criado neste projeto.</p>
+                          <p className="text-xs text-neutral-500">{t('wizard.actions.no_workflows', 'Nenhum fluxo de automação criado neste projeto.')}</p>
                           <Link href={`/admin/${workspace_slug}/${project_slug}/automations`} target="_blank" className="text-xs text-emerald-600 hover:underline font-bold mt-2 inline-block">
-                            Criar Primeiro Fluxo
+                            {t('wizard.actions.create_first_flow', 'Criar Primeiro Fluxo')}
                           </Link>
                         </div>
                       ) : (
@@ -5198,8 +5198,8 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
             )}
 
             <div className="flex gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800 mt-6">
-              <button type="button" onClick={() => setIsActionModalOpen(false)} className="flex-1 px-4 py-3 bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all">Cancelar</button>
-              <button type="button" onClick={() => handleSaveAction(editingAction)} className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95">Salvar Ação</button>
+              <button type="button" onClick={() => setIsActionModalOpen(false)} className="flex-1 px-4 py-3 bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all">{t('common.cancel', 'Cancelar')}</button>
+              <button type="button" onClick={() => handleSaveAction(editingAction)} className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95">{t('wizard.actions.save_action', 'Salvar Ação')}</button>
             </div>
           </div>
         )}
@@ -5412,6 +5412,7 @@ function DroppableZone({ id, children, className }: any) {
 }
 
 function DraggableTableHeader({ model, isCollapsed, onToggle }: any) {
+  const { t } = useI18n()
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `table-source-${model.id}`,
     data: { tableId: model.id, isTable: true }
@@ -5436,7 +5437,7 @@ function DraggableTableHeader({ model, isCollapsed, onToggle }: any) {
         <div className="w-1.5 h-4 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)]"></div>
         <div className="flex flex-col">
           <span className="text-[11px] font-black text-neutral-900 dark:text-white uppercase tracking-[0.15em]">{model.display_name || model.db_table_name}</span>
-          <span className="text-[8px] font-bold text-indigo-500/0 group-hover:text-indigo-500 transition-all uppercase tracking-widest leading-none mt-1">Arraste para add tudo</span>
+          <span className="text-[8px] font-bold text-indigo-500/0 group-hover:text-indigo-500 transition-all uppercase tracking-widest leading-none mt-1">{t('wizard.layout.drag_to_add_all', 'Arraste para add tudo')}</span>
         </div>
       </div>
       <div className="p-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-400 group-hover/header:text-indigo-500 group-hover/header:bg-indigo-50 dark:group-hover/header:bg-indigo-500/10 transition-all">

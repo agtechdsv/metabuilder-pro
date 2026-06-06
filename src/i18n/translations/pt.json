@@ -91,7 +91,8 @@
     "logged_in_as": "Usuário Logado",
     "all": "Todos",
     "back_to_home": "Voltar para a Home",
-    "runtime_online": "RUNTIME ONLINE"
+    "runtime_online": "RUNTIME ONLINE",
+    "clear_all": "Limpar Tudo"
   },
   "hero": {
     "badge": "Mecanismo de Metadados Next-Gen",
@@ -307,6 +308,43 @@
           "error_email_hint": "Este e-mail será notificado se um fluxo cair em loop infinito ou retornar erro.",
           "cancel": "Cancelar",
           "save": "Salvar Configurações"
+        },
+        "metadata": {
+          "title": "Estrutura de Tabelas e Campos",
+          "subtitle": "Configure o display_name (nomes amigáveis) e descrições para suas tabelas e colunas do banco de dados.",
+          "search_placeholder": "Buscar tabelas...",
+          "no_tables": "Nenhuma tabela encontrada.",
+          "refresh_tooltip": "Atualizar",
+          "saving": "Salvando...",
+          "save_table": "Salvar Tabela",
+          "friendly_name": "Nome Amigável (Display Name)",
+          "friendly_name_placeholder": "Ex: Departamentos",
+          "table_description": "Descrição da Tabela",
+          "description_placeholder": "Ex: Setores organizacionais da empresa...",
+          "required": "Obrigatório",
+          "actions_permissions": "Ações/Permissões da Tabela",
+          "allow_creation": "Permitir Criação",
+          "allow_creation_desc": "Pode adicionar novos registros",
+          "allow_edition": "Permitir Edição",
+          "allow_edition_desc": "Pode editar registros existentes",
+          "allow_deletion": "Permitir Exclusão",
+          "allow_deletion_desc": "Pode remover registros da tabela",
+          "detected_columns": "Colunas Detectadas ({count})",
+          "loading_columns": "Carregando colunas...",
+          "ui_label": "Label na UI",
+          "order_index": "Ordem (order_index)",
+          "visible_filter": "Visível no Filtro",
+          "visible_grid": "Visível no Grid",
+          "visible_form": "Visível no Form",
+          "sortable": "Ordenável",
+          "no_table_selected": "Nenhuma tabela selecionada",
+          "select_table_desc": "Selecione uma tabela à esquerda para visualizar e editar seus metadados.",
+          "toasts": {
+            "fetch_error": "Erro ao buscar colunas da tabela: ",
+            "save_partial_error": "Erro ao salvar algumas colunas.",
+            "save_success": "Tabela e colunas atualizadas com sucesso!",
+            "save_error": "Erro ao salvar alterações: "
+          }
         },
         "stats": {
           "synced_tables": "Tabelas Sincronizadas",
@@ -609,201 +647,6 @@
     "update_success": "Registro atualizado com sucesso!",
     "delete_success": "Registro excluído com sucesso!",
     "delete_fk_error": "Não é possível excluir este registro pois ele possui relacionamentos ativos (chave estrangeira)."
-  },
-  "wizard": {
-    "title": "Use Case Builder",
-    "edit_mode": "Editando Caso de Uso",
-    "new_mode": "Novo Caso de Uso",
-    "steps": {
-      "logic": "Lógica",
-      "tables": "Tabelas",
-      "layout": "Campos & Layout",
-      "actions": "Ações & Query"
-    },
-    "buttons": {
-      "prev": "Voltar",
-      "next": "Próximo",
-      "update": "Atualizar",
-      "finish": "Finalizar",
-      "saving": "Salvando...",
-      "updating": "Atualizando...",
-      "error_save": "Erro ao salvar: ",
-      "validation": {
-        "name_slug_required": "Nome e slug são obrigatórios.",
-        "grid_required": "Selecione campos para a listagem.",
-        "form_required": "Selecione campos para o formulário.",
-        "filter_required": "Selecione campos para o filtro."
-      }
-    },
-    "logic": {
-      "title": "Qual a lógica do seu caso de uso?",
-      "subtitle": "Defina o comportamento principal desta tela no MetaBuilder.",
-      "types": {
-        "pesquisa": {
-          "title": "Apenas Pesquisa",
-          "desc": "Focado em busca e visualização de dados."
-        },
-        "pesquisa_cadastro": {
-          "title": "Pesquisa + Cadastro",
-          "desc": "Fluxo completo: busca, listagem e formulário."
-        },
-        "cadastro": {
-          "title": "Apenas Cadastro",
-          "desc": "Formulário direto para inserção de dados."
-        },
-        "mapa_mental": {
-          "title": "Mapa Mental",
-          "desc": "Visualização hierárquica e conexões entre dados."
-        },
-        "kanban": {
-          "title": "Kanban",
-          "desc": "Gestão de fluxo de trabalho por colunas e status."
-        },
-        "timeline": {
-          "title": "Linha do Tempo / Feed",
-          "desc": "Visualize registros em uma ordem cronológica baseada em datas."
-        },
-        "map": {
-          "title": "Visão de Mapa (Geospatial)",
-          "desc": "Visualize registros através de marcadores e coordenadas interativas no mapa."
-        },
-        "personalizado": {
-          "title": "Personalizado",
-          "desc": "Lógica customizada e fluxos de trabalho únicos."
-        },
-        "gantt": {
-          "title": "Gráfico de Gantt",
-          "desc": "Gerencie cronogramas e projetos com um gráfico interativo."
-        },
-        "master_detail": {
-          "title": "Mestre-Detalhe",
-          "desc": "Explorador relacional profundo com abas e agrupamentos de dados."
-        },
-        "galeria": {
-          "title": "Galeria / Assets",
-          "desc": "Galeria de mídias, imagens e documentos com download e redirecionamentos."
-        }
-      },
-      "screen_name": "Nome da Tela",
-      "screen_name_placeholder": "Ex: Gestão de Contratos",
-      "slug_label": "URL Amigável (Slug)",
-      "slug_placeholder": "contratos",
-      "enable_args": "Habilitar Argumentos (Filtros de pesquisa na URL)"
-    },
-    "tables": {
-      "title": "Quais tabelas compõem este caso?",
-      "subtitle": "Você pode selecionar uma ou mais tabelas. A lógica de Join será configurada a seguir.",
-      "selected_warning": "Você selecionou {count} tabelas. No próximo passo, definiremos as relações (Joins) entre elas."
-    },
-    "layout": {
-      "title": "Desenhe o Layout da Tela",
-      "subtitle": "Organize os campos em zonas específicas. Um campo pode estar em mais de uma zona.",
-      "available_fields": "Campos Disponíveis",
-      "relationships": "Relacionamentos",
-      "relationships_desc": "Você selecionou múltiplas tabelas. Defina como elas se conectam (Joins).",
-      "select_table": "Selecione a Tabela...",
-      "select_field": "Selecione o Campo...",
-      "add_relationship": "Adicionar Relacionamento",
-      "kanban": {
-        "title": "Configuração do Kanban",
-        "group_field": "Campo de Agrupamento (Colunas)",
-        "group_placeholder": "Selecione um campo para definir as colunas...",
-        "group_desc": "Este campo determinará as colunas do Kanban (ex: Status, Etapa)."
-      },
-      "timeline": {
-        "title": "Configuração da Linha do Tempo",
-        "date_field": "Campo de Data (Obrigatório)",
-        "date_placeholder": "Selecione a data...",
-        "title_field": "Campo de Título (Obrigatório)",
-        "title_placeholder": "Selecione o título...",
-        "desc_field": "Campo de Descrição (Opcional)",
-        "desc_placeholder": "Selecione a descrição...",
-        "icon_field": "Campo de Ícone/Status (Opcional)",
-        "icon_placeholder": "Selecione o campo de ícone..."
-      },
-      "gantt": {
-        "title": "Configuração do Gráfico de Gantt",
-        "title_field": "Campo de Título (Tarefa) - Obrigatório",
-        "start_date_field": "Data Inicial - Obrigatório",
-        "end_date_field": "Data Final - Obrigatório",
-        "progress_field": "Progresso % - Opcional"
-      },
-      "map": {
-        "title": "Configuração do Mapa (Leaflet)",
-        "lat_field": "Latitude (Y) - Obrigatório",
-        "lng_field": "Longitude (X) - Obrigatório",
-        "title_field": "Título do Marcador (Obrigatório)",
-        "desc_field": "Descrição no Popup (Opcional)"
-      },
-      "master_detail": {
-        "title": "Configuração Mestre-Detalhe",
-        "subtitle": "Defina a hierarquia e o estilo de navegação dos dados."
-      },
-      "mindmap": {
-        "config_title": "Configuração do Mapa Mental",
-        "central_field": "Campo Central (Nó Raiz)",
-        "select_central": "Selecione o campo central...",
-        "central_desc": "Este campo será a raiz do seu mapa mental. Os campos selecionados na Zona 02 formarão os próximos níveis."
-      },
-      "zones": {
-        "filter": "Filtro",
-        "grid": "Grid",
-        "form": "Formulário",
-        "kanban_card": "Campos do Card",
-        "card": "Card",
-        "mindmap_nodes": "Campos do Mapa (Níveis)",
-        "node": "Nó",
-        "zone_01": "Zona 01",
-        "zone_02": "Zona 02",
-        "zone_03": "Zona 03"
-      },
-      "display_options": {
-        "list": "Lista",
-        "card": "Cards",
-        "both": "Ambos"
-      },
-      "table": {
-        "field": "Campo",
-        "action": "Ação"
-      },
-      "drawer": {
-        "title": "Propriedades",
-        "label_config": "Configuração do Label",
-        "content_config": "Configuração do Conteúdo",
-        "display_text": "Texto de Exibição",
-        "font": "Fonte",
-        "font_default": "Inter (Padrão)",
-        "size": "Tamanho",
-        "text_color": "Cor do Texto",
-        "content_color": "Cor do Conteúdo",
-        "mask": "Máscara (Input Mask)",
-        "required": "Campo Obrigatório",
-        "required_desc": "Validar se o campo está preenchido"
-      },
-      "reset_formatting": "Resetar Formatação",
-      "reset_confirm": "Deseja resetar toda a formatação personalizada de todos os campos? Esta ação não pode ser desfeita."
-    },
-    "actions": {
-      "title": "Query & Ações Finais",
-      "subtitle": "Configure como os dados serão recuperados e quais botões estarão disponíveis.",
-      "data_strategy": "Estratégia de Dados",
-      "dynamic_query": {
-        "title": "Query Dinâmica (Automática)",
-        "desc": "O MetaBuilder gera os Joins e Selects baseado nas relações das tabelas."
-      },
-      "raw_sql": {
-        "title": "SQL Manual (Raw SQL)",
-        "desc": "Você escreve o SQL puro para maior controle e performance."
-      },
-      "interface_buttons": "Botões da Interface",
-      "sql_editor": "SQL Editor",
-      "validation": {
-        "grid_required": "Selecione pelo menos um campo para a Listagem (Grid).",
-        "filter_required": "Você habilitou argumentos. Selecione pelo menos um campo de Filtro.",
-        "form_required": "Selecione pelo menos um campo para o Formulário.",
-        "name_slug_required": "Por favor, preencha o nome e o slug do caso de uso."
-      }
-    }
   },
   "marketing_v2": {
     "navbar": {
@@ -1492,6 +1335,25 @@
       "slug_label": "URL Amigável (Slug)",
       "slug_placeholder": "Ex: contratos",
       "enable_args": "Habilitar Argumentos (Filtros de pesquisa na URL)",
+      "selected": "Selecionado",
+      "categories": {
+        "dados": {
+          "title": "Gestão de Dados e Cadastros",
+          "desc": "Interfaces focadas em inserção, listagem e relacionamento."
+        },
+        "projetos": {
+          "title": "Projetos, Prazos e Cronogramas",
+          "desc": "Controle visual de tarefas, eventos e progresso."
+        },
+        "mapas": {
+          "title": "Mapeamento, Fluxos e Espacial",
+          "desc": "Interfaces para exibição geoespacial ou diagramas interligados."
+        },
+        "outros": {
+          "title": "Inteligência, Mídia e Outros",
+          "desc": "Dashboards analíticos, galerias e lógicas customizadas."
+        }
+      },
       "types": {
         "pesquisa": {
           "title": "Apenas Pesquisa",
@@ -1520,6 +1382,34 @@
         "personalizado": {
           "title": "Personalizado",
           "desc": "Query customizada para cenários complexos."
+        },
+        "timeline": {
+          "title": "Linha do Tempo / Feed",
+          "desc": "Visualize registros em uma linha do tempo cronológica com base em uma data."
+        },
+        "gantt": {
+          "title": "Gráfico de Gantt",
+          "desc": "Gerencie cronogramas e projetos com um gráfico de Gantt."
+        },
+        "scheduler": {
+          "title": "Agenda / Calendário",
+          "desc": "Agendamentos, prazos, compromissos e tarefas em calendário."
+        },
+        "blueprint": {
+          "title": "Fluxograma (Blueprint)",
+          "desc": "Mapeie processos e fluxos de trabalho interligados dinamicamente."
+        },
+        "map": {
+          "title": "Visão de Mapa (Geospatial)",
+          "desc": "Visualize registros através de marcadores e coordenadas interativas no mapa."
+        },
+        "analytics": {
+          "title": "Dashboard (BI)",
+          "desc": "Indicadores de desempenho, gráficos e KPIs."
+        },
+        "galeria": {
+          "title": "Galeria / Assets",
+          "desc": "Galeria de mídias, imagens e documentos com download e redirecionamentos."
         }
       }
     },
@@ -1537,6 +1427,12 @@
       "reset_formatting": "Resetar Formatação",
       "reset_confirm": "Deseja resetar toda a formatação personalizada de todos os campos? Esta ação não pode ser desfeita.",
       "available_fields": "Campos Disponíveis",
+      "add_table": "Adicionar Tabela",
+      "drag_fields_here": "Arraste campos de \"{table}\" para cá",
+      "drag_to_add_all": "Arraste para add tudo",
+      "master": "Mestre",
+      "detail": "Detalhe",
+      "subdetail": "Sub-Detalhe",
       "kanban": {
         "title": "Configuração Kanban",
         "group_field": "Campo de Agrupamento",
@@ -1545,15 +1441,16 @@
       },
       "master_detail": {
         "title": "Estrutura Mestre-Detalhe",
-        "subtitle": "Defina o relacionamento mestre-detalhe."
+        "subtitle": "Defina o relacionamento mestre-detalhe.",
+        "inline_in_list": "Na lista"
       },
       "zones": {
         "zone_01": "Zona 1",
-        "filter": "Zona 01: Filtros de Pesquisa",
+        "filter": "Filtros de Pesquisa",
         "zone_02": "Zona 2",
-        "grid": "Zona 02: Listagem (Grid/Tabela)",
+        "grid": "Listagem (Grid/Tabela)",
         "zone_03": "Zona 3",
-        "form": "Zona 03: Formulário de Edição"
+        "form": "Formulário de Edição"
       },
       "display_options": {
         "list": "Lista",
@@ -1562,6 +1459,8 @@
       },
       "drawer": {
         "title": "Propriedades",
+        "tab_basic": "Básico / Geral",
+        "tab_styles": "Aparência / Estilos",
         "label_config": "Configuração do Label",
         "font": "Fonte",
         "font_default": "Inter (Padrão)",
@@ -1572,7 +1471,45 @@
         "mask": "Máscara (Input Mask)",
         "required": "Campo Obrigatório",
         "required_desc": "Validar se o campo está preenchido",
-        "content_color": "Cor do Conteúdo"
+        "readonly": "Somente Leitura",
+        "readonly_desc": "O usuário não poderá alterar este valor",
+        "content_color": "Cor do Conteúdo",
+        "component_config": "Configuração do Componente",
+        "component_type": "Tipo de Componente",
+        "width": "Largura",
+        "apply_styles_zone": "Aplicar formatação a todos desta zona ({zone})",
+        "zone_filter": "Filtro",
+        "zone_grid": "Grid",
+        "zone_form": "Formulário",
+        "fixed_options": "Opções (Label:Value, separadas por vírgula)",
+        "options_source": "Origem dos Dados",
+        "options_select_placeholder": "Selecione...",
+        "source_fixed": "Valores Fixos",
+        "source_enum": "Enum Global",
+        "source_relational": "Relacionamento",
+        "select_enumeration": "Selecione o Enumeration",
+        "options_available": "{count} opções disponíveis",
+        "rel_table": "Tabela Relacionada",
+        "rel_label": "Label (Exibição)",
+        "rel_value": "Value (ID)",
+        "rows": "Linhas",
+        "component_types": {
+          "text": "Input Texto",
+          "textarea": "Área de Texto (Textarea)",
+          "number": "Número",
+          "select": "Combo (Select)",
+          "radio": "Radio Buttons",
+          "checkbox": "Checkbox Group",
+          "switch": "Switch (Liga/Desliga)",
+          "date": "Data"
+        },
+        "masks": {
+          "phone": "Telefone/Celular ((00) 00000-0000)",
+          "date": "Data (00/00/0000)",
+          "integer": "Inteiro com Milhar (0.000)",
+          "decimal": "Decimal com Milhar (0.000,00)",
+          "custom": "Personalizado (Custom)..."
+        }
       }
     },
     "actions": {
@@ -1588,7 +1525,108 @@
       },
       "interface_buttons": "Botões da Interface",
       "data_strategy": "Estratégia de Dados",
-      "sql_editor": "SQL Editor"
+      "sql_editor": "SQL Editor",
+      "export_data_title": "Exportação de Dados",
+      "export_data_bg": "Exportação de Dados (Background)",
+      "export_data_desc": "Permite que os usuários exportem os dados desta tela com processamento assíncrono.",
+      "allowed_formats": "Formatos Permitidos",
+      "display_text": "Texto de Exibição",
+      "font": "Fonte",
+      "size": "Tamanho",
+      "text_transform": "Transformação do Texto",
+      "button_preview": "Preview do Botão",
+      "text_color": "Cor do Texto",
+      "bg_color": "Cor do Botão (Fundo)",
+      "custom_action_edit": "Editar Ação Customizada",
+      "custom_action_new": "Nova Ação Customizada",
+      "tab_identification": "Identificação & Appearance",
+      "tab_behavior": "Comportamento (Trigger)",
+      "tab_bpm": "BPM / Automação",
+      "button_name": "Nome do Botão",
+      "icon": "Ícone",
+      "change": "Trocar",
+      "color": "Cor",
+      "colors": {
+        "indigo": "Índigo (Padrão)",
+        "emerald": "Verde (Sucesso/Aprovar)",
+        "red": "Vermelho (Perigo/Rejeitar)",
+        "amber": "Amarelo (Atenção)",
+        "purple": "Roxo (Especial)"
+      },
+      "context": "Contexto",
+      "contexts": {
+        "row": "Ação de Linha (Pesquisa)",
+        "bulk": "Ação Global (Topo da Pesquisa)",
+        "master_top": "Ação Global (Topo do Mestre)",
+        "detail_top": "Ação Global (Topo do Detalhe)",
+        "detail_row": "Ação de Linha (Detalhe)",
+        "field_group": "Agrupado ao Campo (Formulário)"
+      },
+      "target_fields": "Campos Alvo (Selecione um ou mais)",
+      "position": "Posição",
+      "left": "Esquerda",
+      "right": "Direita",
+      "trigger_type": "Tipo de Ação (Trigger)",
+      "sql_command": "Comando SQL",
+      "sql_variables_hint": "Você pode usar variáveis usando chaves duplas: {{id}}",
+      "target_usecase": "Caso de Uso de Destino",
+      "open_mode": "Modo de Abertura",
+      "open_modes": {
+        "page": "Mesma Tela (Navegação Padrão)",
+        "modal": "Modal (Centralizado)",
+        "drawer": "Drawer (Lateral)"
+      },
+      "fields_as_params": "Campos do Registro como Parâmetros",
+      "additional_params": "Parâmetros Adicionais Fixos (Filtros na URL)",
+      "additional_params_hint": "Ex: status=ativo&tipo=1",
+      "method": "Método",
+      "api_url": "URL da API / Webhook",
+      "api_body": "Body (JSON Payload)",
+      "bpm_integration_title": "Integração com BPM",
+      "bpm_integration_desc": "Selecione quais fluxos automatizados (BPM) serão disparados quando o usuário clicar neste botão. Você também pode configurar esta ligação diretamente na tela de Automações.",
+      "available_workflows": "Workflows Disponíveis",
+      "no_workflows": "Nenhum fluxo de automação criado neste projeto.",
+      "create_first_flow": "Criar Primeiro Fluxo",
+      "save_action": "Salvar Ação",
+      "transform": {
+        "none": "Normal",
+        "uppercase": "UPPER",
+        "capitalize": "Iniciais",
+        "lowercase": "lower"
+      },
+      "custom_actions": "Ações Customizadas",
+      "add_action": "Adicionar Ação",
+      "no_custom_actions": "Nenhuma ação customizada configurada",
+      "button_properties": "Propriedades do Botão",
+      "multiple_selection": "múltipla seleção",
+      "sql_procedure": "SQL / Procedure",
+      "select_usecase": "Selecione um caso de uso...",
+      "no_models_selected": "Nenhum modelo selecionado no passo 1.",
+      "text_color_placeholder": "Hexadecimal da cor do texto (ex: #ffffff)",
+      "bg_color_placeholder": "Hexadecimal da cor de fundo (ex: #6366f1)",
+      "action_interface_label": "Interface de Ação (Cadastro/Edição)",
+      "new_action": "Nova Ação",
+      "select_icon_placeholder": "Selecione um ícone...",
+      "trigger_usecase": "Outra Tela",
+      "trigger_rest": "REST API",
+      "filters_args": "Filtros (Argumentos)",
+      "grid_listing": "Grid (Listagem)",
+      "master_form": "Mestre (Formulário)",
+      "details_form": "Detalhes (Formulário)",
+      "btn_search": "Pesquisar",
+      "btn_clear": "Limpar",
+      "btn_view": "Visualizar",
+      "btn_add": "Novo Registro",
+      "btn_edit": "Editar",
+      "btn_delete": "Excluir",
+      "interface_options": {
+        "drawer_title": "Drawer (Lateral)",
+        "drawer_desc": "Os formulários abrirão em uma gaveta lateral deslizante.",
+        "modal_title": "Modal (Central)",
+        "modal_desc": "Os formulários abrirão em uma janela centralizada com fundo escurecido.",
+        "page_title": "Mesma Tela (Página)",
+        "page_desc": "O formulário será exibido na mesma tela, substituindo a lista atual."
+      }
     },
     "buttons": {
       "updating": "Atualizando...",

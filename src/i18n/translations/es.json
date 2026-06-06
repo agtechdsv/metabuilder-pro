@@ -90,7 +90,8 @@
     "logged_in_as": "Usuario Conectado",
     "all": "Todos",
     "back_to_home": "Volver a la Home",
-    "runtime_online": "Runtime Online"
+    "runtime_online": "Runtime Online",
+    "clear_all": "Limpiar Todo"
   },
   "hero": {
     "badge": "Motor de Metadatos de Próxima Generación",
@@ -306,6 +307,43 @@
           "error_email_hint": "Este correo electrónico será notificado si un flujo cae en un bucle infinito o devuelve un error.",
           "cancel": "Cancelar",
           "save": "Guardar Configuraciones"
+        },
+        "metadata": {
+          "title": "Estructura de Tablas y Campos",
+          "subtitle": "Configure display_name (nombres amigables) y descripciones para sus tablas y columnas de la base de datos.",
+          "search_placeholder": "Buscar tablas...",
+          "no_tables": "No se encontraron tablas.",
+          "refresh_tooltip": "Actualizar",
+          "saving": "Guardando...",
+          "save_table": "Guardar Tabla",
+          "friendly_name": "Nombre Amigable (Display Name)",
+          "friendly_name_placeholder": "Ej: Departamentos",
+          "table_description": "Descripción de la Tabla",
+          "description_placeholder": "Ej: Sectores organizacionales de la empresa...",
+          "required": "Obligatorio",
+          "actions_permissions": "Acciones/Permisos de la Tabla",
+          "allow_creation": "Permitir Creación",
+          "allow_creation_desc": "Puede agregar nuevos registros",
+          "allow_edition": "Permitir Edición",
+          "allow_edition_desc": "Puede editar registros existentes",
+          "allow_deletion": "Permitir Eliminación",
+          "allow_deletion_desc": "Puede eliminar registros de la tabla",
+          "detected_columns": "Columnas Detectadas ({count})",
+          "loading_columns": "Cargando columnas...",
+          "ui_label": "Etiqueta en la UI",
+          "order_index": "Orden (order_index)",
+          "visible_filter": "Visible en el Filtro",
+          "visible_grid": "Visible en el Grid",
+          "visible_form": "Visible en el Formulario",
+          "sortable": "Ordenable",
+          "no_table_selected": "Ninguna tabla seleccionada",
+          "select_table_desc": "Seleccione una tabla a la izquierda para ver y editar sus metadados.",
+          "toasts": {
+            "fetch_error": "Error al buscar las columnas de la tabla: ",
+            "save_partial_error": "Error al guardar algunas columnas.",
+            "save_success": "¡Tabla y columnas actualizadas con éxito!",
+            "save_error": "Error al guardar los cambios: "
+          }
         },
         "stats": {
           "synced_tables": "Tablas Sincronizadas",
@@ -608,921 +646,6 @@
     "update_success": "¡Registro actualizado con éxito!",
     "delete_success": "¡Registro eliminado con éxito!",
     "delete_fk_error": "No se puede eliminar este registro porque tiene relaciones activas (restricción de clave extranjera)."
-  },
-  "wizard": {
-    "title": "Use Case Builder",
-    "edit_mode": "Editando Caso de Uso",
-    "new_mode": "Nuevo Caso de Uso",
-    "steps": {
-      "logic": "Lógica",
-      "tables": "Tablas",
-      "layout": "Campos y Diseño",
-      "actions": "Acciones y Consulta"
-    },
-    "buttons": {
-      "prev": "Volver",
-      "next": "Siguiente",
-      "update": "Actualizar",
-      "finish": "Finalizar",
-      "saving": "Guardando...",
-      "updating": "Actualizando...",
-      "error_save": "Error al guardar: ",
-      "validation": {
-        "name_slug_required": "El nombre y el slug son obligatorios.",
-        "grid_required": "Seleccione campos para el listado.",
-        "form_required": "Seleccione campos para el formulario.",
-        "filter_required": "Seleccione campos para el filtro."
-      }
-    },
-    "logic": {
-      "title": "¿Cuál es la lógica de su caso de uso?",
-      "subtitle": "Defina o comportamento principal desta tela no MetaBuilder.",
-      "types": {
-        "pesquisa": {
-          "title": "Solo Búsqueda",
-          "desc": "Enfocado en búsqueda e visualização de dados."
-        },
-        "pesquisa_cadastro": {
-          "title": "Búsqueda + Registro",
-          "desc": "Fluxo completo: busca, listagem e formulário."
-        },
-        "cadastro": {
-          "title": "Solo Registro",
-          "desc": "Formulario direto para inserção de dados."
-        },
-        "mapa_mental": {
-          "title": "Mapa Mental",
-          "desc": "Visualización hierárquica e conexões entre dados."
-        },
-        "kanban": {
-          "title": "Kanban",
-          "desc": "Gestión del flujo de trabajo por columnas y estados."
-        },
-        "timeline": {
-          "title": "Línea de Tiempo / Feed",
-          "desc": "Visualice registros en un orden cronológico basado en fechas."
-        },
-        "map": {
-          "title": "Vista de Mapa (Geospatial)",
-          "desc": "Visualice registros a través de marcadores y coordenadas interactivas en un mapa."
-        },
-        "personalizado": {
-          "title": "Personalizado",
-          "desc": "Lógica personalizada e flujos de trabalho únicos."
-        },
-        "gantt": {
-          "title": "Gráfico de Gantt",
-          "desc": "Gestione cronogramas y proyectos con un gráfico interactivo."
-        },
-        "master_detail": {
-          "title": "Maestro-Detalle",
-          "desc": "Explorador relacional profundo con pestañas y agrupaciones de datos."
-        },
-        "galeria": {
-          "title": "Galería / Assets",
-          "desc": "Galería de medios, imágenes y documentos con descargas y redireccionamientos."
-        }
-      },
-      "screen_name": "Nombre de la Pantalla",
-      "screen_name_placeholder": "Ej: Gestión de Contratos",
-      "slug_label": "URL Amigable (Slug)",
-      "slug_placeholder": "contratos",
-      "enable_args": "Habilitar Argumentos (Filtros de pesquisa na URL)"
-    },
-    "tables": {
-      "title": "¿Qué tablas componen este caso?",
-      "subtitle": "Pode selecionar uma ou mais tabelas. A lógica de Join será configurada a seguir.",
-      "selected_warning": "Ha seleccionado {count} tablas. En el siguiente paso, definiremos las relaciones (Joins) entre ellas."
-    },
-    "layout": {
-      "title": "Diseñe el diseño de la pantalla",
-      "subtitle": "Organize os campos em zonas específicas. Um campo pode estar em mais de uma zona.",
-      "available_fields": "Campos Disponibles",
-      "relationships": "Relaciones",
-      "relationships_desc": "Ha seleccionado múltiples tablas. Defina cómo se conectan (Joins).",
-      "select_table": "Seleccionar Tabla...",
-      "select_field": "Seleccionar Campo...",
-      "add_relationship": "Añadir Relación",
-      "kanban": {
-        "title": "Configuración de Kanban",
-        "group_field": "Campo de Agrupación (Columnas)",
-        "group_placeholder": "Seleccione un campo para definir las columnas...",
-        "group_desc": "Este campo determinará las columnas del Kanban (ej. Estado, Etapa)."
-      },
-      "timeline": {
-        "title": "Configuración de Línea de Tiempo",
-        "date_field": "Campo de Fecha (Obligatorio)",
-        "date_placeholder": "Seleccione la fecha...",
-        "title_field": "Campo de Título (Obligatorio)",
-        "title_placeholder": "Seleccione el título...",
-        "desc_field": "Campo de Descripción (Opcional)",
-        "desc_placeholder": "Seleccione la descripción...",
-        "icon_field": "Campo de Icono/Estado (Opcional)",
-        "icon_placeholder": "Seleccione el campo de ícono..."
-      },
-      "gantt": {
-        "title": "Configuración del Gráfico de Gantt",
-        "title_field": "Campo de Título (Tarea) - Obligatorio",
-        "start_date_field": "Fecha Inicial - Obligatorio",
-        "end_date_field": "Fecha Final - Obligatorio",
-        "progress_field": "Progreso % - Opcional"
-      },
-      "map": {
-        "title": "Configuración del Mapa (Leaflet)",
-        "lat_field": "Latitud (Y) - Obligatorio",
-        "lng_field": "Longitud (X) - Obligatorio",
-        "title_field": "Título del Marcador (Obligatorio)",
-        "desc_field": "Descripción del Popup (Opcional)"
-      },
-      "master_detail": {
-        "title": "Configuración Maestro-Detalle",
-        "subtitle": "Defina la jerarquía y el estilo de navegación de los datos."
-      },
-      "mindmap": {
-        "config_title": "Configuración del Mapa Mental",
-        "central_field": "Campo Central (Nodo Raíz)",
-        "select_central": "Seleccione o campo central...",
-        "central_desc": "Este campo será a raíz do seu mapa mental. Os campos selecionados na Zona 02 formarão os próximos níveis."
-      },
-      "zones": {
-        "filter": "Filtro",
-        "grid": "Grid",
-        "form": "Formulario",
-        "kanban_card": "Campos del Card",
-        "card": "Card",
-        "mindmap_nodes": "Campos do Mapa (Níveis)",
-        "node": "Nodo",
-        "zone_01": "Zona 01",
-        "zone_02": "Zona 02",
-        "zone_03": "Zona 03"
-      },
-      "display_options": {
-        "list": "Lista",
-        "card": "Cards",
-        "both": "Ambos"
-      },
-      "table": {
-        "field": "Campo",
-        "action": "Acción"
-      },
-      "drawer": {
-        "title": "Propiedades",
-        "label_config": "Configuração de Etiqueta",
-        "content_config": "Configuração de Contenido",
-        "display_text": "Texto de Visualización",
-        "font": "Fuente",
-        "font_default": "Inter (Predeterminado)",
-        "size": "Tamaño",
-        "text_color": "Color de Texto",
-        "content_color": "Color de Contenido",
-        "mask": "Máscara (Input Mask)",
-        "required": "Campo Obligatorio",
-        "required_desc": "Validar si el campo está completo"
-      },
-      "reset_formatting": "Restablecer Formato",
-      "reset_confirm": "¿Desea restablecer todo el formato personalizado de todos los campos? Esta acción no se puede deshacer."
-    },
-    "actions": {
-      "title": "Consulta y Acciones Finales",
-      "subtitle": "Configure como os dados serão recuperados e quais botões estarão disponíveis.",
-      "data_strategy": "Estratégia de Datos",
-      "dynamic_query": {
-        "title": "Consulta Dinâmica (Automática)",
-        "desc": "O MetaBuilder gera os Joins e Selects baseado nas relações das tabelas."
-      },
-      "raw_sql": {
-        "title": "SQL Manual (Raw SQL)",
-        "desc": "Usted escribe el SQL puro para mayor control y rendimiento."
-      },
-      "interface_buttons": "Botones de la Interfaz",
-      "sql_editor": "SQL Editor",
-      "validation": {
-        "grid_required": "Seleccione al menos un campo para el listado (Grid).",
-        "filter_required": "Ha habilitado argumentos. Seleccione al menos un campo de Filtro.",
-        "form_required": "Seleccione al menos un campo para el Formulario.",
-        "name_slug_required": "Por favor, complete el nombre y el slug del caso de uso."
-      }
-    }
-  },
-  "marketing_v2": {
-    "navbar": {
-      "speed": "Agilidad",
-      "integration": "Integración",
-      "branding": "Whitelabel",
-      "security": "Seguridad",
-      "use_cases": "Lógicas",
-      "pricing": "Planes",
-      "control_center": "Central de Control",
-      "zero_trust": "Zero-Trust",
-      "bpm": "BPM y Automatización",
-      "sync_resolution": "Sincronización Automática"
-    },
-    "hero": {
-      "badge": "El motor de software del futuro",
-      "title": "Sistemas",
-      "enterprise": "Enterprise",
-      "subtitle": "con la velocidad que tu negocio exige",
-      "desc": "Acelere su entrega técnica con MetaBuilderPRO. Conecte bases de datos, utilice Inteligencia de Metadatos para estructurar interfaces premium y gestione múltiples proyectos en una plataforma whitelabel con backend Next.js nativo, seguro y altamente escalable."
-    },
-    "home": {
-      "bento_title": "Un motor completo para",
-      "bento_highlight": "desarrolladores y empresas.",
-      "bento_desc": "Olvídese del boilerplate. Concéntrese en lo que importa: la lógica de negocio de su cliente.",
-      "bridge_title": "No migre sus datos.",
-      "bridge_subtitle": "Solo dales vida.",
-      "bridge_desc": "MetaBuilderPRO se conecta a su base de datos SQL actual y genera una interfaz administrativa completa en minutos, sin tocar una línea de su estructura actual.",
-      "bridge_cta_demo": "Agendar demostración",
-      "bridge_cta_docs": "Ver documentación",
-      "zero_trust_title": "Privacidad primero.",
-      "zero_trust_highlight": "Siempre.",
-      "zero_trust_desc": "A diferencia de otras herramientas, MetaBuilderPRO no se conecta a su base de datos. Envía comandos cifrados a su túnel local, que procesa la información.",
-      "zero_trust_encrypted": "Datos cifrados",
-      "zero_trust_ports": "Cero puertos abiertos",
-      "control_center_badge": "Central de Control",
-      "control_center_title": "Visibilidad total.",
-      "control_center_highlight": "Gestión técnica & financiera.",
-      "control_center_desc": "Panel de gestión completo: métricas de productividad por DEV, facturación, suscripción, el programa de fidelidad iClub, el canal de sugerencias MetaVoice y una comunidad integrada orientada al compromiso y la mejora del rendimiento colectivo.",
-      "control_center_desc_long": "La Central de Control es el cockpit del gestor técnico. Monitoree sesiones de desarrollo en tiempo real, audite acciones con granularidad de línea de tiempo, gestione su suscripción, interactúe con sugerencias en MetaVoice y consulte los beneficios del iClub — todo en un solo panel.",
-      "control_center_stat1": "Módulos Integrados",
-      "control_center_stat2": "Visibilidad Whitelabel",
-      "control_center_cta": "Conocer la Central de Control",
-      "control_center_cta_sim": "Acceder al Simulador",
-      "control_center_sub_bi_title": "Dashboard BI y Productividad",
-      "control_center_sub_bi_desc": "Monitore la facturación, controle el tiempo de desarrollo activo de cada programador, analice el Cycle Time y obtenga informes analíticos en tiempo real para decisiones estratégicas.",
-      "control_center_sub_billing_title": "Suscripción y Cancelación",
-      "control_center_sub_billing_desc": "Ofrezca total autonomía a los clientes para gestionar facturas de Stripe, actualizar métodos de pago, cambiar de plan y realizar cancelaciones transparentes en modo autoservicio.",
-      "control_center_sub_community_title": "MetaBuilders",
-      "control_center_sub_community_desc": "Un Social HUB integrado para conectar desarrolladores, fundadores y socios de la plataforma. Permite interactuar en tiempo real en el chat, compartir experiencias y establecer conexiones de networking.",
-      "control_center_sub_metavoice_title": "MetaVoice",
-      "control_center_sub_metavoice_desc": "Canal centralizado de comentarios y sugerencias activas para mejorar el producto. Los usuarios proponen ideas, votan por las más relevantes y siguen el roadmap de desarrollo abiertamente.",
-      "control_center_sub_iclub_title": "iClub",
-      "control_center_sub_iclub_desc": "El programa de fidelidad definitivo integrado en la plataforma. Ofrezca beneficios exclusivos, descuentos en nuevas licencias, puntos por actividades y gamificación para fidelizar a los clientes.",
-      "wizard_title": "Wizard de Caso de Uso",
-      "wizard_desc": "No pierda tiempo dibujando cuadrículas y formularios uno por uno. Nuestro asistente inteligente crea flujos completos de CRUD, Maestro-Detalle e Dashboards basados en la semántica de su base de datos.",
-      "whitelabel_title": "Whitelabel Runtime",
-      "whitelabel_desc": "MetaBuilderPRO desaparece para que su marca brille. Favicons dinámicos, URLs personalizadas y temas específicos para cada proyecto que aloje en la plataforma.",
-      "cta_title": "¿Listo para el siguiente nivel?",
-      "cta_desc": "Acelere su entrega técnica y deleite a sus clientes con interfaces premium.",
-      "cta_start": "Empezar ahora gratis",
-      "cta_plans": "Ver planes Enterprise"
-    },
-    "features": {
-      "speed": {
-        "title": "Desarrolle. a la velocidad del pensamiento.",
-        "desc": "MetaBuilderPRO fue diseñado para eliminar las tareas repetitivas del desarrollo web.",
-        "stats_title": "Estimación de tiempo",
-        "vs_traditional": "MetaBuilderPRO vs Tradicional",
-        "hours": "Horas",
-        "minutes": "Minutos",
-        "stats_traditional": "CRUD Tradicional (Código Manual)",
-        "stats_metabuilder": "MetaBuilderPRO Wizard",
-        "item1_title": "Wizard de Caso de Uso",
-        "item1_desc": "Configure formularios, grids y filtros respondiendo preguntas simples.",
-        "item2_title": "Generación de Esquema IA",
-        "item2_desc": "Nuestra IA analiza su base de datos y sugiere automáticamente las mejores configuraciones.",
-        "item3_title": "Despliegue instantáneo",
-        "item3_desc": "Los cambios se reflejan inmediatamente en el entorno de runtime.",
-        "footer_title": "Deje de programar lo básico.",
-        "footer_cta": "Probar Wizard gratis"
-      },
-      "integration": {
-        "title": "Donde sus datos. ya están.",
-        "desc": "No gaste recursos en migraciones arriesgadas. Capa de interfaz ultra moderna sobre sus bases SQL.",
-        "console_title": "Consola de Conexión",
-        "item1_title": "Preserve su lógica",
-        "item1_desc": "Siga usando sus Procedures, Triggers y Views nativas.",
-        "item2_title": "Seguridad transparente",
-        "item2_desc": "Sus datos nunca salen de su infraestructura local.",
-        "supported_engines": "Compatible con los principales motores de bases de datos del mercado."
-      },
-      "branding": {
-        "title": "Su marca. sus reglas.",
-        "desc": "Whitelabel total. Cada proyecto com su propia identidad visual dinámica.",
-        "primary_action": "Botón de Acción Primária",
-        "customize_now": "Personalizar Ahora",
-        "item1_title": "Logos y Favicons",
-        "item1_desc": "Cada proyecto inyecta su propio favicon y logo en tiempo real.",
-        "item2_title": "Tipografía personalizada",
-        "item2_desc": "Defina familias de fuentes específicas para cada marca.",
-        "item3_title": "Temas adaptativos",
-        "item3_desc": "Soporte nativo para Light y Dark mode por proyecto.",
-        "footer_title": "No somos una plantilla.",
-        "footer_subtitle": "Somos una plataforma de branding.",
-        "footer_cta": "Empezar configuración visual"
-      },
-      "zero_trust": {
-        "title": "Arquitectura. Zero-Trust Bridge.",
-        "desc": "Conecte su interfaz en la nube a su base de datos local sin exponer puertos de red.",
-        "cloud_app": "App en la Nube",
-        "tunnel_binary": "Binário del Túnel",
-        "tunnel_status_msg": "# Túnel establecido vía WebSocket Seguro",
-        "item1_title": "Ejecutable nativo",
-        "item1_desc": "Binarios optimizados para Windows y Linux. Ejecute donde esté su base de datos.",
-        "item2_title": "Ciego por diseño",
-        "item2_desc": "El ejecutable local es el único que posee la contraseña de la base de datos.",
-        "item3_title": "Rendimiento en tiempo real",
-        "item3_desc": "WebSockets para garantizar una latência mínima e una experiencia fluida.",
-        "it_summary": "Resumen para el Gerente de TI",
-        "it_item1": "No requiere apertura de puertos de entrada (Inbound).",
-        "it_item2": "Conexión TLS 1.3 de extremo a extremo.",
-        "it_item3": "Las credenciales nunca salen de la infraestructura del cliente.",
-        "it_item4": "Auditable: los comandos SQL pasan por el túnel local.",
-        "cta": "Activar seguridad Enterprise"
-      },
-      "security": {
-        "title": "Seguridad. Inquebrantable.",
-        "desc": "Protección total para los datos de sus clientes. Elija entre múltiples estrategias de autenticación y asegúrese de que solo quienes deban, accedan a lo que pueden.",
-        "auth_title": "Autenticación Personalizable",
-        "auth_desc": "Soporte para BCrypt, MD5, SHA256 y más.",
-        "item1_title": "Criptografía de Vanguardia",
-        "item1_desc": "Toda la comunicación entre el Runtime y su base de datos está protegida por capas de cifrado TLS.",
-        "item2_title": "Cumplimiento LGPD/GDPR",
-        "item2_desc": "Herramientas integradas para la gestión de cookies, términos de uso y políticas de privacidad.",
-        "footer_title": "¿Listo para proteger sus datos?",
-        "footer_desc": "Implemente seguridad de nivel bancario en sus sistemas en pocos clics.",
-        "footer_cta": "Activar Seguridad Enterprise"
-      },
-      "use_cases": {
-        "desc": "Genere pantallas CRUD, Kanban, Mapas Mentales y Agendas dinámicamente basadas en relaciones SQL."
-      }
-    },
-    "use_cases_page": {
-      "badge": "Lógicas de Negocio Dinámicas",
-      "title": "Lógicas de Negocio.",
-      "title_highlight": "El cerebro de MetaBuilderPRO.",
-      "desc": "Vea cómo el motor analiza la semántica de su base de datos para instanciar interfaces premium dinámicas y funcionales sin generar archivos físicos.",
-      "interactive_title": "Modelos de Comportamiento Soportados",
-      "interactive_desc": "Seleccione una de las lógicas a continuación para ver cómo se comporta la interfaz en el Runtime y cómo se procesan los datos.",
-      "what_is": "Qué es",
-      "engine_behavior": "Comportamiento del Motor",
-      "practical_example": "Ejemplo Práctico",
-      "mapped_components": "Componentes Generados",
-      "interactive_hint": "¡Haga clic en los elementos del Simulador Runtime arriba para ver la lógica en acción! En algunos componentes debe hacer clic, arrastrar y soltar para verlo funcionar en la práctica.",
-      "mockups": {
-        "search": "Buscar...",
-        "search_btn": "Filtrar",
-        "add_btn": "Agregar Registro",
-        "name": "Nombre",
-        "email": "E-mail",
-        "status": "Estado",
-        "actions": "Acciones",
-        "details": "Ver Detalles",
-        "save": "Guardar Registro",
-        "cancel": "Cancelar",
-        "delete_confirm_title": "¿Eliminar Registro?",
-        "delete_confirm_desc": "¿Está seguro de que desea eliminar este registro? Esta acción no se puede deshacer.",
-        "delete_confirm_yes": "Confirmar",
-        "delete_confirm_no": "Cancelar",
-        "order_title": "Visualización de Pedido #3492",
-        "tab_items": "Artículos del Pedido",
-        "tab_payments": "Pagos",
-        "tab_logs": "Historial",
-        "item_name": "Producto",
-        "qty": "Cant",
-        "price": "Precio",
-        "to_do": "Por Hacer",
-        "in_progress": "En Progreso",
-        "done": "Completado",
-        "central_node": "Empresa (Raíz)",
-        "node_finance": "Finanzas",
-        "node_sales": "Ventas",
-        "node_hr": "RH",
-        "node_billing": "Facturación",
-        "node_treasury": "Tesorería",
-        "node_crm": "CRM Ventas",
-        "node_pipeline": "Embudo Ventas",
-        "node_recruitment": "Reclutamiento",
-        "node_payroll": "Nómina",
-        "sql_editor_title": "Custom SQL Query Editor",
-        "sql_placeholder": "SELECT p.id, p.name, count(o.id) FROM products p LEFT JOIN orders o ON p.id = o.product_id GROUP BY p.id",
-        "run_query": "Ejecutar Consulta",
-        "query_result": "Resultado de Consulta (Personalizado)"
-      },
-      "items": {
-        "cadastro": {
-          "title": "Solo Registro",
-          "desc": "Formulario directo para la inserción rápida de datos, sin enumerar los registros existentes.",
-          "what_is": "Un diseño puramente de entrada, optimizado para formularios públicos de contacto, captación de leads o nuevos registros de usuarios.",
-          "behavior": "El motor ignora las operaciones de listado (Select) y se enfoca en validaciones y operaciones de inserción (Insert) directas.",
-          "example": "Formularios de contacto, páginas de registro de eventos o encuestas de satisfacción.",
-          "components": "Campos de entrada dinámicos, validación de obligatoriedad, máscaras de entrada y botón de envío."
-        },
-        "pesquisa": {
-          "title": "Solo Búsqueda",
-          "desc": "Interfaz enfocada exclusivamente en consultas e informes de datos de forma de solo lectura.",
-          "what_is": "Una página diseñada para emitir informes y filtros rápidos de consulta. Los botones de editar o crear están deshabilitados.",
-          "behavior": "El motor ejecuta consultas de solo lectura optimizadas (Select) y previene cualquier acción de escritura (Insert/Update/Delete).",
-          "example": "Consultas de facturas emitidas, registro de logs de auditoría o paneles de solo lectura.",
-          "components": "Filtros rápidos, caja de búsqueda global, cuadrícula paginada y exportador de datos Excel/PDF."
-        },
-        "pesquisa_cadastro": {
-          "title": "Búsqueda + Registro",
-          "desc": "El flujo CRUD estándar. Listado inteligente combinado con formulario completo de edición.",
-          "what_is": "El clásico panel administrativo: búsqueda de registros existentes y botones de acción para crear, editar o eliminar registros.",
-          "behavior": "Gestión de estado compleja que une filtros de consulta en tiempo real y formulario dinámico en Drawer lateral.",
-          "example": "Directorio de clientes, catálogo de productos o control de inventarios.",
-          "components": "Barra de filtros, cuadrícula dinámica con ordenación, Drawer para creación/edición y diálogo de borrado."
-        },
-        "master_detail": {
-          "title": "Maestro-Detalle",
-          "desc": "Explorador de datos relacionales avanzado con subtablas y pestañas integradas.",
-          "what_is": "Una vista jerárquica en la que un registro principal posee múltiples registros dependientes (ej: Pedido e Items de Pedido).",
-          "behavior": "Realiza consultas anidadas (Joins/sub-selects) y organiza las tablas dependientes en pestañas enlazadas mediante claves foráneas (FK).",
-          "example": "Vistas de pedido con ítems comprados, perfiles de clientes con contactos y abas de facturas vinculadas.",
-          "components": "Pestañas dinámicas, cuadrículas de detalles, borrado en cascada y tarjetas de detalles."
-        },
-        "kanban": {
-          "title": "Kanban",
-          "desc": "Tablero visual de tarjetas organizadas en columnas según estados o etapas de trabajo.",
-          "what_is": "Ideal para realizar el seguimiento visual de flujos de trabajo y pipelines de procesos de forma gráfica.",
-          "behavior": "Agrupa datos por un campo de estado y esta actualiza registros inmediatamente en la base de datos tras arrastrar y soltar.",
-          "example": "Embudo de Ventas (CRM), tableros de tareas (Gestión de Proyectos) o colas de pedidos.",
-          "components": "Columnas de etapas, tarjetas (cards) con metadados configurables y soporte nativo para arrastrar y soltar."
-        },
-        "mapa_mental": {
-          "title": "Mapa Mental",
-          "desc": "Diagrama de nodos en árbol para explorar relaciones jerárquicas u organigramas.",
-          "what_is": "Una forma geométrica e interactiva de explorar relaciones de dependencia en cascada directamente desde los datos.",
-          "behavior": "Procesa árboles recursivos de registros de base de datos y dibuja un grafo interactivo usando SVG y animaciones fluidas.",
-          "example": "Organigramas empresariales, árboles genealógicos o jerarquías de categorías de productos.",
-          "components": "Nodos interactivos SVG expansibles, caja de búsqueda de nodos y líneas de enlace animadas."
-        },
-        "dashboard": {
-          "title": "Dashboard (BI)",
-          "desc": "Indicadores de rendimiento, gráficos interactivos y KPIs.",
-          "what_is": "Un panel visual dinámico que consolida métricas clave de negocio directamente desde la base de datos.",
-          "behavior": "Ejecuta consultas de agregación complejas (Group By, Sum, Avg) y alimenta componentes visuales de alto rendimiento.",
-          "example": "Panel de ingresos mensuales, monitor de servidores activos o embudo de ventas del CRM.",
-          "components": "Tarjetas de KPI con variación porcentual, gráficos interactivos de líneas/barras y filtros de fechas."
-        },
-        "agenda": {
-          "title": "Agenda / Calendario",
-          "desc": "Programación, plazos, citas y tareas en un calendario.",
-          "what_is": "Organizador de tareas y eventos estructurado en cuadrículas temporales mensuales, semanales o diarias.",
-          "behavior": "Sincroniza registros con campos de fecha/hora en la base de datos, recalculando bloques horarios y alertas.",
-          "example": "Calendario de citas médicas, cronogramas de entrega de proyectos o reservas de salas de reuniones.",
-          "components": "Vista en cuadrícula (Mensual/Semanal/Diaria), tarjetas de eventos interactivas con drag-and-drop y diálogo de reserva."
-        },
-        "personalizado": {
-          "title": "Personalizado",
-          "desc": "Control absoluto sobre la consulta SQL y el diseño de la interfaz.",
-          "what_is": "Para escenarios avanzados donde las plantillas automáticas no bastan. Permite programar SQL puro y configurar botones virtuales.",
-          "behavior": "El motor omite la generación de SQL automática y procesa la consulta Raw SQL escrita por el programador.",
-          "example": "Paneles analíticos complejos con agregaciones pesadas o flujos que llaman a APIs externas.",
-          "components": "Editor SQL con resaltado de código, plantillas UI personalizadas y definición de botones de acción."
-        },
-        "galeria": {
-          "title": "Galería / Assets",
-          "desc": "Biblioteca de medios y gestión de archivos adjuntos con previsualización y descarga.",
-          "what_is": "Una interfaz de visualización y control de assets (imágenes, PDFs, documentos, videos) asociados a registros de la base de datos.",
-          "behavior": "Sincroniza referencias de archivos almacenados en el bucket (storage) con registros de la base, ofreciendo descarga segura y preview nativo.",
-          "example": "Central de documentos de clientes, biblioteca de imágenes de productos, o galería de comprobantes de pago.",
-          "components": "Cuadrícula de tarjetas de asset con vista previa, filtros por extensión/categoría, lightbox de imagen en pantalla completa y botón de descarga."
-        },
-        "timeline": {
-          "title": "Línea de Tiempo / Feed",
-          "desc": "Visualice registros en un orden cronológico basado en fechas.",
-          "what_is": "Un diseño de flujo cronológico ideal para logs de auditoria, feeds de actividad o historial de actualizaciones.",
-          "behavior": "Ordena los registros dinámicamente basándose en una columna de fecha/hora de la base de dados y los renderiza en un feed vertical.",
-          "example": "Feeds de actividad de usuarios, historial de cambios de ofertas o registros de auditoría de seguridad.",
-          "components": "Feed vertical con línea de unión, nodos de eventos estilizados por tipo, orden cronológico inverso y buscador de eventos."
-        },
-        "gantt": {
-          "title": "Gráfico de Gantt",
-          "desc": "Gestione cronogramas y proyectos con un gráfico de barras interactivo.",
-          "what_is": "Una vista de barras de tiempo para planificar cronogramas, dependencias de tareas y progreso de proyectos.",
-          "behavior": "Mapea las fechas de inicio, fin y progreso de los registros de la base para renderizar barras horizontales de tiempo dinámicas.",
-          "example": "Planificación de desarrollo de software, planificación de eventos corporativos o gestión de fases de obras.",
-          "components": "Línea de tiempo por semanas/meses, barras de tareas ajustables, indicadores de progreso y lista lateral de tareas."
-        },
-        "blueprint": {
-          "title": "Diagrama de Flujo (Blueprint)",
-          "desc": "Mapee processos y flujos de trabajo interconectados dinámicamente.",
-          "what_is": "Una interfaz gráfica de diagramas para modelar flujos de trabajo, etapas de aprobación o lógicas de negocio.",
-          "behavior": "Analiza las relaciones de transición y los nodos del sistema para dibujar un diagrama de flujo interactivo con líneas conectadas.",
-          "example": "Flujos de aprobación de propuestas comerciales, procesos internos de compras o escalamiento de tickets de soporte.",
-          "components": "Canvas interactivo de dibujo, tarjetas de nodo personalizables, líneas de enlace inteligentes y disparadores de acciones."
-        },
-        "map": {
-          "title": "Vista de Mapa (Geospatial)",
-          "desc": "Visualice registros mediante marcadores y coordenadas interactivas en el mapa.",
-          "what_is": "Una interfaz cartográfica integrada para localizar activos, clientes, tiendas o vehículos que tienen coordenadas en la base de datos.",
-          "behavior": "Lee columnas de coordenadas geográficas y coloca marcadores georreferenciados en un mapa interactivo con soporte para filtros.",
-          "example": "Mapas de sucursales, ubicación de operarios de campo en tiempo real o geolocalización de envíos.",
-          "components": "Mapa interactivo (Leaflet), marcadores de estado personalizados, globos de información (popups) y filtros por zona geográfica."
-        }
-      }
-    },
-    "control_center_page": {
-      "badge": "AUDITORÍA DE DESARROLLO",
-      "title": "Central de Control.",
-      "title_highlight": "Gestión técnica & productividad.",
-      "desc": "Monitoree y audite la productividad de ingeniería en tiempo real. Vea el Cycle Time, tasa de retrabajo, tiempo activo de cada DEV y gestione workspaces, facturación y licencias.",
-      "interactive_title": "Módulos de la Central de Control",
-      "interactive_desc": "Navegue por las pestañas de la Central de Control abajo para simular cómo los gestores supervisan el rendimiento y la facturación.",
-      "tabs": {
-        "bi": "Panel BI",
-        "productivity": "O \"VAR do Desenvolvimento\"",
-        "subscription": "Suscripción & Facturación",
-        "cancel": "Flujo de Cancelación Transparente",
-        "community": "MetaBuilders - Red Exclusiva",
-        "metavoice": "MetaVoice - Sugerencias & Comentarios",
-        "iclub": "iClub - Ventajas y Fidelidad"
-      },
-      "tabs_short": {
-        "bi": "Panel BI",
-        "productivity": "Productividad",
-        "subscription": "Suscripción",
-        "cancel": "Cancelación",
-        "community": "MetaBuilders",
-        "metavoice": "MetaVoice",
-        "iclub": "iClub"
-      },
-      "descriptions": {
-        "bi": "Visión unificada de las métricas vitales de su empresa. Realice un seguimiento de licencias activas, espacios de trabajo creados, número de proyectos y la distribución de casos de uso por tipo (Registro, Consulta, Maestro-Detalle).",
-        "productivity": "El corazón de la Central. Auditoría completa de sesiones con línea de tiempo visual interactiva, seguimiento granular de eventos de configuración y navegación, y cálculo preciso de inactividad (gaps de tiempo) entre cada acción de los desarrolladores en el Studio.",
-        "subscription": "Gestión simplificada de su plan de suscripción. Vea los importes contratados, ciclos de renovación recurrentes (semestral/anual), métodos de pago (Pix/Tarjeta) y descargue recibos de pago con un solo clic.",
-        "cancel": "Formulario interactivo whitelabel para comentarios. Los usuarios pueden justificar su salida a través de múltiples motivos de cancelación estratégicos y comentarios adicionales antes de la desactivación en Asaas.",
-        "community": "Hub de networking exclusivo para clientes. Conéctese con Owners y Devs, comparta insights, intercambie experiencias en tiempo real y amplíe sus conexiones dentro del ecosistema MetaBuilderPRO.",
-        "metavoice": "Canal de comentarios bidireccional integrado para la comunidad de clientes. Permite el envío de nuevas sugerencias, votación de funciones y comentarios, lo que permite priorizar el roadmap en tiempo real.",
-        "iclub": "Club de beneficios y fidelidad integrado. Ofrece descuentos automáticos y acumulativos en la factura para referencias activas (5% por referido) y licencias gratuitas por volumen contratado (ej. 12 licencias)."
-      },
-      "simulator": {
-        "title": "Central de Control - Simulator",
-        "header_title": "Central de Control",
-        "header_desc": "Resumen de sus datos, suscripción y cuenta",
-        "active": "Activo",
-        "footer_banner": "Central de Control Whitelabel — Métricas Activas en tiempo real",
-        "toast_copied": "¡Enlace copiado con éxito! (Simulado)",
-        "toast_sub_success": "¡Plan de suscripción actualizado con éxito! (Simulado)",
-        "toast_card_success": "¡Tarjeta de crédito actualizada con éxito! (Simulado)",
-        "toast_cancel_success": "¡Cancelación simulada con éxito!",
-        "toast_keep_sub": "¡Gracias por continuar con nosotros! ❤️"
-      },
-      "bi": {
-        "licenses": "Licencias",
-        "active_users": "Usuarios activos",
-        "workspaces": "Workspaces",
-        "created_env": "Ambiente creado",
-        "projects": "Proyectos",
-        "all_workspaces": "En todos los workspaces",
-        "use_cases": "Casos de Uso",
-        "functional_screens": "Pantallas funcionales",
-        "projects_per_ws": "Proyectos por Workspace",
-        "cases_per_project": "Casos de Uso por Proyecto",
-        "cases_by_type": "Casos de Uso por Tipo",
-        "search": "Consulta",
-        "create": "Registro",
-        "master": "Maestro",
-        "ws_details": "Detalle por Workspace",
-        "ws_col": "Workspace",
-        "projects_col": "Proyectos",
-        "cases_col": "Casos",
-        "users_col": "Usuarios"
-      },
-      "productivity": {
-        "filters": "Filtros:",
-        "all_projects": "Todos los Proyectos",
-        "all_devs": "Todos los Profesionales",
-        "all_periods": "Todo el Período",
-        "summary_tab": "Resumen por DEV",
-        "detailed_tab": "Detalle por DEV",
-        "active_time": "Tiempo Activo Total",
-        "active_time_desc": "Tiempo dedicado a construir en la plataforma",
-        "actions": "Acciones Realizadas",
-        "actions_desc": "Interacciones con el Studio",
-        "prod_by_dev": "Productividad por Profesional",
-        "col_active_time": "Tiempo Activo",
-        "col_actions": "Acciones",
-        "col_sessions": "Sesiones",
-        "detailed_logs_title": "Logs de Actividad Detallados",
-        "col_dev": "Profesional",
-        "col_session_start": "Inicio de la Sesión",
-        "col_action": "Acción",
-        "btn_view_log": "Ver log detallado",
-        "modal_title": "Detalles del Log de Actividad",
-        "modal_started_at": "Sesión iniciada en",
-        "theme_light": "Tema Claro",
-        "theme_dark": "Tema Oscuro",
-        "tab_timeline": "Línea de Tiempo",
-        "tab_json": "JSON Bruto",
-        "btn_copy": "Copiar",
-        "btn_copied": "¡Copiado!",
-        "btn_export": "Exportar",
-        "btn_close": "Cerrar",
-        "action_start": "Inicio",
-        "action_config": "Configuración",
-        "action_navigation": "Navegación",
-        "action_other": "Acción",
-        "sim_start_1": "Ingresó al configurador del Caso de Uso",
-        "sim_close_1": "Cerró la sesión sin guardar",
-        "sim_start_2": "Ingresó al configurador del Caso de Uso \"contratos\"",
-        "sim_remove_save": "Eliminó el botón \"guardar\" (Paso 3 - Layout)",
-        "sim_add_save": "Añadió el botón \"guardar\" (Paso 3 - Layout)",
-        "sim_finish_2": "Finalizó y guardó cambios (Paso 4 - Finalizar)"
-      },
-      "subscription": {
-        "summary_title": "Resumen de la Suscripción",
-        "summary_desc": "Estado del plan activo y ciclo contratado",
-        "btn_change": "Cambiar",
-        "btn_add_card": "Añadir Tarjeta Guardada",
-        "col_current_plan": "Plan Actual",
-        "col_cycle": "Ciclo",
-        "col_status": "Estado",
-        "col_next_renewal": "Próxima Renovación",
-        "col_recurrent": "Renovación recurrente",
-        "col_normal": "Operación normal",
-        "col_billing_recurrent": "Cobro recurrente",
-        "billing_summary_payment": "ÚLTIMO PAGO:",
-        "billing_summary_date": "FECHA:",
-        "billing_summary_method": "FORMA DE PAGO:",
-        "method_card": "Tarjeta de Crédito",
-        "method_pix": "Pix",
-        "change_plan_title": "Cambiar Plan o Ciclo",
-        "change_plan_desc": "Cambie de plan o ciclo de facturación al instante",
-        "cycle_monthly": "Mensual",
-        "cycle_quarterly": "Trimestral",
-        "cycle_semiannual": "Semestral",
-        "cycle_yearly": "Anual",
-        "plan_licenses_count": "Hasta {count} licencias activas",
-        "plan_license_single": "Hasta 1 licencia activa",
-        "plan_license_plural": "Hasta {count} licencias activas",
-        "plan_billing_hint": "Cobrado {price} al contratar",
-        "btn_confirm_sub": "Confirmar Nueva Suscripción",
-        "billing_history": "Historial de Facturación",
-        "transactions_count": "1 transacción",
-        "col_date": "Fecha",
-        "col_value": "Valor",
-        "col_method": "Método",
-        "col_receipt": "Comprobante",
-        "btn_receipt": "Recibo",
-        "toast_loading_receipt": "Cargando comprobante en PDF...",
-        "card_modal_title": "Actualizar Tarjeta de Crédito (Simulado)",
-        "card_modal_desc": "Configure los datos simulados para la renovación de su suscripción.",
-        "card_details_header": "Datos de la Tarjeta",
-        "billing_details_header": "Titular y Dirección",
-        "card_number": "Número de Tarjeta",
-        "card_name": "Nombre en la Tarjeta",
-        "card_expiry": "Vencimiento",
-        "card_cvv": "Código de Seguridad (CVV)",
-        "billing_info": "Datos de Facturación",
-        "billing_name": "Nombre / Razón Social",
-        "billing_tax_id": "CPF / CNPJ",
-        "billing_email": "Correo de Facturación",
-        "billing_phone": "Teléfono",
-        "billing_zip": "Código Postal",
-        "billing_number": "Número de Dirección",
-        "btn_card_submit": "Actualizar Tarjeta",
-        "btn_card_updating": "Actualizando...",
-        "plan_modal_title": "Confirmar Cambio de Plan (Simulado)",
-        "plan_modal_desc": "Verifique los detalles de la nueva suscripción simulada antes de continuar",
-        "plan_modal_new_plan": "Nuevo Plan Seleccionado",
-        "plan_modal_new_value": "Nuevo valor: {price} cobrado en el ciclo seleccionado.",
-        "plan_modal_disclaimer": "Esta es una simulación de la sincronización instantánea con la pasarela de pagos. Los valores prorrateados se aplicarían en la factura real."
-      },
-      "cancel_flow": {
-        "title": "¿Realmente desea cancelar su suscripción?",
-        "desc": "Al cancelar, su acceso permanecerá activo hasta el final del período ya pagado (23/11/2026). Después de esa fecha, el acceso a los recursos se suspenderá, pero sus datos se conservarán.",
-        "reason_label": "¿Motivo de la cancelación?",
-        "reasons": {
-          "price": "PRECIO DEMASIADO ALTO",
-          "usability": "DIFICULTAD DE USO",
-          "features": "FALTA DE CARACTERÍSTICAS / CONEXIONES",
-          "strategy": "CAMBIO DE ESTRATEGIA / NO LO NECESITO",
-          "other": "OTRO MOTIVO"
-        },
-        "comment_label": "Cuéntenos un poco más sobre el motivo de su cancelación y cómo podemos mejorar nuestros servicios",
-        "comment_placeholder": "Escriba su respuesta aquí (opcional)...",
-        "btn_keep": "Mantener Suscripción",
-        "btn_cancel": "Continuar Cancelación"
-      },
-      "iclub": {
-        "share_earn": "Recomiende & Gane",
-        "link_title": "Su Enlace de iClub",
-        "link_desc": "Comparta el enlace. Por cada recomendado que se convierta en suscriptor, usted obtiene un 5% de descuento — ¡de por vida mientras sea suscriptor!",
-        "billing_title": "Facturación iClub",
-        "discount_title": "Descuento Acumulado",
-        "discount_val": "15% de Descuento",
-        "discount_desc": "En su próxima factura de Asaas (3 recomendaciones activas) — descuento de por vida por recomendado",
-        "volume_title": "Progreso de Volumen (Meta: 12 Licencias)",
-        "volume_status": "3 / 12 Licencias",
-        "volume_desc": "Por cada 12 licencias activas contratadas, el iClub otorga 1 licencia adicional totalmente gratuita. Faltan 9 licencia(s) para su próxima recompensa.",
-        "referrals_title": "Recomendaciones Recientes",
-        "col_email": "Correo Recomendado",
-        "status_referred": "Suscriptor",
-        "rewards_title": "Premios Otorgados",
-        "reward_discount": "Descuento de Factura",
-        "reward_date": "25/05/2026",
-        "reward_bonus": "Bono de 5% de descuento"
-      },
-      "metavoice_sim": {
-        "title": "Ideas y Sugerencias de la Comunidad",
-        "desc": "Envíe sus ideas, vote las sugerencias de otros usuarios y ayude a priorizar el roadmap de MetaBuilderPRO.",
-        "status_planned": "Planificado",
-        "status_running": "En Ejecución",
-        "cat_ui": "UI / UX",
-        "cat_integration": "Integración",
-        "idea1_title": "Modo Oscuro en el Editor SQL",
-        "idea1_desc": "Añadir un botón rápido para cambiar el tema específicamente en el editor de código SQL en el panel de administración.",
-        "idea2_title": "Integración nativa con n8n",
-        "idea2_desc": "Disparar Webhooks automáticos de n8n siempre que un caso de uso CRUD guarde o elimine registros."
-      },
-      "auditing": {
-        "section_title": "Auditoría Técnica En Tiempo Real: El \"VAR del Desarrollo\"",
-        "section_desc": "Elimine la falta de visibilidad del trabajo operacional de ingeniería. La pestaña Productividad es una solución de auditoría continua que rastrea las interacciones reales de los DEVs con la engine para generar métricas de gestión precisas.",
-        "card1_title": "Tiempo Activo vs. Inactividad",
-        "card1_desc": "El sistema calcula el tiempo activo real de desarrollo y expone con precisión los intervalos ociosos (gaps de tiempo) entre cada acción en el Studio.",
-        "card2_title": "Seguimiento Granular",
-        "card2_desc": "Monitoree cambios de configuración detallados: cambio de nombre de tablas y slugs, adición de widgets, nuevos campos en Grid/Filtros y botones de diseño activos/inactivos.",
-        "card3_title": "Auditoría Completa de Sesión",
-        "card3_desc": "Seguimiento de extremo a extremo desde el inicio automático de la sesión (SESSION_START) hasta la finalización y publicación de cambios en la Central de Control."
-      },
-      "strategic": {
-        "title": "Gestión Estratégica a través de Panel BI",
-        "desc": "Consolide datos de infraestructura y consumo de licencias de todos los workspaces creados para su empresa o clientes en un panel de gestión único.",
-        "card1_title": "Distribución Dinâmica de Recursos",
-        "card1_desc": "Monitoree instantáneamente qué tipos de pantallas se están creando (CRUDs de Registro, Pantallas de Informe/Consulta y Estructuras de Maestro-Detalle) para auditar si los recursos coinciden con las licencias.",
-        "card1_cta": "Mapeo Automático",
-        "card2_title": "Control Financiero Whitelabel",
-        "card2_desc": "Tenga un control total sobre las facturas generadas, métodos de pago mediante Pix, y envíe registros de cancelación estructurados directamente en el panel. Reduzca el churn conociendo los problemas del usuario en tiempo real.",
-        "card2_cta": "Gestión de Ingresos (MRR)"
-      },
-      "pillars": {
-        "title": "Pilares de la Central de Control",
-        "desc": "Explore en detalle cada funcionalidad integrada en el panel de gestión de MetaBuilderPRO:",
-        "card1_title": "Suscripción & Facturación",
-        "card1_desc": "Monitoree el estado de su plan activo, consulte la fecha de renovación recurrente y gestione las licencias de desarrolladores. La central proporciona descargas sencillas de recibos de facturas para Pix o Tarjeta.",
-        "card2_title": "Flujo de Cancelación Transparente",
-        "card2_desc": "Creemos en asociaciones libres de burocracia. Los clientes pueden cancelar su cuenta directamente desde el panel en cualquier momento. Un formulario estructurado recopila comentarios valiosos para ayudarnos a mejorar.",
-        "card3_title": "MetaVoice - Sugestiones & Comentarios",
-        "card3_desc": "Envíe sugerencias de mejoras o nuevas funciones. Las ideas que beneficien a la comunidad de clientes serán desarrolladas e implementadas sin costo adicional. Para requisitos específicos de su negocio, puede contratar la ejecución directamente con el equipo de MetaBuilder PRO.",
-        "card4_title": "MetaBuilders - Red Exclusiva",
-        "card4_desc": "Comunidad exclusiva integrada en el panel. Conéctese con otros Owners y Devs, publique insights, vote y comente en publicaciones en tiempo real. Un hub de networking diseñado para el ecosistema MetaBuilderPRO.",
-        "card5_title": "iClub - Ventajas y Fidelidad",
-        "card5_desc": "iClub es nuestro programa de recomendación y beneficios. Cada recomendación exitosa genera un descuento de por vida del 5% en su factura (mientras el usuario permanezca activo). ¡Acumule descuentos de hasta el 100% o reciba licencias adicionales gratis!"
-      },
-      "bottom_cta": {
-        "title": "Gestione su Ecosistema con Total Visibilidad",
-        "desc": "Acceda a la Central de Control a través de su menú de perfil y audite la productividad del desarrollo ahora mismo."
-      }
-    }
-  },
-  "settings": {
-    "team_tab": "Equipo y Permisos",
-    "billing_tab": "Facturación",
-    "title": "Miembros del Espacio de Trabajo",
-    "subtitle": "Gestione quién tiene acceso a los proyectos de este Espacio de Trabajo.",
-    "member": "miembro",
-    "members": "miembros",
-    "no_email": "Sin correo electrónico",
-    "invite_title": "Invitar Nuevo Miembro",
-    "user_email": "Correo del Usuario",
-    "access_level": "Nivel de Acceso",
-    "role_developer": "Developer (Crea y edita proyectos)",
-    "role_admin": "Admin (Acceso total excepto eliminar el espacio de trabajo)",
-    "sending": "Enviando...",
-    "send_invite": "Enviar Invitación",
-    "invite_hint": "El usuario recibirá un correo electrónico para acceder a la plataforma.",
-    "only_admins": "Solo los Administradores o el Propietario del Espacio de Trabajo pueden invitar a nuevos miembros.",
-    "remove_title": "Eliminar Miembro",
-    "remove_desc": "¿Está seguro de que desea eliminar a este miembro del equipo?",
-    "yes_remove": "Sí, eliminar",
-    "allowed_projects": "Proyectos Permitidos",
-    "allowed_projects_desc": "Seleccione los proyectos que este miembro puede ver y actuar.",
-    "no_projects": "No se encontraron proyectos en este espacio de trabajo.",
-    "done": "Concluido"
-  },
-  "wizard": {
-    "title": "Asistente de Casos de Uso",
-    "edit_mode": "Editar Caso de Uso",
-    "new_mode": "Nuevo Caso de Uso",
-    "logic": {
-      "title": "¿Cuál es la lógica de su caso de uso?",
-      "subtitle": "Defina el comportamiento principal de esta pantalla en MetaBuilder.",
-      "screen_name": "Nombre de la Pantalla",
-      "screen_name_placeholder": "Ej: Gestión de Contratos",
-      "slug_label": "URL Amigable (Slug)",
-      "slug_placeholder": "Ej: contratos",
-      "enable_args": "Habilitar Argumentos (Filtros de búsqueda en la URL)",
-      "types": {
-        "pesquisa": {
-          "title": "Solo Búsqueda",
-          "desc": "Centrado en buscar y visualizar datos."
-        },
-        "cadastro": {
-          "title": "Solo Registro",
-          "desc": "Formulario directo para insertar datos."
-        },
-        "pesquisa_cadastro": {
-          "title": "Búsqueda + Registro",
-          "desc": "Flujo completo: búsqueda, listado y formulario."
-        },
-        "master_detail": {
-          "title": "Maestro-Detalle",
-          "desc": "Estructura relacional con sub-tablas vinculadas."
-        },
-        "kanban": {
-          "title": "Kanban",
-          "desc": "Tablero visual de tarjetas organizado por columnas."
-        },
-        "mapa_mental": {
-          "title": "Mapa Mental",
-          "desc": "Visualizador de jerarquías de datos."
-        },
-        "personalizado": {
-          "title": "Personalizado",
-          "desc": "Consulta personalizada para escenarios complejos."
-        }
-      }
-    },
-    "tables": {
-      "title": "¿Qué tablas componen este caso?",
-      "subtitle": "Puede seleccionar una o más tablas. La lógica de Join se configurará a continuación.",
-      "selected_warning": "Seleccionó más de una tabla. Recuerde configurar las relaciones (Joins)."
-    },
-    "layout": {
-      "title": "Diseñe el Diseño de la Pantalla",
-      "subtitle": "Organize los campos en zonas específicas. Un campo puede estar en más de una zona.",
-      "widget_title": "Título del Widget",
-      "relationships": "Relaciones (Joins)",
-      "relationships_desc": "Configure cómo se relacionan las tablas para obtener las métricas correctas.",
-      "reset_formatting": "Restablecer Formato",
-      "reset_confirm": "¿Desea restablecer todo el formato personalizado para todos los campos? Esta acción no se puede deshacer.",
-      "available_fields": "Campos Disponibles",
-      "kanban": {
-        "title": "Configuración de Kanban",
-        "group_field": "Campo de Agrupamiento",
-        "group_placeholder": "Seleccione campo...",
-        "group_desc": "Seleccione la columna que se utilizará para organizar las columnas del Kanban (normalmente un enum o clave foránea)."
-      },
-      "master_detail": {
-        "title": "Estructura Maestro-Detalle",
-        "subtitle": "Defina la relación maestro-detalle."
-      },
-      "zones": {
-        "zone_01": "Zona 1",
-        "filter": "Zona 01: Filtros de Búsqueda",
-        "zone_02": "Zona 2",
-        "grid": "Zona 02: Listagem (Grid/Tabla)",
-        "zone_03": "Zona 3",
-        "form": "Zona 03: Formulario de Edición"
-      },
-      "display_options": {
-        "list": "Lista",
-        "card": "Tarjetas",
-        "both": "Ambos"
-      },
-      "drawer": {
-        "title": "Propiedades",
-        "label_config": "Configuración de la Etiqueta",
-        "font": "Fuente",
-        "font_default": "Inter (Predeterminado)",
-        "size": "Tamaño",
-        "text_color": "Color de Texto",
-        "display_text": "Texto de Visualización",
-        "content_config": "Configuración de Contenido",
-        "mask": "Máscara (Input Mask)",
-        "required": "Campo Obligatorio",
-        "required_desc": "Validar si el campo está completo",
-        "content_color": "Color de Contenido"
-      }
-    },
-    "actions": {
-      "title": "Consulta y Acciones Finales",
-      "subtitle": "Configure cómo se recuperarán los datos y qué botones estarán disponibles.",
-      "dynamic_query": {
-        "title": "Consulta Dinámica (Automática)",
-        "desc": "MetaBuilder genera Joins y Selects basados en las relaciones de las tablas."
-      },
-      "raw_sql": {
-        "title": "SQL Manual (Raw SQL)",
-        "desc": "Usted escribe el SQL puro para mayor control y rendimiento."
-      },
-      "interface_buttons": "Botones de Interfaz",
-      "data_strategy": "Estrategia de Datos",
-      "sql_editor": "SQL Editor"
-    },
-    "buttons": {
-      "updating": "Actualizando...",
-      "saving": "Guardando...",
-      "update": "Actualizar Caso de Uso",
-      "finish": "Finalizar Caso de Uso",
-      "prev": "Volver Paso",
-      "next": "Próximo Paso",
-      "error_save": "Error al guardar el caso de uso",
-      "validation": {
-        "grid_required": "Seleccione al menos un campo para el listado (Grid).",
-        "form_required": "Seleccione al menos un campo para el Formulario.",
-        "filter_required": "Ha habilitado argumentos. Seleccione al menos un campo de Filtro.",
-        "name_slug_required": "Por favor, complete el nombre y el slug del caso de uso."
-      }
-    },
-    "steps": {
-      "logic": "Lógica",
-      "tables": "Tablas",
-      "layout": "Campos y Diseño",
-      "actions": "Acciones y Consulta"
-    }
   },
   "marketing_v2": {
     "navbar": {
@@ -2172,6 +1295,358 @@
         "title": "Gestione su Ecosistema con Total Visibilidad",
         "desc": "Acceda al Panel de Control desde su menú de perfil y audite la productividad de desarrollo ahora mismo."
       }
+    }
+  },
+  "settings": {
+    "team_tab": "Equipo y Permisos",
+    "billing_tab": "Facturación",
+    "title": "Miembros del Espacio de Trabajo",
+    "subtitle": "Gestione quién tiene acceso a los proyectos de este Espacio de Trabajo.",
+    "member": "miembro",
+    "members": "miembros",
+    "no_email": "Sin correo electrónico",
+    "invite_title": "Invitar Nuevo Miembro",
+    "user_email": "Correo del Usuario",
+    "access_level": "Nivel de Acceso",
+    "role_developer": "Developer (Crea y edita proyectos)",
+    "role_admin": "Admin (Acceso total excepto eliminar el espacio de trabajo)",
+    "sending": "Enviando...",
+    "send_invite": "Enviar Invitación",
+    "invite_hint": "El usuario recibirá un correo electrónico para acceder a la plataforma.",
+    "only_admins": "Solo los Administradores o el Propietario del Espacio de Trabajo pueden invitar a nuevos miembros.",
+    "remove_title": "Eliminar Miembro",
+    "remove_desc": "¿Está seguro de que desea eliminar a este miembro del equipo?",
+    "yes_remove": "Sí, eliminar",
+    "allowed_projects": "Proyectos Permitidos",
+    "allowed_projects_desc": "Seleccione los proyectos que este miembro puede ver y actuar.",
+    "no_projects": "No se encontraron proyectos en este espacio de trabajo.",
+    "done": "Concluido"
+  },
+  "wizard": {
+    "title": "Asistente de Casos de Uso",
+    "edit_mode": "Editar Caso de Uso",
+    "new_mode": "Nuevo Caso de Uso",
+    "logic": {
+      "title": "¿Cuál es la lógica de su caso de uso?",
+      "subtitle": "Defina el comportamiento principal de esta pantalla en MetaBuilder.",
+      "screen_name": "Nombre de la Pantalla",
+      "screen_name_placeholder": "Ej: Gestión de Contratos",
+      "slug_label": "URL Amigável (Slug)",
+      "slug_placeholder": "Ej: contratos",
+      "enable_args": "Habilitar Argumentos (Filtros de búsqueda en la URL)",
+      "selected": "Seleccionado",
+      "categories": {
+        "dados": {
+          "title": "Gestión de Datos y Registros",
+          "desc": "Interfaces centradas en la inserción, el listado y las relaciones."
+        },
+        "projetos": {
+          "title": "Proyectos, Plazos y Cronogramas",
+          "desc": "Control visual de tareas, eventos y progreso."
+        },
+        "mapas": {
+          "title": "Mapeo, Flujos y Espacial",
+          "desc": "Interfaces para visualización geoespacial o diagramas interconectados."
+        },
+        "outros": {
+          "title": "Inteligencia, Medios y Otros",
+          "desc": "Tableros analíticos, galerías y lógicas personalizadas."
+        }
+      },
+      "types": {
+        "pesquisa": {
+          "title": "Solo Búsqueda",
+          "desc": "Centrado en buscar y visualizar datos."
+        },
+        "cadastro": {
+          "title": "Solo Registro",
+          "desc": "Formulario directo para insertar datos."
+        },
+        "pesquisa_cadastro": {
+          "title": "Búsqueda + Registro",
+          "desc": "Flujo completo: búsqueda, listado y formulario."
+        },
+        "master_detail": {
+          "title": "Maestro-Detalle",
+          "desc": "Estructura relacional con sub-tablas vinculadas."
+        },
+        "kanban": {
+          "title": "Kanban",
+          "desc": "Tablero visual de tarjetas organizado por columnas."
+        },
+        "mapa_mental": {
+          "title": "Mapa Mental",
+          "desc": "Visualizador de jerarquías de datos."
+        },
+        "personalizado": {
+          "title": "Personalizado",
+          "desc": "Consulta personalizada para escenarios complejos."
+        },
+        "timeline": {
+          "title": "Línea de Tiempo / Feed",
+          "desc": "Visualice registros en una línea de tiempo cronológica basada en una fecha."
+        },
+        "gantt": {
+          "title": "Gráfico de Gantt",
+          "desc": "Gestione cronogramas y proyectos con un gráfico de Gantt."
+        },
+        "scheduler": {
+          "title": "Agenda / Calendario",
+          "desc": "Citas, plazos, compromisos y tareas en un calendario."
+        },
+        "blueprint": {
+          "title": "Diagrama de Flujo (Blueprint)",
+          "desc": "Mapee procesos y flujos de trabajo interconectados dinámicamente."
+        },
+        "map": {
+          "title": "Vista de Mapa (Geoespacial)",
+          "desc": "Visualice registros mediante marcadores interactivos y coordenadas en el mapa."
+        },
+        "analytics": {
+          "title": "Tablero (BI)",
+          "desc": "Indicadores de rendimiento, gráficos y KPIs."
+        },
+        "galeria": {
+          "title": "Galería / Activos",
+          "desc": "Galería de medios, imágenes y documentos con descargas y redirecciones."
+        }
+      }
+    },
+    "tables": {
+      "title": "¿Qué tablas componen este caso?",
+      "subtitle": "Puede seleccionar una o más tablas. La lógica de Join se configurará a continuación.",
+      "selected_warning": "Seleccionó más de una tabla. Recuerde configurar las relaciones (Joins)."
+    },
+    "layout": {
+      "title": "Diseñe el Diseño de la Pantalla",
+      "subtitle": "Organize los campos en zonas específicas. Un campo puede estar en más de una zona.",
+      "widget_title": "Título del Widget",
+      "relationships": "Relaciones (Joins)",
+      "relationships_desc": "Configure cómo se relacionan las tablas para obtener las métricas correctas.",
+      "reset_formatting": "Restablecer Formato",
+      "reset_confirm": "¿Desea restablecer todo el formato personalizado para todos los campos? Esta acción no se puede deshacer.",
+      "available_fields": "Campos Disponibles",
+      "add_table": "Añadir Tabla",
+      "drag_fields_here": "Arrastre campos de \"{table}\" aquí",
+      "drag_to_add_all": "Arrastre para agregar todo",
+      "master": "Maestro",
+      "detail": "Detalle",
+      "subdetail": "Sub-Detalle",
+      "kanban": {
+        "title": "Configuración de Kanban",
+        "group_field": "Campo de Agrupamiento",
+        "group_placeholder": "Seleccione campo...",
+        "group_desc": "Seleccione la columna que se utilizará para organizar las columnas del Kanban (normalmente un enum o clave foránea)."
+      },
+      "master_detail": {
+        "title": "Estructura Maestro-Detalle",
+        "subtitle": "Defina la relación maestro-detalle.",
+        "inline_in_list": "En lista"
+      },
+      "zones": {
+        "zone_01": "Zona 1",
+        "filter": "Filtros de Búsqueda",
+        "zone_02": "Zona 2",
+        "grid": "Listado (Grid/Tabla)",
+        "zone_03": "Zona 3",
+        "form": "Formulario de Edición"
+      },
+      "display_options": {
+        "list": "Lista",
+        "card": "Tarjetas",
+        "both": "Ambos"
+      },
+      "drawer": {
+        "title": "Propiedades",
+        "tab_basic": "Básico / General",
+        "tab_styles": "Apariencia / Estilos",
+        "label_config": "Configuración de la Etiqueta",
+        "font": "Fuente",
+        "font_default": "Inter (Predeterminado)",
+        "size": "Tamaño",
+        "text_color": "Color de Texto",
+        "display_text": "Texto de Visualización",
+        "content_config": "Configuración de Contenido",
+        "mask": "Máscara (Input Mask)",
+        "required": "Campo Obligatorio",
+        "required_desc": "Validar si el campo está completo",
+        "readonly": "Sólo lectura",
+        "readonly_desc": "El usuario no podrá cambiar este valor",
+        "content_color": "Color de Contenido",
+        "component_config": "Configuración del Componente",
+        "component_type": "Tipo de Componente",
+        "width": "Ancho",
+        "apply_styles_zone": "Aplicar formato a todos en esta zona ({zone})",
+        "zone_filter": "Filtro",
+        "zone_grid": "Grid",
+        "zone_form": "Formulario",
+        "fixed_options": "Opciones (Label:Value, separadas por comas)",
+        "options_source": "Origen de Datos",
+        "options_select_placeholder": "Seleccionar...",
+        "source_fixed": "Valores Fijos",
+        "source_enum": "Enum Global",
+        "source_relational": "Relación",
+        "select_enumeration": "Seleccione la Enumeración",
+        "options_available": "{count} opciones disponibles",
+        "rel_table": "Tabla Relacionada",
+        "rel_label": "Etiqueta (Visualización)",
+        "rel_value": "Valor (ID)",
+        "rows": "Filas",
+        "component_types": {
+          "text": "Entrada de Texto",
+          "textarea": "Área de Texto (Textarea)",
+          "number": "Número",
+          "select": "Combo (Select)",
+          "radio": "Botones de Opción (Radio)",
+          "checkbox": "Grupo de Casillas (Checkbox)",
+          "switch": "Interruptor (Switch)",
+          "date": "Fecha"
+        },
+        "masks": {
+          "phone": "Teléfono/Celular ((00) 00000-0000)",
+          "date": "Fecha (00/00/0000)",
+          "integer": "Entero con Millares (0.000)",
+          "decimal": "Decimal con Millares (0.000,00)",
+          "custom": "Personalizado..."
+        }
+      }
+    },
+    "actions": {
+      "title": "Consulta y Acciones Finales",
+      "subtitle": "Configure cómo se recuperarán los datos y qué botones estarán disponibles.",
+      "dynamic_query": {
+        "title": "Consulta Dinámica (Automática)",
+        "desc": "MetaBuilder genera Joins y Selects basados en las relaciones de las tablas."
+      },
+      "raw_sql": {
+        "title": "SQL Manual (Raw SQL)",
+        "desc": "Usted escribe el SQL puro para mayor control y rendimiento."
+      },
+      "interface_buttons": "Botones de Interfaz",
+      "data_strategy": "Estrategia de Datos",
+      "sql_editor": "SQL Editor",
+      "export_data_title": "Exportación de Datos",
+      "export_data_bg": "Exportación de Datos (Background)",
+      "export_data_desc": "Permite que los usuarios exporten los datos de esta pantalla con procesamiento asíncrono.",
+      "allowed_formats": "Formatos Permitidos",
+      "display_text": "Texto de Visualización",
+      "font": "Fuente",
+      "size": "Tamaño",
+      "text_transform": "Transformación de Texto",
+      "button_preview": "Preview de Botón",
+      "text_color": "Color de Texto",
+      "bg_color": "Color de Botón (Fundo)",
+      "custom_action_edit": "Editar Acción Personalizada",
+      "custom_action_new": "Nueva Acción Personalizada",
+      "tab_identification": "Identificación y Apariencia",
+      "tab_behavior": "Comportamento (Trigger)",
+      "tab_bpm": "BPM / Automatización",
+      "button_name": "Nombre del Botón",
+      "icon": "Icono",
+      "change": "Cambiar",
+      "color": "Color",
+      "colors": {
+        "indigo": "Índigo (Predeterminado)",
+        "emerald": "Verde (Éxito/Aprovar)",
+        "red": "Rojo (Peligro/Rechazar)",
+        "amber": "Amarillo (Atención)",
+        "purple": "Púrpura (Especial)"
+      },
+      "context": "Contexto",
+      "contexts": {
+        "row": "Acción de Fila (Búsqueda)",
+        "bulk": "Acción Global (Parte Superior de Búsqueda)",
+        "master_top": "Acción Global (Parte Superior del Maestro)",
+        "detail_top": "Acción Global (Parte Superior del Detalle)",
+        "detail_row": "Acción de Fila (Detalle)",
+        "field_group": "Agrupado al Campo (Formulario)"
+      },
+      "target_fields": "Campos Destino (Seleccione uno o más)",
+      "position": "Posición",
+      "left": "Izquierda",
+      "right": "Derecha",
+      "trigger_type": "Tipo de Acción (Trigger)",
+      "sql_command": "Comando SQL",
+      "sql_variables_hint": "Puede usar variables usando llaves dobles: {{id}}",
+      "target_usecase": "Caso de Uso de Destino",
+      "open_mode": "Modo de Apertura",
+      "open_modes": {
+        "page": "Misma Pantalla (Navegación Estándar)",
+        "modal": "Modal (Centrado)",
+        "drawer": "Drawer (Lateral)"
+      },
+      "fields_as_params": "Campos de Registro como Parâmetros",
+      "additional_params": "Parámetros Adicionales Fijos (Filtros en la URL)",
+      "additional_params_hint": "Ej: status=activo&tipo=1",
+      "method": "Método",
+      "api_url": "URL de la API / Webhook",
+      "api_body": "Body (JSON Payload)",
+      "bpm_integration_title": "Integración con BPM",
+      "bpm_integration_desc": "Seleccione qué flujos automatizados (BPM) se activarán cuando el usuario haga clic en este botón. También puede configurar este enlace directamente en la pantalla de Automatizaciones.",
+      "available_workflows": "Flujos de Trabajo Disponibles",
+      "no_workflows": "No se han creado flujos de automatización en este proyecto.",
+      "create_first_flow": "Crear Primer Flujo",
+      "save_action": "Guardar Acción",
+      "transform": {
+        "none": "Normal",
+        "uppercase": "MAYÚS",
+        "capitalize": "Iniciales",
+        "lowercase": "minús"
+      },
+      "custom_actions": "Acciones Personalizadas",
+      "add_action": "Agregar Acción",
+      "no_custom_actions": "Ninguna acción personalizada configurada",
+      "button_properties": "Propiedades del Botón",
+      "multiple_selection": "selección múltiple",
+      "sql_procedure": "SQL / Procedimiento",
+      "select_usecase": "Seleccione un caso de uso...",
+      "no_models_selected": "Ninguna tabla seleccionada en el paso 1.",
+      "text_color_placeholder": "Color de texto hexadecimal (ej: #ffffff)",
+      "bg_color_placeholder": "Color de fondo hexadecimal (ej: #6366f1)",
+      "action_interface_label": "Interfaz de Acción (Creación/Edición)",
+      "new_action": "Nueva Acción",
+      "select_icon_placeholder": "Seleccione un icono...",
+      "trigger_usecase": "Otra Pantalla",
+      "trigger_rest": "REST API",
+      "filters_args": "Filtros (Argumentos)",
+      "grid_listing": "Grid (Listado)",
+      "master_form": "Maestro (Formulario)",
+      "details_form": "Detalles (Formulario)",
+      "btn_search": "Buscar",
+      "btn_clear": "Limpiar",
+      "btn_view": "Ver",
+      "btn_add": "Nuevo Registro",
+      "btn_edit": "Editar",
+      "btn_delete": "Eliminar",
+      "interface_options": {
+        "drawer_title": "Drawer (Lateral)",
+        "drawer_desc": "Los formularios se abrirán en un panel lateral deslizante.",
+        "modal_title": "Modal (Central)",
+        "modal_desc": "Los formularios se abrirán en una ventana emergente centralizada con fondo oscurecido.",
+        "page_title": "Misma Pantalla (Página)",
+        "page_desc": "El formulario se mostrará en la misma pantalla, reemplazando la lista actual."
+      }
+    },
+    "buttons": {
+      "updating": "Actualizando...",
+      "saving": "Guardando...",
+      "update": "Actualizar Caso de Uso",
+      "finish": "Finalizar Caso de Uso",
+      "prev": "Volver Paso",
+      "next": "Próximo Paso",
+      "error_save": "Error al guardar el caso de uso",
+      "validation": {
+        "grid_required": "Seleccione al menos un campo para el listado (Grid).",
+        "form_required": "Seleccione al menos un campo para el Formulario.",
+        "filter_required": "Ha habilitado argumentos. Seleccione al menos un campo de Filtro.",
+        "name_slug_required": "Por favor, complete el nombre y el slug del caso de uso."
+      }
+    },
+    "steps": {
+      "logic": "Lógica",
+      "tables": "Tablas",
+      "layout": "Campos y Diseño",
+      "actions": "Acciones y Consulta"
     }
   },
   "bpm_page": {

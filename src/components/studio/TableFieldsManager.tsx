@@ -90,11 +90,11 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
       }
     } catch (err: any) {
       console.error('Error fetching fields:', err)
-      toast('Erro ao buscar colunas da tabela: ' + err.message, 'error')
+      toast(t('dashboard.projects.studio.metadata.toasts.fetch_error') + err.message, 'error')
     } finally {
       setLoadingFields(false)
     }
-  }, [selectedModelId, supabase, toast])
+  }, [selectedModelId, supabase, toast, t])
 
   // Load fields and model info when selectedModelId changes
   useEffect(() => {
@@ -166,14 +166,14 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
       const hasError = results.some(r => r.error)
 
       if (hasError) {
-        toast('Erro ao salvar algumas colunas.', 'error')
+        toast(t('dashboard.projects.studio.metadata.toasts.save_partial_error'), 'error')
       } else {
-        toast('Tabela e colunas atualizadas com sucesso!', 'success')
+        toast(t('dashboard.projects.studio.metadata.toasts.save_success'), 'success')
         onSaveSuccess?.()
       }
     } catch (err: any) {
       console.error('Error saving model/fields metadata:', err)
-      toast('Erro ao salvar alterações: ' + err.message, 'error')
+      toast(t('dashboard.projects.studio.metadata.toasts.save_error') + err.message, 'error')
     } finally {
       setIsSaving(false)
     }
@@ -221,9 +221,9 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
         <div>
           <h3 className="text-xl font-black flex items-center gap-3 text-neutral-900 dark:text-white tracking-tight">
             <Database className="w-6 h-6 text-indigo-600 dark:text-indigo-500" />
-            Estrutura de Tabelas e Campos
+            {t('dashboard.projects.studio.metadata.title')}
           </h3>
-          <p className="text-xs text-neutral-500 mt-1">Configure o display_name (nomes amigáveis) e descrições para suas tabelas e colunas do banco de dados.</p>
+          <p className="text-xs text-neutral-500 mt-1">{t('dashboard.projects.studio.metadata.subtitle')}</p>
         </div>
       </div>
 
@@ -236,7 +236,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Buscar tabelas..."
+              placeholder={t('dashboard.projects.studio.metadata.search_placeholder')}
               className="w-full bg-neutral-50 dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-2xl pl-11 pr-4 py-3 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
             />
           </div>
@@ -244,7 +244,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
           <div className="space-y-1.5 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
             {filteredModels.length === 0 ? (
               <div className="text-center py-8 text-neutral-500 text-xs font-bold">
-                Nenhuma tabela encontrada.
+                {t('dashboard.projects.studio.metadata.no_tables')}
               </div>
             ) : (
               filteredModels.map(m => {
@@ -303,8 +303,8 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                       onClick={fetchFields}
                       disabled={loadingFields}
                       type="button"
-                      className="p-2.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-full transition-all flex items-center justify-center group shadow-sm"
-                      title="Atualizar"
+                      className="p-2.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 bg-white dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-full transition-all flex items-center justify-center group shadow-sm"
+                      title={t('dashboard.projects.studio.metadata.refresh_tooltip')}
                     >
                       <RefreshCw className={`w-4 h-4 ${loadingFields ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500 ease-out'}`} />
                     </button>
@@ -316,12 +316,12 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                       {isSaving ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Salvando...</span>
+                          <span>{t('dashboard.projects.studio.metadata.saving')}</span>
                         </>
                       ) : (
                         <>
                           <Save className="w-4 h-4" />
-                          <span>Salvar Tabela</span>
+                          <span>{t('dashboard.projects.studio.metadata.save_table')}</span>
                         </>
                       )}
                     </button>
@@ -330,25 +330,25 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
-                      <Tag className="w-3.5 h-3.5 text-indigo-500" /> Nome Amigável (Display Name)
+                      <Tag className="w-3.5 h-3.5 text-indigo-500" /> {t('dashboard.projects.studio.metadata.friendly_name')}
                     </label>
                     <input
                       type="text"
                       value={modelDisplayName}
                       onChange={e => setModelDisplayName(e.target.value)}
-                      placeholder="Ex: Departamentos"
+                      placeholder={t('dashboard.projects.studio.metadata.friendly_name_placeholder')}
                       className="w-full bg-neutral-50 dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-indigo-500" /> Descrição da Tabela
+                      <FileText className="w-3.5 h-3.5 text-indigo-500" /> {t('dashboard.projects.studio.metadata.table_description')}
                     </label>
                     <input
                       type="text"
                       value={modelDescription}
                       onChange={e => setModelDescription(e.target.value)}
-                      placeholder="Ex: Setores organizacionais da empresa..."
+                      placeholder={t('dashboard.projects.studio.metadata.description_placeholder')}
                       className="w-full bg-neutral-50 dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-colors"
                     />
                   </div>
@@ -357,14 +357,14 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                 {/* Permissões da Tabela */}
                 <div className="bg-neutral-50 dark:bg-neutral-955 border border-neutral-100 dark:border-neutral-800/80 rounded-2xl p-5 space-y-4">
                   <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-indigo-500" /> Ações/Permissões da Tabela
+                    <ShieldCheck className="w-4 h-4 text-indigo-500" /> {t('dashboard.projects.studio.metadata.actions_permissions')}
                   </span>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {/* Can Create */}
                     <label className="flex items-center justify-between p-3.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-500 transition-all group">
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Permitir Criação</span>
-                        <span className="text-[9px] text-neutral-400">Pode adicionar novos registros</span>
+                        <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">{t('dashboard.projects.studio.metadata.allow_creation')}</span>
+                        <span className="text-[9px] text-neutral-400">{t('dashboard.projects.studio.metadata.allow_creation_desc')}</span>
                       </div>
                       <input
                         type="checkbox"
@@ -377,8 +377,8 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                     {/* Can Update */}
                     <label className="flex items-center justify-between p-3.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-500 transition-all group">
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Permitir Edição</span>
-                        <span className="text-[9px] text-neutral-400">Pode editar registros existentes</span>
+                        <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">{t('dashboard.projects.studio.metadata.allow_edition')}</span>
+                        <span className="text-[9px] text-neutral-400">{t('dashboard.projects.studio.metadata.allow_edition_desc')}</span>
                       </div>
                       <input
                         type="checkbox"
@@ -391,8 +391,8 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                     {/* Can Delete */}
                     <label className="flex items-center justify-between p-3.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-500 transition-all group">
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Permitir Exclusão</span>
-                        <span className="text-[9px] text-neutral-400">Pode remover registros da tabela</span>
+                        <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">{t('dashboard.projects.studio.metadata.allow_deletion')}</span>
+                        <span className="text-[9px] text-neutral-400">{t('dashboard.projects.studio.metadata.allow_deletion_desc')}</span>
                       </div>
                       <input
                         type="checkbox"
@@ -409,14 +409,14 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
               <div className="space-y-5 pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-black uppercase tracking-widest text-neutral-500 flex items-center gap-2">
-                    <Database className="w-4 h-4 text-indigo-500" /> Colunas Detectadas ({fields.length})
+                    <Database className="w-4 h-4 text-indigo-500" /> {t('dashboard.projects.studio.metadata.detected_columns').replace('{count}', String(fields.length))}
                   </h4>
                 </div>
 
                 {loadingFields ? (
                   <div className="text-center py-12">
                     <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
-                    <p className="text-neutral-500 mt-4 font-bold text-xs">Carregando colunas...</p>
+                    <p className="text-neutral-500 mt-4 font-bold text-xs">{t('dashboard.projects.studio.metadata.loading_columns')}</p>
                   </div>
                 ) : (
                   <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
@@ -448,7 +448,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                               )}
                               {!f.is_nullable && (
                                 <span className="px-2 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[9px] font-black uppercase tracking-wider rounded border border-amber-500/20">
-                                  Required
+                                  {t('dashboard.projects.studio.metadata.required')}
                                 </span>
                               )}
                             </div>
@@ -457,7 +457,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                           {/* Editable Inputs */}
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="md:col-span-3 space-y-1.5">
-                              <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Label na UI</label>
+                              <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">{t('dashboard.projects.studio.metadata.ui_label')}</label>
                               <input
                                 type="text"
                                 value={edit.display_name}
@@ -467,7 +467,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                               />
                             </div>
                             <div className="space-y-1.5">
-                              <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Ordem (order_index)</label>
+                              <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">{t('dashboard.projects.studio.metadata.order_index')}</label>
                               <input
                                 type="number"
                                 value={edit.order_index}
@@ -488,7 +488,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                                 className="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer"
                               />
                               <div className="flex flex-col">
-                                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Visível no Filtro</span>
+                                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">{t('dashboard.projects.studio.metadata.visible_filter')}</span>
                               </div>
                             </label>
 
@@ -501,7 +501,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                                 className="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer"
                               />
                               <div className="flex flex-col">
-                                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Visível no Grid</span>
+                                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">{t('dashboard.projects.studio.metadata.visible_grid')}</span>
                               </div>
                             </label>
 
@@ -514,7 +514,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                                 className="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer"
                               />
                               <div className="flex flex-col">
-                                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Visível no Form</span>
+                                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">{t('dashboard.projects.studio.metadata.visible_form')}</span>
                               </div>
                             </label>
 
@@ -527,7 +527,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                                 className="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer"
                               />
                               <div className="flex flex-col">
-                                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">Ordenável</span>
+                                <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300">{t('dashboard.projects.studio.metadata.sortable')}</span>
                               </div>
                             </label>
                           </div>
@@ -542,8 +542,8 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
             <div className="flex flex-col items-center justify-center text-center py-20 text-neutral-400 dark:text-neutral-600 gap-4">
               <Table className="w-12 h-12 opacity-50" />
               <div>
-                <h4 className="font-bold text-sm">Nenhuma tabela selecionada</h4>
-                <p className="text-xs mt-1">Selecione uma tabela à esquerda para visualizar e editar seus metadados.</p>
+                <h4 className="font-bold text-sm">{t('dashboard.projects.studio.metadata.no_table_selected')}</h4>
+                <p className="text-xs mt-1">{t('dashboard.projects.studio.metadata.select_table_desc')}</p>
               </div>
             </div>
           )}

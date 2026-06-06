@@ -831,7 +831,7 @@ export function StudioDashboardClient({
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <div className="px-2.5 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[9px] font-black rounded-lg border border-indigo-500/20 uppercase tracking-widest w-fit">
-                            {view.logic_type?.replace('_', ' + ') || 'Custom'}
+                            {t(`wizard.logic.types.${view.logic_type}.title`, view.logic_type?.replace('_', ' + ') || 'Custom')}
                           </div>
                           {canCreate ? (
                             <button
