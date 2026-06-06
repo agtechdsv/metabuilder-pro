@@ -1504,12 +1504,17 @@
           "date": "Data"
         },
         "masks": {
+          "cpf": "CPF (000.000.000-00)",
+          "cnpj": "CNPJ (00.000.000/0000-00)",
+          "cep": "CEP (00000-000)",
           "phone": "Telefone/Celular ((00) 00000-0000)",
           "date": "Data (00/00/0000)",
           "integer": "Inteiro com Milhar (0.000)",
           "decimal": "Decimal com Milhar (0.000,00)",
           "custom": "Personalizado (Custom)..."
-        }
+        },
+        "viacep_title": "Busca Automática de Endereço (ViaCEP)",
+        "viacep_desc": "Mapeie os campos do formulário que receberão os dados do ViaCEP automaticamente:"
       }
     },
     "actions": {

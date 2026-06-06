@@ -103,7 +103,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   const { workspace_slug, project_slug } = params
   const supabase = createClient()
   const { toast } = useToast()
-  
+
   const [currentProjectId, setCurrentProjectId] = useState<string>()
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string>()
 
@@ -137,7 +137,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         .from('ui_views')
         .update({ status: newStatus })
         .eq('id', initialData.id)
-      
+
       if (error) throw error
       setCurrentStatus(newStatus)
       flushTextChanges()
@@ -152,7 +152,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   }
 
   // Ref e Timeout para debounce dos campos de texto (name, slug, custom_query) e propriedades do Drawer (fields_metadata)
-  const textChangesRef = useRef<{name?: string, slug?: string, custom_query?: string, fields_metadata?: string | boolean, master_tab_title?: boolean, details_tab_titles?: boolean}>({})
+  const textChangesRef = useRef<{ name?: string, slug?: string, custom_query?: string, fields_metadata?: string | boolean, master_tab_title?: boolean, details_tab_titles?: boolean }>({})
   const textTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const flushTextChanges = useCallback(() => {
@@ -337,7 +337,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
 
   // Ref para guardar o estado anterior do config para o diff
   const prevConfigRef = useRef<typeof config | null>(null)
-  
+
   // Lógica de diff síncrona para "Dar nome aos bois" sem perder a ordem sequencial das ações
   useEffect(() => {
     if (!isInitialized) return
@@ -404,16 +404,16 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     }
 
     if (hasDebouncedChange) {
-       if (textTimeoutRef.current) clearTimeout(textTimeoutRef.current)
-       textTimeoutRef.current = setTimeout(() => {
-          if (textChangesRef.current.name) logAction('CONFIG_CHANGE', `Renomeou o caso de uso para "${textChangesRef.current.name}"`)
-          if (textChangesRef.current.slug) logAction('CONFIG_CHANGE', `Alterou o slug para "${textChangesRef.current.slug}"`)
-          if (textChangesRef.current.custom_query) logAction('CONFIG_CHANGE', 'Editou a query SQL customizada')
-          if (textChangesRef.current.fields_metadata) logAction('CONFIG_CHANGE', typeof textChangesRef.current.fields_metadata === 'string' ? textChangesRef.current.fields_metadata : 'Alterou as propriedades de um campo (Etapa 3)')
-          if (textChangesRef.current.master_tab_title) logAction('CONFIG_CHANGE', 'Alterou o nome da aba Mestre (Etapa 3)')
-          if (textChangesRef.current.details_tab_titles) logAction('CONFIG_CHANGE', 'Alterou os nomes das abas de Detalhe (Etapa 3)')
-          textChangesRef.current = {}
-       }, 1500)
+      if (textTimeoutRef.current) clearTimeout(textTimeoutRef.current)
+      textTimeoutRef.current = setTimeout(() => {
+        if (textChangesRef.current.name) logAction('CONFIG_CHANGE', `Renomeou o caso de uso para "${textChangesRef.current.name}"`)
+        if (textChangesRef.current.slug) logAction('CONFIG_CHANGE', `Alterou o slug para "${textChangesRef.current.slug}"`)
+        if (textChangesRef.current.custom_query) logAction('CONFIG_CHANGE', 'Editou a query SQL customizada')
+        if (textChangesRef.current.fields_metadata) logAction('CONFIG_CHANGE', typeof textChangesRef.current.fields_metadata === 'string' ? textChangesRef.current.fields_metadata : 'Alterou as propriedades de um campo (Etapa 3)')
+        if (textChangesRef.current.master_tab_title) logAction('CONFIG_CHANGE', 'Alterou o nome da aba Mestre (Etapa 3)')
+        if (textChangesRef.current.details_tab_titles) logAction('CONFIG_CHANGE', 'Alterou os nomes das abas de Detalhe (Etapa 3)')
+        textChangesRef.current = {}
+      }, 1500)
     }
 
     // --- Etapa 2: Tabelas ---
@@ -567,7 +567,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         changes.push(`Adicionou ${currActions.length - prevActions.length} ação(ões) customizada(s) ${step4Label}`)
       if (currActions.length < prevActions.length)
         changes.push(`Removeu ${prevActions.length - currActions.length} ação(ões) customizada(s) ${step4Label}`)
-      
+
       currActions.forEach((a: any) => {
         const prevA = prevActions.find((pa: any) => pa.id === a.id)
         if (prevA && JSON.stringify(prevA) !== JSON.stringify(a)) {
@@ -617,7 +617,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         .single()
 
       if (!project) return
-      
+
       setIsDownloadsActive(project.theme_config?.enable_downloads !== false)
       setCurrentProjectId(project.id)
       setCurrentWorkspaceId(project.workspace_id)
@@ -637,7 +637,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         .select('*')
         .eq('project_id', project.id)
         .order('name')
-        
+
       if (enumsData) setEnumerations(enumsData)
 
       // 3. Buscamos apenas as relações deste projeto
@@ -645,7 +645,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         .from('relations')
         .select('*')
         .eq('project_id', project.id)
-      
+
       if (relsData) setRelations(relsData)
 
       const { data: viewsData } = await supabase
@@ -653,7 +653,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         .select('name, slug, logic_type')
         .eq('project_id', project.id)
         .order('name')
-      
+
       if (viewsData) {
         // Deduplicate to avoid React key errors
         const unique = viewsData.filter((v, i, a) => a.findIndex(t => (t.slug === v.slug)) === i)
@@ -666,7 +666,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         .select('id, name')
         .eq('project_id', project.id)
         .order('name')
-        
+
       if (bpmData) setBpmWorkflows(bpmData)
 
       setIsLoading(false)
@@ -682,11 +682,11 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
 
     if (currentStep === 3) {
       const autoJoins: any[] = []
-      
+
       if (relations.length > 0) {
         // Filtra relações onde AMBOS os modelos estão selecionados no Wizard
-        const relevantRelations = relations.filter(rel => 
-          config.selected_models.includes(rel.foreign_table_id) && 
+        const relevantRelations = relations.filter(rel =>
+          config.selected_models.includes(rel.foreign_table_id) &&
           config.selected_models.includes(rel.referenced_table_id)
         )
 
@@ -718,12 +718,12 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
             if (i === j) continue
             const modelA = selectedModelsData[i]
             const modelB = selectedModelsData[j]
-            
+
             const expectedKeys = [
               `${modelA.db_table_name}_id`,
               `${modelA.db_table_name.replace(/s$/, '')}_id`
             ]
-            
+
             const parts = modelA.db_table_name.split('_')
             if (parts.length > 1) {
               expectedKeys.push(`${parts[0]}_id`)
@@ -933,7 +933,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     })
 
     const allInvolved = Array.from(new Set([...widgetModels, ...joinModels])).filter(Boolean) as string[]
-    
+
     // Só atualizamos se houver mudança real para evitar loops de renderização
     if (JSON.stringify([...allInvolved].sort()) !== JSON.stringify([...config.selected_models].sort())) {
       setConfig(prev => ({
@@ -1167,7 +1167,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         const zoneMeta = config.layout_config.fields_metadata[`${zone}-${fid}`]
         const globalMeta = config.layout_config.fields_metadata[fid] || {}
         const metadata = zoneMeta || globalMeta
-        
+
         const labelText = metadata.label?.text || getFormattedFieldName(fid)
 
         if (!componentMap[fid]) {
@@ -1188,11 +1188,11 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
             componentMap[fid].config.zones.push(zone)
           }
           componentMap[fid].config[`${zone}_config`] = metadata
-          
+
           if (zone === 'form' && metadata.label?.text) {
-             componentMap[fid].label = metadata.label.text
+            componentMap[fid].label = metadata.label.text
           } else if (zone === 'form' && !componentMap[fid].label) {
-             componentMap[fid].label = labelText
+            componentMap[fid].label = labelText
           }
         }
       }
@@ -1254,8 +1254,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
                   <div className={cn(
                     "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
                     currentStatus === 'delivered' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                    currentStatus === 'reopened' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                    'bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-800 dark:border-neutral-700'
+                      currentStatus === 'reopened' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                        'bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-800 dark:border-neutral-700'
                   )}>
                     {currentStatus === 'delivered' ? 'Entregue' : currentStatus === 'reopened' ? 'Reaberto' : 'Rascunho'}
                   </div>
@@ -1368,7 +1368,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
               "flex items-center gap-2 px-8 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl",
               currentStep === steps.length
                 ? (!canCreate ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed opacity-50" : "text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800")
-                : (currentStep === 1 && config.logic_type === 'analytics' ? false : !isStepValid(steps[currentStep-1].id))
+                : (currentStep === 1 && config.logic_type === 'analytics' ? false : !isStepValid(steps[currentStep - 1].id))
                   ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed opacity-50"
                   : "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-neutral-900/10 dark:shadow-white/5"
             )}
@@ -1396,8 +1396,8 @@ function StepLogic({ config, setConfig }: any) {
   const categories = [
     {
       id: 'dados',
-      title: 'Gestão de Dados e Cadastros',
-      description: 'Interfaces focadas em inserção, listagem e relacionamento.',
+      title: t('wizard.logic.categories.dados.title'),
+      description: t('wizard.logic.categories.dados.desc'),
       icon: Database,
       items: [
         { id: 'pesquisa', title: t('wizard.logic.types.pesquisa.title'), desc: t('wizard.logic.types.pesquisa.desc'), icon: Layout },
@@ -1408,8 +1408,8 @@ function StepLogic({ config, setConfig }: any) {
     },
     {
       id: 'projetos',
-      title: 'Projetos, Prazos e Cronogramas',
-      description: 'Controle visual de tarefas, eventos e progresso.',
+      title: t('wizard.logic.categories.projetos.title'),
+      description: t('wizard.logic.categories.projetos.desc'),
       icon: Calendar,
       items: [
         { id: 'kanban', title: t('wizard.logic.types.kanban.title'), desc: t('wizard.logic.types.kanban.desc'), icon: Columns },
@@ -1420,8 +1420,8 @@ function StepLogic({ config, setConfig }: any) {
     },
     {
       id: 'mapas',
-      title: 'Mapeamento, Fluxos e Espacial',
-      description: 'Interfaces para exibição geoespacial ou diagramas interligados.',
+      title: t('wizard.logic.categories.mapas.title'),
+      description: t('wizard.logic.categories.mapas.desc'),
       icon: Share2,
       items: [
         { id: 'blueprint', title: t('wizard.logic.types.blueprint.title', 'Fluxograma (Blueprint)'), desc: t('wizard.logic.types.blueprint.desc', 'Mapeie processos e fluxos de trabalho interligados dinamicamente.'), icon: Activity },
@@ -1431,8 +1431,8 @@ function StepLogic({ config, setConfig }: any) {
     },
     {
       id: 'outros',
-      title: 'Inteligência, Mídia e Outros',
-      description: 'Dashboards analíticos, galerias e lógicas customizadas.',
+      title: t('wizard.logic.categories.outros.title'),
+      description: t('wizard.logic.categories.outros.desc'),
       icon: LayoutGrid,
       items: [
         { id: 'analytics', title: t('wizard.logic.types.analytics.title', 'Dashboard (BI)'), desc: t('wizard.logic.types.analytics.desc', 'Indicadores de desempenho, gráficos e KPIs.'), icon: Layout },
@@ -1504,14 +1504,14 @@ function StepLogic({ config, setConfig }: any) {
         {categories.map(cat => {
           const isExpanded = expandedCategory === cat.id
           const hasSelectedLogic = cat.items.some(i => i.id === config.logic_type)
-          
+
           return (
             <div key={cat.id} className={cn(
               "rounded-[1.5rem] border-2 overflow-hidden transition-all duration-300",
               isExpanded ? "border-indigo-600 bg-white dark:bg-neutral-950 shadow-xl" : "border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/30 hover:border-neutral-300 dark:hover:border-neutral-700 cursor-pointer"
             )}>
               {/* Header da Categoria */}
-              <div 
+              <div
                 className={cn("p-4 flex items-center justify-between", !isExpanded && "cursor-pointer")}
                 onClick={() => setExpandedCategory(isExpanded ? null : cat.id)}
               >
@@ -1622,14 +1622,14 @@ function StepTables({ config, setConfig, models }: any) {
                       const newSelected = isSelected
                         ? config.selected_models.filter((id: string) => id !== m.id)
                         : [...config.selected_models, m.id]
-                      
+
                       // Extrai todos os IDs de campos válidos baseados nas tabelas selecionadas
                       const validFields = models
                         .filter((mod: any) => newSelected.includes(mod.id))
                         .flatMap((mod: any) => mod.fields?.map((f: any) => f.id) || [])
 
-                      setConfig({ 
-                        ...config, 
+                      setConfig({
+                        ...config,
                         selected_models: newSelected,
                         layout_config: {
                           ...config.layout_config,
@@ -1736,7 +1736,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
   const [collapsedTables, setCollapsedTables] = useState<Record<string, boolean>>({})
   const [fieldSearchTerm, setFieldSearchTerm] = useState('')
   const dragControls = useDragControls()
-  
+
   const [editingWidget, setEditingWidget] = useState<any>(null)
   const [isWidgetModalOpen, setIsWidgetModalOpen] = useState(false)
 
@@ -1758,7 +1758,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
   const handleSaveWidget = (updatedWidget: any) => {
     const currentWidgets = config.layout_config.analytics_config?.widgets || []
     const exists = currentWidgets.find((w: any) => w.id === updatedWidget.id)
-    
+
     let newWidgets
     if (exists) {
       newWidgets = currentWidgets.map((w: any) => w.id === updatedWidget.id ? updatedWidget : w)
@@ -1808,7 +1808,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
     if (activeIdStr.startsWith('source-') || activeIdStr.startsWith('table-source-')) {
       const isTable = activeIdStr.startsWith('table-source-')
       const id = activeIdStr.replace(isTable ? 'table-source-' : 'source-', '')
-      
+
       let targetZone: 'filter_fields' | 'grid_fields' | 'form_fields' | null = null
       if (overIdStr === 'droppable-filter' || overIdStr.startsWith('filter-')) targetZone = 'filter_fields'
       else if (overIdStr === 'droppable-grid' || overIdStr.startsWith('grid-')) targetZone = 'grid_fields'
@@ -1855,7 +1855,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
           }
         } else {
           const fieldId = id
-          
+
           // Achar o campo no modelo para validar
           let fieldObj: any = null
           for (const m of models) {
@@ -1931,7 +1931,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
     const isForm = activeIdStr.startsWith('form-')
 
     const listKey = isFilter ? 'filter_fields' : isGrid ? 'grid_fields' : 'form_fields'
-    
+
     const activeId = activeIdStr.replace(/^(filter-|grid-|form-)/, '')
     const overId = overIdStr.replace(/^(filter-|grid-|form-)/, '')
 
@@ -1974,8 +1974,8 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
 
     const tree = [getNode(masterModel)]
     models.filter((m: any) => config.selected_models.includes(m.id) && !visited.has(m.db_table_name)).forEach((m: any) => {
-       visited.add(m.db_table_name)
-       tree.push(getNode(m))
+      visited.add(m.db_table_name)
+      tree.push(getNode(m))
     })
     return tree
   })()
@@ -1992,7 +1992,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
 
   const renderModelZone = (model: any, depth: number = 0, index: number = 0) => {
     const isMaster = depth === 0 && index === 0
-    const fieldsOfThisModel = config.layout_config.form_fields.filter((fid: string) => 
+    const fieldsOfThisModel = config.layout_config.form_fields.filter((fid: string) =>
       model.fields.some((f: any) => f.id === fid)
     )
 
@@ -2012,8 +2012,8 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
               {isMaster ? (
                 <input
                   type="text"
-                  placeholder={`Mestre: ${model.display_name || model.db_table_name}`}
-                  value={(config.layout_config as any).master_tab_title ?? `Mestre: ${model.display_name || model.db_table_name}`}
+                  placeholder={`${t('wizard.layout.master')}: ${model.display_name || model.db_table_name}`}
+                  value={(config.layout_config as any).master_tab_title ?? `${t('wizard.layout.master')}: ${model.display_name || model.db_table_name}`}
                   onChange={e => setConfig({
                     ...config,
                     layout_config: {
@@ -2096,49 +2096,49 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                 })}
               </div>
 
-            <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800 ml-2">
-              <button
-                onClick={() => {
-                  const currentInlines = (config.layout_config as any).details_inline_types || {}
-                  const isCurrentlyInline = currentInlines[model.id] !== false // Default true
-                  
-                  setConfig({
-                    ...config,
-                    layout_config: {
-                      ...config.layout_config,
-                      details_inline_types: {
-                        ...currentInlines,
-                        [model.id]: !isCurrentlyInline
+              <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800 ml-2">
+                <button
+                  onClick={() => {
+                    const currentInlines = (config.layout_config as any).details_inline_types || {}
+                    const isCurrentlyInline = currentInlines[model.id] !== false // Default true
+
+                    setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        details_inline_types: {
+                          ...currentInlines,
+                          [model.id]: !isCurrentlyInline
+                        }
                       }
-                    }
-                  })
-                }}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all",
-                  ((config.layout_config as any).details_inline_types?.[model.id] !== false)
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                    : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
-                )}
-              >
-                <div className={cn(
-                  "w-1 h-1 rounded-full",
-                  ((config.layout_config as any).details_inline_types?.[model.id] !== false) ? "bg-white" : "bg-neutral-400"
-                )} />
-                Na lista
-              </button>
+                    })
+                  }}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all",
+                    ((config.layout_config as any).details_inline_types?.[model.id] !== false)
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                      : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
+                  )}
+                >
+                  <div className={cn(
+                    "w-1 h-1 rounded-full",
+                    ((config.layout_config as any).details_inline_types?.[model.id] !== false) ? "bg-white" : "bg-neutral-400"
+                  )} />
+                  Na lista
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
         </div>
 
-        <DroppableZone 
-          id={`droppable-form-${model.id}`} 
+        <DroppableZone
+          id={`droppable-form-${model.id}`}
           className="grid grid-cols-7 gap-3 min-h-[100px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] items-start transition-all hover:bg-neutral-100/50 dark:hover:bg-neutral-900/40"
         >
           {fieldsOfThisModel.length === 0 ? (
             <div className="col-span-7 flex flex-col items-center justify-center py-4 space-y-2 opacity-50">
-               <Plus className="w-4 h-4 text-neutral-400" />
-               <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Arraste campos de "{model.display_name || model.db_table_name}" para cá</p>
+              <Plus className="w-4 h-4 text-neutral-400" />
+              <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Arraste campos de "{model.display_name || model.db_table_name}" para cá</p>
             </div>
           ) : (
             <SortableContext items={fieldsOfThisModel.map((id: string) => `form-${id}`)} strategy={rectSortingStrategy}>
@@ -2151,7 +2151,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                   zoneType="form"
                   onEdit={() => { setEditingFieldId(id); setEditingFieldZone('form'); setIsDrawerOpen(true); }}
                 >
-                   <span
+                  <span
                     style={{
                       fontFamily: getFieldMeta(id, 'form').label?.font,
                       fontSize: getFieldMeta(id, 'form').label?.size,
@@ -2214,7 +2214,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
   const getFieldMeta = (fid: string, zone?: string | null) => {
     const specificKey = zone ? `${zone}-${fid}` : null
     const meta = (specificKey ? config.layout_config.fields_metadata[specificKey] : null) || config.layout_config.fields_metadata[fid]
-    
+
     if (meta) return meta
 
     return createDefaultFieldMeta(fid)
@@ -2224,16 +2224,16 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
 
   const updateMeta = (section: 'label' | 'content' | 'component' | 'viacep', key: string, value: any) => {
     if (!editingFieldId) return
-    
+
     // O usuário solicitou que todas as instâncias do mesmo campo compartilhem as configurações.
     // Então, ao atualizar uma propriedade, atualizamos todas as chaves deste field.
-    
+
     const baseMeta = getFieldMeta(editingFieldId, null) // get current base meta or default
     const newMeta = { ...currentFieldMeta } // current meta being edited
     newMeta[section] = { ...newMeta[section], [key]: value }
 
     const newFieldsMetadata = { ...config.layout_config.fields_metadata }
-    
+
     // 1. Atualizar a chave base (para servir de herança quando arrastar para uma nova zona)
     newFieldsMetadata[editingFieldId] = newMeta
 
@@ -2242,7 +2242,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
     zones.forEach(z => {
       const zKey = `${z}-${editingFieldId}`
       if (newFieldsMetadata[zKey] !== undefined || editingFieldZone === z) {
-         newFieldsMetadata[zKey] = newMeta
+        newFieldsMetadata[zKey] = newMeta
       }
     })
 
@@ -2257,12 +2257,12 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
 
   const handleApplyStylesToZone = () => {
     if (!editingFieldId || !editingFieldZone) return
-    
+
     // Identificar os campos da zona atual
-    const zoneFields = editingFieldZone === 'filter' ? config.layout_config.filter_fields 
+    const zoneFields = editingFieldZone === 'filter' ? config.layout_config.filter_fields
       : editingFieldZone === 'grid' ? config.layout_config.grid_fields
-      : editingFieldZone === 'form' ? config.layout_config.form_fields
-      : []
+        : editingFieldZone === 'form' ? config.layout_config.form_fields
+          : []
 
     if (!zoneFields.length) return
 
@@ -2275,7 +2275,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
     zoneFields.forEach((fieldId: string) => {
       const metaKey = `${editingFieldZone}-${fieldId}`
       const existingMeta = newFieldsMetadata[metaKey] || { label: {}, content: {}, component: {} }
-      
+
       newFieldsMetadata[metaKey] = {
         ...existingMeta,
         label: {
@@ -2326,7 +2326,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
               {t('wizard.layout.reset_confirm')}
             </p>
           </div>
-          
+
           <div className="flex gap-3">
             <button
               onClick={() => setShowResetConfirm(false)}
@@ -2363,292 +2363,180 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
         </div>
       </Modal>
 
-      <DndContext 
-        sensors={sensors} 
-        collisionDetection={rectIntersection} 
+      <DndContext
+        sensors={sensors}
+        collisionDetection={rectIntersection}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
         <div className="flex flex-col xl:flex-row-reverse gap-10 relative">
           <div className="w-full xl:w-80 shrink-0">
-            <motion.div 
+            <motion.div
               drag
               dragControls={dragControls}
               dragListener={false}
               dragMomentum={false}
               className="bg-white dark:bg-neutral-900 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 flex flex-col xl:fixed xl:w-80 xl:h-[600px] xl:top-64 xl:right-12 z-30 shadow-2xl shadow-indigo-500/10 overflow-hidden ring-1 ring-black/5 transition-colors duration-500 resize both min-w-[280px] min-h-[400px] max-w-[500px]"
             >
-            <div 
-              onPointerDown={(e) => dragControls.start(e)}
-              className="p-5 border-b border-neutral-200 dark:border-neutral-800 cursor-grab active:cursor-grabbing hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors group flex items-center justify-between"
-            >
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 group-hover:text-indigo-500 transition-colors">{t('wizard.layout.available_fields')}</h3>
-              <div className="flex gap-0.5">
-                {[1,2,3].map(i => <div key={i} className="w-1 h-1 rounded-full bg-neutral-300 dark:bg-neutral-700 group-hover:bg-indigo-400"></div>)}
+              <div
+                onPointerDown={(e) => dragControls.start(e)}
+                className="p-5 border-b border-neutral-200 dark:border-neutral-800 cursor-grab active:cursor-grabbing hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors group flex items-center justify-between"
+              >
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 group-hover:text-indigo-500 transition-colors">{t('wizard.layout.available_fields')}</h3>
+                <div className="flex gap-0.5">
+                  {[1, 2, 3].map(i => <div key={i} className="w-1 h-1 rounded-full bg-neutral-300 dark:bg-neutral-700 group-hover:bg-indigo-400"></div>)}
+                </div>
               </div>
-            </div>
-            
-            {/* Filtro de Campos */}
-            <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-950/50 border-b border-neutral-100 dark:border-neutral-800">
-              <div className="relative group">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-all" />
-                <input 
-                  type="text"
-                  placeholder="Pesquisar tabelas ou campos..."
-                  value={fieldSearchTerm}
-                  onChange={e => setFieldSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all shadow-sm"
-                />
+
+              {/* Filtro de Campos */}
+              <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-950/50 border-b border-neutral-100 dark:border-neutral-800">
+                <div className="relative group">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-all" />
+                  <input
+                    type="text"
+                    placeholder="Pesquisar tabelas ou campos..."
+                    value={fieldSearchTerm}
+                    onChange={e => setFieldSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all shadow-sm"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
-              {orderedModels
-                .filter((m: any) => {
-                  if (!fieldSearchTerm) return true
-                  const term = fieldSearchTerm.toLowerCase()
-                  const tableMatch = (m.display_name || m.db_table_name || '').toLowerCase().includes(term)
-                  const fieldMatch = m.fields.some((f: any) => (f.display_name || f.db_column_name || '').toLowerCase().includes(term))
-                  return tableMatch || fieldMatch
-                })
-                .map((m: any) => {
-                  const isCollapsed = collapsedTables[m.id]
-                  // Se houver busca e a tabela der match via campo, forçamos a expansão para mostrar os campos
-                  const forceExpand = fieldSearchTerm && m.fields.some((f: any) => (f.display_name || f.db_column_name || '').toLowerCase().includes(fieldSearchTerm.toLowerCase()))
-                  const actuallyCollapsed = isCollapsed && !forceExpand
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {orderedModels
+                  .filter((m: any) => {
+                    if (!fieldSearchTerm) return true
+                    const term = fieldSearchTerm.toLowerCase()
+                    const tableMatch = (m.display_name || m.db_table_name || '').toLowerCase().includes(term)
+                    const fieldMatch = m.fields.some((f: any) => (f.display_name || f.db_column_name || '').toLowerCase().includes(term))
+                    return tableMatch || fieldMatch
+                  })
+                  .map((m: any) => {
+                    const isCollapsed = collapsedTables[m.id]
+                    // Se houver busca e a tabela der match via campo, forçamos a expansão para mostrar os campos
+                    const forceExpand = fieldSearchTerm && m.fields.some((f: any) => (f.display_name || f.db_column_name || '').toLowerCase().includes(fieldSearchTerm.toLowerCase()))
+                    const actuallyCollapsed = isCollapsed && !forceExpand
 
-                return (
-                  <div key={`sidebar-table-${m.id}`} className="border-b border-neutral-100 dark:border-neutral-800/50 last:border-0">
-                    <button
-                      onClick={() => setCollapsedTables(prev => ({ ...prev, [m.id]: !prev[m.id] }))}
-                      className="w-full p-4 flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-all group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "w-1 h-4 rounded-full transition-all",
-                          actuallyCollapsed ? "bg-neutral-300" : "bg-indigo-500"
-                        )}></div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-700 dark:text-neutral-300">
-                          {m.display_name || m.db_table_name}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[9px] font-black text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full">{m.fields.length}</span>
-                        {actuallyCollapsed ? <ChevronDown className="w-3.5 h-3.5 text-neutral-400" /> : <ChevronUp className="w-3.5 h-3.5 text-indigo-500" />}
-                      </div>
-                    </button>
-                    
-                    {!actuallyCollapsed && (
-                      <div className="p-4 pt-0 grid grid-cols-1 gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <DraggableItem id={`table-source-${m.id}`} className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 p-2.5 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-indigo-300 transition-all">
-                           <div className="flex items-center gap-2">
-                             <Table className="w-3 h-3 text-indigo-500" />
-                             <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">{t('wizard.layout.add_table', 'Adicionar Tabela')}</span>
-                           </div>
-                           <Plus className="w-3 h-3 text-indigo-400 group-hover:scale-125 transition-transform" />
-                        </DraggableItem>
-
-                        <div className="h-px bg-neutral-100 dark:bg-neutral-800 my-1"></div>
-
-                        {m.fields
-                          .filter((f: any) => {
-                             if (!fieldSearchTerm) return true
-                             const term = fieldSearchTerm.toLowerCase()
-                             return (f.display_name || f.db_column_name || '').toLowerCase().includes(term) || (m.display_name || m.db_table_name || '').toLowerCase().includes(term)
-                          })
-                          .map((f: any) => (
-                          <DraggableItem key={`source-${f.id}`} id={`source-${f.id}`} className="bg-neutral-50 dark:bg-neutral-950/50 border border-neutral-100 dark:border-neutral-800/50 p-2.5 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-indigo-200 dark:hover:border-indigo-900/50 transition-all">
-                            <span className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 truncate pr-2">
-                              {f.display_name || f.db_column_name}
+                    return (
+                      <div key={`sidebar-table-${m.id}`} className="border-b border-neutral-100 dark:border-neutral-800/50 last:border-0">
+                        <button
+                          onClick={() => setCollapsedTables(prev => ({ ...prev, [m.id]: !prev[m.id] }))}
+                          className="w-full p-4 flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-all group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "w-1 h-4 rounded-full transition-all",
+                              actuallyCollapsed ? "bg-neutral-300" : "bg-indigo-500"
+                            )}></div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-neutral-700 dark:text-neutral-300">
+                              {m.display_name || m.db_table_name}
                             </span>
-                            <Plus className="w-3 h-3 text-neutral-300 group-hover:text-indigo-500 group-hover:scale-125 transition-all" />
-                          </DraggableItem>
-                        ))}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-[9px] font-black text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full">{m.fields.length}</span>
+                            {actuallyCollapsed ? <ChevronDown className="w-3.5 h-3.5 text-neutral-400" /> : <ChevronUp className="w-3.5 h-3.5 text-indigo-500" />}
+                          </div>
+                        </button>
+
+                        {!actuallyCollapsed && (
+                          <div className="p-4 pt-0 grid grid-cols-1 gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <DraggableItem id={`table-source-${m.id}`} className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 p-2.5 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-indigo-300 transition-all">
+                              <div className="flex items-center gap-2">
+                                <Table className="w-3 h-3 text-indigo-500" />
+                                <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">{t('wizard.layout.add_table', 'Adicionar Tabela')}</span>
+                              </div>
+                              <Plus className="w-3 h-3 text-indigo-400 group-hover:scale-125 transition-transform" />
+                            </DraggableItem>
+
+                            <div className="h-px bg-neutral-100 dark:bg-neutral-800 my-1"></div>
+
+                            {m.fields
+                              .filter((f: any) => {
+                                if (!fieldSearchTerm) return true
+                                const term = fieldSearchTerm.toLowerCase()
+                                return (f.display_name || f.db_column_name || '').toLowerCase().includes(term) || (m.display_name || m.db_table_name || '').toLowerCase().includes(term)
+                              })
+                              .map((f: any) => (
+                                <DraggableItem key={`source-${f.id}`} id={`source-${f.id}`} className="bg-neutral-50 dark:bg-neutral-950/50 border border-neutral-100 dark:border-neutral-800/50 p-2.5 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-indigo-200 dark:hover:border-indigo-900/50 transition-all">
+                                  <span className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 truncate pr-2">
+                                    {f.display_name || f.db_column_name}
+                                  </span>
+                                  <Plus className="w-3 h-3 text-neutral-300 group-hover:text-indigo-500 group-hover:scale-125 transition-all" />
+                                </DraggableItem>
+                              ))}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+                    )
+                  })}
+              </div>
             </motion.div>
           </div>
-          
+
           <div className="flex-1 space-y-10 min-w-0">
-          {/* ZONA: KANBAN CONFIG */}
-          {config.logic_type === 'kanban' && (
-            <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
-                    <Columns className="w-4 h-4" />
+            {/* ZONA: KANBAN CONFIG */}
+            {config.logic_type === 'kanban' && (
+              <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
+                      <Columns className="w-4 h-4" />
+                    </div>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.kanban.title')}</h4>
                   </div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.kanban.title')}</h4>
                 </div>
-              </div>
-              
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.kanban.group_field')}</label>
-                <select
-                  value={config.layout_config.kanban_group_field || ''}
-                  onChange={e => setConfig({
-                    ...config,
-                    layout_config: { ...config.layout_config, kanban_group_field: e.target.value }
-                  })}
-                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                >
-                  <option value="">{t('wizard.layout.kanban.group_placeholder')}</option>
-                  {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                    <option key={`opt-kanban-${f.id}`} value={f.id}>
-                      {getFieldName(f.id)} ({f.data_type})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[10px] text-neutral-400 font-medium italic ml-1">{t('wizard.layout.kanban.group_desc')}</p>
-              </div>
-            </div>
-          )}
 
-          {/* ZONA: SCHEDULER CONFIG */}
-          {config.logic_type === 'scheduler' && (
-            <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
-                    <Calendar className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Configuração do Calendário</h4>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo do Título</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.kanban.group_field')}</label>
                   <select
-                    value={config.layout_config.scheduler_config?.title_field || ''}
+                    value={config.layout_config.kanban_group_field || ''}
                     onChange={e => setConfig({
                       ...config,
-                      layout_config: {
-                        ...config.layout_config,
-                        scheduler_config: { ...config.layout_config.scheduler_config, title_field: e.target.value }
-                      }
+                      layout_config: { ...config.layout_config, kanban_group_field: e.target.value }
                     })}
                     className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                   >
-                    <option value="">Selecione o campo de título...</option>
+                    <option value="">{t('wizard.layout.kanban.group_placeholder')}</option>
                     {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                      <option key={`opt-sched-title-${f.id}`} value={f.id}>
+                      <option key={`opt-kanban-${f.id}`} value={f.id}>
                         {getFieldName(f.id)} ({f.data_type})
                       </option>
                     ))}
                   </select>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Data de Início</label>
-                  <select
-                    value={config.layout_config.scheduler_config?.start_date_field || ''}
-                    onChange={e => setConfig({
-                      ...config,
-                      layout_config: {
-                        ...config.layout_config,
-                        scheduler_config: { ...config.layout_config.scheduler_config, start_date_field: e.target.value }
-                      }
-                    })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                  >
-                    <option value="">Selecione o campo de data de início...</option>
-                    {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
-                      <option key={`opt-sched-start-${f.id}`} value={f.id}>
-                        {getFieldName(f.id)} ({f.data_type})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Data de Fim (Opcional)</label>
-                  <select
-                    value={config.layout_config.scheduler_config?.end_date_field || ''}
-                    onChange={e => setConfig({
-                      ...config,
-                      layout_config: {
-                        ...config.layout_config,
-                        scheduler_config: { ...config.layout_config.scheduler_config, end_date_field: e.target.value }
-                      }
-                    })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                  >
-                    <option value="">Nenhum (Evento de data única)</option>
-                    {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
-                      <option key={`opt-sched-end-${f.id}`} value={f.id}>
-                        {getFieldName(f.id)} ({f.data_type})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Cor/Categoria (Opcional)</label>
-                  <select
-                    value={config.layout_config.scheduler_config?.color_field || ''}
-                    onChange={e => setConfig({
-                      ...config,
-                      layout_config: {
-                        ...config.layout_config,
-                        scheduler_config: { ...config.layout_config.scheduler_config, color_field: e.target.value }
-                      }
-                    })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                  >
-                    <option value="">Nenhum (Cor padrão indigo)</option>
-                    {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                      <option key={`opt-sched-color-${f.id}`} value={f.id}>
-                        {getFieldName(f.id)} ({f.data_type})
-                      </option>
-                    ))}
-                  </select>
+                  <p className="text-[10px] text-neutral-400 font-medium italic ml-1">{t('wizard.layout.kanban.group_desc')}</p>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-
-          {/* ZONA: TIMELINE CONFIG */}
-          {config.logic_type === 'timeline' && (
-            <div className="p-5 bg-indigo-50/30 dark:bg-indigo-950/10 border border-indigo-100 dark:border-indigo-900/30 rounded-[1.5rem] space-y-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
-                    <History className="w-4 h-4" />
+            {/* ZONA: SCHEDULER CONFIG */}
+            {config.logic_type === 'scheduler' && (
+              <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
+                      <Calendar className="w-4 h-4" />
+                    </div>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Configuração do Calendário</h4>
                   </div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.timeline.title', 'Configuração da Linha do Tempo')}</h4>
-                </div>
-              </div>
-              
-              {/* Subcard 1: Mapeamento de Dados */}
-              <div className="p-4 bg-white dark:bg-neutral-900/70 border border-neutral-200/60 dark:border-neutral-800/60 rounded-2xl space-y-4 shadow-sm">
-                <div className="flex items-center gap-2.5">
-                  <Database className="w-4 h-4 text-indigo-500" />
-                  <span className="text-[10px] font-black uppercase text-neutral-700 dark:text-neutral-300 tracking-wider">Mapeamento de Dados</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.title_field', 'Campo de Título')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo do Título</label>
                     <select
-                      value={(config.layout_config as any).timeline_config?.title_field || ''}
+                      value={config.layout_config.scheduler_config?.title_field || ''}
                       onChange={e => setConfig({
                         ...config,
                         layout_config: {
                           ...config.layout_config,
-                          timeline_config: { ...(config.layout_config as any).timeline_config, title_field: e.target.value }
+                          scheduler_config: { ...config.layout_config.scheduler_config, title_field: e.target.value }
                         }
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Selecione o campo de título...</option>
                       {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                        <option key={`opt-tl-title-${f.id}`} value={f.id}>
+                        <option key={`opt-sched-title-${f.id}`} value={f.id}>
                           {getFieldName(f.id)} ({f.data_type})
                         </option>
                       ))}
@@ -2656,21 +2544,21 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.date_field', 'Campo de Data')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Data de Início</label>
                     <select
-                      value={(config.layout_config as any).timeline_config?.date_field || ''}
+                      value={config.layout_config.scheduler_config?.start_date_field || ''}
                       onChange={e => setConfig({
                         ...config,
                         layout_config: {
                           ...config.layout_config,
-                          timeline_config: { ...(config.layout_config as any).timeline_config, date_field: e.target.value }
+                          scheduler_config: { ...config.layout_config.scheduler_config, start_date_field: e.target.value }
                         }
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione a data...</option>
+                      <option value="">Selecione o campo de data de início...</option>
                       {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
-                        <option key={`opt-tl-date-${f.id}`} value={f.id}>
+                        <option key={`opt-sched-start-${f.id}`} value={f.id}>
                           {getFieldName(f.id)} ({f.data_type})
                         </option>
                       ))}
@@ -2678,21 +2566,21 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.desc_field', 'Campo de Descrição (Opcional)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Data de Fim (Opcional)</label>
                     <select
-                      value={(config.layout_config as any).timeline_config?.desc_field || ''}
+                      value={config.layout_config.scheduler_config?.end_date_field || ''}
                       onChange={e => setConfig({
                         ...config,
                         layout_config: {
                           ...config.layout_config,
-                          timeline_config: { ...(config.layout_config as any).timeline_config, desc_field: e.target.value }
+                          scheduler_config: { ...config.layout_config.scheduler_config, end_date_field: e.target.value }
                         }
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Nenhum</option>
-                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                        <option key={`opt-tl-desc-${f.id}`} value={f.id}>
+                      <option value="">Nenhum (Evento de data única)</option>
+                      {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
+                        <option key={`opt-sched-end-${f.id}`} value={f.id}>
                           {getFieldName(f.id)} ({f.data_type})
                         </option>
                       ))}
@@ -2700,21 +2588,21 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.icon_field', 'Campo de Ícone/Status (Opcional)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Cor/Categoria (Opcional)</label>
                     <select
-                      value={(config.layout_config as any).timeline_config?.icon_field || ''}
+                      value={config.layout_config.scheduler_config?.color_field || ''}
                       onChange={e => setConfig({
                         ...config,
                         layout_config: {
                           ...config.layout_config,
-                          timeline_config: { ...(config.layout_config as any).timeline_config, icon_field: e.target.value }
+                          scheduler_config: { ...config.layout_config.scheduler_config, color_field: e.target.value }
                         }
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Nenhum</option>
+                      <option value="">Nenhum (Cor padrão indigo)</option>
                       {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                        <option key={`opt-tl-icon-${f.id}`} value={f.id}>
+                        <option key={`opt-sched-color-${f.id}`} value={f.id}>
                           {getFieldName(f.id)} ({f.data_type})
                         </option>
                       ))}
@@ -2722,252 +2610,538 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* Subcard 2: Estilo e Comportamento */}
-              <div className="p-4 bg-white dark:bg-neutral-900/70 border border-neutral-200/60 dark:border-neutral-800/60 rounded-2xl space-y-4 shadow-sm">
-                <div className="flex items-center gap-2.5">
-                  <Settings2 className="w-4 h-4 text-indigo-500" />
-                  <span className="text-[10px] font-black uppercase text-neutral-700 dark:text-neutral-300 tracking-wider">Estilo e Comportamento</span>
+
+            {/* ZONA: TIMELINE CONFIG */}
+            {config.logic_type === 'timeline' && (
+              <div className="p-5 bg-indigo-50/30 dark:bg-indigo-950/10 border border-indigo-100 dark:border-indigo-900/30 rounded-[1.5rem] space-y-5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
+                      <History className="w-4 h-4" />
+                    </div>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.timeline.title', 'Configuração da Linha do Tempo')}</h4>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Subcard 1: Mapeamento de Dados */}
+                <div className="p-4 bg-white dark:bg-neutral-900/70 border border-neutral-200/60 dark:border-neutral-800/60 rounded-2xl space-y-4 shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <Database className="w-4 h-4 text-indigo-500" />
+                    <span className="text-[10px] font-black uppercase text-neutral-700 dark:text-neutral-300 tracking-wider">Mapeamento de Dados</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.title_field', 'Campo de Título')}</label>
+                      <select
+                        value={(config.layout_config as any).timeline_config?.title_field || ''}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: {
+                            ...config.layout_config,
+                            timeline_config: { ...(config.layout_config as any).timeline_config, title_field: e.target.value }
+                          }
+                        })}
+                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      >
+                        <option value="">Selecione o campo de título...</option>
+                        {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                          <option key={`opt-tl-title-${f.id}`} value={f.id}>
+                            {getFieldName(f.id)} ({f.data_type})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.date_field', 'Campo de Data')}</label>
+                      <select
+                        value={(config.layout_config as any).timeline_config?.date_field || ''}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: {
+                            ...config.layout_config,
+                            timeline_config: { ...(config.layout_config as any).timeline_config, date_field: e.target.value }
+                          }
+                        })}
+                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      >
+                        <option value="">Selecione a data...</option>
+                        {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
+                          <option key={`opt-tl-date-${f.id}`} value={f.id}>
+                            {getFieldName(f.id)} ({f.data_type})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.desc_field', 'Campo de Descrição (Opcional)')}</label>
+                      <select
+                        value={(config.layout_config as any).timeline_config?.desc_field || ''}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: {
+                            ...config.layout_config,
+                            timeline_config: { ...(config.layout_config as any).timeline_config, desc_field: e.target.value }
+                          }
+                        })}
+                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      >
+                        <option value="">Nenhum</option>
+                        {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                          <option key={`opt-tl-desc-${f.id}`} value={f.id}>
+                            {getFieldName(f.id)} ({f.data_type})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.icon_field', 'Campo de Ícone/Status (Opcional)')}</label>
+                      <select
+                        value={(config.layout_config as any).timeline_config?.icon_field || ''}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: {
+                            ...config.layout_config,
+                            timeline_config: { ...(config.layout_config as any).timeline_config, icon_field: e.target.value }
+                          }
+                        })}
+                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      >
+                        <option value="">Nenhum</option>
+                        {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                          <option key={`opt-tl-icon-${f.id}`} value={f.id}>
+                            {getFieldName(f.id)} ({f.data_type})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Subcard 2: Estilo e Comportamento */}
+                <div className="p-4 bg-white dark:bg-neutral-900/70 border border-neutral-200/60 dark:border-neutral-800/60 rounded-2xl space-y-4 shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <Settings2 className="w-4 h-4 text-indigo-500" />
+                    <span className="text-[10px] font-black uppercase text-neutral-700 dark:text-neutral-300 tracking-wider">Estilo e Comportamento</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.direction', 'Direção da Linha')}</label>
+                      <select
+                        value={(config.layout_config as any).timeline_config?.layout_direction || 'vertical'}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: {
+                            ...config.layout_config,
+                            timeline_config: { ...(config.layout_config as any).timeline_config, layout_direction: e.target.value }
+                          }
+                        })}
+                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      >
+                        <option value="vertical">Vertical</option>
+                        <option value="horizontal">Horizontal</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.mode', 'Modo de Exibição')}</label>
+                      <select
+                        value={(config.layout_config as any).timeline_config?.layout_mode || 'alternating'}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: {
+                            ...config.layout_config,
+                            timeline_config: { ...(config.layout_config as any).timeline_config, layout_mode: e.target.value }
+                          }
+                        })}
+                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      >
+                        <option value="alternating">Intercalado (Zig-Zag)</option>
+                        <option value="same_side">Mesmo Lado</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.animated', 'Animação de Desenho')}</label>
+                      <select
+                        value={(config.layout_config as any).timeline_config?.animated === false ? 'false' : 'true'}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: {
+                            ...config.layout_config,
+                            timeline_config: { ...(config.layout_config as any).timeline_config, animated: e.target.value === 'true' }
+                          }
+                        })}
+                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      >
+                        <option value="false">Sem Animação (Estático)</option>
+                        <option value="true">Com Animação (Desenho Dinâmico)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.style', 'Estilo Visual')}</label>
+                      <select
+                        value={(config.layout_config as any).timeline_config?.layout_style || 'cards'}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: {
+                            ...config.layout_config,
+                            timeline_config: { ...(config.layout_config as any).timeline_config, layout_style: e.target.value }
+                          }
+                        })}
+                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      >
+                        <option value="cards">Cards (Padrão)</option>
+                        <option value="infographic">Infográfico (Minimalista)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-3 col-span-1 sm:col-span-2 border-t border-neutral-100 dark:border-neutral-800/50 pt-4">
+                      <div className="flex justify-between items-center ml-1">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Escala de Exibição (Cards e Textos)</label>
+                        <span className="text-[10px] font-extrabold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
+                          {((config.layout_config as any).timeline_config?.card_scale ?? 1.0).toFixed(1)}x
+                          {((config.layout_config as any).timeline_config?.card_scale ?? 1.0) === 1.0 ? ' (Padrão)' : ''}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Compacto (0.6x)</span>
+                        <input
+                          type="range"
+                          min="0.6"
+                          max="1.4"
+                          step="0.1"
+                          value={(config.layout_config as any).timeline_config?.card_scale ?? 1.0}
+                          onChange={e => setConfig({
+                            ...config,
+                            layout_config: {
+                              ...config.layout_config,
+                              timeline_config: { ...(config.layout_config as any).timeline_config, card_scale: parseFloat(e.target.value) }
+                            }
+                          })}
+                          className="flex-1 h-2 bg-neutral-200 dark:bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-indigo-600 focus:outline-none"
+                        />
+                        <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Ampliado (1.4x)</span>
+                      </div>
+                      <p className="text-[9px] text-neutral-400 italic ml-1">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaçamentos da linha do tempo.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ZONA: GANTT CONFIG */}
+            {config.logic_type === 'gantt' && (
+              <div className="p-6 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-[2rem] space-y-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
+                    <BarChartHorizontal className="w-4 h-4" />
+                  </div>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.gantt.title', 'Configuração do Gráfico de Gantt')}</h4>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.direction', 'Direção da Linha')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.title_field', 'Campo de Título (Obrigatório)')}</label>
                     <select
-                      value={(config.layout_config as any).timeline_config?.layout_direction || 'vertical'}
+                      value={(config.layout_config as any).gantt_config?.title_field || ''}
                       onChange={e => setConfig({
                         ...config,
                         layout_config: {
                           ...config.layout_config,
-                          timeline_config: { ...(config.layout_config as any).timeline_config, layout_direction: e.target.value }
+                          gantt_config: { ...(config.layout_config as any).gantt_config, title_field: e.target.value }
                         }
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="vertical">Vertical</option>
-                      <option value="horizontal">Horizontal</option>
+                      <option value="">Selecione o campo de título...</option>
+                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                        <option key={`opt-gantt-title-${f.id}`} value={f.id}>
+                          {getFieldName(f.id)} ({f.data_type})
+                        </option>
+                      ))}
                     </select>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.mode', 'Modo de Exibição')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.start_date_field', 'Data Inicial (Obrigatório)')}</label>
                     <select
-                      value={(config.layout_config as any).timeline_config?.layout_mode || 'alternating'}
+                      value={(config.layout_config as any).gantt_config?.start_date_field || ''}
                       onChange={e => setConfig({
                         ...config,
                         layout_config: {
                           ...config.layout_config,
-                          timeline_config: { ...(config.layout_config as any).timeline_config, layout_mode: e.target.value }
+                          gantt_config: { ...(config.layout_config as any).gantt_config, start_date_field: e.target.value }
                         }
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="alternating">Intercalado (Zig-Zag)</option>
-                      <option value="same_side">Mesmo Lado</option>
+                      <option value="">Selecione a data inicial...</option>
+                      {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
+                        <option key={`opt-gantt-start-${f.id}`} value={f.id}>
+                          {getFieldName(f.id)} ({f.data_type})
+                        </option>
+                      ))}
                     </select>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.animated', 'Animação de Desenho')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.end_date_field', 'Data Final (Obrigatório)')}</label>
                     <select
-                      value={(config.layout_config as any).timeline_config?.animated === false ? 'false' : 'true'}
+                      value={(config.layout_config as any).gantt_config?.end_date_field || ''}
                       onChange={e => setConfig({
                         ...config,
                         layout_config: {
                           ...config.layout_config,
-                          timeline_config: { ...(config.layout_config as any).timeline_config, animated: e.target.value === 'true' }
+                          gantt_config: { ...(config.layout_config as any).gantt_config, end_date_field: e.target.value }
                         }
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="false">Sem Animação (Estático)</option>
-                      <option value="true">Com Animação (Desenho Dinâmico)</option>
+                      <option value="">Selecione a data final...</option>
+                      {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
+                        <option key={`opt-gantt-end-${f.id}`} value={f.id}>
+                          {getFieldName(f.id)} ({f.data_type})
+                        </option>
+                      ))}
                     </select>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.style', 'Estilo Visual')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.progress_field', 'Progresso % (Opcional)')}</label>
                     <select
-                      value={(config.layout_config as any).timeline_config?.layout_style || 'cards'}
+                      value={(config.layout_config as any).gantt_config?.progress_field || ''}
                       onChange={e => setConfig({
                         ...config,
                         layout_config: {
                           ...config.layout_config,
-                          timeline_config: { ...(config.layout_config as any).timeline_config, layout_style: e.target.value }
+                          gantt_config: { ...(config.layout_config as any).gantt_config, progress_field: e.target.value }
                         }
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="cards">Cards (Padrão)</option>
-                      <option value="infographic">Infográfico (Minimalista)</option>
+                      <option value="">Nenhum (Progresso não exibido)</option>
+                      {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('int') || f.data_type.includes('float') || f.data_type.includes('numeric')).map((f: any) => (
+                        <option key={`opt-gantt-prog-${f.id}`} value={f.id}>
+                          {getFieldName(f.id)} ({f.data_type})
+                        </option>
+                      ))}
                     </select>
                   </div>
+                </div>
+              </div>
+            )}
 
-                  <div className="space-y-3 col-span-1 sm:col-span-2 border-t border-neutral-100 dark:border-neutral-800/50 pt-4">
-                    <div className="flex justify-between items-center ml-1">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Escala de Exibição (Cards e Textos)</label>
-                      <span className="text-[10px] font-extrabold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
-                        {((config.layout_config as any).timeline_config?.card_scale ?? 1.0).toFixed(1)}x
-                        {((config.layout_config as any).timeline_config?.card_scale ?? 1.0) === 1.0 ? ' (Padrão)' : ''}
+            {/* ZONA: BLUEPRINT CONFIG */}
+            {config.logic_type === 'blueprint' && (
+              <div className="space-y-6">
+                {/* Card 1: Mapeamento de Dados */}
+                <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-6 shadow-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
+                      <Database className="w-4 h-4" />
+                    </div>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Mapeamento de Dados</h4>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Título do Nó (Obrigatório)</label>
+                      <select
+                        value={(config.layout_config as any).blueprint_config?.title_field || ''}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: {
+                            ...config.layout_config,
+                            blueprint_config: { ...(config.layout_config as any).blueprint_config, title_field: e.target.value }
+                          }
+                        })}
+                        className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      >
+                        <option value="">Selecione o título...</option>
+                        {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                          <option key={`opt-bp-title-${f.id}`} value={f.id}>
+                            {getFieldName(f.id)} ({f.data_type})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo Nó Anterior / Predecessora (Obrigatório)</label>
+                      <select
+                        value={(config.layout_config as any).blueprint_config?.predecessor_field || ''}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: {
+                            ...config.layout_config,
+                            blueprint_config: { ...(config.layout_config as any).blueprint_config, predecessor_field: e.target.value }
+                          }
+                        })}
+                        className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      >
+                        <option value="">Selecione o campo de relação...</option>
+                        {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                          <option key={`opt-bp-pred-${f.id}`} value={f.id}>
+                            {getFieldName(f.id)} ({f.data_type})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Status (Opcional)</label>
+                      <select
+                        value={(config.layout_config as any).blueprint_config?.status_field || ''}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: {
+                            ...config.layout_config,
+                            blueprint_config: { ...(config.layout_config as any).blueprint_config, status_field: e.target.value }
+                          }
+                        })}
+                        className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      >
+                        <option value="">Selecione o campo de status...</option>
+                        {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                          <option key={`opt-bp-status-${f.id}`} value={f.id}>
+                            {getFieldName(f.id)} ({f.data_type})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Descrição (Opcional)</label>
+                      <select
+                        value={(config.layout_config as any).blueprint_config?.desc_field || ''}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: {
+                            ...config.layout_config,
+                            blueprint_config: { ...(config.layout_config as any).blueprint_config, desc_field: e.target.value }
+                          }
+                        })}
+                        className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      >
+                        <option value="">Selecione a descrição...</option>
+                        {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                          <option key={`opt-bp-desc-${f.id}`} value={f.id}>
+                            {getFieldName(f.id)} ({f.data_type})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 2: Estilo e Comportamento */}
+                <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-6 shadow-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
+                      <SlidersHorizontal className="w-4 h-4" />
+                    </div>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Estilo e Comportamento</h4>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    {/* Direção da Linha */}
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Direção da Linha</label>
+                      <select
+                        value={(config.layout_config as any).blueprint_config?.direction || 'TB'}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: { ...config.layout_config, blueprint_config: { ...(config.layout_config as any).blueprint_config, direction: e.target.value } }
+                        })}
+                        className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      >
+                        <option value="TB">Vertical (Cima para Baixo)</option>
+                        <option value="LR">Horizontal (Esquerda para Direita)</option>
+                      </select>
+                    </div>
+
+                    {/* Animação */}
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Animação de Desenho</label>
+                      <select
+                        value={(config.layout_config as any).blueprint_config?.animated_edges !== false ? 'true' : 'false'}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: { ...config.layout_config, blueprint_config: { ...(config.layout_config as any).blueprint_config, animated_edges: e.target.value === 'true' } }
+                        })}
+                        className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      >
+                        <option value="true">Com Animação (Desenho Dinâmico)</option>
+                        <option value="false">Sem Animação (Estático)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Slider de Escala */}
+                  <div className="space-y-3 pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
+                    <div className="flex justify-between items-center text-xs font-bold text-neutral-500 mb-2 uppercase tracking-wider">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Escala de exibição (Cards e textos)</label>
+                      <span className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
+                        {((config.layout_config as any).blueprint_config?.scale || 1).toFixed(1)}x
                       </span>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Compacto (0.6x)</span>
+                    <div className="flex items-center gap-4 px-2">
+                      <span className="text-[10px] font-semibold text-neutral-400 whitespace-nowrap">COMPACTO (0.6X)</span>
                       <input
                         type="range"
                         min="0.6"
                         max="1.4"
                         step="0.1"
-                        value={(config.layout_config as any).timeline_config?.card_scale ?? 1.0}
-                        onChange={e => setConfig({
+                        value={(config.layout_config as any).blueprint_config?.scale || 1}
+                        onChange={(e) => setConfig({
                           ...config,
-                          layout_config: {
-                            ...config.layout_config,
-                            timeline_config: { ...(config.layout_config as any).timeline_config, card_scale: parseFloat(e.target.value) }
-                          }
+                          layout_config: { ...config.layout_config, blueprint_config: { ...(config.layout_config as any).blueprint_config, scale: Number(e.target.value) } }
                         })}
-                        className="flex-1 h-2 bg-neutral-200 dark:bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-indigo-600 focus:outline-none"
+                        className="flex-1 h-2 bg-neutral-200 dark:bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-600 transition-all"
                       />
-                      <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Ampliado (1.4x)</span>
+                      <span className="text-[10px] font-semibold text-neutral-400 whitespace-nowrap">AMPLIADO (1.4X)</span>
                     </div>
-                    <p className="text-[9px] text-neutral-400 italic ml-1">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaçamentos da linha do tempo.</p>
+                    <p className="text-[10px] text-neutral-400 mt-2 italic px-2">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaçamentos do fluxograma.</p>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* ZONA: GANTT CONFIG */}
-          {config.logic_type === 'gantt' && (
-            <div className="p-6 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-[2rem] space-y-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
-                  <BarChartHorizontal className="w-4 h-4" />
-                </div>
-                <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.gantt.title', 'Configuração do Gráfico de Gantt')}</h4>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.title_field', 'Campo de Título (Obrigatório)')}</label>
-                  <select
-                    value={(config.layout_config as any).gantt_config?.title_field || ''}
-                    onChange={e => setConfig({
-                      ...config,
-                      layout_config: {
-                        ...config.layout_config,
-                        gantt_config: { ...(config.layout_config as any).gantt_config, title_field: e.target.value }
-                      }
-                    })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                  >
-                    <option value="">Selecione o campo de título...</option>
-                    {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                      <option key={`opt-gantt-title-${f.id}`} value={f.id}>
-                        {getFieldName(f.id)} ({f.data_type})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.start_date_field', 'Data Inicial (Obrigatório)')}</label>
-                  <select
-                    value={(config.layout_config as any).gantt_config?.start_date_field || ''}
-                    onChange={e => setConfig({
-                      ...config,
-                      layout_config: {
-                        ...config.layout_config,
-                        gantt_config: { ...(config.layout_config as any).gantt_config, start_date_field: e.target.value }
-                      }
-                    })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                  >
-                    <option value="">Selecione a data inicial...</option>
-                    {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
-                      <option key={`opt-gantt-start-${f.id}`} value={f.id}>
-                        {getFieldName(f.id)} ({f.data_type})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.end_date_field', 'Data Final (Obrigatório)')}</label>
-                  <select
-                    value={(config.layout_config as any).gantt_config?.end_date_field || ''}
-                    onChange={e => setConfig({
-                      ...config,
-                      layout_config: {
-                        ...config.layout_config,
-                        gantt_config: { ...(config.layout_config as any).gantt_config, end_date_field: e.target.value }
-                      }
-                    })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                  >
-                    <option value="">Selecione a data final...</option>
-                    {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
-                      <option key={`opt-gantt-end-${f.id}`} value={f.id}>
-                        {getFieldName(f.id)} ({f.data_type})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.progress_field', 'Progresso % (Opcional)')}</label>
-                  <select
-                    value={(config.layout_config as any).gantt_config?.progress_field || ''}
-                    onChange={e => setConfig({
-                      ...config,
-                      layout_config: {
-                        ...config.layout_config,
-                        gantt_config: { ...(config.layout_config as any).gantt_config, progress_field: e.target.value }
-                      }
-                    })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                  >
-                    <option value="">Nenhum (Progresso não exibido)</option>
-                    {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('int') || f.data_type.includes('float') || f.data_type.includes('numeric')).map((f: any) => (
-                      <option key={`opt-gantt-prog-${f.id}`} value={f.id}>
-                        {getFieldName(f.id)} ({f.data_type})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ZONA: BLUEPRINT CONFIG */}
-          {config.logic_type === 'blueprint' && (
-            <div className="space-y-6">
-              {/* Card 1: Mapeamento de Dados */}
-              <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-6 shadow-sm">
+            {/* ZONA: MAP CONFIG */}
+            {config.logic_type === 'map' && (
+              <div className="p-6 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-[2rem] space-y-6 shadow-sm">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
-                    <Database className="w-4 h-4" />
+                    <Share2 className="w-4 h-4" />
                   </div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Mapeamento de Dados</h4>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.map.title', 'Configuração do Mapa (Leaflet)')}</h4>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Título do Nó (Obrigatório)</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.title_field', 'Campo de Título (Obrigatório)')}</label>
                     <select
-                      value={(config.layout_config as any).blueprint_config?.title_field || ''}
+                      value={(config.layout_config as any).map_config?.title_field || ''}
                       onChange={e => setConfig({
                         ...config,
                         layout_config: {
                           ...config.layout_config,
-                          blueprint_config: { ...(config.layout_config as any).blueprint_config, title_field: e.target.value }
+                          map_config: { ...(config.layout_config as any).map_config, title_field: e.target.value }
                         }
                       })}
-                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Selecione o título...</option>
                       {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                        <option key={`opt-bp-title-${f.id}`} value={f.id}>
+                        <option key={`opt-map-title-${f.id}`} value={f.id}>
                           {getFieldName(f.id)} ({f.data_type})
                         </option>
                       ))}
@@ -2975,65 +3149,65 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo Nó Anterior / Predecessora (Obrigatório)</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.desc_field', 'Campo de Descrição (Opcional)')}</label>
                     <select
-                      value={(config.layout_config as any).blueprint_config?.predecessor_field || ''}
+                      value={(config.layout_config as any).map_config?.desc_field || ''}
                       onChange={e => setConfig({
                         ...config,
                         layout_config: {
                           ...config.layout_config,
-                          blueprint_config: { ...(config.layout_config as any).blueprint_config, predecessor_field: e.target.value }
+                          map_config: { ...(config.layout_config as any).map_config, desc_field: e.target.value }
                         }
                       })}
-                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                    >
-                      <option value="">Selecione o campo de relação...</option>
-                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                        <option key={`opt-bp-pred-${f.id}`} value={f.id}>
-                          {getFieldName(f.id)} ({f.data_type})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Status (Opcional)</label>
-                    <select
-                      value={(config.layout_config as any).blueprint_config?.status_field || ''}
-                      onChange={e => setConfig({
-                        ...config,
-                        layout_config: {
-                          ...config.layout_config,
-                          blueprint_config: { ...(config.layout_config as any).blueprint_config, status_field: e.target.value }
-                        }
-                      })}
-                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                    >
-                      <option value="">Selecione o campo de status...</option>
-                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                        <option key={`opt-bp-status-${f.id}`} value={f.id}>
-                          {getFieldName(f.id)} ({f.data_type})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Descrição (Opcional)</label>
-                    <select
-                      value={(config.layout_config as any).blueprint_config?.desc_field || ''}
-                      onChange={e => setConfig({
-                        ...config,
-                        layout_config: {
-                          ...config.layout_config,
-                          blueprint_config: { ...(config.layout_config as any).blueprint_config, desc_field: e.target.value }
-                        }
-                      })}
-                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Selecione a descrição...</option>
                       {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                        <option key={`opt-bp-desc-${f.id}`} value={f.id}>
+                        <option key={`opt-map-desc-${f.id}`} value={f.id}>
+                          {getFieldName(f.id)} ({f.data_type})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lat_field', 'Latitude (Y) - Obrigatório')}</label>
+                    <select
+                      value={(config.layout_config as any).map_config?.lat_field || ''}
+                      onChange={e => setConfig({
+                        ...config,
+                        layout_config: {
+                          ...config.layout_config,
+                          map_config: { ...(config.layout_config as any).map_config, lat_field: e.target.value }
+                        }
+                      })}
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                    >
+                      <option value="">Selecione a latitude...</option>
+                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                        <option key={`opt-map-lat-${f.id}`} value={f.id}>
+                          {getFieldName(f.id)} ({f.data_type})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lng_field', 'Longitude (X) - Obrigatório')}</label>
+                    <select
+                      value={(config.layout_config as any).map_config?.lng_field || ''}
+                      onChange={e => setConfig({
+                        ...config,
+                        layout_config: {
+                          ...config.layout_config,
+                          map_config: { ...(config.layout_config as any).map_config, lng_field: e.target.value }
+                        }
+                      })}
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                    >
+                      <option value="">Selecione a longitude...</option>
+                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
+                        <option key={`opt-map-lng-${f.id}`} value={f.id}>
                           {getFieldName(f.id)} ({f.data_type})
                         </option>
                       ))}
@@ -3041,608 +3215,434 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* Card 2: Estilo e Comportamento */}
-              <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
-                    <SlidersHorizontal className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Estilo e Comportamento</h4>
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  {/* Direção da Linha */}
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Direção da Linha</label>
-                    <select
-                      value={(config.layout_config as any).blueprint_config?.direction || 'TB'}
-                      onChange={e => setConfig({
-                        ...config,
-                        layout_config: { ...config.layout_config, blueprint_config: { ...(config.layout_config as any).blueprint_config, direction: e.target.value } }
-                      })}
-                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                    >
-                      <option value="TB">Vertical (Cima para Baixo)</option>
-                      <option value="LR">Horizontal (Esquerda para Direita)</option>
-                    </select>
-                  </div>
-
-                  {/* Animação */}
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Animação de Desenho</label>
-                    <select
-                      value={(config.layout_config as any).blueprint_config?.animated_edges !== false ? 'true' : 'false'}
-                      onChange={e => setConfig({
-                        ...config,
-                        layout_config: { ...config.layout_config, blueprint_config: { ...(config.layout_config as any).blueprint_config, animated_edges: e.target.value === 'true' } }
-                      })}
-                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                    >
-                      <option value="true">Com Animação (Desenho Dinâmico)</option>
-                      <option value="false">Sem Animação (Estático)</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Slider de Escala */}
-                <div className="space-y-3 pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
-                  <div className="flex justify-between items-center text-xs font-bold text-neutral-500 mb-2 uppercase tracking-wider">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Escala de exibição (Cards e textos)</label>
-                    <span className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
-                      {((config.layout_config as any).blueprint_config?.scale || 1).toFixed(1)}x
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 px-2">
-                    <span className="text-[10px] font-semibold text-neutral-400 whitespace-nowrap">COMPACTO (0.6X)</span>
-                    <input 
-                      type="range" 
-                      min="0.6" 
-                      max="1.4" 
-                      step="0.1" 
-                      value={(config.layout_config as any).blueprint_config?.scale || 1} 
-                      onChange={(e) => setConfig({
-                        ...config,
-                        layout_config: { ...config.layout_config, blueprint_config: { ...(config.layout_config as any).blueprint_config, scale: Number(e.target.value) } }
-                      })}
-                      className="flex-1 h-2 bg-neutral-200 dark:bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-600 transition-all" 
-                    />
-                    <span className="text-[10px] font-semibold text-neutral-400 whitespace-nowrap">AMPLIADO (1.4X)</span>
-                  </div>
-                  <p className="text-[10px] text-neutral-400 mt-2 italic px-2">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaçamentos do fluxograma.</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ZONA: MAP CONFIG */}
-          {config.logic_type === 'map' && (
-            <div className="p-6 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-[2rem] space-y-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
-                  <Share2 className="w-4 h-4" />
-                </div>
-                <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.map.title', 'Configuração do Mapa (Leaflet)')}</h4>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.title_field', 'Campo de Título (Obrigatório)')}</label>
-                  <select
-                    value={(config.layout_config as any).map_config?.title_field || ''}
-                    onChange={e => setConfig({
-                      ...config,
-                      layout_config: {
-                        ...config.layout_config,
-                        map_config: { ...(config.layout_config as any).map_config, title_field: e.target.value }
-                      }
-                    })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                  >
-                    <option value="">Selecione o título...</option>
-                    {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                      <option key={`opt-map-title-${f.id}`} value={f.id}>
-                        {getFieldName(f.id)} ({f.data_type})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.desc_field', 'Campo de Descrição (Opcional)')}</label>
-                  <select
-                    value={(config.layout_config as any).map_config?.desc_field || ''}
-                    onChange={e => setConfig({
-                      ...config,
-                      layout_config: {
-                        ...config.layout_config,
-                        map_config: { ...(config.layout_config as any).map_config, desc_field: e.target.value }
-                      }
-                    })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                  >
-                    <option value="">Selecione a descrição...</option>
-                    {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                      <option key={`opt-map-desc-${f.id}`} value={f.id}>
-                        {getFieldName(f.id)} ({f.data_type})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lat_field', 'Latitude (Y) - Obrigatório')}</label>
-                  <select
-                    value={(config.layout_config as any).map_config?.lat_field || ''}
-                    onChange={e => setConfig({
-                      ...config,
-                      layout_config: {
-                        ...config.layout_config,
-                        map_config: { ...(config.layout_config as any).map_config, lat_field: e.target.value }
-                      }
-                    })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                  >
-                    <option value="">Selecione a latitude...</option>
-                    {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                      <option key={`opt-map-lat-${f.id}`} value={f.id}>
-                        {getFieldName(f.id)} ({f.data_type})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lng_field', 'Longitude (X) - Obrigatório')}</label>
-                  <select
-                    value={(config.layout_config as any).map_config?.lng_field || ''}
-                    onChange={e => setConfig({
-                      ...config,
-                      layout_config: {
-                        ...config.layout_config,
-                        map_config: { ...(config.layout_config as any).map_config, lng_field: e.target.value }
-                      }
-                    })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                  >
-                    <option value="">Selecione a longitude...</option>
-                    {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                      <option key={`opt-map-lng-${f.id}`} value={f.id}>
-                        {getFieldName(f.id)} ({f.data_type})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ZONA: MASTER-DETAIL CONFIG */}
-          {config.logic_type === 'master_detail' && (
-            <div className="p-6 bg-slate-50/50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800 rounded-[2rem] space-y-6 shadow-sm overflow-hidden transition-all duration-300">
-              <div 
-                className="flex items-center justify-between cursor-pointer"
-                onClick={() => toggleZone('masterDetail')}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
-                    <Layers className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.master_detail.title')}</h4>
-                    <p className="text-[10px] text-neutral-400 font-medium mt-1">{t('wizard.layout.master_detail.subtitle')}</p>
-                  </div>
-                </div>
-                <div className="p-2 text-indigo-600">
-                  {expandedZones.masterDetail ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                </div>
-              </div>
-
-              {expandedZones.masterDetail && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-300 pt-4 border-t border-slate-200 dark:border-slate-800/50">
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Tabela Mestre (Root)</label>
-                  <select
-                    value={(config.layout_config as any).master_model_id || ''}
-                    onChange={e => setConfig({
-                      ...config,
-                      layout_config: { ...config.layout_config, master_model_id: e.target.value }
-                    })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                  >
-                    <option value="">Selecione a tabela principal...</option>
-                    {models.filter((m: any) => config.selected_models.includes(m.id)).map((m: any) => (
-                      <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Estilo dos Detalhes</label>
-                  <div className="flex p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
-                    <button
-                      onClick={() => setConfig({ ...config, layout_config: { ...config.layout_config, detail_display_mode: 'tabs' } })}
-                      className={cn(
-                        "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                        (config.layout_config as any).detail_display_mode !== 'sections' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600'
-                      )}
-                    >
-                      Abas
-                    </button>
-                    <button
-                      onClick={() => setConfig({ ...config, layout_config: { ...config.layout_config, detail_display_mode: 'sections' } })}
-                      className={cn(
-                        "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                        (config.layout_config as any).detail_display_mode === 'sections' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600'
-                      )}
-                    >
-                      Seções
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 bg-indigo-500/5 rounded-2xl border border-indigo-500/10 flex gap-3 items-start">
-                <AlertCircle className="w-4 h-4 text-indigo-500 mt-0.5" />
-                <p className="text-[10px] text-indigo-600 dark:text-indigo-400 leading-relaxed">
-                  <strong>Dica:</strong> No estilo <strong>Abas</strong>, cada tabela detalhe será uma aba separada. No estilo <strong>Seções</strong>, os dados serão empilhados em grupos dentro do mesmo corpo de formulário.
-                </p>
-              </div>
-            </div>
-          )}
-            </div>
-          )}
-
-          {/* ZONA: ANALYTICS (BI) CONFIG */}
-          {config.logic_type === 'analytics' && (
-            <div className="p-6 bg-indigo-50/30 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 rounded-[2rem] space-y-6 shadow-sm animate-in zoom-in-95 duration-500">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
-                    <Layers className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Painel de Indicadores (BI)</h4>
-                    <p className="text-[10px] text-neutral-400 font-medium mt-1">Configure os widgets e gráficos do seu dashboard.</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3 p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl">
-                   <button 
-                     onClick={() => setConfig({
-                       ...config,
-                       layout_config: {
-                         ...config.layout_config,
-                         analytics_config: { ...config.layout_config.analytics_config, allow_runtime_edit: !config.layout_config.analytics_config.allow_runtime_edit }
-                       }
-                     })}
-                     className={cn(
-                       "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
-                       config.layout_config.analytics_config.allow_runtime_edit ? "bg-indigo-600 text-white shadow-md" : "text-neutral-400 hover:text-neutral-600"
-                     )}
-                   >
-                     Edição no Runtime: {config.layout_config.analytics_config.allow_runtime_edit ? 'ON' : 'OFF'}
-                   </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <SortableContext items={(config.layout_config.analytics_config?.widgets || []).map((w: any) => `widget-${w.id}`)} strategy={rectSortingStrategy}>
-                  {(config.layout_config.analytics_config?.widgets || []).map((widget: any) => (
-                    <SortableWidgetCard 
-                      key={`widget-${widget.id}`} 
-                      widget={widget} 
-                      onEdit={() => { setEditingWidget(widget); setIsWidgetModalOpen(true); }}
-                      onDelete={() => handleDeleteWidget(widget.id)}
-                      getFieldName={getFieldName}
-                    />
-                  ))}
-                </SortableContext>
-                
-                <button 
-                  onClick={handleAddWidget}
-                  className="p-8 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-3 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-all group"
+            {/* ZONA: MASTER-DETAIL CONFIG */}
+            {config.logic_type === 'master_detail' && (
+              <div className="p-6 bg-slate-50/50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800 rounded-[2rem] space-y-6 shadow-sm overflow-hidden transition-all duration-300">
+                <div
+                  className="flex items-center justify-between cursor-pointer"
+                  onClick={() => toggleZone('masterDetail')}
                 >
-                  <Plus className="w-6 h-6 group-hover:scale-125 transition-transform" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Adicionar Widget de BI</span>
-                </button>
-              </div>
-            </div>
-          )}
-          {config.logic_type === 'mapa_mental' && (
-            <div className="p-4 bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-[1.5rem] space-y-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-600 text-white rounded-xl shadow-lg shadow-purple-500/20">
-                    <Share2 className="w-4 h-4" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
+                      <Layers className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.master_detail.title')}</h4>
+                      <p className="text-[10px] text-neutral-400 font-medium mt-1">{t('wizard.layout.master_detail.subtitle')}</p>
+                    </div>
                   </div>
-                  <h4 className="text-[10px] font-black uppercase text-purple-600 tracking-[0.3em]">{t('wizard.layout.mindmap.config_title', 'Configuração do Mapa Mental')}</h4>
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.mindmap.central_field', 'Campo Central (Nó Raiz)')}</label>
-                <select
-                  value={config.layout_config.mindmap_central_field || ''}
-                  onChange={e => setConfig((prev: any) => ({
-                    ...prev,
-                    layout_config: { ...prev.layout_config, mindmap_central_field: e.target.value }
-                  }))}
-                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-purple-600 outline-none transition-all shadow-sm text-sm font-bold"
-                >
-                  <option value="">{t('wizard.layout.mindmap.select_central', 'Selecione o campo central...')}</option>
-                  {relationalTree.flatMap((m: any) => m.fields).map((f: any) => (
-                    <option key={f.id} value={f.id}>
-                      {getFieldName(f.id)} ({f.data_type})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[10px] text-neutral-400 font-medium italic ml-1">{t('wizard.layout.mindmap.central_desc', 'Este campo será a raiz do seu mapa mental. Os campos selecionados na Zona 02 formarão os próximos níveis na ordem definida.')}</p>
-              </div>
-            </div>
-          )}
-          {config.logic_type === 'galeria' && (
-            <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
-                    <LayoutGrid className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Configuração da Galeria</h4>
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Visualização de Imagem</label>
-                <div className="flex p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
-                  <button
-                    type="button"
-                    onClick={() => setConfig({
-                      ...config,
-                      layout_config: { ...config.layout_config, gallery_click_behavior: 'lightbox' }
-                    })}
-                    className={cn(
-                      "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                      (config.layout_config.gallery_click_behavior || 'lightbox') === 'lightbox' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
-                    )}
-                  >
-                    Abrir na Modal (Lightbox)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfig({
-                      ...config,
-                      layout_config: { ...config.layout_config, gallery_click_behavior: 'thumbnail' }
-                    })}
-                    className={cn(
-                      "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                      (config.layout_config.gallery_click_behavior || 'lightbox') === 'thumbnail' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
-                    )}
-                  >
-                    Ver no próprio Thumbnail
-                  </button>
-                </div>
-                <p className="text-[10px] text-neutral-400 font-medium italic ml-1">
-                  Selecione "Ver no próprio Thumbnail" para exibir a imagem inteira (sem cortes) diretamente no card, desabilitando a modal de visualização ao clicar.
-                </p>
-              </div>
-            </div>
-          )}
-
-
-          {/* Seção Global de Relacionamentos (JOINS) - Posicionada estrategicamente antes das Zonas de Dados */}
-          <JoinsEditor 
-            joins={config.layout_config.joins || []}
-            // Para Analytics, permitimos relacionar qualquer tabela do projeto. Para outros, apenas as selecionadas.
-            models={config.logic_type === 'analytics' ? models : models.filter((m: any) => config.selected_models.includes(m.id))}
-            onUpdate={(newJoins) => setConfig({
-              ...config,
-              layout_config: { ...config.layout_config, joins: newJoins }
-            })}
-            t={t}
-          />
-
-          {/* ZONA: FILTROS */}
-          {(config.logic_type.includes('pesquisa') || 
-            config.logic_type === 'kanban' || 
-            config.logic_type === 'mapa_mental' || 
-            config.logic_type === 'master_detail' || 
-            config.logic_type === 'scheduler' || 
-            config.logic_type === 'galeria' || 
-            config.logic_type === 'personalizado' || 
-            config.logic_type === 'analytics') && (
-            <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm overflow-hidden transition-all duration-300">
-              <div 
-                className="flex items-center justify-between cursor-pointer"
-                onClick={() => toggleZone('zone01')}
-              >
-                <div className="flex items-center gap-3">
-                  <h4 className="text-[9px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_01')}: {t('wizard.layout.zones.filter')}</h4>
-                  <span className="px-3 py-1 bg-indigo-500/10 text-indigo-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.filter_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {config.layout_config.filter_fields.length > 0 && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setConfig({ ...config, layout_config: { ...config.layout_config, filter_fields: [] } }) }}
-                      className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                      title={t('common.clear_all', 'Limpar Tudo')}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                  <div className="p-1 text-indigo-600">
-                    {expandedZones.zone01 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  <div className="p-2 text-indigo-600">
+                    {expandedZones.masterDetail ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                   </div>
                 </div>
-              </div>
 
-              {expandedZones.zone01 && (
-                <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-              <DroppableZone id="droppable-filter" className="grid grid-cols-7 gap-3 min-h-[80px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-start">
-                {config.layout_config.filter_fields.length === 0 ? (
-                  <p className="text-xs text-neutral-400 font-medium w-full text-center italic">{t('wizard.layout.subtitle')}</p>
-                ) : (
-                  <SortableContext items={config.layout_config.filter_fields.map((id: string) => `filter-${id}`)} strategy={rectSortingStrategy}>
-                    {config.layout_config.filter_fields.map((id: string) => (
-                      <SortableFieldChip
-                        key={`filter-${id}`}
-                        id={`filter-${id}`}
-                        itemValue={id}
-                        toggleField={toggleField}
-                        zoneType="filter"
-                        onEdit={() => { setEditingFieldId(id); setEditingFieldZone('filter'); setIsDrawerOpen(true); }}
-                      >
-                        <span
-                          style={{
-                            fontFamily: getFieldMeta(id, 'filter').label?.font,
-                            fontSize: getFieldMeta(id, 'filter').label?.size,
-                            color: getFieldMeta(id, 'filter').label?.color || undefined
-                          }}
-                          className={cn(
-                            "text-[10px] font-black tracking-wider",
-                            !getFieldMeta(id, 'filter').label?.font && "uppercase"
-                          )}
+                {expandedZones.masterDetail && (
+                  <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-300 pt-4 border-t border-slate-200 dark:border-slate-800/50">
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Tabela Mestre (Root)</label>
+                        <select
+                          value={(config.layout_config as any).master_model_id || ''}
+                          onChange={e => setConfig({
+                            ...config,
+                            layout_config: { ...config.layout_config, master_model_id: e.target.value }
+                          })}
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                         >
-                          {getFieldMeta(id, 'filter').label?.text || getFieldName(id)}
-                        </span>
-                      </SortableFieldChip>
+                          <option value="">Selecione a tabela principal...</option>
+                          {models.filter((m: any) => config.selected_models.includes(m.id)).map((m: any) => (
+                            <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Estilo dos Detalhes</label>
+                        <div className="flex p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
+                          <button
+                            onClick={() => setConfig({ ...config, layout_config: { ...config.layout_config, detail_display_mode: 'tabs' } })}
+                            className={cn(
+                              "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                              (config.layout_config as any).detail_display_mode !== 'sections' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600'
+                            )}
+                          >
+                            Abas
+                          </button>
+                          <button
+                            onClick={() => setConfig({ ...config, layout_config: { ...config.layout_config, detail_display_mode: 'sections' } })}
+                            className={cn(
+                              "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                              (config.layout_config as any).detail_display_mode === 'sections' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600'
+                            )}
+                          >
+                            Seções
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-indigo-500/5 rounded-2xl border border-indigo-500/10 flex gap-3 items-start">
+                      <AlertCircle className="w-4 h-4 text-indigo-500 mt-0.5" />
+                      <p className="text-[10px] text-indigo-600 dark:text-indigo-400 leading-relaxed">
+                        <strong>Dica:</strong> No estilo <strong>Abas</strong>, cada tabela detalhe será uma aba separada. No estilo <strong>Seções</strong>, os dados serão empilhados em grupos dentro do mesmo corpo de formulário.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ZONA: ANALYTICS (BI) CONFIG */}
+            {config.logic_type === 'analytics' && (
+              <div className="p-6 bg-indigo-50/30 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 rounded-[2rem] space-y-6 shadow-sm animate-in zoom-in-95 duration-500">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
+                      <Layers className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Painel de Indicadores (BI)</h4>
+                      <p className="text-[10px] text-neutral-400 font-medium mt-1">Configure os widgets e gráficos do seu dashboard.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+                    <button
+                      onClick={() => setConfig({
+                        ...config,
+                        layout_config: {
+                          ...config.layout_config,
+                          analytics_config: { ...config.layout_config.analytics_config, allow_runtime_edit: !config.layout_config.analytics_config.allow_runtime_edit }
+                        }
+                      })}
+                      className={cn(
+                        "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                        config.layout_config.analytics_config.allow_runtime_edit ? "bg-indigo-600 text-white shadow-md" : "text-neutral-400 hover:text-neutral-600"
+                      )}
+                    >
+                      Edição no Runtime: {config.layout_config.analytics_config.allow_runtime_edit ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <SortableContext items={(config.layout_config.analytics_config?.widgets || []).map((w: any) => `widget-${w.id}`)} strategy={rectSortingStrategy}>
+                    {(config.layout_config.analytics_config?.widgets || []).map((widget: any) => (
+                      <SortableWidgetCard
+                        key={`widget-${widget.id}`}
+                        widget={widget}
+                        onEdit={() => { setEditingWidget(widget); setIsWidgetModalOpen(true); }}
+                        onDelete={() => handleDeleteWidget(widget.id)}
+                        getFieldName={getFieldName}
+                      />
                     ))}
                   </SortableContext>
-                )}
-              </DroppableZone>
-              </div>
-            )}
-            </div>
-          )}
 
-          {/* ZONA: GRID */}
-          {config.logic_type !== 'timeline' && config.logic_type !== 'map' && config.logic_type !== 'gantt' && config.logic_type !== 'cadastro' && (
-          <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <h4 className="text-[9px] font-black uppercase text-emerald-600 tracking-[0.3em]">
-                  {config.logic_type === 'kanban' ? t('wizard.layout.zones.kanban_card', 'Campos do Card') : config.logic_type === 'mapa_mental' ? t('wizard.layout.zones.mindmap_nodes', 'Campos do Mapa (Níveis)') : `${t('wizard.layout.zones.zone_02')}: ${t('wizard.layout.zones.grid')}`}
-                </h4>
-                {config.logic_type !== 'kanban' && config.logic_type !== 'mapa_mental' && config.logic_type !== 'galeria' && (
-                  <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg w-fit">
-                    {[
-                      { id: 'list', label: t('wizard.layout.display_options.list') },
-                      { id: 'card', label: t('wizard.layout.display_options.card') },
-                      { id: 'both', label: t('wizard.layout.display_options.both') }
-                    ].map(opt => (
-                      <button
-                        key={opt.id}
-                        onClick={() => setConfig({
-                          ...config,
-                          layout_config: { ...config.layout_config, display_type: opt.id }
-                        })}
-                        className={cn(
-                          "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all",
-                          (config.layout_config.display_type || 'list') === opt.id
-                            ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
-                            : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
-                        )}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.grid_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
-                {config.layout_config.grid_fields.length > 0 && (
                   <button
-                    onClick={() => setConfig({ ...config, layout_config: { ...config.layout_config, grid_fields: [] } })}
-                    className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                    title={t('common.clear_all', 'Limpar Tudo')}
+                    onClick={handleAddWidget}
+                    className="p-8 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-3 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-all group"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Plus className="w-6 h-6 group-hover:scale-125 transition-transform" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Adicionar Widget de BI</span>
                   </button>
-                )}
-              </div>
-            </div>
-
-            <DroppableZone id="droppable-grid" className="grid grid-cols-7 gap-3 min-h-[100px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-start">
-              {config.layout_config.grid_fields.length === 0 ? (
-                <p className="text-xs text-neutral-400 font-medium w-full text-center italic">{t('wizard.layout.subtitle')}</p>
-              ) : (
-                <SortableContext items={config.layout_config.grid_fields.map((id: string) => `grid-${id}`)} strategy={rectSortingStrategy}>
-                  {config.layout_config.grid_fields.map((id: string) => (
-                    <SortableFieldChip
-                      key={`grid-${id}`}
-                      id={`grid-${id}`}
-                      itemValue={id}
-                      toggleField={toggleField}
-                      zoneType="grid"
-                      onEdit={() => { setEditingFieldId(id); setEditingFieldZone('grid'); setIsDrawerOpen(true); }}
-                    >
-                      <span
-                        style={{
-                          fontFamily: getFieldMeta(id, 'grid').label?.font,
-                          fontSize: getFieldMeta(id, 'grid').label?.size,
-                          color: getFieldMeta(id, 'grid').label?.color || undefined
-                        }}
-                        className={cn(
-                          "text-[10px] font-black tracking-wider",
-                          !getFieldMeta(id, 'grid').label?.font && "uppercase"
-                        )}
-                      >
-                        {getFieldMeta(id, 'grid').label?.text || getFieldName(id)}
-                      </span>
-                    </SortableFieldChip>
-                  ))}
-                </SortableContext>
-              )}
-            </DroppableZone>
-            </div>
-            )}
-
-          {/* ZONA: FORMULÁRIO (RECURSIVO) */}
-          {(config.logic_type.includes('cadastro') || 
-            config.logic_type === 'master_detail' || 
-            config.logic_type === 'kanban' || 
-            config.logic_type === 'timeline' ||
-            config.logic_type === 'map' ||
-            config.logic_type === 'gantt' ||
-            config.logic_type === 'scheduler' || 
-            config.logic_type === 'mapa_mental' || 
-            config.logic_type === 'galeria' || 
-            config.logic_type === 'personalizado') && (
-            <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-4 shadow-sm overflow-hidden transition-all duration-300">
-              <div 
-                className="flex items-center justify-between cursor-pointer"
-                onClick={() => toggleZone('zone03')}
-              >
-                <div className="flex items-center gap-3">
-                  <h4 className="text-[9px] font-black uppercase text-amber-600 tracking-[0.3em]">{config.logic_type === 'cadastro' ? t('wizard.layout.zones.zone_01') : t('wizard.layout.zones.zone_03')}: {t('wizard.layout.zones.form')}</h4>
-                  <span className="px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.form_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  {config.layout_config.form_fields.length > 0 && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setConfig({ ...config, layout_config: { ...config.layout_config, form_fields: [] } }) }}
-                      className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                      title={t('common.clear_all', 'Limpar Tudo')}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                  <div className="p-1 text-amber-600">
-                    {expandedZones.zone03 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </div>
+            )}
+            {config.logic_type === 'mapa_mental' && (
+              <div className="p-4 bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-[1.5rem] space-y-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-600 text-white rounded-xl shadow-lg shadow-purple-500/20">
+                      <Share2 className="w-4 h-4" />
+                    </div>
+                    <h4 className="text-[10px] font-black uppercase text-purple-600 tracking-[0.3em]">{t('wizard.layout.mindmap.config_title', 'Configuração do Mapa Mental')}</h4>
                   </div>
                 </div>
-              </div>
 
-              {expandedZones.zone03 && (
-                <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                  {relationalTree.map((node: any, nIdx: number) => renderModelZone(node, 0, nIdx))}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.mindmap.central_field', 'Campo Central (Nó Raiz)')}</label>
+                  <select
+                    value={config.layout_config.mindmap_central_field || ''}
+                    onChange={e => setConfig((prev: any) => ({
+                      ...prev,
+                      layout_config: { ...prev.layout_config, mindmap_central_field: e.target.value }
+                    }))}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-purple-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  >
+                    <option value="">{t('wizard.layout.mindmap.select_central', 'Selecione o campo central...')}</option>
+                    {relationalTree.flatMap((m: any) => m.fields).map((f: any) => (
+                      <option key={f.id} value={f.id}>
+                        {getFieldName(f.id)} ({f.data_type})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-neutral-400 font-medium italic ml-1">{t('wizard.layout.mindmap.central_desc', 'Este campo será a raiz do seu mapa mental. Os campos selecionados na Zona 02 formarão os próximos níveis na ordem definida.')}</p>
+                </div>
+              </div>
+            )}
+            {config.logic_type === 'galeria' && (
+              <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
+                      <LayoutGrid className="w-4 h-4" />
+                    </div>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Configuração da Galeria</h4>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Visualização de Imagem</label>
+                  <div className="flex p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setConfig({
+                        ...config,
+                        layout_config: { ...config.layout_config, gallery_click_behavior: 'lightbox' }
+                      })}
+                      className={cn(
+                        "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                        (config.layout_config.gallery_click_behavior || 'lightbox') === 'lightbox' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
+                      )}
+                    >
+                      Abrir na Modal (Lightbox)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfig({
+                        ...config,
+                        layout_config: { ...config.layout_config, gallery_click_behavior: 'thumbnail' }
+                      })}
+                      className={cn(
+                        "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                        (config.layout_config.gallery_click_behavior || 'lightbox') === 'thumbnail' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
+                      )}
+                    >
+                      Ver no próprio Thumbnail
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-neutral-400 font-medium italic ml-1">
+                    Selecione "Ver no próprio Thumbnail" para exibir a imagem inteira (sem cortes) diretamente no card, desabilitando a modal de visualização ao clicar.
+                  </p>
+                </div>
+              </div>
+            )}
+
+
+            {/* Seção Global de Relacionamentos (JOINS) - Posicionada estrategicamente antes das Zonas de Dados */}
+            <JoinsEditor
+              joins={config.layout_config.joins || []}
+              // Para Analytics, permitimos relacionar qualquer tabela do projeto. Para outros, apenas as selecionadas.
+              models={config.logic_type === 'analytics' ? models : models.filter((m: any) => config.selected_models.includes(m.id))}
+              onUpdate={(newJoins) => setConfig({
+                ...config,
+                layout_config: { ...config.layout_config, joins: newJoins }
+              })}
+              t={t}
+            />
+
+            {/* ZONA: FILTROS */}
+            {(config.logic_type.includes('pesquisa') ||
+              config.logic_type === 'kanban' ||
+              config.logic_type === 'mapa_mental' ||
+              config.logic_type === 'master_detail' ||
+              config.logic_type === 'scheduler' ||
+              config.logic_type === 'galeria' ||
+              config.logic_type === 'personalizado' ||
+              config.logic_type === 'analytics') && (
+                <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm overflow-hidden transition-all duration-300">
+                  <div
+                    className="flex items-center justify-between cursor-pointer"
+                    onClick={() => toggleZone('zone01')}
+                  >
+                    <div className="flex items-center gap-3">
+                      <h4 className="text-[9px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_01')}: {t('wizard.layout.zones.filter')}</h4>
+                      <span className="px-3 py-1 bg-indigo-500/10 text-indigo-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.filter_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {config.layout_config.filter_fields.length > 0 && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setConfig({ ...config, layout_config: { ...config.layout_config, filter_fields: [] } }) }}
+                          className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                          title={t('common.clear_all', 'Limpar Tudo')}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <div className="p-1 text-indigo-600">
+                        {expandedZones.zone01 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </div>
+                    </div>
+                  </div>
+
+                  {expandedZones.zone01 && (
+                    <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <DroppableZone id="droppable-filter" className="grid grid-cols-7 gap-3 min-h-[80px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-start">
+                        {config.layout_config.filter_fields.length === 0 ? (
+                          <p className="text-xs text-neutral-400 font-medium w-full text-center italic">{t('wizard.layout.subtitle')}</p>
+                        ) : (
+                          <SortableContext items={config.layout_config.filter_fields.map((id: string) => `filter-${id}`)} strategy={rectSortingStrategy}>
+                            {config.layout_config.filter_fields.map((id: string) => (
+                              <SortableFieldChip
+                                key={`filter-${id}`}
+                                id={`filter-${id}`}
+                                itemValue={id}
+                                toggleField={toggleField}
+                                zoneType="filter"
+                                onEdit={() => { setEditingFieldId(id); setEditingFieldZone('filter'); setIsDrawerOpen(true); }}
+                              >
+                                <span
+                                  style={{
+                                    fontFamily: getFieldMeta(id, 'filter').label?.font,
+                                    fontSize: getFieldMeta(id, 'filter').label?.size,
+                                    color: getFieldMeta(id, 'filter').label?.color || undefined
+                                  }}
+                                  className={cn(
+                                    "text-[10px] font-black tracking-wider",
+                                    !getFieldMeta(id, 'filter').label?.font && "uppercase"
+                                  )}
+                                >
+                                  {getFieldMeta(id, 'filter').label?.text || getFieldName(id)}
+                                </span>
+                              </SortableFieldChip>
+                            ))}
+                          </SortableContext>
+                        )}
+                      </DroppableZone>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
+
+            {/* ZONA: GRID */}
+            {config.logic_type !== 'timeline' && config.logic_type !== 'map' && config.logic_type !== 'gantt' && config.logic_type !== 'cadastro' && (
+              <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h4 className="text-[9px] font-black uppercase text-emerald-600 tracking-[0.3em]">
+                      {config.logic_type === 'kanban' ? t('wizard.layout.zones.kanban_card', 'Campos do Card') : config.logic_type === 'mapa_mental' ? t('wizard.layout.zones.mindmap_nodes', 'Campos do Mapa (Níveis)') : `${t('wizard.layout.zones.zone_02')}: ${t('wizard.layout.zones.grid')}`}
+                    </h4>
+                    {config.logic_type !== 'kanban' && config.logic_type !== 'mapa_mental' && config.logic_type !== 'galeria' && (
+                      <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg w-fit">
+                        {[
+                          { id: 'list', label: t('wizard.layout.display_options.list') },
+                          { id: 'card', label: t('wizard.layout.display_options.card') },
+                          { id: 'both', label: t('wizard.layout.display_options.both') }
+                        ].map(opt => (
+                          <button
+                            key={opt.id}
+                            onClick={() => setConfig({
+                              ...config,
+                              layout_config: { ...config.layout_config, display_type: opt.id }
+                            })}
+                            className={cn(
+                              "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all",
+                              (config.layout_config.display_type || 'list') === opt.id
+                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                                : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
+                            )}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.grid_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
+                    {config.layout_config.grid_fields.length > 0 && (
+                      <button
+                        onClick={() => setConfig({ ...config, layout_config: { ...config.layout_config, grid_fields: [] } })}
+                        className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                        title={t('common.clear_all', 'Limpar Tudo')}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <DroppableZone id="droppable-grid" className="grid grid-cols-7 gap-3 min-h-[100px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-start">
+                  {config.layout_config.grid_fields.length === 0 ? (
+                    <p className="text-xs text-neutral-400 font-medium w-full text-center italic">{t('wizard.layout.subtitle')}</p>
+                  ) : (
+                    <SortableContext items={config.layout_config.grid_fields.map((id: string) => `grid-${id}`)} strategy={rectSortingStrategy}>
+                      {config.layout_config.grid_fields.map((id: string) => (
+                        <SortableFieldChip
+                          key={`grid-${id}`}
+                          id={`grid-${id}`}
+                          itemValue={id}
+                          toggleField={toggleField}
+                          zoneType="grid"
+                          onEdit={() => { setEditingFieldId(id); setEditingFieldZone('grid'); setIsDrawerOpen(true); }}
+                        >
+                          <span
+                            style={{
+                              fontFamily: getFieldMeta(id, 'grid').label?.font,
+                              fontSize: getFieldMeta(id, 'grid').label?.size,
+                              color: getFieldMeta(id, 'grid').label?.color || undefined
+                            }}
+                            className={cn(
+                              "text-[10px] font-black tracking-wider",
+                              !getFieldMeta(id, 'grid').label?.font && "uppercase"
+                            )}
+                          >
+                            {getFieldMeta(id, 'grid').label?.text || getFieldName(id)}
+                          </span>
+                        </SortableFieldChip>
+                      ))}
+                    </SortableContext>
+                  )}
+                </DroppableZone>
+              </div>
+            )}
+
+            {/* ZONA: FORMULÁRIO (RECURSIVO) */}
+            {(config.logic_type.includes('cadastro') ||
+              config.logic_type === 'master_detail' ||
+              config.logic_type === 'kanban' ||
+              config.logic_type === 'timeline' ||
+              config.logic_type === 'map' ||
+              config.logic_type === 'gantt' ||
+              config.logic_type === 'scheduler' ||
+              config.logic_type === 'mapa_mental' ||
+              config.logic_type === 'galeria' ||
+              config.logic_type === 'personalizado') && (
+                <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-4 shadow-sm overflow-hidden transition-all duration-300">
+                  <div
+                    className="flex items-center justify-between cursor-pointer"
+                    onClick={() => toggleZone('zone03')}
+                  >
+                    <div className="flex items-center gap-3">
+                      <h4 className="text-[9px] font-black uppercase text-amber-600 tracking-[0.3em]">{config.logic_type === 'cadastro' ? t('wizard.layout.zones.zone_01') : t('wizard.layout.zones.zone_03')}: {t('wizard.layout.zones.form')}</h4>
+                      <span className="px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.form_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {config.layout_config.form_fields.length > 0 && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setConfig({ ...config, layout_config: { ...config.layout_config, form_fields: [] } }) }}
+                          className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                          title={t('common.clear_all', 'Limpar Tudo')}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <div className="p-1 text-amber-600">
+                        {expandedZones.zone03 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </div>
+                    </div>
+                  </div>
+
+                  {expandedZones.zone03 && (
+                    <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                      {relationalTree.map((node: any, nIdx: number) => renderModelZone(node, 0, nIdx))}
+                    </div>
+                  )}
+                </div>
+              )}
           </div>
         </div>
 
@@ -3692,7 +3692,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                     drawerActiveTab === 'geral' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
                   )}
                 >
-                  Básico / Geral
+                  {t('wizard.layout.drawer.tab_basic')}
                   {drawerActiveTab === 'geral' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
                 </button>
                 <button
@@ -3702,7 +3702,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                     drawerActiveTab === 'estilos' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
                   )}
                 >
-                  Aparência / Estilos
+                  {t('wizard.layout.drawer.tab_styles')}
                   {drawerActiveTab === 'estilos' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
                 </button>
               </div>
@@ -3763,7 +3763,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* TEXTO DE EXIBIÇÃO PARA TABS FICA SEPARADO MAS NA MESMA ABA ÚNICA */}
                   <div className="space-y-4 pt-6 mt-6 border-t border-neutral-100 dark:border-neutral-800">
                     <div className="flex items-center gap-3">
@@ -3775,8 +3775,8 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       <input
                         type="text"
                         value={
-                          editingTabId === 'master' 
-                            ? ((config.layout_config as any).master_tab_title || `Mestre: ${models.find((m: any) => m.id === (config.layout_config as any).master_model_id)?.display_name || ''}`)
+                          editingTabId === 'master'
+                            ? ((config.layout_config as any).master_tab_title || `${t('wizard.layout.master')}: ${models.find((m: any) => m.id === (config.layout_config as any).master_model_id)?.display_name || ''}`)
                             : ((config.layout_config as any).details_tab_titles?.[editingTabId || ''] || `Detalhe`)
                         }
                         onChange={e => {
@@ -3843,21 +3843,21 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                               } else {
                                 const isKnown = ['', '000.000.000-00', '00.000.000/0000-00', '00000-000', '(00) 00000-0000', '00/00/0000', '0.000', '0.000,00'].includes(currentFieldMeta.content.mask || '')
                                 if (isKnown) {
-                                  updateMeta('content', 'mask', ' ') 
+                                  updateMeta('content', 'mask', ' ')
                                 }
                               }
                             }}
                             className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none cursor-pointer"
                           >
                             <option value="">{t('common.none', 'Nenhuma')}</option>
-                            <option value="000.000.000-00">CPF (000.000.000-00)</option>
-                            <option value="00.000.000/0000-00">CNPJ (00.000.000/0000-00)</option>
-                            <option value="00000-000">CEP (00000-000)</option>
-                            <option value="(00) 00000-0000">Telefone/Celular ((00) 00000-0000)</option>
-                            <option value="00/00/0000">Data (00/00/0000)</option>
-                            <option value="0.000">Inteiro com Milhar (0.000)</option>
-                            <option value="0.000,00">Decimal com Milhar (0.000,00)</option>
-                            <option value="custom">Personalizado (Custom)...</option>
+                            <option value="000.000.000-00">{t('wizard.layout.drawer.masks.cpf', 'CPF (000.000.000-00)')}</option>
+                            <option value="00.000.000/0000-00">{t('wizard.layout.drawer.masks.cnpj', 'CNPJ (00.000.000/0000-00)')}</option>
+                            <option value="00000-000">{t('wizard.layout.drawer.masks.cep', 'CEP (00000-000)')}</option>
+                            <option value="(00) 00000-0000">{t('wizard.layout.drawer.masks.phone', 'Telefone/Celular ((00) 00000-0000)')}</option>
+                            <option value="00/00/0000">{t('wizard.layout.drawer.masks.date', 'Data (00/00/0000)')}</option>
+                            <option value="0.000">{t('wizard.layout.drawer.masks.integer', 'Inteiro com Milhar (0.000)')}</option>
+                            <option value="0.000,00">{t('wizard.layout.drawer.masks.decimal', 'Decimal com Milhar (0.000,00)')}</option>
+                            <option value="custom">{t('wizard.layout.drawer.masks.custom', 'Personalizado (Custom)...')}</option>
                           </select>
 
                           {!['', '000.000.000-00', '00.000.000/0000-00', '00000-000', '(00) 00000-0000', '00/00/0000', '0.000', '0.000,00'].includes(currentFieldMeta.content.mask || '') && (
@@ -3874,21 +3874,21 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                             <div className="space-y-4 p-4 mt-2 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 animate-in fade-in slide-in-from-top-2">
                               <div className="flex items-center gap-3">
                                 <label className="relative inline-flex items-center cursor-pointer">
-                                  <input 
-                                    type="checkbox" 
+                                  <input
+                                    type="checkbox"
                                     className="sr-only peer"
                                     checked={currentFieldMeta.viacep?.enabled || false}
                                     onChange={(e) => updateMeta('viacep', 'enabled', e.target.checked)}
                                   />
                                   <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none rounded-full peer dark:bg-neutral-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
                                 </label>
-                                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Busca Automática de Endereço (ViaCEP)</span>
+                                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">{t('wizard.layout.drawer.viacep_title', 'Busca Automática de Endereço (ViaCEP)')}</span>
                               </div>
 
                               {currentFieldMeta.viacep?.enabled && (
                                 <div className="space-y-3 pt-4 border-t border-indigo-100 dark:border-indigo-900/30">
-                                  <p className="text-[9px] text-neutral-500 font-medium leading-relaxed">Mapeie os campos do formulário que receberão os dados do ViaCEP automaticamente:</p>
-                                  
+                                  <p className="text-[9px] text-neutral-500 font-medium leading-relaxed">{t('wizard.layout.drawer.viacep_desc', 'Mapeie os campos do formulário que receberão os dados do ViaCEP automaticamente:')}</p>
+
                                   {['logradouro', 'bairro', 'cidade', 'uf'].map((fieldKey) => (
                                     <div key={fieldKey} className="flex items-center justify-between gap-2">
                                       <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider w-20">{fieldKey}</label>
@@ -3897,7 +3897,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                                         onChange={e => updateMeta('viacep', fieldKey, e.target.value)}
                                         className="flex-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1.5 text-[9px] font-bold outline-none"
                                       >
-                                        <option value="">Selecione o campo...</option>
+                                        <option value="">{t('wizard.layout.kanban.group_placeholder', 'Selecione o campo...')}</option>
                                         {config.layout_config.form_fields.map((ffId: string) => (
                                           <option key={ffId} value={ffId}>{getFieldName(ffId)}</option>
                                         ))}
@@ -3953,14 +3953,14 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                           onChange={e => updateMeta('component', 'type', e.target.value)}
                           className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
                         >
-                          <option value="text">Input Texto</option>
-                          <option value="textarea">Área de Texto (Textarea)</option>
-                          <option value="number">Número</option>
-                          <option value="select">Combo (Select)</option>
-                          <option value="radio">Radio Buttons</option>
-                          <option value="checkbox">Checkbox Group</option>
-                          <option value="switch">Switch (Liga/Desliga)</option>
-                          <option value="date">Data</option>
+                          <option value="text">{t('wizard.layout.drawer.component_types.text')}</option>
+                          <option value="textarea">{t('wizard.layout.drawer.component_types.textarea')}</option>
+                          <option value="number">{t('wizard.layout.drawer.component_types.number')}</option>
+                          <option value="select">{t('wizard.layout.drawer.component_types.select')}</option>
+                          <option value="radio">{t('wizard.layout.drawer.component_types.radio')}</option>
+                          <option value="checkbox">{t('wizard.layout.drawer.component_types.checkbox')}</option>
+                          <option value="switch">{t('wizard.layout.drawer.component_types.switch')}</option>
+                          <option value="date">{t('wizard.layout.drawer.component_types.date')}</option>
                         </select>
                       </div>
 
@@ -4002,7 +4002,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                                     (currentFieldMeta.component?.options_type || 'fixed') === opt ? 'bg-indigo-600 text-white shadow-md' : 'bg-white dark:bg-neutral-900 text-neutral-400'
                                   )}
                                 >
-                                  {opt === 'fixed' ? 'Valores Fixos' : opt === 'enumeration' ? 'Enum Global' : 'Relacionamento'}
+                                  {opt === 'fixed' ? t('wizard.layout.drawer.source_fixed') : opt === 'enumeration' ? t('wizard.layout.drawer.source_enum') : t('wizard.layout.drawer.source_relational')}
                                 </button>
                               ))}
                             </div>
@@ -4020,20 +4020,20 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                             </div>
                           ) : currentFieldMeta.component?.options_type === 'enumeration' ? (
                             <div className="space-y-2">
-                              <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Selecione o Enumeration</label>
+                              <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.select_enumeration')}</label>
                               <select
                                 value={currentFieldMeta.component?.rel_table || ''}
                                 onChange={e => updateMeta('component', 'rel_table', e.target.value)}
                                 className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
                               >
-                                <option value="">Selecione...</option>
+                                <option value="">{t('wizard.layout.drawer.options_select_placeholder')}</option>
                                 {enumerations.map((e: any) => (
                                   <option key={e.id} value={e.id}>{e.name}</option>
                                 ))}
                               </select>
                               {currentFieldMeta.component?.rel_table && (
                                 <p className="text-[9px] text-neutral-500 mt-2 italic px-1">
-                                  {enumerations.find((e: any) => e.id === currentFieldMeta.component?.rel_table)?.values?.length || 0} opções disponíveis
+                                  {t('wizard.layout.drawer.options_available', '{count} opções disponíveis').replace('{count}', String(enumerations.find((e: any) => e.id === currentFieldMeta.component?.rel_table)?.values?.length || 0))}
                                 </p>
                               )}
                             </div>
@@ -4046,7 +4046,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                                   onChange={e => updateMeta('component', 'rel_table', e.target.value)}
                                   className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
                                 >
-                                  <option value="">Selecione...</option>
+                                  <option value="">{t('wizard.layout.drawer.options_select_placeholder')}</option>
                                   {models.map((m: any) => (
                                     <option key={m.id} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>
                                   ))}
@@ -4054,26 +4054,26 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                               </div>
                               <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-2">
-                                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Label (Exibição)</label>
+                                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.rel_label')}</label>
                                   <select
                                     value={currentFieldMeta.component?.rel_label || ''}
                                     onChange={e => updateMeta('component', 'rel_label', e.target.value)}
                                     className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
                                   >
-                                    <option value="">Selecione...</option>
+                                    <option value="">{t('wizard.layout.drawer.options_select_placeholder')}</option>
                                     {models.find((m: any) => m.db_table_name === currentFieldMeta.component?.rel_table)?.fields.map((f: any) => (
                                       <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
                                     ))}
                                   </select>
                                 </div>
                                 <div className="space-y-2">
-                                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Value (ID)</label>
+                                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.rel_value')}</label>
                                   <select
                                     value={currentFieldMeta.component?.rel_value || ''}
                                     onChange={e => updateMeta('component', 'rel_value', e.target.value)}
                                     className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
                                   >
-                                    <option value="">Selecione...</option>
+                                    <option value="">{t('wizard.layout.drawer.options_select_placeholder')}</option>
                                     {models.find((m: any) => m.db_table_name === currentFieldMeta.component?.rel_table)?.fields.map((f: any) => (
                                       <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
                                     ))}
@@ -4092,12 +4092,12 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
               {editingFieldId !== 'TABS' && drawerActiveTab === 'estilos' && (
                 <>
                   <button
-                      onClick={handleApplyStylesToZone}
-                      className="w-full mb-6 flex items-center justify-center gap-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 py-3 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors text-xs font-bold"
-                    >
-                      <Copy className="w-4 h-4" />
-                      Aplicar formatação a todos desta zona ({editingFieldZone === 'filter' ? 'Filtro' : editingFieldZone === 'grid' ? 'Grid' : 'Formulário'})
-                    </button>
+                    onClick={handleApplyStylesToZone}
+                    className="w-full mb-6 flex items-center justify-center gap-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 py-3 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors text-xs font-bold"
+                  >
+                    <Copy className="w-4 h-4" />
+                    {t('wizard.layout.drawer.apply_styles_zone', 'Aplicar formatação a todos desta zona ({zone})').replace('{zone}', editingFieldZone === 'filter' ? t('wizard.layout.drawer.zone_filter') : editingFieldZone === 'grid' ? t('wizard.layout.drawer.zone_grid') : t('wizard.layout.drawer.zone_form'))}
+                  </button>
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="w-1 h-4 bg-indigo-600 rounded-full"></div>
@@ -4215,7 +4215,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
         title="Configurar Widget de BI"
       >
         <div className="space-y-6">
-          <BIWidgetConfigEditor 
+          <BIWidgetConfigEditor
             editingWidget={editingWidget}
             setEditingWidget={setEditingWidget}
             models={models}
@@ -4225,8 +4225,8 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
 
 
           <div className="flex gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800">
-             <button onClick={() => setIsWidgetModalOpen(false)} className="flex-1 px-4 py-3.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all">Cancelar</button>
-             <button onClick={() => handleSaveWidget(editingWidget)} className="flex-1 px-4 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95">Salvar Widget</button>
+            <button onClick={() => setIsWidgetModalOpen(false)} className="flex-1 px-4 py-3.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all">Cancelar</button>
+            <button onClick={() => handleSaveWidget(editingWidget)} className="flex-1 px-4 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95">Salvar Widget</button>
           </div>
         </div>
       </Modal>
@@ -4298,7 +4298,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
     const newActions = isNew
       ? [...currentActions, { ...action, id: action.id || Math.random().toString(36).substr(2, 9) }]
       : currentActions.map((a: any) => a.id === action.id ? action : a)
-      
+
     setConfig({
       ...config,
       layout_config: {
@@ -4321,17 +4321,17 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
   }
 
   const strategies = [
-    { 
-      id: 'dynamic', 
-      title: t('wizard.actions.dynamic_query.title'), 
-      desc: t('wizard.actions.dynamic_query.desc'), 
-      icon: Wand2 
+    {
+      id: 'dynamic',
+      title: t('wizard.actions.dynamic_query.title'),
+      desc: t('wizard.actions.dynamic_query.desc'),
+      icon: Wand2
     },
-    { 
-      id: 'raw', 
-      title: t('wizard.actions.raw_sql.title'), 
-      desc: t('wizard.actions.raw_sql.desc'), 
-      icon: Terminal 
+    {
+      id: 'raw',
+      title: t('wizard.actions.raw_sql.title'),
+      desc: t('wizard.actions.raw_sql.desc'),
+      icon: Terminal
     }
   ]
 
@@ -4357,15 +4357,15 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                   onClick={() => {
                     setConfig({
                       ...config,
-                      buttons_config: config.buttons_config.map((b: any) => 
+                      buttons_config: config.buttons_config.map((b: any) =>
                         b.id === btn.id ? { ...b, visible: !b.visible } : b
                       )
                     })
                   }}
                   className={cn(
                     "w-full p-4 rounded-[1.5rem] border transition-all flex flex-col items-center justify-center gap-3 min-h-[108px] relative",
-                    btn.visible 
-                      ? "bg-white dark:bg-neutral-955 border-indigo-600 shadow-lg shadow-indigo-500/5" 
+                    btn.visible
+                      ? "bg-white dark:bg-neutral-955 border-indigo-600 shadow-lg shadow-indigo-500/5"
                       : "bg-neutral-50/50 dark:bg-neutral-900/30 border-neutral-200 dark:border-neutral-800 opacity-50",
                     isDisabled && "opacity-30 cursor-not-allowed hover:border-neutral-200 dark:hover:border-neutral-800"
                   )}
@@ -4374,10 +4374,10 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                     "w-10 h-10 rounded-2xl flex items-center justify-center transition-colors",
                     btn.visible ? "bg-indigo-500 text-white" : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500"
                   )}
-                  style={btn.visible ? {
-                    backgroundColor: btn.bg_color || undefined,
-                    color: btn.text_color || undefined
-                  } : undefined}
+                    style={btn.visible ? {
+                      backgroundColor: btn.bg_color || undefined,
+                      color: btn.text_color || undefined
+                    } : undefined}
                   >
                     {btn.icon === 'search' && <Search className="w-5 h-5" />}
                     {btn.icon === 'refresh-ccw' && <RefreshCcw className="w-5 h-5" />}
@@ -4385,7 +4385,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                     {btn.icon === 'pencil' && <Pencil className="w-5 h-5" />}
                     {btn.icon === 'trash' && <Trash2 className="w-5 h-5" />}
                   </div>
-                  <span 
+                  <span
                     className={cn(
                       "text-[10px] font-black transition-all truncate max-w-full px-2",
                       (btn.custom_label !== undefined && btn.custom_label !== '') ? "" : "capitalize tracking-wider"
@@ -4432,12 +4432,12 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Ações Customizadas</label>
+          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.custom_actions')}</label>
           <button
             onClick={() => {
               setEditingAction({
                 id: Math.random().toString(36).substr(2, 9),
-                label: 'Nova Ação',
+                label: t('wizard.actions.new_action'),
                 icon: 'Zap',
                 color: 'indigo',
                 trigger_type: 'usecase',
@@ -4456,7 +4456,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
             className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all"
           >
             <Plus className="w-3.5 h-3.5" />
-            Adicionar Ação
+            {t('wizard.actions.add_action')}
           </button>
         </div>
 
@@ -4464,7 +4464,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
           {(config.layout_config.custom_actions || []).length === 0 ? (
             <div className="col-span-full p-8 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] flex flex-col items-center justify-center text-neutral-400">
               <Zap className="w-6 h-6 mb-2 opacity-50" />
-              <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma ação customizada configurada</p>
+              <p className="text-[10px] font-black uppercase tracking-widest">{t('wizard.actions.no_custom_actions')}</p>
             </div>
           ) : (
             (config.layout_config.custom_actions || []).map((action: any) => (
@@ -4484,11 +4484,11 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                           ? (Array.isArray(action.contexts) ? action.contexts : [action.contexts])
                           : (action.context ? [action.context] : ['row']);
                         return activeContexts.map(c => {
-                          if (c === 'row') return 'Linha (Pesquisa)';
-                          if (c === 'bulk') return 'Global (Pesquisa)';
-                          if (c === 'master_top') return 'Global (Mestre)';
-                          if (c === 'detail_top') return 'Global (Detalhe)';
-                          if (c === 'detail_row') return 'Linha (Detalhe)';
+                          if (c === 'row') return t('wizard.actions.contexts.row');
+                          if (c === 'bulk') return t('wizard.actions.contexts.bulk');
+                          if (c === 'master_top') return t('wizard.actions.contexts.master_top');
+                          if (c === 'detail_top') return t('wizard.actions.contexts.detail_top');
+                          if (c === 'detail_row') return t('wizard.actions.contexts.detail_row');
                           return c;
                         }).join(', ');
                       })()}
@@ -4506,12 +4506,12 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
       </div>
 
       <div className="space-y-6">
-        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Interface de Ação (Cadastro/Edição)</label>
+        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.action_interface_label')}</label>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { id: 'drawer', title: 'Drawer (Lateral)', desc: 'Os formulários abrirão em uma gaveta lateral deslizante.', icon: Layout },
-            { id: 'modal', title: 'Modal (Central)', desc: 'Os formulários abrirão em uma janela centralizada com fundo escurecido.', icon: Maximize2 },
-            { id: 'page', title: 'Mesma Tela (Página)', desc: 'O formulário será exibido na mesma tela, substituindo a lista atual.', icon: Layout }
+            { id: 'drawer', title: t('wizard.actions.interface_options.drawer_title'), desc: t('wizard.actions.interface_options.drawer_desc'), icon: Layout },
+            { id: 'modal', title: t('wizard.actions.interface_options.modal_title'), desc: t('wizard.actions.interface_options.modal_desc'), icon: Maximize2 },
+            { id: 'page', title: t('wizard.actions.interface_options.page_title'), desc: t('wizard.actions.interface_options.page_desc'), icon: Layout }
           ].map(opt => (
             <button
               key={opt.id}
@@ -4544,7 +4544,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
 
       <div className="space-y-6">
         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.export_data_title', 'Exportação de Dados')}</label>
-        
+
         <div className="space-y-4">
           <button
             type="button"
@@ -4552,7 +4552,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
               const isExportVisible = config.buttons_config.find((b: any) => b.id === 'export')?.visible !== false;
               setConfig({
                 ...config,
-                buttons_config: config.buttons_config.map((b: any) => 
+                buttons_config: config.buttons_config.map((b: any) =>
                   b.id === 'export' ? { ...b, visible: !isExportVisible } : b
                 )
               });
@@ -4678,7 +4678,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
       <Modal
         isOpen={isActionModalOpen}
         onClose={() => setIsActionModalOpen(false)}
-        title={editingAction?.id ? 'Editar Ação Customizada' : 'Nova Ação Customizada'}
+        title={editingAction?.id ? t('wizard.actions.custom_action_edit') : t('wizard.actions.custom_action_new')}
         size="2xl"
       >
         {editingAction && (
@@ -4699,7 +4699,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                   "w-4.5 h-4.5 rounded-full flex items-center justify-center text-[9px] border",
                   activeModalTab === 'general' ? "bg-indigo-600 border-indigo-600 text-white font-bold" : "border-neutral-300 dark:border-neutral-700"
                 )}>1</span>
-                Identificação & Aparência
+                {t('wizard.actions.tab_identification')}
               </button>
               <button
                 type="button"
@@ -4715,7 +4715,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                   "w-4.5 h-4.5 rounded-full flex items-center justify-center text-[9px] border",
                   activeModalTab === 'trigger' ? "bg-indigo-600 border-indigo-600 text-white font-bold" : "border-neutral-300 dark:border-neutral-700"
                 )}>2</span>
-                Comportamento (Trigger)
+                {t('wizard.actions.tab_behavior')}
               </button>
               <button
                 type="button"
@@ -4731,7 +4731,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                   "w-4.5 h-4.5 rounded-full flex items-center justify-center text-[9px] border",
                   activeModalTab === 'bpm' ? "bg-emerald-600 border-emerald-600 text-white font-bold" : "border-neutral-300 dark:border-neutral-700"
                 )}>3</span>
-                BPM / Automação
+                {t('wizard.actions.tab_bpm')}
               </button>
             </div>
 
@@ -4741,7 +4741,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                 {/* Left: Button properties */}
                 <div className="lg:col-span-6 space-y-5">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Nome do Botão</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.button_name')}</label>
                     <input
                       type="text"
                       value={editingAction.label}
@@ -4751,7 +4751,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                   </div>
 
                   <div className="space-y-2 relative">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Ícone</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.icon')}</label>
                     <button
                       type="button"
                       onClick={() => setIsIconPickerOpen(true)}
@@ -4759,13 +4759,13 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                     >
                       <div className="flex items-center gap-3">
                         <DynamicIcon icon={editingAction.icon || 'Zap'} className="w-5 h-5 text-indigo-500" />
-                        <span>{editingAction.icon || 'Selecione um ícone...'}</span>
+                        <span>{editingAction.icon || t('wizard.actions.select_icon_placeholder')}</span>
                       </div>
-                      <span className="text-[10px] uppercase text-neutral-400 font-bold">Trocar</span>
+                      <span className="text-[10px] uppercase text-neutral-400 font-bold">{t('wizard.actions.change')}</span>
                     </button>
                     {isIconPickerOpen && (
-                      <IconPicker 
-                        currentIcon={editingAction.icon || 'Zap'} 
+                      <IconPicker
+                        currentIcon={editingAction.icon || 'Zap'}
                         onSelect={icon => {
                           setEditingAction({ ...editingAction, icon })
                           setIsIconPickerOpen(false)
@@ -4776,32 +4776,32 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Cor</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.color')}</label>
                     <select
                       value={editingAction.color}
                       onChange={e => setEditingAction({ ...editingAction, color: e.target.value })}
                       className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-all"
                     >
-                      <option value="indigo">Índigo (Padrão)</option>
-                      <option value="emerald">Verde (Sucesso/Aprovar)</option>
-                      <option value="red">Vermelho (Perigo/Rejeitar)</option>
-                      <option value="amber">Amarelo (Atenção)</option>
-                      <option value="purple">Roxo (Especial)</option>
+                      <option value="indigo">{t('wizard.actions.colors.indigo')}</option>
+                      <option value="emerald">{t('wizard.actions.colors.emerald')}</option>
+                      <option value="red">{t('wizard.actions.colors.red')}</option>
+                      <option value="amber">{t('wizard.actions.colors.amber')}</option>
+                      <option value="purple">{t('wizard.actions.colors.purple')}</option>
                     </select>
                   </div>
                 </div>
 
                 {/* Right: Context checkboxes */}
                 <div className="lg:col-span-6 space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Contexto <span className="normal-case font-normal">(múltipla seleção)</span></label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.context')} <span className="normal-case font-normal">({t('wizard.actions.multiple_selection')})</span></label>
                   <div className="grid grid-cols-1 gap-1.5 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl">
                     {[
-                      { value: 'row', label: 'Ação de Linha (Pesquisa)' },
-                      { value: 'bulk', label: 'Ação Global (Topo da Pesquisa)' },
-                      { value: 'master_top', label: 'Ação Global (Topo do Mestre)' },
-                      { value: 'detail_top', label: 'Ação Global (Topo do Detalhe)' },
-                      { value: 'detail_row', label: 'Ação de Linha (Detalhe)' },
-                      { value: 'field_group', label: 'Agrupado ao Campo (Formulário)' },
+                      { value: 'row', label: t('wizard.actions.contexts.row') },
+                      { value: 'bulk', label: t('wizard.actions.contexts.bulk') },
+                      { value: 'master_top', label: t('wizard.actions.contexts.master_top') },
+                      { value: 'detail_top', label: t('wizard.actions.contexts.detail_top') },
+                      { value: 'detail_row', label: t('wizard.actions.contexts.detail_row') },
+                      { value: 'field_group', label: t('wizard.actions.contexts.field_group') },
                     ].map(opt => {
                       const activeContexts: string[] = editingAction.contexts
                         ? (Array.isArray(editingAction.contexts) ? editingAction.contexts : [editingAction.contexts])
@@ -4828,7 +4828,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                         </label>
                       )
                     })}
-                    
+
                     {(() => {
                       const activeContexts: string[] = editingAction.contexts
                         ? (Array.isArray(editingAction.contexts) ? editingAction.contexts : [editingAction.contexts])
@@ -4836,12 +4836,12 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                       return activeContexts.includes('field_group') ? (
                         <div className="p-3 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-xl mt-2 space-y-3 animate-in fade-in slide-in-from-top-2">
                           <div className="space-y-2">
-                            <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">Campos Alvo (Selecione um ou mais)</label>
+                            <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">{t('wizard.actions.target_fields')}</label>
                             <div className="max-h-48 overflow-y-auto custom-scrollbar border border-indigo-100 dark:border-indigo-900/30 rounded-lg bg-white dark:bg-neutral-950 p-3 space-y-4">
                               {/* Filtros */}
                               {groupedFields.filterFields.length > 0 && (
                                 <div className="space-y-1.5">
-                                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Filtros (Argumentos)</span>
+                                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{t('wizard.actions.filters_args')}</span>
                                   {groupedFields.filterFields.map((f: any) => {
                                     const val = `filter:${f.db_column_name}`;
                                     const legacyVal = f.db_column_name;
@@ -4862,7 +4862,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                               {/* Grid */}
                               {groupedFields.gridFields.length > 0 && (
                                 <div className="space-y-1.5">
-                                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Grid (Listagem)</span>
+                                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{t('wizard.actions.grid_listing')}</span>
                                   {groupedFields.gridFields.map((f: any) => {
                                     const val = `grid:${f.db_column_name}`;
                                     const legacyVal = f.db_column_name;
@@ -4883,7 +4883,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                               {/* Master */}
                               {groupedFields.masterFields.length > 0 && (
                                 <div className="space-y-1.5">
-                                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Mestre (Formulário)</span>
+                                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{t('wizard.actions.master_form')}</span>
                                   {groupedFields.masterFields.map((f: any) => {
                                     const val = `master:${f.db_column_name}`;
                                     const legacyVal = f.db_column_name;
@@ -4904,7 +4904,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                               {/* Detail */}
                               {groupedFields.detailFields.length > 0 && (
                                 <div className="space-y-1.5">
-                                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Detalhes (Formulário)</span>
+                                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{t('wizard.actions.details_form')}</span>
                                   {groupedFields.detailFields.map((f: any) => {
                                     const val = `detail:${f.db_column_name}`;
                                     const legacyVal = f.db_column_name;
@@ -4925,21 +4925,21 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                             </div>
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">Posição</label>
+                            <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">{t('wizard.actions.position')}</label>
                             <div className="flex gap-2">
                               <button
                                 type="button"
                                 onClick={() => setEditingAction({ ...editingAction, group_position: 'left' })}
                                 className={cn("flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-md transition-all border", (editingAction.group_position || 'right') === 'left' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50')}
                               >
-                                Esquerda
+                                {t('wizard.actions.left')}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setEditingAction({ ...editingAction, group_position: 'right' })}
                                 className={cn("flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-md transition-all border", (editingAction.group_position || 'right') === 'right' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50')}
                               >
-                                Direita
+                                {t('wizard.actions.right')}
                               </button>
                             </div>
                           </div>
@@ -4955,36 +4955,36 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
             {activeModalTab === 'trigger' && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Tipo de Ação (Trigger)</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.trigger_type')}</label>
                   <div className="flex p-1 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800">
                     <button
                       type="button"
                       onClick={() => setEditingAction({ ...editingAction, trigger_type: 'sql' })}
                       className={cn("flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", editingAction.trigger_type === 'sql' ? 'bg-white dark:bg-neutral-800 shadow text-indigo-600' : 'text-neutral-500')}
                     >
-                      SQL / Procedure
+                      {t('wizard.actions.sql_procedure')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setEditingAction({ ...editingAction, trigger_type: 'usecase' })}
                       className={cn("flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", editingAction.trigger_type === 'usecase' ? 'bg-white dark:bg-neutral-800 shadow text-indigo-600' : 'text-neutral-500')}
                     >
-                      Outra Tela
+                      {t('wizard.actions.trigger_usecase')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setEditingAction({ ...editingAction, trigger_type: 'rest' })}
                       className={cn("flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", editingAction.trigger_type === 'rest' ? 'bg-white dark:bg-neutral-800 shadow text-indigo-600' : 'text-neutral-500')}
                     >
-                      REST API
+                      {t('wizard.actions.trigger_rest')}
                     </button>
                   </div>
                 </div>
 
                 {editingAction.trigger_type === 'sql' && (
                   <div className="space-y-2 animate-in fade-in zoom-in-95 duration-300">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Comando SQL</label>
-                    <p className="text-[9px] text-neutral-500 ml-1 mb-2">Você pode usar variáveis usando chaves duplas: {'{{id}}'}</p>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.sql_command')}</label>
+                    <p className="text-[9px] text-neutral-500 ml-1 mb-2">{t('wizard.actions.sql_variables_hint', 'Você pode usar variáveis usando chaves duplas: {{id}}')}</p>
                     <textarea
                       value={editingAction.sql_query}
                       onChange={e => setEditingAction({ ...editingAction, sql_query: e.target.value })}
@@ -4998,20 +4998,20 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                   <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300 bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Caso de Uso de Destino</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.target_usecase')}</label>
                         <select
                           value={editingAction.usecase_slug}
                           onChange={e => setEditingAction({ ...editingAction, usecase_slug: e.target.value })}
                           className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-500 outline-none transition-all"
                         >
-                          <option value="">Selecione um caso de uso...</option>
+                          <option value="">{t('wizard.actions.select_usecase')}</option>
                           {isDownloadsActive && <option value="downloads">📁 Central de Downloads</option>}
                           {useCases?.filter((uc: any) => uc.slug !== config.slug).map((uc: any) => (
                             <option key={uc.slug} value={uc.slug}>{uc.name} ({uc.slug})</option>
                           ))}
                         </select>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.open_mode', 'Modo de Abertura')}</label>
                         <select
@@ -5046,15 +5046,15 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                                       type="button"
                                       onClick={() => {
                                         const current = editingAction.usecase_selected_fields || []
-                                        const next = isSelected 
+                                        const next = isSelected
                                           ? current.filter((f: string) => f !== field.db_column_name)
                                           : [...current, field.db_column_name]
                                         setEditingAction({ ...editingAction, usecase_selected_fields: next })
                                       }}
                                       className={cn(
                                         "px-2.5 py-1.5 text-[10px] font-bold rounded-lg border transition-all",
-                                        isSelected 
-                                          ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-500/20" 
+                                        isSelected
+                                          ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-500/20"
                                           : "bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-indigo-500"
                                       )}
                                     >
@@ -5161,8 +5161,8 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                           return (
                             <label key={workflow.id} className={cn(
                               "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border-2",
-                              isChecked 
-                                ? "bg-white dark:bg-neutral-800 border-emerald-500 shadow-sm" 
+                              isChecked
+                                ? "bg-white dark:bg-neutral-800 border-emerald-500 shadow-sm"
                                 : "bg-white dark:bg-neutral-800 border-transparent hover:border-emerald-200 dark:hover:border-emerald-800"
                             )}>
                               <div className={cn(
@@ -5176,13 +5176,13 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                                   {workflow.name}
                                 </p>
                               </div>
-                              <input 
-                                type="checkbox" 
+                              <input
+                                type="checkbox"
                                 className="hidden"
                                 checked={isChecked}
                                 onChange={(e) => {
-                                  const next = e.target.checked 
-                                    ? [...linkedWorkflows, workflow.id] 
+                                  const next = e.target.checked
+                                    ? [...linkedWorkflows, workflow.id]
                                     : linkedWorkflows.filter((id: string) => id !== workflow.id);
                                   setEditingAction({ ...editingAction, linked_bpm_workflows: next });
                                 }}
@@ -5239,7 +5239,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                   <option value="JetBrains Mono">Mono (JetBrains)</option>
                 </select>
               </div>
-              
+
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Tamanho</label>
                 <input
@@ -5395,10 +5395,10 @@ function DraggableFieldCard({ field }: { field: any }) {
 function DroppableZone({ id, children, className }: any) {
   const { setNodeRef, isOver } = useDroppable({ id })
   return (
-    <div 
-      ref={setNodeRef} 
+    <div
+      ref={setNodeRef}
       className={cn(
-        className, 
+        className,
         "transition-all duration-300 relative",
         isOver && "bg-indigo-100/50 dark:bg-indigo-900/30 border-indigo-500 border-solid scale-[1.02] shadow-[0_0_40px_rgba(99,102,241,0.15)] ring-4 ring-indigo-500/10"
       )}
@@ -5419,7 +5419,7 @@ function DraggableTableHeader({ model, isCollapsed, onToggle }: any) {
   })
 
   return (
-    <div 
+    <div
       ref={setNodeRef}
       {...attributes}
       {...listeners}
@@ -5449,8 +5449,8 @@ function DraggableTableHeader({ model, isCollapsed, onToggle }: any) {
 
 function SortableFieldChip({ id, itemValue, toggleField, onEdit, children, zoneType }: any) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
-  const style = { 
-    transform: CSS.Transform.toString(transform), 
+  const style = {
+    transform: CSS.Transform.toString(transform),
     transition,
     ...(isDragging ? { opacity: 0.5, zIndex: 50, position: 'relative' } : {})
   }
@@ -5489,17 +5489,17 @@ function SortableFieldChip({ id, itemValue, toggleField, onEdit, children, zoneT
 
 function SortableWidgetCard({ widget, onEdit, onDelete, getFieldName }: any) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: `widget-${widget.id}` })
-  const style = { 
-    transform: CSS.Transform.toString(transform), 
+  const style = {
+    transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 50 : 'auto',
     opacity: isDragging ? 0.5 : 1
   }
 
   return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
+    <div
+      ref={setNodeRef}
+      style={style}
       className="p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] flex items-center justify-between group shadow-sm hover:border-indigo-300 transition-all relative overflow-hidden"
     >
       <div className="flex items-center gap-3 relative z-10">

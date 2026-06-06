@@ -1503,12 +1503,17 @@
           "date": "Fecha"
         },
         "masks": {
+          "cpf": "CPF (000.000.000-00)",
+          "cnpj": "CNPJ (00.000.000/0000-00)",
+          "cep": "Código Postal (00000-000)",
           "phone": "Teléfono/Celular ((00) 00000-0000)",
           "date": "Fecha (00/00/0000)",
           "integer": "Entero con Millares (0.000)",
           "decimal": "Decimal con Millares (0.000,00)",
           "custom": "Personalizado..."
-        }
+        },
+        "viacep_title": "Búsqueda Automática de Dirección (ViaCEP)",
+        "viacep_desc": "Mapee los campos del formulario que recibirán los datos de ViaCEP automáticamente:"
       }
     },
     "actions": {

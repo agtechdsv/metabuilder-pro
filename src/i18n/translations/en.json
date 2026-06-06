@@ -1504,12 +1504,17 @@
           "date": "Date"
         },
         "masks": {
+          "cpf": "CPF (000.000.000-00)",
+          "cnpj": "CNPJ (00.000.000/0000-00)",
+          "cep": "ZIP Code (00000-000)",
           "phone": "Phone/Mobile ((00) 00000-0000)",
           "date": "Date (00/00/0000)",
           "integer": "Integer with Thousand (0.000)",
           "decimal": "Decimal with Thousand (0.000,00)",
           "custom": "Custom..."
-        }
+        },
+        "viacep_title": "Automatic Address Lookup (ViaCEP)",
+        "viacep_desc": "Map the form fields that will receive the ViaCEP data automatically:"
       }
     },
     "actions": {
