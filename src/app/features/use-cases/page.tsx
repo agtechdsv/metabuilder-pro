@@ -2297,7 +2297,7 @@ export default function UseCasesFeaturePage() {
           >
             <div className="border-b border-neutral-100 dark:border-neutral-800/85 pb-4">
               <h4 className="text-sm font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
-                Especificações Técnicas
+                {t('marketing_v2.use_cases_page.technical_specifications')}
               </h4>
             </div>
 
@@ -2365,10 +2365,10 @@ export default function UseCasesFeaturePage() {
       <section className="border-t border-neutral-100 dark:border-neutral-900 pt-16 space-y-12">
         <div className="max-w-2xl">
           <h2 className="text-3xl font-black dark:text-white tracking-tight">
-            Como o Motor de Metadados Processa as Lógicas?
+            {t('marketing_v2.use_cases_page.how_engine_works_title')}
           </h2>
           <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed mt-2">
-            Cada caso de uso é modelado em formato de metadados declarativos JSON. O Runtime lê a lógica selecionada e reconstrói o estado comportamental no frontend do cliente.
+            {t('marketing_v2.use_cases_page.how_engine_works_desc')}
           </p>
         </div>
 
@@ -2377,9 +2377,9 @@ export default function UseCasesFeaturePage() {
             <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500">
               <Database className="w-6 h-6" />
             </div>
-            <h4 className="text-lg font-bold dark:text-white">1. Mapeamento Semântico</h4>
+            <h4 className="text-lg font-bold dark:text-white">{t('marketing_v2.use_cases_page.semantic_mapping_title')}</h4>
             <p className="text-neutral-500 dark:text-neutral-400 text-xs leading-relaxed">
-              O assistente analisa as Chaves Primárias (PK) e Estrangeiras (FK) para estruturar os formulários, ligar as tabelas do Mestre-Detalhe e sugerir relacionamentos automaticamente.
+              {t('marketing_v2.use_cases_page.semantic_mapping_desc')}
             </p>
           </div>
 
@@ -2387,9 +2387,9 @@ export default function UseCasesFeaturePage() {
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500">
               <Terminal className="w-6 h-6" />
             </div>
-            <h4 className="text-lg font-bold dark:text-white">2. Transações pelo Túnel</h4>
+            <h4 className="text-lg font-bold dark:text-white">{t('marketing_v2.use_cases_page.tunnel_transactions_title')}</h4>
             <p className="text-neutral-500 dark:text-neutral-400 text-xs leading-relaxed">
-              Os comandos CRUD e queries SQL não batem em servidores externos. O runtime envia instruções criptografadas TLS 1.3 processadas localmente pelo CLI Agent.
+              {t('marketing_v2.use_cases_page.tunnel_transactions_desc')}
             </p>
           </div>
 
@@ -2397,9 +2397,9 @@ export default function UseCasesFeaturePage() {
             <div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-500">
               <Layout className="w-6 h-6" />
             </div>
-            <h4 className="text-lg font-bold dark:text-white">3. Runtime Whitelabel</h4>
+            <h4 className="text-lg font-bold dark:text-white">{t('marketing_v2.use_cases_page.whitelabel_runtime_title')}</h4>
             <p className="text-neutral-500 dark:text-neutral-400 text-xs leading-relaxed">
-              A estrutura da tela se adapta instantaneamente ao tema (Light/Dark), logotipos, tipografia e regras de segurança definidas no painel de branding de cada workspace.
+              {t('marketing_v2.use_cases_page.whitelabel_runtime_desc')}
             </p>
           </div>
         </div>
@@ -2408,9 +2408,9 @@ export default function UseCasesFeaturePage() {
       {/* Bottom CTA Card */}
       <section className="p-12 rounded-[3.5rem] bg-neutral-100 dark:bg-neutral-900 border border-neutral-250 dark:border-neutral-800 text-center space-y-8">
         <div className="space-y-3">
-          <h2 className="text-3xl font-black dark:text-white">Pronto para criar seus Casos de Uso?</h2>
+          <h2 className="text-3xl font-black dark:text-white">{t('marketing_v2.use_cases_page.bottom_cta_title')}</h2>
           <p className="text-neutral-500 dark:text-neutral-400 max-w-xl mx-auto text-sm leading-relaxed">
-            Abra o painel Studio de um dos seus projetos e use o Use Case Builder para construir qualquer um dos modelos em minutos.
+            {t('marketing_v2.use_cases_page.bottom_cta_desc')}
           </p>
         </div>
         <BottomCta />

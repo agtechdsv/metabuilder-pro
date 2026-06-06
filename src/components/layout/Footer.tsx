@@ -28,16 +28,16 @@ export function Footer() {
 
         {/* Centro: Info Consolidada */}
         <div className="flex items-center gap-2 text-sm font-medium text-neutral-400 dark:text-neutral-500">
-          <span>{language === 'pt' ? 'Desenvolvido por' : language === 'es' ? 'Desarrollado por' : 'Developed by'}</span>
+          <span>{t('footer.developed_by')}</span>
           <button 
             onClick={() => setLegalType('agtech')}
-            className="text-indigo-600 font-bold hover:scale-105 transition-transform"
+            className="text-indigo-650 font-bold hover:scale-105 transition-transform"
           >
             AGTech ®
           </button>
           <span className="mx-1 opacity-30">|</span>
-          <span>MetadataTech {language === 'en' ? 'High Performance' : 'de Alta Performance'} © 2026</span>
-          <span className="ml-1">{language === 'en' ? 'All rights reserved.' : 'Todos os direitos reservados.'}</span>
+          <span>MetadataTech {t('footer.high_performance')} © 2026</span>
+          <span className="ml-1">{t('footer.all_rights_reserved')}</span>
         </div>
 
         {/* Lado Direito: Links Legais */}
@@ -46,13 +46,13 @@ export function Footer() {
             onClick={() => setLegalType('privacy')}
             className="text-sm font-bold text-neutral-400 dark:text-neutral-500 hover:text-indigo-600 hover:underline underline-offset-4 transition-all cursor-pointer"
           >
-            {language === 'pt' ? 'Privacidade' : language === 'es' ? 'Privacidad' : 'Privacy'}
+            {t('footer.privacy')}
           </button>
           <button 
             onClick={() => setLegalType('terms')}
             className="text-sm font-bold text-neutral-400 dark:text-neutral-500 hover:text-indigo-600 hover:underline underline-offset-4 transition-all cursor-pointer"
           >
-            {language === 'pt' ? 'Termos' : language === 'es' ? 'Términos' : 'Terms'}
+            {t('footer.terms')}
           </button>
         </div>
       </div>

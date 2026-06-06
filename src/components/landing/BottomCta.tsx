@@ -36,7 +36,7 @@ export function BottomCta({ className, buttonClassName }: BottomCtaProps) {
     <>
       <div className="flex flex-col items-center gap-3 w-full">
         <p className="text-xs font-medium italic text-center max-w-xl leading-relaxed opacity-70">
-          Muito mais que uma demonstração técnica: um bate-papo para entender suas necessidades e garantir que somos a solução ideal para os seus projetos.
+          {t('hero.demo_subtext')}
         </p>
         <div className={cn("flex flex-col sm:flex-row gap-4 justify-center items-center w-full", className)}>
           {user ? (
@@ -48,7 +48,7 @@ export function BottomCta({ className, buttonClassName }: BottomCtaProps) {
               )}
             >
               <LayoutDashboard className="w-4 h-4" />
-              <span>Workspace</span>
+              <span>{t('common.dashboard')}</span>
               <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           ) : (
@@ -60,7 +60,7 @@ export function BottomCta({ className, buttonClassName }: BottomCtaProps) {
               )}
             >
               <LogIn className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-              <span>Entrar</span>
+              <span>{t('common.login')}</span>
             </button>
           )}
           <Link

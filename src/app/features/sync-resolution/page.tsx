@@ -22,11 +22,11 @@ export default function SyncResolutionFeaturePage() {
             <RefreshCw className="w-8 h-8" />
           </div>
           <h1 className="text-5xl md:text-7xl font-black tracking-tighter dark:text-white leading-[1]">
-            Resolução de <br/>
-            <span className="text-cyan-500">Sincronização</span>
+            {t('marketing_v2.features.sync_resolution.title_part1')} <br/>
+            <span className="text-cyan-500">{t('marketing_v2.features.sync_resolution.title_part2')}</span>
           </h1>
           <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
-            Nunca mais perca o seu trabalho. Se uma tabela do banco de dados for renomeada ou uma coluna for excluída no seu banco de dados legado, o MetaBuilderPRO resolve todos os conflitos automaticamente para você.
+            {t('marketing_v2.features.sync_resolution.desc')}
           </p>
         </div>
         
@@ -41,23 +41,23 @@ export default function SyncResolutionFeaturePage() {
       <section className="grid grid-cols-1 md:grid-cols-3 gap-12">
         <div className="space-y-4">
           <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-          <h3 className="text-xl font-bold dark:text-white">Mapeamento Visual Inteligente</h3>
+          <h3 className="text-xl font-bold dark:text-white">{t('marketing_v2.features.sync_resolution.item1_title')}</h3>
           <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed">
-            O MetaBuilder varre todas as alterações e exibe os itens que sumiram do banco de dados legado, permitindo que você diga facilmente com qual novo nome aquele campo ou tabela foi mapeado.
+            {t('marketing_v2.features.sync_resolution.item1_desc')}
           </p>
         </div>
         <div className="space-y-4">
           <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-          <h3 className="text-xl font-bold dark:text-white">Automação de Refatoração</h3>
+          <h3 className="text-xl font-bold dark:text-white">{t('marketing_v2.features.sync_resolution.item2_title')}</h3>
           <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed">
-            Ao clicar em &quot;Aplicar&quot;, o painel vasculha de forma profunda formulários, grids, layouts dinâmicos e até mesmo dentro dos fluxos invisíveis de BPM, substituindo nomes antigos de variáveis por seus respectivos novos correspondentes.
+            {t('marketing_v2.features.sync_resolution.item2_desc')}
           </p>
         </div>
         <div className="space-y-4">
           <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-          <h3 className="text-xl font-bold dark:text-white">Integridade Garantida</h3>
+          <h3 className="text-xl font-bold dark:text-white">{t('marketing_v2.features.sync_resolution.item3_title')}</h3>
           <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed">
-            O processo de substituição não danifica lógicas de negócios complexas. Ele garante a integridade de queries customizadas, gatilhos de fluxo e macros pré-compiladas.
+            {t('marketing_v2.features.sync_resolution.item3_desc')}
           </p>
         </div>
       </section>
@@ -66,10 +66,10 @@ export default function SyncResolutionFeaturePage() {
       <section className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[3rem] p-12 lg:p-20">
         <div className="max-w-3xl mx-auto text-center mb-16 space-y-4">
           <h2 className="text-3xl md:text-5xl font-black dark:text-white tracking-tight">
-            Como a <span className="text-cyan-500">Mágica</span> Acontece
+            {t('marketing_v2.features.sync_resolution.how_magic_happens').split(' ')[0]} {t('marketing_v2.features.sync_resolution.how_magic_happens').split(' ')[1]} <span className="text-cyan-500">{t('marketing_v2.features.sync_resolution.how_magic_happens').split(' ')[2]}</span> {t('marketing_v2.features.sync_resolution.how_magic_happens').split(' ')[3]}
           </h2>
           <p className="text-lg text-neutral-500 dark:text-neutral-400">
-            A refatoração de dezenas de telas, formulários, joins e lógicas agora resolvidas em 3 simples passos.
+            {t('marketing_v2.features.sync_resolution.how_magic_happens_desc')}
           </p>
         </div>
 
@@ -81,9 +81,9 @@ export default function SyncResolutionFeaturePage() {
               1
             </div>
             <div>
-              <h4 className="text-xl font-bold dark:text-white mb-2">Renomeie no seu Banco</h4>
+              <h4 className="text-xl font-bold dark:text-white mb-2">{t('marketing_v2.features.sync_resolution.step1_title')}</h4>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                Utilize as ferramentas tradicionais para renomear colunas ou tabelas na sua base legada (PostgreSQL, MySQL, SQL Server).
+                {t('marketing_v2.features.sync_resolution.step1_desc')}
               </p>
             </div>
           </div>
@@ -93,9 +93,9 @@ export default function SyncResolutionFeaturePage() {
               2
             </div>
             <div>
-              <h4 className="text-xl font-bold dark:text-white mb-2">Rode o Comando de Sync</h4>
+              <h4 className="text-xl font-bold dark:text-white mb-2">{t('marketing_v2.features.sync_resolution.step2_title')}</h4>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                Execute o comando de conexão da nossa CLI. O MetaBuilder notará a ausência do campo anterior e perguntará para qual o campo atual ele migrou.
+                {t('marketing_v2.features.sync_resolution.step2_desc')}
               </p>
             </div>
           </div>
@@ -105,9 +105,9 @@ export default function SyncResolutionFeaturePage() {
               <CheckCircle2 className="w-10 h-10" />
             </div>
             <div>
-              <h4 className="text-xl font-bold dark:text-white mb-2">Mapeie e Aplique</h4>
+              <h4 className="text-xl font-bold dark:text-white mb-2">{t('marketing_v2.features.sync_resolution.step3_title')}</h4>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                Acesse o painel do Studio Web, faça as correspondências pelo seletor visual e veja todo o seu painel se atualizar em tempo real num piscar de olhos.
+                {t('marketing_v2.features.sync_resolution.step3_desc')}
               </p>
             </div>
           </div>
@@ -115,7 +115,7 @@ export default function SyncResolutionFeaturePage() {
       </section>
       
       <section className="p-12 rounded-[3rem] bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-center space-y-8">
-         <h2 className="text-3xl font-black dark:text-white">Pronto para acelerar a sua produtividade?</h2>
+         <h2 className="text-3xl font-black dark:text-white">{t('marketing_v2.features.sync_resolution.footer_title')}</h2>
          <p className="text-neutral-500 dark:text-neutral-400 max-w-xl mx-auto">
             {t('marketing_v2.hero.desc')}
          </p>

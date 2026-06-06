@@ -15,7 +15,7 @@ interface LegalModalProps {
 
 export function LegalModal({ isOpen, onClose, title, children }: LegalModalProps) {
   const [isMounted, setIsMounted] = useState(false)
-  const { language } = useI18n()
+  const { t, language } = useI18n()
 
   useEffect(() => {
     setIsMounted(true)
@@ -58,7 +58,7 @@ export function LegalModal({ isOpen, onClose, title, children }: LegalModalProps
           <span className="text-neutral-900 dark:text-white font-bold">{title}</span>
         )}
         <span className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase mt-1 flex items-center gap-2">
-          <span className="bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-700">Documento Oficial</span>
+          <span className="bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-700">{t('legal.official_document')}</span>
           <span className="text-indigo-600 dark:text-indigo-500">V2.0</span>
         </span>
       </span>
@@ -119,14 +119,14 @@ export function LegalModal({ isOpen, onClose, title, children }: LegalModalProps
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">MetaBuilder Pro Security</span>
-                    <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-600">Compliance & Proteção de Dados</span>
+                    <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-600">{t('agtech.compliance')}</span>
                   </div>
                 </div>
                 <button
                   onClick={onClose}
                   className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 transition-all active:scale-95 flex items-center gap-2 group"
                 >
-                  {language === 'pt' ? 'Entendido e Aceito' : 'Understand and Accept'}
+                  {t('legal.understand_accept')}
                   <CheckCircle2 className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>

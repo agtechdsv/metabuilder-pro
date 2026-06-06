@@ -427,7 +427,7 @@ export function StudioDashboardClient({
                   viewMode === 'list' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
                 )}
                >
-                 Casos de Uso
+                 {t('dashboard.projects.studio.tabs.use_cases')}
                </button>
                {canCreate && (
                  <>
@@ -438,7 +438,7 @@ export function StudioDashboardClient({
                       viewMode === 'navigation' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
                     )}
                    >
-                     Navegação
+                     {t('dashboard.projects.studio.tabs.navigation')}
                    </button>
                    <button 
                      onClick={() => setViewMode('enumerations')}
@@ -447,7 +447,7 @@ export function StudioDashboardClient({
                        viewMode === 'enumerations' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
                      )}
                     >
-                      <Database className="w-3.5 h-3.5" /> Enums
+                      <Database className="w-3.5 h-3.5" /> {t('dashboard.projects.studio.tabs.enums')}
                     </button>
                     <button 
                      onClick={() => setViewMode('metadata')}
@@ -456,7 +456,7 @@ export function StudioDashboardClient({
                        viewMode === 'metadata' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
                      )}
                     >
-                      <Table className="w-3.5 h-3.5" /> Tabela / Campos
+                      <Table className="w-3.5 h-3.5" /> {t('dashboard.projects.studio.tabs.table_fields')}
                     </button>
                  </>
                )}
@@ -683,7 +683,7 @@ export function StudioDashboardClient({
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <h4 className={`text-lg font-black tracking-tight transition-colors ${isAutomationsActive ? 'text-neutral-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400' : 'text-neutral-400 italic'}`}>
-                          Automações / BPM
+                          {t('dashboard.projects.studio.automations_bpm')}
                         </h4>
                         <div className="px-2 py-0.5 bg-emerald-600 text-white text-[8px] font-black rounded-lg uppercase tracking-widest shadow-lg shadow-emerald-500/20">
                           {t('dashboard.projects.system_label')}
@@ -720,7 +720,7 @@ export function StudioDashboardClient({
                           onClick={() => setIsBpmConfigModalOpen(true)}
                           className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-emerald-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-emerald-500/20"
                         >
-                          <Settings2 className="w-4 h-4" /> Configurar Módulo
+                          <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure_module')}
                         </button>
                         {isAutomationsActive && (
                           <Link
@@ -754,7 +754,7 @@ export function StudioDashboardClient({
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <h4 className={`text-lg font-black tracking-tight transition-colors ${isDownloadsActive ? 'text-neutral-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400' : 'text-neutral-400 italic'}`}>
-                          Central de Downloads
+                          {t('dashboard.projects.studio.downloads_center')}
                         </h4>
                         <div className="px-2 py-0.5 bg-blue-600 text-white text-[8px] font-black rounded-lg uppercase tracking-widest shadow-lg shadow-blue-500/20">
                           {t('dashboard.projects.system_label')}
@@ -791,7 +791,7 @@ export function StudioDashboardClient({
                           onClick={handleToggleDownloads}
                           className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-blue-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-blue-500/20"
                         >
-                          <Settings2 className="w-4 h-4" /> {isDownloadsActive ? 'Desativar Módulo' : 'Ativar Módulo'}
+                          <Settings2 className="w-4 h-4" /> {isDownloadsActive ? t('dashboard.projects.studio.disable_module') : t('dashboard.projects.studio.enable_module')}
                         </button>
                         {isDownloadsActive && (
                           <Link

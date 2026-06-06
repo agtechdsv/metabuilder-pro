@@ -121,6 +121,32 @@ export function MarketingSections() {
     }
   ]
 
+  const renderEquivalentMonthly = (value: number) => {
+    const [prefix, suffix] = t('marketing_v2.home.pricing_equivalent_monthly').split('{val}')
+    return (
+      <>
+        {prefix}
+        <span className="text-indigo-650 dark:text-indigo-400">
+          R$ {value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </span>
+        {suffix}
+      </>
+    )
+  }
+
+  const renderEquivalentLicense = (value: number) => {
+    const [prefix, suffix] = t('marketing_v2.home.pricing_equivalent_license').split('{val}')
+    return (
+      <>
+        {prefix}
+        <span className="text-indigo-650 dark:text-indigo-400">
+          R$ {value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </span>
+        {suffix}
+      </>
+    )
+  }
+
   return (
     <div className="w-full space-y-32 py-20 px-6">
 
@@ -147,7 +173,7 @@ export function MarketingSections() {
                 <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">{feature.desc}</p>
               </div>
               <div className="mt-8 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                Saiba Mais <ArrowRight className="w-3 h-3" />
+                {t('marketing_v2.home.learn_more')} <ArrowRight className="w-3 h-3" />
               </div>
             </Link>
           ))}
@@ -165,7 +191,7 @@ export function MarketingSections() {
                 </div>
               </div>
               <Link href={features[5].href} className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all hover:scale-102 shadow-md shadow-indigo-600/20 dark:shadow-indigo-500/10 shrink-0 self-start lg:self-center">
-                Acessar Simulador <ArrowRight className="w-3.5 h-3.5" />
+                {t('marketing_v2.home.control_center_cta_sim')} <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
 
@@ -350,15 +376,21 @@ export function MarketingSections() {
 
               {/* Tabs strip */}
               <div className="flex gap-1 mb-5 p-1 bg-neutral-100 dark:bg-neutral-900 rounded-xl text-[9px] font-black uppercase tracking-wider overflow-x-auto">
-                {['Dashboard BI', 'Produtividade', 'Assinatura', 'Cancelamento', 'iClub'].map((tab, i) => (
+                {[
+                  { key: 'Dashboard BI', label: t('marketing_v2.home.control_center_tab_bi') },
+                  { key: 'Produtividade', label: t('marketing_v2.home.control_center_tab_prod') },
+                  { key: 'Assinatura', label: t('marketing_v2.home.control_center_tab_sub') },
+                  { key: 'Cancelamento', label: t('marketing_v2.home.control_center_tab_cancel') },
+                  { key: 'iClub', label: t('marketing_v2.home.control_center_tab_iclub') }
+                ].map((tab, i) => (
                   <span
-                    key={tab}
+                    key={tab.key}
                     className={`px-3 py-1.5 rounded-lg transition-all ${i === 0
                       ? 'bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
                       : 'text-neutral-400'
                       }`}
                   >
-                    {tab}
+                    {tab.label}
                   </span>
                 ))}
               </div>
@@ -366,10 +398,10 @@ export function MarketingSections() {
               {/* Metric cards */}
               <div className="grid grid-cols-2 gap-3 mb-4">
                 {[
-                  { label: 'Licenças Ativas', value: '2 / 3', color: 'text-emerald-500' },
-                  { label: 'Workspaces', value: '1', color: 'text-indigo-500' },
-                  { label: 'Projetos', value: '1', color: 'text-amber-500' },
-                  { label: 'Casos de Uso', value: '3', color: 'text-purple-500' },
+                  { label: t('marketing_v2.home.control_center_metric_licenses'), value: '2 / 3', color: 'text-emerald-500' },
+                  { label: t('marketing_v2.home.control_center_metric_workspaces'), value: '1', color: 'text-indigo-500' },
+                  { label: t('marketing_v2.home.control_center_metric_projects'), value: '1', color: 'text-amber-500' },
+                  { label: t('marketing_v2.home.control_center_metric_use_cases'), value: '3', color: 'text-purple-500' },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="p-3 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800 text-center">
                     <p className={`text-lg font-black leading-none ${color}`}>{value}</p>
@@ -380,7 +412,7 @@ export function MarketingSections() {
 
               {/* Mini bar chart */}
               <div className="p-3 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-100 dark:border-neutral-800">
-                <p className="text-[8px] font-black uppercase text-neutral-400 tracking-wider mb-2">Atividade de Desenvolvimento</p>
+                <p className="text-[8px] font-black uppercase text-neutral-400 tracking-wider mb-2">{t('marketing_v2.home.control_center_chart_title')}</p>
                 <div className="flex items-end gap-1 h-10">
                   {[40, 65, 30, 80, 55, 90, 45].map((h, i) => (
                     <div
@@ -396,7 +428,7 @@ export function MarketingSections() {
               {/* Footer status */}
               <div className="mt-4 flex items-center justify-center gap-2 text-[9px] text-neutral-400 font-bold">
                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
-                Central de Controle — Métricas em tempo real
+                {t('marketing_v2.home.control_center_footer_status')}
               </div>
             </div>
           </div>
@@ -409,37 +441,37 @@ export function MarketingSections() {
           <div className="space-y-8 order-2 lg:order-1">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-400 text-[10px] font-black uppercase tracking-widest">
               <Database className="w-3.5 h-3.5" />
-              Sincronização Inteligente
+              {t('marketing_v2.home.sync_resolution_badge')}
             </div>
             <h2 className="text-4xl md:text-6xl font-black tracking-tighter dark:text-white leading-[1]">
-              Não Perca Nada com a <br />
-              <span className="text-cyan-600">Resolução de Conflitos</span>
+              {t('marketing_v2.home.sync_title')} <br />
+              <span className="text-cyan-600">{t('marketing_v2.home.sync_highlight')}</span>
             </h2>
             <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
-              Renomeou uma tabela no seu banco de dados legado? Deletou uma coluna? O MetaBuilder detecta as mudanças automaticamente e permite que você remapeie todos os seus casos de uso, filtros, gráficos e automações BPM com um único clique. Nenhuma refatoração manual necessária.
+              {t('marketing_v2.home.sync_desc')}
             </p>
             <div className="flex gap-4">
               <div className="flex-1 p-6 rounded-3xl bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
                 <h4 className="text-2xl font-black text-cyan-600 mb-2">100%</h4>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">À Prova de Falhas</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{t('marketing_v2.home.sync_stat_failproof')}</p>
               </div>
               <div className="flex-1 p-6 rounded-3xl bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
                 <h4 className="text-2xl font-black text-indigo-600 mb-2">0</h4>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Refatoração Manual</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{t('marketing_v2.home.sync_stat_refactoring')}</p>
               </div>
             </div>
             <Link
               href="/features/sync-resolution"
               className="inline-flex items-center gap-2 px-8 py-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:scale-105 shadow-xl shadow-cyan-500/20"
             >
-              Conheça a Ferramenta
+              {t('marketing_v2.home.sync_cta')}
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
           <div className="relative order-1 lg:order-2">
             <div className="p-2 rounded-[2rem] bg-gradient-to-br from-cyan-500/20 to-blue-500/10 dark:from-cyan-900/40 dark:to-blue-900/20 shadow-2xl relative overflow-hidden">
-                <img src="/sync-resolution-demo.png" alt="Tela de Resolução de Sincronização" className="w-full h-auto rounded-[1.5rem] border border-cyan-500/20 shadow-inner" />
+                <img src="/sync-resolution-demo.png" alt={t('marketing_v2.home.sync_resolution_badge')} className="w-full h-auto rounded-[1.5rem] border border-cyan-500/20 shadow-inner" />
             </div>
           </div>
         </div>
@@ -486,30 +518,30 @@ export function MarketingSections() {
           <div className="space-y-8 order-2 lg:order-2">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-              Motor de Workflows
+              {t('marketing_v2.home.bpm_badge')}
             </div>
             <h2 className="text-4xl md:text-6xl font-black tracking-tighter dark:text-white leading-[1]">
-              A Mágica do <br />
-              <span className="text-emerald-600">BPM & Automação</span>
+              {t('marketing_v2.home.bpm_title')} <br />
+              <span className="text-emerald-600">{t('marketing_v2.home.bpm_highlight')}</span>
             </h2>
             <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
-              Crie lógicas de negócios complexas desenhando diagramas visuais. Sincronize botões da sua interface diretamente com fluxos invisíveis executados em background. Tudo perfeitamente integrado.
+              {t('marketing_v2.home.bpm_desc')}
             </p>
             <div className="flex gap-4">
               <div className="flex-1 p-6 rounded-3xl bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
                 <h4 className="text-2xl font-black text-emerald-600 mb-2">100%</h4>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Visual Node-Based</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{t('marketing_v2.home.bpm_stat_visual')}</p>
               </div>
               <div className="flex-1 p-6 rounded-3xl bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
                 <h4 className="text-2xl font-black text-indigo-600 mb-2">API</h4>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Eventos & Cron Jobs</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{t('marketing_v2.home.bpm_stat_events')}</p>
               </div>
             </div>
             <Link
               href="/bpm"
               className="inline-flex items-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:scale-105 shadow-xl shadow-emerald-500/20"
             >
-              Descubra a Mágica
+              {t('marketing_v2.home.bpm_cta')}
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -542,11 +574,11 @@ export function MarketingSections() {
       <section id="pricing" className="max-w-7xl mx-auto py-12 scroll-mt-24">
         <div className="max-w-4xl mx-auto text-center mb-10 space-y-4">
           <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-black dark:text-white leading-[1.1]">
-            Planos flexíveis para <br />
-            <span className="text-indigo-600">qualquer tamanho de equipe</span>
+            {t('marketing_v2.home.pricing_title')} <br />
+            <span className="text-indigo-600">{t('marketing_v2.home.pricing_highlight')}</span>
           </h2>
           <p className="text-xl text-neutral-500 dark:text-neutral-400 font-medium">
-            Escolha a quantidade de licenças e economize com descontos progressivos por volume e prazos de renovação.
+            {t('marketing_v2.home.pricing_subtitle')}
           </p>
         </div>
 
@@ -556,10 +588,10 @@ export function MarketingSections() {
             {(['monthly', 'quarterly', 'semiannual', 'yearly'] as const).map((c) => {
               const isSelected = billingCycle === c
               const labels = {
-                monthly: 'Mensal',
-                quarterly: 'Trimestral',
-                semiannual: 'Semestral',
-                yearly: 'Anual'
+                monthly: t('marketing_v2.home.pricing_cycle_monthly'),
+                quarterly: t('marketing_v2.home.pricing_cycle_quarterly'),
+                semiannual: t('marketing_v2.home.pricing_cycle_semiannual'),
+                yearly: t('marketing_v2.home.pricing_cycle_yearly')
               }
               const discountPercentage = {
                 monthly: rules?.cycle_discounts?.monthly ? `-${rules.cycle_discounts.monthly}%` : '',
@@ -605,7 +637,7 @@ export function MarketingSections() {
           </div>
         ) : !rules ? (
           <div className="text-center py-12 text-neutral-500">
-            Carregando tabela de preços...
+            {t('marketing_v2.home.pricing_loading')}
           </div>
         ) : (
           <div className="max-w-4xl mx-auto bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 md:p-12 shadow-2xl flex flex-col md:flex-row gap-12">
@@ -613,13 +645,13 @@ export function MarketingSections() {
             {/* Left side: Calculator */}
             <div className="flex-1 space-y-8">
               <div>
-                <h3 className="text-2xl font-black text-neutral-900 dark:text-white mb-2">Configure seu Plano</h3>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">Arraste o seletor para definir a quantidade de licenças para sua equipe.</p>
+                <h3 className="text-2xl font-black text-neutral-900 dark:text-white mb-2">{t('marketing_v2.home.pricing_calc_title')}</h3>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('marketing_v2.home.pricing_calc_subtitle')}</p>
               </div>
 
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300">Licenças</span>
+                  <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300">{t('marketing_v2.home.pricing_licenses')}</span>
                   <div className="flex items-center gap-3">
                     <button 
                       onClick={() => setLicenses(Math.max(1, licenses - 1))}
@@ -668,15 +700,15 @@ export function MarketingSections() {
                 <ul className="space-y-3">
                   <li className="flex items-start gap-3 text-sm text-neutral-600 dark:text-neutral-400">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                    <span>Acesso a todas as ferramentas PRO</span>
+                    <span>{t('marketing_v2.home.pricing_feat_pro')}</span>
                   </li>
                   <li className="flex items-start gap-3 text-sm text-neutral-600 dark:text-neutral-400">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                    <span>Desenvolvimento Ilimitado</span>
+                    <span>{t('marketing_v2.home.pricing_feat_unlimited')}</span>
                   </li>
                   <li className="flex items-start gap-3 text-sm text-neutral-600 dark:text-neutral-400">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                    <span>Suporte e Atualizações (IClub)</span>
+                    <span>{t('marketing_v2.home.pricing_feat_support')}</span>
                   </li>
                 </ul>
               </div>
@@ -712,34 +744,34 @@ export function MarketingSections() {
                   <>
                     <div className="space-y-4">
                       <div className="flex justify-between items-center text-sm font-bold text-neutral-500">
-                        <span>Preço Base Unitário</span>
+                        <span>{t('marketing_v2.home.pricing_base_price')}</span>
                         <span>R$ {base.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                       </div>
                       
                       {volDiscount > 0 && (
                         <div className="flex justify-between items-center text-sm font-bold text-emerald-500">
-                          <span>Desconto por Volume</span>
+                          <span>{t('marketing_v2.home.pricing_volume_discount')}</span>
                           <span>-{volDiscount}%</span>
                         </div>
                       )}
                       
                       <div className="flex justify-between items-center text-sm font-bold text-neutral-500">
-                        <span>Valor Final Unitário</span>
+                        <span>{t('marketing_v2.home.pricing_final_price')}</span>
                         <span>R$ {unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                       </div>
 
                       {cycleDiscount > 0 && (
                         <div className="flex justify-between items-center text-sm font-bold text-emerald-500">
-                          <span>Desconto do Ciclo ({months}x)</span>
+                          <span>{t('marketing_v2.home.pricing_cycle_discount').replace('{count}', String(months))}</span>
                           <span>-{cycleDiscount}%</span>
                         </div>
                       )}
                       
                       <div className="border-t border-neutral-200 dark:border-neutral-800 pt-4 mt-4">
-                        <span className="block text-[10px] font-black uppercase text-neutral-400 mb-1">Total a Pagar</span>
+                        <span className="block text-[10px] font-black uppercase text-neutral-400 mb-1">{t('marketing_v2.home.pricing_total')}</span>
                         {licenses >= 100 ? (
                           <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400">
-                            Preço Sob Consulta
+                            {t('marketing_v2.home.pricing_custom')}
                           </div>
                         ) : (
                           <>
@@ -748,19 +780,21 @@ export function MarketingSections() {
                                 R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </span>
                               <span className="text-xs font-bold text-neutral-400">
-                                {billingCycle === 'monthly' ? ' / mês' : ` / ${months} meses`}
+                                {billingCycle === 'monthly'
+                                  ? t('marketing_v2.home.pricing_per_month')
+                                  : t('marketing_v2.home.pricing_per_months').replace('{count}', String(months))}
                               </span>
                             </div>
                             
                             {billingCycle !== 'monthly' ? (
                               <div className="text-[11px] font-bold text-neutral-500 mt-2 flex flex-col gap-0.5">
-                                <span>Equivalente a <span className="text-indigo-600 dark:text-indigo-400">R$ {monthlyEq.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> / mês</span>
-                                <span>Equivalente a <span className="text-indigo-600 dark:text-indigo-400">R$ {(monthlyEq / licenses).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> / licença</span>
+                                <span>{renderEquivalentMonthly(monthlyEq)}</span>
+                                <span>{renderEquivalentLicense(monthlyEq / licenses)}</span>
                               </div>
                             ) : (
                               licenses > 1 && (
-                                <div className="text-[11px] font-bold text-neutral-500 mt-2">
-                                  Equivalente a <span className="text-indigo-600 dark:text-indigo-400">R$ {(totalValue / licenses).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> / licença
+                                <div className="text-[11px] font-bold text-neutral-550 mt-2">
+                                  {renderEquivalentLicense(totalValue / licenses)}
                                 </div>
                               )
                             )}
@@ -775,7 +809,7 @@ export function MarketingSections() {
                         target="_blank"
                         className="mt-8 w-full block py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-center font-black text-xs uppercase tracking-widest transition-all hover:scale-102 shadow-xl shadow-indigo-500/20"
                       >
-                        Falar com Consultor
+                        {t('marketing_v2.home.pricing_btn_consultant')}
                       </Link>
                     ) : (
                       <Link
@@ -790,7 +824,7 @@ export function MarketingSections() {
                         }}
                         className="mt-8 w-full block py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-center font-black text-xs uppercase tracking-widest transition-all hover:scale-102 shadow-xl shadow-indigo-500/20"
                       >
-                        Finalizar Contratação
+                        {t('marketing_v2.home.pricing_btn_checkout')}
                       </Link>
                     )}
                   </>

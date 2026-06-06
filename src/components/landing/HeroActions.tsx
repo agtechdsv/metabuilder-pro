@@ -19,7 +19,7 @@ export function HeroActions({ user }: HeroActionsProps) {
     <>
       <div className="flex flex-col gap-3 mt-8 items-center md:items-start w-full">
         <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium italic text-center md:text-left max-w-xl leading-relaxed">
-          Muito mais que uma demonstração técnica: um bate-papo para entender suas necessidades e garantir que somos a solução ideal para os seus projetos.
+          {t('hero.demo_subtext')}
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start items-center w-full">
           {user ? (
