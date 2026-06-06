@@ -47,7 +47,7 @@ const initialNodes: Node[] = [
   {
     id: '1',
     type: 'trigger',
-    data: { label: 'Novo Registro', description: 'Quando criado' },
+    data: {},
     position: { x: 250, y: 50 },
   },
 ];
@@ -1494,10 +1494,10 @@ function BpmCanvasContent({
                         className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
                       >
                         <option value="">{t('bpm.canvas.select_action')}</option>
-                        <option value="insert">{t('bpm.canvas.insert_record')}</option>
-                        <option value="update">{t('bpm.canvas.update_record')}</option>
-                        <option value="delete">{t('bpm.canvas.delete_record')}</option>
-                        <option value="email">{t('bpm.canvas.send_email')}</option>
+                        <option value="insert">{t('bpm.nodes.insert_record')}</option>
+                        <option value="update">{t('bpm.nodes.update_record')}</option>
+                        <option value="delete">{t('bpm.nodes.delete_record')}</option>
+                        <option value="email">{t('bpm.nodes.send_email')}</option>
                         <option value="webhook">{t('bpm.canvas.webhook_api_call')}</option>
                       </select>
                     </div>

@@ -3,6 +3,8 @@ import { Metadata } from 'next';
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { AlertCircle } from 'lucide-react'
+import { getLocale } from '@/i18n/get-locale'
+import { getTranslations } from '@/i18n/get-translations'
 
 export const metadata: Metadata = {
   title: 'Automations & BPM | MetaBuilder PRO',
@@ -21,6 +23,9 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
   const { workspace_slug, project_slug } = await params
   const resolvedSearchParams = await searchParams
   const useCaseId = resolvedSearchParams?.use_case as string | undefined
+
+  const locale = await getLocale()
+  const t = await getTranslations(locale)
 
   // 1. Inicializa o cliente Supabase com service_role
   const supabase = createClient(
@@ -144,7 +149,9 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
     console.log("=== VIEWS RES DATA LENGTH ===", initialViews.length);
   }
 
-  const canvasTitle = useCaseName ? `Automações: ${useCaseName}` : (automationsView?.name || 'Aprovação de Pedidos');
+  const canvasTitle = useCaseName 
+    ? `${t('bpm.canvas.automations_title')}: ${useCaseName}` 
+    : (automationsView?.name || 'Aprovação de Pedidos');
 
   return (
     <div className="h-screen w-full bg-white dark:bg-neutral-950 overflow-hidden">

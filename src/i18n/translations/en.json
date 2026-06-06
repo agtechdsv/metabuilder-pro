@@ -1807,6 +1807,7 @@
       "no": "No"
     },
     "canvas": {
+      "automations_title": "Automations",
       "save_draft": "Save Draft",
       "publish": "Publish",
       "node_properties": "Node Properties",
@@ -1961,6 +1962,60 @@
         "flow_deleted": "Flow deleted successfully!",
         "delete_flow_error": "Error deleting flow."
       }
+    }
+  },
+  "auth": {
+    "login": {
+      "join_title": "Join",
+      "subtitle": "Access your high-performance data ecosystem",
+      "signup_subtitle": "Start building your enterprise-grade application today",
+      "google_signin": "Sign in with Google",
+      "google_signup": "Sign up with Google",
+      "or_use_email": "or use your email",
+      "display_name": "Display Name",
+      "display_name_placeholder": "What should we call you?",
+      "email_label": "Corporate Email",
+      "email_placeholder": "you@work.com",
+      "password_label": "Access Password",
+      "forgot_password": "Forgot?",
+      "confirm_password": "Confirm Password",
+      "confirm_password_placeholder": "Repeat your password",
+      "submit_btn": "Access Platform",
+      "submit_signup_btn": "Create PRO Account",
+      "new_here": "New here?",
+      "already_have_account": "Already have access?",
+      "create_account": "Create your account",
+      "do_login": "Log In",
+      "criteria": {
+        "min_char": "8+ characters",
+        "uppercase": "Uppercase",
+        "number": "Number",
+        "symbol": "Symbol"
+      },
+      "errors": {
+        "otp_expired": "The email link is invalid or expired.",
+        "auth_error": "Error processing authentication.",
+        "passwords_dont_match": "Passwords do not match.",
+        "password_too_weak": "Password is too weak."
+      },
+      "success": {
+        "signup_done": "Registration completed! Check your email to confirm your account."
+      },
+      "expired_modal": {
+        "title": "Expired or Invalid Link",
+        "desc": "For security reasons, invitation and password reset links expire quickly or after the first click. Please request a new invitation or try again.",
+        "back_home": "Go to Homepage"
+      }
+    },
+    "callback": {
+      "authenticating": "Authenticating...",
+      "connecting_securely": "Securely connecting to your account.",
+      "success": "Success!",
+      "success_desc": "You can close this window now if it does not close automatically.",
+      "close_window": "Close Window",
+      "auth_error_title": "Authentication Error",
+      "auth_error_desc": "Could not complete login.",
+      "close_try_again": "Close and Try Again"
     }
   }
 }

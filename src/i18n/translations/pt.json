@@ -1807,6 +1807,7 @@
       "no": "Não"
     },
     "canvas": {
+      "automations_title": "Automações",
       "save_draft": "Salvar Rascunho",
       "publish": "Publicar",
       "node_properties": "Propriedades do Nó",
@@ -1961,6 +1962,60 @@
         "flow_deleted": "Fluxo excluído com sucesso!",
         "delete_flow_error": "Erro ao excluir o fluxo."
       }
+    }
+  },
+  "auth": {
+    "login": {
+      "join_title": "Junte-se ao",
+      "subtitle": "Acesse seu ecossistema de dados de alta performance",
+      "signup_subtitle": "Comece a construir sua aplicação de nível empresarial hoje",
+      "google_signin": "Entrar com Google",
+      "google_signup": "Cadastrar com Google",
+      "or_use_email": "ou use seu e-mail",
+      "display_name": "Nome de Exibição",
+      "display_name_placeholder": "Como quer ser chamado?",
+      "email_label": "E-mail Corporativo",
+      "email_placeholder": "seu@trabalho.com",
+      "password_label": "Senha de Acesso",
+      "forgot_password": "Esqueceu?",
+      "confirm_password": "Confirmar Senha",
+      "confirm_password_placeholder": "Repita sua senha",
+      "submit_btn": "Acessar Plataforma",
+      "submit_signup_btn": "Criar Conta PRO",
+      "new_here": "Novo por aqui?",
+      "already_have_account": "Já possui acesso?",
+      "create_account": "Crie sua conta",
+      "do_login": "Fazer Login",
+      "criteria": {
+        "min_char": "8+ caracteres",
+        "uppercase": "Maiúscula",
+        "number": "Número",
+        "symbol": "Símbolo"
+      },
+      "errors": {
+        "otp_expired": "O link de e-mail é inválido ou expirou.",
+        "auth_error": "Erro ao processar autenticação.",
+        "passwords_dont_match": "As senhas não coincidem.",
+        "password_too_weak": "A senha é muito fraca."
+      },
+      "success": {
+        "signup_done": "Cadastro realizado! Verifique seu e-mail para confirmar a conta."
+      },
+      "expired_modal": {
+        "title": "Link Expirado ou Inválido",
+        "desc": "Por motivos de segurança, os links de convite e redefinição de senha expiram em pouco tempo ou após o primeiro clique. Solicite um novo convite ou tente realizar o processo novamente.",
+        "back_home": "Ir para a Página Inicial"
+      }
+    },
+    "callback": {
+      "authenticating": "Autenticando...",
+      "connecting_securely": "Conectando de forma segura à sua conta.",
+      "success": "Sucesso!",
+      "success_desc": "Você já pode fechar esta janela caso ela não feche automaticamente.",
+      "close_window": "Fechar Janela",
+      "auth_error_title": "Erro na Autenticação",
+      "auth_error_desc": "Não foi possível concluir o login.",
+      "close_try_again": "Fechar e Tentar Novamente"
     }
   }
 }

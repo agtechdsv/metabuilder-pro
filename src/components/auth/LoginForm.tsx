@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { SetPasswordForm } from '@/components/auth/SetPasswordForm'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface LoginFormProps {
   error?: string
@@ -16,6 +17,7 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ error: serverError, className }: LoginFormProps) {
+  const { t } = useI18n()
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -101,7 +103,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
       const errorDesc = hashParams.get('error_description') || searchParams.get('error_description') || searchParams.get('error')
       
       if (errorCode === 'otp_expired' || window.location.hash.includes('otp_expired') || window.location.search.includes('otp_expired')) {
-        setExpiredModalDesc(errorDesc || 'O link de e-mail é inválido ou expirou.')
+        setExpiredModalDesc(errorDesc || t('auth.login.errors.otp_expired', 'O link de e-mail é inválido ou expirou.'))
         setShowExpiredModal(true)
       } else {
         const type = hashParams.get('type')
@@ -218,7 +220,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
         }
         window.location.href = redirectTo;
       } else {
-        setClientError('Erro ao processar autenticação.');
+        setClientError(t('auth.login.errors.auth_error', 'Erro ao processar autenticação.'));
         setIsLoading(false);
       }
     };
@@ -274,11 +276,11 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
 
     if (mode === 'signup') {
       if (password !== confirmPassword) {
-        setClientError('As senhas não coincidem.')
+        setClientError(t('auth.login.errors.passwords_dont_match', 'As senhas não coincidem.'))
         return
       }
       if (strengthScore < 3) {
-        setClientError('A senha é muito fraca.')
+        setClientError(t('auth.login.errors.password_too_weak', 'A senha é muito fraca.'))
         return
       }
     }
@@ -347,14 +349,14 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
             }
             window.location.href = redirectTo
           } else {
-            setSuccessMessage('Cadastro realizado! Verifique seu e-mail para confirmar a conta.')
+            setSuccessMessage(t('auth.login.success.signup_done', 'Cadastro realizado! Verifique seu e-mail para confirmar a conta.'))
             setIsLoading(false)
           }
         }
       }
     } catch (err: any) {
       if (err.message?.includes('NEXT_REDIRECT')) return
-      setClientError(err.message || 'Erro ao processar autenticação')
+      setClientError(err.message || t('auth.login.errors.auth_error', 'Erro ao processar autenticação'))
       setIsLoading(false)
     }
   }
@@ -419,12 +421,12 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
         </div>
 
         <h2 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-2">
-          {mode === 'login' ? 'MetaBuilder' : 'Junte-se ao'} <span className="text-indigo-600">PRO</span>
+          {mode === 'login' ? 'MetaBuilder' : t('auth.login.join_title', 'Junte-se ao')} <span className="text-indigo-600">PRO</span>
         </h2>
         <p className="text-neutral-500 dark:text-neutral-400 text-sm font-medium px-4">
           {mode === 'login'
-            ? 'Acesse seu ecossistema de dados de alta performance'
-            : 'Comece a construir sua aplicação de nível empresarial hoje'}
+            ? t('auth.login.subtitle', 'Acesse seu ecossistema de dados de alta performance')
+            : t('auth.login.signup_subtitle', 'Comece a construir sua aplicação de nível empresarial hoje')}
         </p>
       </div>
 
@@ -460,19 +462,19 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
           </svg>
         </div>
-        {mode === 'login' ? 'Entrar com Google' : 'Cadastrar com Google'}
+        {mode === 'login' ? t('auth.login.google_signin', 'Entrar com Google') : t('auth.login.google_signup', 'Cadastrar com Google')}
       </button>
 
       <div className="relative flex items-center py-2 mb-8">
         <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800/50"></div>
-        <span className="flex-shrink mx-6 text-[10px] text-neutral-400 dark:text-neutral-600 font-black uppercase tracking-[0.2em]">ou use seu e-mail</span>
+        <span className="flex-shrink mx-6 text-[10px] text-neutral-400 dark:text-neutral-600 font-black uppercase tracking-[0.2em]">{t('auth.login.or_use_email', 'ou use seu e-mail')}</span>
         <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800/50"></div>
       </div>
 
       <form onSubmit={handleEmailAction} className="space-y-5">
         {mode === 'signup' && (
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest px-2">Nome de Exibição</label>
+            <label className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest px-2">{t('auth.login.display_name', 'Nome de Exibição')}</label>
             <div className="relative group">
               <User className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 group-focus-within:text-indigo-500 transition-colors" />
               <input
@@ -480,7 +482,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
                 type="text"
                 required
                 ref={nameInputRef}
-                placeholder="Como quer ser chamado?"
+                placeholder={t('auth.login.display_name_placeholder', 'Como quer ser chamado?')}
                 className="w-full bg-neutral-100/50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 focus:border-indigo-500 focus:bg-white dark:focus:bg-neutral-900 rounded-2xl py-4 pl-14 pr-6 text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 transition-all outline-none"
               />
             </div>
@@ -488,7 +490,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
         )}
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest px-2">E-mail Corporativo</label>
+          <label className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest px-2">{t('auth.login.email_label', 'E-mail Corporativo')}</label>
           <div className="relative group">
             <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 group-focus-within:text-indigo-500 transition-colors" />
             <input
@@ -498,7 +500,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
               ref={emailInputRef}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@trabalho.com"
+              placeholder={t('auth.login.email_placeholder', 'seu@trabalho.com')}
               className="w-full bg-neutral-100/50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 focus:border-indigo-500 focus:bg-white dark:focus:bg-neutral-900 rounded-2xl py-4 pl-14 pr-6 text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 transition-all outline-none"
             />
           </div>
@@ -506,9 +508,9 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
 
         <div className="space-y-2">
           <div className="flex justify-between items-center px-2">
-            <label className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">Senha de Acesso</label>
+            <label className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">{t('auth.login.password_label', 'Senha de Acesso')}</label>
             {mode === 'login' && (
-              <button type="button" className="text-[10px] font-black text-indigo-500 hover:text-indigo-400 transition-colors uppercase tracking-widest">Esqueceu?</button>
+              <button type="button" className="text-[10px] font-black text-indigo-500 hover:text-indigo-400 transition-colors uppercase tracking-widest">{t('auth.login.forgot_password', 'Esqueceu?')}</button>
             )}
           </div>
           <div className="relative group">
@@ -547,10 +549,10 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
                 ))}
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-2">
-                <PasswordCheck label="8+ caracteres" met={passwordCriteria.minChar} />
-                <PasswordCheck label="Maiúscula" met={passwordCriteria.upper} />
-                <PasswordCheck label="Número" met={passwordCriteria.number} />
-                <PasswordCheck label="Símbolo" met={passwordCriteria.symbol} />
+                <PasswordCheck label={t('auth.login.criteria.min_char', '8+ caracteres')} met={passwordCriteria.minChar} />
+                <PasswordCheck label={t('auth.login.criteria.uppercase', 'Maiúscula')} met={passwordCriteria.upper} />
+                <PasswordCheck label={t('auth.login.criteria.number', 'Número')} met={passwordCriteria.number} />
+                <PasswordCheck label={t('auth.login.criteria.symbol', 'Símbolo')} met={passwordCriteria.symbol} />
               </div>
             </div>
           )}
@@ -558,7 +560,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
 
         {mode === 'signup' && (
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest px-2">Confirmar Senha</label>
+            <label className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest px-2">{t('auth.login.confirm_password', 'Confirmar Senha')}</label>
             <div className="relative group">
               <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 group-focus-within:text-indigo-500 transition-colors" />
               <input
@@ -567,7 +569,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Repita sua senha"
+                placeholder={t('auth.login.confirm_password_placeholder', 'Repita sua senha')}
                 className={cn(
                   "w-full bg-neutral-100/50 dark:bg-neutral-900/50 border rounded-2xl py-4 pl-14 pr-6 text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 transition-all outline-none",
                   confirmPassword && (password === confirmPassword ? "border-emerald-500/50 focus:border-emerald-500" : "border-red-500/50 focus:border-red-500"),
@@ -588,7 +590,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
           ) : (
             <>
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
-              <span className="relative z-10">{mode === 'login' ? 'Acessar Plataforma' : 'Criar Conta PRO'}</span>
+              <span className="relative z-10">{mode === 'login' ? t('auth.login.submit_btn', 'Acessar Plataforma') : t('auth.login.submit_signup_btn', 'Criar Conta PRO')}</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform relative z-10" />
             </>
           )}
@@ -597,7 +599,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
 
       <div className="mt-10 text-center">
         <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest">
-          {mode === 'login' ? 'Novo por aqui?' : 'Já possui acesso?'}
+          {mode === 'login' ? t('auth.login.new_here', 'Novo por aqui?') : t('auth.login.already_have_account', 'Já possui acesso?')}
           <button
             onClick={() => {
               setMode(mode === 'login' ? 'signup' : 'login')
@@ -606,7 +608,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
             }}
             className="ml-2 text-indigo-500 hover:text-indigo-400 transition-colors"
           >
-            {mode === 'login' ? 'Crie sua conta' : 'Fazer Login'}
+            {mode === 'login' ? t('auth.login.create_account', 'Crie sua conta') : t('auth.login.do_login', 'Fazer Login')}
           </button>
         </p>
       </div>
@@ -624,9 +626,9 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
           </div>
           
           <div className="space-y-2">
-            <h3 className="text-xl font-bold text-neutral-900 dark:text-white">Link Expirado ou Inválido</h3>
+            <h3 className="text-xl font-bold text-neutral-900 dark:text-white">{t('auth.login.expired_modal.title', 'Link Expirado ou Inválido')}</h3>
             <p className="text-xs text-neutral-550 dark:text-neutral-400 leading-relaxed">
-              Por motivos de segurança, os links de convite e redefinição de senha expiram em pouco tempo ou após o primeiro clique. Solicite um novo convite ou tente realizar o processo novamente.
+              {t('auth.login.expired_modal.desc', 'Por motivos de segurança, os links de convite e redefinição de senha expiram em pouco tempo ou após o primeiro clique. Solicite um novo convite ou tente realizar o processo novamente.')}
             </p>
           </div>
 
@@ -635,7 +637,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
             onClick={handleCloseExpiredModal}
             className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] active:scale-95 text-xs font-black uppercase tracking-widest cursor-pointer"
           >
-            Ir para a Página Inicial
+            {t('auth.login.expired_modal.back_home', 'Ir para a Página Inicial')}
           </button>
         </div>
       </AuthModal>

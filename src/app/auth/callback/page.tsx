@@ -4,8 +4,10 @@ import { useEffect, Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react'
+import { useI18n } from '@/i18n/I18nContext'
 
 function CallbackHandler() {
+  const { t } = useI18n()
   const searchParams = useSearchParams()
   const next = searchParams.get('next') ?? '/workspace'
   const errorDesc = searchParams.get('error_description') || searchParams.get('error')
@@ -94,8 +96,8 @@ function CallbackHandler() {
         {status === 'loading' && (
           <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500">
             <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-6" />
-            <h2 className="text-xl font-bold mb-2">Autenticando...</h2>
-            <p className="text-neutral-400 text-sm">Conectando de forma segura à sua conta.</p>
+            <h2 className="text-xl font-bold mb-2">{t('auth.callback.authenticating', 'Autenticando...')}</h2>
+            <p className="text-neutral-400 text-sm">{t('auth.callback.connecting_securely', 'Conectando de forma segura à sua conta.')}</p>
           </div>
         )}
 
@@ -104,13 +106,13 @@ function CallbackHandler() {
             <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6">
               <CheckCircle2 className="w-8 h-8 text-emerald-500" />
             </div>
-            <h2 className="text-xl font-bold mb-2">Sucesso!</h2>
-            <p className="text-neutral-400 text-sm mb-6">Você já pode fechar esta janela caso ela não feche automaticamente.</p>
+            <h2 className="text-xl font-bold mb-2">{t('auth.callback.success', 'Sucesso!')}</h2>
+            <p className="text-neutral-400 text-sm mb-6">{t('auth.callback.success_desc', 'Você já pode fechar esta janela caso ela não feche automaticamente.')}</p>
             <button 
               onClick={() => window.close()}
               className="px-6 py-3 bg-neutral-800 hover:bg-neutral-700 rounded-xl text-sm font-bold transition-colors"
             >
-              Fechar Janela
+              {t('auth.callback.close_window', 'Fechar Janela')}
             </button>
           </div>
         )}
@@ -120,13 +122,13 @@ function CallbackHandler() {
             <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6">
               <AlertCircle className="w-8 h-8 text-red-500" />
             </div>
-            <h2 className="text-xl font-bold mb-2">Erro na Autenticação</h2>
-            <p className="text-neutral-400 text-sm mb-6">{errorMessage || 'Não foi possível concluir o login.'}</p>
+            <h2 className="text-xl font-bold mb-2">{t('auth.callback.auth_error_title', 'Erro na Autenticação')}</h2>
+            <p className="text-neutral-400 text-sm mb-6">{errorMessage || t('auth.callback.auth_error_desc', 'Não foi possível concluir o login.')}</p>
             <button 
               onClick={() => window.close()}
               className="px-6 py-3 bg-neutral-800 hover:bg-neutral-700 rounded-xl text-sm font-bold transition-colors"
             >
-              Fechar e Tentar Novamente
+              {t('auth.callback.close_try_again', 'Fechar e Tentar Novamente')}
             </button>
           </div>
         )}

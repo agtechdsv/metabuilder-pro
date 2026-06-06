@@ -1885,6 +1885,7 @@
       "no": "No"
     },
     "canvas": {
+      "automations_title": "Automatizaciones",
       "save_draft": "Guardar Borrador",
       "publish": "Publicar",
       "node_properties": "Propiedades del Nodo",
@@ -2039,6 +2040,60 @@
         "flow_deleted": "¡Flujo eliminado con éxito!",
         "delete_flow_error": "Error al eliminar el flujo."
       }
+    }
+  },
+  "auth": {
+    "login": {
+      "join_title": "Únase a",
+      "subtitle": "Acceda a su ecosistema de datos de alto rendimiento",
+      "signup_subtitle": "Comience a construir su aplicación de nivel empresarial hoy",
+      "google_signin": "Iniciar sesión con Google",
+      "google_signup": "Registrarse con Google",
+      "or_use_email": "o use su correo electrónico",
+      "display_name": "Nombre de Mostrar",
+      "display_name_placeholder": "¿Cómo quiere ser llamado?",
+      "email_label": "Correo Corporativo",
+      "email_placeholder": "su@trabajo.com",
+      "password_label": "Contraseña de Acceso",
+      "forgot_password": "¿Olvidó?",
+      "confirm_password": "Confirmar Contraseña",
+      "confirm_password_placeholder": "Repita su contraseña",
+      "submit_btn": "Acceder a la Plataforma",
+      "submit_signup_btn": "Crear Cuenta PRO",
+      "new_here": "¿Nuevo por aquí?",
+      "already_have_account": "¿Ya tiene acceso?",
+      "create_account": "Cree su cuenta",
+      "do_login": "Iniciar sesión",
+      "criteria": {
+        "min_char": "8+ caracteres",
+        "uppercase": "Mayúscula",
+        "number": "Número",
+        "symbol": "Símbolo"
+      },
+      "errors": {
+        "otp_expired": "El enlace del correo no es válido o ha expirado.",
+        "auth_error": "Error al procesar la autenticación.",
+        "passwords_dont_match": "Las contraseñas no coinciden.",
+        "password_too_weak": "La contraseña es demasiado débil."
+      },
+      "success": {
+        "signup_done": "¡Registro completado! Revise su correo electrónico para confirmar su cuenta."
+      },
+      "expired_modal": {
+        "title": "Enlace Expirado o Inválido",
+        "desc": "Por razones de seguridad, los enlaces de invitación y restablecimiento de contraseña expiran rápidamente o tras el primer clic. Solicite una nueva invitación o intente nuevamente.",
+        "back_home": "Ir a la Página de Inicio"
+      }
+    },
+    "callback": {
+      "authenticating": "Autenticando...",
+      "connecting_securely": "Conectando de forma segura a su cuenta.",
+      "success": "¡Éxito!",
+      "success_desc": "Ya puede cerrar esta ventana si no se cierra automáticamente.",
+      "close_window": "Cerrar Ventana",
+      "auth_error_title": "Error de Autenticación",
+      "auth_error_desc": "No se pudo completar el inicio de sesión.",
+      "close_try_again": "Cerrar y Intentar de Nuevo"
     }
   }
 }
