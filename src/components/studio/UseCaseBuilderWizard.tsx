@@ -52,7 +52,9 @@ import {
   Copy,
   FileText,
   FileSpreadsheet,
-  Workflow
+  Workflow,
+  Check,
+  X
 } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
@@ -1715,6 +1717,8 @@ function StepTables({ config, setConfig, models }: any) {
 function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
   const { t } = useI18n()
   const { toast } = useToast()
+  const [expandedCustomSlot, setExpandedCustomSlot] = useState<number | null>(null)
+  const [tabToDelete, setTabToDelete] = useState<number | null>(null)
 
   function formatLabelText(text: string) {
     if (!text) return ''
@@ -3479,18 +3483,49 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                         </div>
                         <button
                           onClick={() => {
-                            const newSlots = (config.layout_config.custom_slots || []).filter((_: any, i: number) => i !== idx);
-                            setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                            setExpandedCustomSlot(expandedCustomSlot === idx ? null : idx);
                           }}
-                          className="mt-6 p-2.5 text-neutral-400 hover:text-red-500 bg-neutral-50 hover:bg-red-50 dark:bg-neutral-900 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                          title="Remover Aba"
+                          className="mt-6 p-2.5 text-indigo-500 hover:text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 rounded-lg transition-all"
+                          title={expandedCustomSlot === idx ? "Recolher Configurações" : "Expandir Configurações"}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {expandedCustomSlot === idx ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
+                        {tabToDelete === idx ? (
+                          <div className="mt-6 flex items-center gap-1 animate-in fade-in zoom-in duration-200">
+                            <button
+                              onClick={() => {
+                                const newSlots = (config.layout_config.custom_slots || []).filter((_: any, i: number) => i !== idx);
+                                setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                setTabToDelete(null);
+                              }}
+                              className="p-2.5 text-white bg-red-500 hover:bg-red-600 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1"
+                              title="Confirmar Exclusão"
+                            >
+                              <Check className="w-3.5 h-3.5" /> Sim
+                            </button>
+                            <button
+                              onClick={() => setTabToDelete(null)}
+                              className="p-2.5 text-neutral-500 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-lg transition-all"
+                              title="Cancelar"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setTabToDelete(idx)}
+                            className="mt-6 p-2.5 text-neutral-400 hover:text-red-500 bg-neutral-50 hover:bg-red-50 dark:bg-neutral-900 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                            title="Remover Aba"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
 
-                      {(slot.type === 'grid' || slot.type === 'kanban') && (
-                        <div className="w-full p-4 mt-2 bg-rose-50/50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/30 rounded-xl space-y-4">
+                      {expandedCustomSlot === idx && (
+                        <div className="w-full space-y-4 animate-in slide-in-from-top-2 duration-200">
+                          {(slot.type === 'grid' || slot.type === 'kanban') && (
+                            <div className="w-full p-4 mt-2 bg-rose-50/50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/30 rounded-xl space-y-4">
                           
                           {/* Configurações Kanban Específicas */}
                           {slot.type === 'kanban' && (() => {
@@ -3855,8 +3890,10 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                           </div>
                         </div>
                       )}
-                    </div>
-                  ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
 
                   <button
                     onClick={() => {
