@@ -10,7 +10,8 @@ import {
   Maximize2, 
   Layout, 
   Database,
-  Workflow
+  Workflow,
+  ArrowLeft
 } from 'lucide-react'
 import { HeaderActions } from '@/components/layout/HeaderActions'
 import RecordDrawer from './RecordDrawer'
@@ -28,8 +29,9 @@ import { BIWidgetEditor as BIWidgetConfigEditor } from '@/components/shared/BIWi
 import { Modal } from '@/components/ui/Modal'
 import { Drawer } from '@/components/ui/Drawer'
 import { useToast } from '@/components/ui/Toast'
-import { useRouter } from 'next/navigation'
 import { ExportDropdown } from './ExportControls'
+import CustomUseCaseRenderer from './CustomUseCaseRenderer'
+import { useRouter } from 'next/navigation'
 
 // Importamos o ViewContainer sem SSR para evitar o "piscar" do loader
 // e conflitos de hidratação com o sessionStorage
@@ -80,6 +82,7 @@ interface ViewPageContentProps {
   exportFormats?: string[]
   galleryClickBehavior?: 'lightbox' | 'thumbnail'
   customActions?: any[]
+  customSlots?: any[]
   isAutomationsEnabled?: boolean
 }
 
@@ -127,6 +130,7 @@ export default function ViewPageContent({
   analyticsConfig: initialAnalyticsConfig,
   galleryClickBehavior,
   customActions = [],
+  customSlots = [],
   isAutomationsEnabled = false
 }: ViewPageContentProps) {
   const router = useRouter()
@@ -309,6 +313,20 @@ export default function ViewPageContent({
       return str.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
         return rowData[key] !== undefined ? String(rowData[key]) : match
       })
+    }
+
+    if (action.action === 'system_refresh') {
+      setRefreshKey(prev => prev + 1)
+      setRelationalRefreshKey(prev => prev + 1)
+      setDetailRefreshKey(prev => prev + 1)
+      
+      // If there's an open record modal, fetch fresh details
+      if (selectedRow && Object.keys(selectedRow).length > 0) {
+         fetchDetails(selectedRow, modelName).then(updatedDetails => {
+           setSelectedRow((prev: any) => ({ ...prev, _details: updatedDetails }))
+         })
+      }
+      return
     }
 
     if (action.linked_bpm_workflows && action.linked_bpm_workflows.length > 0) {
@@ -662,7 +680,7 @@ export default function ViewPageContent({
   }
 
   const fetchDetails = async (parentRow: any, parentModel: string) => {
-    if (logicType !== 'master_detail' || !joins || joins.length === 0) return []
+    if ((logicType !== 'master_detail' && logicType !== 'personalizado') || !joins || joins.length === 0) return []
 
     const allDetails: any[] = []
     
@@ -1836,16 +1854,70 @@ export default function ViewPageContent({
 
       <main className="px-10 py-6 pb-8 space-y-8">
         {(isPage && isPageVisible) || isCadastroOnly ? (
-          <RecordForm
-            key={`page-form-${relationalRefreshKey}-${refreshKey}`}
-            mode={drawerMode}
-            fields={cleanFormFields}
-            initialData={selectedRow}
-            onSave={handleSave}
-            onCancel={isCadastroOnly ? () => {} : () => setIsPageVisible(false)}
-            isLoading={isProcessing}
-            logicType={logicType}
-            masterModelId={masterModelId}
+          logicType === 'personalizado' ? (
+            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden shadow-sm flex flex-col">
+              <div className="flex items-center justify-between p-8 border-b border-neutral-100 dark:border-neutral-800">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
+                    <Pencil className="w-5 h-5 text-indigo-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
+                      {drawerMode === 'create' ? t('runtime.record_drawer.new_item') : t('runtime.record_drawer.edit_item', 'Editar Registro')}
+                    </h3>
+                    <p className="text-[10px] font-black tracking-[0.2em] text-neutral-400">
+                      {drawerMode === 'create' ? t('runtime.record_drawer.new_item') : t('runtime.record_drawer.record_id').replace('{id}', selectedRow?.id || 'N/A')}
+                    </p>
+                  </div>
+                </div>
+                {!isCadastroOnly && (
+                  <button
+                    onClick={() => setIsPageVisible(false)}
+                    className="flex items-center gap-2 px-4 py-2 text-[10px] font-black tracking-widest text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> {t('runtime.back_to_list', 'Voltar para Lista')}
+                  </button>
+                )}
+              </div>
+              <CustomUseCaseRenderer
+                mode={drawerMode}
+                initialData={selectedRow}
+                customSlots={customSlots}
+                logicType={logicType}
+                masterModelId={masterModelId}
+                masterModelName={modelName}
+                projectId={project.id}
+                secretToken={project.secret_token}
+                tunnelChannel={tunnelChannel}
+                isTunnelReady={isTunnelReady}
+                project={project}
+                onClose={isCadastroOnly ? () => {} : () => setIsPageVisible(false)}
+                onSave={handleSave}
+                isLoading={isProcessing}
+                fields={cleanFormFields}
+                dictionary={dictionary}
+                joins={joins}
+                customActions={customActions}
+                onCustomAction={handleCustomAction}
+                refreshTrigger={refreshKey}
+                detailsInterfaceTypes={detailsInterfaceTypes}
+                detailsInlineTypes={detailsInlineTypes}
+                onEditDetail={handleEditDetail}
+                onDeleteDetail={handleDeleteDetail}
+                onAddDetail={handleOpenAddDetail}
+              />
+            </div>
+          ) : (
+            <RecordForm
+              key={`page-form-${relationalRefreshKey}-${refreshKey}`}
+              mode={drawerMode}
+              fields={cleanFormFields}
+              initialData={selectedRow}
+              onSave={handleSave}
+              onCancel={isCadastroOnly ? () => {} : () => setIsPageVisible(false)}
+              isLoading={isProcessing}
+              logicType={logicType}
+              masterModelId={masterModelId}
             masterModelName={modelName}
             masterTabTitle={masterTabTitle}
             detailsTabTitles={detailsTabTitles}
@@ -1870,6 +1942,7 @@ export default function ViewPageContent({
             customActions={customActions}
             onCustomAction={handleCustomAction}
           />
+          )
         ) : (
           <>
             {(logicType === 'analytics' || (localAnalyticsConfig?.widgets?.length ?? initialAnalyticsConfig?.widgets?.length ?? 0) > 0) && (
@@ -1963,6 +2036,7 @@ export default function ViewPageContent({
           customActions={customActions}
           onCustomAction={handleCustomAction}
           refreshTrigger={refreshKey}
+          customSlots={customSlots}
         />
       ) : (
         <RecordDrawer 
@@ -1998,6 +2072,7 @@ export default function ViewPageContent({
           customActions={customActions}
           onCustomAction={handleCustomAction}
           refreshTrigger={refreshKey}
+          customSlots={customSlots}
         />
       )}
 

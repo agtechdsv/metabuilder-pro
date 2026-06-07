@@ -1,20 +1,20 @@
 {
   "connections": [
     {
-      "projectId": "de4082a9-6d23-4445-939b-96c5100e9361",
-      "secretToken": "88a76e83b1b1cb3b3d7cdfbb1e9ec9cd407cdb2b8d63b5021bf0c8b943b30cc5",
+      "projectId": "ede9c509-56e5-492c-ba94-6168dd98e394",
+      "secretToken": "ff05b9652a61e2ce9757eaaf75340e74a317f500508aeb3e27d8f24febf7609a",
       "connectionsString": [
         {
-          "name": "erp",
+          "name": "erp_local",
           "type": "postgres",
-          "connectionString": "postgresql://erp:erp@localhost:5432/erp"
+          "connectionString": "postgresql://erp_local:erp_local@localhost:5432/erp_local"
         }
       ]
     }
   ],
   "supabaseUrl": "https://chmstvtepzmjhpyxjjam.supabase.co",
   "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNobXN0dnRlcHptamhweXhqamFtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODAyOTU4OCwiZXhwIjoyMDkzNjA1NTg4fQ.B-s9eb_TgABJWBuBxgIQIqNjtw2Q3e7UXcdhXsx-Ijc",
-  "apiUrl": "http://metabuilderpro.com/api/metadata/sync",
+  "apiUrl": "http://localhost:3000/api/metadata/sync",
   "ldap": {
     "enabled": false,
     "url": "ldap://10.0.0.15:389",

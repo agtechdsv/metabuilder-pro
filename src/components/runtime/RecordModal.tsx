@@ -1,5 +1,6 @@
 import { Modal } from '@/components/ui/Modal'
 import RecordForm from './RecordForm'
+import CustomUseCaseRenderer from './CustomUseCaseRenderer'
 
 interface RecordModalProps {
   isOpen: boolean
@@ -33,6 +34,8 @@ interface RecordModalProps {
   isTunnelReady?: boolean
   project?: any
   refreshTrigger?: number
+  customSlots?: any[]
+  detailsInterfaceTypes?: Record<string, string>
 }
 
 export default function RecordModal({ 
@@ -66,7 +69,9 @@ export default function RecordModal({
   customActions = [],
   onCustomAction,
   refreshTrigger,
-  tabsStyleConfig
+  tabsStyleConfig,
+  customSlots = [],
+  detailsInterfaceTypes
 }: RecordModalProps) {
   return (
     <Modal 
@@ -76,38 +81,68 @@ export default function RecordModal({
       size={logicType === 'master_detail' ? '2xl' : 'xl'}
       zIndex={zIndex}
     >
-      <RecordForm 
-        mode={mode}
-        fields={fields}
-        initialData={initialData}
-        onSave={onSave}
-        onCancel={onClose}
-        isLoading={isLoading}
-        logicType={logicType}
-        masterModelId={masterModelId}
-        masterModelName={masterModelName}
-        masterTabTitle={masterTabTitle}
-        detailsTabTitles={detailsTabTitles}
-        tabsStyleConfig={tabsStyleConfig}
-        detailDisplayMode={detailDisplayMode}
-        onEditDetail={onEditDetail}
-        onDeleteDetail={onDeleteDetail}
-        onAddDetail={onAddDetail}
-        joins={joins}
-        dictionary={dictionary}
-        detailsInlineTypes={detailsInlineTypes}
-        initialTab={initialTab}
-        onTabChange={onTabChange}
-        footerBgClass="bg-white dark:bg-neutral-900"
-        projectId={projectId}
-        secretToken={secretToken}
-        tunnelChannel={tunnelChannel}
-        isTunnelReady={isTunnelReady}
-        project={project}
-        customActions={customActions}
-        onCustomAction={onCustomAction}
-        refreshTrigger={refreshTrigger}
-      />
+      {logicType === 'personalizado' ? (
+        <CustomUseCaseRenderer 
+          mode={mode}
+          initialData={initialData}
+          customSlots={customSlots.length > 0 ? customSlots : project?.ui_views?.find?.((v: any) => v.id === initialData?.view_id)?.layout_config?.custom_slots || []} 
+          logicType={logicType}
+          masterModelId={masterModelId}
+          masterModelName={masterModelName}
+          projectId={projectId}
+          secretToken={secretToken}
+          tunnelChannel={tunnelChannel}
+          isTunnelReady={isTunnelReady}
+          project={project}
+          onClose={onClose}
+          onSave={onSave}
+          isLoading={isLoading}
+          fields={fields}
+          dictionary={dictionary}
+          joins={joins}
+          customActions={customActions}
+          onCustomAction={onCustomAction}
+          refreshTrigger={refreshTrigger}
+          detailsInterfaceTypes={detailsInterfaceTypes}
+          detailsInlineTypes={detailsInlineTypes}
+          onEditDetail={onEditDetail}
+          onDeleteDetail={onDeleteDetail}
+          onAddDetail={onAddDetail}
+        />
+      ) : (
+        <RecordForm 
+          mode={mode}
+          fields={fields}
+          initialData={initialData}
+          onSave={onSave}
+          onCancel={onClose}
+          isLoading={isLoading}
+          logicType={logicType}
+          masterModelId={masterModelId}
+          masterModelName={masterModelName}
+          masterTabTitle={masterTabTitle}
+          detailsTabTitles={detailsTabTitles}
+          tabsStyleConfig={tabsStyleConfig}
+          detailDisplayMode={detailDisplayMode}
+          onEditDetail={onEditDetail}
+          onDeleteDetail={onDeleteDetail}
+          onAddDetail={onAddDetail}
+          joins={joins}
+          dictionary={dictionary}
+          detailsInlineTypes={detailsInlineTypes}
+          initialTab={initialTab}
+          onTabChange={onTabChange}
+          footerBgClass="bg-white dark:bg-neutral-900"
+          projectId={projectId}
+          secretToken={secretToken}
+          tunnelChannel={tunnelChannel}
+          isTunnelReady={isTunnelReady}
+          project={project}
+          customActions={customActions}
+          onCustomAction={onCustomAction}
+          refreshTrigger={refreshTrigger}
+        />
+      )}
     </Modal>
   )
 }

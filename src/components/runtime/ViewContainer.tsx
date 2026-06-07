@@ -28,6 +28,8 @@ interface ViewContainerProps {
   logicType?: string
   primaryKeyName?: string
   kanbanGroupField?: string
+  kanbanGroupDisplayField?: string
+  kanbanCardFields?: string[]
   mindmapCentralField?: string
   schedulerConfig?: any
   timelineConfig?: any
@@ -42,12 +44,14 @@ interface ViewContainerProps {
   project?: any
   actionInterfaceType?: 'drawer' | 'modal' | 'page'
   externalFilters?: Record<string, string>
+  advancedStaticFilters?: any[]
   onFiltersChange?: (filters: Record<string, string>) => void
   tunnelChannel?: any
   isTunnelReady?: boolean
   galleryClickBehavior?: 'lightbox' | 'thumbnail'
   customActions?: any[]
   externalRefreshTrigger?: number
+  onCustomAction?: (action: any, row?: any) => void
 }
 
 import DynamicCardList from './DynamicCardList'
@@ -130,6 +134,8 @@ export default function ViewContainer({
   logicType,
   primaryKeyName = 'id',
   kanbanGroupField,
+  kanbanGroupDisplayField,
+  kanbanCardFields,
   mindmapCentralField,
   schedulerConfig,
   timelineConfig,
@@ -144,12 +150,14 @@ export default function ViewContainer({
   project,
   actionInterfaceType = 'drawer',
   externalFilters = {},
+  advancedStaticFilters = [],
   onFiltersChange,
   tunnelChannel,
   isTunnelReady,
   galleryClickBehavior,
   customActions = [],
-  externalRefreshTrigger = 0
+  externalRefreshTrigger = 0,
+  onCustomAction
 }: ViewContainerProps) {
   const { toast } = useToast()
   const router = useRouter()
@@ -538,7 +546,7 @@ export default function ViewContainer({
         let resultData = payload.payload.data || []
         
         // Agrupar mestre/detalhe
-        if (logicType === 'master_detail' && joins && joins.length > 0) {
+        if ((logicType === 'master_detail' || logicType === 'personalizado') && joins && joins.length > 0) {
           const primaryKeyName = formFields.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
           
           const grouped: Record<string, any> = {}
@@ -556,7 +564,7 @@ export default function ViewContainer({
         
         resultData = resultData.map((row: any) => ({
           ...row,
-          _key: crypto.randomUUID()
+          _key: String(row[primaryKeyName] || row.id || row.ID || crypto.randomUUID())
         }))
 
         if (shouldAppend) {
@@ -640,10 +648,10 @@ export default function ViewContainer({
           // Build raw SQL query with aliases to avoid column name shadowing (e.g. multiple 'name' columns)
           // We must also build the JOINs manually if we provide a raw query
           const buildJoinsSql = (joinsList: any[]) => {
-            if (!joinsList || joinsList.length === 0) return ''
+            const validJoinsList = joinsList || []
             
             // Resolvemos os joins caso venham como IDs do Wizard
-            const resolvedJoins = joinsList.map(j => {
+            const resolvedJoins = validJoinsList.map(j => {
               if (j.toTable && j.table) return j
               
               // Se já vier da versão nova do Wizard (JoinsEditor) que salva db_table_name e db_column_name
@@ -689,6 +697,21 @@ export default function ViewContainer({
                  const col = f.sql_expression || f.db_column_name;
                  if (col && col.includes('.')) {
                     requiredTables.add(col.split('.')[0]);
+                 }
+               });
+            }
+            if (filterFields) {
+               filterFields.forEach(f => {
+                 const col = f.sql_expression || f.db_column_name;
+                 if (col && col.includes('.')) {
+                    requiredTables.add(col.split('.')[0]);
+                 }
+               });
+            }
+            if (advancedStaticFilters) {
+               advancedStaticFilters.forEach(f => {
+                 if (f.field && f.field.includes('.')) {
+                    requiredTables.add(f.field.split('.')[0]);
                  }
                });
             }
@@ -935,6 +958,9 @@ export default function ViewContainer({
           if (currentFilters && Object.keys(currentFilters).length > 0) {
             payload.filters = currentFilters
           }
+          if (advancedStaticFilters && advancedStaticFilters.length > 0) {
+            payload.advancedFilters = advancedStaticFilters
+          }
 
           // Count payload
           const countQueryId = crypto.randomUUID()
@@ -952,6 +978,9 @@ export default function ViewContainer({
           }
           if (currentFilters && Object.keys(currentFilters).length > 0) {
             countPayload.filters = currentFilters
+          }
+          if (advancedStaticFilters && advancedStaticFilters.length > 0) {
+            countPayload.advancedFilters = advancedStaticFilters
           }
 
           // Pequeno delay para garantir que o canal de broadcast esteja "quente"
@@ -1073,7 +1102,10 @@ export default function ViewContainer({
         if (!res.payload.success) {
           toast(res.payload.error || 'Erro ao salvar no banco', 'error')
         } else {
-          toast('Salvo com sucesso!', 'success')
+          toast(t('runtime.update_success'), 'success')
+          if (onCustomAction) {
+            onCustomAction({ action: 'system_refresh' })
+          }
         }
       }
     }
@@ -1210,6 +1242,17 @@ export default function ViewContainer({
     setSortConfig({ key: columnName, direction })
   }
 
+  // Auto-correct kanbanGroupDisplayField if it lacks a table prefix
+  let correctedKanbanGroupDisplayField = kanbanGroupDisplayField;
+  const actualGroupField = displayFields.find(f => f.id === kanbanGroupField) || displayFields.find(f => f.db_column_name === 'status') || { db_column_name: 'status' };
+  if (kanbanGroupDisplayField && !kanbanGroupDisplayField.includes('.')) {
+    const join = joins?.find(j => j.localKey === actualGroupField.db_column_name || j.foreignKey === actualGroupField.db_column_name);
+    if (join) {
+      const relTableName = join.to === modelName ? join.from : join.to;
+      correctedKanbanGroupDisplayField = `${relTableName}.${kanbanGroupDisplayField}`;
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Toolbar - Custom Actions & Toggles */}
@@ -1287,11 +1330,11 @@ export default function ViewContainer({
         <div className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
           <div className="flex flex-col lg:flex-row items-end gap-6">
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full">
-               {filterFields.map(field => {
+               {filterFields.map((field, idx) => {
                  const zoneConfig = field.config?.filter_config || field.config || {}
                  
                  return (
-                  <div key={field.id} className="flex flex-col gap-1.5">
+                  <div key={field.id || field.db_column_name || `filter-${idx}`} className="flex flex-col gap-1.5">
                     <label 
                       style={{
                         fontFamily: zoneConfig.label?.font,
@@ -1533,7 +1576,9 @@ export default function ViewContainer({
           <DynamicKanban 
             data={data}
             fields={displayFields}
-            groupField={displayFields.find(f => f.id === kanbanGroupField) || displayFields.find(f => f.db_column_name === 'status') || { db_column_name: 'status' }}
+            groupField={actualGroupField}
+            kanbanGroupDisplayField={correctedKanbanGroupDisplayField}
+            kanbanCardFields={kanbanCardFields}
             dictionary={dictionary}
             onMove={handleMove}
             onView={onView}

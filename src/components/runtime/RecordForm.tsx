@@ -139,6 +139,7 @@ interface RecordFormProps {
   isTunnelReady?: boolean
   project?: any
   refreshTrigger?: number
+  renderOnlyDetail?: string
 }
 
 const getActionColorClasses = (color: string) => {
@@ -270,7 +271,8 @@ export default function RecordForm({
   project,
   masterTabTitle,
   detailsTabTitles,
-  refreshTrigger = 0
+  refreshTrigger = 0,
+  renderOnlyDetail
 }: RecordFormProps) {
   const { t } = useI18n()
   const [formData, setFormData] = useState<any>(initialData || {})
@@ -1353,7 +1355,7 @@ export default function RecordForm({
       </div>
 
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
-        {logicType === 'master_detail' && detailDisplayMode === 'tabs' && detailTables.length > 0 && (
+        {!renderOnlyDetail && logicType === 'master_detail' && detailDisplayMode === 'tabs' && detailTables.length > 0 && (
           <div className="flex items-center gap-2 border-b border-neutral-100 dark:border-neutral-800 mb-6">
             <button
               type="button"
@@ -1402,7 +1404,7 @@ export default function RecordForm({
         )}
 
         <div className={cn("flex-1 space-y-12", isPageMode ? "" : "overflow-y-auto custom-scrollbar pr-2")}>
-          {(detailDisplayMode === 'sections' || activeTab === 'master') && (
+          {!renderOnlyDetail && (detailDisplayMode === 'sections' || activeTab === 'master') && (
             <div className="space-y-6">
               {detailDisplayMode === 'sections' && logicType === 'master_detail' && (
                 <div className="flex items-center gap-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
@@ -1425,7 +1427,7 @@ export default function RecordForm({
             </div>
           )}
 
-          {logicType === 'master_detail' && detailDisplayMode === 'sections' && detailTables.map(tableName => (
+          {!renderOnlyDetail && logicType === 'master_detail' && detailDisplayMode === 'sections' && detailTables.map(tableName => (
             <div key={tableName} className="pt-4 space-y-6">
               <div className="flex items-center gap-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
@@ -1440,9 +1442,11 @@ export default function RecordForm({
             </div>
           ))}
 
-          {logicType === 'master_detail' && detailDisplayMode === 'tabs' && activeTab !== 'master' && (
+          {!renderOnlyDetail && logicType === 'master_detail' && detailDisplayMode === 'tabs' && activeTab !== 'master' && (
             renderDetailSection(activeTab)
           )}
+
+          {renderOnlyDetail && renderDetailSection(renderOnlyDetail)}
         </div>
 
         <div className={cn(

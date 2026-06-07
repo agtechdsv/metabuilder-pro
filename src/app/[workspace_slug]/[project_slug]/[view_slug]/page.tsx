@@ -651,6 +651,7 @@ export default async function SlugPage({ params }: PageProps) {
           exportFormats={view.layout_config?.export_formats}
           galleryClickBehavior={view.layout_config?.gallery_click_behavior}
           customActions={view.layout_config?.custom_actions || []}
+          customSlots={view.layout_config?.custom_slots || []}
           isAutomationsEnabled={isAutomationsEnabled}
           baseUrl={`${baseUrl}/dashboard`}
           breadcrumbs={breadcrumbs}

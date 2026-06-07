@@ -35,6 +35,8 @@ interface DynamicKanbanProps {
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
   dictionary?: any
+  kanbanGroupDisplayField?: string
+  kanbanCardFields?: string[]
 }
 
 export default function DynamicKanban({
@@ -45,7 +47,9 @@ export default function DynamicKanban({
   onView,
   onEdit,
   onDelete,
-  dictionary = {}
+  dictionary = {},
+  kanbanGroupDisplayField,
+  kanbanCardFields
 }: DynamicKanbanProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   
@@ -108,18 +112,43 @@ export default function DynamicKanban({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        {columns.map(column => (
+        {columns.map(column => {
+          let displayTitle = dictionary[column] || column;
+          if (column !== 'Unassigned') {
+            const sampleItem = data.find(item => String(getNestedValue(item, groupColumnName)) === column);
+            if (sampleItem) {
+              if (kanbanGroupDisplayField) {
+                const nestedVal = getNestedValue(sampleItem, kanbanGroupDisplayField);
+                if (nestedVal) displayTitle = nestedVal;
+              } else {
+                const labelField = `${groupColumnName}_nome`;
+                if (sampleItem[labelField]) {
+                  displayTitle = sampleItem[labelField];
+                }
+              }
+            }
+          }
+          return (
           <KanbanColumn
             key={column}
             id={column}
-            title={dictionary[column] || column}
-            fields={fields}
+            title={displayTitle}
+            fields={fields.filter((f: any) => {
+              // Hide group columns from card content
+              if (f.db_column_name === groupColumnName || f.db_column_name === kanbanGroupDisplayField) return false;
+              // If card fields are specified, only show those
+              if (kanbanCardFields && kanbanCardFields.length > 0) {
+                return kanbanCardFields.includes(f.db_column_name);
+              }
+              return true;
+            })}
             items={data.filter(item => String(getNestedValue(item, groupColumnName) || 'Unassigned') === column)}
             onView={onView}
             onEdit={onEdit}
             onDelete={onDelete}
           />
-        ))}
+          )
+        })}
 
         <DragOverlay>
           {activeId ? (
@@ -189,6 +218,7 @@ function KanbanColumn({ id, title, items, fields, onView, onEdit, onDelete }: an
 
 function getNestedValue(obj: any, path: string) {
   if (!path) return undefined
+  if (obj && obj[path] !== undefined) return obj[path]
   return path.split('.').reduce((acc, part) => acc && acc[part], obj)
 }
 

@@ -267,13 +267,57 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
 
         if (action === 'select') {
           const filters = payload.payload.filters;
+          const advancedFilters = payload.payload.advancedFilters || [];
           const joins = payload.payload.joins || [];
           let whereClause = '';
           const rawQueryStr = (payload.payload.query || '').toLowerCase();
           
+          let i = 1;
+          const conditions = [];
+
+          let advancedConditionsSql = '';
+          if (advancedFilters && advancedFilters.length > 0) {
+            let advClauses = [];
+            for (let j = 0; j < advancedFilters.length; j++) {
+              const f = advancedFilters[j];
+              let tablePart = safeTable;
+              let columnPart = f.field;
+              if (columnPart && columnPart.includes('.')) {
+                const parts = columnPart.split('.');
+                tablePart = parts[0].replace(/[^a-zA-Z0-9_]/g, '');
+                columnPart = parts[1].replace(/[^a-zA-Z0-9_]/g, '');
+              } else if (columnPart) {
+                columnPart = columnPart.replace(/[^a-zA-Z0-9_]/g, '');
+              } else {
+                continue;
+              }
+
+              const isJoinedStr = rawQueryStr.includes(`join "${tablePart.toLowerCase()}"`) || rawQueryStr.includes(`join ${tablePart.toLowerCase()}`);
+              const isJoinedCli = (joins || []).some((j) => {
+                 return j.to === tablePart || j.from === tablePart || j.toTable === tablePart || j.table === tablePart;
+              });
+
+              if (tablePart === safeTable || isJoinedStr || isJoinedCli) {
+                const logicOp = advClauses.length > 0 ? (f.logic === 'OR' ? ' OR ' : ' AND ') : '';
+                const op = f.operator || '=';
+                
+                if (op === 'between') {
+                  advClauses.push(`${logicOp}("${tablePart}"."${columnPart}" BETWEEN $${i} AND $${i+1})`);
+                  params.push(f.value, f.value2);
+                  i += 2;
+                } else if (['=', '>', '<', '>=', '<='].includes(op)) {
+                  advClauses.push(`${logicOp}("${tablePart}"."${columnPart}" ${op} $${i})`);
+                  params.push(f.value);
+                  i++;
+                }
+              }
+            }
+            if (advClauses.length > 0) {
+              advancedConditionsSql = `(${advClauses.join('')})`;
+            }
+          }
+
           if (filters && Object.keys(filters).length > 0) {
-            const conditions = [];
-            let i = 1;
             for (const [key, value] of Object.entries(filters)) {
               if (value !== undefined && value !== '') {
                 let tablePart = safeTable;
@@ -301,9 +345,14 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
                 }
               }
             }
-            if (conditions.length > 0) {
-              whereClause = ` WHERE ${conditions.join(' AND ')}`;
-            }
+          }
+
+          if (conditions.length > 0 && advancedConditionsSql) {
+            whereClause = ` WHERE ${advancedConditionsSql} AND (${conditions.join(' AND ')})`;
+          } else if (conditions.length > 0) {
+            whereClause = ` WHERE ${conditions.join(' AND ')}`;
+          } else if (advancedConditionsSql) {
+            whereClause = ` WHERE ${advancedConditionsSql}`;
           }
 
           const limit = payload.payload.limit ? parseInt(payload.payload.limit) : 100;
@@ -375,13 +424,57 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
           console.log(chalk.green(`[ OK ] SELECT: Retornou ${result.rows.length} linhas (Limit: ${limit}, Offset: ${offset}).`));
         } else if (action === 'count_records') {
           const filters = payload.payload.filters;
+          const advancedFilters = payload.payload.advancedFilters || [];
           const joins = payload.payload.joins || [];
           let whereClause = '';
           const rawQueryStr = (payload.payload.query || '').toLowerCase();
           
+          let i = 1;
+          const conditions = [];
+
+          let advancedConditionsSql = '';
+          if (advancedFilters && advancedFilters.length > 0) {
+            let advClauses = [];
+            for (let j = 0; j < advancedFilters.length; j++) {
+              const f = advancedFilters[j];
+              let tablePart = safeTable;
+              let columnPart = f.field;
+              if (columnPart && columnPart.includes('.')) {
+                const parts = columnPart.split('.');
+                tablePart = parts[0].replace(/[^a-zA-Z0-9_]/g, '');
+                columnPart = parts[1].replace(/[^a-zA-Z0-9_]/g, '');
+              } else if (columnPart) {
+                columnPart = columnPart.replace(/[^a-zA-Z0-9_]/g, '');
+              } else {
+                continue;
+              }
+
+              const isJoinedStr = rawQueryStr.includes(`join "${tablePart.toLowerCase()}"`) || rawQueryStr.includes(`join ${tablePart.toLowerCase()}`);
+              const isJoinedCli = (joins || []).some((j) => {
+                 return j.to === tablePart || j.from === tablePart || j.toTable === tablePart || j.table === tablePart;
+              });
+
+              if (tablePart === safeTable || isJoinedStr || isJoinedCli) {
+                const logicOp = advClauses.length > 0 ? (f.logic === 'OR' ? ' OR ' : ' AND ') : '';
+                const op = f.operator || '=';
+                
+                if (op === 'between') {
+                  advClauses.push(`${logicOp}("${tablePart}"."${columnPart}" BETWEEN $${i} AND $${i+1})`);
+                  params.push(f.value, f.value2);
+                  i += 2;
+                } else if (['=', '>', '<', '>=', '<='].includes(op)) {
+                  advClauses.push(`${logicOp}("${tablePart}"."${columnPart}" ${op} $${i})`);
+                  params.push(f.value);
+                  i++;
+                }
+              }
+            }
+            if (advClauses.length > 0) {
+              advancedConditionsSql = `(${advClauses.join('')})`;
+            }
+          }
+
           if (filters && Object.keys(filters).length > 0) {
-            const conditions = [];
-            let i = 1;
             for (const [key, value] of Object.entries(filters)) {
               if (value !== undefined && value !== '') {
                 let tablePart = safeTable;
@@ -406,9 +499,14 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
                 }
               }
             }
-            if (conditions.length > 0) {
-              whereClause = ` WHERE ${conditions.join(' AND ')}`;
-            }
+          }
+
+          if (conditions.length > 0 && advancedConditionsSql) {
+            whereClause = ` WHERE ${advancedConditionsSql} AND (${conditions.join(' AND ')})`;
+          } else if (conditions.length > 0) {
+            whereClause = ` WHERE ${conditions.join(' AND ')}`;
+          } else if (advancedConditionsSql) {
+            whereClause = ` WHERE ${advancedConditionsSql}`;
           }
 
           if (payload.payload.query) {
