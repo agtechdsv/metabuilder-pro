@@ -117,6 +117,7 @@ export default function UseCasesFeaturePage() {
   const [isHrExpanded, setIsHrExpanded] = useState(false)
 
   // Galeria simulation state
+  const [customHybridTab, setCustomHybridTab] = useState<'metrics' | 'kanban' | 'history'>('metrics')
   const [galleryFilter, setGalleryFilter] = useState<'all' | 'image' | 'pdf'>('all')
   const [gallerySearchQuery, setGallerySearchQuery] = useState('')
   const [selectedAssetPreview, setSelectedAssetPreview] = useState<any | null>(null)
@@ -293,7 +294,9 @@ export default function UseCasesFeaturePage() {
     // 4. Inteligência, Mídia e Outros
     { id: 'dashboard', icon: <BarChart3 className="w-5 h-5" />, color: 'from-blue-500 to-blue-600' },
     { id: 'galeria', icon: <LayoutGrid className="w-5 h-5" />, color: 'from-rose-500 to-pink-600' },
-    { id: 'personalizado', icon: <Terminal className="w-5 h-5" />, color: 'from-amber-500 to-amber-600' },
+    
+    // 5. Avançado e Híbrido
+    { id: 'personalizado', icon: <Layers className="w-5 h-5" />, color: 'from-amber-500 to-amber-600' },
   ]
 
   return (
@@ -1752,95 +1755,172 @@ export default function UseCasesFeaturePage() {
                   >
                     <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-5 shadow-sm space-y-4">
                       
-                      {/* Custom SQL Editor Header */}
-                      <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
-                        <div className="flex items-center gap-2">
-                          <Terminal className="w-4 h-4 text-amber-500" />
-                          <span className="text-xs font-black uppercase text-neutral-800 dark:text-white">
-                            {t('marketing_v2.use_cases_page.mockups.sql_editor_title')}
-                          </span>
+                      {/* Hybrid Layout Header */}
+                      <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-amber-500/10 text-amber-500 rounded-xl">
+                            <Layers className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-neutral-800 dark:text-white leading-tight">
+                              Painel de Controle Financeiro (Híbrido)
+                            </h4>
+                            <p className="text-[10px] text-neutral-400">
+                              Exemplo de Layout Personalizado com múltiplas visões e botões dinâmicos
+                            </p>
+                          </div>
                         </div>
+                        <div className="flex gap-2">
+                          {/* Mock Action Buttons generated from Tabs */}
+                          <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold uppercase transition-colors flex items-center gap-1.5 shadow-sm">
+                            <Plus className="w-3.5 h-3.5" /> Emitir NFe
+                          </button>
+                          <button className="px-4 py-2 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900 text-neutral-700 dark:text-neutral-300 rounded-lg text-[10px] font-bold uppercase transition-colors flex items-center gap-1.5">
+                            <ExternalLink className="w-3.5 h-3.5" /> Portal
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Fake Tabs */}
+                      <div className="flex border-b border-neutral-200 dark:border-neutral-800">
                         <button 
-                          onClick={runCustomQuery}
-                          disabled={isSqlRunning}
-                          className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-500/60 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-1"
+                          onClick={() => setCustomHybridTab('metrics')}
+                          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${customHybridTab === 'metrics' ? 'border-amber-500 text-amber-600 dark:text-amber-500' : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'}`}
                         >
-                          {isSqlRunning ? (
-                            <span>...</span>
-                          ) : (
-                            <>
-                              <Play className="w-3 h-3 fill-current" />
-                              <span>{t('marketing_v2.use_cases_page.mockups.run_query')}</span>
-                            </>
-                          )}
+                          Métricas e Gráficos
+                        </button>
+                        <button 
+                          onClick={() => setCustomHybridTab('kanban')}
+                          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${customHybridTab === 'kanban' ? 'border-amber-500 text-amber-600 dark:text-amber-500' : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'}`}
+                        >
+                          Kanban de Aprovações
+                        </button>
+                        <button 
+                          onClick={() => setCustomHybridTab('history')}
+                          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${customHybridTab === 'history' ? 'border-amber-500 text-amber-600 dark:text-amber-500' : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'}`}
+                        >
+                          Histórico (Grid)
                         </button>
                       </div>
 
-                      {/* Mockup SQL TextArea */}
-                      <div className="font-mono text-xs text-neutral-700 dark:text-neutral-300 p-4 bg-neutral-50 dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-850">
-                        <p className="text-purple-500 dark:text-purple-400">SELECT</p>
-                        <p className="pl-4 text-neutral-600 dark:text-neutral-300">
-                          p.id, p.name, <span className="text-emerald-500">count</span>(o.id) <span className="text-purple-500">as</span> orders_count
-                        </p>
-                        <p className="text-purple-500 dark:text-purple-400">FROM</p>
-                        <p className="pl-4">products p</p>
-                        <p className="text-purple-500 dark:text-purple-400">LEFT JOIN</p>
-                        <p className="pl-4">orders o ON p.id = o.product_id</p>
-                        <p className="text-purple-500 dark:text-purple-400">GROUP BY</p>
-                        <p className="pl-4">p.id</p>
+                      {/* Content Area - Simulated Dynamic Content */}
+                      <div className="pt-2 min-h-[220px]">
+                        <AnimatePresence mode="wait">
+                          {customHybridTab === 'metrics' && (
+                            <motion.div 
+                              key="metrics"
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -5 }}
+                              className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                            >
+                              <div className="col-span-2 space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="p-4 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50">
+                                    <span className="text-[10px] font-black uppercase text-neutral-400">Receita Bruta</span>
+                                    <p className="text-xl font-black text-neutral-800 dark:text-white mt-1">R$ 1.452.900</p>
+                                  </div>
+                                  <div className="p-4 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50">
+                                    <span className="text-[10px] font-black uppercase text-neutral-400">Custos Variáveis</span>
+                                    <p className="text-xl font-black text-rose-500 mt-1">R$ 384.200</p>
+                                  </div>
+                                </div>
+                                <div className="h-32 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 flex items-center justify-center text-xs text-neutral-400 font-medium">
+                                  <BarChart3 className="w-5 h-5 mr-2 opacity-50" />
+                                  [Gráfico Analítico Embutido]
+                                </div>
+                              </div>
+                              <div className="col-span-1 border-l border-neutral-100 dark:border-neutral-800 pl-4">
+                                <h5 className="text-[10px] font-black uppercase text-neutral-400 mb-3">
+                                  Ações Rápidas Customizadas
+                               </h5>
+                                <div className="space-y-2">
+                                  <button className="w-full text-left p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:border-indigo-500/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/10 transition-colors flex items-center justify-between group">
+                                    <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">Aprovar Lote #41</span>
+                                    <ArrowRight className="w-3.5 h-3.5 text-neutral-400 group-hover:text-indigo-500" />
+                                  </button>
+                                  <button className="w-full text-left p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:border-indigo-500/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/10 transition-colors flex items-center justify-between group">
+                                    <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">Revisar Despesas</span>
+                                    <ArrowRight className="w-3.5 h-3.5 text-neutral-400 group-hover:text-indigo-500" />
+                                  </button>
+                                  <button className="w-full text-left p-2.5 rounded-lg border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/10 hover:border-amber-400 transition-colors flex items-center justify-between group">
+                                    <span className="text-xs font-bold text-amber-700 dark:text-amber-400">Gerar Fechamento</span>
+                                    <ArrowRight className="w-3.5 h-3.5 text-amber-500" />
+                                  </button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+
+                          {customHybridTab === 'kanban' && (
+                            <motion.div 
+                              key="kanban"
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -5 }}
+                              className="grid grid-cols-3 gap-4"
+                            >
+                              <div className="bg-neutral-50 dark:bg-neutral-900/50 rounded-xl p-3 border border-neutral-100 dark:border-neutral-800 h-48 flex flex-col gap-2">
+                                <span className="text-[10px] font-black uppercase text-neutral-400 px-1">Pendente</span>
+                                <div className="bg-white dark:bg-neutral-950 p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 shadow-sm">
+                                  <p className="text-[10px] font-bold text-neutral-800 dark:text-neutral-200">Revisão Contábil Q2</p>
+                                </div>
+                                <div className="bg-white dark:bg-neutral-950 p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 shadow-sm opacity-50 border-dashed"></div>
+                              </div>
+                              <div className="bg-neutral-50 dark:bg-neutral-900/50 rounded-xl p-3 border border-neutral-100 dark:border-neutral-800 h-48 flex flex-col gap-2">
+                                <span className="text-[10px] font-black uppercase text-amber-500 px-1">Em Análise</span>
+                                <div className="bg-white dark:bg-neutral-950 p-2.5 rounded-lg border border-amber-200 dark:border-amber-900/30 shadow-sm border-l-2 border-l-amber-500">
+                                  <p className="text-[10px] font-bold text-neutral-800 dark:text-neutral-200">Aprovar Adiantamentos</p>
+                                </div>
+                              </div>
+                              <div className="bg-neutral-50 dark:bg-neutral-900/50 rounded-xl p-3 border border-neutral-100 dark:border-neutral-800 h-48 flex flex-col gap-2">
+                                <span className="text-[10px] font-black uppercase text-emerald-500 px-1">Aprovado</span>
+                                <div className="bg-white dark:bg-neutral-950 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-900/30 shadow-sm border-l-2 border-l-emerald-500">
+                                  <p className="text-[10px] font-bold text-neutral-800 dark:text-neutral-200">Lote Pagamento #40</p>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+
+                          {customHybridTab === 'history' && (
+                            <motion.div 
+                              key="history"
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -5 }}
+                              className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden bg-white dark:bg-neutral-950"
+                            >
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 text-[9px] font-black uppercase text-neutral-400 tracking-wider">
+                                    <th className="px-4 py-2">Data</th>
+                                    <th className="px-4 py-2">Ação</th>
+                                    <th className="px-4 py-2">Usuário</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800 text-xs">
+                                  <tr className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/30">
+                                    <td className="px-4 py-2 font-mono text-neutral-500">Hoje, 14:30</td>
+                                    <td className="px-4 py-2 font-bold text-neutral-800 dark:text-neutral-200">Emissão de NFe Avulsa</td>
+                                    <td className="px-4 py-2 text-indigo-500">@alexandre</td>
+                                  </tr>
+                                  <tr className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/30">
+                                    <td className="px-4 py-2 font-mono text-neutral-500">Ontem, 09:15</td>
+                                    <td className="px-4 py-2 font-bold text-neutral-800 dark:text-neutral-200">Baixa de Lote #39</td>
+                                    <td className="px-4 py-2 text-indigo-500">@financeiro</td>
+                                  </tr>
+                                  <tr className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/30">
+                                    <td className="px-4 py-2 font-mono text-neutral-500">05/06, 16:00</td>
+                                    <td className="px-4 py-2 font-bold text-neutral-800 dark:text-neutral-200">Alteração de Meta</td>
+                                    <td className="px-4 py-2 text-indigo-500">@diretoria</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </div>
-
-                    {/* Query Result Grid simulation */}
-                    <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-5 shadow-sm space-y-3 min-h-[160px] flex flex-col justify-center">
-                      <h5 className="text-[10px] font-black uppercase text-neutral-400 border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                        {t('marketing_v2.use_cases_page.mockups.query_result')}
-                      </h5>
-
-                      <AnimatePresence mode="wait">
-                        {isSqlRunning ? (
-                          <motion.div 
-                            key="sql-loader"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="text-center py-8 text-neutral-400 italic text-xs"
-                          >
-                            Executing Raw SQL query through CLI Bridge tunnel...
-                          </motion.div>
-                        ) : sqlResults.length > 0 ? (
-                          <motion.div 
-                            key="sql-table"
-                            initial={{ opacity: 0, y: 5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="space-y-3"
-                          >
-                            <div className="grid grid-cols-3 text-[9px] font-black uppercase text-neutral-400 border-b border-neutral-100 dark:border-neutral-850 pb-2">
-                              <span>ID</span>
-                              <span>Produto</span>
-                              <span className="text-right">Pedidos Feitos</span>
-                            </div>
-                            {sqlResults.map(item => (
-                              <div key={item.id} className="grid grid-cols-3 text-xs font-mono">
-                                <span>#{item.id}</span>
-                                <span className="font-bold font-sans text-neutral-800 dark:text-neutral-300">{item.name}</span>
-                                <span className="text-right font-black text-amber-500">{item.count}</span>
-                              </div>
-                            ))}
-                          </motion.div>
-                        ) : (
-                          <motion.div 
-                            key="sql-empty"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="text-center py-8 text-neutral-400 text-xs italic"
-                          >
-                            Nenhuma consulta executada ainda. Clique em "EXECUTAR QUERY" para testar.
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-
                   </motion.div>
                 )}
 

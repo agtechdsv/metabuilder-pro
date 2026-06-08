@@ -1069,12 +1069,12 @@
           "components": "Visualização em grade (Grade Mensal/Semanal), cards de evento interativos com drag-and-drop e modal de novo agendamento."
         },
         "personalizado": {
-          "title": "Personalizado",
+          "title": "Personalizado (Híbrido)",
           "desc": "Controle total da query e do layout, ideal para fluxos complexos fora do padrão.",
-          "what_is": "Para cenários em que o assistente automático não basta. Permite programar SQL puro e definir layouts manuais.",
-          "behavior": "A engine ignora a geração automática de consultas e passa a executar a query SQL manual especificada pelo desenvolvedor.",
-          "example": "Painel analítico com consultas aggregadas pesadas ou fluxos com integrações de APIs adicionais.",
-          "components": "Editor SQL com realce de sintaxe, layout de exibição livre e criação de botões virtuais para rotas."
+          "what_is": "Para cenários em que o padrão não basta. Permite combinar módulos (grids, kanbans, galerias) em múltiplas abas e até transformar abas em botões de ação dinâmicos (modais/drawers).",
+          "behavior": "A engine possibilita ao desenvolvedor montar um painel híbrido totalmente adaptado à sua regra de negócio.",
+          "example": "Telas com abas variadas, ou menus complexos interligando diferentes relatórios analíticos, cadastros e ações pontuais em overlays nativos.",
+          "components": "Componente Mestre, N Abas Secundárias de visualizações distintas, Botões interativos com modais dinâmicos."
         },
         "galeria": {
           "title": "Galeria / Assets",
@@ -1425,7 +1425,11 @@
         },
         "outros": {
           "title": "Inteligência, Mídia e Outros",
-          "desc": "Dashboards analíticos, galerias e lógicas customizadas."
+          "desc": "Dashboards analíticos e galerias."
+        },
+        "avancado": {
+          "title": "Avançado e Híbrido",
+          "desc": "Lógicas personalizadas unindo múltiplos componentes e views."
         }
       },
       "types": {
@@ -1454,8 +1458,8 @@
           "desc": "Visualizador de hierarquias de dados."
         },
         "personalizado": {
-          "title": "Personalizado",
-          "desc": "Query customizada para cenários complexos."
+          "title": "Personalizado (Híbrido)",
+          "desc": "Crie layouts únicos com abas flexíveis combinando grids, kanbans e botões de ação customizados para workflows avançados."
         },
         "timeline": {
           "title": "Linha do Tempo / Feed",

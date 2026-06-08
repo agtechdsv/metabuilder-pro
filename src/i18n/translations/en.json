@@ -1069,12 +1069,12 @@
           "components": "Grid view layouts (Monthly/Weekly/Daily), interactive event cards with drag-and-drop, and new booking dialog."
         },
         "personalizado": {
-          "title": "Custom",
-          "desc": "Complete query and layout control, perfect for custom logic beyond standards.",
-          "what_is": "For advanced scenarios where automated wizards are not enough. Write raw SQL queries and design custom layouts.",
-          "behavior": "The engine bypasses automatic SQL generators and executes raw database queries specified by the programmer.",
-          "example": "Analytical dashboards with complex SQL aggregations or pages integrating external REST APIs.",
-          "components": "SQL editor with syntax highlighting, freeform UI templates, and custom route buttons."
+          "title": "Custom (Hybrid)",
+          "desc": "Complete layout control, perfect for custom workflows beyond standards.",
+          "what_is": "For scenarios where the standard isn't enough. Allows combining modules (grids, kanbans, galleries) in multiple tabs and even transforming tabs into dynamic action buttons (modals/drawers).",
+          "behavior": "The engine allows the developer to build a hybrid panel fully adapted to their business rules.",
+          "example": "Screens with varied tabs, or complex menus interconnecting different analytical reports, records and punctual actions in native overlays.",
+          "components": "Master component, N Secondary Tabs of distinct visualizations, Interactive buttons with dynamic modals."
         },
         "galeria": {
           "title": "Gallery / Assets",
@@ -1424,8 +1424,12 @@
           "desc": "Interfaces for geospatial display or interconnected diagrams."
         },
         "outros": {
-          "title": "Intelligence, Media & Others",
-          "desc": "Analytical dashboards, galleries, and custom logics."
+          "title": "Intelligence & Media",
+          "desc": "Analytical dashboards and galleries."
+        },
+        "avancado": {
+          "title": "Advanced & Hybrid",
+          "desc": "Custom logic combining multiple components and views."
         }
       },
       "types": {
@@ -1454,8 +1458,8 @@
           "desc": "Visualizer of data hierarchies."
         },
         "personalizado": {
-          "title": "Custom",
-          "desc": "Custom query for complex scenarios."
+          "title": "Custom (Hybrid)",
+          "desc": "Create unique layouts with flexible tabs combining grids, kanbans and custom action buttons for advanced workflows."
         },
         "timeline": {
           "title": "Timeline / Feed",

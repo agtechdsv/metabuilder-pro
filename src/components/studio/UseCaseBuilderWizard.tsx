@@ -1473,7 +1473,15 @@ function StepLogic({ config, setConfig }: any) {
       icon: LayoutGrid,
       items: [
         { id: 'analytics', title: t('wizard.logic.types.analytics.title', 'Dashboard (BI)'), desc: t('wizard.logic.types.analytics.desc', 'Indicadores de desempenho, gráficos e KPIs.'), icon: Layout },
-        { id: 'galeria', title: t('wizard.logic.types.galeria.title', 'Galeria / Assets'), desc: t('wizard.logic.types.galeria.desc', 'Galeria de mídias, imagens e documentos com download e redirecionamentos.'), icon: LayoutGrid },
+        { id: 'galeria', title: t('wizard.logic.types.galeria.title', 'Galeria / Assets'), desc: t('wizard.logic.types.galeria.desc', 'Galeria de mídias, imagens e documentos com download e redirecionamentos.'), icon: LayoutGrid }
+      ]
+    },
+    {
+      id: 'avancado',
+      title: t('wizard.logic.categories.avancado.title', 'Avançado e Híbrido'),
+      description: t('wizard.logic.categories.avancado.desc', 'Lógicas personalizadas unindo múltiplos componentes e views.'),
+      icon: Settings,
+      items: [
         { id: 'personalizado', title: t('wizard.logic.types.personalizado.title'), desc: t('wizard.logic.types.personalizado.desc'), icon: Settings }
       ]
     }
