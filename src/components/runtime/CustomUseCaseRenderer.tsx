@@ -127,6 +127,7 @@ export default function CustomUseCaseRenderer({
             customActions={customActions}
             onCustomAction={onCustomAction}
             detailsItemTitles={detailsItemTitles}
+            hideHeader={true}
           />
         </div>
       )
@@ -270,6 +271,7 @@ export default function CustomUseCaseRenderer({
               onSave={onSave}
               onCancel={onClose}
               isLoading={isLoading}
+              hideHeader={true}
               logicType="master_detail"
               masterModelId={masterModelId}
               masterModelName={masterModelName}

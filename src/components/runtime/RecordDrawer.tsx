@@ -37,6 +37,8 @@ interface RecordDrawerProps {
   refreshTrigger?: number
   customSlots?: any[]
   detailsInterfaceTypes?: Record<string, string>
+  formHeaderTitle?: string
+  formHeaderSubtitleField?: string
 }
 
 export default function RecordDrawer({ 
@@ -73,7 +75,9 @@ export default function RecordDrawer({
   onCustomAction,
   refreshTrigger,
   customSlots = [],
-  detailsInterfaceTypes
+  detailsInterfaceTypes,
+  formHeaderTitle,
+  formHeaderSubtitleField
 }: RecordDrawerProps) {
   return (
     <Drawer isOpen={isOpen} onClose={onClose} title="" zIndex={zIndex}>
@@ -137,6 +141,8 @@ export default function RecordDrawer({
           customActions={customActions}
           onCustomAction={onCustomAction}
           refreshTrigger={refreshTrigger}
+          formHeaderTitle={formHeaderTitle}
+          formHeaderSubtitleField={formHeaderSubtitleField}
         />
       )}
     </Drawer>

@@ -37,6 +37,8 @@ interface RecordModalProps {
   refreshTrigger?: number
   customSlots?: any[]
   detailsInterfaceTypes?: Record<string, string>
+  formHeaderTitle?: string
+  formHeaderSubtitleField?: string
 }
 
 export default function RecordModal({ 
@@ -73,7 +75,9 @@ export default function RecordModal({
   refreshTrigger,
   tabsStyleConfig,
   customSlots = [],
-  detailsInterfaceTypes
+  detailsInterfaceTypes,
+  formHeaderTitle,
+  formHeaderSubtitleField
 }: RecordModalProps) {
   return (
     <Modal 
@@ -144,6 +148,8 @@ export default function RecordModal({
           customActions={customActions}
           onCustomAction={onCustomAction}
           refreshTrigger={refreshTrigger}
+          formHeaderTitle={formHeaderTitle}
+          formHeaderSubtitleField={formHeaderSubtitleField}
         />
       )}
     </Modal>

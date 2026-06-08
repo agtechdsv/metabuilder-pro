@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import { 
   ChevronRight, 
@@ -83,17 +83,50 @@ export default function DynamicMindMap({
   tunnelChannel,
   isTunnelReady
 }: DynamicMindMapProps) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
+  const localeStr = language === 'pt' ? 'pt-BR' : language === 'en' ? 'en-US' : 'es-ES'
+
+  const formatValue = (value: any, fieldName: string, modelId: string | undefined) => {
+    if (value === null || value === undefined) return value;
+    const model = models.find(m => m.id === modelId);
+    if (!model) return value;
+    const field = model.fields?.find((f: any) => f.db_column_name === fieldName);
+    if (!field) return value;
+
+    if (field.data_type === 'date' || field.data_type === 'timestamp' || field.data_type === 'timestamptz' || (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value))) {
+      try {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+          return new Intl.DateTimeFormat(localeStr, { 
+            dateStyle: 'short', 
+            timeStyle: (field.data_type === 'timestamp' || field.data_type === 'timestamptz' || value.includes('T')) ? 'short' : undefined 
+          }).format(date);
+        }
+      } catch (e) {}
+    }
+
+    if (field.data_type === 'numeric' || field.data_type === 'decimal' || field.data_type === 'float' || field.data_type === 'float8' || field.data_type === 'money') {
+      try {
+        const num = Number(value);
+        if (!isNaN(num)) {
+          return new Intl.NumberFormat(localeStr, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          }).format(num);
+        }
+      } catch (e) {}
+    }
+    return value;
+  };
   const supabase = createClient()
   const [zoom, setZoom] = useState(1)
   const [currentPath, setCurrentPath] = useState<number[]>([])
+  const [loadingPath, setLoadingPath] = useState<string | null>(null)
+  const [relationalTree, setRelationalTree] = useState<MindMapNode[]>([])
+  const prevRootIdsRef = useRef<string>('');
   const controls = useAnimation()
   
   const isRelational = mindmapLevels && mindmapLevels.length > 0;
-  
-  // Relational State
-  const [relationalTree, setRelationalTree] = useState<MindMapNode[]>([])
-  const [loadingPath, setLoadingPath] = useState<string | null>(null) // Para mostrar spinner se necessário
   
   // Sincronizar posição e escala
   useEffect(() => {
@@ -162,9 +195,11 @@ export default function DynamicMindMap({
     const rootLevel = mindmapLevels[0];
     const uniqueMap = new Map();
     data.forEach((item, idx) => {
-      const name = rootLevel.title_field ? item[rootLevel.title_field] : (item.name || item.nome || item.title || item.titulo || item.id);
-      const desc = rootLevel.desc_field ? item[rootLevel.desc_field] : undefined;
-      const key = item.id || name || `root-${idx}`;
+      const rawName = rootLevel.title_field ? item[rootLevel.title_field] : (item.name || item.nome || item.title || item.titulo || item.id);
+      const name = formatValue(rawName, rootLevel.title_field || '', rootLevel.model_id);
+      const rawDesc = rootLevel.desc_field ? item[rootLevel.desc_field] : undefined;
+      const desc = rawDesc ? formatValue(rawDesc, rootLevel.desc_field || '', rootLevel.model_id) : undefined;
+      const key = item.id || item[primaryKeyName] || `root-${idx}`;
       if (!uniqueMap.has(key)) {
         uniqueMap.set(key, {
           id: key,
@@ -178,19 +213,44 @@ export default function DynamicMindMap({
       }
     });
     const newTree = Array.from(uniqueMap.values());
-    setRelationalTree(newTree);
+    const newRootIds = newTree.map(n => n.id).join(',');
     
-    // Auto-focus and auto-expand if there is only 1 root node (e.g. Master Detail with single record)
-    if (newTree.length === 1) {
-      setCurrentPath([0]);
-      if (newTree[0].children === undefined) {
-        // We use setTimeout to ensure React has flushed the initial state before fetching
-        setTimeout(() => fetchChildren([0], newTree[0]), 50);
+    setRelationalTree(prevTree => {
+      if (prevTree.length > 0 && prevTree.map(n => n.id).join(',') === newRootIds) {
+        const updateNames = (nodes: any[]): any[] => {
+          return nodes.map(n => {
+            const modelId = mindmapLevels[n.level]?.model_id;
+            const titleField = mindmapLevels[n.level]?.title_field;
+            const descField = mindmapLevels[n.level]?.desc_field;
+            const rawName = titleField ? n.rawData[titleField] : (n.rawData.name || n.rawData.nome || n.rawData.title || n.rawData.titulo || n.rawData.id);
+            const name = formatValue(rawName, titleField || '', modelId);
+            const rawDesc = descField ? n.rawData[descField] : undefined;
+            const desc = rawDesc ? formatValue(rawDesc, descField || '', modelId) : undefined;
+            return {
+              ...n,
+              name: String(name || 'Sem Título'),
+              desc: desc ? String(desc) : undefined,
+              children: n.children ? updateNames(n.children) : undefined
+            };
+          });
+        };
+        return updateNames(prevTree);
       }
-    } else {
-      setCurrentPath([]);
+      return newTree;
+    });
+    
+    if (prevRootIdsRef.current !== newRootIds) {
+      if (newTree.length === 1) {
+        setCurrentPath([0]);
+        if (newTree[0].children === undefined) {
+          setTimeout(() => fetchChildren([0], newTree[0]), 50);
+        }
+      } else {
+        setCurrentPath([]);
+      }
+      prevRootIdsRef.current = newRootIds;
     }
-  }, [data, isRelational, mindmapLevels, isTunnelReady])
+  }, [data, isRelational, mindmapLevels, isTunnelReady, localeStr])
 
   const treeData = isRelational ? relationalTree : pivotTreeData;
 
@@ -209,7 +269,14 @@ export default function DynamicMindMap({
     if (nextLevelIndex >= mindmapLevels.length) return; 
     
     const nextLevelConfig = mindmapLevels[nextLevelIndex];
-    if (!nextLevelConfig.model_id || !nextLevelConfig.foreign_key) return;
+    if (!nextLevelConfig.model_id) return;
+    if (nextLevelConfig.relation_type === 'indirect') {
+      if (!nextLevelConfig.through_table || !nextLevelConfig.through_local_fk || !nextLevelConfig.through_target_fk) return;
+    } else if (nextLevelConfig.relation_type === 'multilevel') {
+      if (!nextLevelConfig.relation_path || nextLevelConfig.relation_path.length === 0) return;
+    } else {
+      if (!nextLevelConfig.foreign_key) return;
+    }
 
     const pathStr = path.join('-');
     setLoadingPath(pathStr);
@@ -222,7 +289,28 @@ export default function DynamicMindMap({
       const schemaName = modelData.db_schema_name || project?.slug || 'public';
       
       const parentId = String(node.rawData?.id || node.id).replace(/'/g, "''");
-      const rawQuery = `SELECT * FROM "${tableName}" WHERE "${nextLevelConfig.foreign_key}" = '${parentId}'`;
+      let rawQuery = '';
+      if (nextLevelConfig.relation_type === 'multilevel' && nextLevelConfig.relation_path) {
+        const pathArray = nextLevelConfig.relation_path;
+        let joins = '';
+        for (let i = pathArray.length - 1; i >= 0; i--) {
+          const hop = pathArray[i];
+          const hopAlias = `th${i}`;
+          if (i === pathArray.length - 1) {
+            joins += ` INNER JOIN "${hop.table}" ${hopAlias} ON t."${hop.target_to_field}" = ${hopAlias}."${hop.target_from_field}"`;
+          }
+          if (i > 0) {
+            const prevHopAlias = `th${i - 1}`;
+            joins += ` INNER JOIN "${pathArray[i-1].table}" ${prevHopAlias} ON ${prevHopAlias}."${hop.from_field}" = ${hopAlias}."${hop.to_field}"`;
+          }
+        }
+        const firstHop = pathArray[0];
+        rawQuery = `SELECT DISTINCT t.* FROM "${tableName}" t ${joins} WHERE th0."${firstHop.to_field}" = '${parentId}'`;
+      } else if (nextLevelConfig.relation_type === 'indirect' && nextLevelConfig.through_table) {
+        rawQuery = `SELECT t.* FROM "${tableName}" t INNER JOIN "${nextLevelConfig.through_table}" th ON t.id = th."${nextLevelConfig.through_target_fk}" WHERE th."${nextLevelConfig.through_local_fk}" = '${parentId}'`;
+      } else {
+        rawQuery = `SELECT * FROM "${tableName}" WHERE "${nextLevelConfig.foreign_key}" = '${parentId}'`;
+      }
       
       const queryId = crypto.randomUUID();
       const payload: any = {
@@ -242,9 +330,11 @@ export default function DynamicMindMap({
           const childrenData = res.payload.data;
           const uniqueChildren = new Map();
           (childrenData || []).forEach((item: any, idx: number) => {
-            const name = nextLevelConfig.title_field ? item[nextLevelConfig.title_field] : (item.name || item.nome || item.title || item.titulo || item.id);
-            const desc = nextLevelConfig.desc_field ? item[nextLevelConfig.desc_field] : undefined;
-            const key = item.id || name || `${node.id}-child-${idx}`;
+            const rawName = nextLevelConfig.title_field ? item[nextLevelConfig.title_field] : (item.name || item.nome || item.title || item.titulo || item.id);
+            const name = formatValue(rawName, nextLevelConfig.title_field || '', nextLevelConfig.model_id);
+            const rawDesc = nextLevelConfig.desc_field ? item[nextLevelConfig.desc_field] : undefined;
+            const desc = rawDesc ? formatValue(rawDesc, nextLevelConfig.desc_field || '', nextLevelConfig.model_id) : undefined;
+            const key = item.id || item[primaryKeyName] || `${node.id}-child-${idx}`;
             if (!uniqueChildren.has(key)) {
               uniqueChildren.set(key, {
                 id: key,
@@ -258,6 +348,7 @@ export default function DynamicMindMap({
             }
           });
           const newChildren = Array.from(uniqueChildren.values());
+          newChildren.sort((a: any, b: any) => a.name.localeCompare(b.name, localeStr, { numeric: true }));
 
           setRelationalTree(prevTree => {
             const newTree = JSON.parse(JSON.stringify(prevTree)); 
@@ -429,7 +520,7 @@ export default function DynamicMindMap({
             className="z-30 relative w-56 h-56 rounded-full bg-white/80 dark:bg-slate-900/60 border-2 border-indigo-500/20 dark:border-indigo-500/40 backdrop-blur-[40px] flex flex-col items-center justify-center p-8 text-center shadow-[0_0_80px_rgba(79,70,229,0.1)] dark:shadow-[0_0_80px_rgba(79,70,229,0.25)]"
           >
             <span className="text-[10px] uppercase font-black tracking-[0.4em] text-indigo-500 dark:text-indigo-400 mb-2 opacity-70">
-              {isRelational ? (currentPath.length === 0 ? 'Workspace' : `Nível ${currentNode.level + 1}`) : (currentNode.field?.display_name || 'Core')}
+              {isRelational ? (currentPath.length === 0 ? 'Workspace' : `${t('runtime.level', 'Nível')} ${currentNode.level + 1}`) : (currentNode.field?.display_name || 'Core')}
             </span>
             <h3 className="text-2xl font-black text-neutral-900 dark:text-white leading-tight break-words max-w-full">
               {renderValue(currentNode.field, currentNode.name)}
@@ -482,7 +573,7 @@ export default function DynamicMindMap({
                         isRelational && "text-indigo-500 dark:text-indigo-400"
                       )}
                     >
-                      {isRelational ? `Nível ${child.level + 1}` : ((child.field?.config?.grid_config || child.field?.config)?.label?.text || child.field?.display_name || 'Level')}
+                      {isRelational ? `${t('runtime.level', 'Nível')} ${child.level + 1}` : ((child.field?.config?.grid_config || child.field?.config)?.label?.text || child.field?.display_name || 'Level')}
                     </span>
                     <h4 
                       style={!isRelational ? {
@@ -527,7 +618,7 @@ export default function DynamicMindMap({
       {/* Toolbar Superior */}
       <div className="absolute top-8 left-8 z-50 flex items-center gap-4">
         {currentPath.length > 0 && (
-          <Tooltip text="Voltar Nível">
+          <Tooltip text={t('runtime.back_level', 'Voltar Nível')}>
             <button onClick={handleGoBack} className="p-4 bg-white/60 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/10 rounded-2xl backdrop-blur-3xl transition-all active:scale-95 shadow-xl pointer-events-auto group">
               <ArrowLeft className="w-5 h-5 text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white" />
             </button>
@@ -537,7 +628,7 @@ export default function DynamicMindMap({
           <div className="flex items-center gap-3">
             <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
             <span className="text-[10px] font-black text-neutral-700 dark:text-white uppercase tracking-[0.3em] opacity-80">
-              {currentPath.length === 0 ? 'Workspace' : (isRelational ? `Nível ${currentNode.level + 1}` : (currentNode.field?.display_name || 'Level'))}
+              {currentPath.length === 0 ? 'Workspace' : (isRelational ? `${t('runtime.level', 'Nível')} ${currentNode.level + 1}` : (currentNode.field?.display_name || 'Level'))}
             </span>
           </div>
         </div>

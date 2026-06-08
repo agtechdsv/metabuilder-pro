@@ -141,6 +141,9 @@ interface RecordFormProps {
   project?: any
   refreshTrigger?: number
   renderOnlyDetail?: string
+  hideHeader?: boolean
+  formHeaderTitle?: string
+  formHeaderSubtitleField?: string
 }
 
 const getActionColorClasses = (color: string) => {
@@ -274,7 +277,10 @@ export default function RecordForm({
   detailsTabTitles,
   detailsItemTitles,
   refreshTrigger = 0,
-  renderOnlyDetail
+  renderOnlyDetail,
+  hideHeader = false,
+  formHeaderTitle,
+  formHeaderSubtitleField
 }: RecordFormProps) {
   const { t } = useI18n()
   const [formData, setFormData] = useState<any>(initialData || {})
@@ -1322,45 +1328,52 @@ export default function RecordForm({
 
   return (
     <div className={cn("flex flex-col", isPageMode ? "bg-white dark:bg-neutral-900/50 p-8 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-xl" : "h-full")}>
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
-            {icons[mode]}
+      {!hideHeader && (
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
+              {icons[mode]}
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
+                {formHeaderTitle && formHeaderTitle.trim() !== '' ? formHeaderTitle : titles[mode]}
+              </h3>
+              <p className="text-[10px] font-black tracking-[0.2em] text-neutral-400">
+                {mode === 'create' ? t('runtime.record_drawer.new_item') : 
+                  (formHeaderSubtitleField && initialData?.[formHeaderSubtitleField] 
+                    ? String(initialData[formHeaderSubtitleField]) 
+                    : t('runtime.record_drawer.record_id').replace('{id}', initialData?.id || 'N/A'))}
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-xl font-bold text-neutral-900 dark:text-white">{titles[mode]}</h3>
-            <p className="text-[10px] font-black tracking-[0.2em] text-neutral-400">
-              {mode === 'create' ? t('runtime.record_drawer.new_item') : t('runtime.record_drawer.record_id').replace('{id}', initialData?.id || 'N/A')}
-            </p>
+
+          <div className="flex items-center gap-2">
+            {customActions.filter(a => { const ctxs = a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]; return ctxs.includes('master_top') || ctxs.includes('form_top') }).map(action => (
+              <button
+                key={action.id}
+                onClick={() => onCustomAction?.(action, formData)}
+                type="button"
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs capitalize tracking-wider transition-all shadow-lg",
+                  getBulkActionClasses(action.color)
+                )}
+              >
+                {getActionIcon(action.icon)}
+                {action.label}
+              </button>
+            ))}
+
+            {isPageMode && (
+              <button
+                onClick={handleCancel}
+                className="flex items-center gap-2 px-4 py-2 text-[10px] font-black tracking-widest text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all"
+              >
+                <ArrowLeft className="w-4 h-4" /> {t('runtime.back_to_list', 'Voltar para Lista')}
+              </button>
+            )}
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          {customActions.filter(a => { const ctxs = a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]; return ctxs.includes('master_top') || ctxs.includes('form_top') }).map(action => (
-            <button
-              key={action.id}
-              onClick={() => onCustomAction?.(action, formData)}
-              type="button"
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs capitalize tracking-wider transition-all shadow-lg",
-                getBulkActionClasses(action.color)
-              )}
-            >
-              {getActionIcon(action.icon)}
-              {action.label}
-            </button>
-          ))}
-
-          {isPageMode && (
-            <button
-              onClick={handleCancel}
-              className="flex items-center gap-2 px-4 py-2 text-[10px] font-black tracking-widest text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all"
-            >
-              <ArrowLeft className="w-4 h-4" /> {t('runtime.back_to_list', 'Voltar para Lista')}
-            </button>
-          )}
-        </div>
-      </div>
+      )}
 
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
         {!renderOnlyDetail && logicType === 'master_detail' && detailDisplayMode === 'tabs' && detailTables.length > 0 && (

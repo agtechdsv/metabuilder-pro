@@ -1716,6 +1716,94 @@ function StepTables({ config, setConfig, models }: any) {
   )
 }
 
+function MultiLevelPathBuilder({ level, onChange, models, parentModelId }: any) {
+  const path = level.relation_path || [];
+
+  const addHop = () => {
+    onChange([...path, { table: '', from_field: '', to_field: '', target_from_field: '', target_to_field: '' }]);
+  };
+  const removeHop = (index: number) => {
+    onChange(path.filter((_: any, i: number) => i !== index));
+  };
+  const updateHop = (index: number, key: string, value: string) => {
+    const newPath = [...path];
+    newPath[index] = { ...newPath[index], [key]: value };
+    onChange(newPath);
+  };
+
+  return (
+    <div className="space-y-3 mt-4 border border-dashed border-indigo-200 dark:border-indigo-900 p-4 rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10">
+      <div className="flex items-center justify-between">
+        <label className="text-[9px] font-black uppercase text-indigo-500 tracking-widest">Caminho de Tabelas (INNER JOINs)</label>
+        <button type="button" onClick={addHop} className="text-[9px] px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 rounded uppercase font-bold hover:bg-indigo-100 transition-all">+ Adicionar Pulo</button>
+      </div>
+      {path.length === 0 && (
+        <p className="text-[10px] text-neutral-400 italic">Adicione os pulos para conectar o pai ao destino final.</p>
+      )}
+      {path.map((hop: any, idx: number) => {
+        const prevTable = idx === 0 ? models.find((m:any) => m.id === parentModelId)?.db_table_name : path[idx - 1]?.table;
+        const currentModel = models.find((m:any) => m.db_table_name === hop.table);
+        const prevModel = models.find((m:any) => m.db_table_name === prevTable);
+        return (
+          <div key={idx} className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg space-y-3 relative">
+            <button type="button" onClick={() => removeHop(idx)} className="absolute top-2 right-2 text-red-500 hover:bg-red-50 p-1 rounded-md"><Trash2 className="w-3 h-3" /></button>
+            <div className="text-[9px] font-bold text-neutral-500 uppercase">Pulo {idx + 1}</div>
+            
+            <div className="grid grid-cols-1 gap-2">
+              <div>
+                <label className="text-[9px] font-black uppercase text-neutral-400">Tabela Intermediária</label>
+                <select value={hop.table || ''} onChange={e => updateHop(idx, 'table', e.target.value)} className="w-full text-xs p-2 rounded border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 mt-1">
+                  <option value="">Selecione a Tabela...</option>
+                  {models.map((m:any) => <option key={m.id} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[9px] font-black uppercase text-neutral-400">Chave em {prevTable || 'Pai'}</label>
+                  <select value={hop.from_field || ''} onChange={e => updateHop(idx, 'from_field', e.target.value)} className="w-full text-xs p-2 rounded border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 mt-1">
+                    <option value="">Campo...</option>
+                    {prevModel?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.db_column_name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[9px] font-black uppercase text-neutral-400">Chave na Intermediária</label>
+                  <select value={hop.to_field || ''} onChange={e => updateHop(idx, 'to_field', e.target.value)} className="w-full text-xs p-2 rounded border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 mt-1">
+                    <option value="">Campo...</option>
+                    {currentModel?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.db_column_name}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      
+      {/* Último Pulo implícito */}
+      {path.length > 0 && (
+        <div className="p-3 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/50 rounded-lg mt-2">
+          <div className="text-[9px] font-bold text-emerald-600 uppercase mb-2">Pulo Final para o Destino</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[9px] font-black uppercase text-neutral-400">Chave na Intermediária {path[path.length - 1]?.table}</label>
+              <select value={path[path.length - 1]?.target_from_field || ''} onChange={e => updateHop(path.length - 1, 'target_from_field', e.target.value)} className="w-full text-xs p-2 rounded border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-neutral-950 mt-1">
+                <option value="">Campo...</option>
+                {models.find((m:any) => m.db_table_name === path[path.length - 1]?.table)?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.db_column_name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[9px] font-black uppercase text-neutral-400">Chave no Destino Final</label>
+              <select value={path[path.length - 1]?.target_to_field || ''} onChange={e => updateHop(path.length - 1, 'target_to_field', e.target.value)} className="w-full text-xs p-2 rounded border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-neutral-950 mt-1">
+                <option value="">Campo...</option>
+                {models.find((m:any) => m.id === level.model_id)?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.db_column_name}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
   const { t } = useI18n()
   const { toast } = useToast()
@@ -3470,22 +3558,129 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                           </div>
                           
                           {!isRoot && (
-                            <div>
-                              <label className="text-[9px] font-black uppercase text-neutral-400">Chave Estrangeira (Aponta pro Pai)</label>
-                              <select
-                                value={level.foreign_key || ''}
-                                onChange={e => {
-                                  setConfig((prev: any) => {
-                                    const newLevels = [...(prev.layout_config.mindmap_levels || [])];
-                                    newLevels[lIdx].foreign_key = e.target.value;
-                                    return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
-                                  });
-                                }}
-                                className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none"
-                              >
-                                <option value="">Selecione o Campo...</option>
-                                {levelModel?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
-                              </select>
+                            <div className="space-y-3 col-span-full bg-neutral-50 dark:bg-neutral-800/30 p-3 rounded-lg border border-neutral-100 dark:border-neutral-800">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Tipo de Relação com o Nível Anterior</label>
+                                  <select
+                                    value={level.relation_type || 'direct'}
+                                    onChange={e => {
+                                      setConfig((prev: any) => {
+                                        const newLevels = [...(prev.layout_config.mindmap_levels || [])];
+                                        newLevels[lIdx].relation_type = e.target.value;
+                                        // Reset fields
+                                        newLevels[lIdx].foreign_key = '';
+                                        newLevels[lIdx].through_table = '';
+                                        newLevels[lIdx].through_local_fk = '';
+                                        newLevels[lIdx].through_target_fk = '';
+                                        return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
+                                      });
+                                    }}
+                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
+                                  >
+                                    <option value="direct">Direta (1:N)</option>
+                                    <option value="indirect">Indireta (N:M - Via Tabela Intermediária)</option>
+                                    <option value="multilevel">Avançada (Multi-Níveis - Múltiplos Joins)</option>
+                                  </select>
+                                </div>
+
+                                {level.relation_type === 'indirect' ? (
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Tabela Intermediária (N:M)</label>
+                                    <select
+                                      value={level.through_table || ''}
+                                      onChange={e => {
+                                        setConfig((prev: any) => {
+                                          const newLevels = [...(prev.layout_config.mindmap_levels || [])];
+                                          newLevels[lIdx].through_table = e.target.value;
+                                          newLevels[lIdx].through_local_fk = '';
+                                          newLevels[lIdx].through_target_fk = '';
+                                          return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
+                                        });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
+                                    >
+                                      <option value="">Selecione a Tabela...</option>
+                                      {models.map((m:any) => <option key={`through-${m.id}`} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>)}
+                                    </select>
+                                  </div>
+                                ) : level.relation_type === 'direct' ? (
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Chave Estrangeira (Aponta pro Pai)</label>
+                                    <select
+                                      value={level.foreign_key || ''}
+                                      onChange={e => {
+                                        setConfig((prev: any) => {
+                                          const newLevels = [...(prev.layout_config.mindmap_levels || [])];
+                                          newLevels[lIdx].foreign_key = e.target.value;
+                                          return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
+                                        });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
+                                    >
+                                      <option value="">Selecione o Campo...</option>
+                                      {levelModel?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
+                                    </select>
+                                  </div>
+                                ) : null}
+
+                                {level.relation_type === 'indirect' && level.through_table && (() => {
+                                  const throughModel = models.find((m:any) => m.db_table_name === level.through_table);
+                                  return (
+                                    <>
+                                      <div>
+                                        <label className="text-[9px] font-black uppercase text-neutral-400">FK para o Pai (Na Tabela Intermediária)</label>
+                                        <select
+                                          value={level.through_local_fk || ''}
+                                          onChange={e => {
+                                            setConfig((prev: any) => {
+                                              const newLevels = [...(prev.layout_config.mindmap_levels || [])];
+                                              newLevels[lIdx].through_local_fk = e.target.value;
+                                              return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
+                                            });
+                                          }}
+                                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
+                                        >
+                                          <option value="">Selecione o Campo...</option>
+                                          {throughModel?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
+                                        </select>
+                                      </div>
+                                      <div>
+                                        <label className="text-[9px] font-black uppercase text-neutral-400">FK para o Filho (Na Tabela Intermediária)</label>
+                                        <select
+                                          value={level.through_target_fk || ''}
+                                          onChange={e => {
+                                            setConfig((prev: any) => {
+                                              const newLevels = [...(prev.layout_config.mindmap_levels || [])];
+                                              newLevels[lIdx].through_target_fk = e.target.value;
+                                              return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
+                                            });
+                                          }}
+                                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
+                                        >
+                                          <option value="">Selecione o Campo...</option>
+                                          {throughModel?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
+                                        </select>
+                                      </div>
+                                    </>
+                                  );
+                                })()}
+
+                                {level.relation_type === 'multilevel' && (
+                                  <MultiLevelPathBuilder
+                                    level={level}
+                                    models={models}
+                                    parentModelId={lIdx === 0 ? config.selected_models?.[0] : config.layout_config.mindmap_levels[lIdx - 1]?.model_id}
+                                    onChange={(newPath: any) => {
+                                      setConfig((prev: any) => {
+                                        const newLevels = [...(prev.layout_config.mindmap_levels || [])];
+                                        newLevels[lIdx].relation_path = newPath;
+                                        return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
+                                      });
+                                    }}
+                                  />
+                                )}
+                              </div>
                             </div>
                           )}
                           
@@ -3542,6 +3737,10 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                                 id: Math.random().toString(36).substr(2, 9),
                                 model_id: config.model_id,
                                 foreign_key: '',
+                                relation_type: 'direct',
+                                through_table: '',
+                                through_local_fk: '',
+                                through_target_fk: '',
                                 title_field: '',
                                 desc_field: ''
                               }]
@@ -3564,6 +3763,10 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                             id: Math.random().toString(36).substr(2, 9),
                             model_id: '',
                             foreign_key: '',
+                            relation_type: 'direct',
+                            through_table: '',
+                            through_local_fk: '',
+                            through_target_fk: '',
                             title_field: '',
                             desc_field: ''
                           });
@@ -3979,20 +4182,118 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                                         </div>
                                         
                                         {!isRoot && (
-                                          <div>
-                                            <label className="text-[9px] font-black uppercase text-neutral-400">Chave Estrangeira (Aponta pro Pai)</label>
-                                            <select
-                                              value={level.foreign_key || ''}
-                                              onChange={e => {
-                                                const newSlots = [...(config.layout_config.custom_slots || [])];
-                                                newSlots[idx].mindmap_levels[lIdx].foreign_key = e.target.value;
-                                                setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
-                                              }}
-                                              className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none"
-                                            >
-                                              <option value="">Selecione o Campo...</option>
-                                              {levelModel?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
-                                            </select>
+                                          <div className="space-y-3 col-span-full bg-neutral-50 dark:bg-neutral-800/30 p-3 rounded-lg border border-neutral-100 dark:border-neutral-800">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                              <div>
+                                                <label className="text-[9px] font-black uppercase text-neutral-400">Tipo de Relação com o Nível Anterior</label>
+                                                <select
+                                                  value={level.relation_type || 'direct'}
+                                                  onChange={e => {
+                                                    const newSlots = [...(config.layout_config.custom_slots || [])];
+                                                    newSlots[idx].mindmap_levels[lIdx].relation_type = e.target.value;
+                                                    newSlots[idx].mindmap_levels[lIdx].foreign_key = '';
+                                                    newSlots[idx].mindmap_levels[lIdx].through_table = '';
+                                                    newSlots[idx].mindmap_levels[lIdx].through_local_fk = '';
+                                                    newSlots[idx].mindmap_levels[lIdx].through_target_fk = '';
+                                                    setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                                  }}
+                                                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
+                                                >
+                                                  <option value="direct">Direta (1:N)</option>
+                                                  <option value="indirect">Indireta (N:M - Via Tabela Intermediária)</option>
+                                                  <option value="multilevel">Avançada (Multi-Níveis - Múltiplos Joins)</option>
+                                                </select>
+                                              </div>
+
+                                              {level.relation_type === 'indirect' ? (
+                                                <div>
+                                                  <label className="text-[9px] font-black uppercase text-neutral-400">Tabela Intermediária (N:M)</label>
+                                                  <select
+                                                    value={level.through_table || ''}
+                                                    onChange={e => {
+                                                      const newSlots = [...(config.layout_config.custom_slots || [])];
+                                                      newSlots[idx].mindmap_levels[lIdx].through_table = e.target.value;
+                                                      newSlots[idx].mindmap_levels[lIdx].through_local_fk = '';
+                                                      newSlots[idx].mindmap_levels[lIdx].through_target_fk = '';
+                                                      setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                                    }}
+                                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
+                                                  >
+                                                    <option value="">Selecione a Tabela...</option>
+                                                    {models.map((m:any) => <option key={`through-${m.id}`} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>)}
+                                                  </select>
+                                                </div>
+                                              ) : level.relation_type === 'direct' ? (
+                                                <div>
+                                                  <label className="text-[9px] font-black uppercase text-neutral-400">Chave Estrangeira (Aponta pro Pai)</label>
+                                                  <select
+                                                    value={level.foreign_key || ''}
+                                                    onChange={e => {
+                                                      const newSlots = [...(config.layout_config.custom_slots || [])];
+                                                      newSlots[idx].mindmap_levels[lIdx].foreign_key = e.target.value;
+                                                      setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                                    }}
+                                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
+                                                  >
+                                                    <option value="">Selecione o Campo...</option>
+                                                    {levelModel?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
+                                                  </select>
+                                                </div>
+                                              ) : null}
+
+                                              {level.relation_type === 'indirect' && level.through_table && (() => {
+                                                const throughModel = models.find((m:any) => m.db_table_name === level.through_table);
+                                                return (
+                                                  <>
+                                                    <div>
+                                                      <label className="text-[9px] font-black uppercase text-neutral-400">FK para o Pai (Na Tabela Intermediária)</label>
+                                                      <select
+                                                        value={level.through_local_fk || ''}
+                                                        onChange={e => {
+                                                          const newSlots = [...(config.layout_config.custom_slots || [])];
+                                                          newSlots[idx].mindmap_levels[lIdx].through_local_fk = e.target.value;
+                                                          setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                                        }}
+                                                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
+                                                      >
+                                                        <option value="">Selecione o Campo...</option>
+                                                        {throughModel?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
+                                                      </select>
+                                                    </div>
+                                                    <div>
+                                                      <label className="text-[9px] font-black uppercase text-neutral-400">FK para o Filho (Na Tabela Intermediária)</label>
+                                                      <select
+                                                        value={level.through_target_fk || ''}
+                                                        onChange={e => {
+                                                          const newSlots = [...(config.layout_config.custom_slots || [])];
+                                                          newSlots[idx].mindmap_levels[lIdx].through_target_fk = e.target.value;
+                                                          setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                                        }}
+                                                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
+                                                      >
+                                                        <option value="">Selecione o Campo...</option>
+                                                        {throughModel?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
+                                                      </select>
+                                                    </div>
+                                                  </>
+                                                );
+                                              })()}
+
+                                              {level.relation_type === 'multilevel' && (
+                                                <MultiLevelPathBuilder
+                                                  level={level}
+                                                  models={models}
+                                                  parentModelId={lIdx === 0 ? config.selected_models?.[0] : slot.mindmap_levels[lIdx - 1]?.model_id}
+                                                  onChange={(newPath: any) => {
+                                                    setConfig((prev: any) => {
+                                                      const newSlots = [...(prev.layout_config.custom_slots || [])];
+                                                      newSlots[idx].mindmap_levels[lIdx].relation_path = newPath;
+                                                      return { ...prev, layout_config: { ...prev.layout_config, custom_slots: newSlots } };
+                                                    });
+                                                  }}
+                                                />
+                                              )}
+                                            </div>
                                           </div>
                                         )}
                                         
@@ -4042,6 +4343,10 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                                           id: Math.random().toString(36).substr(2, 9),
                                           model_id: slot.model_id,
                                           foreign_key: '',
+                                          relation_type: 'direct',
+                                          through_table: '',
+                                          through_local_fk: '',
+                                          through_target_fk: '',
                                           title_field: '',
                                           desc_field: ''
                                         }];
@@ -4062,6 +4367,10 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                                         id: Math.random().toString(36).substr(2, 9),
                                         model_id: '',
                                         foreign_key: '',
+                                        relation_type: 'direct',
+                                        through_table: '',
+                                        through_local_fk: '',
+                                        through_target_fk: '',
                                         title_field: '',
                                         desc_field: ''
                                       });
@@ -4607,6 +4916,48 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      <div className="space-y-6 mt-8">
+        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Configurações do Formulário</label>
+        <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-4 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Título do Formulário (Opcional)</label>
+              <input
+                type="text"
+                placeholder="Ex: Editar Registro"
+                value={(config.layout_config as any).form_header_title || ''}
+                onChange={e => setConfig({
+                  ...config,
+                  layout_config: { ...config.layout_config, form_header_title: e.target.value }
+                })}
+                className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all"
+              />
+              <p className="text-[9px] text-neutral-400 mt-1 italic">Sobrescreve o título padrão do formulário (ex: "Editar", "Novo"). Suporta tradução se usar chaves de dicionário.</p>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Subtítulo (Opcional)</label>
+              <select
+                value={(config.layout_config as any).form_header_subtitle_field || ''}
+                onChange={e => setConfig({
+                  ...config,
+                  layout_config: { ...config.layout_config, form_header_subtitle_field: e.target.value }
+                })}
+                className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all"
+              >
+                <option value="">Padrão (Exibe o ID do registro)</option>
+                {models.filter((m: any) => config.selected_models.includes(m.id)).flatMap((m: any) => m.fields).map((f: any) => (
+                  <option key={`opt-sub-${f.id}`} value={f.db_column_name}>
+                    {getFieldName(f.id)} ({f.data_type})
+                  </option>
+                ))}
+              </select>
+              <p className="text-[9px] text-neutral-400 mt-1 italic">Substitui a exibição do ID do registro pelo valor deste campo no formulário.</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <Drawer
         isOpen={isDrawerOpen}
@@ -5436,6 +5787,8 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
           )}
         </div>
       </div>
+
+
 
       <div className="space-y-6">
         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.action_interface_label')}</label>

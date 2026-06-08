@@ -604,6 +604,7 @@
     "project_inactive_desc": "This application has been temporarily disabled by the workspace administrator."
   },
   "runtime": {
+    "level": "Level",
     "dashboard": "Dashboard",
     "export": "Export Data",
     "search": "Search",

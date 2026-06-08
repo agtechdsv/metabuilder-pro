@@ -86,6 +86,8 @@ interface ViewPageContentProps {
   customActions?: any[]
   customSlots?: any[]
   isAutomationsEnabled?: boolean
+  formHeaderTitle?: string
+  formHeaderSubtitleField?: string
 }
 
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
@@ -135,7 +137,9 @@ export default function ViewPageContent({
   galleryClickBehavior,
   customActions = [],
   customSlots = [],
-  isAutomationsEnabled = false
+  isAutomationsEnabled = false,
+  formHeaderTitle,
+  formHeaderSubtitleField
 }: ViewPageContentProps) {
   const router = useRouter()
   const { t } = useI18n()
@@ -1867,10 +1871,13 @@ export default function ViewPageContent({
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
-                      {drawerMode === 'create' ? t('runtime.record_drawer.new_item') : t('runtime.record_drawer.edit_item', 'Editar Registro')}
+                      {formHeaderTitle && formHeaderTitle.trim() !== '' ? formHeaderTitle : (drawerMode === 'create' ? t('runtime.record_drawer.new_item') : t('runtime.record_drawer.edit_item', 'Editar Registro'))}
                     </h3>
                     <p className="text-[10px] font-black tracking-[0.2em] text-neutral-400">
-                      {drawerMode === 'create' ? t('runtime.record_drawer.new_item') : t('runtime.record_drawer.record_id').replace('{id}', selectedRow?.id || 'N/A')}
+                      {drawerMode === 'create' ? t('runtime.record_drawer.new_item') : 
+                        (formHeaderSubtitleField && selectedRow?.[formHeaderSubtitleField] 
+                          ? String(selectedRow[formHeaderSubtitleField]) 
+                          : t('runtime.record_drawer.record_id').replace('{id}', selectedRow?.id || 'N/A'))}
                     </p>
                   </div>
                 </div>
@@ -1923,31 +1930,33 @@ export default function ViewPageContent({
               isLoading={isProcessing}
               logicType={logicType}
               masterModelId={masterModelId}
-            masterModelName={modelName}
-            masterTabTitle={masterTabTitle}
-            detailsTabTitles={detailsTabTitles}
-            detailsItemTitles={detailsItemTitles}
-            tabsStyleConfig={tabsStyleConfig}
-            detailDisplayMode={detailDisplayMode}
-            isPageMode={true}
-            onEditDetail={handleEditDetail}
-            onDeleteDetail={handleDeleteDetail}
-            onAddDetail={handleOpenAddDetail}
-            refreshTrigger={refreshKey}
-            joins={joins}
-            detailsInterfaceTypes={detailsInterfaceTypes}
-            dictionary={dictionary}
-            detailsInlineTypes={detailsInlineTypes}
-            initialTab={activeTabForMaster}
-            onTabChange={setActiveTabForMaster}
-            projectId={project.id}
-            secretToken={project.secret_token}
-            tunnelChannel={tunnelChannel}
-            isTunnelReady={isTunnelReady}
-            project={project}
-            customActions={customActions}
-            onCustomAction={handleCustomAction}
-          />
+              masterModelName={modelName}
+              masterTabTitle={masterTabTitle}
+              detailsTabTitles={detailsTabTitles}
+              detailsItemTitles={detailsItemTitles}
+              tabsStyleConfig={tabsStyleConfig}
+              detailDisplayMode={detailDisplayMode}
+              isPageMode={true}
+              onEditDetail={handleEditDetail}
+              onDeleteDetail={handleDeleteDetail}
+              onAddDetail={handleOpenAddDetail}
+              refreshTrigger={refreshKey}
+              joins={joins}
+              detailsInterfaceTypes={detailsInterfaceTypes}
+              dictionary={dictionary}
+              detailsInlineTypes={detailsInlineTypes}
+              initialTab={activeTabForMaster}
+              onTabChange={setActiveTabForMaster}
+              projectId={project.id}
+              secretToken={project.secret_token}
+              tunnelChannel={tunnelChannel}
+              isTunnelReady={isTunnelReady}
+              project={project}
+              customActions={customActions}
+              onCustomAction={handleCustomAction}
+              formHeaderTitle={formHeaderTitle}
+              formHeaderSubtitleField={formHeaderSubtitleField}
+            />
           )
         ) : (
           <>

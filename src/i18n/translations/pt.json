@@ -604,6 +604,7 @@
     "project_inactive_desc": "Este aplicativo foi temporariamente desativado pelo administrador do workspace."
   },
   "runtime": {
+    "level": "Nível",
     "dashboard": "Dashboard",
     "export": "Exportar Dados",
     "search": "Pesquisar",
