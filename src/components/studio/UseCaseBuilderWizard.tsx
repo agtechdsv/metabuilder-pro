@@ -206,6 +206,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       details_item_titles: {} as Record<string, string>,
       export_formats: ['xlsx', 'csv', 'json'],
       gallery_click_behavior: 'lightbox',
+      form_header_title: '',
+      form_header_subtitle_field: '',
       scheduler_config: {
         title_field: '',
         start_date_field: '',
@@ -798,6 +800,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           details_item_titles: initialData.layout_config?.details_item_titles || {},
           export_formats: initialData.layout_config?.export_formats || ['xlsx', 'csv', 'json'],
           gallery_click_behavior: initialData.layout_config?.gallery_click_behavior || 'lightbox',
+          form_header_title: initialData.layout_config?.form_header_title || '',
+          form_header_subtitle_field: initialData.layout_config?.form_header_subtitle_field || '',
           scheduler_config: initialData.layout_config?.scheduler_config || {
             title_field: '',
             start_date_field: '',
@@ -1862,6 +1866,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
 
   const [editingWidget, setEditingWidget] = useState<any>(null)
   const [isWidgetModalOpen, setIsWidgetModalOpen] = useState(false)
+  const [editingSlotIconIndex, setEditingSlotIconIndex] = useState<number | null>(null)
 
   const handleAddWidget = () => {
     setEditingWidget({
@@ -3892,6 +3897,159 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
 
                       {expandedCustomSlot === idx && (
                         <div className="w-full space-y-4 animate-in slide-in-from-top-2 duration-200">
+                          {idx > 0 && (
+                            <div className="w-full p-4 mt-2 bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl space-y-4">
+                              <div className="flex flex-col gap-2">
+                                <h5 className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">Modo de Exibição da Aba</h5>
+                                <p className="text-[10px] text-neutral-500">Escolha como esta aba deve ser exibida no sistema.</p>
+                                
+                                <div className="flex gap-4 mt-2">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name={`render_mode_${idx}`} value="tab" checked={!slot.render_mode || slot.render_mode === 'tab'} onChange={() => {
+                                      const newSlots = [...(config.layout_config.custom_slots || [])];
+                                      newSlots[idx].render_mode = 'tab';
+                                      setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                    }} />
+                                    <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Aba (Padrão)</span>
+                                  </label>
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name={`render_mode_${idx}`} value="button" checked={slot.render_mode === 'button'} onChange={() => {
+                                      const newSlots = [...(config.layout_config.custom_slots || [])];
+                                      newSlots[idx].render_mode = 'button';
+                                      setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                    }} />
+                                    <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Botão (Oculta Aba)</span>
+                                  </label>
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name={`render_mode_${idx}`} value="both" checked={slot.render_mode === 'both'} onChange={() => {
+                                      const newSlots = [...(config.layout_config.custom_slots || [])];
+                                      newSlots[idx].render_mode = 'both';
+                                      setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                    }} />
+                                    <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Ambos</span>
+                                  </label>
+                                </div>
+
+                                {(slot.render_mode === 'button' || slot.render_mode === 'both') && (
+                                  <div className="mt-4 p-4 bg-white dark:bg-neutral-950/50 border border-indigo-200 dark:border-indigo-800 rounded-lg space-y-4">
+                                    <h6 className="text-[10px] font-black uppercase text-indigo-500">Configurações do Botão</h6>
+                                    
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div>
+                                        <label className="text-[9px] font-black uppercase text-neutral-400">Localização do Botão</label>
+                                        <select
+                                          value={slot.button_config?.location || 'master_top'}
+                                          onChange={e => {
+                                            const newSlots = [...(config.layout_config.custom_slots || [])];
+                                            newSlots[idx].button_config = { ...(newSlots[idx].button_config || {}), location: e.target.value };
+                                            setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                          }}
+                                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium outline-none mt-1"
+                                        >
+                                          <option value="master_top">Aba Mestre (Topo)</option>
+                                          <option value="search_grid_record">Tela de Pesquisa (Linha do Grid)</option>
+                                          <option value="specific_tab_top">Outra Aba (Topo)</option>
+                                          <option value="specific_tab_grid">Outra Aba (Linha do Grid)</option>
+                                        </select>
+                                      </div>
+
+                                      {(slot.button_config?.location === 'specific_tab_top' || slot.button_config?.location === 'specific_tab_grid') && (
+                                        <div>
+                                          <label className="text-[9px] font-black uppercase text-neutral-400">Aba Alvo</label>
+                                          <select
+                                            value={slot.button_config?.target_tab_id || ''}
+                                            onChange={e => {
+                                              const newSlots = [...(config.layout_config.custom_slots || [])];
+                                              newSlots[idx].button_config = { ...(newSlots[idx].button_config || {}), target_tab_id: e.target.value };
+                                              setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                            }}
+                                            className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium outline-none mt-1"
+                                          >
+                                            <option value="">Selecione a aba...</option>
+                                            {(config.layout_config.custom_slots || []).filter((_: any, i: number) => i !== idx).map((otherSlot: any) => (
+                                              <option key={otherSlot.id} value={otherSlot.id}>{otherSlot.title}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                      )}
+
+                                      <div>
+                                        <label className="text-[9px] font-black uppercase text-neutral-400">Como deve abrir?</label>
+                                        <select
+                                          value={slot.button_config?.action_type || 'modal'}
+                                          onChange={e => {
+                                            const newSlots = [...(config.layout_config.custom_slots || [])];
+                                            newSlots[idx].button_config = { ...(newSlots[idx].button_config || {}), action_type: e.target.value };
+                                            setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                          }}
+                                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium outline-none mt-1"
+                                        >
+                                          <option value="modal">Modal Centralizada</option>
+                                          <option value="drawer">Drawer Lateral (Menu Esquerdo)</option>
+                                        </select>
+                                      </div>
+
+                                      <div>
+                                        <label className="text-[9px] font-black uppercase text-neutral-400">Nome Específico do Botão (Opcional)</label>
+                                        <input
+                                          type="text"
+                                          placeholder={slot.title || 'Usar título da aba'}
+                                          value={slot.button_config?.label || ''}
+                                          onChange={e => {
+                                            const newSlots = [...(config.layout_config.custom_slots || [])];
+                                            newSlots[idx].button_config = { ...(newSlots[idx].button_config || {}), label: e.target.value };
+                                            setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                          }}
+                                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium outline-none mt-1"
+                                        />
+                                      </div>
+                                      
+                                      <div>
+                                        <label className="text-[9px] font-black uppercase text-neutral-400">Ícone do Botão (Opcional)</label>
+                                        <button
+                                          onClick={() => setEditingSlotIconIndex(idx)}
+                                          className="w-full flex items-center gap-3 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 mt-1 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors text-left"
+                                        >
+                                          {slot.button_config?.icon ? (
+                                            <>
+                                              <div className="w-5 h-5 flex items-center justify-center text-indigo-500">
+                                                <DynamicIcon name={slot.button_config.icon} />
+                                              </div>
+                                              <span className="text-sm font-medium text-neutral-900 dark:text-white truncate">
+                                                {slot.button_config.icon}
+                                              </span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <div className="w-5 h-5 flex items-center justify-center text-neutral-400 bg-neutral-100 dark:bg-neutral-800 rounded">
+                                                ?
+                                              </div>
+                                              <span className="text-sm font-medium text-neutral-400">
+                                                Escolher ícone...
+                                              </span>
+                                            </>
+                                          )}
+                                        </button>
+                                        
+                                        {editingSlotIconIndex === idx && (
+                                          <IconPicker
+                                            currentIcon={slot.button_config?.icon || ''}
+                                            onSelect={(icon) => {
+                                              const newSlots = [...(config.layout_config.custom_slots || [])];
+                                              newSlots[idx].button_config = { ...(newSlots[idx].button_config || {}), icon };
+                                              setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                              setEditingSlotIconIndex(null);
+                                            }}
+                                            onClose={() => setEditingSlotIconIndex(null)}
+                                          />
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                           {(slot.type === 'grid' || slot.type === 'kanban' || slot.type === 'timeline' || slot.type === 'mapa_mental') && (
                             <div className="w-full p-4 mt-2 bg-rose-50/50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/30 rounded-xl space-y-4">
                           

@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Layout, Table, CheckSquare } from 'lucide-react'
+import { Layout, Table, CheckSquare, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { motion, AnimatePresence } from 'framer-motion'
 import RecordForm from './RecordForm'
 import dynamic from 'next/dynamic'
 import { createClient } from '@/utils/supabase/client'
@@ -37,6 +38,7 @@ interface CustomUseCaseRendererProps {
   onEditDetail?: (detail: any) => void
   onDeleteDetail?: (detail: any) => void
   onAddDetail?: (tableName: string, parentId?: any) => void
+  autoOpenSlotConfig?: { id: string, type: 'modal' | 'drawer' } | null
 }
 
 export default function CustomUseCaseRenderer({
@@ -65,9 +67,17 @@ export default function CustomUseCaseRenderer({
   detailsItemTitles,
   onEditDetail,
   onDeleteDetail,
-  onAddDetail
+  onAddDetail,
+  autoOpenSlotConfig
 }: CustomUseCaseRendererProps) {
   const [activeTabId, setActiveTabId] = useState<string>(customSlots[0]?.id || '')
+  const [openSlotConfig, setOpenSlotConfig] = useState<{ id: string, type: 'modal' | 'drawer', recordId?: any } | null>(autoOpenSlotConfig || null)
+
+  React.useEffect(() => {
+    if (autoOpenSlotConfig) {
+      setOpenSlotConfig({ ...autoOpenSlotConfig, recordId: initialData?.id })
+    }
+  }, [autoOpenSlotConfig, initialData?.id])
 
   if (!customSlots || customSlots.length === 0) {
     return (
@@ -77,8 +87,9 @@ export default function CustomUseCaseRenderer({
     )
   }
 
-  const activeSlot = customSlots.find(s => s.id === activeTabId) || customSlots[0]
-  const isMasterSlot = activeSlot.id === customSlots[0].id
+  const visibleSlots = customSlots.filter(s => s.render_mode !== 'button')
+  const activeSlot = visibleSlots.find(s => s.id === activeTabId) || visibleSlots[0] || customSlots[0]
+  const isMasterSlot = activeSlot?.id === customSlots[0]?.id
   
   // The first slot is considered the Master. Other slots are Details.
   // For details, we need to pass the parent ID to filter the grid/kanban.
@@ -334,12 +345,47 @@ export default function CustomUseCaseRenderer({
     return null
   }
 
+  const renderTopActions = () => {
+    const slotButtons = customSlots.filter(s => {
+      if (s.render_mode !== 'button' && s.render_mode !== 'both') return false;
+      const config = s.button_config || {};
+      const location = config.location || 'master_top';
+      
+      if (isMasterSlot && location === 'master_top') return true;
+      if (!isMasterSlot && location === 'specific_tab_top' && config.target_tab_id === activeSlot?.id) return true;
+      
+      return false;
+    });
+
+    if (slotButtons.length === 0) return null;
+
+    return (
+      <div className="flex items-center gap-2 px-6 pt-4">
+        {slotButtons.map(s => {
+          const config = s.button_config || {};
+          return (
+            <button
+              key={`btn-${s.id}`}
+              onClick={() => setOpenSlotConfig({ id: s.id, type: config.action_type || 'modal', recordId: parentId })}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-wider rounded-xl border border-indigo-100 dark:border-indigo-800/50 transition-all"
+            >
+              {config.label || s.title}
+            </button>
+          )
+        })}
+      </div>
+    );
+  }
+
+  // Se tem um slot aberto como Modal ou Drawer, precisamos encontrar ele
+  const openedSlot = openSlotConfig ? customSlots.find(s => s.id === openSlotConfig.id) : null;
+
   return (
     <div className="flex flex-col h-full bg-white dark:bg-[#050505]">
       {/* Custom Tabs Header */}
       <div className="px-6 pt-2">
         <div className="flex border-b border-neutral-100 dark:border-neutral-800">
-          {customSlots.map((slot) => (
+          {visibleSlots.map((slot) => (
             <button
               key={slot.id}
               onClick={() => setActiveTabId(slot.id)}
@@ -357,10 +403,97 @@ export default function CustomUseCaseRenderer({
         </div>
       </div>
 
+      {renderTopActions()}
+
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto">
-        {renderSlotContent(activeSlot)}
+        {activeSlot && renderSlotContent(activeSlot)}
       </div>
+
+      <AnimatePresence>
+        {openedSlot && openSlotConfig && openSlotConfig.type === 'modal' && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[200] flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 bg-neutral-900/40 backdrop-blur-sm"
+            onClick={() => {
+              setOpenSlotConfig(null)
+              if (autoOpenSlotConfig) onClose?.()
+            }}
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="w-full max-w-5xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden" 
+              style={{ maxHeight: '90vh' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 dark:border-neutral-800">
+                <h3 className="text-sm font-bold text-neutral-900 dark:text-white uppercase tracking-wider">{openedSlot.title}</h3>
+                <button 
+                  onClick={() => {
+                    setOpenSlotConfig(null)
+                    if (autoOpenSlotConfig) {
+                      onClose?.()
+                    }
+                  }}
+                  className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 bg-neutral-50 dark:bg-neutral-950/50">
+                {renderSlotContent(openedSlot)}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {openedSlot && openSlotConfig && openSlotConfig.type === 'drawer' && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[200] flex justify-end bg-neutral-900/40 backdrop-blur-sm"
+            onClick={() => {
+              setOpenSlotConfig(null)
+              if (autoOpenSlotConfig) onClose?.()
+            }}
+          >
+            <motion.div 
+              initial={{ x: '100%', opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: '100%', opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="w-full max-w-2xl bg-white dark:bg-neutral-900 border-l border-neutral-200 dark:border-neutral-800 shadow-2xl flex flex-col h-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-100 dark:border-neutral-800">
+                <h3 className="text-base font-bold text-neutral-900 dark:text-white uppercase tracking-wider">{openedSlot.title}</h3>
+                <button 
+                  onClick={() => {
+                    setOpenSlotConfig(null)
+                    if (autoOpenSlotConfig) {
+                      onClose?.()
+                    }
+                  }}
+                  className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 bg-neutral-50 dark:bg-neutral-950/50">
+                {renderSlotContent(openedSlot)}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

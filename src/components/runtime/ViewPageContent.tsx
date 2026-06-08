@@ -253,6 +253,7 @@ export default function ViewPageContent({
   const [isTunnelReady, setIsTunnelReady] = useState(false)
   
   const [initialEditId, setInitialEditId] = useState<string | null>(null)
+  const [autoOpenSlotConfig, setAutoOpenSlotConfig] = useState<{ id: string, type: 'modal' | 'drawer' } | null>(null)
 
   // Custom Actions iframes state
   const [iframeUrl, setIframeUrl] = useState<string>('')
@@ -315,6 +316,20 @@ export default function ViewPageContent({
     return () => window.removeEventListener('message', handleMessage)
   }, [])
 
+  const gridCustomActions = useMemo(() => {
+    const dynamicActions = customSlots
+      .filter((slot: any) => (slot.render_mode === 'button' || slot.render_mode === 'both') && slot.button_config?.location === 'search_grid_record')
+      .map((slot: any) => ({
+        id: `custom_slot_${slot.id}`,
+        label: slot.button_config?.label || slot.title,
+        icon: slot.button_config?.icon || 'external-link',
+        context: 'row',
+        action_type: slot.button_config?.action_type || 'modal'
+      }));
+    
+    return [...customActions, ...dynamicActions];
+  }, [customSlots, customActions]);
+
   const handleCustomAction = async (action: any, rowData?: any) => {
     const interpolate = (str: string) => {
       if (!str || !rowData) return str
@@ -335,6 +350,19 @@ export default function ViewPageContent({
          })
       }
       return
+    }
+
+    if (action.id && action.id.startsWith('custom_slot_')) {
+      const slotId = action.id.replace('custom_slot_', '');
+      
+      // Abre a cortina/layout principal
+      setSelectedRow(rowData);
+      setDrawerMode('view');
+      setIsPageVisible(true);
+      
+      // Manda abrir a aba correspondente via modal/drawer
+      setAutoOpenSlotConfig({ id: slotId, type: action.action_type || 'modal' });
+      return;
     }
 
     if (action.linked_bpm_workflows && action.linked_bpm_workflows.length > 0) {
@@ -681,6 +709,7 @@ export default function ViewPageContent({
     if (initialData && typeof initialData === 'object' && ('nativeEvent' in initialData || initialData._reactName || typeof initialData.preventDefault === 'function')) {
       initialData = {}
     }
+    setAutoOpenSlotConfig(null)
     setDrawerMode('create')
     setSelectedRow(initialData)
     setActiveTabForMaster('master')
@@ -825,6 +854,7 @@ export default function ViewPageContent({
   }
 
   const handleOpenView = async (row: any) => {
+    setAutoOpenSlotConfig(null)
     setDrawerMode('view')
     setIsProcessing(true)
     const details = await fetchDetails(row, modelName)
@@ -834,6 +864,7 @@ export default function ViewPageContent({
   }
 
   const handleOpenEdit = async (row: any) => {
+    setAutoOpenSlotConfig(null)
     setDrawerMode('edit')
     setIsProcessing(true)
     const details = await fetchDetails(row, modelName)
@@ -1896,6 +1927,7 @@ export default function ViewPageContent({
                 customSlots={customSlots}
                 logicType={logicType}
                 masterModelId={masterModelId}
+                autoOpenSlotConfig={autoOpenSlotConfig}
                 masterModelName={modelName}
                 projectId={project.id}
                 secretToken={project.secret_token}
@@ -2012,7 +2044,8 @@ export default function ViewPageContent({
               onView={handleOpenView}
               onEdit={handleOpenEdit}
               onDelete={handleOpenDelete}
-              customActions={customActions}
+              customActions={gridCustomActions}
+              onCustomAction={handleCustomAction}
             />
           </>
         )}

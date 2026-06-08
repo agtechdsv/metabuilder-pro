@@ -185,6 +185,11 @@ export default function ViewContainer({
   }, [])
 
   const handleCustomAction = async (action: any, rowData?: any) => {
+    if (onCustomAction) {
+      onCustomAction(action, rowData);
+      return;
+    }
+
     // Helper to interpolate variables {{field}}
     const interpolate = (str: string) => {
       if (!str || !rowData) return str
