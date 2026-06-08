@@ -33,6 +33,7 @@ interface CustomUseCaseRendererProps {
   refreshTrigger?: number
   detailsInterfaceTypes?: Record<string, string>
   detailsInlineTypes?: Record<string, boolean>
+  detailsItemTitles?: Record<string, string>
   onEditDetail?: (detail: any) => void
   onDeleteDetail?: (detail: any) => void
   onAddDetail?: (tableName: string, parentId?: any) => void
@@ -61,6 +62,7 @@ export default function CustomUseCaseRenderer({
   refreshTrigger,
   detailsInterfaceTypes = {},
   detailsInlineTypes = {},
+  detailsItemTitles,
   onEditDetail,
   onDeleteDetail,
   onAddDetail
@@ -104,7 +106,7 @@ export default function CustomUseCaseRenderer({
       // A submissão do RecordForm principal já salva o `initialData` do mestre.
       
       return (
-        <div className="p-6">
+        <div key={slot.id} className="p-6">
           <RecordForm
             mode={isMasterSlot ? mode : 'view'} // Por enquanto, formulários de detalhe ficam como view, ou precisariam de gestão de estado próprio
             fields={slotFields.length > 0 ? slotFields : fields} // Fallback se não filtrar bem
@@ -124,12 +126,12 @@ export default function CustomUseCaseRenderer({
             dictionary={dictionary}
             customActions={customActions}
             onCustomAction={onCustomAction}
+            detailsItemTitles={detailsItemTitles}
           />
         </div>
       )
     }
-
-    if (slot.type === 'grid' || slot.type === 'kanban') {
+    if (slot.type === 'grid' || slot.type === 'kanban' || slot.type === 'timeline' || slot.type === 'mapa_mental') {
       const useMasterId = slot.use_master_id !== false;
       const hasStaticFilters = slot.static_filters && slot.static_filters.some((f: any) => f.field && f.value);
       const slotModel = project?.models?.find((m: any) => m.id === slot.model_id || m.db_table_name === slotModelName);
@@ -174,19 +176,29 @@ export default function CustomUseCaseRenderer({
 
       if (useMasterId && (mode === 'create' || !parentId)) {
         return (
-          <div className="p-8 text-center text-neutral-500 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 m-6">
+          <div key={slot.id} className="p-8 text-center text-neutral-500 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 m-6">
             Salve o registro principal primeiro para visualizar os dados relacionados.
           </div>
         )
       }
 
       // Descobre a chave estrangeira (join) entre o mestre e este modelo de detalhe
-      const join = (joins || []).find(j => 
-        (j.from?.toLowerCase() === masterModelName?.toLowerCase() && j.to?.toLowerCase() === slotModelName?.toLowerCase()) ||
-        (j.to?.toLowerCase() === masterModelName?.toLowerCase() && j.from?.toLowerCase() === slotModelName?.toLowerCase())
-      )
+      const join = (joins || []).find(j => {
+        const fromT = (j.from || j.table)?.toLowerCase()
+        const toT = (j.to || j.toTable)?.toLowerCase()
+        return (fromT === masterModelName?.toLowerCase() && toT === slotModelName?.toLowerCase()) ||
+               (toT === masterModelName?.toLowerCase() && fromT === slotModelName?.toLowerCase())
+      })
 
-      const foreignKey = join ? (join.from?.toLowerCase() === slotModelName?.toLowerCase() ? join.from_column : join.to_column) : undefined;
+      let foreignKey: string | undefined = undefined;
+      if (join) {
+        const fromT = (join.from || join.table)?.toLowerCase()
+        if (fromT === slotModelName?.toLowerCase()) {
+          foreignKey = join.from_column || join.localKey || join.local_field
+        } else {
+          foreignKey = join.to_column || join.foreignKey || join.foreign_field
+        }
+      }
 
       // Monta os filtros externos básicos (para relacionamentos simples)
       let externalFilters: Record<string, any> = {};
@@ -213,7 +225,7 @@ export default function CustomUseCaseRenderer({
       // para preservar a interface de "Cortina" nativa do Mestre Detalhe.
       if (slot.type === 'grid' && useMasterId && !hasStaticFilters) {
         return (
-          <div className="p-6 h-[calc(100vh-150px)] overflow-y-auto custom-scrollbar">
+          <div key={slot.id} className="p-6 h-[calc(100vh-150px)] overflow-y-auto custom-scrollbar">
             <RecordForm
               mode={mode}
               fields={fields}
@@ -227,6 +239,7 @@ export default function CustomUseCaseRenderer({
               renderOnlyDetail={slotModelName}
               detailsInterfaceTypes={detailsInterfaceTypes}
               detailsInlineTypes={detailsInlineTypes}
+              detailsItemTitles={detailsItemTitles}
               onEditDetail={onEditDetail}
               onDeleteDetail={onDeleteDetail}
               onAddDetail={onAddDetail}
@@ -247,7 +260,7 @@ export default function CustomUseCaseRenderer({
 
       // Para KANBAN ou quando as regras exigirem, usamos o poderoso ViewContainer
       return (
-        <div className="p-6 h-[calc(100vh-150px)] overflow-y-auto custom-scrollbar relative">
+        <div key={slot.id} className="p-6 h-[calc(100vh-150px)] overflow-y-auto custom-scrollbar relative">
           <ViewContainer
             externalRefreshTrigger={refreshTrigger}
             projectId={projectId!}
@@ -256,10 +269,12 @@ export default function CustomUseCaseRenderer({
             filterFields={slotFilterFields}
             formFields={slotFormFields}
             displayType="list"
-            logicType={slot.type === 'kanban' ? 'kanban' : 'pesquisa'}
+            logicType={slot.type === 'kanban' ? 'kanban' : slot.type === 'timeline' ? 'timeline' : slot.type === 'mapa_mental' ? 'mapa_mental' : 'pesquisa'}
             kanbanGroupField={slot.kanban_group_field}
             kanbanGroupDisplayField={slot.kanban_group_display_field}
             kanbanCardFields={slot.kanban_card_fields}
+            timelineConfig={slot.timeline_config}
+            mindmapCentralField={slot.mindmap_central_field}
             externalFilters={externalFilters}
             advancedStaticFilters={advancedStaticFilters}
             buttonsConfig={referenceView?.buttons_config || []}

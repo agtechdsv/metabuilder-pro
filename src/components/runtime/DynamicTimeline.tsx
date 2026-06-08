@@ -86,7 +86,12 @@ export default function DynamicTimeline({
   // Ordenar dados
   // Vertical e Horizontal: mais antigo primeiro (ascending)
   // Para que a linha do tempo seja lida na ordem cronológica (Cima -> Baixo ou Esquerda -> Direita)
-  const sortedData = [...data].sort((a, b) => {
+  // Remover possíveis duplicatas que venham de JOINs multiplicados
+  const uniqueData = data.filter((item, index, self) => 
+    index === self.findIndex((t) => (t._key || t.id || t.ID) === (item._key || item.id || item.ID))
+  )
+
+  const sortedData = [...uniqueData].sort((a, b) => {
     const dateA = new Date(a[dateField])
     const dateB = new Date(b[dateField])
     return dateA.getTime() - dateB.getTime() // Mais antigo primeiro (Cronológico)
@@ -399,7 +404,7 @@ export default function DynamicTimeline({
 
             return (
               <div 
-                key={`timeline-item-${primaryKey}`} 
+                key={`timeline-item-${primaryKey}-${index}`} 
                 className={cn("relative flex flex-col group", mode === 'alternating' ? "h-[450px]" : "h-full pt-[40px]")}
                 style={{ width: `${scale * 350}px` }}
               >
@@ -531,7 +536,7 @@ export default function DynamicTimeline({
           const nextColor = index < sortedData.length - 1 ? colors[(index + 1) % colors.length] : 'transparent'
 
           return (
-            <div key={`timeline-item-${primaryKey}`} className="relative flex items-start justify-between md:justify-normal w-full group">
+            <div key={`timeline-item-${primaryKey}-${index}`} className="relative flex items-start justify-between md:justify-normal w-full group">
               
               <motion.div 
                 initial={animated ? { scale: 0, opacity: 0 } : false}

@@ -118,6 +118,7 @@ interface RecordFormProps {
   masterModelName?: string
   masterTabTitle?: string
   detailsTabTitles?: Record<string, string>
+  detailsItemTitles?: Record<string, string>
   tabsStyleConfig?: any
   detailDisplayMode?: 'tabs' | 'sections'
   isPageMode?: boolean
@@ -271,6 +272,7 @@ export default function RecordForm({
   project,
   masterTabTitle,
   detailsTabTitles,
+  detailsItemTitles,
   refreshTrigger = 0,
   renderOnlyDetail
 }: RecordFormProps) {
@@ -1065,7 +1067,13 @@ export default function RecordForm({
                         "text-xs font-bold transition-colors",
                         expandedDetails[uniqueKey] ? "text-indigo-600 dark:text-indigo-400" : "text-neutral-700 dark:text-neutral-200"
                       )}>
-                        {detail.display_name || detail.name || detail.label || `Item #${idx + 1}`}
+                        {(() => {
+                          const customField = detailsItemTitles?.[modelId || ''];
+                          if (customField && detail[customField] !== undefined && detail[customField] !== null && detail[customField] !== '') {
+                            return String(detail[customField]);
+                          }
+                          return detail.display_name || detail.name || detail.label || `Item #${idx + 1}`;
+                        })()}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 transition-all">

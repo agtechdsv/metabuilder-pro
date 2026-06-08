@@ -17,6 +17,7 @@ interface RecordDrawerProps {
   onCustomAction?: (action: any, row?: any) => void
   masterTabTitle?: string
   detailsTabTitles?: Record<string, string>
+  detailsItemTitles?: Record<string, string>
   tabsStyleConfig?: any
   detailDisplayMode?: 'tabs' | 'sections'
   onEditDetail?: (detail: any) => void
@@ -51,6 +52,7 @@ export default function RecordDrawer({
   masterModelName,
   masterTabTitle,
   detailsTabTitles,
+  detailsItemTitles,
   tabsStyleConfig,
   detailDisplayMode = 'tabs',
   onEditDetail,
@@ -116,6 +118,7 @@ export default function RecordDrawer({
           masterModelName={masterModelName}
           masterTabTitle={masterTabTitle}
           detailsTabTitles={detailsTabTitles}
+          detailsItemTitles={detailsItemTitles}
           tabsStyleConfig={tabsStyleConfig}
           detailDisplayMode={detailDisplayMode}
           onEditDetail={onEditDetail}

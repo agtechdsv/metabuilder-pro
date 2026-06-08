@@ -70,6 +70,7 @@ interface ViewPageContentProps {
   detailsInlineTypes?: Record<string, boolean>
   masterTabTitle?: string
   detailsTabTitles?: Record<string, string>
+  detailsItemTitles?: Record<string, string>
   tabsStyleConfig?: any
   baseUrl?: string
   breadcrumbs?: { label: string; href: string }[]
@@ -120,6 +121,7 @@ export default function ViewPageContent({
   detailsInlineTypes,
   masterTabTitle,
   detailsTabTitles,
+  detailsItemTitles,
   tabsStyleConfig,
   actionInterfaceType = 'drawer',
   baseUrl,
@@ -1902,6 +1904,7 @@ export default function ViewPageContent({
                 refreshTrigger={refreshKey}
                 detailsInterfaceTypes={detailsInterfaceTypes}
                 detailsInlineTypes={detailsInlineTypes}
+                detailsItemTitles={detailsItemTitles}
                 onEditDetail={handleEditDetail}
                 onDeleteDetail={handleDeleteDetail}
                 onAddDetail={handleOpenAddDetail}
@@ -1921,6 +1924,7 @@ export default function ViewPageContent({
             masterModelName={modelName}
             masterTabTitle={masterTabTitle}
             detailsTabTitles={detailsTabTitles}
+            detailsItemTitles={detailsItemTitles}
             tabsStyleConfig={tabsStyleConfig}
             detailDisplayMode={detailDisplayMode}
             isPageMode={true}
@@ -2018,6 +2022,7 @@ export default function ViewPageContent({
           masterModelName={modelName}
           masterTabTitle={masterTabTitle}
           detailsTabTitles={detailsTabTitles}
+          detailsItemTitles={detailsItemTitles}
           tabsStyleConfig={tabsStyleConfig}
           detailDisplayMode={detailDisplayMode}
           onEditDetail={handleEditDetail}
@@ -2054,6 +2059,7 @@ export default function ViewPageContent({
           masterModelName={modelName}
           masterTabTitle={masterTabTitle}
           detailsTabTitles={detailsTabTitles}
+          detailsItemTitles={detailsItemTitles}
           tabsStyleConfig={tabsStyleConfig}
           detailDisplayMode={detailDisplayMode}
           onEditDetail={handleEditDetail}
@@ -2098,6 +2104,7 @@ export default function ViewPageContent({
           masterModelName: item.tableName,
           masterTabTitle: masterTabTitle,
           detailsTabTitles: detailsTabTitles,
+          detailsItemTitles: detailsItemTitles,
           joins: joins,
           dictionary: dictionary,
           detailsInlineTypes: detailsInlineTypes,

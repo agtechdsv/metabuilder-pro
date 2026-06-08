@@ -203,6 +203,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       details_inline_types: {} as Record<string, boolean>,
       master_tab_title: '',
       details_tab_titles: {} as Record<string, string>,
+      details_item_titles: {} as Record<string, string>,
       export_formats: ['xlsx', 'csv', 'json'],
       gallery_click_behavior: 'lightbox',
       scheduler_config: {
@@ -794,6 +795,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           details_inline_types: initialData.layout_config?.details_inline_types || {},
           master_tab_title: initialData.layout_config?.master_tab_title,
           details_tab_titles: initialData.layout_config?.details_tab_titles || {},
+          details_item_titles: initialData.layout_config?.details_item_titles || {},
           export_formats: initialData.layout_config?.export_formats || ['xlsx', 'csv', 'json'],
           gallery_click_behavior: initialData.layout_config?.gallery_click_behavior || 'lightbox',
           scheduler_config: initialData.layout_config?.scheduler_config || {
@@ -2160,6 +2162,34 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                   Na lista
                 </button>
               </div>
+
+              {((config.layout_config as any).details_inline_types?.[model.id] !== false) && (
+                <div className="flex items-center ml-2 border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden h-6 bg-white dark:bg-neutral-900">
+                  <select
+                    value={(config.layout_config as any).details_item_titles?.[model.id] || ''}
+                    onChange={(e) => {
+                      const currentItemTitles = (config.layout_config as any).details_item_titles || {}
+                      setConfig({
+                        ...config,
+                        layout_config: {
+                          ...config.layout_config,
+                          details_item_titles: {
+                            ...currentItemTitles,
+                            [model.id]: e.target.value
+                          }
+                        }
+                      })
+                    }}
+                    className="bg-transparent border-none outline-none text-[8px] font-black uppercase tracking-wider text-neutral-600 dark:text-neutral-400 px-2 h-full cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                    title="Campo usado como título do item recolhido"
+                  >
+                    <option value="">Título Automático</option>
+                    {model.fields?.map((f: any) => (
+                      <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -3479,6 +3509,8 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                             <option value="form">Formulário</option>
                             <option value="grid">Grid de Dados</option>
                             <option value="kanban">Kanban</option>
+                            <option value="timeline">Linha do Tempo</option>
+                            <option value="mapa_mental">Mapa Mental</option>
                           </select>
                         </div>
                         <button
@@ -3524,7 +3556,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
 
                       {expandedCustomSlot === idx && (
                         <div className="w-full space-y-4 animate-in slide-in-from-top-2 duration-200">
-                          {(slot.type === 'grid' || slot.type === 'kanban') && (
+                          {(slot.type === 'grid' || slot.type === 'kanban' || slot.type === 'timeline' || slot.type === 'mapa_mental') && (
                             <div className="w-full p-4 mt-2 bg-rose-50/50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/30 rounded-xl space-y-4">
                           
                           {/* Configurações Kanban Específicas */}
@@ -3669,6 +3701,137 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                               </>
                             );
                           })()}
+
+                          {/* Configurações Timeline Específicas */}
+                          {slot.type === 'timeline' && (
+                            <>
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Data da Timeline</label>
+                                  <p className="text-[10px] text-neutral-500 mb-1">Qual campo será usado para ordenar a linha do tempo?</p>
+                                  <select
+                                    value={slot.timeline_config?.date_field || ''}
+                                    onChange={e => {
+                                      const newSlots = [...(config.layout_config.custom_slots || [])];
+                                      newSlots[idx].timeline_config = { ...newSlots[idx].timeline_config, date_field: e.target.value };
+                                      setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                    }}
+                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                  >
+                                    <option value="">Selecione o campo de data...</option>
+                                    {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
+                                      <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                                    ))}
+                                    {config.layout_config?.joins?.length > 0 && config.layout_config.joins.map((j:any, jIdx: number) => {
+                                      const relatedModel = models.find((m:any) => m.db_table_name === (j.to === models.find((mod:any) => mod.id === slot.model_id)?.db_table_name ? j.from : j.to) || m.db_table_name === j.toTable);
+                                      if (!relatedModel) return null;
+                                      return (
+                                        <optgroup key={`j-${jIdx}`} label={`Relacionado: ${relatedModel.display_name || relatedModel.db_table_name}`}>
+                                          {relatedModel.fields.map((f:any) => (
+                                            <option key={`${relatedModel.id}-${f.id}`} value={`${relatedModel.db_table_name} -> ${f.db_column_name}`}>
+                                              {relatedModel.db_table_name} &rarr; {f.display_name || f.db_column_name}
+                                            </option>
+                                          ))}
+                                        </optgroup>
+                                      )
+                                    })}
+                                  </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Título</label>
+                                    <select
+                                      value={slot.timeline_config?.title_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].timeline_config = { ...newSlots[idx].timeline_config, title_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Nenhum</option>
+                                      {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
+                                        <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Descrição</label>
+                                    <select
+                                      value={slot.timeline_config?.desc_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].timeline_config = { ...newSlots[idx].timeline_config, desc_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Nenhum</option>
+                                      {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
+                                        <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Ícone / Rótulo</label>
+                                    <select
+                                      value={slot.timeline_config?.icon_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].timeline_config = { ...newSlots[idx].timeline_config, icon_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Nenhum</option>
+                                      {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
+                                        <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          {/* Configurações Mapa Mental Específicas */}
+                          {slot.type === 'mapa_mental' && (
+                            <>
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Campo Central do Mapa Mental</label>
+                                  <p className="text-[10px] text-neutral-500 mb-1">Qual campo será o nó raiz (centro) do mapa?</p>
+                                  <select
+                                    value={slot.mindmap_central_field || ''}
+                                    onChange={e => {
+                                      const newSlots = [...(config.layout_config.custom_slots || [])];
+                                      newSlots[idx].mindmap_central_field = e.target.value;
+                                      setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                    }}
+                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                  >
+                                    <option value="">Automático (Nome principal da aba)</option>
+                                    {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
+                                      <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                                    ))}
+                                    {config.layout_config?.joins?.length > 0 && config.layout_config.joins.map((j:any, jIdx: number) => {
+                                      const relatedModel = models.find((m:any) => m.db_table_name === (j.to === models.find((mod:any) => mod.id === slot.model_id)?.db_table_name ? j.from : j.to) || m.db_table_name === j.toTable);
+                                      if (!relatedModel) return null;
+                                      return (
+                                        <optgroup key={`j-${jIdx}`} label={`Relacionado: ${relatedModel.display_name || relatedModel.db_table_name}`}>
+                                          {relatedModel.fields.map((f:any) => (
+                                            <option key={`${relatedModel.id}-${f.id}`} value={`${relatedModel.db_table_name} -> ${f.db_column_name}`}>
+                                              {relatedModel.db_table_name} &rarr; {f.display_name || f.db_column_name}
+                                            </option>
+                                          ))}
+                                        </optgroup>
+                                      )
+                                    })}
+                                  </select>
+                                </div>
+                              </div>
+                            </>
+                          )}
 
                           <div className="h-px w-full bg-rose-200 dark:bg-rose-900/50" />
 

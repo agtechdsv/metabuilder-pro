@@ -302,13 +302,13 @@ export default function ViewContainer({
     logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'blueprint' ? 'blueprint' : logicType === 'timeline' ? 'timeline' : logicType === 'map' ? 'map' : logicType === 'gantt' ? 'gantt' : logicType === 'kanban' ? 'kanban' : logicType === 'scheduler' ? 'scheduler' : logicType === 'galeria' ? 'galeria' : (displayType === 'both' ? defaultView : (displayType as any))
   )
   const [searchQuery, setSearchQuery] = useState('')
-  const filterValues = externalFilters
+  const [internalFilters, setInternalFilters] = useState<Record<string, any>>({})
+  const filterValues = { ...(externalFilters || {}), ...internalFilters }
+  
   const setFilterValues = (newVal: any) => {
-    if (typeof newVal === 'function') {
-      onFiltersChange?.(newVal(filterValues))
-    } else {
-      onFiltersChange?.(newVal)
-    }
+    const updated = typeof newVal === 'function' ? newVal(filterValues) : newVal
+    setInternalFilters(updated)
+    onFiltersChange?.(updated)
   }
   const [relationalOptions, setRelationalOptions] = useState<Record<string, any[]>>({})
 
@@ -514,8 +514,8 @@ export default function ViewContainer({
   const hasAutoOpenedEditRef = useRef<boolean>(false)
   
   useEffect(() => {
-    currentFiltersRef.current = externalFilters
-  }, [externalFilters])
+    currentFiltersRef.current = filterValues
+  }, [JSON.stringify(filterValues)])
 
   // Listener centralizado usando o canal do PAI
   useEffect(() => {
@@ -1155,7 +1155,7 @@ export default function ViewContainer({
     if (isFirstRender.current) {
       const cacheKey = `${projectId}:${modelName}`
       const cached = getCachedData(cacheKey)
-      const hasActiveFilters = Object.values(externalFilters).some(v => v !== undefined && v !== '')
+      const hasActiveFilters = Object.values(filterValues).some(v => v !== undefined && v !== '')
       if (cached && !hasActiveFilters) {
         setData(cached)
         setIsLoading(false)
@@ -1164,13 +1164,13 @@ export default function ViewContainer({
     }
 
     const handler = setTimeout(() => {
-      console.log(`[MetaBuilder] Buscando dados frescos com filtros...`, externalFilters)
-      fetchData(externalFilters, true)
+      console.log(`[MetaBuilder] Buscando dados frescos com filtros...`, filterValues)
+      fetchData(filterValues, true)
       isFirstRender.current = false
     }, isFirstRender.current ? 50 : 400) // Debounce apenas nas digitações subsequentes
 
     return () => clearTimeout(handler)
-  }, [projectId, modelName, isTunnelReady, externalFilters])
+  }, [projectId, modelName, isTunnelReady, JSON.stringify(filterValues)])
 
   const handleSearch = () => {
     fetchData(filterValues, true) // Busca sempre força o refresh
@@ -1178,7 +1178,7 @@ export default function ViewContainer({
 
   const handleClear = () => {
     setFilterValues({})
-    fetchData({}, true) // Limpar força o refresh
+    fetchData(externalFilters || {}, true) // Limpar força o refresh, mantendo filtros externos (ex: chaves estrangeiras)
   }
 
   // Cache global para evitar fetch no re-mount por troca de idioma
@@ -1529,7 +1529,7 @@ export default function ViewContainer({
               <span className="opacity-60">{t('runtime.total')}: <span className="text-neutral-900 dark:text-white">{data.length}</span></span>
               {data.length >= 100 && (data.length % 100 === 0) && (
                 <button
-                  onClick={() => fetchData(externalFilters, false, true)}
+                  onClick={() => fetchData(filterValues, false, true)}
                   disabled={isLoading}
                   className="ml-4 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-black capitalize tracking-wider transition-all disabled:opacity-50 flex items-center gap-1.5"
                 >
@@ -1588,7 +1588,7 @@ export default function ViewContainer({
           {data.length >= 100 && (data.length % 100 === 0) && (
             <div className="flex justify-center pt-2">
               <button
-                onClick={() => fetchData(externalFilters, false, true)}
+                onClick={() => fetchData(filterValues, false, true)}
                 disabled={isLoading}
                 className="flex items-center gap-2 px-8 py-3 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black rounded-full text-[11px] font-black capitalize tracking-wider transition-all shadow-xl disabled:opacity-50"
               >
@@ -1701,7 +1701,7 @@ export default function ViewContainer({
                 <>
                   <span className="mx-1 opacity-20">|</span>
                   <button
-                    onClick={() => fetchData(externalFilters, false, true)}
+                    onClick={() => fetchData(filterValues, false, true)}
                     disabled={isLoading}
                     className="text-indigo-600 dark:text-indigo-400 hover:opacity-80 transition-all disabled:opacity-50 flex items-center gap-1 font-black"
                   >
