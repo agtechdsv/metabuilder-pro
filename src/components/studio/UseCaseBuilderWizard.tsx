@@ -4013,7 +4013,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                                           {slot.button_config?.icon ? (
                                             <>
                                               <div className="w-5 h-5 flex items-center justify-center text-indigo-500">
-                                                <DynamicIcon name={slot.button_config.icon} />
+                                                <DynamicIcon icon={slot.button_config.icon} />
                                               </div>
                                               <span className="text-sm font-medium text-neutral-900 dark:text-white truncate">
                                                 {slot.button_config.icon}
