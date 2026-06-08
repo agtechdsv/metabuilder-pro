@@ -632,6 +632,7 @@ export default async function SlugPage({ params }: PageProps) {
           logicType={view.logic_type}
           kanbanGroupField={view.layout_config?.kanban_group_field}
           mindmapCentralField={view.layout_config?.mindmap_central_field}
+          mindmapLevels={view.layout_config?.mindmap_levels}
           schedulerConfig={view.layout_config?.scheduler_config}
           timelineConfig={view.layout_config?.timeline_config}
           mapConfig={view.layout_config?.map_config}

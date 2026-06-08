@@ -56,6 +56,7 @@ interface ViewPageContentProps {
   logicType?: string
   kanbanGroupField?: string
   mindmapCentralField?: string
+  mindmapLevels?: any[]
   schedulerConfig?: any
   timelineConfig?: any
   mapConfig?: any
@@ -108,6 +109,7 @@ export default function ViewPageContent({
   logicType,
   kanbanGroupField,
   mindmapCentralField,
+  mindmapLevels,
   schedulerConfig,
   timelineConfig,
   mapConfig,
@@ -1980,6 +1982,7 @@ export default function ViewPageContent({
               primaryKeyName={primaryKeyName}
               kanbanGroupField={kanbanGroupField}
               mindmapCentralField={mindmapCentralField}
+              mindmapLevels={mindmapLevels}
               schedulerConfig={schedulerConfig}
               timelineConfig={timelineConfig}
               mapConfig={mapConfig}

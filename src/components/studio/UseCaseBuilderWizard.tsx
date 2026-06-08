@@ -3421,28 +3421,161 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                     <div className="p-2 bg-purple-600 text-white rounded-xl shadow-lg shadow-purple-500/20">
                       <Share2 className="w-4 h-4" />
                     </div>
-                    <h4 className="text-[10px] font-black uppercase text-purple-600 tracking-[0.3em]">{t('wizard.layout.mindmap.config_title', 'Configuração do Mapa Mental')}</h4>
+                    <h4 className="text-[10px] font-black uppercase text-purple-600 tracking-[0.3em]">Hierarquia Relacional do Mapa</h4>
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.mindmap.central_field', 'Campo Central (Nó Raiz)')}</label>
-                  <select
-                    value={config.layout_config.mindmap_central_field || ''}
-                    onChange={e => setConfig((prev: any) => ({
-                      ...prev,
-                      layout_config: { ...prev.layout_config, mindmap_central_field: e.target.value }
-                    }))}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-purple-600 outline-none transition-all shadow-sm text-sm font-bold"
-                  >
-                    <option value="">{t('wizard.layout.mindmap.select_central', 'Selecione o campo central...')}</option>
-                    {relationalTree.flatMap((m: any) => m.fields).map((f: any) => (
-                      <option key={f.id} value={f.id}>
-                        {getFieldName(f.id)} ({f.data_type})
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-[10px] text-neutral-400 font-medium italic ml-1">{t('wizard.layout.mindmap.central_desc', 'Este campo será a raiz do seu mapa mental. Os campos selecionados na Zona 02 formarão os próximos níveis na ordem definida.')}</p>
+                <div className="space-y-4">
+                  {(config.layout_config.mindmap_levels || []).map((level: any, lIdx: number) => {
+                    const levelModel = models.find((m:any) => m.id === level.model_id);
+                    const isRoot = lIdx === 0;
+                    return (
+                      <div key={level.id || lIdx} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 space-y-3 relative">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[10px] font-black uppercase text-neutral-400">Nível {lIdx + 1} {isRoot && '(Raiz)'}</span>
+                          {!isRoot && (
+                            <button onClick={() => {
+                              setConfig((prev: any) => {
+                                const newLevels = prev.layout_config.mindmap_levels.filter((_:any, i:number) => i !== lIdx);
+                                return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
+                              });
+                            }} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1.5 rounded-lg transition-colors">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[9px] font-black uppercase text-neutral-400">Tabela (Model)</label>
+                            <select
+                              value={level.model_id || ''}
+                              onChange={e => {
+                                setConfig((prev: any) => {
+                                  const newLevels = [...(prev.layout_config.mindmap_levels || [])];
+                                  newLevels[lIdx].model_id = e.target.value;
+                                  newLevels[lIdx].title_field = ''; 
+                                  newLevels[lIdx].desc_field = '';
+                                  newLevels[lIdx].foreign_key = '';
+                                  return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
+                                });
+                              }}
+                              disabled={isRoot}
+                              className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none disabled:opacity-50"
+                            >
+                              <option value="">Selecione...</option>
+                              {models.map((m:any) => <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>)}
+                            </select>
+                            {isRoot && <p className="text-[9px] text-neutral-400 mt-1 italic">Tabela base do Use Case.</p>}
+                          </div>
+                          
+                          {!isRoot && (
+                            <div>
+                              <label className="text-[9px] font-black uppercase text-neutral-400">Chave Estrangeira (Aponta pro Pai)</label>
+                              <select
+                                value={level.foreign_key || ''}
+                                onChange={e => {
+                                  setConfig((prev: any) => {
+                                    const newLevels = [...(prev.layout_config.mindmap_levels || [])];
+                                    newLevels[lIdx].foreign_key = e.target.value;
+                                    return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
+                                  });
+                                }}
+                                className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none"
+                              >
+                                <option value="">Selecione o Campo...</option>
+                                {levelModel?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
+                              </select>
+                            </div>
+                          )}
+                          
+                          <div>
+                            <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Título do Card</label>
+                            <select
+                              value={level.title_field || ''}
+                              onChange={e => {
+                                setConfig((prev: any) => {
+                                  const newLevels = [...(prev.layout_config.mindmap_levels || [])];
+                                  newLevels[lIdx].title_field = e.target.value;
+                                  return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
+                                });
+                              }}
+                              className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none"
+                            >
+                              <option value="">Automático</option>
+                              {levelModel?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
+                            </select>
+                          </div>
+                          
+                          <div>
+                            <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Descrição / Subtítulo</label>
+                            <select
+                              value={level.desc_field || ''}
+                              onChange={e => {
+                                setConfig((prev: any) => {
+                                  const newLevels = [...(prev.layout_config.mindmap_levels || [])];
+                                  newLevels[lIdx].desc_field = e.target.value;
+                                  return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
+                                });
+                              }}
+                              className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none"
+                            >
+                              <option value="">Nenhum</option>
+                              {levelModel?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  
+                  {(!config.layout_config.mindmap_levels || config.layout_config.mindmap_levels.length === 0) && (
+                    <div className="p-4 border-2 border-dashed border-purple-200 dark:border-purple-900/50 rounded-xl text-center bg-white dark:bg-neutral-900">
+                      <p className="text-xs text-neutral-500">Nenhuma hierarquia definida. O mapa agrupará os dados base do modelo atual.</p>
+                      <button
+                        onClick={() => {
+                          setConfig((prev: any) => ({
+                            ...prev,
+                            layout_config: { 
+                              ...prev.layout_config, 
+                              mindmap_levels: [{
+                                id: Math.random().toString(36).substr(2, 9),
+                                model_id: config.model_id,
+                                foreign_key: '',
+                                title_field: '',
+                                desc_field: ''
+                              }]
+                            }
+                          }));
+                        }}
+                        className="mt-3 px-4 py-2 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-[10px] font-black uppercase rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors"
+                      >
+                        Começar Hierarquia Relacional
+                      </button>
+                    </div>
+                  )}
+                  
+                  {(config.layout_config.mindmap_levels && config.layout_config.mindmap_levels.length > 0) && (
+                    <button
+                      onClick={() => {
+                        setConfig((prev: any) => {
+                          const newLevels = [...(prev.layout_config.mindmap_levels || [])];
+                          newLevels.push({
+                            id: Math.random().toString(36).substr(2, 9),
+                            model_id: '',
+                            foreign_key: '',
+                            title_field: '',
+                            desc_field: ''
+                          });
+                          return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
+                        });
+                      }}
+                      className="w-full py-3 border-2 border-dashed border-neutral-200 dark:border-neutral-800 hover:border-purple-300 dark:hover:border-purple-700/50 rounded-xl text-neutral-500 hover:text-purple-600 dark:hover:text-purple-400 text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Adicionar Nível Abaixo
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -3796,41 +3929,152 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
 
                           {/* Configurações Mapa Mental Específicas */}
                           {slot.type === 'mapa_mental' && (
-                            <>
-                              <div className="space-y-3">
+                            <div className="space-y-4 bg-indigo-50/30 dark:bg-indigo-950/10 p-4 rounded-xl border border-indigo-100/50 dark:border-indigo-900/30 mt-4">
+                              <div className="flex items-center justify-between">
                                 <div>
-                                  <label className="text-[9px] font-black uppercase text-neutral-400">Campo Central do Mapa Mental</label>
-                                  <p className="text-[10px] text-neutral-500 mb-1">Qual campo será o nó raiz (centro) do mapa?</p>
-                                  <select
-                                    value={slot.mindmap_central_field || ''}
-                                    onChange={e => {
-                                      const newSlots = [...(config.layout_config.custom_slots || [])];
-                                      newSlots[idx].mindmap_central_field = e.target.value;
-                                      setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
-                                    }}
-                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
-                                  >
-                                    <option value="">Automático (Nome principal da aba)</option>
-                                    {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
-                                      <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                                    ))}
-                                    {config.layout_config?.joins?.length > 0 && config.layout_config.joins.map((j:any, jIdx: number) => {
-                                      const relatedModel = models.find((m:any) => m.db_table_name === (j.to === models.find((mod:any) => mod.id === slot.model_id)?.db_table_name ? j.from : j.to) || m.db_table_name === j.toTable);
-                                      if (!relatedModel) return null;
-                                      return (
-                                        <optgroup key={`j-${jIdx}`} label={`Relacionado: ${relatedModel.display_name || relatedModel.db_table_name}`}>
-                                          {relatedModel.fields.map((f:any) => (
-                                            <option key={`${relatedModel.id}-${f.id}`} value={`${relatedModel.db_table_name} -> ${f.db_column_name}`}>
-                                              {relatedModel.db_table_name} &rarr; {f.display_name || f.db_column_name}
-                                            </option>
-                                          ))}
-                                        </optgroup>
-                                      )
-                                    })}
-                                  </select>
+                                  <h5 className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">Hierarquia Relacional</h5>
+                                  <p className="text-[10px] text-neutral-500 mt-0.5">Defina os níveis do mapa e como eles se relacionam no banco de dados.</p>
                                 </div>
                               </div>
-                            </>
+                              
+                              <div className="space-y-4">
+                                {(slot.mindmap_levels || []).map((level: any, lIdx: number) => {
+                                  const levelModel = models.find((m:any) => m.id === level.model_id);
+                                  const isRoot = lIdx === 0;
+                                  return (
+                                    <div key={level.id || lIdx} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 space-y-3 relative">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[10px] font-black uppercase text-neutral-400">Nível {lIdx + 1} {isRoot && '(Raiz)'}</span>
+                                        {!isRoot && (
+                                          <button onClick={() => {
+                                            const newSlots = [...(config.layout_config.custom_slots || [])];
+                                            newSlots[idx].mindmap_levels = newSlots[idx].mindmap_levels.filter((_:any, i:number) => i !== lIdx);
+                                            setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                          }} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1.5 rounded-lg transition-colors">
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        )}
+                                      </div>
+                                      
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                          <label className="text-[9px] font-black uppercase text-neutral-400">Tabela (Model)</label>
+                                          <select
+                                            value={level.model_id || ''}
+                                            onChange={e => {
+                                              const newSlots = [...(config.layout_config.custom_slots || [])];
+                                              newSlots[idx].mindmap_levels[lIdx].model_id = e.target.value;
+                                              newSlots[idx].mindmap_levels[lIdx].title_field = ''; 
+                                              newSlots[idx].mindmap_levels[lIdx].desc_field = '';
+                                              newSlots[idx].mindmap_levels[lIdx].foreign_key = '';
+                                              setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                            }}
+                                            disabled={isRoot}
+                                            className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none disabled:opacity-50"
+                                          >
+                                            <option value="">Selecione...</option>
+                                            {models.map((m:any) => <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>)}
+                                          </select>
+                                          {isRoot && <p className="text-[9px] text-neutral-400 mt-1 italic">Tabela base da aba.</p>}
+                                        </div>
+                                        
+                                        {!isRoot && (
+                                          <div>
+                                            <label className="text-[9px] font-black uppercase text-neutral-400">Chave Estrangeira (Aponta pro Pai)</label>
+                                            <select
+                                              value={level.foreign_key || ''}
+                                              onChange={e => {
+                                                const newSlots = [...(config.layout_config.custom_slots || [])];
+                                                newSlots[idx].mindmap_levels[lIdx].foreign_key = e.target.value;
+                                                setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                              }}
+                                              className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none"
+                                            >
+                                              <option value="">Selecione o Campo...</option>
+                                              {levelModel?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
+                                            </select>
+                                          </div>
+                                        )}
+                                        
+                                        <div>
+                                          <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Título do Card</label>
+                                          <select
+                                            value={level.title_field || ''}
+                                            onChange={e => {
+                                              const newSlots = [...(config.layout_config.custom_slots || [])];
+                                              newSlots[idx].mindmap_levels[lIdx].title_field = e.target.value;
+                                              setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                            }}
+                                            className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none"
+                                          >
+                                            <option value="">Automático</option>
+                                            {levelModel?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
+                                          </select>
+                                        </div>
+                                        
+                                        <div>
+                                          <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Descrição / Subtítulo</label>
+                                          <select
+                                            value={level.desc_field || ''}
+                                            onChange={e => {
+                                              const newSlots = [...(config.layout_config.custom_slots || [])];
+                                              newSlots[idx].mindmap_levels[lIdx].desc_field = e.target.value;
+                                              setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                            }}
+                                            className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none"
+                                          >
+                                            <option value="">Nenhum</option>
+                                            {levelModel?.fields?.map((f:any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
+                                          </select>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                                
+                                {(!slot.mindmap_levels || slot.mindmap_levels.length === 0) && (
+                                  <div className="p-4 border-2 border-dashed border-indigo-200 dark:border-indigo-900/50 rounded-xl text-center bg-white dark:bg-neutral-900">
+                                    <p className="text-xs text-neutral-500">Nenhuma hierarquia definida. O mapa agrupará os dados base.</p>
+                                    <button
+                                      onClick={() => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].mindmap_levels = [{
+                                          id: Math.random().toString(36).substr(2, 9),
+                                          model_id: slot.model_id,
+                                          foreign_key: '',
+                                          title_field: '',
+                                          desc_field: ''
+                                        }];
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="mt-3 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                                    >
+                                      Começar Hierarquia Relacional
+                                    </button>
+                                  </div>
+                                )}
+                                
+                                {(slot.mindmap_levels && slot.mindmap_levels.length > 0) && (
+                                  <button
+                                    onClick={() => {
+                                      const newSlots = [...(config.layout_config.custom_slots || [])];
+                                      newSlots[idx].mindmap_levels.push({
+                                        id: Math.random().toString(36).substr(2, 9),
+                                        model_id: '',
+                                        foreign_key: '',
+                                        title_field: '',
+                                        desc_field: ''
+                                      });
+                                      setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                    }}
+                                    className="w-full py-3 border-2 border-dashed border-neutral-200 dark:border-neutral-800 hover:border-indigo-300 dark:hover:border-indigo-700/50 rounded-xl text-neutral-500 hover:text-indigo-600 dark:hover:text-indigo-400 text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                    Adicionar Nível Abaixo
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                           )}
 
                           <div className="h-px w-full bg-rose-200 dark:bg-rose-900/50" />

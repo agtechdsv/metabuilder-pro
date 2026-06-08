@@ -200,6 +200,43 @@ export default function CustomUseCaseRenderer({
         }
       }
 
+      // Tenta inferir a chave estrangeira automaticamente se não encontrar no join explícito
+      if (!foreignKey && useMasterId && project?.models) {
+        if (slotModelName?.toLowerCase() === masterModelName?.toLowerCase()) {
+          // O Mestre e o Detalhe são a mesma tabela! O vínculo é o próprio ID do registro.
+          foreignKey = 'id';
+        } else {
+          const slotModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === slotModelName?.toLowerCase());
+          const masterModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === masterModelName?.toLowerCase());
+          if (slotModelDef && masterModelDef) {
+            const masterTableBase = masterModelDef.db_table_name?.toLowerCase() || '';
+            const singularMasterTable = masterTableBase.endsWith('s') ? masterTableBase.slice(0, -1) : masterTableBase;
+            
+            const fkField = slotModelDef.fields?.find((f: any) => 
+              f.foreign_key_table?.toLowerCase() === masterTableBase ||
+              f.db_column_name?.toLowerCase() === `${masterTableBase}_id` ||
+              f.db_column_name?.toLowerCase() === `id_${masterTableBase}` ||
+              f.db_column_name?.toLowerCase() === `${singularMasterTable}_id` ||
+              f.db_column_name?.toLowerCase() === `id_${singularMasterTable}` ||
+              (masterModelDef.name && f.db_column_name?.toLowerCase() === `${masterModelDef.name.toLowerCase()}_id`)
+            );
+            if (fkField) {
+              foreignKey = fkField.db_column_name;
+            }
+          }
+        }
+      }
+
+      if (useMasterId && !foreignKey) {
+        return (
+          <div key={slot.id} className="p-8 text-center text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-500 rounded-xl border border-amber-200 dark:border-amber-800 m-6 flex flex-col items-center gap-2">
+            <span className="font-bold text-lg">⚠️ Atenção: Ligação com o Mestre Falhou</span>
+            <span>A aba está configurada para &quot;Vincular ao Mestre&quot;, mas não foi possível encontrar a chave estrangeira na tabela <strong>{slotModelName}</strong> que aponte para <strong>{masterModelName}</strong>.</span>
+            <span className="text-sm opacity-80 mt-2">Certifique-se de que a tabela possui uma coluna de ligação (ex: {masterModelName?.endsWith('s') ? masterModelName.slice(0, -1) : masterModelName}_id) ou configure o relacionamento manualmente no Studio.</span>
+          </div>
+        )
+      }
+
       // Monta os filtros externos básicos (para relacionamentos simples)
       let externalFilters: Record<string, any> = {};
       if (useMasterId && foreignKey && parentId) {
@@ -275,6 +312,7 @@ export default function CustomUseCaseRenderer({
             kanbanCardFields={slot.kanban_card_fields}
             timelineConfig={slot.timeline_config}
             mindmapCentralField={slot.mindmap_central_field}
+            mindmapLevels={slot.mindmap_levels}
             externalFilters={externalFilters}
             advancedStaticFilters={advancedStaticFilters}
             buttonsConfig={referenceView?.buttons_config || []}

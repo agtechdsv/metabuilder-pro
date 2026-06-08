@@ -31,6 +31,7 @@ interface ViewContainerProps {
   kanbanGroupDisplayField?: string
   kanbanCardFields?: string[]
   mindmapCentralField?: string
+  mindmapLevels?: any[]
   schedulerConfig?: any
   timelineConfig?: any
   initialEditId?: string | null
@@ -137,6 +138,7 @@ export default function ViewContainer({
   kanbanGroupDisplayField,
   kanbanCardFields,
   mindmapCentralField,
+  mindmapLevels,
   schedulerConfig,
   timelineConfig,
   initialEditId,
@@ -510,7 +512,7 @@ export default function ViewContainer({
   // 1. Refs e Hooks de topo (Regras do React)
   const activeQueriesRef = useRef<Set<string>>(new Set())
   const queryConfigsRef = useRef<Map<string, { append: boolean }>>(new Map())
-  const currentFiltersRef = useRef<any>({})
+  const currentFiltersRef = useRef<any>(filterValues)
   const hasAutoOpenedEditRef = useRef<boolean>(false)
   
   useEffect(() => {
@@ -1657,11 +1659,17 @@ export default function ViewContainer({
           data={data}
           fields={displayFields}
           centralFieldId={mindmapCentralField}
+          mindmapLevels={mindmapLevels}
+          projectId={projectId}
           onView={onView}
           onEdit={onEdit}
           onDelete={onDelete}
           primaryKeyName={primaryKeyName}
           dictionary={dictionary}
+          models={project?.models || []}
+          project={project}
+          tunnelChannel={tunnelChannel}
+          isTunnelReady={isTunnelReady}
         />
       ) : viewMode === 'galeria' ? (
         <DynamicGallery 

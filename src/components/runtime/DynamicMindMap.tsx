@@ -8,20 +8,28 @@ import {
   ZoomOut, 
   RotateCcw,
   ArrowLeft,
-  Maximize2
+  Maximize2,
+  Loader2
 } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/utils/supabase/client'
 
 interface DynamicMindMapProps {
   data: any[]
   fields: any[]
   centralFieldId?: string
+  mindmapLevels?: any[]
   primaryKeyName: string
+  projectId?: string
   onView?: (row: any) => void
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
   dictionary?: any
+  models?: any[]
+  project?: any
+  tunnelChannel?: any
+  isTunnelReady?: boolean
 }
 
 // Componente interno para Tooltip Estilizada (Multi-Tema)
@@ -47,21 +55,46 @@ const Tooltip = ({ children, text }: { children: React.ReactNode, text: string }
   )
 }
 
+interface MindMapNode {
+  id: string;
+  name: string;
+  desc?: string;
+  count: number;
+  level: number;
+  field?: any; // Para modo Pivot
+  rawData?: any;
+  children?: MindMapNode[];
+  isLoading?: boolean;
+}
+
 export default function DynamicMindMap({
   data,
   fields,
   centralFieldId,
+  mindmapLevels,
   primaryKeyName,
+  projectId,
   onView,
   onEdit,
   onDelete,
-  dictionary = {}
+  dictionary = {},
+  models = [],
+  project,
+  tunnelChannel,
+  isTunnelReady
 }: DynamicMindMapProps) {
   const { t } = useI18n()
+  const supabase = createClient()
   const [zoom, setZoom] = useState(1)
   const [currentPath, setCurrentPath] = useState<number[]>([])
   const controls = useAnimation()
-
+  
+  const isRelational = mindmapLevels && mindmapLevels.length > 0;
+  
+  // Relational State
+  const [relationalTree, setRelationalTree] = useState<MindMapNode[]>([])
+  const [loadingPath, setLoadingPath] = useState<string | null>(null) // Para mostrar spinner se necessário
+  
   // Sincronizar posição e escala
   useEffect(() => {
     controls.start({ 
@@ -72,9 +105,9 @@ export default function DynamicMindMap({
     })
   }, [currentPath, zoom, controls])
 
-  // 1. Processamento da Árvore
-  const treeData = useMemo(() => {
-    if (!data || data.length === 0 || !fields || fields.length === 0) return []
+  // 1. Processamento da Árvore (Modo Pivot Antigo)
+  const pivotTreeData = useMemo(() => {
+    if (isRelational || !data || data.length === 0 || !fields || fields.length === 0) return []
     let hierarchyFields = fields.filter(f => !f.hidden)
     const centralField = fields.find(f => f.id === centralFieldId)
     if (centralField) {
@@ -99,7 +132,7 @@ export default function DynamicMindMap({
       return undefined
     }
 
-    const buildTree = (items: any[], level: number): any[] => {
+    const buildTree = (items: any[], level: number): MindMapNode[] => {
       if (level >= hierarchyFields.length) return []
       const currentField = hierarchyFields[level]
       const groups = new Map<string, any[]>()
@@ -120,19 +153,183 @@ export default function DynamicMindMap({
       }))
     }
     return buildTree(data, 0)
-  }, [data, fields, centralFieldId])
+  }, [data, fields, centralFieldId, isRelational])
+
+  // Inicialização do Modo Relacional
+  useEffect(() => {
+    if (!isRelational || !data || !mindmapLevels) return;
+    
+    const rootLevel = mindmapLevels[0];
+    const uniqueMap = new Map();
+    data.forEach((item, idx) => {
+      const name = rootLevel.title_field ? item[rootLevel.title_field] : (item.name || item.nome || item.title || item.titulo || item.id);
+      const desc = rootLevel.desc_field ? item[rootLevel.desc_field] : undefined;
+      const key = item.id || name || `root-${idx}`;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, {
+          id: key,
+          name: String(name || 'Sem Título'),
+          desc: desc ? String(desc) : undefined,
+          count: 0,
+          level: 0,
+          rawData: item,
+          children: mindmapLevels.length > 1 ? undefined : []
+        });
+      }
+    });
+    const newTree = Array.from(uniqueMap.values());
+    setRelationalTree(newTree);
+    
+    // Auto-focus and auto-expand if there is only 1 root node (e.g. Master Detail with single record)
+    if (newTree.length === 1) {
+      setCurrentPath([0]);
+      if (newTree[0].children === undefined) {
+        // We use setTimeout to ensure React has flushed the initial state before fetching
+        setTimeout(() => fetchChildren([0], newTree[0]), 50);
+      }
+    } else {
+      setCurrentPath([]);
+    }
+  }, [data, isRelational, mindmapLevels, isTunnelReady])
+
+  const treeData = isRelational ? relationalTree : pivotTreeData;
 
   const currentNode = useMemo(() => {
-    let current = { children: treeData } as any
+    let current = { children: treeData, id: 'virtual-root', name: 'Virtual Root', count: 0, level: -1 } as MindMapNode
     for (const index of currentPath) {
       if (current.children && current.children[index]) current = current.children[index]
     }
     return current
   }, [treeData, currentPath])
 
-  const handleNodeClick = (index: number) => {
-    if (currentNode.children[index]?.children?.length > 0) {
-      setCurrentPath([...currentPath, index])
+  // Função Async para Carregar Filhos do Nível Inferior
+  const fetchChildren = async (path: number[], node: MindMapNode) => {
+    if (!isRelational || !mindmapLevels) return;
+    const nextLevelIndex = node.level + 1;
+    if (nextLevelIndex >= mindmapLevels.length) return; 
+    
+    const nextLevelConfig = mindmapLevels[nextLevelIndex];
+    if (!nextLevelConfig.model_id || !nextLevelConfig.foreign_key) return;
+
+    const pathStr = path.join('-');
+    setLoadingPath(pathStr);
+
+    try {
+      const modelData = models.find(m => m.id === nextLevelConfig.model_id);
+      if (!modelData?.db_table_name) throw new Error('Model not found in project.models');
+
+      const tableName = String(modelData.db_table_name);
+      const schemaName = modelData.db_schema_name || project?.slug || 'public';
+      
+      const parentId = String(node.rawData?.id || node.id).replace(/'/g, "''");
+      const rawQuery = `SELECT * FROM "${tableName}" WHERE "${nextLevelConfig.foreign_key}" = '${parentId}'`;
+      
+      const queryId = crypto.randomUUID();
+      const payload: any = {
+        queryId,
+        table: tableName,
+        tableName: tableName,
+        schemaName: schemaName,
+        slug: project?.slug,
+        action: 'select',
+        query: rawQuery,
+        sql: rawQuery,
+        token: project?.secret_token || 'test-token'
+      };
+
+      const handleResult = (res: any) => {
+        if (res.payload?.queryId === queryId) {
+          const childrenData = res.payload.data;
+          const uniqueChildren = new Map();
+          (childrenData || []).forEach((item: any, idx: number) => {
+            const name = nextLevelConfig.title_field ? item[nextLevelConfig.title_field] : (item.name || item.nome || item.title || item.titulo || item.id);
+            const desc = nextLevelConfig.desc_field ? item[nextLevelConfig.desc_field] : undefined;
+            const key = item.id || name || `${node.id}-child-${idx}`;
+            if (!uniqueChildren.has(key)) {
+              uniqueChildren.set(key, {
+                id: key,
+                name: String(name || 'Sem Título'),
+                desc: desc ? String(desc) : undefined,
+                count: 0,
+                level: nextLevelIndex,
+                rawData: item,
+                children: nextLevelIndex + 1 < mindmapLevels.length ? undefined : []
+              });
+            }
+          });
+          const newChildren = Array.from(uniqueChildren.values());
+
+          setRelationalTree(prevTree => {
+            const newTree = JSON.parse(JSON.stringify(prevTree)); 
+            let curr: any = { children: newTree };
+            for (const p of path) {
+              curr = curr.children[p];
+            }
+            curr.children = newChildren;
+            curr.count = newChildren.length;
+            return newTree;
+          });
+          setLoadingPath(null);
+        }
+      };
+
+      if (tunnelChannel && isTunnelReady) {
+        tunnelChannel.on('broadcast', { event: `query_result_${queryId}` }, handleResult);
+        tunnelChannel.send({
+          type: 'broadcast',
+          event: 'sql_query',
+          payload
+        });
+        // Cleanup listener after 10s
+        setTimeout(() => {
+          try {
+            const bindings = tunnelChannel.bindings?.broadcast;
+            if (Array.isArray(bindings)) {
+               tunnelChannel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult);
+            }
+          } catch (_) {}
+          setLoadingPath(null);
+        }, 10000);
+      } else {
+        const channelName = `tunnel:${project?.id}`;
+        const channel = supabase.channel(channelName);
+        channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult);
+        channel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            channel.send({
+              type: 'broadcast',
+              event: 'sql_query',
+              payload
+            });
+            setTimeout(() => {
+              supabase.removeChannel(channel);
+              setLoadingPath(null);
+            }, 10000);
+          }
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch mindmap children:", err);
+      setLoadingPath(null);
+    }
+  }
+
+  const handleNodeClick = async (index: number) => {
+    const nextPath = [...currentPath, index];
+    const clickedNode = currentNode.children![index];
+
+    if (isRelational) {
+      if (clickedNode.children === undefined) {
+        // Needs fetching
+        await fetchChildren(nextPath, clickedNode);
+        setCurrentPath(nextPath);
+      } else if (clickedNode.children.length > 0) {
+        setCurrentPath(nextPath);
+      }
+    } else {
+      if (clickedNode.children && clickedNode.children.length > 0) {
+        setCurrentPath(nextPath);
+      }
     }
   }
 
@@ -152,13 +349,14 @@ export default function DynamicMindMap({
   }
 
   const renderValue = (field: any, val: any) => {
+    if (!field) return String(val); // Relational mode fallback
     if (val === null || val === undefined) return '-'
     if (typeof val === 'boolean') return val ? 'Yes' : 'No'
     if (field?.data_type === 'uuid' && dictionary?.[val]) return dictionary[val]
     return String(val)
   }
 
-  if (treeData.length === 0) {
+  if (!treeData || treeData.length === 0) {
     return (
       <div className="py-20 text-center text-neutral-500 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
         {t('runtime.no_results')}
@@ -184,8 +382,8 @@ export default function DynamicMindMap({
         {/* Camada de Conexões */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-visible">
           <AnimatePresence>
-            {currentNode.children?.map((child: any, idx: number) => {
-              const total = currentNode.children.length
+            {currentNode.children?.map((child: MindMapNode, idx: number) => {
+              const total = currentNode.children!.length
               const angle = (idx / total) * 360 - 90
               const radius = 260
               
@@ -231,25 +429,29 @@ export default function DynamicMindMap({
             className="z-30 relative w-56 h-56 rounded-full bg-white/80 dark:bg-slate-900/60 border-2 border-indigo-500/20 dark:border-indigo-500/40 backdrop-blur-[40px] flex flex-col items-center justify-center p-8 text-center shadow-[0_0_80px_rgba(79,70,229,0.1)] dark:shadow-[0_0_80px_rgba(79,70,229,0.25)]"
           >
             <span className="text-[10px] uppercase font-black tracking-[0.4em] text-indigo-500 dark:text-indigo-400 mb-2 opacity-70">
-              {currentNode.field?.display_name || 'Core'}
+              {isRelational ? (currentPath.length === 0 ? 'Workspace' : `Nível ${currentNode.level + 1}`) : (currentNode.field?.display_name || 'Core')}
             </span>
             <h3 className="text-2xl font-black text-neutral-900 dark:text-white leading-tight break-words max-w-full">
               {renderValue(currentNode.field, currentNode.name)}
             </h3>
+            {currentNode.desc && (
+              <p className="text-[10px] text-neutral-500 mt-2">{currentNode.desc}</p>
+            )}
             <div className="mt-4 px-4 py-1.5 bg-indigo-500/10 rounded-full border border-indigo-500/20">
-              <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-200 uppercase tracking-widest">{currentNode.count} records</span>
+              <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-200 uppercase tracking-widest">{currentNode.count || currentNode.children?.length || 0} records</span>
             </div>
           </motion.div>
 
           {/* Orbitais */}
           <AnimatePresence>
-            {currentNode.children?.map((child: any, idx: number) => {
-              const total = currentNode.children.length
+            {currentNode.children?.map((child: MindMapNode, idx: number) => {
+              const total = currentNode.children!.length
               const angleRad = ((idx / total) * Math.PI * 2) - (Math.PI / 2)
               const radius = 260
               const x = Math.cos(angleRad) * radius
               const y = Math.sin(angleRad) * radius
-              const hasChildren = child.children?.length > 0
+              const hasChildren = child.children === undefined || child.children.length > 0;
+              const isLoading = loadingPath === [...currentPath, idx].join('-');
 
               return (
                 <motion.div
@@ -269,41 +471,50 @@ export default function DynamicMindMap({
                 >
                   <div className="flex flex-col gap-2 relative">
                     <span 
-                      style={{
+                      style={!isRelational ? {
                         fontFamily: (child.field?.config?.grid_config || child.field?.config)?.label?.font,
                         fontSize: (child.field?.config?.grid_config || child.field?.config)?.label?.size || '8px',
                         color: (child.field?.config?.grid_config || child.field?.config)?.label?.color,
-                      }}
+                      } : {}}
                       className={cn(
                         "text-[8px] uppercase font-black tracking-[0.2em]",
-                        !(child.field?.config?.grid_config || child.field?.config)?.label?.color && "text-neutral-400 dark:text-neutral-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400"
+                        (!isRelational && !(child.field?.config?.grid_config || child.field?.config)?.label?.color) && "text-neutral-400 dark:text-neutral-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400",
+                        isRelational && "text-indigo-500 dark:text-indigo-400"
                       )}
                     >
-                      {(child.field?.config?.grid_config || child.field?.config)?.label?.text || child.field?.display_name || 'Level'}
+                      {isRelational ? `Nível ${child.level + 1}` : ((child.field?.config?.grid_config || child.field?.config)?.label?.text || child.field?.display_name || 'Level')}
                     </span>
                     <h4 
-                      style={{
+                      style={!isRelational ? {
                         fontFamily: (child.field?.config?.grid_config || child.field?.config)?.content?.font,
                         fontSize: (child.field?.config?.grid_config || child.field?.config)?.content?.size || '12px',
                         color: (child.field?.config?.grid_config || child.field?.config)?.content?.color,
-                      }}
+                      } : {}}
                       className={cn(
                         "text-xs font-bold leading-tight",
-                        !(child.field?.config?.grid_config || child.field?.config)?.content?.color && "text-neutral-800 dark:text-neutral-100"
+                        (!isRelational && !(child.field?.config?.grid_config || child.field?.config)?.content?.color) && "text-neutral-800 dark:text-neutral-100",
+                        isRelational && "text-neutral-800 dark:text-neutral-100"
                       )}
                     >
                       {renderValue(child.field, child.name)}
                     </h4>
+                    {child.desc && (
+                      <p className="text-[10px] text-neutral-500 truncate leading-tight">{child.desc}</p>
+                    )}
                     <div className="flex items-center gap-2 mt-1">
                       <div className="flex-1 h-[1.5px] bg-neutral-200 dark:bg-white/5 rounded-full overflow-hidden">
                         <div className="h-full bg-indigo-500/40 w-2/3" />
                       </div>
-                      <span className="text-[9px] font-black text-neutral-400 dark:text-neutral-500">{child.count}</span>
+                      <span className="text-[9px] font-black text-neutral-400 dark:text-neutral-500">{child.children === undefined ? '?' : child.count || child.children.length}</span>
                     </div>
                   </div>
                   {hasChildren && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <ChevronRight className="w-3.5 h-3.5 text-indigo-500/60" />
+                      {isLoading ? (
+                        <Loader2 className="w-3.5 h-3.5 text-indigo-500 animate-spin" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 text-indigo-500/60" />
+                      )}
                     </div>
                   )}
                 </motion.div>
@@ -326,7 +537,7 @@ export default function DynamicMindMap({
           <div className="flex items-center gap-3">
             <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
             <span className="text-[10px] font-black text-neutral-700 dark:text-white uppercase tracking-[0.3em] opacity-80">
-              {currentPath.length === 0 ? 'Workspace' : currentNode.field?.display_name || 'Level'}
+              {currentPath.length === 0 ? 'Workspace' : (isRelational ? `Nível ${currentNode.level + 1}` : (currentNode.field?.display_name || 'Level'))}
             </span>
           </div>
         </div>
