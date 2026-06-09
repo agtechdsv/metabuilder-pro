@@ -203,6 +203,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         widgets: [] as any[],
         allow_runtime_edit: true
       },
+      details_display_mode: {} as Record<string, string>,
       details_interface_types: {} as Record<string, 'modal' | 'drawer'>,
       details_inline_types: {} as Record<string, boolean>,
       master_tab_title: '',

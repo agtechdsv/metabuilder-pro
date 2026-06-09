@@ -55,6 +55,7 @@ interface ViewContainerProps {
   externalRefreshTrigger?: number
   onCustomAction?: (action: any, row?: any) => void
   projectRelations?: any[]
+  detailsDisplayMode?: Record<string, string>
 }
 
 import DynamicCardList from './DynamicCardList'
