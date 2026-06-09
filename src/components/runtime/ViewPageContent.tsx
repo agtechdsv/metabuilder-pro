@@ -65,7 +65,7 @@ interface ViewPageContentProps {
   dictionary?: any
   joins?: any[]
   masterModelId?: string
-  detailDisplayMode?: 'tabs' | 'sections'
+  detailsDisplayMode?: Record<string, 'tabs' | 'sections'>
   actionInterfaceType?: 'drawer' | 'modal' | 'page'
   detailsInterfaceTypes?: Record<string, string>
   detailsInlineTypes?: Record<string, boolean>
@@ -121,7 +121,7 @@ export default function ViewPageContent({
   dictionary = {},
   joins = [],
   masterModelId,
-  detailDisplayMode,
+  detailsDisplayMode,
   detailsInterfaceTypes,
   detailsInlineTypes,
   masterTabTitle,
@@ -2022,7 +2022,7 @@ export default function ViewPageContent({
               detailsTabTitles={detailsTabTitles}
               detailsItemTitles={detailsItemTitles}
               tabsStyleConfig={tabsStyleConfig}
-              detailDisplayMode={detailDisplayMode}
+              detailsDisplayMode={detailsDisplayMode}
               isPageMode={true}
               onEditDetail={handleEditDetail}
               onDeleteDetail={handleDeleteDetail}
@@ -2088,7 +2088,7 @@ export default function ViewPageContent({
               blueprintConfig={blueprintConfig}
               initialEditId={initialEditId}
               masterModelId={masterModelId}
-              detailDisplayMode={detailDisplayMode}
+              detailsDisplayMode={detailsDisplayMode}
               dictionary={dictionary}
               joins={joins}
               actionInterfaceType={actionInterfaceType}
@@ -2127,7 +2127,7 @@ export default function ViewPageContent({
           detailsTabTitles={detailsTabTitles}
           detailsItemTitles={detailsItemTitles}
           tabsStyleConfig={tabsStyleConfig}
-          detailDisplayMode={detailDisplayMode}
+          detailsDisplayMode={detailsDisplayMode}
           onEditDetail={handleEditDetail}
           onDeleteDetail={handleDeleteDetail}
           onAddDetail={handleOpenAddDetail}
@@ -2164,7 +2164,7 @@ export default function ViewPageContent({
           detailsTabTitles={detailsTabTitles}
           detailsItemTitles={detailsItemTitles}
           tabsStyleConfig={tabsStyleConfig}
-          detailDisplayMode={detailDisplayMode}
+          detailsDisplayMode={detailsDisplayMode}
           onEditDetail={handleEditDetail}
           onDeleteDetail={handleDeleteDetail}
           onAddDetail={handleOpenAddDetail}

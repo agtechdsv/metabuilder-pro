@@ -121,7 +121,7 @@ interface RecordFormProps {
   detailsTabTitles?: Record<string, string>
   detailsItemTitles?: Record<string, string>
   tabsStyleConfig?: any
-  detailDisplayMode?: 'tabs' | 'sections'
+  detailsDisplayMode?: Record<string, 'tabs' | 'sections'>
   isPageMode?: boolean
   onEditDetail?: (detail: any) => void
   onDeleteDetail?: (detail: any) => void
@@ -255,7 +255,7 @@ export default function RecordForm({
   logicType,
   masterModelId,
   masterModelName,
-  detailDisplayMode = 'tabs',
+  detailsDisplayMode = {},
   tabsStyleConfig,
   isPageMode = false,
   onEditDetail,
@@ -1005,37 +1005,52 @@ export default function RecordForm({
     )
   }
 
-  const renderDetailSection = (tableName: string, parentData: any = formData) => {
+  const renderDetailSection = (tableName: string, parentData: any = formData, titleNode?: any, hideToolbar?: boolean) => {
     const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase())
     const modelId = targetModel?.id || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
     const displayLabel = detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || tableName
 
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <h4 className="text-[10px] font-black tracking-[0.2em] text-indigo-600">Registros Relacionados: {displayLabel}</h4>
+      <div className="space-y-2">
+        {!hideToolbar && (
+        <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+          {titleNode ?? <div />}
+          {/* lado direito: todos os controles */}
+          <div className="flex items-center gap-1">
+            {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('detail_top')).map(action => {
+              const colors = getActionColorClasses(action.color)
+              return (
+                <button
+                  key={action.id}
+                  type="button"
+                  onClick={() => onCustomAction?.(action, formData)}
+                  className={cn(
+                    "p-1.5 rounded-lg border transition-all shadow-sm bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700",
+                    colors.text,
+                    colors.hover
+                  )}
+                  title={action.label}
+                >
+                  {getActionIcon(action.icon, "w-4 h-4")}
+                </button>
+              )
+            })}
 
-            {/* Botão Expande/Recolhe Tudo */}
+            {/* Expande/Recolhe Tudo */}
             {detailsInlineTypes[modelId || ''] !== false && (parentData?._details || []).some((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase()) && (
-              <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
+              <div className="flex items-center gap-0.5 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
                 <button
                   type="button"
                   onClick={async () => {
                     const currentDetails = (parentData?._details || []).filter((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase())
                     const pkField = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase()).find(f => f.is_primary_key) || { db_column_name: 'id' }
                     const pkCol = pkField.db_column_name.split('.').pop() || 'id'
-
-                    // 1. Expande todos imediatamente
                     const newState = { ...expandedDetails }
                     currentDetails.forEach((d: any, idx: number) => {
                       const dPk = d[pkCol] || d[pkCol.toUpperCase()] || d.id || d.ID || `idx-${idx}`
-                      const key = `detail-${tableName}-${dPk}`
-                      newState[key] = true
+                      newState[`detail-${tableName}-${dPk}`] = true
                     })
                     setExpandedDetails(newState)
-
-                    // 2. Lazy load sub-detalhes para todos que ainda não têm
                     const fetches = currentDetails
                       .filter((d: any) => !d._details || d._details.length === 0)
                       .map((d: any, idx: number) => {
@@ -1061,12 +1076,10 @@ export default function RecordForm({
                     const currentDetails = (parentData?._details || []).filter((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase())
                     const pkField = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase()).find(f => f.is_primary_key) || { db_column_name: 'id' }
                     const pkCol = pkField.db_column_name.split('.').pop() || 'id'
-
                     const newState = { ...expandedDetails }
                     currentDetails.forEach((d: any, idx: number) => {
                       const dPk = d[pkCol] || d[pkCol.toUpperCase()] || d.id || d.ID || `idx-${idx}`
-                      const key = `detail-${tableName}-${dPk}`
-                      newState[key] = false
+                      newState[`detail-${tableName}-${dPk}`] = false
                     })
                     setExpandedDetails(newState)
                   }}
@@ -1077,45 +1090,16 @@ export default function RecordForm({
                 </button>
               </div>
             )}
-          </div>
 
-          {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('detail_top')).map(action => {
-            const colors = getActionColorClasses(action.color)
-            return (
-              <button
-                key={action.id}
-                type="button"
-                onClick={() => onCustomAction?.(action, formData)}
-                className={cn(
-                  "p-1.5 rounded-lg border transition-all shadow-sm bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700",
-                  colors.text,
-                  colors.hover
-                )}
-                title={action.label}
-              >
-                {getActionIcon(action.icon, "w-4 h-4")}
-              </button>
-            )
-          })}
-          <div className="flex items-center gap-1">
+            {/* Adicionar registro */}
             <button
               type="button"
               onClick={() => {
                 if (detailsInlineTypes[modelId || ''] !== false) {
                   const newTempId = `temp-${Date.now()}`
-                  const newRecord = { 
-                    id: newTempId,
-                    model_name: tableName,
-                    _isNew: true 
-                  }
-                  
-                  setFormData((prev: any) => ({
-                    ...prev,
-                    _details: [...(prev._details || []), newRecord]
-                  }))
-                  
-                  const uniqueKey = `detail-${tableName}-${newTempId}`
-                  setExpandedDetails((prev: any) => ({ ...prev, [uniqueKey]: true }))
+                  const newRecord = { id: newTempId, model_name: tableName, _isNew: true }
+                  setFormData((prev: any) => ({ ...prev, _details: [...(prev._details || []), newRecord] }))
+                  setExpandedDetails((prev: any) => ({ ...prev, [`detail-${tableName}-${newTempId}`]: true }))
                 } else {
                   onAddDetail?.(tableName, parentData.id || parentData.ID)
                 }
@@ -1125,18 +1109,21 @@ export default function RecordForm({
             >
               <Plus className="w-4 h-4" />
             </button>
+
+            {/* Abrir Modal/Drawer */}
             {detailsInlineTypes[modelId || ''] !== false && (
               <button
                 type="button"
                 onClick={() => onAddDetail?.(tableName, parentData.id || parentData.ID)}
                 title={detailsInterfaceTypes[modelId || ''] === 'drawer' ? t('common.open_drawer', 'Abrir Gaveta') : t('common.open_modal', 'Abrir Modal')}
-                className="p-1.5 ml-1 bg-neutral-50 dark:bg-neutral-800 text-neutral-400 hover:text-indigo-600 rounded-lg transition-colors border border-transparent hover:border-indigo-200"
+                className="p-1.5 bg-neutral-50 dark:bg-neutral-800 text-neutral-400 hover:text-indigo-600 rounded-lg transition-colors border border-transparent hover:border-indigo-200"
               >
                 {detailsInterfaceTypes[modelId || ''] === 'drawer' ? <PanelRight className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
               </button>
             )}
           </div>
         </div>
+        )}
 
         <div className="space-y-1.5 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
           {(() => {
@@ -1263,7 +1250,23 @@ export default function RecordForm({
                       </button>
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); onDeleteDetail?.(detail); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Se o registro é novo (ainda não salvo no banco), apenas remove da lista local
+                          if (detail._isNew || String(detailIdValue).startsWith('temp-')) {
+                            setFormData((prev: any) => ({
+                              ...prev,
+                              _details: (prev._details || []).filter((_d: any, _i: number) => {
+                                const _pk = pkField.db_column_name.split('.').pop() || 'id';
+                                const _dPk = _d[_pk] || _d[_pk.toUpperCase()] || _d.id || _d.ID || `idx-${_i}`;
+                                return String(_dPk) !== String(detailIdValue);
+                              })
+                            }));
+                          } else {
+                            // Registro persistido: chama o fluxo normal de exclusão
+                            onDeleteDetail?.(detail);
+                          }
+                        }}
                         className="p-1.5 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40 shadow-sm transition-all"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1552,100 +1555,215 @@ export default function RecordForm({
       )}
 
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
-        {!renderOnlyDetail && detailDisplayMode === 'tabs' && detailTables.length > 0 && (
-          <div className="flex items-center gap-2 border-b border-neutral-100 dark:border-neutral-800 mb-6">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('master')
-                onTabChange?.('master')
-              }}
-              style={{
-                fontFamily: getFontFamily(tabsStyleConfig?.label?.font),
-                fontSize: getFontSize(tabsStyleConfig?.label?.size),
-                ...(activeTab === 'master' && tabsStyleConfig?.label?.color ? { color: tabsStyleConfig.label.color, borderColor: tabsStyleConfig.label.color } : {})
-              }}
-              className={cn(
-                "px-4 py-2 text-[10px] font-black tracking-widest transition-all border-b-2",
-                !tabsStyleConfig?.label?.color && activeTab === 'master' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600'
-              )}
-            >
-              {masterTabTitle || t('runtime.master_details.main_data', 'Dados Principais')}
-            </button>
-            {detailTables.map(tableName => {
-              const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase())
-              const modelId = targetModel?.id || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
-              const displayLabel = dictionary[modelId || ''] || tableName
-              return (
-                <button
-                  key={tableName}
-                  type="button"
-                  onClick={() => {
-                    setActiveTab(tableName)
-                    onTabChange?.(tableName)
-                  }}
-                  style={{
-                    fontFamily: getFontFamily(tabsStyleConfig?.label?.font),
-                    fontSize: getFontSize(tabsStyleConfig?.label?.size),
-                    ...(activeTab === tableName && tabsStyleConfig?.label?.color ? { color: tabsStyleConfig.label.color, borderColor: tabsStyleConfig.label.color } : {})
-                  }}
-                  className={cn(
-                    "px-4 py-2 text-[10px] font-black tracking-widest transition-all border-b-2",
-                    !tabsStyleConfig?.label?.color && activeTab === tableName ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600'
+        {/* Formulário Principal e Abas Híbridas */}
+        <div className={cn("flex flex-col h-full", !isPageMode && "overflow-hidden")}>
+          {(() => {
+            const getModelIdForTable = (tableName: string) => {
+              const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase());
+              return targetModel?.id || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id;
+            };
+            const tabTables = detailTables.filter(tableName => detailsDisplayMode?.[getModelIdForTable(tableName)] === 'tabs');
+            const sectionTables = detailTables.filter(tableName => detailsDisplayMode?.[getModelIdForTable(tableName)] !== 'tabs');
+
+            return (
+              <>
+                {!renderOnlyDetail && tabTables.length > 0 && (
+                  <div className="flex items-end mb-2 border-b border-neutral-100 dark:border-neutral-800">
+                    {/* Abas (scroll horizontal) */}
+                    <div className="flex items-center gap-1 overflow-x-auto flex-1 custom-scrollbar">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setActiveTab('master')
+                          onTabChange?.('master')
+                        }}
+                        style={{
+                          fontFamily: getFontFamily(tabsStyleConfig?.label?.font),
+                          fontSize: getFontSize(tabsStyleConfig?.label?.size),
+                          ...(activeTab === 'master' && tabsStyleConfig?.label?.color ? { color: tabsStyleConfig.label.color, borderColor: tabsStyleConfig.label.color } : {})
+                        }}
+                        className={cn(
+                          "px-4 py-2 text-[10px] font-black tracking-widest transition-all border-b-2 whitespace-nowrap",
+                          !tabsStyleConfig?.label?.color && activeTab === 'master' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
+                        )}
+                      >
+                        {masterTabTitle || t('runtime.master_details.main_data', 'Dados Principais')}
+                      </button>
+                      {tabTables.map(tableName => {
+                        const modelId = getModelIdForTable(tableName);
+                        const title = detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || tableName;
+                        return (
+                          <button
+                            key={tableName}
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              setActiveTab(tableName)
+                              onTabChange?.(tableName)
+                            }}
+                            style={{
+                              fontFamily: getFontFamily(tabsStyleConfig?.label?.font),
+                              fontSize: getFontSize(tabsStyleConfig?.label?.size),
+                              ...(activeTab === tableName && tabsStyleConfig?.label?.color ? { color: tabsStyleConfig.label.color, borderColor: tabsStyleConfig.label.color } : {})
+                            }}
+                            className={cn(
+                              "px-4 py-2 text-[10px] font-black tracking-widest transition-all border-b-2 whitespace-nowrap",
+                              !tabsStyleConfig?.label?.color && activeTab === tableName ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
+                            )}
+                          >
+                            {title}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Botões de acao alinhados na mesma linha das abas */}
+                    {activeTab !== 'master' && (() => {
+                      const activeModelId = getModelIdForTable(activeTab);
+                      return (
+                        <div className="flex items-center gap-1 pb-2 flex-shrink-0 pl-2">
+                          {detailsInlineTypes[activeModelId || ''] !== false && (formData?._details || []).some((d: any) => d.model_name?.toLowerCase() === activeTab?.toLowerCase()) && (
+                            <div className="flex items-center gap-0.5 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const currentDetails = (formData?._details || []).filter((d: any) => d.model_name?.toLowerCase() === activeTab?.toLowerCase())
+                                  const pkField = fields.filter(f => f.model_name?.toLowerCase() === activeTab?.toLowerCase()).find(f => f.is_primary_key) || { db_column_name: 'id' }
+                                  const pkCol = pkField.db_column_name.split('.').pop() || 'id'
+                                  const newState = { ...expandedDetails }
+                                  currentDetails.forEach((d: any, idx: number) => {
+                                    const dPk = d[pkCol] || d[pkCol.toUpperCase()] || d.id || d.ID || `idx-${idx}`
+                                    newState[`detail-${activeTab}-${dPk}`] = true
+                                  })
+                                  setExpandedDetails(newState)
+                                  const fetches = currentDetails.filter((d: any) => !d._details || d._details.length === 0).map((d: any, idx: number) => {
+                                    const dPk = d[pkCol] || d[pkCol.toUpperCase()] || d.id || d.ID || `idx-${idx}`
+                                    const key = `detail-${activeTab}-${dPk}`
+                                    if (!loadingSubDetails[key]) {
+                                      setLoadingSubDetails(prev => ({ ...prev, [key]: true }))
+                                      return fetchSubDetailsForRecord(d, activeTab, pkCol, dPk).finally(() => setLoadingSubDetails(prev => ({ ...prev, [key]: false })))
+                                    }
+                                    return Promise.resolve()
+                                  })
+                                  await Promise.all(fetches)
+                                }}
+                                title={t('common.expand_all', 'Expandir Tudo')}
+                                className="p-1 hover:bg-white dark:hover:bg-neutral-800 rounded text-neutral-400 hover:text-indigo-600 transition-all"
+                              >
+                                <ChevronDown className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const currentDetails = (formData?._details || []).filter((d: any) => d.model_name?.toLowerCase() === activeTab?.toLowerCase())
+                                  const pkField = fields.filter(f => f.model_name?.toLowerCase() === activeTab?.toLowerCase()).find(f => f.is_primary_key) || { db_column_name: 'id' }
+                                  const pkCol = pkField.db_column_name.split('.').pop() || 'id'
+                                  const newState = { ...expandedDetails }
+                                  currentDetails.forEach((d: any, idx: number) => {
+                                    const dPk = d[pkCol] || d[pkCol.toUpperCase()] || d.id || d.ID || `idx-${idx}`
+                                    newState[`detail-${activeTab}-${dPk}`] = false
+                                  })
+                                  setExpandedDetails(newState)
+                                }}
+                                title={t('common.collapse_all', 'Recolher Tudo')}
+                                className="p-1 hover:bg-white dark:hover:bg-neutral-800 rounded text-neutral-400 hover:text-indigo-600 transition-all"
+                              >
+                                <ChevronUp className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (detailsInlineTypes[activeModelId || ''] !== false) {
+                                const newTempId = `temp-${Date.now()}`
+                                setFormData((prev: any) => ({ ...prev, _details: [...(prev._details || []), { id: newTempId, model_name: activeTab, _isNew: true }] }))
+                                setExpandedDetails((prev: any) => ({ ...prev, [`detail-${activeTab}-${newTempId}`]: true }))
+                              } else {
+                                onAddDetail?.(activeTab, formData.id || formData.ID)
+                              }
+                            }}
+                            className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
+                            title={t('common.add_record', 'Adicionar')}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                          {detailsInlineTypes[activeModelId || ''] !== false && (
+                            <button
+                              type="button"
+                              onClick={() => onAddDetail?.(activeTab, formData.id || formData.ID)}
+                              title={detailsInterfaceTypes[activeModelId || ''] === 'drawer' ? t('common.open_drawer', 'Abrir Gaveta') : t('common.open_modal', 'Abrir Modal')}
+                              className="p-1.5 bg-neutral-50 dark:bg-neutral-800 text-neutral-400 hover:text-indigo-600 rounded-lg transition-colors border border-transparent hover:border-indigo-200"
+                            >
+                              {detailsInterfaceTypes[activeModelId || ''] === 'drawer' ? <PanelRight className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                <div className={cn("flex-1 space-y-12", isPageMode ? "" : "overflow-y-auto custom-scrollbar pr-2")}>
+                  {!renderOnlyDetail && activeTab === 'master' && (
+                    <div className="space-y-6">
+                      {sectionTables.length > 0 && tabTables.length > 0 && (
+                        <div className="flex items-center gap-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
+                          <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
+                          <h3 className="text-[10px] font-black tracking-[0.2em] text-neutral-800 dark:text-neutral-200">
+                            {masterTabTitle || t('runtime.master_details.main_data', 'Dados Principais')}
+                          </h3>
+                        </div>
+                      )}
+                      <div className={cn("grid gap-6", isPageMode ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
+                        {(() => {
+                          const seenFields = new Set();
+                          return masterFields.map(field => {
+                            if (seenFields.has(field.id)) return null;
+                            seenFields.add(field.id);
+                            return <div key={field.id}>{renderField(field)}</div>;
+                          });
+                        })()}
+                      </div>
+                    </div>
                   )}
-                >
-                  {detailsTabTitles?.[modelId || ''] || displayLabel}
-                </button>
-              )
-            })}
-          </div>
-        )}
 
-        <div className={cn("flex-1 space-y-12", isPageMode ? "" : "overflow-y-auto custom-scrollbar pr-2")}>
-          {!renderOnlyDetail && (detailDisplayMode === 'sections' || activeTab === 'master') && (
-            <div className="space-y-6">
-              {detailDisplayMode === 'sections' && detailTables.length > 0 && (
-                <div className="flex items-center gap-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
-                  <h3 className="text-[10px] font-black tracking-[0.2em] text-neutral-800 dark:text-neutral-200">
-                    {masterTabTitle || t('runtime.master_details.main_data', 'Dados Principais')}
-                  </h3>
+                  {!renderOnlyDetail && activeTab === 'master' && sectionTables.length > 0 && sectionTables.map(tableName => {
+                    const sectionModelId = getModelIdForTable(tableName);
+                    const sectionTitle = detailsTabTitles?.[sectionModelId || ''] || dictionary[sectionModelId || ''] || tableName;
+                    return (
+                      <div key={tableName} className="pt-6">
+                        {renderDetailSection(tableName, formData, (
+                          <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
+                            <h3
+                              style={{
+                                fontFamily: getFontFamily(tabsStyleConfig?.label?.font),
+                                fontSize: getFontSize(tabsStyleConfig?.label?.size),
+                                ...(tabsStyleConfig?.label?.color ? { color: tabsStyleConfig.label.color } : {})
+                              }}
+                              className="text-[10px] font-black tracking-[0.2em] text-neutral-800 dark:text-neutral-200"
+                            >
+                              {sectionTitle}
+                            </h3>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+
+                  {!renderOnlyDetail && tabTables.length > 0 && activeTab !== 'master' && (
+                    renderDetailSection(activeTab, formData, undefined, true)
+                  )}
+
+                  {renderOnlyDetail && renderDetailSection(renderOnlyDetail)}
                 </div>
-              )}
-              <div className={cn("grid gap-6", isPageMode ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
-                {(() => {
-                  const seenFields = new Set();
-                  return masterFields.map(field => {
-                    if (seenFields.has(field.id)) return null;
-                    seenFields.add(field.id);
-                    return <div key={field.id}>{renderField(field)}</div>;
-                  });
-                })()}
-              </div>
-            </div>
-          )}
-
-          {!renderOnlyDetail && detailDisplayMode === 'sections' && detailTables.length > 0 && detailTables.map(tableName => (
-            <div key={tableName} className="pt-4 space-y-6">
-              <div className="flex items-center gap-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
-                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
-                <h3 className="text-[10px] font-black tracking-[0.2em] text-neutral-800 dark:text-neutral-200">
-                  {(() => {
-                    const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase())
-                    const modelId = targetModel?.id || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
-                    return detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || tableName
-                  })()}
-                </h3>
-              </div>
-              {renderDetailSection(tableName)}
-            </div>
-          ))}
-
-          {!renderOnlyDetail && detailDisplayMode === 'tabs' && detailTables.length > 0 && activeTab !== 'master' && (
-            renderDetailSection(activeTab)
-          )}
-
-          {renderOnlyDetail && renderDetailSection(renderOnlyDetail)}
+              </>
+            );
+          })()}
         </div>
 
         <div className={cn(

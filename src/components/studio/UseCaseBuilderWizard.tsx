@@ -797,6 +797,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           joins: initialData.layout_config?.joins || [],
           fields_metadata: initialData.layout_config?.fields_metadata || {},
           analytics_config: initialData.layout_config?.analytics_config || { widgets: [], allow_runtime_edit: true },
+          details_display_mode: initialData.layout_config?.details_display_mode || {},
           details_interface_types: initialData.layout_config?.details_interface_types || {},
           details_inline_types: initialData.layout_config?.details_inline_types || {},
           master_tab_title: initialData.layout_config?.master_tab_title,
@@ -2445,16 +2446,56 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
 
           {!isMaster && !hiddenDetails.has(model.id) && (
             <div className="flex items-center gap-1">
+              {/* Abas/Seções Toggle */}
               <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
                 {[
-                  { id: 'modal', label: 'Modal', icon: Maximize2 },
-                  { id: 'drawer', label: 'Drawer', icon: Layout }
+                  { id: 'tabs', label: 'Aba', tooltip: 'Exibe os registros deste detalhe em uma aba superior' },
+                  { id: 'sections', label: 'Seção', tooltip: 'Exibe os registros deste detalhe em uma seção empilhada na página' }
+                ].map(opt => {
+                  const currentMode = (config.layout_config as any).details_display_mode?.[model.id] || 'sections'
+                  const isActive = currentMode === opt.id
+                  return (
+                    <button
+                      key={opt.id}
+                      title={opt.tooltip}
+                      onClick={() => {
+                        const currentModes = (config.layout_config as any).details_display_mode || {}
+                        setConfig({
+                          ...config,
+                          layout_config: {
+                            ...config.layout_config,
+                            details_display_mode: {
+                              ...currentModes,
+                              [model.id]: opt.id
+                            }
+                          }
+                        })
+                      }}
+                      className={cn(
+                        "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all",
+                        isActive
+                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                          : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Modal/Drawer Toggle */}
+              <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800 ml-1">
+                {[
+                  { id: 'modal', label: 'Modal', icon: Maximize2, tooltip: 'Abre o formulário deste detalhe em uma janela central' },
+                  { id: 'drawer', label: 'Drawer', icon: Layout, tooltip: 'Abre o formulário deste detalhe em uma gaveta lateral' }
                 ].map(opt => {
                   const currentType = (config.layout_config as any).details_interface_types?.[model.id] || 'modal'
                   const isActive = currentType === opt.id
                   return (
                     <button
                       key={opt.id}
+                      title={opt.tooltip}
                       onClick={() => {
                         const currentTypes = (config.layout_config as any).details_interface_types || {}
                         setConfig({
@@ -2484,6 +2525,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
 
               <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800 ml-2">
                 <button
+                  title="Lista os registros deste detalhe de forma expandida diretamente na mesma página"
                   onClick={() => {
                     const currentInlines = (config.layout_config as any).details_inline_types || {}
                     const isCurrentlyInline = currentInlines[model.id] !== false // Default true
@@ -3581,61 +3623,6 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
               </div>
             )}
 
-            {/* ZONA: MASTER-DETAIL CONFIG */}
-            {config.logic_type === 'pesquisa_cadastro' && (
-              <div className="p-6 bg-slate-50/50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800 rounded-[2rem] space-y-6 shadow-sm overflow-hidden transition-all duration-300">
-                <div
-                  className="flex items-center justify-between cursor-pointer"
-                  onClick={() => toggleZone('masterDetail')}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
-                      <Layers className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.master_detail.title')}</h4>
-                      <p className="text-[10px] text-neutral-400 font-medium mt-1">{t('wizard.layout.master_detail.subtitle')}</p>
-                    </div>
-                  </div>
-                  <div className="p-2 text-indigo-600">
-                    {expandedZones.masterDetail ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                  </div>
-                </div>
-
-                {expandedZones.masterDetail && (
-                  <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-300 pt-4 border-t border-slate-200 dark:border-slate-800/50">
-
-                    <div className="max-w-md">
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Estilo dos Detalhes</label>
-                        <div className="flex p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
-                          <button
-                            onClick={() => setConfig({ ...config, layout_config: { ...config.layout_config, detail_display_mode: 'tabs' } })}
-                            className={cn(
-                              "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                              (config.layout_config as any).detail_display_mode !== 'sections' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600'
-                            )}
-                          >
-                            Abas
-                          </button>
-                          <button
-                            onClick={() => setConfig({ ...config, layout_config: { ...config.layout_config, detail_display_mode: 'sections' } })}
-                            className={cn(
-                              "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                              (config.layout_config as any).detail_display_mode === 'sections' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600'
-                            )}
-                          >
-                            Seções
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* ZONA: ANALYTICS (BI) CONFIG */}
             {config.logic_type === 'analytics' && (

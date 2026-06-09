@@ -691,7 +691,7 @@ export default async function SlugPage({ params }: PageProps) {
           dictionary={dictionary}
           joins={view.layout_config?.joins || []}
           masterModelId={view.layout_config?.master_model_id}
-          detailDisplayMode={view.layout_config?.detail_display_mode}
+          detailsDisplayMode={view.layout_config?.details_display_mode}
           detailsInterfaceTypes={view.layout_config?.details_interface_types}
           detailsInlineTypes={view.layout_config?.details_inline_types}
           masterTabTitle={view.layout_config?.master_tab_title}

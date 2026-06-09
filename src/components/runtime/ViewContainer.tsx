@@ -40,7 +40,6 @@ interface ViewContainerProps {
   ganttConfig?: any
   blueprintConfig?: any
   masterModelId?: string
-  detailDisplayMode?: 'tabs' | 'sections'
   dictionary?: any
   joins?: any[]
   project?: any
@@ -149,7 +148,6 @@ export default function ViewContainer({
   ganttConfig,
   blueprintConfig,
   masterModelId,
-  detailDisplayMode = 'tabs',
   dictionary = {},
   joins = [],
   project,

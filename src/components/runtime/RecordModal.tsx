@@ -19,7 +19,7 @@ interface RecordModalProps {
   detailsTabTitles?: Record<string, string>
   detailsItemTitles?: Record<string, string>
   tabsStyleConfig?: any
-  detailDisplayMode?: 'tabs' | 'sections'
+  detailsDisplayMode?: Record<string, 'tabs' | 'sections'>
   onEditDetail?: (detail: any) => void
   onDeleteDetail?: (detail: any) => void
   onAddDetail?: (tableName: string) => void
@@ -55,7 +55,7 @@ export default function RecordModal({
   masterTabTitle,
   detailsTabTitles,
   detailsItemTitles,
-  detailDisplayMode = 'tabs',
+  detailsDisplayMode = {},
   onEditDetail,
   onDeleteDetail,
   onAddDetail,
@@ -130,7 +130,7 @@ export default function RecordModal({
           detailsTabTitles={detailsTabTitles}
           detailsItemTitles={detailsItemTitles}
           tabsStyleConfig={tabsStyleConfig}
-          detailDisplayMode={detailDisplayMode}
+          detailsDisplayMode={detailsDisplayMode}
           onEditDetail={onEditDetail}
           onDeleteDetail={onDeleteDetail}
           onAddDetail={onAddDetail}
