@@ -2,6 +2,7 @@
 // Refined UseCaseBuilderWizard - Metadata Driven Actions Order
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import FormulaBuilder from './FormulaBuilder'
 import {
   ArrowLeft,
   Save,
@@ -1079,7 +1080,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
 
       const validFieldIds = new Set(models.flatMap((m: any) => m.fields?.map((f: any) => f.id) || []))
 
-      const filterValid = (arr: string[]) => (arr || []).filter(fid => validFieldIds.has(fid))
+      const filterValid = (arr: string[]) => (arr || []).filter(fid => validFieldIds.has(fid) || fid.startsWith('virt_'))
 
       const validFormFields = filterValid(config.layout_config.form_fields)
       const validGridFields = filterValid(config.layout_config.grid_fields)
@@ -1241,7 +1242,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       validGridFields.forEach((fid: string) => addOrUpdateComponent(fid, 'grid'))
       validFormFields.forEach((fid: string) => addOrUpdateComponent(fid, 'form'))
 
-      const componentsToInsert = Object.values(componentMap)
+      const componentsToInsert = Object.values(componentMap).filter((c: any) => !c.field_id.startsWith('virt_'))
 
       if (componentsToInsert.length > 0) {
         const { error: compError } = await supabase.from('ui_components').insert(componentsToInsert)
@@ -1912,7 +1913,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
   const [editingTabId, setEditingTabId] = useState<string | null>(null)
   const [editingFieldZone, setEditingFieldZone] = useState<string | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-  const [drawerActiveTab, setDrawerActiveTab] = useState<'geral' | 'estilos'>('geral')
+  const [drawerActiveTab, setDrawerActiveTab] = useState<'geral' | 'estilos' | 'logica'>('geral')
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [collapsedTables, setCollapsedTables] = useState<Record<string, boolean>>({})
@@ -2039,27 +2040,30 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
             toast('Nenhum novo campo permitido pôde ser adicionado a esta zona.', 'info')
           }
         } else {
-          const fieldId = id
+          const isVirtualTool = id === 'virtual_calc_tool';
+          const fieldId = isVirtualTool ? `virt_${Math.random().toString(36).substring(2, 10)}` : id;
 
           // Achar o campo no modelo para validar
           let fieldObj: any = null
-          for (const m of models) {
-            fieldObj = m.fields.find((f: any) => f.id === fieldId)
-            if (fieldObj) break
-          }
+          if (!isVirtualTool) {
+            for (const m of models) {
+              fieldObj = m.fields.find((f: any) => f.id === fieldId)
+              if (fieldObj) break
+            }
 
-          if (fieldObj) {
-            if (targetZone === 'grid_fields' && fieldObj.is_visible_in_list === false) {
-              toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" está configurado como não visível no grid.`, 'error')
-              return
-            }
-            if (targetZone === 'form_fields' && fieldObj.is_visible_in_form === false) {
-              toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" está configurado como não visível no formulário.`, 'error')
-              return
-            }
-            if (targetZone === 'filter_fields' && fieldObj.is_searchable === false) {
-              toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" está configurado como não pesquisável (não visível no filtro).`, 'error')
-              return
+            if (fieldObj) {
+              if (targetZone === 'grid_fields' && fieldObj.is_visible_in_list === false) {
+                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" está configurado como não visível no grid.`, 'error')
+                return
+              }
+              if (targetZone === 'form_fields' && fieldObj.is_visible_in_form === false) {
+                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" está configurado como não visível no formulário.`, 'error')
+                return
+              }
+              if (targetZone === 'filter_fields' && fieldObj.is_searchable === false) {
+                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" está configurado como não pesquisável (não visível no filtro).`, 'error')
+                return
+              }
             }
           }
 
@@ -2069,11 +2073,41 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
             if (targetZone === 'form_fields' && config.logic_type === 'pesquisa') return
 
             currentFields.push(fieldId)
+            
+            const newMetadata = { ...(config.layout_config.fields_metadata || {}) }
+            if (isVirtualTool) {
+              let assignedModelId = null;
+              if (targetZone === 'form_fields' && overIdStr.startsWith('droppable-form-')) {
+                 assignedModelId = overIdStr.replace('droppable-form-', '');
+              } else if (targetZone === 'form_fields' && overIdStr.startsWith('form-')) {
+                 const droppedOnFieldId = overIdStr.replace('form-', '');
+                 for (const m of models) {
+                   if (m.fields.some((f: any) => f.id === droppedOnFieldId)) {
+                     assignedModelId = m.id;
+                     break;
+                   }
+                 }
+                 // Herda a zona caso tenha sido solto em cima de outro campo virtual
+                 if (!assignedModelId && droppedOnFieldId.startsWith('virt_')) {
+                    assignedModelId = config.layout_config.fields_metadata?.[droppedOnFieldId]?.virtual_model_id || null;
+                 }
+              }
+
+              newMetadata[fieldId] = {
+                label: { text: 'Campo Calculado', show: true, position: 'top', width: 'auto' },
+                content: { readonly: true, formula_tokens: [] },
+                component: { type: 'virtual_calc', rel_table: '', rel_value: '', rel_label: '', fixed_options: '' },
+                viacep: { enabled: false },
+                virtual_model_id: assignedModelId
+              }
+            }
+
             setConfig({
               ...config,
               layout_config: {
                 ...config.layout_config,
-                [targetZone]: currentFields
+                [targetZone]: currentFields,
+                fields_metadata: newMetadata
               }
             })
             toast(t('common.success', 'Campo adicionado com sucesso!'), 'success')
@@ -2311,9 +2345,13 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
 
   const renderModelZone = (model: any, depth: number = 0, index: number = 0) => {
     const isMaster = depth === 0 && index === 0
-    const fieldsOfThisModel = config.layout_config.form_fields.filter((fid: string) =>
-      model.fields.some((f: any) => f.id === fid)
-    )
+    const fieldsOfThisModel = config.layout_config.form_fields.filter((fid: string) => {
+      if (fid.startsWith('virt_')) {
+         const meta = (config.layout_config.fields_metadata || {})[fid] || {};
+         return meta.virtual_model_id === model.id || (!meta.virtual_model_id && isMaster);
+      }
+      return model.fields.some((f: any) => f.id === fid)
+    })
 
     const tabsMeta = (config.layout_config as any).fields_metadata?.['form-TABS'] || (config.layout_config as any).fields_metadata?.['TABS']
     const tabStyles = {
@@ -2780,6 +2818,29 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {/* Ferramentas Virtuais */}
+                <div className="border-b border-neutral-100 dark:border-neutral-800">
+                  <div className="flex items-center gap-2 px-4 py-3 bg-neutral-50/50 dark:bg-neutral-900/20">
+                     <div className="w-1.5 h-3.5 bg-indigo-500 rounded-full"></div>
+                     <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-800 dark:text-neutral-200">
+                       Ferramentas Virtuais
+                     </h4>
+                  </div>
+                  <div className="p-4 pt-2">
+                    <DraggableItem id="source-virtual_calc_tool" className="bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/50 p-3 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-indigo-400 dark:hover:border-indigo-500 transition-all shadow-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
+                          <span className="text-indigo-600 dark:text-indigo-400 font-black text-[10px]">fx</span>
+                        </div>
+                        <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+                          Campo Calculado
+                        </span>
+                      </div>
+                      <Plus className="w-3.5 h-3.5 text-indigo-300 group-hover:text-indigo-500 transition-all" />
+                    </DraggableItem>
+                  </div>
+                </div>
+
                 {(() => {
                   const formTreeIds = new Set<string>()
                   const traverse = (nodes: any[]) => {
@@ -5501,7 +5562,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     drawerActiveTab === 'geral' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
                   )}
                 >
-                  {t('wizard.layout.drawer.tab_basic')}
+                  GERAL
                   {drawerActiveTab === 'geral' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
                 </button>
                 <button
@@ -5511,8 +5572,18 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     drawerActiveTab === 'estilos' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
                   )}
                 >
-                  {t('wizard.layout.drawer.tab_styles')}
+                  ESTILOS
                   {drawerActiveTab === 'estilos' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
+                </button>
+                <button
+                  onClick={() => setDrawerActiveTab('logica')}
+                  className={cn(
+                    "flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
+                    drawerActiveTab === 'logica' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
+                  )}
+                >
+                  FÓRMULA
+                  {drawerActiveTab === 'logica' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
                 </button>
               </div>
             )}
@@ -5896,6 +5967,61 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     </div>
                   </div>
                 </>
+              )}
+
+              {editingFieldId !== 'TABS' && drawerActiveTab === 'logica' && (
+                <div className="space-y-6">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
+                      <h4 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-widest">
+                        Cálculos e Fórmulas
+                      </h4>
+                    </div>
+                    <FormulaBuilder 
+                      value={currentFieldMeta.content?.formula_tokens || []}
+                      onChange={(tokens) => {
+                        updateMeta('content', 'formula_tokens', tokens);
+                      }}
+                      availableFields={[
+                        ...(models || []).flatMap((m: any) => 
+                          (m.fields || []).map((f: any) => ({
+                            id: f.id,
+                            modelName: m.display_name || m.name,
+                            db_column_name: m.id === (config.layout_config?.master_model_id || config.selected_models?.[0]) ? f.db_column_name : `${m.db_table_name}.${f.db_column_name}`,
+                            display_name: f.display_name
+                          }))
+                        ),
+                        ...(config.layout_config?.form_fields || [])
+                          .filter((fid: string) => fid.startsWith('virt_') && fid !== editingFieldId)
+                          .map((fid: string) => {
+                            const meta = config.layout_config?.fields_metadata?.[fid] || {};
+                            const virtModelId = meta.virtual_model_id;
+                            let vModelName = 'Virtual';
+                            let vDbTable = '';
+                            if (virtModelId) {
+                               const foundModel = models?.find((m:any) => m.id === virtModelId);
+                               if (foundModel) {
+                                  vModelName = foundModel.display_name || foundModel.name;
+                                  vDbTable = foundModel.db_table_name;
+                               }
+                            }
+                            
+                            const isMaster = !virtModelId || virtModelId === (config.layout_config?.master_model_id || config.selected_models?.[0]);
+                            const dbColName = isMaster ? fid : `${vDbTable}.${fid}`;
+
+                            return {
+                              id: fid,
+                              modelName: vModelName,
+                              db_column_name: dbColName,
+                              display_name: meta.label?.text || 'Campo Calculado',
+                              isVirtual: true
+                            };
+                          })
+                      ]}
+                    />
+                  </div>
+                </div>
               )}
 
               {editingFieldId !== 'TABS' && drawerActiveTab === 'estilos' && (

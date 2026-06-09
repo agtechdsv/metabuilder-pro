@@ -59,6 +59,10 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
   const [formRelType, setFormRelType] = useState('many_to_one')
   const [isSaving, setIsSaving] = useState(false)
 
+  const [cliPage, setCliPage] = useState(1)
+  const [manualPage, setManualPage] = useState(1)
+  const ITEMS_PER_PAGE = 10
+
   const fetchRelations = useCallback(async () => {
     const { data, error } = await supabase
       .from('relations')
@@ -167,6 +171,40 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
 
   const cliRelations = relations.filter(r => r.source !== 'manual')
   const manualRelations = relations.filter(r => r.source === 'manual')
+
+  const cliTotalPages = Math.max(1, Math.ceil(cliRelations.length / ITEMS_PER_PAGE))
+  const manualTotalPages = Math.max(1, Math.ceil(manualRelations.length / ITEMS_PER_PAGE))
+
+  const safeCliPage = Math.min(cliPage, cliTotalPages)
+  const safeManualPage = Math.min(manualPage, manualTotalPages)
+
+  const currentCliRelations = cliRelations.slice((safeCliPage - 1) * ITEMS_PER_PAGE, safeCliPage * ITEMS_PER_PAGE)
+  const currentManualRelations = manualRelations.slice((safeManualPage - 1) * ITEMS_PER_PAGE, safeManualPage * ITEMS_PER_PAGE)
+
+  const PaginationControls = ({ page, total, setPage }: { page: number, total: number, setPage: (p: number) => void }) => {
+    if (total <= 1) return null;
+    return (
+      <div className="flex items-center justify-between mt-4 px-2 border-t border-neutral-100 dark:border-neutral-800/60 pt-3">
+        <button
+          onClick={() => setPage(Math.max(1, page - 1))}
+          disabled={page === 1}
+          className="text-xs font-bold px-3 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 disabled:opacity-30 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+        >
+          Anterior
+        </button>
+        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+          Página {page} de {total}
+        </span>
+        <button
+          onClick={() => setPage(Math.min(total, page + 1))}
+          disabled={page === total}
+          className="text-xs font-bold px-3 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 disabled:opacity-30 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+        >
+          Próxima
+        </button>
+      </div>
+    )
+  }
 
   const RelationRow = ({ rel }: { rel: Relation }) => {
     const fromModel = getModelById(rel.from_model_id)
@@ -423,52 +461,60 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
         </div>
       )}
 
-      {/* CLI Relations */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Database className="w-3.5 h-3.5 text-emerald-500" />
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
-            Do Banco de Dados ({cliRelations.length})
-          </h4>
-          <div className="flex-1 h-px bg-neutral-100 dark:bg-neutral-800" />
-          <div className="flex items-center gap-1 text-[8px] text-neutral-400 font-bold">
-            <Lock className="w-2.5 h-2.5" /> Somente Leitura
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
+        {/* CLI Relations */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Database className="w-3.5 h-3.5 text-emerald-500" />
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
+              Do Banco de Dados ({cliRelations.length})
+            </h4>
+            <div className="flex-1 h-px bg-neutral-100 dark:bg-neutral-800" />
+            <div className="flex items-center gap-1 text-[8px] text-neutral-400 font-bold">
+              <Lock className="w-2.5 h-2.5" /> Somente Leitura
+            </div>
           </div>
+
+          {cliRelations.length === 0 ? (
+            <div className="text-center py-8 text-neutral-400">
+              <Database className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p className="text-xs font-bold">Nenhuma relação introspectada ainda.</p>
+              <p className="text-[10px] mt-1">Execute a Sincronização pelo CLI para importar as relações do banco.</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {currentCliRelations.map(rel => <RelationRow key={rel.id} rel={rel} />)}
+              </div>
+              <PaginationControls page={safeCliPage} total={cliTotalPages} setPage={setCliPage} />
+            </>
+          )}
         </div>
 
-        {cliRelations.length === 0 ? (
-          <div className="text-center py-8 text-neutral-400">
-            <Database className="w-8 h-8 mx-auto mb-2 opacity-30" />
-            <p className="text-xs font-bold">Nenhuma relação introspectada ainda.</p>
-            <p className="text-[10px] mt-1">Execute a Sincronização pelo CLI para importar as relações do banco.</p>
+        {/* Manual Relations */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <GitFork className="w-3.5 h-3.5 text-blue-500" />
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
+              Manuais ({manualRelations.length})
+            </h4>
+            <div className="flex-1 h-px bg-neutral-100 dark:bg-neutral-800" />
           </div>
-        ) : (
-          <div className="space-y-2">
-            {cliRelations.map(rel => <RelationRow key={rel.id} rel={rel} />)}
-          </div>
-        )}
-      </div>
 
-      {/* Manual Relations */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <GitFork className="w-3.5 h-3.5 text-blue-500" />
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
-            Manuais ({manualRelations.length})
-          </h4>
-          <div className="flex-1 h-px bg-neutral-100 dark:bg-neutral-800" />
+          {manualRelations.length === 0 ? (
+            <div className="text-center py-6 text-neutral-400 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl">
+              <p className="text-xs font-bold">Nenhuma relação manual adicionada.</p>
+              <p className="text-[10px] mt-1">Use o botão "Nova Relação" para conectar tabelas sem FK explícita no banco.</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {currentManualRelations.map(rel => <RelationRow key={rel.id} rel={rel} />)}
+              </div>
+              <PaginationControls page={safeManualPage} total={manualTotalPages} setPage={setManualPage} />
+            </>
+          )}
         </div>
-
-        {manualRelations.length === 0 ? (
-          <div className="text-center py-6 text-neutral-400 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl">
-            <p className="text-xs font-bold">Nenhuma relação manual adicionada.</p>
-            <p className="text-[10px] mt-1">Use o botão "Nova Relação" para conectar tabelas sem FK explícita no banco.</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {manualRelations.map(rel => <RelationRow key={rel.id} rel={rel} />)}
-          </div>
-        )}
       </div>
     </div>
   )

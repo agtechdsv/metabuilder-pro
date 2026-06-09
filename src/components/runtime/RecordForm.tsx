@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { evaluateFormula } from '@/lib/formulaEvaluator'
 import { Loader2, Save, Eye, Pencil, Plus, Trash2, ArrowLeft, Check, ChevronDown, ChevronUp, Zap, Link, Database, Globe, Maximize2, PanelRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
@@ -628,13 +629,80 @@ export default function RecordForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('[RecordForm] handleSubmit - formData keys:', Object.keys(formData), '| formData:', JSON.stringify(formData).slice(0, 500))
-    onSave(formData)
+    
+    const payloadToSave = { ...formData }
+    Object.keys(payloadToSave).forEach(key => {
+      if (key.startsWith('virt_') || fields.find((f: any) => f.db_column_name === key)?.is_virtual) {
+        delete payloadToSave[key]
+      }
+    })
+
+    console.log('[RecordForm] handleSubmit - payload keys:', Object.keys(payloadToSave), '| payload:', JSON.stringify(payloadToSave).slice(0, 500))
+    onSave(payloadToSave)
   }
 
   useEffect(() => {
     setFormData(initialData || {})
   }, [initialData])
+
+  // Motor Reativo de Fórmulas
+  useEffect(() => {
+    if (!fields) return;
+
+    let hasChanges = false;
+    const newFormData = { ...formData };
+
+    // Agrupa os detalhes pela tabela (model_name) para alimentar as funções de agregação (SOMA, etc)
+    const detailsData: Record<string, any[]> = {};
+    (formData._details || []).forEach((d: any) => {
+      const tableName = d.model_name || d.model;
+      if (tableName) {
+        if (!detailsData[tableName]) detailsData[tableName] = [];
+        detailsData[tableName].push(d);
+      }
+    });
+
+    // Avalia todos os campos que possuem uma fórmula configurada
+    fields.forEach(field => {
+      const tokens = field.config?.content?.formula_tokens || [];
+      if (tokens.length === 0) return;
+
+      const mainModelName = project?.models?.find((m: any) => m.id === masterModelId)?.db_table_name;
+      const isMasterZone = !field.model_name || !mainModelName || field.model_name.toLowerCase() === mainModelName.toLowerCase();
+
+      if (isMasterZone) {
+        const computedValue = evaluateFormula(tokens, formData, detailsData);
+        // Evita loop infinito atualizando apenas se o valor realmente mudou
+        if (computedValue !== null && computedValue !== undefined && String(computedValue) !== String(formData[field.db_column_name])) {
+          newFormData[field.db_column_name] = computedValue;
+          hasChanges = true;
+        }
+      } else {
+        const detailTableName = field.model_name;
+        if (newFormData._details) {
+          newFormData._details = newFormData._details.map((row: any) => {
+            if (row.model_name?.toLowerCase() !== detailTableName?.toLowerCase() && row.model?.toLowerCase() !== detailTableName?.toLowerCase()) return row;
+
+            const mappedRow = { ...formData, ...row };
+            Object.keys(row).forEach(k => {
+               mappedRow[`${detailTableName}.${k}`] = row[k];
+            });
+
+            const computedValue = evaluateFormula(tokens, mappedRow, detailsData, row, detailTableName);
+            if (computedValue !== null && computedValue !== undefined && String(computedValue) !== String(row[field.db_column_name])) {
+              hasChanges = true;
+              return { ...row, [field.db_column_name]: computedValue };
+            }
+            return row;
+          });
+        }
+      }
+    });
+
+    if (hasChanges) {
+      setFormData(newFormData);
+    }
+  }, [formData, fields]);
 
   const titles = {
     create: t('runtime.new_record'),
@@ -677,6 +745,7 @@ export default function RecordForm({
     const rightActions = fieldCustomActions.filter((a: any) => a.group_position !== 'left');
 
     let rawValue = getCaseInsensitiveValue(formData, field.db_column_name) ?? ''
+    if (Number.isNaN(rawValue)) rawValue = ''
     let value = rawValue
 
     const zoneConfig = field.config?.form_config || field.config || {}
@@ -750,7 +819,7 @@ export default function RecordForm({
     }
 
     const commonClasses = cn(
-      "w-full px-5 py-3.5 bg-neutral-50 dark:bg-neutral-900 border rounded-2xl text-sm outline-none transition-all shadow-sm",
+      "w-full px-5 py-3.5 bg-neutral-50 dark:bg-neutral-900 border rounded-2xl text-sm outline-none transition-all shadow-sm disabled:cursor-not-allowed disabled:opacity-70 disabled:bg-neutral-200/50 dark:disabled:bg-neutral-800/50",
       mode === 'view'
         ? "border-transparent bg-neutral-100/50 dark:bg-neutral-900/50 cursor-default opacity-80"
         : "border-neutral-200 dark:border-neutral-800 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 group-hover:border-neutral-300 dark:group-hover:border-neutral-700",
@@ -760,10 +829,9 @@ export default function RecordForm({
     const options = (comp.options_type === 'relational' || comp.options_type === 'enumeration')
       ? (relationalOptions[field.id] || [])
       : parseFixedOptions(comp.fixed_options)
-
-    const isDisabled = mode === 'view' || field.is_primary_key || zoneConfig.content?.readonly === true
-
-    return (
+    const isReadOnly = mode === 'view' || zoneConfig.content?.readonly === true || (field.config?.content?.formula_tokens && field.config.content.formula_tokens.length > 0);
+    const isDisabled = isReadOnly || field.is_primary_key;
+    const isInlineDisabled = isReadOnly || false;    return (
       <div className="space-y-2" style={{ width: width }}>
         <label
           style={{

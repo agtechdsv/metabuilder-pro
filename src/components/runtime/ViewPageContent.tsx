@@ -1068,6 +1068,7 @@ export default function ViewPageContent({
         if (
           INTERNAL_KEYS.has(lowKey) ||
           k.startsWith('_') ||                            // skip _key, _details, etc.
+          k.startsWith('virt_') ||                        // skip virtual fields
           k.includes('.') ||                             // skip table-prefixed keys
           lowKey === detailPkName.toLowerCase() ||
           lowKey === 'created_at' ||
@@ -1663,7 +1664,7 @@ export default function ViewPageContent({
           const sanitizedDetail: any = {}
           for (const [k, v] of Object.entries(detail)) {
             const lowKey = k.toLowerCase()
-            if (INTERNAL_KEYS.has(lowKey) || k.startsWith('_') || k.includes('.') || lowKey === detailPkName.toLowerCase() || lowKey === 'created_at' || lowKey === 'updated_at' || v === undefined || typeof v === 'object') continue
+            if (INTERNAL_KEYS.has(lowKey) || k.startsWith('_') || k.startsWith('virt_') || k.includes('.') || lowKey === detailPkName.toLowerCase() || lowKey === 'created_at' || lowKey === 'updated_at' || v === undefined || typeof v === 'object') continue
             sanitizedDetail[k] = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
           }
 

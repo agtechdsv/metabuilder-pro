@@ -368,6 +368,50 @@ export default async function SlugPage({ params }: PageProps) {
         zone: 3
       }))
 
+    // Inject Virtual Fields into Grid
+    gridFieldsOrder.filter((id: string) => id.startsWith('virt_')).forEach((id: string) => {
+      const meta = view.layout_config?.fields_metadata?.[id] || {}
+      displayFields.push({
+        id: id,
+        model_id: null,
+        model_name: '',
+        display_name: meta.label?.text || 'Campo Calculado',
+        db_column_name: id,
+        sql_expression: `NULL AS "${id}"`,
+        is_primary_key: false,
+        data_type: 'virtual',
+        is_sortable: false,
+        config: meta,
+        is_virtual: true
+      })
+    })
+
+    // Inject Virtual Fields into Form
+    formFieldsOrder.filter((id: string) => id.startsWith('virt_')).forEach((id: string) => {
+      const meta = view.layout_config?.fields_metadata?.[id] || {}
+      
+      const virtualModelId = meta.virtual_model_id || null;
+      let virtualModelName = '';
+      if (virtualModelId) {
+        const foundModel = allModels?.find((m: any) => m.id === virtualModelId);
+        if (foundModel) virtualModelName = foundModel.db_table_name;
+      }
+
+      formFields.push({
+        id: id,
+        model_id: virtualModelId,
+        model_name: virtualModelName,
+        display_name: meta.label?.text || 'Campo Calculado',
+        db_column_name: id,
+        sql_expression: `NULL AS "${id}"`,
+        data_type: 'virtual',
+        is_primary_key: false,
+        config: meta,
+        zone: 3,
+        is_virtual: true
+      })
+    })
+
     // Extrai os campos de Filtro (Zona Filter)
     const filterFields = allComponents
       .filter((c: any) => c.is_visible !== false && c.config?.zones?.includes('filter') && c.field?.is_searchable !== false)

@@ -4,6 +4,7 @@ import { Pencil, Trash2, Search, Zap, Link, Database, Globe } from 'lucide-react
 import { cn } from '@/lib/utils'
 import { DynamicIcon } from '@/components/runtime/DynamicIcon'
 import { useI18n } from '@/i18n/I18nContext'
+import { evaluateFormula } from '@/lib/formulaEvaluator'
 
 interface DynamicGridProps {
   fields: any[]
@@ -227,7 +228,11 @@ export default function DynamicGrid({
             <input type="checkbox" className="rounded-md bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-indigo-600 focus:ring-indigo-500" />
           </td>
           {fields.map((field) => {
-            const rawVal = getNestedValue(row, field.db_column_name)
+            let rawVal = getNestedValue(row, field.db_column_name)
+            
+            if (field.is_virtual && field.config?.content?.formula_tokens?.length > 0) {
+               rawVal = evaluateFormula(field.config.content.formula_tokens, row, {})
+            }
             
             // Resolve label if it is a relational combo
             const comp = field.config?.grid_config?.component || field.config?.component || {}
