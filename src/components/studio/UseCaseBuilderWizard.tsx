@@ -135,23 +135,97 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   const [bpmWorkflows, setBpmWorkflows] = useState<any[]>([])
   const [isDownloadsActive, setIsDownloadsActive] = useState(false)
 
-  const handleUpdateStatus = async (newStatus: 'delivered' | 'reopened') => {
+  const handlePublish = async () => {
     if (!initialData?.id) return
     setIsSaving(true)
     try {
-      const { error } = await supabase
+      // 1. Ler o draft_config atual
+      const { data: currentView, error: readError } = await supabase
         .from('ui_views')
-        .update({ status: newStatus })
+        .select('draft_config')
+        .eq('id', initialData.id)
+        .single()
+
+      if (readError) throw readError
+
+      const draft = currentView?.draft_config
+      if (!draft) {
+        toast('Nenhum rascunho encontrado para publicar.', 'error')
+        setIsSaving(false)
+        return
+      }
+
+      // 2. Copiar draft para os campos ao vivo e limpar o draft
+      const { error: publishError } = await supabase
+        .from('ui_views')
+        .update({
+          name: draft.name,
+          slug: draft.slug,
+          logic_type: draft.logic_type,
+          has_arguments: draft.has_arguments,
+          tables_config: draft.tables_config,
+          query_type: draft.query_type,
+          custom_query: draft.custom_query,
+          layout_config: draft.layout_config,
+          buttons_config: draft.buttons_config,
+          model_id: draft.model_id,
+          status: 'delivered',
+          draft_config: null,
+        })
         .eq('id', initialData.id)
 
-      if (error) throw error
-      setCurrentStatus(newStatus)
+      if (publishError) throw publishError
+
+      // 3. Reconstruir ui_components a partir do draft publicado
+      await supabase.from('ui_components').delete().eq('view_id', initialData.id)
+
+      const draftLayout = draft.layout_config || {}
+      const draftMeta = draftLayout.fields_metadata || {}
+      const validFormFields: string[] = draftLayout.form_fields || []
+      const validGridFields: string[] = draftLayout.grid_fields || []
+      const validFilterFields: string[] = draftLayout.filter_fields || []
+
+      const componentMap: Record<string, any> = {}
+
+      const addComponent = (fid: string, zone: string) => {
+        if (fid.startsWith('virt_')) return
+        const zoneMeta = draftMeta[`${zone}-${fid}`]
+        const globalMeta = draftMeta[fid] || {}
+        const metadata = zoneMeta || globalMeta
+        const labelText = metadata.label?.text || fid
+        if (!componentMap[fid]) {
+          componentMap[fid] = {
+            view_id: initialData.id,
+            field_id: fid,
+            component_type: zone,
+            label: labelText,
+            is_visible: true,
+            config: { zones: [zone], [`${zone}_config`]: metadata, ...metadata }
+          }
+        } else {
+          if (!componentMap[fid].config.zones.includes(zone)) componentMap[fid].config.zones.push(zone)
+          componentMap[fid].config[`${zone}_config`] = metadata
+          if (zone === 'form' && metadata.label?.text) componentMap[fid].label = metadata.label.text
+        }
+      }
+
+      validFilterFields.forEach(fid => addComponent(fid, 'filter'))
+      validGridFields.forEach(fid => addComponent(fid, 'grid'))
+      validFormFields.forEach(fid => addComponent(fid, 'form'))
+
+      const componentsToInsert = Object.values(componentMap)
+      if (componentsToInsert.length > 0) {
+        const { error: compError } = await supabase.from('ui_components').insert(componentsToInsert)
+        if (compError) throw compError
+      }
+
+      setCurrentStatus('delivered')
       flushTextChanges()
-      logAction('LIFECYCLE', newStatus === 'delivered' ? 'Entregou o Caso de Uso' : 'Reabriu o Caso de Uso')
-      toast(`Caso de Uso ${newStatus === 'delivered' ? 'entregue' : 'reaberto'} com sucesso!`, 'success')
+      logAction('LIFECYCLE', 'Publicou o Caso de Uso')
+      toast('Caso de Uso publicado com sucesso! Os usuários já podem acessar.', 'success')
       onSaveSuccess()
     } catch (err: any) {
-      toast("Erro ao atualizar status: " + err.message, 'error')
+      toast('Erro ao publicar: ' + err.message, 'error')
     } finally {
       setIsSaving(false)
     }
@@ -774,73 +848,74 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
 
   useEffect(() => {
     if (initialData && !isInitialized) {
+      const sourceData = initialData.draft_config || initialData
       setConfig({
-        name: initialData.name || '',
-        slug: initialData.slug || '',
-        logic_type: initialData.logic_type || '',
-        has_arguments: initialData.has_arguments ?? true,
-        selected_models: initialData.tables_config || [],
-        tables_config: initialData.tables_config || [],
-        query_type: initialData.query_type || 'dynamic',
-        custom_query: initialData.custom_query || '',
+        name: sourceData.name || '',
+        slug: sourceData.slug || '',
+        logic_type: sourceData.logic_type || '',
+        has_arguments: sourceData.has_arguments ?? true,
+        selected_models: sourceData.tables_config || [],
+        tables_config: sourceData.tables_config || [],
+        query_type: sourceData.query_type || 'dynamic',
+        custom_query: sourceData.custom_query || '',
         layout_config: {
-          filter_fields: initialData.layout_config?.filter_fields || [],
-          grid_fields: initialData.layout_config?.grid_fields || [],
-          form_fields: initialData.layout_config?.form_fields || [],
-          grouping_type: initialData.layout_config?.grouping_type || 'sections',
-          display_type: initialData.layout_config?.display_type || 'list',
-          default_view: initialData.layout_config?.default_view || 'list',
-          kanban_group_field: initialData.layout_config?.kanban_group_field || '',
-          master_model_id: initialData.layout_config?.master_model_id || '',
-          detail_display_mode: initialData.layout_config?.detail_display_mode || 'tabs',
-          mindmap_central_field: initialData.layout_config?.mindmap_central_field || '',
-          action_interface_type: initialData.layout_config?.action_interface_type || 'drawer',
-          joins: initialData.layout_config?.joins || [],
-          fields_metadata: initialData.layout_config?.fields_metadata || {},
-          analytics_config: initialData.layout_config?.analytics_config || { widgets: [], allow_runtime_edit: true },
-          details_display_mode: initialData.layout_config?.details_display_mode || {},
-          details_interface_types: initialData.layout_config?.details_interface_types || {},
-          details_inline_types: initialData.layout_config?.details_inline_types || {},
-          master_tab_title: initialData.layout_config?.master_tab_title,
-          details_tab_titles: initialData.layout_config?.details_tab_titles || {},
-          details_item_titles: initialData.layout_config?.details_item_titles || {},
-          export_formats: initialData.layout_config?.export_formats || ['xlsx', 'csv', 'json'],
-          gallery_click_behavior: initialData.layout_config?.gallery_click_behavior || 'lightbox',
-          form_header_title: initialData.layout_config?.form_header_title || '',
-          form_header_subtitle_field: initialData.layout_config?.form_header_subtitle_field || '',
-          scheduler_config: initialData.layout_config?.scheduler_config || {
+          filter_fields: sourceData.layout_config?.filter_fields || [],
+          grid_fields: sourceData.layout_config?.grid_fields || [],
+          form_fields: sourceData.layout_config?.form_fields || [],
+          grouping_type: sourceData.layout_config?.grouping_type || 'sections',
+          display_type: sourceData.layout_config?.display_type || 'list',
+          default_view: sourceData.layout_config?.default_view || 'list',
+          kanban_group_field: sourceData.layout_config?.kanban_group_field || '',
+          master_model_id: sourceData.layout_config?.master_model_id || '',
+          detail_display_mode: sourceData.layout_config?.detail_display_mode || 'tabs',
+          mindmap_central_field: sourceData.layout_config?.mindmap_central_field || '',
+          action_interface_type: sourceData.layout_config?.action_interface_type || 'drawer',
+          joins: sourceData.layout_config?.joins || [],
+          fields_metadata: sourceData.layout_config?.fields_metadata || {},
+          analytics_config: sourceData.layout_config?.analytics_config || { widgets: [], allow_runtime_edit: true },
+          details_display_mode: sourceData.layout_config?.details_display_mode || {},
+          details_interface_types: sourceData.layout_config?.details_interface_types || {},
+          details_inline_types: sourceData.layout_config?.details_inline_types || {},
+          master_tab_title: sourceData.layout_config?.master_tab_title,
+          details_tab_titles: sourceData.layout_config?.details_tab_titles || {},
+          details_item_titles: sourceData.layout_config?.details_item_titles || {},
+          export_formats: sourceData.layout_config?.export_formats || ['xlsx', 'csv', 'json'],
+          gallery_click_behavior: sourceData.layout_config?.gallery_click_behavior || 'lightbox',
+          form_header_title: sourceData.layout_config?.form_header_title || '',
+          form_header_subtitle_field: sourceData.layout_config?.form_header_subtitle_field || '',
+          scheduler_config: sourceData.layout_config?.scheduler_config || {
             title_field: '',
             start_date_field: '',
             end_date_field: '',
             color_field: ''
           },
-          timeline_config: initialData.layout_config?.timeline_config || {
+          timeline_config: sourceData.layout_config?.timeline_config || {
             date_field: '',
             title_field: '',
             desc_field: '',
             icon_field: ''
           },
-          map_config: initialData.layout_config?.map_config || {
+          map_config: sourceData.layout_config?.map_config || {
             lat_field: '',
             lng_field: '',
             title_field: '',
             desc_field: ''
           },
-          gantt_config: initialData.layout_config?.gantt_config || {
+          gantt_config: sourceData.layout_config?.gantt_config || {
             title_field: '',
             start_date_field: '',
             end_date_field: '',
             progress_field: '',
             dependencies_field: ''
           },
-          blueprint_config: initialData.layout_config?.blueprint_config || {
+          blueprint_config: sourceData.layout_config?.blueprint_config || {
             title_field: '',
             desc_field: '',
             status_field: '',
             predecessor_field: ''
           },
-          custom_actions: initialData.layout_config?.custom_actions || [],
-          custom_slots: initialData.layout_config?.custom_slots || []
+          custom_actions: sourceData.layout_config?.custom_actions || [],
+          custom_slots: sourceData.layout_config?.custom_slots || []
         },
         buttons_config: (() => {
           const defaults = [
@@ -852,10 +927,10 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
             { id: 'delete', label: t('runtime.delete'), labelKey: 'runtime.delete', icon: 'trash', action_key: 'delete', visible: true },
             { id: 'export', label: 'Exportar Dados', labelKey: 'runtime.export', icon: 'download', action: 'export', visible: true }
           ]
-          if (!initialData.buttons_config) return defaults
+          if (!sourceData.buttons_config) return defaults
           // Merge: Keep existing visible states, but ensure all default IDs exist
           return defaults.map(def => {
-            const existing = initialData.buttons_config.find((b: any) => b.id === def.id)
+            const existing = sourceData.buttons_config.find((b: any) => b.id === def.id)
             return existing ? { ...def, ...existing } : { ...def, visible: def.id === 'export' ? true : false }
           })
         })()
@@ -1109,8 +1184,14 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         filter_fields: validFilterFields,
       }
 
-      const viewPayload = {
-        project_id: projectData?.id,
+      // ──────────────────────────────────────────────────────────────────
+      // DRAFT/PUBLISH: o save salva APENAS em draft_config.
+      // Os campos ao vivo (layout_config, buttons_config, etc.) e a tabela
+      // ui_components SÓ são atualizados quando o dev clicar em PUBLICAR.
+      // Usuários finais continuam vendo a última versão publicada.
+      // ──────────────────────────────────────────────────────────────────
+
+      const draftPayload = {
         name: config.name,
         slug: config.slug,
         logic_type: config.logic_type,
@@ -1120,8 +1201,9 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         custom_query: config.custom_query,
         layout_config: { ...cleanLayoutConfig, fields_metadata: populatedFieldsMeta, is_active: true },
         buttons_config: config.buttons_config,
+        model_id: config.selected_models[0],
+        project_id: projectData?.id,
         view_type: 'advanced_use_case',
-        model_id: config.selected_models[0], // Define a primeira tabela como modelo principal
       }
 
       // Tenta encontrar por slug primeiro
@@ -1142,18 +1224,30 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       }
 
       if (initialData) {
+        // UPDATE: salva apenas no draft_config — não toca nos campos ao vivo
         const { data, error } = await supabase
           .from('ui_views')
-          .update(viewPayload)
+          .update({ draft_config: draftPayload })
           .eq('id', initialData.id)
           .select()
           .single()
         view = data
         viewError = error
       } else {
+        // INSERT: cria o registro com draft_config populado e campos ao vivo vazios
+        // layout_config default '{}' — o runtime não exibe views com layout vazio
         const { data, error } = await supabase
           .from('ui_views')
-          .insert(viewPayload)
+          .insert({
+            project_id: projectData?.id,
+            name: config.name,          // obrigatório (NOT NULL)
+            slug: config.slug,          // obrigatório (NOT NULL)
+            view_type: 'advanced_use_case',
+            logic_type: config.logic_type,
+            model_id: config.selected_models[0],
+            draft_config: draftPayload, // rascunho completo
+            // layout_config fica com o default '{}' até o Publicar
+          })
           .select()
           .single()
         view = data
@@ -1162,7 +1256,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
 
       if (viewError) throw viewError
 
-      // Se o slug do caso de uso mudou, atualiza as referências no menu de navegação do projeto
+      // Se o slug mudou no draft, atualiza referências de navegação do projeto
+      // (usamos o slug do draft para manter navegação consistente no Studio)
       const hasSlugChanged = initialData && initialData.slug && initialData.slug !== config.slug
       if (hasSlugChanged && projectData?.navigation && Array.isArray(projectData.navigation)) {
         const updateMenuTarget = (items: any[]): any[] => {
@@ -1178,17 +1273,13 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           })
         }
         const updatedNavigation = updateMenuTarget(projectData.navigation)
-        
-        await supabase
-          .from('projects')
-          .update({ navigation: updatedNavigation })
-          .eq('id', projectData.id)
+        await supabase.from('projects').update({ navigation: updatedNavigation }).eq('id', projectData.id)
       }
 
-      // 2. Limpar componentes antigos desta view
-      await supabase.from('ui_components').delete().eq('view_id', view.id)
+      // ui_components NÃO é atualizado aqui — permanece com a versão ao vivo
+      // A reconstrução de ui_components acontece no handlePublish
 
-      // 3. Consolidar componentes por field_id para evitar violação de constraint unique(view_id, field_id)
+      // (manter variável componentMap para não quebrar o restante do fluxo)
       const componentMap: Record<string, any> = {}
 
       const formatLabelText = (text: string) => {
@@ -1240,20 +1331,13 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         }
       }
 
-      validFilterFields.forEach((fid: string) => addOrUpdateComponent(fid, 'filter'))
-      validGridFields.forEach((fid: string) => addOrUpdateComponent(fid, 'grid'))
-      validFormFields.forEach((fid: string) => addOrUpdateComponent(fid, 'form'))
-
-      const componentsToInsert = Object.values(componentMap).filter((c: any) => !c.field_id.startsWith('virt_'))
-
-      if (componentsToInsert.length > 0) {
-        const { error: compError } = await supabase.from('ui_components').insert(componentsToInsert)
-        if (compError) throw compError
-      }
+      // ui_components não é mais atualizado aqui (ver handlePublish)
+      // O componentMap acima está vazio intencionalmente para manter compatibilidade
 
       flushTextChanges()
-      logAction('SAVE', 'Atualizou as configurações do caso de uso')
+      logAction('SAVE', 'Salvou rascunho do caso de uso')
       await flush(view.id)
+      toast('Rascunho salvo! Clique em Publicar para liberar aos usuários.', 'success')
       onSaveSuccess()
     } catch (err: any) {
       console.error(err)
@@ -1296,46 +1380,31 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
                 <>
                   <div className={cn(
                     "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
-                    currentStatus === 'delivered' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                      currentStatus === 'reopened' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                        'bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-800 dark:border-neutral-700'
+                    initialData.draft_config ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
                   )}>
-                    {currentStatus === 'delivered' ? 'Entregue' : currentStatus === 'reopened' ? 'Reaberto' : 'Rascunho'}
+                    {initialData.draft_config ? 'Rascunho Pendente' : 'Publicado'}
                   </div>
 
-                  {currentStatus !== 'delivered' && (
+                  {initialData.draft_config && (
                     <button
-                      onClick={() => handleUpdateStatus('delivered')}
+                      onClick={handlePublish}
                       disabled={isSaving}
                       className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20 disabled:opacity-50 active:scale-95"
                     >
-                      🚀 Entregar
-                    </button>
-                  )}
-
-                  {currentStatus === 'delivered' && (
-                    <button
-                      onClick={() => handleUpdateStatus('reopened')}
-                      disabled={isSaving}
-                      className="flex items-center gap-2 px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-amber-500/20 disabled:opacity-50 active:scale-95"
-                    >
-                      🔓 Reabrir
+                      🚀 Publicar
                     </button>
                   )}
                 </>
               )}
 
-              {/* Só permite salvar se não estiver Entregue */}
-              {currentStatus !== 'delivered' && (
-                <button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-95"
-                >
-                  {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                  {isSaving ? (initialData ? t('wizard.buttons.updating') : t('wizard.buttons.saving')) : (initialData ? t('wizard.buttons.update') : t('wizard.buttons.finish'))}
-                </button>
-              )}
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-95"
+              >
+                {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                {isSaving ? (initialData ? t('wizard.buttons.updating') : t('wizard.buttons.saving')) : (initialData ? t('wizard.buttons.update') : t('wizard.buttons.finish'))}
+              </button>
             </div>
           )}
         </div>

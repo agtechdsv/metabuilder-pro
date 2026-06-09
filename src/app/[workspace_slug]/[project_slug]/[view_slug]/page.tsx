@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { notFound, redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
-import { Table, LayoutGrid, Plus, Search, Filter } from 'lucide-react'
+import { Table, LayoutGrid, Plus, Search, Filter, AlertCircle } from 'lucide-react'
 import DynamicGrid from '@/components/DynamicGrid'
 import ViewPageContent from '@/components/runtime/ViewPageContent'
 import { TranslationProvider } from '@/i18n/TranslationProvider'
@@ -661,8 +661,16 @@ export default async function SlugPage({ params }: PageProps) {
     const canAdd = buttonsConfig.find((b: any) => b.id === 'add')?.visible !== false
     const canExport = buttonsConfig.find((b: any) => b.id === 'export')?.visible !== false
 
+    const isUnpublished = view && Object.keys(view.layout_config || {}).length === 0;
+
     return (
       <TranslationProvider locale={locale}>
+        {isUnpublished && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 text-amber-600 p-4 text-center font-bold text-sm flex items-center justify-center gap-2">
+            <AlertCircle className="w-5 h-5" />
+            Este caso de uso é um rascunho e ainda não foi publicado.
+          </div>
+        )}
         <ViewPageContent 
           workspace={workspace}
           project={{ ...project, models: allModels }}
