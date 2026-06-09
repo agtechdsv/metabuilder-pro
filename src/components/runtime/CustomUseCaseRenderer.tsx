@@ -1,12 +1,13 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Layout, Table, CheckSquare, X } from 'lucide-react'
+import { Layout, Table, CheckSquare, X, Activity, Plus, List, Grid, Calendar, Clock, Maximize2, ChevronRight, Minimize2, MoreVertical, Settings, BarChart3, Image as ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import RecordForm from './RecordForm'
 import dynamic from 'next/dynamic'
 import { createClient } from '@/utils/supabase/client'
+import AnalyticsDashboard from './AnalyticsDashboard'
 
 // Use dynamic import for ViewContainer to avoid SSR issues
 const ViewContainer = dynamic(() => import('./ViewContainer'), { ssr: false })
@@ -39,6 +40,7 @@ interface CustomUseCaseRendererProps {
   onDeleteDetail?: (detail: any) => void
   onAddDetail?: (tableName: string, parentId?: any) => void
   autoOpenSlotConfig?: { id: string, type: 'modal' | 'drawer' } | null
+  projectRelations?: any[]
 }
 
 export default function CustomUseCaseRenderer({
@@ -68,7 +70,8 @@ export default function CustomUseCaseRenderer({
   onEditDetail,
   onDeleteDetail,
   onAddDetail,
-  autoOpenSlotConfig
+  autoOpenSlotConfig,
+  projectRelations = []
 }: CustomUseCaseRendererProps) {
   const [activeTabId, setActiveTabId] = useState<string>(customSlots[0]?.id || '')
   const [openSlotConfig, setOpenSlotConfig] = useState<{ id: string, type: 'modal' | 'drawer', recordId?: any } | null>(autoOpenSlotConfig || null)
@@ -97,10 +100,14 @@ export default function CustomUseCaseRenderer({
 
   const getSlotIcon = (type: string) => {
     switch (type) {
-      case 'form': return <Layout className="w-4 h-4" />
-      case 'grid': return <Table className="w-4 h-4" />
-      case 'kanban': return <CheckSquare className="w-4 h-4" />
-      default: return <Layout className="w-4 h-4" />
+      case 'form': return <List className="w-4 h-4 mr-2" />
+      case 'grid': return <Grid className="w-4 h-4 mr-2" />
+      case 'kanban': return <Activity className="w-4 h-4 mr-2" />
+      case 'timeline': return <Clock className="w-4 h-4 mr-2" />
+      case 'mapa_mental': return <Settings className="w-4 h-4 mr-2" />
+      case 'analytics': return <BarChart3 className="w-4 h-4 mr-2" />
+      case 'galeria': return <ImageIcon className="w-4 h-4 mr-2" />
+      default: return <List className="w-4 h-4 mr-2" />
     }
   }
 
@@ -143,7 +150,27 @@ export default function CustomUseCaseRenderer({
         </div>
       )
     }
-    if (slot.type === 'grid' || slot.type === 'kanban' || slot.type === 'timeline' || slot.type === 'mapa_mental') {
+    if (slot.type === 'analytics') {
+      return (
+        <div key={slot.id} className="h-full bg-neutral-50 dark:bg-neutral-950">
+          <AnalyticsDashboard 
+            config={slot.analytics_config || { widgets: [], allow_runtime_edit: false }}
+            project={project}
+            joins={joins || []}
+            filters={{}}
+            onEditWidget={() => {}}
+            onAddWidget={() => {}}
+            onDeleteWidget={() => {}}
+            onSaveLayout={async (newConfig: any) => {}}
+            tunnelChannel={tunnelChannel}
+            isTunnelReady={isTunnelReady}
+            projectRelations={projectRelations}
+          />
+        </div>
+      )
+    }
+
+    if (slot.type === 'grid' || slot.type === 'kanban' || slot.type === 'timeline' || slot.type === 'mapa_mental' || slot.type === 'galeria') {
       const useMasterId = slot.use_master_id !== false;
       const hasStaticFilters = slot.static_filters && slot.static_filters.some((f: any) => f.field && f.value);
       const slotModel = project?.models?.find((m: any) => m.id === slot.model_id || m.db_table_name === slotModelName);
@@ -239,11 +266,20 @@ export default function CustomUseCaseRenderer({
         }
       }
 
-      if (useMasterId && !foreignKey) {
+      let isJoinedIndirectly = false;
+      if (useMasterId && !foreignKey && joins && joins.length > 0) {
+        // Verifica se masterModelName está presente em algum join, o que permite o backend processar a junção
+        const hasMaster = joins.some((j: any) => (j.from || j.table)?.toLowerCase() === masterModelName?.toLowerCase() || (j.to || j.toTable)?.toLowerCase() === masterModelName?.toLowerCase());
+        if (hasMaster) {
+          isJoinedIndirectly = true;
+        }
+      }
+
+      if (useMasterId && !foreignKey && !isJoinedIndirectly) {
         return (
           <div key={slot.id} className="p-8 text-center text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-500 rounded-xl border border-amber-200 dark:border-amber-800 m-6 flex flex-col items-center gap-2">
             <span className="font-bold text-lg">⚠️ Atenção: Ligação com o Mestre Falhou</span>
-            <span>A aba está configurada para &quot;Vincular ao Mestre&quot;, mas não foi possível encontrar a chave estrangeira na tabela <strong>{slotModelName}</strong> que aponte para <strong>{masterModelName}</strong>.</span>
+            <span>A aba está configurada para &quot;Vincular ao Mestre&quot;, mas não foi possível encontrar a chave estrangeira na tabela <strong>{slotModelName}</strong> que aponte para <strong>{masterModelName}</strong> e não existem joins configurados.</span>
             <span className="text-sm opacity-80 mt-2">Certifique-se de que a tabela possui uma coluna de ligação (ex: {masterModelName?.endsWith('s') ? masterModelName.slice(0, -1) : masterModelName}_id) ou configure o relacionamento manualmente no Studio.</span>
           </div>
         )
@@ -256,6 +292,16 @@ export default function CustomUseCaseRenderer({
       }
       
       let advancedStaticFilters: any[] = [];
+      
+      // Se tiver parentId mas não tiver foreignKey direta (porém está indiretamente joinada)
+      if (useMasterId && !foreignKey && isJoinedIndirectly && parentId) {
+        advancedStaticFilters.push({
+          field: `${masterModelName}.id`,
+          operator: '=',
+          value: parentId,
+          logic: 'AND'
+        });
+      }
       if (hasStaticFilters) {
         slot.static_filters.forEach((filter: any) => {
           if (filter.field && filter.value) {
@@ -319,7 +365,7 @@ export default function CustomUseCaseRenderer({
             filterFields={slotFilterFields}
             formFields={slotFormFields}
             displayType="list"
-            logicType={slot.type === 'kanban' ? 'kanban' : slot.type === 'timeline' ? 'timeline' : slot.type === 'mapa_mental' ? 'mapa_mental' : 'pesquisa'}
+            logicType={['kanban', 'timeline', 'mapa_mental', 'galeria'].includes(slot.type) ? slot.type : 'pesquisa'}
             kanbanGroupField={slot.kanban_group_field}
             kanbanGroupDisplayField={slot.kanban_group_display_field}
             kanbanCardFields={slot.kanban_card_fields}
@@ -337,6 +383,9 @@ export default function CustomUseCaseRenderer({
             joins={joins}
             customActions={customActions}
             onCustomAction={onCustomAction}
+            galleryClickBehavior={slot.gallery_click_behavior || 'lightbox'}
+            galleryConfig={slot.gallery_config}
+            projectRelations={projectRelations}
           />
         </div>
       )

@@ -10,6 +10,7 @@ import { useI18n } from '@/i18n/I18nContext'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { Drawer } from '@/components/ui/Drawer'
+import { resolveRelations, resolveAllJoins, buildJoinSql, extractTableNames } from '@/lib/relationPathFinder'
 
 interface ViewContainerProps {
   projectId: string
@@ -50,9 +51,11 @@ interface ViewContainerProps {
   tunnelChannel?: any
   isTunnelReady?: boolean
   galleryClickBehavior?: 'lightbox' | 'thumbnail'
+  galleryConfig?: any
   customActions?: any[]
   externalRefreshTrigger?: number
   onCustomAction?: (action: any, row?: any) => void
+  projectRelations?: any[]
 }
 
 import DynamicCardList from './DynamicCardList'
@@ -157,9 +160,11 @@ export default function ViewContainer({
   tunnelChannel,
   isTunnelReady,
   galleryClickBehavior,
+  galleryConfig,
   customActions = [],
   externalRefreshTrigger = 0,
-  onCustomAction
+  onCustomAction,
+  projectRelations = []
 }: ViewContainerProps) {
   const { toast } = useToast()
   const router = useRouter()
@@ -553,7 +558,7 @@ export default function ViewContainer({
         let resultData = payload.payload.data || []
         
         // Agrupar mestre/detalhe
-        if ((logicType === 'master_detail' || logicType === 'personalizado') && joins && joins.length > 0) {
+        if (joins && joins.length > 0) {
           const primaryKeyName = formFields.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
           
           const grouped: Record<string, any> = {}
@@ -574,15 +579,24 @@ export default function ViewContainer({
           _key: String(row[primaryKeyName] || row.id || row.ID || crypto.randomUUID())
         }))
 
+        // Garantir que resultData não tenha duplicatas internas devido a JOINs 1:N
+        const uniqueResultData = resultData.filter((row: any, index: number, self: any[]) => 
+          index === self.findIndex((r) => 
+            String(r[primaryKeyName] || r.id || r.ID) === String(row[primaryKeyName] || row.id || row.ID)
+          )
+        );
+
         if (shouldAppend) {
-          setData(prev => {
-            const existingIds = new Set(prev.map(row => String(row[primaryKeyName] || row.id || row.ID)))
-            const newRows = resultData.filter((row: any) => !existingIds.has(String(row[primaryKeyName] || row.id || row.ID)))
-            return [...prev, ...newRows]
+          setData((prev: any[]) => {
+            const combined = [...prev, ...uniqueResultData]
+            return combined.filter((row: any, index: number, self: any[]) => 
+              index === self.findIndex((r) => 
+                String(r[primaryKeyName] || r.id || r.ID) === String(row[primaryKeyName] || row.id || row.ID)
+              )
+            )
           })
         } else {
-          setData(resultData)
-          
+          setData(uniqueResultData)
           if (initialEditId && onEdit) {
             if (!hasAutoOpenedEditRef.current) {
               const rowToEdit = resultData.find((r: any) => String(r[primaryKeyName || 'id'] || r.id) === String(initialEditId))
@@ -633,7 +647,12 @@ export default function ViewContainer({
     const cached = getCachedData(cacheKey)
 
     if (!forceRefresh && !append && cached && !Object.keys(currentFilters).length) {
-      setData(cached)
+      const uniqueCached = cached.filter((row: any, index: number, self: any[]) => 
+        index === self.findIndex((r) => 
+          String(r[primaryKeyName] || r.id || r.ID) === String(row[primaryKeyName] || row.id || row.ID)
+        )
+      );
+      setData(uniqueCached)
       setIsLoading(false)
       return
     }
@@ -652,206 +671,163 @@ export default function ViewContainer({
 
     // Aguarda um momento para o canal estar pronto e envia
     setTimeout(() => {
-          // Build raw SQL query with aliases to avoid column name shadowing (e.g. multiple 'name' columns)
-          // We must also build the JOINs manually if we provide a raw query
+          // ─── Santo Graal BFS Join Resolver ────────────────────────────────
           const buildJoinsSql = (joinsList: any[]) => {
+            const allModels = project?.models || []
+
+            // Collect required tables from filters, display fields and filter fields
+            const requiredTables = new Set<string>()
+            if (currentFilters) {
+              Object.keys(currentFilters).forEach(key => {
+                if (key.includes('.')) requiredTables.add(key.split('.')[0])
+              })
+            }
+            if (displayFields) {
+              displayFields.forEach(f => {
+                const col = f.sql_expression || f.db_column_name
+                if (col && col.includes('.')) requiredTables.add(col.split('.')[0])
+              })
+            }
+            if (filterFields) {
+              filterFields.forEach(f => {
+                const col = f.sql_expression || f.db_column_name
+                if (col && col.includes('.')) requiredTables.add(col.split('.')[0])
+              })
+            }
+            if (advancedStaticFilters) {
+              advancedStaticFilters.forEach(f => {
+                if (f.field && f.field.includes('.')) requiredTables.add(f.field.split('.')[0])
+              })
+            }
+
+            const additionalTables = [
+              ...Array.from(requiredTables),
+              ...(joinsList || []).flatMap((j: any) => {
+                const fromModel = allModels.find((m: any) => String(m.id) === String(j.from) || m.db_table_name === j.from)
+                const toModel = allModels.find((m: any) => String(m.id) === String(j.to) || m.db_table_name === j.to)
+                return [fromModel?.db_table_name, toModel?.db_table_name].filter(Boolean)
+              })
+            ].filter((t: string) => t && t.toLowerCase() !== modelName.toLowerCase())
+
+            if (additionalTables.length === 0) return ''
+
+            // ── Path 1: Santo Graal BFS (preferred) ──
+            if (projectRelations.length > 0) {
+              const resolvedRelations = resolveRelations(projectRelations, allModels)
+              const steps = resolveAllJoins(resolvedRelations, modelName, additionalTables)
+              return buildJoinSql(steps)
+            }
+
+            // ── Path 2: Fallback — resolve from legacy joins list + heuristic FK matching ──
             const validJoinsList = joinsList || []
-            
-            // Resolvemos os joins caso venham como IDs do Wizard
-            const resolvedJoins = validJoinsList.map(j => {
+            const resolvedJoins = validJoinsList.map((j: any) => {
               if (j.toTable && j.table) return j
-              
-              // Se já vier da versão nova do Wizard (JoinsEditor) que salva db_table_name e db_column_name
               if (j.localKey && j.foreignKey) {
-                return {
-                  table: j.from,
-                  toTable: j.to,
-                  on: j.localKey,
-                  toOn: j.foreignKey
-                }
+                return { table: j.from, toTable: j.to, on: j.localKey, toOn: j.foreignKey }
               }
-              
-              if (project?.models) {
-                const fromModel = project.models?.find((m: any) => String(m.id) === String(j.from) || m.db_table_name === j.from)
-                const toModel = project.models?.find((m: any) => String(m.id) === String(j.to) || m.db_table_name === j.to)
+              if (allModels.length > 0) {
+                const fromModel = allModels.find((m: any) => String(m.id) === String(j.from) || m.db_table_name === j.from)
+                const toModel = allModels.find((m: any) => String(m.id) === String(j.to) || m.db_table_name === j.to)
                 const fromTable = fromModel?.db_table_name
                 const toTable = toModel?.db_table_name
-                
                 const localField = fromModel?.fields?.find((f: any) => String(f.id) === String(j.local_field) || f.db_column_name === j.local_field)
                 const foreignField = toModel?.fields?.find((f: any) => String(f.id) === String(j.foreign_field) || f.db_column_name === j.foreign_field)
-                
                 if (!fromTable || !toTable || !localField || !foreignField) return null
-                
-                return {
-                  table: fromTable,
-                  toTable: toTable,
-                  on: localField.db_column_name,
-                  toOn: foreignField.db_column_name
-                }
+                return { table: fromTable, toTable: toTable, on: localField.db_column_name, toOn: foreignField.db_column_name }
               }
               return null
             }).filter(Boolean)
 
-            // Coleta todas as tabelas requeridas por filtros e colunas selecionadas
-            const requiredTables = new Set<string>();
-            if (currentFilters) {
-              Object.keys(currentFilters).forEach(key => {
-                if (key.includes('.')) requiredTables.add(key.split('.')[0]);
-              });
-            }
-            if (displayFields) {
-               displayFields.forEach(f => {
-                 const col = f.sql_expression || f.db_column_name;
-                 if (col && col.includes('.')) {
-                    requiredTables.add(col.split('.')[0]);
-                 }
-               });
-            }
-            if (filterFields) {
-               filterFields.forEach(f => {
-                 const col = f.sql_expression || f.db_column_name;
-                 if (col && col.includes('.')) {
-                    requiredTables.add(col.split('.')[0]);
-                 }
-               });
-            }
-            if (advancedStaticFilters) {
-               advancedStaticFilters.forEach(f => {
-                 if (f.field && f.field.includes('.')) {
-                    requiredTables.add(f.field.split('.')[0]);
-                 }
-               });
-            }
-
-            // Auto-detect missing joins required by filters and select (multi-hop graph resolution)
-            if (requiredTables.size > 0 && project?.models) {
+            // Heuristic auto-detect for missing tables (same code as before)
+            if (requiredTables.size > 0 && allModels.length > 0) {
               const findRelation = (modelA: any, modelB: any) => {
-                if (!modelA || !modelB) return null;
-                const modelBNameSingular = modelB.db_table_name.endsWith('s') ? modelB.db_table_name.slice(0, -1) : modelB.db_table_name;
-                const modelBNameShort = modelBNameSingular.slice(0, -2);
-                const modelBParts = modelB.db_table_name.split('_');
-                
-                // Priority 1: Explicit rel_table configuration
+                if (!modelA || !modelB) return null
+                const modelBNameSingular = modelB.db_table_name.endsWith('s') ? modelB.db_table_name.slice(0, -1) : modelB.db_table_name
+                const modelBNameShort = modelBNameSingular.slice(0, -2)
+                const modelBParts = modelB.db_table_name.split('_')
                 let fkField = modelA.fields?.find((f: any) => {
-                  const rel = f.config?.rel_table || '';
-                  return rel !== '' && (rel === modelB.db_table_name || rel + 's' === modelB.db_table_name || modelB.db_table_name.includes(rel) || rel.includes(modelBNameSingular));
-                });
-                if (fkField) {
-                  return { table: modelA.db_table_name, toTable: modelB.db_table_name, on: fkField.db_column_name, toOn: 'id' };
-                }
-                
-                // Priority 2: Field name matches pattern and ends with _id
+                  const rel = f.config?.rel_table || ''
+                  return rel !== '' && (rel === modelB.db_table_name || rel + 's' === modelB.db_table_name || modelB.db_table_name.includes(rel) || rel.includes(modelBNameSingular))
+                })
+                if (fkField) return { table: modelA.db_table_name, toTable: modelB.db_table_name, on: fkField.db_column_name, toOn: 'id' }
                 fkField = modelA.fields?.find((f: any) => {
-                  const col = (f.db_column_name || '').toLowerCase();
-                  if (!col.endsWith('_id')) return false;
-                  
-                  if (col.includes(modelBNameSingular.toLowerCase()) || col.includes(modelBNameShort.toLowerCase())) return true;
-                  
-                  // Try matching first part of snake_case table name (pedidos_compra -> pedido_id)
+                  const col = (f.db_column_name || '').toLowerCase()
+                  if (!col.endsWith('_id')) return false
+                  if (col.includes(modelBNameSingular.toLowerCase()) || col.includes(modelBNameShort.toLowerCase())) return true
                   if (modelBParts.length > 1) {
-                     const firstPartSingular = modelBParts[0].endsWith('s') ? modelBParts[0].slice(0, -1) : modelBParts[0];
-                     if (col.includes(firstPartSingular.toLowerCase())) return true;
+                    const firstPartSingular = modelBParts[0].endsWith('s') ? modelBParts[0].slice(0, -1) : modelBParts[0]
+                    if (col.includes(firstPartSingular.toLowerCase())) return true
                   }
-                  
-                  return false;
-                });
-                if (fkField) {
-                  return { table: modelA.db_table_name, toTable: modelB.db_table_name, on: fkField.db_column_name, toOn: 'id' };
-                }
-                return null;
-              };
-
-              // Start dependency resolution
-              const tablesToJoin = Array.from(requiredTables).filter(t => t !== modelName);
-              const currentlyJoined = new Set<string>([modelName.toLowerCase()]);
-              let changed = true;
-
+                  return false
+                })
+                if (fkField) return { table: modelA.db_table_name, toTable: modelB.db_table_name, on: fkField.db_column_name, toOn: 'id' }
+                return null
+              }
+              const tablesToJoin = Array.from(requiredTables).filter(t => t !== modelName)
+              const currentlyJoined = new Set<string>([modelName.toLowerCase()])
+              let changed = true
               while (changed && tablesToJoin.length > 0) {
-                changed = false;
+                changed = false
                 for (let i = 0; i < tablesToJoin.length; i++) {
-                  const reqTable = tablesToJoin[i];
-                  const relModel = project.models.find((m: any) => m.db_table_name === reqTable);
-                  if (!relModel) continue;
-
-                  let foundRelation: any = null;
+                  const reqTable = tablesToJoin[i]
+                  const relModel = allModels.find((m: any) => m.db_table_name === reqTable)
+                  if (!relModel) continue
+                  let foundRelation: any = null
                   for (const joinedTable of currentlyJoined) {
-                    const joinedModel = project.models.find((m: any) => m.db_table_name === joinedTable);
-                    if (!joinedModel) continue;
-
-                    // Check both directions:
-                    // 1. joinedModel -> relModel (foreign key in joinedModel pointing to relModel)
-                    foundRelation = findRelation(joinedModel, relModel);
-                    if (foundRelation) break;
-
-                    // 2. relModel -> joinedModel (foreign key in relModel pointing to joinedModel)
-                    foundRelation = findRelation(relModel, joinedModel);
-                    if (foundRelation) break;
+                    const joinedModel = allModels.find((m: any) => m.db_table_name === joinedTable)
+                    if (!joinedModel) continue
+                    foundRelation = findRelation(joinedModel, relModel)
+                    if (foundRelation) break
+                    foundRelation = findRelation(relModel, joinedModel)
+                    if (foundRelation) break
                   }
-
                   if (foundRelation) {
                     const isDuplicate = resolvedJoins.some((rj: any) =>
                       (rj.table === foundRelation.table && rj.toTable === foundRelation.toTable) ||
                       (rj.table === foundRelation.toTable && rj.toTable === foundRelation.table)
-                    );
-                    if (!isDuplicate) {
-                      resolvedJoins.push(foundRelation);
-                    }
-                    currentlyJoined.add(reqTable.toLowerCase());
-                    tablesToJoin.splice(i, 1);
-                    changed = true;
-                    break;
-                  }
-                }
-              }
-            }
-  
-              if (resolvedJoins.length === 0) return ''
-  
-              // Mapeamos para garantir que o JOIN seja sempre "OUTRA_TABELA ON TABELA_EXISTENTE.col = OUTRA_TABELA.col"
-              const joinedTables = new Set([modelName.toLowerCase()])
-              const sqlParts: string[] = []
-              
-              // Tentamos encaixar cada join no que já temos na query
-              let changed = true
-              const remaining = [...resolvedJoins]
-              while (changed && remaining.length > 0) {
-                changed = false
-                for (let i = 0; i < remaining.length; i++) {
-                  const j = remaining[i]
-                  const fromT = j.table.toLowerCase()
-                  const toT = j.toTable.toLowerCase()
-                  
-                  let targetTable = ''
-                  let existingTable = ''
-                  let localOn = ''
-                  let foreignOn = ''
-  
-                  if (joinedTables.has(fromT) && !joinedTables.has(toT)) {
-                    targetTable = j.toTable
-                    existingTable = j.table
-                    localOn = j.on
-                    foreignOn = j.toOn
-                  } else if (joinedTables.has(toT) && !joinedTables.has(fromT)) {
-                    targetTable = j.table
-                    existingTable = j.toTable
-                    localOn = j.toOn
-                    foreignOn = j.on
-                  }
-  
-                  if (targetTable) {
-                    sqlParts.push(`LEFT JOIN "${targetTable}" ON "${existingTable}"."${localOn}" = "${targetTable}"."${foreignOn}"`)
-                    joinedTables.add(targetTable.toLowerCase())
-                    remaining.splice(i, 1)
+                    )
+                    if (!isDuplicate) resolvedJoins.push(foundRelation)
+                    currentlyJoined.add(reqTable.toLowerCase())
+                    tablesToJoin.splice(i, 1)
                     changed = true
                     break
                   }
                 }
               }
-              return sqlParts.join(' ')
             }
-            
+
+            if (resolvedJoins.length === 0) return ''
+            const joinedTables = new Set([modelName.toLowerCase()])
+            const sqlParts: string[] = []
+            let changed = true
+            const remaining = [...resolvedJoins]
+            while (changed && remaining.length > 0) {
+              changed = false
+              for (let i = 0; i < remaining.length; i++) {
+                const j = remaining[i]
+                const fromT = j.table.toLowerCase()
+                const toT = j.toTable.toLowerCase()
+                let targetTable = '', existingTable = '', localOn = '', foreignOn = ''
+                if (joinedTables.has(fromT) && !joinedTables.has(toT)) {
+                  targetTable = j.toTable; existingTable = j.table; localOn = j.on; foreignOn = j.toOn
+                } else if (joinedTables.has(toT) && !joinedTables.has(fromT)) {
+                  targetTable = j.table; existingTable = j.toTable; localOn = j.toOn; foreignOn = j.on
+                }
+                if (targetTable) {
+                  sqlParts.push(`LEFT JOIN "${targetTable}" ON "${existingTable}"."${localOn}" = "${targetTable}"."${foreignOn}"`)
+                  joinedTables.add(targetTable.toLowerCase())
+                  remaining.splice(i, 1)
+                  changed = true
+                  break
+                }
+              }
+            }
+            return sqlParts.join(' ')
+          }
+
             const selectExprs: string[] = []
             const seenExprs = new Set<string>()
+
 
             const addSelectExpr = (expr: string, alias?: string) => {
               const key = alias || expr
@@ -935,14 +911,17 @@ export default function ViewContainer({
           
           const currentOffset = append ? data.length : (currentPage - 1) * itemsPerPage;
           let rawQuery = '';
-          if (logicType === 'master_detail') {
+          if (joins && joins.length > 0) {
             rawQuery = `SELECT ${columns} FROM (
-  SELECT * FROM "${modelName}"
-  __WHERE_PLACEHOLDER__
-  LIMIT ${itemsPerPage} OFFSET ${currentOffset}
-) AS "${modelName}" ${buildJoinsSql(joins)}`
+    SELECT "${modelName}".* FROM "${modelName}"
+    ${buildJoinsSql(joins)}
+    __WHERE_PLACEHOLDER__
+    GROUP BY "${modelName}"."${primaryKeyName}"
+    ORDER BY "${modelName}"."${primaryKeyName}" DESC
+    LIMIT ${itemsPerPage} OFFSET ${currentOffset}
+  ) AS "${modelName}" ${buildJoinsSql(joins)}`
           } else {
-            rawQuery = `SELECT ${columns} FROM "${modelName}" ${buildJoinsSql(joins)}`
+            rawQuery = `SELECT ${columns} FROM "${modelName}" __WHERE_PLACEHOLDER__ ORDER BY "${primaryKeyName}" DESC`
           }
 
           const currentModel = project?.models?.find((m: any) => m.db_table_name === modelName)
@@ -1164,7 +1143,13 @@ export default function ViewContainer({
       const cached = getCachedData(cacheKey)
       const hasActiveFilters = Object.values(filterValues).some(v => v !== undefined && v !== '')
       if (cached && !hasActiveFilters) {
-        setData(cached)
+        // Remover duplicatas do cache poluído de versões anteriores
+        const uniqueCached = cached.filter((row: any, index: number, self: any[]) => 
+          index === self.findIndex((r) => 
+            String(r[primaryKeyName] || r.id || r.ID) === String(row[primaryKeyName] || row.id || row.ID)
+          )
+        );
+        setData(uniqueCached)
         setIsLoading(false)
         // NÃO damos return! Deixamos prosseguir para fazer o fetch silencioso em background
       }
@@ -1685,6 +1670,7 @@ export default function ViewContainer({
           onEdit={onEdit}
           onDelete={onDelete}
           galleryClickBehavior={galleryClickBehavior}
+          galleryConfig={galleryConfig}
         />
       ) : (
         <div className="space-y-6">

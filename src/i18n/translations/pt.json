@@ -1518,8 +1518,8 @@
         "group_desc": "Selecione a coluna que será utilizada para organizar as colunas do Kanban (normalmente um enum ou chave estrangeira)."
       },
       "master_detail": {
-        "title": "Estrutura Mestre-Detalhe",
-        "subtitle": "Defina o relacionamento mestre-detalhe.",
+        "title": "Estilo dos Detalhes",
+        "subtitle": "No estilo Abas, cada tabela detalhe será uma aba separada. No estilo Seções, os dados serão empilhados em grupos dentro do mesmo corpo de formulário.",
         "inline_in_list": "Na lista"
       },
       "zones": {

@@ -30,6 +30,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { useI18n } from '@/i18n/I18nContext'
 import { cn } from '@/lib/utils'
+import { resolveRelations, resolveAllJoins, buildJoinSql, extractTableNames } from '@/lib/relationPathFinder'
 
 interface Widget {
   id: string
@@ -65,6 +66,7 @@ interface AnalyticsDashboardProps {
   onSaveLayout?: (newWidgets: Widget[]) => void
   tunnelChannel?: any
   isTunnelReady?: boolean
+  projectRelations?: any[]
 }
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4']
@@ -79,7 +81,8 @@ export default function AnalyticsDashboard({
   onDeleteWidget,
   onSaveLayout,
   tunnelChannel,
-  isTunnelReady
+  isTunnelReady,
+  projectRelations = []
 }: AnalyticsDashboardProps) {
   const [data, setData] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
@@ -148,7 +151,7 @@ export default function AnalyticsDashboard({
       if (payload.payload.success) {
         const records = payload.payload.data
         const model = (project as any).models?.find((m: any) => String(m.id) === String(widget.model_id))
-        const tableName = model?.db_table_name || widget.model_id
+        const tableName = model?.db_table_name || (typeof widget.model_id === 'string' && widget.model_id !== 'undefined' && !widget.model_id.includes('-') ? widget.model_id : null)
         const isFormula = (widget as any).use_formula || (widget.field?.includes('*') || widget.field?.includes('+') || widget.field?.includes('/') || widget.field?.includes('-'))
         const formula = widget.field || '*'
         
@@ -207,7 +210,7 @@ export default function AnalyticsDashboard({
     setErrors(prev => ({ ...prev, [widget.id]: '' }))
 
     const model = (project as any).models?.find((m: any) => String(m.id) === String(widget.model_id))
-    const tableName = model?.db_table_name || (typeof widget.model_id === 'string' && !widget.model_id.includes('-') ? widget.model_id : null)
+    const tableName = model?.db_table_name || (typeof widget.model_id === 'string' && widget.model_id !== 'undefined' && !widget.model_id.includes('-') ? widget.model_id : null)
     // Resolve o schema real da tabela a partir dos models do projeto
     const schemaName = model?.db_schema_name || (project as any)?.slug || 'public'
 
@@ -244,31 +247,59 @@ export default function AnalyticsDashboard({
         if (!selectStr.includes(groupCol)) selectStr += `, ${groupCol}`
     }
 
-    // Build JOINs
-    const combinedJoins = [...(widget.joins || []), ...(joins || [])]
-    const seenTables = new Set<string>()
-    const activeJoins = combinedJoins.filter((j: any) => {
-      const isRelated = j.from === tableName || j.to === tableName
-      if (!isRelated) return false
-      const otherTable = j.from === tableName ? j.to : j.from
-      if (seenTables.has(otherTable)) return false
-      seenTables.add(otherTable)
-      return true
+    // Build JOINs using the Santo Graal BFS path-finder
+    // Collect all table names referenced by the widget (group_by, field, manual joins)
+    const allModels = Array.isArray(project.models) ? project.models : Object.values(project.models || {})
+    const resolvedRelations = resolveRelations(projectRelations, allModels as any[])
+
+    // Tables referenced in the query (group_by may reference a foreign table)
+    const referencedTables: string[] = []
+    if (widget.group_by && widget.group_by.includes('.')) {
+      referencedTables.push(widget.group_by.split('.')[0])
+    }
+    if (widget.field && typeof widget.field === 'string' && widget.field.includes('.')) {
+      referencedTables.push(widget.field.split('.')[0])
+    }
+    // Also respect manually configured widget joins (legacy support)
+    const legacyJoins = [...(widget.joins || []), ...(joins || [])]
+    legacyJoins.forEach((j: any) => {
+      const fromModel = (allModels as any[]).find((m: any) => String(m.id) === String(j.from) || m.db_table_name === j.from)
+      const toModel = (allModels as any[]).find((m: any) => String(m.id) === String(j.to) || m.db_table_name === j.to)
+      if (fromModel?.db_table_name) referencedTables.push(fromModel.db_table_name)
+      if (toModel?.db_table_name) referencedTables.push(toModel.db_table_name)
     })
 
     let joinSql = ''
-    activeJoins.forEach((j: any) => {
-      const fromModel = (project as any).models?.find((m: any) => String(m.id) === String(j.from))
-      const toModel = (project as any).models?.find((m: any) => String(m.id) === String(j.to))
-      const fromTable = fromModel?.db_table_name
-      const toTable = toModel?.db_table_name
-      const fromField = fromModel?.fields?.find((f: any) => String(f.id) === String(j.local_field))?.db_column_name || j.local_field
-      const toField = toModel?.fields?.find((f: any) => String(f.id) === String(j.foreign_field))?.db_column_name || j.foreign_field
-      const otherTable = fromTable === tableName ? toTable : fromTable
-      const joinOnFrom = fromTable === tableName ? fromField : toField
-      const joinOnTo = fromTable === tableName ? toField : fromField
-      joinSql += ` LEFT JOIN "${otherTable}" ON "${tableName}"."${joinOnFrom}" = "${otherTable}"."${joinOnTo}"`
-    })
+    if (resolvedRelations.length > 0 && referencedTables.length > 0) {
+      // Use Santo Graal BFS
+      const uniqueReferenced = [...new Set(referencedTables.filter(t => t !== tableName))]
+      const steps = resolveAllJoins(resolvedRelations, tableName, uniqueReferenced)
+      joinSql = buildJoinSql(steps)
+    } else if (legacyJoins.length > 0) {
+      // Fallback: use the old manual processJoins loop
+      const joinedTables = new Set<string>([tableName])
+      const processJoins = () => {
+        let added = false
+        legacyJoins.forEach((j: any) => {
+          const fromModel = (allModels as any[]).find((m: any) => String(m.id) === String(j.from) || m.db_table_name === j.from)
+          const toModel = (allModels as any[]).find((m: any) => String(m.id) === String(j.to) || m.db_table_name === j.to)
+          const fromTable = fromModel?.db_table_name || j.from || j.table
+          const toTable = toModel?.db_table_name || j.to || j.toTable
+          const fromField = fromModel?.fields?.find((f: any) => String(f.id) === String(j.local_field || j.local || j.localKey))?.db_column_name || j.local_field || j.local || j.localKey || 'id'
+          const toField = toModel?.fields?.find((f: any) => String(f.id) === String(j.foreign_field || j.foreignKey))?.db_column_name || j.foreign_field || j.foreignKey || 'id'
+          if (!fromTable || !toTable) return
+          if (joinedTables.has(fromTable) && joinedTables.has(toTable)) return
+          if (!joinedTables.has(fromTable) && !joinedTables.has(toTable)) return
+          const newTable = joinedTables.has(fromTable) ? toTable : fromTable
+          joinSql += ` LEFT JOIN "${newTable}" ON "${fromTable}"."${fromField}" = "${toTable}"."${toField}"`
+          joinedTables.add(newTable)
+          added = true
+        })
+        return added
+      }
+      let iterations = 0
+      while (processJoins() && iterations < 10) { iterations++ }
+    }
 
     // Build Filters
     let whereClause = '1=1'

@@ -100,6 +100,14 @@ export default async function StudioDashboard({ params }: StudioDashboardProps) 
     .eq('project_id', project.id)
     .order('db_table_name', { ascending: true })
 
+  // 4.1 Busca todos os Relacionamentos do Projeto (Santo Graal)
+  const { data: projectRelations } = await supabase
+    .from('relations')
+    .select('*')
+    .eq('project_id', project.id)
+    .order('source', { ascending: false })
+    .order('name', { ascending: true })
+
   // 5. Busca Views já criadas para mostrar no dashboard
   const { data: views } = await supabase
     .from('ui_views')
@@ -140,6 +148,7 @@ export default async function StudioDashboard({ params }: StudioDashboardProps) 
       profile={profile}
       canCreate={canCreate}
       canDelete={canDelete}
+      projectRelations={projectRelations || []}
     />
   )
 }

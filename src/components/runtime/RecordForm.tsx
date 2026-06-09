@@ -144,6 +144,7 @@ interface RecordFormProps {
   hideHeader?: boolean
   formHeaderTitle?: string
   formHeaderSubtitleField?: string
+  projectRelations?: any[]
 }
 
 const getActionColorClasses = (color: string) => {
@@ -280,7 +281,8 @@ export default function RecordForm({
   renderOnlyDetail,
   hideHeader = false,
   formHeaderTitle,
-  formHeaderSubtitleField
+  formHeaderSubtitleField,
+  projectRelations = []
 }: RecordFormProps) {
   const { t } = useI18n()
   const [formData, setFormData] = useState<any>(initialData || {})
@@ -315,7 +317,6 @@ export default function RecordForm({
       if (projectId) {
         // Query via the secure data tunnel
         const queryId = crypto.randomUUID()
-        const rawQuery = `SELECT * FROM "${join.to}" WHERE "${join.foreignKey}" = '${String(pkValue).replace(/'/g, "''")}'`
 
         console.log(`[MetaBuilder] RecordForm fetching sub-details from ${join.to} via tunnel where ${join.foreignKey} = ${pkValue}`)
 
@@ -364,6 +365,34 @@ export default function RecordForm({
             channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
             channel.on('broadcast', { event: 'sql_result' }, handleResult)
 
+            let fetchJoins = (joins || []).filter(j => j.from?.toLowerCase() === join.to.toLowerCase())
+          
+            const modelId = project?.models?.find((m: any) => m.db_table_name === join.to)?.id
+            const customField = detailsItemTitles?.[modelId || '']
+            if (customField && customField.includes('.')) {
+              const relatedTable = customField.split('.')[0]
+              const hasJoin = fetchJoins.some(j => j.to === relatedTable || j.toTable === relatedTable)
+              if (!hasJoin) {
+                const sourceModel = project?.models?.find((m: any) => m.db_table_name === join.to)
+              const linkField = sourceModel?.fields?.find((f: any) => 
+                f.foreign_key_table === relatedTable || 
+                f.db_column_name === `${relatedTable}_id` ||
+                (relatedTable.endsWith('s') && f.db_column_name === `${relatedTable.slice(0, -1)}_id`) ||
+                (relatedTable.endsWith('es') && f.db_column_name === `${relatedTable.slice(0, -2)}_id`)
+              )
+              if (linkField) {
+                  fetchJoins.push({
+                    from: join.to,
+                    local: linkField.db_column_name,
+                    localKey: linkField.db_column_name,
+                    to: relatedTable,
+                    foreignKey: linkField.foreign_key_column || 'id',
+                    type: 'left'
+                  })
+                }
+              }
+            }
+
             const sendPayload = {
               type: 'broadcast',
               event: 'sql_query',
@@ -372,10 +401,9 @@ export default function RecordForm({
                 table: join.to,
                 schemaName: project?.models?.find((m: any) => m.db_table_name === join.to)?.db_schema_name || project?.slug || 'public',
                 action: 'select',
-                query: rawQuery,
-                sql: rawQuery,
                 token: secretToken,
-                joins: [],
+                joins: fetchJoins,
+                filters: { [join.foreignKey]: String(pkValue) },
                 limit: 100,
                 offset: 0
               }
@@ -442,7 +470,7 @@ export default function RecordForm({
         // Tenta pegar a config específica de formulário, senão usa a global
         const config = field.config?.form_config || field.config
         const comp = config?.component
-        const isRelationalComp = comp?.type && (['select', 'radio', 'checkbox', 'Combo (Select)'].includes(comp.type) || comp.options_type === 'relational')
+        const isRelationalComp = comp?.type && (['select', 'radio', 'checkbox', 'Combo (Select)', 'Radio Buttons', 'Checkbox Group'].includes(comp.type) || comp.options_type === 'relational' || comp.options_type === 'enumeration')
         if (isRelationalComp && comp.options_type === 'relational' && comp.rel_table) {
           try {
             if (projectId && tunnelChannel && isTunnelReady) {
@@ -569,24 +597,20 @@ export default function RecordForm({
   // Identifica quem é o mestre atual (pode ser o ID ou o Nome da tabela)
   const currentMasterId = masterModelId || fields.find(f => f.model_name?.toLowerCase() === masterModelName?.toLowerCase())?.model_id
 
-  const masterFields = logicType === 'master_detail'
-    ? fields.filter(f => {
-      const isMaster = !f.model_id ||
-        (currentMasterId && String(f.model_id) === String(currentMasterId)) ||
-        (masterModelName && f.model_name?.toLowerCase().trim() === masterModelName?.toLowerCase().trim())
+  const masterFields = fields.filter(f => {
+    const isMaster = !f.model_id ||
+      (currentMasterId && String(f.model_id) === String(currentMasterId)) ||
+      (masterModelName && f.model_name?.toLowerCase().trim() === masterModelName?.toLowerCase().trim())
 
-      if (!isMaster) return false
-      return (!!masterModelName || f.zone === 3 || f.zone === '3' || f.zone === undefined || f.zone === null)
-    })
-    : fields.filter(f => f.zone === 3 || f.zone === '3' || f.zone === undefined || f.zone === null)
+    if (!isMaster) return false
+    return (!!masterModelName || f.zone === 3 || f.zone === '3' || f.zone === undefined || f.zone === null)
+  })
 
-  const detailFields = logicType === 'master_detail'
-    ? fields.filter(f => {
-      const isMaster = (currentMasterId && String(f.model_id) === String(currentMasterId)) ||
-        (masterModelName && f.model_name?.toLowerCase().trim() === masterModelName?.toLowerCase().trim())
-      return f.model_id && !isMaster
-    })
-    : []
+  const detailFields = fields.filter(f => {
+    const isMaster = (currentMasterId && String(f.model_id) === String(currentMasterId)) ||
+      (masterModelName && f.model_name?.toLowerCase().trim() === masterModelName?.toLowerCase().trim())
+    return f.model_id && !isMaster
+  })
 
   // FILTRAGEM HIERÁRQUICA: 
   // Só mostramos como aba as tabelas que são FILHAS DIRETAS do mestre atual no array de JOINS
@@ -783,7 +807,7 @@ export default function RecordForm({
           )}
 
           <div className="relative group flex-1">
-            {fieldType === 'textarea' ? (
+            {['textarea', 'Área de Texto (Textarea)'].includes(fieldType) ? (
               <textarea
                 disabled={isDisabled}
                 required={zoneConfig.content?.required}
@@ -794,7 +818,7 @@ export default function RecordForm({
                 className={cn(commonClasses, "resize-none")}
                 placeholder={mode === 'view' ? '' : t('runtime.record_drawer.input_placeholder').replace('{field}', field.display_name)}
               />
-            ) : fieldType === 'select' ? (
+            ) : ['select', 'Combo (Select)'].includes(fieldType) ? (
               <select
                 disabled={isDisabled}
                 required={zoneConfig.content?.required}
@@ -808,7 +832,7 @@ export default function RecordForm({
                   <option key={i} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
-            ) : fieldType === 'radio' ? (
+            ) : ['radio', 'Radio Buttons'].includes(fieldType) ? (
               <div className="flex flex-wrap gap-4 p-4 bg-neutral-50/50 dark:bg-neutral-950/30 rounded-2xl border border-neutral-100 dark:border-neutral-800">
                 {options.map((opt: any, i: number) => (
                   <label key={i} className="flex items-center gap-2 cursor-pointer group/opt">
@@ -825,7 +849,7 @@ export default function RecordForm({
                   </label>
                 ))}
               </div>
-            ) : fieldType === 'checkbox' ? (
+            ) : ['checkbox', 'Checkbox Group'].includes(fieldType) ? (
               <div className="flex flex-wrap gap-4 p-4 bg-neutral-50/50 dark:bg-neutral-950/30 rounded-2xl border border-neutral-100 dark:border-neutral-800">
                 {options.map((opt: any, i: number) => {
                   const checked = Array.isArray(value) ? value.includes(opt.value) : String(value).split(',').includes(String(opt.value))
@@ -852,7 +876,7 @@ export default function RecordForm({
                   )
                 })}
               </div>
-            ) : fieldType === 'switch' ? (
+            ) : ['switch', 'Switch (Liga/Desliga)'].includes(fieldType) ? (
               <div
                 onClick={() => !isDisabled && handleChange(!value)}
                 className={cn(
@@ -914,7 +938,8 @@ export default function RecordForm({
   }
 
   const renderDetailSection = (tableName: string, parentData: any = formData) => {
-    const modelId = fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
+    const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase())
+    const modelId = targetModel?.id || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
     const displayLabel = detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || tableName
 
     return (
@@ -1075,8 +1100,35 @@ export default function RecordForm({
                       )}>
                         {(() => {
                           const customField = detailsItemTitles?.[modelId || ''];
-                          if (customField && detail[customField] !== undefined && detail[customField] !== null && detail[customField] !== '') {
-                            return String(detail[customField]);
+                          if (customField) {
+                            const baseField = customField.includes('.') ? customField.split('.')[0] : customField;
+                            let val = detail[baseField];
+                            
+                            // Tradução Automática: Se o campo for um relacionamento (Combo), troca o ID pelo Label
+                            // Simplificação: encontra qualquer campo do detalhe com aquele nome e checa se há opções baixadas
+                            const safeBase = baseField?.toLowerCase()?.trim() || '';
+                            const checkMatch = (f: any) => {
+                               const fName = f.db_column_name?.toLowerCase()?.trim() || '';
+                               return fName === safeBase || fName.endsWith(`.${safeBase}`) || fName.endsWith(`_${safeBase}`);
+                            };
+                            const titleFieldDef = detailFields.find(checkMatch) || fields.find(checkMatch);
+                            
+                            // Removemos os logs verbosos para deixar a tela limpa
+                            if (titleFieldDef) {
+                               const opts = relationalOptions[titleFieldDef.id] || [];
+                               const matchedOpt = opts.find(o => String(o.value) === String(val));
+                               if (matchedOpt && matchedOpt.label) {
+                                  val = matchedOpt.label;
+                               }
+                            }
+
+                            if (val === undefined && customField.includes('.')) {
+                              const parts = customField.split('.');
+                              val = detail[parts[0]]?.[parts[1]] ?? detail[parts[1]];
+                            }
+                            if (val !== undefined && val !== null && val !== '') {
+                              return String(val);
+                            }
                           }
                           return detail.display_name || detail.name || detail.label || `Item #${idx + 1}`;
                         })()}
@@ -1239,7 +1291,7 @@ export default function RecordForm({
                                   );
                                 }
 
-                                if (['select', 'radio'].includes(type)) {
+                                if (['select', 'Combo (Select)'].includes(type)) {
                                   const options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
                                   return (
                                     <select
@@ -1253,6 +1305,62 @@ export default function RecordForm({
                                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                                       ))}
                                     </select>
+                                  );
+                                }
+
+                                if (['radio', 'Radio Buttons'].includes(type)) {
+                                  const options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
+                                  return (
+                                    <div className="flex flex-wrap gap-4 pt-1">
+                                      {options.map((opt: any, i: number) => (
+                                        <label key={i} className="flex items-center gap-2 cursor-pointer group/opt">
+                                          <div
+                                            onClick={() => !isInlineDisabled && handleInlineChange(opt.value)}
+                                            className={cn(
+                                              "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                                              String(rawValue) === String(opt.value) ? 'border-indigo-600 bg-indigo-600' : 'border-neutral-300 dark:border-neutral-700'
+                                            )}
+                                          >
+                                            {String(rawValue) === String(opt.value) && <div className="w-2 h-2 bg-white rounded-full" />}
+                                          </div>
+                                          <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 group-hover/opt:text-indigo-600 transition-colors">{opt.label}</span>
+                                        </label>
+                                      ))}
+                                    </div>
+                                  );
+                                }
+                                
+                                if (['checkbox', 'Checkbox Group'].includes(type)) {
+                                  const options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
+                                  return (
+                                    <div className="flex flex-wrap gap-4 pt-1">
+                                      {options.map((opt: any, i: number) => {
+                                        const checked = Array.isArray(rawValue) ? rawValue.includes(opt.value) : String(rawValue).split(',').includes(String(opt.value));
+                                        return (
+                                          <label key={i} className="flex items-center gap-2 cursor-pointer group/opt">
+                                            <div
+                                              onClick={() => {
+                                                if (isInlineDisabled) return;
+                                                let currentValues = Array.isArray(rawValue) ? [...rawValue] : (rawValue ? String(rawValue).split(',') : []);
+                                                if (checked) {
+                                                  currentValues = currentValues.filter((v: any) => String(v) !== String(opt.value));
+                                                } else {
+                                                  currentValues.push(opt.value);
+                                                }
+                                                handleInlineChange(currentValues.join(','));
+                                              }}
+                                              className={cn(
+                                                "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
+                                                checked ? 'border-indigo-600 bg-indigo-600' : 'border-neutral-300 dark:border-neutral-700'
+                                              )}
+                                            >
+                                              {checked && <div className="w-2 h-2 bg-white" style={{ clipPath: 'polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%)' }} />}
+                                            </div>
+                                            <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 group-hover/opt:text-indigo-600 transition-colors">{opt.label}</span>
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
                                   );
                                 }
 
@@ -1376,7 +1484,7 @@ export default function RecordForm({
       )}
 
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
-        {!renderOnlyDetail && logicType === 'master_detail' && detailDisplayMode === 'tabs' && detailTables.length > 0 && (
+        {!renderOnlyDetail && detailDisplayMode === 'tabs' && detailTables.length > 0 && (
           <div className="flex items-center gap-2 border-b border-neutral-100 dark:border-neutral-800 mb-6">
             <button
               type="button"
@@ -1397,7 +1505,8 @@ export default function RecordForm({
               {masterTabTitle || t('runtime.master_details.main_data', 'Dados Principais')}
             </button>
             {detailTables.map(tableName => {
-              const modelId = fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
+              const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase())
+              const modelId = targetModel?.id || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
               const displayLabel = dictionary[modelId || ''] || tableName
               return (
                 <button
@@ -1427,7 +1536,7 @@ export default function RecordForm({
         <div className={cn("flex-1 space-y-12", isPageMode ? "" : "overflow-y-auto custom-scrollbar pr-2")}>
           {!renderOnlyDetail && (detailDisplayMode === 'sections' || activeTab === 'master') && (
             <div className="space-y-6">
-              {detailDisplayMode === 'sections' && logicType === 'master_detail' && (
+              {detailDisplayMode === 'sections' && detailTables.length > 0 && (
                 <div className="flex items-center gap-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
                   <h3 className="text-[10px] font-black tracking-[0.2em] text-neutral-800 dark:text-neutral-200">
@@ -1448,13 +1557,14 @@ export default function RecordForm({
             </div>
           )}
 
-          {!renderOnlyDetail && logicType === 'master_detail' && detailDisplayMode === 'sections' && detailTables.map(tableName => (
+          {!renderOnlyDetail && detailDisplayMode === 'sections' && detailTables.length > 0 && detailTables.map(tableName => (
             <div key={tableName} className="pt-4 space-y-6">
               <div className="flex items-center gap-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
                 <h3 className="text-[10px] font-black tracking-[0.2em] text-neutral-800 dark:text-neutral-200">
                   {(() => {
-                    const modelId = fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
+                    const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase())
+                    const modelId = targetModel?.id || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
                     return detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || tableName
                   })()}
                 </h3>
@@ -1463,7 +1573,7 @@ export default function RecordForm({
             </div>
           ))}
 
-          {!renderOnlyDetail && logicType === 'master_detail' && detailDisplayMode === 'tabs' && activeTab !== 'master' && (
+          {!renderOnlyDetail && detailDisplayMode === 'tabs' && detailTables.length > 0 && activeTab !== 'master' && (
             renderDetailSection(activeTab)
           )}
 

@@ -42,6 +42,7 @@ import { Modal } from '@/components/ui/Modal'
 import { MenuBuilder } from '@/components/studio/MenuBuilder'
 import { EnumerationsClient } from '../enumerations/EnumerationsClient'
 import { TableFieldsManager } from '@/components/studio/TableFieldsManager'
+import { RelationsManager } from '@/components/studio/RelationsManager'
 
 const RETENTION_OPTIONS = [
   { value: '', labelKey: 'dashboard.projects.studio.stats.retention.forever' },
@@ -162,6 +163,7 @@ interface StudioDashboardClientProps {
   profile: any
   canCreate: boolean
   canDelete: boolean
+  projectRelations?: any[]
 }
 
 export function StudioDashboardClient({
@@ -174,7 +176,8 @@ export function StudioDashboardClient({
   user,
   profile,
   canCreate,
-  canDelete
+  canDelete,
+  projectRelations = []
 }: StudioDashboardClientProps) {
   const { t } = useI18n()
   const router = useRouter()
@@ -205,7 +208,7 @@ export function StudioDashboardClient({
     setIsUpdatingRetention(false)
   }
 
-  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'navigation' | 'enumerations' | 'metadata'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'navigation' | 'enumerations' | 'metadata' | 'relations'>('list')
   const [viewToEdit, setViewToEdit] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [viewToDelete, setViewToDelete] = useState<any>(null)
@@ -452,14 +455,24 @@ export function StudioDashboardClient({
                       <Database className="w-3.5 h-3.5" /> {t('dashboard.projects.studio.tabs.enums')}
                     </button>
                     <button 
-                     onClick={() => setViewMode('metadata')}
-                     className={cn(
-                       "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
-                       viewMode === 'metadata' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
-                     )}
-                    >
-                      <Table className="w-3.5 h-3.5" /> {t('dashboard.projects.studio.tabs.table_fields')}
-                    </button>
+                      onClick={() => setViewMode('metadata')}
+                      className={cn(
+                        "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
+                        viewMode === 'metadata' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
+                      )}
+                     >
+                       <Table className="w-3.5 h-3.5" /> {t('dashboard.projects.studio.tabs.table_fields')}
+                     </button>
+                     <button 
+                      onClick={() => setViewMode('relations')}
+                      className={cn(
+                        "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
+                        viewMode === 'relations' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
+                      )}
+                     >
+                       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                       Relacionamentos
+                     </button>
                  </>
                )}
             </div>
@@ -580,6 +593,7 @@ export function StudioDashboardClient({
             }}
             onSaveSuccess={refreshData}
             canCreate={canCreate}
+            projectRelations={projectRelations}
           />
         ) : viewMode === 'navigation' ? (
           <div className="">
@@ -602,6 +616,13 @@ export function StudioDashboardClient({
               project={project}
               models={models}
               onSaveSuccess={() => router.refresh()}
+            />
+          </div>
+        ) : viewMode === 'relations' ? (
+          <div className="">
+            <RelationsManager
+              project={project}
+              models={models}
             />
           </div>
         ) : (

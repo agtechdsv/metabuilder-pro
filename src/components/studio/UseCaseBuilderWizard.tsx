@@ -54,7 +54,9 @@ import {
   FileSpreadsheet,
   Workflow,
   Check,
-  X
+  X,
+  Eye,
+  EyeOff
 } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
@@ -97,9 +99,10 @@ interface UseCaseBuilderWizardProps {
   onClose: () => void
   onSaveSuccess: () => void
   canCreate?: boolean
+  projectRelations?: any[]
 }
 
-export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canCreate = true }: UseCaseBuilderWizardProps) {
+export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canCreate = true, projectRelations = [] }: UseCaseBuilderWizardProps) {
   const { t } = useI18n()
   const params = useParams()
   const { workspace_slug, project_slug } = params
@@ -1027,8 +1030,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   const nextStep = () => {
     if (!isStepValid(currentStep)) {
       if (currentStep === 1) toast(t('wizard.buttons.validation.name_slug_required'), 'error')
-      if (currentStep === 2 && config.selected_models.length < (config.logic_type === 'master_detail' ? 2 : 1)) {
-        toast(config.logic_type === 'master_detail' ? "Mestre-Detalhe requer pelo menos 2 tabelas." : t('dashboard.projects.studio.config.db_fields_desc').replace('{table}', ''), 'error')
+      if (currentStep === 2 && config.selected_models.length < 1) {
+        toast(t('dashboard.projects.studio.config.db_fields_desc').replace('{table}', ''), 'error')
         return
       }
 
@@ -1372,10 +1375,10 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           <StepLogic config={config} setConfig={setConfig} />
         )}
         {steps[currentStep - 1]?.id === 2 && (
-          <StepTables config={config} setConfig={setConfig} models={models} />
+          <StepTables config={config} setConfig={setConfig} models={models} relations={relations} />
         )}
         {steps[currentStep - 1]?.id === 3 && (
-          <StepLayout config={config} setConfig={setConfig} models={models} enumerations={enumerations} />
+          <StepLayout config={config} setConfig={setConfig} models={models} enumerations={enumerations} relations={relations} />
         )}
         {steps[currentStep - 1]?.id === 4 && (
           <StepActions config={config} setConfig={setConfig} models={models} useCases={useCases} isDownloadsActive={isDownloadsActive} bpmWorkflows={bpmWorkflows} />
@@ -1437,10 +1440,7 @@ function StepLogic({ config, setConfig }: any) {
       description: t('wizard.logic.categories.dados.desc'),
       icon: Database,
       items: [
-        { id: 'pesquisa', title: t('wizard.logic.types.pesquisa.title'), desc: t('wizard.logic.types.pesquisa.desc'), icon: Layout },
-        { id: 'cadastro', title: t('wizard.logic.types.cadastro.title'), desc: t('wizard.logic.types.cadastro.desc'), icon: Layout },
-        { id: 'pesquisa_cadastro', title: t('wizard.logic.types.pesquisa_cadastro.title'), desc: t('wizard.logic.types.pesquisa_cadastro.desc'), icon: Layout },
-        { id: 'master_detail', title: t('wizard.logic.types.master_detail.title'), desc: t('wizard.logic.types.master_detail.desc'), icon: Layers },
+        { id: 'pesquisa_cadastro', title: t('wizard.logic.types.pesquisa_cadastro.title', 'Pesquisa / Cadastro (Canvas)'), desc: t('wizard.logic.types.pesquisa_cadastro.desc', 'Telas completas gerenciadas por layout. Oculte as zonas que não desejar (Ex: "Apenas Cadastro").'), icon: Layout }
       ]
     },
     {
@@ -1633,8 +1633,17 @@ function StepLogic({ config, setConfig }: any) {
   )
 }
 
-function StepTables({ config, setConfig, models }: any) {
+function StepTables({ config, setConfig, models, relations = [] }: any) {
   const { t } = useI18n()
+
+  // Count how many direct relations each table has
+  const relationCountByModel = models.reduce((acc: Record<string, number>, m: any) => {
+    const count = relations.filter((r: any) =>
+      r.foreign_table_id === m.id || r.referenced_table_id === m.id
+    ).length
+    acc[m.id] = count
+    return acc
+  }, {})
 
   const groupedModels = models.reduce((acc: any, m: any) => {
     const schema = m.db_schema_name || 'public'
@@ -1643,11 +1652,48 @@ function StepTables({ config, setConfig, models }: any) {
     return acc
   }, {})
 
+  const selectedId = config.selected_models[0] || null
+
+  const selectModel = (m: any) => {
+    // Single-select: replace entire selection with this one table
+    setConfig({
+      ...config,
+      selected_models: [m.id],
+      layout_config: {
+        ...config.layout_config,
+        master_model_id: m.id,
+        filter_fields: [],
+        grid_fields: [],
+        form_fields: [],
+        joins: []
+      }
+    })
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
       <div className="space-y-2">
-        <h2 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white">{t('wizard.tables.title')}</h2>
-        <p className="text-neutral-500 dark:text-neutral-400 text-sm">{t('wizard.tables.subtitle')}</p>
+        <h2 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
+          Qual é a tabela principal deste caso de uso?
+        </h2>
+        <p className="text-neutral-500 dark:text-neutral-400 text-sm">
+          Selecione <strong>uma tabela</strong> como raiz. Na próxima etapa, todos os campos das tabelas relacionadas estarão disponíveis automaticamente.
+        </p>
+      </div>
+
+      {/* Info callout */}
+      <div className="flex items-start gap-3 p-4 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/50 rounded-2xl">
+        <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg flex-shrink-0 mt-0.5">
+          <Share2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-[11px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">
+            Santo Graal ativo
+          </p>
+          <p className="text-[11px] text-indigo-600 dark:text-indigo-400 leading-relaxed">
+            O sistema detecta automaticamente todas as tabelas relacionadas à tabela raiz e disponibiliza seus campos na etapa seguinte. Você não precisa selecionar manualmente as tabelas de JOIN.
+          </p>
+        </div>
       </div>
 
       <div className="space-y-10">
@@ -1659,33 +1705,12 @@ function StepTables({ config, setConfig, models }: any) {
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {groupedModels[schema].map((m: any) => {
-                const isSelected = config.selected_models.includes(m.id)
+                const isSelected = selectedId === m.id
+                const relCount = relationCountByModel[m.id] || 0
                 return (
                   <button
                     key={m.id}
-                    onClick={() => {
-                      const newSelected = isSelected
-                        ? config.selected_models.filter((id: string) => id !== m.id)
-                        : [...config.selected_models, m.id]
-
-                      // Extrai todos os IDs de campos válidos baseados nas tabelas selecionadas
-                      const validFields = models
-                        .filter((mod: any) => newSelected.includes(mod.id))
-                        .flatMap((mod: any) => mod.fields?.map((f: any) => f.id) || [])
-
-                      setConfig({
-                        ...config,
-                        selected_models: newSelected,
-                        layout_config: {
-                          ...config.layout_config,
-                          filter_fields: config.layout_config.filter_fields?.filter((id: string) => validFields.includes(id)) || [],
-                          grid_fields: config.layout_config.grid_fields?.filter((id: string) => validFields.includes(id)) || [],
-                          form_fields: config.layout_config.form_fields?.filter((id: string) => validFields.includes(id)) || [],
-                          master_model_id: newSelected.includes(config.layout_config.master_model_id) ? config.layout_config.master_model_id : '',
-                          joins: [] // Reseta os joins para forçar a re-sugestão na Etapa 3
-                        }
-                      })
-                    }}
+                    onClick={() => selectModel(m)}
                     className={cn(
                       "p-4 rounded-[1.5rem] border-2 text-left transition-all relative group hover:-translate-y-1",
                       isSelected
@@ -1699,13 +1724,24 @@ function StepTables({ config, setConfig, models }: any) {
                         {m.db_schema_name || 'public'}
                       </div>
                       {isSelected ? (
-                        <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-indigo-500/40"><CheckCircle2 className="w-4 h-4" /></div>
+                        <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-indigo-500/40">
+                          <CheckCircle2 className="w-4 h-4" />
+                        </div>
                       ) : (
                         <div className="w-6 h-6 rounded-full border-2 border-neutral-200 dark:border-neutral-700 group-hover:border-indigo-300 transition-colors"></div>
                       )}
                     </div>
                     <h4 className="font-bold text-base text-neutral-900 dark:text-white leading-tight">{m.display_name || m.db_table_name}</h4>
                     <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-mono mt-1 uppercase tracking-widest block">{m.db_table_name}</p>
+                    {/* Relation count badge */}
+                    {relCount > 0 && (
+                      <div className="mt-3 pt-2 border-t border-neutral-100 dark:border-neutral-800/40 flex items-center gap-1.5">
+                        <Share2 className="w-2.5 h-2.5 text-neutral-400" />
+                        <span className="text-[9px] text-neutral-400 font-bold">
+                          {relCount} {relCount === 1 ? 'relacionamento' : 'relacionamentos'}
+                        </span>
+                      </div>
+                    )}
                     {m.description && (
                       <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-2 line-clamp-2 leading-normal border-t border-neutral-100 dark:border-neutral-800/40 pt-1.5">
                         {m.description}
@@ -1718,10 +1754,20 @@ function StepTables({ config, setConfig, models }: any) {
           </div>
         ))}
       </div>
-      {config.selected_models.length > 1 && (
-        <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-600 dark:text-amber-400">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          <p className="text-[11px] font-bold leading-relaxed">{t('wizard.tables.selected_warning').replace('{count}', config.selected_models.length.toString())}</p>
+
+      {selectedId && (
+        <div className="flex items-center gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-600 dark:text-emerald-400">
+          <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-widest">
+              {models.find((m: any) => m.id === selectedId)?.display_name || models.find((m: any) => m.id === selectedId)?.db_table_name} selecionada como tabela raiz
+            </p>
+            {(relationCountByModel[selectedId] || 0) > 0 && (
+              <p className="text-[10px] mt-0.5 opacity-80">
+                {relationCountByModel[selectedId]} tabela{relationCountByModel[selectedId] !== 1 ? 's' : ''} relacionada{relationCountByModel[selectedId] !== 1 ? 's' : ''} será{relationCountByModel[selectedId] !== 1 ? 'ão' : ''} descoberta{relationCountByModel[selectedId] !== 1 ? 's' : ''} automaticamente na próxima etapa.
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -1816,7 +1862,7 @@ function MultiLevelPathBuilder({ level, onChange, models, parentModelId }: any) 
   );
 }
 
-function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
+function StepLayout({ config, setConfig, models, enumerations = [], relations = [] }: any) {
   const { t } = useI18n()
   const { toast } = useToast()
   const [expandedCustomSlot, setExpandedCustomSlot] = useState<number | null>(null)
@@ -1848,7 +1894,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
     return {
       label: { text: getFormattedFieldName(fid), font: 'Inter', size: '10px', color: '' },
       content: { font: 'Inter', size: '12px', color: '', mask: '', required: false, readonly: false },
-      component: { type: 'text', rows: 3, width: '100%', options_type: 'fixed', fixed_options: '', rel_table: '', rel_label: '', rel_value: '' },
+      component: { type: 'text', rows: 3, width: '100%', options_type: 'relational', fixed_options: '', rel_table: '', rel_label: '', rel_value: '' },
       viacep: { enabled: false, logradouro: '', bairro: '', cidade: '', uf: '' }
     }
   }
@@ -1860,7 +1906,8 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
     zone03: true
   })
   const toggleZone = (zone: string) => setExpandedZones(prev => ({ ...prev, [zone]: !prev[zone] }))
-
+  const [hiddenDetails, setHiddenDetails] = useState<Set<string>>(new Set())
+  const [hiddenZones, setHiddenZones] = useState<Set<string>>(new Set())
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null)
   const [editingTabId, setEditingTabId] = useState<string | null>(null)
   const [editingFieldZone, setEditingFieldZone] = useState<string | null>(null)
@@ -1874,6 +1921,8 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
 
   const [editingWidget, setEditingWidget] = useState<any>(null)
   const [isWidgetModalOpen, setIsWidgetModalOpen] = useState(false)
+  const [editingSlotBIWidget, setEditingSlotBIWidget] = useState<{ slotIdx: number, widget: any } | null>(null)
+  const [isSlotWidgetModalOpen, setIsSlotWidgetModalOpen] = useState(false)
   const [editingSlotIconIndex, setEditingSlotIconIndex] = useState<number | null>(null)
 
   const handleAddWidget = () => {
@@ -2086,45 +2135,179 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
     })
   }
 
-  const relationalTree = (() => {
-    const masterId = config.layout_config.master_model_id || config.selected_models[0]
-    const masterModel = models.find((m: any) => m.id === masterId)
-    if (!masterModel) return []
+  // BFS from the root table through the relations graph to discover all reachable tables.
+  // This replaces the old join-config-based tree — the dev only selects the root table now.
+  const renderFieldOptions = (models: any[], filterFn?: (f: any) => boolean) => {
+    return models.map((m: any) => {
+      const fields = filterFn ? m.fields.filter(filterFn) : m.fields;
+      if (!fields || fields.length === 0) return null;
+      return (
+        <optgroup key={`group-${m.id}`} label={m.display_name || m.db_table_name}>
+          {fields.map((f: any) => (
+            <option key={`opt-${f.id}`} value={f.id}>
+              {f.display_name || f.db_column_name} ({f.data_type})
+            </option>
+          ))}
+        </optgroup>
+      );
+    });
+  };
 
-    const joins = config.layout_config.joins || []
-    const visited = new Set<string>([masterModel.db_table_name])
+  const orderedModels = (() => {
+    if (config.logic_type === 'analytics') return models
 
-    const getNode = (model: any): any => {
-      const children: any[] = []
-      joins.forEach((j: any) => {
-        if (j.from === model.db_table_name && !visited.has(j.to)) {
-          const childModel = models.find((m: any) => m.db_table_name === j.to)
-          if (childModel) {
-            visited.add(j.to)
-            children.push(getNode(childModel))
-          }
+    const rootId = config.layout_config.master_model_id || config.selected_models[0]
+    const rootModel = models.find((m: any) => m.id === rootId)
+    if (!rootModel) return models.filter((m: any) => config.selected_models.includes(m.id))
+
+    // Build adjacency map from the relations table (bidirectional)
+    const adj: Record<string, string[]> = {}
+    relations.forEach((r: any) => {
+      const a = r.from_model_id
+      const b = r.to_model_id
+      if (!a || !b) return
+      if (!adj[a]) adj[a] = []
+      if (!adj[b]) adj[b] = []
+      if (!adj[a].includes(b)) adj[a].push(b)
+      if (!adj[b].includes(a)) adj[b].push(a)
+    })
+
+    // BFS from root
+    const visited = new Set<string>([rootId])
+    const queue = [rootId]
+    const result: any[] = [rootModel]
+
+    while (queue.length > 0) {
+      const current = queue.shift()!
+      const neighbours = adj[current] || []
+      for (const neighbourId of neighbours) {
+        if (!visited.has(neighbourId)) {
+          visited.add(neighbourId)
+          queue.push(neighbourId)
+          const neighbourModel = models.find((m: any) => m.id === neighbourId)
+          if (neighbourModel) result.push(neighbourModel)
         }
-      })
-      return { ...model, children }
+      }
     }
 
-    const tree = [getNode(masterModel)]
-    models.filter((m: any) => config.selected_models.includes(m.id) && !visited.has(m.db_table_name)).forEach((m: any) => {
-      visited.add(m.db_table_name)
-      tree.push(getNode(m))
-    })
-    return tree
+    // If no relations at all, fallback to selected models
+    if (result.length <= 1 && config.selected_models.length > 1) {
+      return models.filter((m: any) => config.selected_models.includes(m.id))
+    }
+
+    return result
   })()
 
-  const flattenTree = (nodes: any[]): any[] => {
-    let flat: any[] = []
-    nodes.forEach(node => {
-      flat.push(node)
-      if (node.children) flat = flat.concat(flattenTree(node.children))
-    })
-    return flat
-  }
-  const orderedModels = config.logic_type === 'analytics' ? models : flattenTree(relationalTree)
+  const formTree = (() => {
+    if (config.logic_type === 'analytics') return models
+
+    const rootId = config.layout_config.master_model_id || config.selected_models[0]
+    const rootModel = models.find((m: any) => m.id === rootId)
+    if (!rootModel) return models.filter((m: any) => config.selected_models.includes(m.id))
+
+    const buildTree = (modelId: string, depth: number, visited: Set<string>): any[] => {
+      if (depth >= 3) return [] // Max depth: Master (0) -> Detail (1) -> SubDetail (2)
+      
+      const childRelations = relations.filter((r: any) => r.to_model_id === modelId && !visited.has(r.from_model_id))
+      
+      return childRelations.map((r: any) => {
+        const childModel = models.find((m: any) => m.id === r.from_model_id)
+        if (!childModel) return null
+        
+        const newVisited = new Set(visited)
+        newVisited.add(r.from_model_id)
+        
+        return {
+          ...childModel,
+          children: buildTree(childModel.id, depth + 1, newVisited)
+        }
+      }).filter(Boolean)
+    }
+
+    return [{
+      ...rootModel,
+      children: buildTree(rootId, 1, new Set([rootId]))
+    }]
+  })()
+
+  const getAvailableSlotFields = (modelIdOrName: string) => {
+    const slotModel = models.find((m: any) => m.id === modelIdOrName || m.db_table_name === modelIdOrName);
+    if (!slotModel) return [];
+    
+    const fields: { id: string, value: string, label: string, isJoined: boolean, modelName: string }[] = [];
+    
+    // Base fields
+    (slotModel.fields || []).forEach((f: any) => {
+      fields.push({
+        id: f.id,
+        value: f.db_column_name,
+        label: f.display_name || f.db_column_name,
+        isJoined: false,
+        modelName: slotModel.display_name || slotModel.db_table_name
+      });
+
+      // NOVO: Expansão via Santo Graal (Relacionamentos)
+      // Se este campo for uma FK (chave estrangeira) formal ou por heurística
+      const isFK = (relations || []).find((r: any) => r.foreign_column_id === f.id) || 
+                   (f.foreign_key_table && models.find((m: any) => m.db_table_name === f.foreign_key_table));
+      
+      let heuristicRelatedModel = null;
+      if (!isFK && f.db_column_name.toLowerCase().endsWith('_id')) {
+        const baseName = f.db_column_name.toLowerCase().replace(/_id$/, '');
+        const potentialTableNames = [baseName, `${baseName}s`, `${baseName}es`];
+        heuristicRelatedModel = models.find((m: any) => potentialTableNames.includes(m.db_table_name?.toLowerCase()));
+      }
+                   
+      if (isFK || heuristicRelatedModel) {
+        const relatedModelId = isFK?.referenced_table_id || models.find((m: any) => m.db_table_name === f.foreign_key_table)?.id || heuristicRelatedModel?.id;
+        const relatedModel = models.find((m: any) => m.id === relatedModelId);
+        
+        if (relatedModel) {
+          (relatedModel.fields || []).forEach((rf: any) => {
+            fields.push({
+              id: `${f.id}_${rf.id}`,
+              value: `${f.db_column_name}.${rf.db_column_name}`, // Padrão: produto_id.nome
+              label: `${f.display_name || f.db_column_name} -> ${rf.display_name || rf.db_column_name}`,
+              isJoined: true,
+              modelName: relatedModel.display_name || relatedModel.db_table_name
+            });
+          });
+        }
+      }
+    });
+
+    // Joined fields estáticos (se existirem na config)
+    const layout = config.layout_config || {};
+    const joins = layout.joins || [];
+    
+    if (joins.length > 0) {
+      const joinedTables = new Set<string>();
+      joins.forEach((j: any) => {
+        if (j.from || j.table) joinedTables.add((j.from || j.table).toLowerCase());
+        if (j.to || j.toTable) joinedTables.add((j.to || j.toTable).toLowerCase());
+      });
+
+      models.forEach((m: any) => {
+        const mTable = m.db_table_name?.toLowerCase();
+        if (mTable && slotModel.db_table_name && mTable !== slotModel.db_table_name.toLowerCase() && joinedTables.has(mTable)) {
+          (m.fields || []).forEach((f: any) => {
+            const val = `${mTable}.${f.db_column_name}`;
+            if (!fields.find(existing => existing.value === val)) {
+              fields.push({
+                id: `${mTable}_${f.id}`,
+                value: val,
+                label: `${m.display_name || m.db_table_name} -> ${f.display_name || f.db_column_name}`,
+                isJoined: true,
+                modelName: m.display_name || m.db_table_name
+              });
+            }
+          });
+        }
+      });
+    }
+
+    return fields;
+  };
 
   const renderModelZone = (model: any, depth: number = 0, index: number = 0) => {
     const isMaster = depth === 0 && index === 0
@@ -2145,11 +2328,18 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
           <div className="flex items-center gap-2">
             <div className={cn("w-1.5 h-4 rounded-full shadow-sm", isMaster ? "bg-amber-600" : "bg-amber-400")}></div>
             <div className="flex items-center gap-2 group relative">
+              <span className={cn(
+                "px-2 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-widest",
+                isMaster ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" 
+                         : "bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"
+              )}>
+                {isMaster ? t('wizard.layout.master', 'Mestre') : depth === 1 ? t('wizard.layout.detail', 'Detalhe') : t('wizard.layout.subdetail', 'Sub-Detalhe')}
+              </span>
               {isMaster ? (
                 <input
                   type="text"
-                  placeholder={`${t('wizard.layout.master')}: ${model.display_name || model.db_table_name}`}
-                  value={(config.layout_config as any).master_tab_title ?? `${t('wizard.layout.master')}: ${model.display_name || model.db_table_name}`}
+                  placeholder={model.display_name || model.db_table_name}
+                  value={(config.layout_config as any).master_tab_title ?? (model.display_name || model.db_table_name)}
                   onChange={e => setConfig({
                     ...config,
                     layout_config: {
@@ -2158,13 +2348,13 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                     }
                   })}
                   style={tabStyles}
-                  className="bg-transparent border-none outline-none font-black tracking-widest text-neutral-600 dark:text-neutral-400 placeholder:text-neutral-300 dark:placeholder:text-neutral-700 w-[250px] hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:bg-white dark:focus:bg-neutral-900 focus:ring-2 focus:ring-amber-500/20 rounded px-1.5 py-0.5 transition-all"
+                  className="bg-transparent border-none outline-none font-black tracking-widest text-neutral-600 dark:text-neutral-400 placeholder:text-neutral-300 dark:placeholder:text-neutral-700 w-[200px] hover:bg-neutral-100 dark:hover:bg-neutral-900 focus:bg-white dark:focus:bg-neutral-900 focus:ring-2 focus:ring-amber-500/20 rounded px-1.5 py-0.5 transition-all"
                 />
               ) : (
                 <input
                   type="text"
-                  placeholder={`${depth === 1 ? 'Detalhe' : 'Sub-Detalhe'}: ${model.display_name || model.db_table_name}`}
-                  value={(config.layout_config as any).details_tab_titles?.[model.id] ?? `${depth === 1 ? 'Detalhe' : 'Sub-Detalhe'}: ${model.display_name || model.db_table_name}`}
+                  placeholder={model.display_name || model.db_table_name}
+                  value={(config.layout_config as any).details_tab_titles?.[model.id] ?? (model.display_name || model.db_table_name)}
                   onChange={e => {
                     const currentTitles = (config.layout_config as any).details_tab_titles || {}
                     setConfig({
@@ -2191,9 +2381,31 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                 <Settings2 className="w-3 h-3" />
               </button>
             </div>
+            
+            <button
+              title={hiddenDetails.has(model.id) ? "Exibir formulário" : "Ocultar formulário"}
+              onClick={() => {
+                if (!hiddenDetails.has(model.id)) {
+                  const fieldsToKeep = config.layout_config.form_fields.filter((fid: string) => !model.fields.some((f: any) => f.id === fid))
+                  setConfig({
+                    ...config,
+                    layout_config: { ...config.layout_config, form_fields: fieldsToKeep }
+                  })
+                }
+                setHiddenDetails(prev => {
+                  const next = new Set(prev)
+                  if (next.has(model.id)) next.delete(model.id)
+                  else next.add(model.id)
+                  return next
+                })
+              }}
+              className="ml-2 p-1.5 text-neutral-400 hover:text-amber-600 dark:hover:text-amber-500 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm transition-all"
+            >
+              {hiddenDetails.has(model.id) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            </button>
           </div>
 
-          {!isMaster && (
+          {!isMaster && !hiddenDetails.has(model.id) && (
             <div className="flex items-center gap-1">
               <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
                 {[
@@ -2285,8 +2497,8 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                     title="Campo usado como título do item recolhido"
                   >
                     <option value="">Título Automático</option>
-                    {model.fields?.map((f: any) => (
-                      <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                    {getAvailableSlotFields(model.id).map((f: any) => (
+                      <option key={f.id} value={f.value}>{f.label}</option>
                     ))}
                   </select>
                 </div>
@@ -2295,47 +2507,48 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
           )}
         </div>
 
-        <DroppableZone
-          id={`droppable-form-${model.id}`}
-          className="grid grid-cols-7 gap-3 min-h-[100px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] items-start transition-all hover:bg-neutral-100/50 dark:hover:bg-neutral-900/40"
-        >
-          {fieldsOfThisModel.length === 0 ? (
-            <div className="col-span-7 flex flex-col items-center justify-center py-4 space-y-2 opacity-50">
-              <Plus className="w-4 h-4 text-neutral-400" />
-              <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Arraste campos de "{model.display_name || model.db_table_name}" para cá</p>
-            </div>
-          ) : (
-            <SortableContext items={fieldsOfThisModel.map((id: string) => `form-${id}`)} strategy={rectSortingStrategy}>
-              {fieldsOfThisModel.map((id: string) => (
-                <SortableFieldChip
-                  key={`form-${id}`}
-                  id={`form-${id}`}
-                  itemValue={id}
-                  toggleField={toggleField}
-                  zoneType="form"
-                  onEdit={() => { setEditingFieldId(id); setEditingFieldZone('form'); setIsDrawerOpen(true); }}
-                >
-                  <span
-                    style={{
-                      fontFamily: getFieldMeta(id, 'form').label?.font,
-                      fontSize: getFieldMeta(id, 'form').label?.size,
-                      color: getFieldMeta(id, 'form').label?.color || undefined
-                    }}
-                    className={cn(
-                      "text-[10px] font-black tracking-wider",
-                      !getFieldMeta(id, 'form').label?.font && "uppercase"
-                    )}
+        {!hiddenDetails.has(model.id) && (
+          <DroppableZone
+            id={`droppable-form-${model.id}`}
+            className="grid grid-cols-7 gap-3 min-h-[100px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] items-start transition-all hover:bg-neutral-100/50 dark:hover:bg-neutral-900/40"
+          >
+            {fieldsOfThisModel.length === 0 ? (
+              <div className="col-span-7 flex flex-col items-center justify-center py-4 space-y-2 opacity-50">
+                <Plus className="w-4 h-4 text-neutral-400" />
+                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Arraste campos de "{model.display_name || model.db_table_name}" para cá</p>
+              </div>
+            ) : (
+              <SortableContext items={fieldsOfThisModel.map((id: string) => `form-${id}`)} strategy={rectSortingStrategy}>
+                {fieldsOfThisModel.map((id: string) => (
+                  <SortableFieldChip
+                    key={`form-${id}`}
+                    id={`form-${id}`}
+                    itemValue={id}
+                    toggleField={toggleField}
+                    zoneType="form"
+                    onEdit={() => { setEditingFieldId(id); setEditingFieldZone('form'); setIsDrawerOpen(true); }}
                   >
-                    {getFieldMeta(id, 'form').label?.text || getFieldName(id)}
-                  </span>
-                </SortableFieldChip>
-              ))}
-            </SortableContext>
-          )}
-        </DroppableZone>
-
-        {model.children && model.children.length > 0 && (
-          <div className="space-y-6 pt-2">
+                    <span
+                      style={{
+                        fontFamily: getFieldMeta(id, 'form').label?.font,
+                        fontSize: getFieldMeta(id, 'form').label?.size,
+                        color: getFieldMeta(id, 'form').label?.color || undefined
+                      }}
+                      className={cn(
+                        "text-[10px] font-black tracking-wider",
+                        !getFieldMeta(id, 'form').label?.font && "uppercase"
+                      )}
+                    >
+                      {getFieldMeta(id, 'form').label?.text || getFieldName(id)}
+                    </span>
+                  </SortableFieldChip>
+                ))}
+              </SortableContext>
+            )}
+          </DroppableZone>
+        )}
+        {(!hiddenDetails.has(model.id)) && model.children && model.children.length > 0 && (
+          <div className="pt-2">
             {model.children.map((child: any, cIdx: number) => renderModelZone(child, depth + 1, cIdx))}
           </div>
         )}
@@ -2567,8 +2780,22 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">
-                {orderedModels
-                  .filter((m: any) => {
+                {(() => {
+                  const formTreeIds = new Set<string>()
+                  const traverse = (nodes: any[]) => {
+                    nodes.forEach(n => {
+                      formTreeIds.add(n.id)
+                      if (n.children) traverse(n.children)
+                    })
+                  }
+                  traverse(formTree)
+
+                  const inTree = orderedModels.filter((m: any) => formTreeIds.has(m.id))
+                  const outTree = orderedModels.filter((m: any) => !formTreeIds.has(m.id))
+                  const sidebarModels = [...inTree, ...outTree]
+
+                  return sidebarModels
+                    .filter((m: any) => {
                     if (!fieldSearchTerm) return true
                     const term = fieldSearchTerm.toLowerCase()
                     const tableMatch = (m.display_name || m.db_table_name || '').toLowerCase().includes(term)
@@ -2576,7 +2803,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                     return tableMatch || fieldMatch
                   })
                   .map((m: any) => {
-                    const isCollapsed = collapsedTables[m.id]
+                    const isCollapsed = collapsedTables[m.id] ?? !formTreeIds.has(m.id)
                     // Se houver busca e a tabela der match via campo, forçamos a expansão para mostrar os campos
                     const forceExpand = fieldSearchTerm && m.fields.some((f: any) => (f.display_name || f.db_column_name || '').toLowerCase().includes(fieldSearchTerm.toLowerCase()))
                     const actuallyCollapsed = isCollapsed && !forceExpand
@@ -2604,15 +2831,10 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
 
                         {!actuallyCollapsed && (
                           <div className="p-4 pt-0 grid grid-cols-1 gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                            <DraggableItem id={`table-source-${m.id}`} className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 p-2.5 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-indigo-300 transition-all">
-                              <div className="flex items-center gap-2">
-                                <Table className="w-3 h-3 text-indigo-500" />
-                                <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">{t('wizard.layout.add_table', 'Adicionar Tabela')}</span>
-                              </div>
-                              <Plus className="w-3 h-3 text-indigo-400 group-hover:scale-125 transition-transform" />
+                            <DraggableItem id={`table-source-${m.id}`} className="bg-indigo-50/30 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 p-2.5 rounded-xl flex items-center justify-center gap-2 group cursor-grab active:cursor-grabbing hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-all mb-2">
+                              <Table className="w-3.5 h-3.5 text-indigo-500" />
+                              <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">{t('wizard.layout.drag_to_add_all', 'Arrastar Todos')}</span>
                             </DraggableItem>
-
-                            <div className="h-px bg-neutral-100 dark:bg-neutral-800 my-1"></div>
 
                             {m.fields
                               .filter((f: any) => {
@@ -2632,7 +2854,8 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                         )}
                       </div>
                     )
-                  })}
+                  })
+                })()}
               </div>
             </motion.div>
           </div>
@@ -2661,11 +2884,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                     className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                   >
                     <option value="">{t('wizard.layout.kanban.group_placeholder')}</option>
-                    {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                      <option key={`opt-kanban-${f.id}`} value={f.id}>
-                        {getFieldName(f.id)} ({f.data_type})
-                      </option>
-                    ))}
+                    {renderFieldOptions(orderedModels)}
                   </select>
                   <p className="text-[10px] text-neutral-400 font-medium italic ml-1">{t('wizard.layout.kanban.group_desc')}</p>
                 </div>
@@ -2699,11 +2918,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Selecione o campo de título...</option>
-                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                        <option key={`opt-sched-title-${f.id}`} value={f.id}>
-                          {getFieldName(f.id)} ({f.data_type})
-                        </option>
-                      ))}
+                      {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
@@ -2721,11 +2936,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Selecione o campo de data de início...</option>
-                      {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
-                        <option key={`opt-sched-start-${f.id}`} value={f.id}>
-                          {getFieldName(f.id)} ({f.data_type})
-                        </option>
-                      ))}
+                      {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp'))}
                     </select>
                   </div>
 
@@ -2743,11 +2954,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Nenhum (Evento de data única)</option>
-                      {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
-                        <option key={`opt-sched-end-${f.id}`} value={f.id}>
-                          {getFieldName(f.id)} ({f.data_type})
-                        </option>
-                      ))}
+                      {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp'))}
                     </select>
                   </div>
 
@@ -2765,11 +2972,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Nenhum (Cor padrão indigo)</option>
-                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                        <option key={`opt-sched-color-${f.id}`} value={f.id}>
-                          {getFieldName(f.id)} ({f.data_type})
-                        </option>
-                      ))}
+                      {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
                 </div>
@@ -2811,11 +3014,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
                         <option value="">Selecione o campo de título...</option>
-                        {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                          <option key={`opt-tl-title-${f.id}`} value={f.id}>
-                            {getFieldName(f.id)} ({f.data_type})
-                          </option>
-                        ))}
+                        {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
 
@@ -2833,11 +3032,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
                         <option value="">Selecione a data...</option>
-                        {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
-                          <option key={`opt-tl-date-${f.id}`} value={f.id}>
-                            {getFieldName(f.id)} ({f.data_type})
-                          </option>
-                        ))}
+                        {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp'))}
                       </select>
                     </div>
 
@@ -2855,11 +3050,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
                         <option value="">Nenhum</option>
-                        {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                          <option key={`opt-tl-desc-${f.id}`} value={f.id}>
-                            {getFieldName(f.id)} ({f.data_type})
-                          </option>
-                        ))}
+                        {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
 
@@ -2877,11 +3068,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
                         <option value="">Nenhum</option>
-                        {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                          <option key={`opt-tl-icon-${f.id}`} value={f.id}>
-                            {getFieldName(f.id)} ({f.data_type})
-                          </option>
-                        ))}
+                        {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
                   </div>
@@ -3026,11 +3213,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Selecione o campo de título...</option>
-                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                        <option key={`opt-gantt-title-${f.id}`} value={f.id}>
-                          {getFieldName(f.id)} ({f.data_type})
-                        </option>
-                      ))}
+                      {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
@@ -3048,11 +3231,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Selecione a data inicial...</option>
-                      {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
-                        <option key={`opt-gantt-start-${f.id}`} value={f.id}>
-                          {getFieldName(f.id)} ({f.data_type})
-                        </option>
-                      ))}
+                      {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp'))}
                     </select>
                   </div>
 
@@ -3070,11 +3249,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Selecione a data final...</option>
-                      {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp')).map((f: any) => (
-                        <option key={`opt-gantt-end-${f.id}`} value={f.id}>
-                          {getFieldName(f.id)} ({f.data_type})
-                        </option>
-                      ))}
+                      {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp'))}
                     </select>
                   </div>
 
@@ -3092,11 +3267,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Nenhum (Progresso não exibido)</option>
-                      {orderedModels.flatMap((m: any) => m.fields).filter((f: any) => f.data_type.includes('int') || f.data_type.includes('float') || f.data_type.includes('numeric')).map((f: any) => (
-                        <option key={`opt-gantt-prog-${f.id}`} value={f.id}>
-                          {getFieldName(f.id)} ({f.data_type})
-                        </option>
-                      ))}
+                      {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('int') || f.data_type.includes('float') || f.data_type.includes('numeric'))}
                     </select>
                   </div>
                 </div>
@@ -3130,11 +3301,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                         className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
                         <option value="">Selecione o título...</option>
-                        {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                          <option key={`opt-bp-title-${f.id}`} value={f.id}>
-                            {getFieldName(f.id)} ({f.data_type})
-                          </option>
-                        ))}
+                        {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
 
@@ -3152,11 +3319,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                         className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
                         <option value="">Selecione o campo de relação...</option>
-                        {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                          <option key={`opt-bp-pred-${f.id}`} value={f.id}>
-                            {getFieldName(f.id)} ({f.data_type})
-                          </option>
-                        ))}
+                        {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
 
@@ -3174,11 +3337,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                         className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
                         <option value="">Selecione o campo de status...</option>
-                        {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                          <option key={`opt-bp-status-${f.id}`} value={f.id}>
-                            {getFieldName(f.id)} ({f.data_type})
-                          </option>
-                        ))}
+                        {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
 
@@ -3196,11 +3355,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                         className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
                         <option value="">Selecione a descrição...</option>
-                        {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                          <option key={`opt-bp-desc-${f.id}`} value={f.id}>
-                            {getFieldName(f.id)} ({f.data_type})
-                          </option>
-                        ))}
+                        {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
                   </div>
@@ -3304,11 +3459,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Selecione o título...</option>
-                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                        <option key={`opt-map-title-${f.id}`} value={f.id}>
-                          {getFieldName(f.id)} ({f.data_type})
-                        </option>
-                      ))}
+                      {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
@@ -3326,11 +3477,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Selecione a descrição...</option>
-                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                        <option key={`opt-map-desc-${f.id}`} value={f.id}>
-                          {getFieldName(f.id)} ({f.data_type})
-                        </option>
-                      ))}
+                      {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
@@ -3348,11 +3495,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Selecione a latitude...</option>
-                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                        <option key={`opt-map-lat-${f.id}`} value={f.id}>
-                          {getFieldName(f.id)} ({f.data_type})
-                        </option>
-                      ))}
+                      {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
@@ -3370,11 +3513,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Selecione a longitude...</option>
-                      {orderedModels.flatMap((m: any) => m.fields).map((f: any) => (
-                        <option key={`opt-map-lng-${f.id}`} value={f.id}>
-                          {getFieldName(f.id)} ({f.data_type})
-                        </option>
-                      ))}
+                      {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
                 </div>
@@ -3382,7 +3521,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
             )}
 
             {/* ZONA: MASTER-DETAIL CONFIG */}
-            {config.logic_type === 'master_detail' && (
+            {config.logic_type === 'pesquisa_cadastro' && (
               <div className="p-6 bg-slate-50/50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800 rounded-[2rem] space-y-6 shadow-sm overflow-hidden transition-all duration-300">
                 <div
                   className="flex items-center justify-between cursor-pointer"
@@ -3405,24 +3544,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                 {expandedZones.masterDetail && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-300 pt-4 border-t border-slate-200 dark:border-slate-800/50">
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Tabela Mestre (Root)</label>
-                        <select
-                          value={(config.layout_config as any).master_model_id || ''}
-                          onChange={e => setConfig({
-                            ...config,
-                            layout_config: { ...config.layout_config, master_model_id: e.target.value }
-                          })}
-                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
-                        >
-                          <option value="">Selecione a tabela principal...</option>
-                          {models.filter((m: any) => config.selected_models.includes(m.id)).map((m: any) => (
-                            <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>
-                          ))}
-                        </select>
-                      </div>
-
+                    <div className="max-w-md">
                       <div className="space-y-3">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Estilo dos Detalhes</label>
                         <div className="flex p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
@@ -3448,12 +3570,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                       </div>
                     </div>
 
-                    <div className="p-4 bg-indigo-500/5 rounded-2xl border border-indigo-500/10 flex gap-3 items-start">
-                      <AlertCircle className="w-4 h-4 text-indigo-500 mt-0.5" />
-                      <p className="text-[10px] text-indigo-600 dark:text-indigo-400 leading-relaxed">
-                        <strong>Dica:</strong> No estilo <strong>Abas</strong>, cada tabela detalhe será uma aba separada. No estilo <strong>Seções</strong>, os dados serão empilhados em grupos dentro do mesmo corpo de formulário.
-                      </p>
-                    </div>
+
                   </div>
                 )}
               </div>
@@ -3860,6 +3977,8 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                             <option value="kanban">Kanban</option>
                             <option value="timeline">Linha do Tempo</option>
                             <option value="mapa_mental">Mapa Mental</option>
+                            <option value="analytics">Dashboard BI</option>
+                            <option value="galeria">Galeria Assets</option>
                           </select>
                         </div>
                         <button
@@ -4058,7 +4177,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                               </div>
                             </div>
                           )}
-                          {(slot.type === 'grid' || slot.type === 'kanban' || slot.type === 'timeline' || slot.type === 'mapa_mental') && (
+                          {['grid', 'kanban', 'timeline', 'mapa_mental', 'galeria', 'analytics'].includes(slot.type) && (
                             <div className="w-full p-4 mt-2 bg-rose-50/50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/30 rounded-xl space-y-4">
                           
                           {/* Configurações Kanban Específicas */}
@@ -4552,6 +4671,213 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                             </div>
                           )}
 
+                          {/* Configurações Galeria Específicas */}
+                          {slot.type === 'galeria' && (
+                            <div className="space-y-4 bg-teal-50/30 dark:bg-teal-950/10 p-4 rounded-xl border border-teal-100/50 dark:border-teal-900/30 mt-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h5 className="text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-400">Campos da Galeria</h5>
+                                  <p className="text-[10px] text-neutral-500 mt-0.5">Defina quais campos compõem o visual da Galeria.</p>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-teal-600 dark:text-teal-400">Campo de Imagem (URL ou Base64)</label>
+                                  <select
+                                    value={slot.gallery_config?.image_field || ''}
+                                    onChange={e => {
+                                      const newSlots = [...(config.layout_config.custom_slots || [])];
+                                      newSlots[idx].gallery_config = { ...(newSlots[idx].gallery_config || {}), image_field: e.target.value };
+                                      setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                    }}
+                                    className="w-full bg-white dark:bg-neutral-950 border border-teal-200 dark:border-teal-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1 focus:border-teal-400"
+                                  >
+                                    <option value="">Detecção Automática</option>
+                                    {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
+                                      <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-teal-600 dark:text-teal-400">Campo de Título</label>
+                                  <select
+                                    value={slot.gallery_config?.title_field || ''}
+                                    onChange={e => {
+                                      const newSlots = [...(config.layout_config.custom_slots || [])];
+                                      newSlots[idx].gallery_config = { ...(newSlots[idx].gallery_config || {}), title_field: e.target.value };
+                                      setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                    }}
+                                    className="w-full bg-white dark:bg-neutral-950 border border-teal-200 dark:border-teal-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1 focus:border-teal-400"
+                                  >
+                                    <option value="">Detecção Automática</option>
+                                    {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
+                                      <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="col-span-full">
+                                  <label className="text-[9px] font-black uppercase text-teal-600 dark:text-teal-400">Campos a Exibir (Opcional)</label>
+                                  <div className="flex gap-2 mt-1">
+                                    <select
+                                      id={`gallery_card_fields_select_${idx}`}
+                                      className="flex-1 bg-white dark:bg-neutral-950 border border-teal-200 dark:border-teal-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-teal-400"
+                                    >
+                                      <option value="">Adicionar campo...</option>
+                                      {models.find((m:any) => m.id === slot.model_id)?.fields
+                                        .filter((f:any) => !(slot.gallery_config?.card_fields || []).includes(f.db_column_name))
+                                        .map((f:any) => (
+                                          <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                                        ))
+                                      }
+                                    </select>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const select = document.getElementById(`gallery_card_fields_select_${idx}`) as HTMLSelectElement;
+                                        if (select.value) {
+                                          const newSlots = [...(config.layout_config.custom_slots || [])];
+                                          const currentFields = newSlots[idx].gallery_config?.card_fields || [];
+                                          newSlots[idx].gallery_config = { ...(newSlots[idx].gallery_config || {}), card_fields: [...currentFields, select.value] };
+                                          setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                          select.value = '';
+                                        }
+                                      }}
+                                      className="px-4 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors font-medium text-xs flex items-center justify-center whitespace-nowrap"
+                                    >
+                                      + Add
+                                    </button>
+                                  </div>
+                                  {(slot.gallery_config?.card_fields?.length > 0) && (
+                                    <div className="flex flex-wrap gap-2 mt-3">
+                                      {slot.gallery_config.card_fields.map((fieldCol: string, i: number) => {
+                                        const fDef = models.find((m:any) => m.id === slot.model_id)?.fields.find((f:any) => f.db_column_name === fieldCol);
+                                        return (
+                                          <span key={`${fieldCol}-${i}`} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 text-[10px] font-bold uppercase tracking-wider border border-teal-200 dark:border-teal-800">
+                                            {fDef?.display_name || fieldCol}
+                                            <button
+                                              onClick={() => {
+                                                const newSlots = [...(config.layout_config.custom_slots || [])];
+                                                newSlots[idx].gallery_config.card_fields = newSlots[idx].gallery_config.card_fields.filter((c: string) => c !== fieldCol);
+                                                setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                              }}
+                                              className="hover:text-red-500 transition-colors"
+                                            >
+                                              <X className="w-3 h-3" />
+                                            </button>
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                  <p className="text-[10px] text-neutral-400 mt-2">
+                                    Se nenhum campo for adicionado, a galeria tentará inferir e mostrar todos os campos automaticamente.
+                                  </p>
+                                </div>
+                                <div className="col-span-full pt-2">
+                                  <label className="text-[9px] font-black uppercase text-teal-600 dark:text-teal-400 block mb-2">Comportamento ao Clicar na Imagem</label>
+                                  <div className="flex gap-4">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input type="radio" name={`gallery_click_${idx}`} value="lightbox" checked={(!slot.gallery_click_behavior || slot.gallery_click_behavior === 'lightbox')} onChange={() => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].gallery_click_behavior = 'lightbox';
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }} />
+                                      <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Lightbox (Modal de Preview)</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input type="radio" name={`gallery_click_${idx}`} value="thumbnail" checked={slot.gallery_click_behavior === 'thumbnail'} onChange={() => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].gallery_click_behavior = 'thumbnail';
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }} />
+                                      <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Zoom na mesma tela (Nova Guia)</span>
+                                    </label>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Configurações BI Específicas */}
+                          {slot.type === 'analytics' && (
+                            <div className="space-y-4 bg-fuchsia-50/30 dark:bg-fuchsia-950/10 p-4 rounded-xl border border-fuchsia-100/50 dark:border-fuchsia-900/30 mt-4 mb-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h5 className="text-[10px] font-black uppercase tracking-widest text-fuchsia-700 dark:text-fuchsia-400">Indicadores do Dashboard</h5>
+                                  <p className="text-[10px] text-neutral-500 mt-0.5">Gerencie os gráficos e KPIs deste dashboard.</p>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    setEditingSlotBIWidget({
+                                      slotIdx: idx,
+                                      widget: {
+                                        id: Math.random().toString(36).substr(2, 9),
+                                        title: 'Novo Indicador',
+                                        type: 'kpi',
+                                        model_id: slot.model_id || '',
+                                        field: '*',
+                                        calc: 'COUNT',
+                                        group_by: '',
+                                        width: 'third',
+                                        joins: []
+                                      }
+                                    });
+                                    setIsSlotWidgetModalOpen(true);
+                                  }}
+                                  className="px-3 py-1.5 bg-fuchsia-100 dark:bg-fuchsia-900/40 text-fuchsia-700 dark:text-fuchsia-400 hover:bg-fuchsia-200 dark:hover:bg-fuchsia-800/50 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1.5"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                  Novo Indicador
+                                </button>
+                              </div>
+                              <div className="space-y-2">
+                                {(slot.analytics_config?.widgets || []).map((w: any) => (
+                                  <div key={w.id} className="flex items-center justify-between bg-white dark:bg-neutral-900 p-3 rounded-lg border border-neutral-200 dark:border-neutral-800">
+                                    <div className="flex items-center gap-3">
+                                      <div className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
+                                        {w.type === 'kpi' ? <Activity className="w-4 h-4 text-neutral-500" /> : w.type === 'gauge' ? <Gauge className="w-4 h-4 text-neutral-500" /> : <BarChart3 className="w-4 h-4 text-neutral-500" />}
+                                      </div>
+                                      <div>
+                                        <p className="text-xs font-bold text-neutral-900 dark:text-white">{w.title}</p>
+                                        <p className="text-[10px] text-neutral-500">{w.type.toUpperCase()} • {w.calc} • {w.width}</p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        onClick={() => {
+                                          setEditingSlotBIWidget({ slotIdx: idx, widget: w });
+                                          setIsSlotWidgetModalOpen(true);
+                                        }}
+                                        className="p-1.5 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                                      >
+                                        <Pencil className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          const newSlots = [...(config.layout_config.custom_slots || [])];
+                                          newSlots[idx].analytics_config = {
+                                            ...newSlots[idx].analytics_config,
+                                            widgets: (newSlots[idx].analytics_config?.widgets || []).filter((wx: any) => wx.id !== w.id)
+                                          };
+                                          setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                        }}
+                                        className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                                {(!slot.analytics_config?.widgets || slot.analytics_config.widgets.length === 0) && (
+                                  <div className="text-center p-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 border-dashed rounded-xl">
+                                    <BarChart3 className="w-6 h-6 text-neutral-300 dark:text-neutral-700 mx-auto mb-2" />
+                                    <p className="text-xs text-neutral-500 font-medium">Nenhum indicador configurado nesta aba.</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
                           <div className="h-px w-full bg-rose-200 dark:bg-rose-900/50" />
 
                           {/* Recuperação de Dados */}
@@ -4839,18 +5165,6 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
             )}
 
 
-            {/* Seção Global de Relacionamentos (JOINS) - Posicionada estrategicamente antes das Zonas de Dados */}
-            <JoinsEditor
-              joins={config.layout_config.joins || []}
-              // Para Analytics, permitimos relacionar qualquer tabela do projeto. Para outros, apenas as selecionadas.
-              models={config.logic_type === 'analytics' ? models : models.filter((m: any) => config.selected_models.includes(m.id))}
-              onUpdate={(newJoins) => setConfig({
-                ...config,
-                layout_config: { ...config.layout_config, joins: newJoins }
-              })}
-              t={t}
-            />
-
             {/* ZONA: FILTROS */}
             {(config.logic_type.includes('pesquisa') ||
               config.logic_type === 'kanban' ||
@@ -4866,7 +5180,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                     onClick={() => toggleZone('zone01')}
                   >
                     <div className="flex items-center gap-3">
-                      <h4 className="text-[9px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.zones.zone_01')}: {t('wizard.layout.zones.filter')}</h4>
+                      <h4 className={cn("text-[9px] font-black uppercase tracking-[0.3em] transition-all", hiddenZones.has('zone01') ? "text-neutral-400" : "text-indigo-600")}>{t('wizard.layout.zones.zone_01')}: {t('wizard.layout.zones.filter')}</h4>
                       <span className="px-3 py-1 bg-indigo-500/10 text-indigo-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.filter_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -4879,13 +5193,26 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!hiddenZones.has('zone01')) {
+                             setConfig({ ...config, layout_config: { ...config.layout_config, filter_fields: [] } })
+                          }
+                          setHiddenZones(prev => { const n = new Set(prev); n.has('zone01') ? n.delete('zone01') : n.add('zone01'); return n; })
+                        }}
+                        className="p-1.5 text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-500 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm transition-all"
+                        title={hiddenZones.has('zone01') ? "Exibir Zona" : "Ocultar Zona"}
+                      >
+                        {hiddenZones.has('zone01') ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
                       <div className="p-1 text-indigo-600">
                         {expandedZones.zone01 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </div>
                     </div>
                   </div>
 
-                  {expandedZones.zone01 && (
+                  {expandedZones.zone01 && !hiddenZones.has('zone01') && (
                     <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
                       <DroppableZone id="droppable-filter" className="grid grid-cols-7 gap-3 min-h-[80px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-start">
                         {config.layout_config.filter_fields.length === 0 ? (
@@ -4927,13 +5254,13 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
             {/* ZONA: GRID */}
             {config.logic_type !== 'timeline' && config.logic_type !== 'map' && config.logic_type !== 'gantt' && config.logic_type !== 'cadastro' && (
               <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between cursor-pointer" onClick={() => toggleZone('zone02')}>
                   <div className="space-y-1">
-                    <h4 className="text-[9px] font-black uppercase text-emerald-600 tracking-[0.3em]">
+                    <h4 className={cn("text-[9px] font-black uppercase tracking-[0.3em] transition-all", hiddenZones.has('zone02') ? "text-neutral-400" : "text-emerald-600")}>
                       {config.logic_type === 'kanban' ? t('wizard.layout.zones.kanban_card', 'Campos do Card') : config.logic_type === 'mapa_mental' ? t('wizard.layout.zones.mindmap_nodes', 'Campos do Mapa (Níveis)') : `${t('wizard.layout.zones.zone_02')}: ${t('wizard.layout.zones.grid')}`}
                     </h4>
                     {config.logic_type !== 'kanban' && config.logic_type !== 'mapa_mental' && config.logic_type !== 'galeria' && (
-                      <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg w-fit">
+                      <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg w-fit" onClick={e => e.stopPropagation()}>
                         {[
                           { id: 'list', label: t('wizard.layout.display_options.list') },
                           { id: 'card', label: t('wizard.layout.display_options.card') },
@@ -4962,48 +5289,68 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                     <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.grid_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
                     {config.layout_config.grid_fields.length > 0 && (
                       <button
-                        onClick={() => setConfig({ ...config, layout_config: { ...config.layout_config, grid_fields: [] } })}
+                        onClick={(e) => { e.stopPropagation(); setConfig({ ...config, layout_config: { ...config.layout_config, grid_fields: [] } }) }}
                         className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
                         title={t('common.clear_all', 'Limpar Tudo')}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!hiddenZones.has('zone02')) {
+                           setConfig({ ...config, layout_config: { ...config.layout_config, grid_fields: [] } })
+                        }
+                        setHiddenZones(prev => { const n = new Set(prev); n.has('zone02') ? n.delete('zone02') : n.add('zone02'); return n; })
+                      }}
+                      className="p-1.5 text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-500 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm transition-all"
+                      title={hiddenZones.has('zone02') ? "Exibir Zona" : "Ocultar Zona"}
+                    >
+                      {hiddenZones.has('zone02') ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                    <div className="p-1 text-emerald-600">
+                      {expandedZones.zone02 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </div>
                   </div>
                 </div>
 
-                <DroppableZone id="droppable-grid" className="grid grid-cols-7 gap-3 min-h-[100px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-start">
-                  {config.layout_config.grid_fields.length === 0 ? (
-                    <p className="text-xs text-neutral-400 font-medium w-full text-center italic">{t('wizard.layout.subtitle')}</p>
-                  ) : (
-                    <SortableContext items={config.layout_config.grid_fields.map((id: string) => `grid-${id}`)} strategy={rectSortingStrategy}>
-                      {config.layout_config.grid_fields.map((id: string) => (
-                        <SortableFieldChip
-                          key={`grid-${id}`}
-                          id={`grid-${id}`}
-                          itemValue={id}
-                          toggleField={toggleField}
-                          zoneType="grid"
-                          onEdit={() => { setEditingFieldId(id); setEditingFieldZone('grid'); setIsDrawerOpen(true); }}
-                        >
-                          <span
-                            style={{
-                              fontFamily: getFieldMeta(id, 'grid').label?.font,
-                              fontSize: getFieldMeta(id, 'grid').label?.size,
-                              color: getFieldMeta(id, 'grid').label?.color || undefined
-                            }}
-                            className={cn(
-                              "text-[10px] font-black tracking-wider",
-                              !getFieldMeta(id, 'grid').label?.font && "uppercase"
-                            )}
-                          >
-                            {getFieldMeta(id, 'grid').label?.text || getFieldName(id)}
-                          </span>
-                        </SortableFieldChip>
-                      ))}
-                    </SortableContext>
-                  )}
-                </DroppableZone>
+                {expandedZones.zone02 && !hiddenZones.has('zone02') && (
+                  <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <DroppableZone id="droppable-grid" className="grid grid-cols-7 gap-3 min-h-[100px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2rem] items-start">
+                      {config.layout_config.grid_fields.length === 0 ? (
+                        <p className="text-xs text-neutral-400 font-medium w-full text-center italic">{t('wizard.layout.subtitle')}</p>
+                      ) : (
+                        <SortableContext items={config.layout_config.grid_fields.map((id: string) => `grid-${id}`)} strategy={rectSortingStrategy}>
+                          {config.layout_config.grid_fields.map((id: string) => (
+                            <SortableFieldChip
+                              key={`grid-${id}`}
+                              id={`grid-${id}`}
+                              itemValue={id}
+                              toggleField={toggleField}
+                              zoneType="grid"
+                              onEdit={() => { setEditingFieldId(id); setEditingFieldZone('grid'); setIsDrawerOpen(true); }}
+                            >
+                              <span
+                                style={{
+                                  fontFamily: getFieldMeta(id, 'grid').label?.font,
+                                  fontSize: getFieldMeta(id, 'grid').label?.size,
+                                  color: getFieldMeta(id, 'grid').label?.color || undefined
+                                }}
+                                className={cn(
+                                  "text-[10px] font-black tracking-wider",
+                                  !getFieldMeta(id, 'grid').label?.font && "uppercase"
+                                )}
+                              >
+                                {getFieldMeta(id, 'grid').label?.text || getFieldName(id)}
+                              </span>
+                            </SortableFieldChip>
+                          ))}
+                        </SortableContext>
+                      )}
+                    </DroppableZone>
+                  </div>
+                )}
               </div>
             )}
 
@@ -5024,7 +5371,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                     onClick={() => toggleZone('zone03')}
                   >
                     <div className="flex items-center gap-3">
-                      <h4 className="text-[9px] font-black uppercase text-amber-600 tracking-[0.3em]">{config.logic_type === 'cadastro' ? t('wizard.layout.zones.zone_01') : t('wizard.layout.zones.zone_03')}: {t('wizard.layout.zones.form')}</h4>
+                      <h4 className={cn("text-[9px] font-black uppercase tracking-[0.3em] transition-all", hiddenZones.has('zone03') ? "text-neutral-400" : "text-amber-600")}>{config.logic_type === 'cadastro' ? t('wizard.layout.zones.zone_01') : t('wizard.layout.zones.zone_03')}: {t('wizard.layout.zones.form')}</h4>
                       <span className="px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.form_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -5037,15 +5384,28 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!hiddenZones.has('zone03')) {
+                             setConfig({ ...config, layout_config: { ...config.layout_config, form_fields: [] } })
+                          }
+                          setHiddenZones(prev => { const n = new Set(prev); n.has('zone03') ? n.delete('zone03') : n.add('zone03'); return n; })
+                        }}
+                        className="p-1.5 text-neutral-400 hover:text-amber-600 dark:hover:text-amber-500 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm transition-all"
+                        title={hiddenZones.has('zone03') ? "Exibir Zona" : "Ocultar Zona"}
+                      >
+                        {hiddenZones.has('zone03') ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
                       <div className="p-1 text-amber-600">
                         {expandedZones.zone03 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </div>
                     </div>
                   </div>
 
-                  {expandedZones.zone03 && (
+                  {expandedZones.zone03 && !hiddenZones.has('zone03') && (
                     <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                      {relationalTree.map((node: any, nIdx: number) => renderModelZone(node, 0, nIdx))}
+                      {formTree.map((node: any, nIdx: number) => renderModelZone(node, 0, nIdx))}
                     </div>
                   )}
                 </div>
@@ -5442,7 +5802,7 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
                           <div className="space-y-2">
                             <label className="text-[9px] font-bold text-indigo-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.options_source', 'Origem dos Dados')}</label>
                             <div className="flex gap-2">
-                              {['fixed', 'enumeration', 'relational'].map(opt => (
+                              {['relational', 'enumeration', 'fixed'].map(opt => (
                                 <button
                                   key={opt}
                                   onClick={() => updateMeta('component', 'options_type', opt)}
@@ -5676,6 +6036,50 @@ function StepLayout({ config, setConfig, models, enumerations = [] }: any) {
           <div className="flex gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800">
             <button onClick={() => setIsWidgetModalOpen(false)} className="flex-1 px-4 py-3.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all">Cancelar</button>
             <button onClick={() => handleSaveWidget(editingWidget)} className="flex-1 px-4 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95">Salvar Widget</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Slot Widget Editor Modal */}
+      <Modal
+        isOpen={isSlotWidgetModalOpen}
+        onClose={() => setIsSlotWidgetModalOpen(false)}
+        title="Configurar Indicador"
+      >
+        <div className="space-y-6">
+          <BIWidgetConfigEditor
+            editingWidget={editingSlotBIWidget?.widget}
+            setEditingWidget={(widget) => setEditingSlotBIWidget(prev => prev ? { ...prev, widget } : null)}
+            models={models}
+            joins={editingSlotBIWidget?.slotIdx !== undefined ? config.layout_config.custom_slots?.[editingSlotBIWidget.slotIdx]?.joins || [] : []}
+            t={t}
+          />
+          <div className="flex gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800">
+            <button onClick={() => setIsSlotWidgetModalOpen(false)} className="flex-1 px-4 py-3.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all">Cancelar</button>
+            <button
+              onClick={() => {
+                if (editingSlotBIWidget) {
+                  const newSlots = [...(config.layout_config.custom_slots || [])];
+                  const slotIdx = editingSlotBIWidget.slotIdx;
+                  const currentWidgets = newSlots[slotIdx].analytics_config?.widgets || [];
+                  const exists = currentWidgets.find((w: any) => w.id === editingSlotBIWidget.widget.id);
+                  const newWidgets = exists
+                    ? currentWidgets.map((w: any) => w.id === editingSlotBIWidget.widget.id ? editingSlotBIWidget.widget : w)
+                    : [...currentWidgets, editingSlotBIWidget.widget];
+                  
+                  newSlots[slotIdx].analytics_config = {
+                    ...newSlots[slotIdx].analytics_config,
+                    widgets: newWidgets
+                  };
+                  setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                  setIsSlotWidgetModalOpen(false);
+                  setEditingSlotBIWidget(null);
+                }
+              }}
+              className="flex-1 px-4 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95"
+            >
+              Salvar Indicador
+            </button>
           </div>
         </div>
       </Modal>

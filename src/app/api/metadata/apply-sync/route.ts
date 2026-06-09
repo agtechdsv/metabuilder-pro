@@ -205,7 +205,8 @@ export async function POST(request: Request) {
                 from_field_id: fromFieldId,
                 to_model_id: refModelId,
                 to_field_id: toFieldId,
-                relation_type: relationType
+                relation_type: relationType,
+                source: 'cli'
               })
           }
         }

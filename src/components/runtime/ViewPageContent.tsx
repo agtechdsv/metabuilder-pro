@@ -88,6 +88,7 @@ interface ViewPageContentProps {
   isAutomationsEnabled?: boolean
   formHeaderTitle?: string
   formHeaderSubtitleField?: string
+  projectRelations?: any[]
 }
 
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
@@ -139,7 +140,8 @@ export default function ViewPageContent({
   customSlots = [],
   isAutomationsEnabled = false,
   formHeaderTitle,
-  formHeaderSubtitleField
+  formHeaderSubtitleField,
+  projectRelations = []
 }: ViewPageContentProps) {
   const router = useRouter()
   const { t } = useI18n()
@@ -717,12 +719,63 @@ export default function ViewPageContent({
   }
 
   const fetchDetails = async (parentRow: any, parentModel: string) => {
-    if ((logicType !== 'master_detail' && logicType !== 'personalizado') || !joins || joins.length === 0) return []
+    let effectiveJoins = joins || []
+    
+    // 1. Fallback via Santo Graal (Banco de Dados)
+    if (effectiveJoins.length === 0 && projectRelations && project.models) {
+      const parentModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === parentModel?.toLowerCase())
+      if (parentModelDef) {
+        const related = projectRelations.filter((rel: any) => rel.referenced_table_id === parentModelDef.id)
+        const auto = related.map((rel: any) => {
+          const childModel = project.models.find((m: any) => m.id === rel.foreign_table_id)
+          const childField = childModel?.fields?.find((f: any) => f.id === rel.foreign_column_id)
+          const parentField = parentModelDef.fields?.find((f: any) => f.id === rel.referenced_column_id)
+          if (childModel && childField && parentField) {
+            return {
+              from: parentModelDef.db_table_name,
+              localKey: parentField.db_column_name,
+              to: childModel.db_table_name,
+              foreignKey: childField.db_column_name
+            }
+          }
+          return null
+        }).filter(Boolean)
+        if (auto.length > 0) effectiveJoins = auto
+      }
+    }
+
+    // 2. Fallback via Heurística (Nomenclatura)
+    if (effectiveJoins.length === 0 && project.models) {
+      const parentModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === parentModel?.toLowerCase())
+      if (parentModelDef) {
+        const heuristicJoins: any[] = []
+        for (const childModel of project.models) {
+          if (childModel.id === parentModelDef.id) continue
+          const expectedKeys = [
+            `${parentModelDef.db_table_name}_id`,
+            `${parentModelDef.db_table_name.replace(/s$/, '')}_id`
+          ]
+          const fkField = childModel.fields?.find((f: any) => expectedKeys.includes(f.db_column_name))
+          const pkField = parentModelDef.fields?.find((f: any) => f.db_column_name === 'id') || parentModelDef.fields?.[0]
+          if (fkField && pkField) {
+            heuristicJoins.push({
+              from: parentModelDef.db_table_name,
+              localKey: pkField.db_column_name,
+              to: childModel.db_table_name,
+              foreignKey: fkField.db_column_name
+            })
+          }
+        }
+        if (heuristicJoins.length > 0) effectiveJoins = heuristicJoins
+      }
+    }
+
+    if (!effectiveJoins || effectiveJoins.length === 0) return []
 
     const allDetails: any[] = []
     
     // Para cada join configurado a partir da tabela pai informada
-    for (const join of joins) {
+    for (const join of effectiveJoins) {
       const isMatch = join.from?.toLowerCase() === parentModel?.toLowerCase()
       console.log(`[MetaBuilder] Checking join: ${join.from} -> ${join.to} | Match: ${isMatch} (Parent: ${parentModel})`)
 
@@ -1949,6 +2002,7 @@ export default function ViewPageContent({
                 onEditDetail={handleEditDetail}
                 onDeleteDetail={handleDeleteDetail}
                 onAddDetail={handleOpenAddDetail}
+                projectRelations={projectRelations}
               />
             </div>
           ) : (
@@ -1988,6 +2042,7 @@ export default function ViewPageContent({
               onCustomAction={handleCustomAction}
               formHeaderTitle={formHeaderTitle}
               formHeaderSubtitleField={formHeaderSubtitleField}
+              projectRelations={projectRelations}
             />
           )
         ) : (
@@ -2004,6 +2059,7 @@ export default function ViewPageContent({
                 onSaveLayout={handleSaveDashboardLayout}
                 tunnelChannel={tunnelChannel}
                 isTunnelReady={isTunnelReady}
+                projectRelations={projectRelations}
               />
             )}
 
@@ -2046,6 +2102,7 @@ export default function ViewPageContent({
               onDelete={handleOpenDelete}
               customActions={gridCustomActions}
               onCustomAction={handleCustomAction}
+              projectRelations={projectRelations}
             />
           </>
         )}
@@ -2166,7 +2223,8 @@ export default function ViewPageContent({
           isTunnelReady: isTunnelReady,
           project: project,
           customActions,
-          onCustomAction: handleCustomAction
+          onCustomAction: handleCustomAction,
+          projectRelations: projectRelations
         }
 
         return interfaceType === 'modal' ? (

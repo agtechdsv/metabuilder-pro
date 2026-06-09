@@ -281,6 +281,12 @@ export default async function SlugPage({ params }: PageProps) {
     const dictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.display_name }), {}) || {}
     const tableDictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.db_table_name }), {}) || {}
 
+    // Busca o Santo Graal — relacionamentos do projeto
+    const { data: projectRelations } = await supabase
+      .from('relations')
+      .select('*')
+      .eq('project_id', project.id)
+
     viewName = view.name
     modelName = tableDictionary[view.model_id] || view.model?.db_table_name || ''
     modelId = view.model_id
@@ -661,6 +667,7 @@ export default async function SlugPage({ params }: PageProps) {
           breadcrumbs={breadcrumbs}
           description={navDescription}
           icon={navIcon}
+          projectRelations={projectRelations || []}
         />
       </TranslationProvider>
     )

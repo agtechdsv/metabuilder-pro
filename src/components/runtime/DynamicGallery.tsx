@@ -31,6 +31,11 @@ interface DynamicGalleryProps {
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
   galleryClickBehavior?: 'lightbox' | 'thumbnail'
+  galleryConfig?: {
+    image_field?: string
+    title_field?: string
+    card_fields?: string[]
+  }
 }
 
 export default function DynamicGallery({
@@ -40,7 +45,8 @@ export default function DynamicGallery({
   onView,
   onEdit,
   onDelete,
-  galleryClickBehavior = 'lightbox'
+  galleryClickBehavior = 'lightbox',
+  galleryConfig
 }: DynamicGalleryProps) {
   const { t } = useI18n()
   const { toast } = useToast()
@@ -94,6 +100,7 @@ export default function DynamicGallery({
       // 1. Identificar título
       let title = ''
       const titleField = fields.find(f => {
+        if (galleryConfig?.title_field) return f.db_column_name === galleryConfig.title_field || f.id === galleryConfig.title_field
         const col = f.db_column_name.toLowerCase()
         return col === 'title' || col === 'name' || col === 'nome' || col === 'titulo' || col === 'label'
       })
@@ -131,6 +138,7 @@ export default function DynamicGallery({
       // 2. Identificar imagem de preview / url principal
       let previewUrl = ''
       const imageField = fields.find(f => {
+        if (galleryConfig?.image_field) return f.db_column_name === galleryConfig.image_field || f.id === galleryConfig.image_field
         const col = f.db_column_name.toLowerCase()
         return col.includes('image') || col.includes('imagem') || col.includes('avatar') || col.includes('thumbnail') || col.includes('thumb') || col.includes('foto') || col.includes('capa') || col.includes('preview')
       })
@@ -356,22 +364,37 @@ export default function DynamicGallery({
       const metadata: Array<{ label: string; value: string }> = []
       fields.forEach(f => {
         const col = f.db_column_name
-        if (
-          col !== titleField?.db_column_name &&
-          col !== imageField?.db_column_name &&
-          col !== linkField?.db_column_name &&
-          col !== downloadField?.db_column_name &&
-          col !== fileNameField?.db_column_name &&
-          col !== sizeField?.db_column_name &&
-          col !== typeField?.db_column_name &&
-          col !== 'id'
-        ) {
-          const val = allValues[col]
-          if (val !== undefined && val !== null && val !== '') {
-            metadata.push({
-              label: f.display_name,
-              value: typeof val === 'object' ? JSON.stringify(val) : String(val)
-            })
+        
+        // Se gallery_card_fields estiver definido, usar apenas os campos selecionados
+        if (galleryConfig && Array.isArray(galleryConfig.card_fields) && galleryConfig.card_fields.length > 0) {
+          if (galleryConfig.card_fields.includes(col) || galleryConfig.card_fields.includes(f.id)) {
+            const val = allValues[col]
+            if (val !== undefined && val !== null && val !== '') {
+              metadata.push({
+                label: f.display_name,
+                value: typeof val === 'object' ? JSON.stringify(val) : String(val)
+              })
+            }
+          }
+        } else {
+          // Fallback nativo: mostrar tudo que sobrar
+          if (
+            col !== titleField?.db_column_name &&
+            col !== imageField?.db_column_name &&
+            col !== linkField?.db_column_name &&
+            col !== downloadField?.db_column_name &&
+            col !== fileNameField?.db_column_name &&
+            col !== sizeField?.db_column_name &&
+            col !== typeField?.db_column_name &&
+            col !== 'id'
+          ) {
+            const val = allValues[col]
+            if (val !== undefined && val !== null && val !== '') {
+              metadata.push({
+                label: f.display_name,
+                value: typeof val === 'object' ? JSON.stringify(val) : String(val)
+              })
+            }
           }
         }
       })
