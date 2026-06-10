@@ -771,6 +771,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
           description={navDescription}
           icon={navIcon}
           projectRelations={projectRelations || []}
+          initialItemsPerPage={view.layout_config?.items_per_page}
         />
       </TranslationProvider>
     )

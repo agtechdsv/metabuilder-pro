@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { Eye, Pencil, Trash2, MapPin } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import L from 'leaflet'
+import { formatFieldValue } from '@/lib/formatters'
 
 // Custom marker icon to fix default leaflet icon issues in React
 const customIcon = new L.Icon({
@@ -28,9 +29,10 @@ export interface DynamicMapProps {
   onEdit: (record: any) => void
   onDelete: (record: any) => void
   onView: (record: any) => void
+  relationalOptions?: Record<string, any[]>
 }
 
-export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, onView }: DynamicMapProps) {
+export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, onView, relationalOptions = {} }: DynamicMapProps) {
   const { t } = useI18n()
   const [isMounted, setIsMounted] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
@@ -69,6 +71,9 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
   const titleField = getFieldKey(mapConfig.title_field)
   const descField = mapConfig.desc_field ? getFieldKey(mapConfig.desc_field) : null
 
+  const titleFieldObj = fields.find(f => f.db_column_name === titleField)
+  const descFieldObj = descField ? fields.find(f => f.db_column_name === descField) : null
+
   // Extract valid points
   const validPoints = data.filter(record => {
     const lat = record[latField]
@@ -80,8 +85,8 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
       record,
       lat: Number(record[latField]),
       lng: Number(record[lngField]),
-      title: record[titleField] || 'Sem Título',
-      desc: descField ? record[descField] : ''
+      title: formatFieldValue(record[titleField], titleFieldObj, relationalOptions) || 'Sem Título',
+      desc: descField ? formatFieldValue(record[descField], descFieldObj, relationalOptions) : ''
     }
   })
 

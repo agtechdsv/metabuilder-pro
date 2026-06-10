@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Calendar, Clock, Edit2, Eye, Trash2, Tag, FileText, Settings2, RefreshCcw } from 'lucide-react'
+import { Calendar, Clock, Edit2, Eye, Trash2, Tag, FileText, Settings2, RefreshCcw, ArrowRight, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
-import { format } from 'date-fns'
+import { format, parseISO, isValid } from 'date-fns'
 import { ptBR, es, enUS } from 'date-fns/locale'
+import { formatFieldValue, getNestedValue } from '@/lib/formatters'
 import { motion } from 'framer-motion'
 
 const colors = [
@@ -34,6 +35,12 @@ interface DynamicTimelineProps {
   onDelete?: (row: any) => void
   onRefresh?: () => void
   dictionary?: any
+  relationalOptions?: Record<string, any[]>
+  onLoadMore?: () => void
+  hasMore?: boolean
+  totalRecords?: number
+  direction?: 'horizontal' | 'vertical'
+  onDirectionChange?: (dir: 'horizontal' | 'vertical') => void
 }
 
 export default function DynamicTimeline({
@@ -44,7 +51,13 @@ export default function DynamicTimeline({
   onEdit,
   onDelete,
   onRefresh,
-  dictionary
+  dictionary,
+  relationalOptions = {},
+  onLoadMore,
+  hasMore,
+  totalRecords,
+  direction = 'vertical',
+  onDirectionChange
 }: DynamicTimelineProps) {
   const { t, language } = useI18n()
 
@@ -69,33 +82,24 @@ export default function DynamicTimeline({
   const descField = timelineConfig.desc_field ? getDateFieldKey(timelineConfig.desc_field) : null
   const iconField = timelineConfig.icon_field ? getDateFieldKey(timelineConfig.icon_field) : null
 
-  const [direction, setDirection] = useState(timelineConfig.layout_direction || 'vertical')
+  const titleFieldObj = fields.find(f => f.db_column_name === titleField)
+  const descFieldObj = descField ? fields.find(f => f.db_column_name === descField) : null
+  const iconFieldObj = iconField ? fields.find(f => f.db_column_name === iconField) : null
+
   const [mode, setMode] = useState(timelineConfig.layout_mode || 'alternating')
   const [style, setStyle] = useState(timelineConfig.layout_style || 'cards')
   const [animated, setAnimated] = useState(timelineConfig.animated !== false)
   const [scale, setScale] = useState(timelineConfig.card_scale ?? 1.0)
 
   useEffect(() => {
-    setDirection(timelineConfig.layout_direction || 'vertical')
     setMode(timelineConfig.layout_mode || 'alternating')
     setStyle(timelineConfig.layout_style || 'cards')
     setAnimated(timelineConfig.animated !== false)
     setScale(timelineConfig.card_scale ?? 1.0)
   }, [timelineConfig])
 
-  // Ordenar dados
-  // Vertical e Horizontal: mais antigo primeiro (ascending)
-  // Para que a linha do tempo seja lida na ordem cronológica (Cima -> Baixo ou Esquerda -> Direita)
-  // Remover possíveis duplicatas que venham de JOINs multiplicados
-  const uniqueData = data.filter((item, index, self) => 
-    index === self.findIndex((t) => (t._key || t.id || t.ID) === (item._key || item.id || item.ID))
-  )
-
-  const sortedData = [...uniqueData].sort((a, b) => {
-    const dateA = new Date(a[dateField])
-    const dateB = new Date(b[dateField])
-    return dateA.getTime() - dateB.getTime() // Mais antigo primeiro (Cronológico)
-  })
+  // Dados sem manipulação de ordenação para refletir o backend
+  const sortedData = data
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return ''
@@ -305,8 +309,10 @@ export default function DynamicTimeline({
             <label className="text-[10px] font-bold text-neutral-500 uppercase">Direção:</label>
             <select 
               value={direction} 
-              onChange={e => setDirection(e.target.value as any)}
-              className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold focus:outline-none"
+              onChange={(e) => {
+                if (onDirectionChange) onDirectionChange(e.target.value as 'horizontal' | 'vertical')
+              }}
+              className="bg-transparent text-indigo-600 outline-none cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 p-1 rounded transition-colors text-xs font-bold focus:outline-none"
             >
               <option value="vertical">Vertical</option>
               <option value="horizontal">Horizontal</option>
@@ -395,10 +401,13 @@ export default function DynamicTimeline({
             const isEven = index % 2 === 0
             const primaryKey = item._key || item.id || item.ID || index
             
-            const rawDate = item[dateField]
-            const title = item[titleField] || 'Sem Título'
-            const desc = descField ? item[descField] : null
-            const iconStatus = iconField ? item[iconField] : null
+            const rawDate = getNestedValue(item, dateField)
+            const titleValue = getNestedValue(item, titleField)
+            const title = formatFieldValue(titleValue, titleFieldObj, relationalOptions) || 'Sem Título'
+            const descValue = descField ? getNestedValue(item, descField) : null
+            const desc = descField ? formatFieldValue(descValue, descFieldObj, relationalOptions) : null
+            const iconStatusValue = iconField ? getNestedValue(item, iconField) : null
+            const iconStatus = iconField ? formatFieldValue(iconStatusValue, iconFieldObj, relationalOptions) : null
             const itemColor = colors[index % colors.length]
             const nextColor = index < sortedData.length - 1 ? colors[(index + 1) % colors.length] : 'transparent'
 
@@ -528,10 +537,13 @@ export default function DynamicTimeline({
           const isEven = index % 2 === 0
           const primaryKey = item._key || item.id || item.ID || index
           
-          const rawDate = item[dateField]
-          const title = item[titleField] || 'Sem Título'
-          const desc = descField ? item[descField] : null
-          const iconStatus = iconField ? item[iconField] : null
+          const rawDate = getNestedValue(item, dateField)
+          const titleValue = getNestedValue(item, titleField)
+          const title = formatFieldValue(titleValue, titleFieldObj, relationalOptions) || 'Sem Título'
+          const descValue = descField ? getNestedValue(item, descField) : null
+          const desc = descField ? formatFieldValue(descValue, descFieldObj, relationalOptions) : null
+          const iconStatusValue = iconField ? getNestedValue(item, iconField) : null
+          const iconStatus = iconField ? formatFieldValue(iconStatusValue, iconFieldObj, relationalOptions) : null
           const itemColor = colors[index % colors.length]
           const nextColor = index < sortedData.length - 1 ? colors[(index + 1) % colors.length] : 'transparent'
 
@@ -674,10 +686,31 @@ export default function DynamicTimeline({
             <h3 className="text-lg font-bold text-neutral-400 dark:text-neutral-500">Nenhum registro encontrado</h3>
           </div>
         )}
+        </div>
       </div>
+      )}
+
+      {hasMore && onLoadMore && (
+        <div className={cn("flex justify-center mt-12 mb-4", direction === 'horizontal' ? "w-full min-w-[200px] shrink-0 self-center" : "w-full")}>
+          <button 
+            onClick={onLoadMore}
+            className="flex flex-col items-center justify-center gap-2 px-8 py-4 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-indigo-600 dark:text-indigo-400 border-2 border-indigo-100 dark:border-indigo-900/50 rounded-2xl shadow-xl shadow-indigo-500/10 hover:shadow-indigo-500/20 transition-all hover:-translate-y-1 group"
+          >
+            <div className="bg-indigo-100 dark:bg-indigo-900/50 p-2 rounded-full group-hover:scale-110 transition-transform">
+              {direction === 'horizontal' ? <ArrowRight className="w-5 h-5" /> : <ArrowDown className="w-5 h-5" />}
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="font-black tracking-widest text-[11px] uppercase">
+                {dictionary?.runtime?.load_more_records || 'Carregar mais registros'}
+              </span>
+              <span className="text-[10px] text-neutral-400 font-medium">
+                ({data.length} de {totalRecords})
+              </span>
+            </div>
+          </button>
+        </div>
+      )}
     </div>
-        )}
-      </div>
-    </div>
+  </div>
   )
 }

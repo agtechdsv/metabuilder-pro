@@ -14,6 +14,7 @@ import {
 import { useI18n } from '@/i18n/I18nContext'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/utils/supabase/client'
+import { formatFieldValue } from '@/lib/formatters'
 
 interface DynamicMindMapProps {
   data: any[]
@@ -30,6 +31,7 @@ interface DynamicMindMapProps {
   project?: any
   tunnelChannel?: any
   isTunnelReady?: boolean
+  relationalOptions?: Record<string, any[]>
 }
 
 // Componente interno para Tooltip Estilizada (Multi-Tema)
@@ -81,7 +83,8 @@ export default function DynamicMindMap({
   models = [],
   project,
   tunnelChannel,
-  isTunnelReady
+  isTunnelReady,
+  relationalOptions = {}
 }: DynamicMindMapProps) {
   const { t, language } = useI18n()
   const localeStr = language === 'pt' ? 'pt-BR' : language === 'en' ? 'en-US' : 'es-ES'
@@ -92,31 +95,7 @@ export default function DynamicMindMap({
     if (!model) return value;
     const field = model.fields?.find((f: any) => f.db_column_name === fieldName);
     if (!field) return value;
-
-    if (field.data_type === 'date' || field.data_type === 'timestamp' || field.data_type === 'timestamptz' || (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value))) {
-      try {
-        const date = new Date(value);
-        if (!isNaN(date.getTime())) {
-          return new Intl.DateTimeFormat(localeStr, { 
-            dateStyle: 'short', 
-            timeStyle: (field.data_type === 'timestamp' || field.data_type === 'timestamptz' || value.includes('T')) ? 'short' : undefined 
-          }).format(date);
-        }
-      } catch (e) {}
-    }
-
-    if (field.data_type === 'numeric' || field.data_type === 'decimal' || field.data_type === 'float' || field.data_type === 'float8' || field.data_type === 'money') {
-      try {
-        const num = Number(value);
-        if (!isNaN(num)) {
-          return new Intl.NumberFormat(localeStr, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-          }).format(num);
-        }
-      } catch (e) {}
-    }
-    return value;
+    return formatFieldValue(value, field, relationalOptions);
   };
   const supabase = createClient()
   const [zoom, setZoom] = useState(1)

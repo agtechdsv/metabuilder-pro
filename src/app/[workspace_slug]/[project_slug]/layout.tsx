@@ -160,16 +160,23 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   // Se o projeto não tiver navegação, vamos garantir que seja um array vazio
   const rawNavigation = project.navigation || []
 
-  // 3. Busca todas as views do projeto para mapeamento de slug -> view_id
+  // 3. Busca todas as views do projeto para mapeamento de slug -> view_id e estado de publicação
   const { data: uiViews } = await supabase
     .from('ui_views')
-    .select('id, slug')
+    .select('id, slug, layout_config')
     .eq('project_id', project.id)
 
   const viewSlugToIdMap = new Map<string, string>()
+  const unpublishedViewIds: string[] = []
+  const unpublishedViewSlugs: string[] = []
+
   if (uiViews) {
     uiViews.forEach(v => {
       if (v.slug) viewSlugToIdMap.set(v.slug.toLowerCase(), v.id)
+      if (!v.layout_config || Object.keys(v.layout_config).length === 0) {
+        unpublishedViewIds.push(v.id)
+        if (v.slug) unpublishedViewSlugs.push(v.slug.toLowerCase())
+      }
     })
   }
 
@@ -272,6 +279,8 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
         workspaceSlug={workspace_slug}
         projectSlug={project_slug}
         navigation={navigation}
+        unpublishedViewIds={unpublishedViewIds}
+        unpublishedViewSlugs={unpublishedViewSlugs}
         isNoAuth={isNoAuth}
       >
         {children}

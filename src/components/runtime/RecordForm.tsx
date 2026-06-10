@@ -667,11 +667,11 @@ export default function RecordForm({
       const tokens = field.config?.content?.formula_tokens || [];
       if (tokens.length === 0) return;
 
-      const mainModelName = project?.models?.find((m: any) => m.id === masterModelId)?.db_table_name;
+      const mainModelName = masterModelName || project?.models?.find((m: any) => m.id === masterModelId)?.db_table_name;
       const isMasterZone = !field.model_name || !mainModelName || field.model_name.toLowerCase() === mainModelName.toLowerCase();
 
       if (isMasterZone) {
-        const computedValue = evaluateFormula(tokens, formData, detailsData);
+        const computedValue = evaluateFormula(tokens, formData, detailsData, formData, mainModelName);
         // Evita loop infinito atualizando apenas se o valor realmente mudou
         if (computedValue !== null && computedValue !== undefined && String(computedValue) !== String(formData[field.db_column_name])) {
           newFormData[field.db_column_name] = computedValue;

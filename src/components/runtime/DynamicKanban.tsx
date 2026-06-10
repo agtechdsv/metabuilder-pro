@@ -25,6 +25,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MoreVertical, Calendar, User, Tag, GripVertical, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatFieldValue } from '@/lib/formatters'
 
 interface DynamicKanbanProps {
   data: any[]
@@ -37,6 +38,7 @@ interface DynamicKanbanProps {
   dictionary?: any
   kanbanGroupDisplayField?: string
   kanbanCardFields?: string[]
+  relationalOptions?: Record<string, any[]>
 }
 
 export default function DynamicKanban({
@@ -49,7 +51,8 @@ export default function DynamicKanban({
   onDelete,
   dictionary = {},
   kanbanGroupDisplayField,
-  kanbanCardFields
+  kanbanCardFields,
+  relationalOptions = {}
 }: DynamicKanbanProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   
@@ -146,6 +149,7 @@ export default function DynamicKanban({
             onView={onView}
             onEdit={onEdit}
             onDelete={onDelete}
+            relationalOptions={relationalOptions}
           />
           )
         })}
@@ -157,6 +161,7 @@ export default function DynamicKanban({
               item={data.find(item => String(item._key || item.id || item.ID) === activeId)}
               fields={fields}
               isOverlay
+              relationalOptions={relationalOptions}
             />
           ) : null}
         </DragOverlay>
@@ -165,7 +170,7 @@ export default function DynamicKanban({
   )
 }
 
-function KanbanColumn({ id, title, items, fields, onView, onEdit, onDelete }: any) {
+function KanbanColumn({ id, title, items, fields, onView, onEdit, onDelete, relationalOptions }: any) {
   return (
     <div className="flex-shrink-0 w-80 flex flex-col bg-neutral-50/50 dark:bg-neutral-900/30 border border-neutral-200/50 dark:border-neutral-800/50 rounded-[2rem] overflow-hidden h-full">
       {/* Column Header */}
@@ -201,6 +206,7 @@ function KanbanColumn({ id, title, items, fields, onView, onEdit, onDelete }: an
                 onView={onView}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                relationalOptions={relationalOptions}
               />
             ))}
           </AnimatePresence>
@@ -222,7 +228,7 @@ function getNestedValue(obj: any, path: string) {
   return path.split('.').reduce((acc, part) => acc && acc[part], obj)
 }
 
-function KanbanCard({ id, item, fields, isOverlay, onView, onEdit, onDelete }: any) {
+function KanbanCard({ id, item, fields, isOverlay, onView, onEdit, onDelete, relationalOptions }: any) {
   const {
     attributes,
     listeners,
@@ -273,7 +279,7 @@ function KanbanCard({ id, item, fields, isOverlay, onView, onEdit, onDelete }: a
               }}
               className="font-bold text-neutral-900 dark:text-white leading-tight"
             >
-              {getNestedValue(item, mainField?.db_column_name) || 'Untitled'}
+              {formatFieldValue(getNestedValue(item, mainField?.db_column_name), mainField, relationalOptions, mainZoneConfig) || 'Untitled'}
             </h4>
             {subField && (
               <span 
@@ -287,7 +293,7 @@ function KanbanCard({ id, item, fields, isOverlay, onView, onEdit, onDelete }: a
                   !subZoneConfig.content?.color && "text-neutral-400"
                 )}
               >
-                {getNestedValue(item, subField.db_column_name)}
+                {formatFieldValue(getNestedValue(item, subField.db_column_name), subField, relationalOptions, subZoneConfig)}
               </span>
             )}
           </div>
@@ -333,7 +339,7 @@ function KanbanCard({ id, item, fields, isOverlay, onView, onEdit, onDelete }: a
                     !fZoneConfig.content?.color && "text-neutral-600 dark:text-neutral-300"
                   )}
                  >
-                   {getNestedValue(item, f.db_column_name)}
+                   {formatFieldValue(getNestedValue(item, f.db_column_name), f, relationalOptions, fZoneConfig)}
                  </span>
               </div>
             )

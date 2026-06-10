@@ -13,6 +13,7 @@ import {
   Layers,
   Sparkles
 } from 'lucide-react'
+import { formatFieldValue } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -31,6 +32,7 @@ interface DynamicSchedulerProps {
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
   dictionary?: any
+  relationalOptions?: Record<string, any[]>
 }
 
 export default function DynamicScheduler({
@@ -42,7 +44,8 @@ export default function DynamicScheduler({
   onView,
   onEdit,
   onDelete,
-  dictionary = {}
+  dictionary = {},
+  relationalOptions = {}
 }: DynamicSchedulerProps) {
   const [currentView, setCurrentView] = useState<'month' | 'week' | 'day'>('month')
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
@@ -68,13 +71,15 @@ export default function DynamicScheduler({
 
   // Eventos formatados para o calendário
   const events = useMemo(() => {
+    const titleFieldObj = fields.find(f => f.db_column_name === titleCol)
     return data.map(item => {
       const start = parseEventDate(getNestedValue(item, startCol))
       const end = parseEventDate(getNestedValue(item, endCol)) || start
+      const rawTitle = getNestedValue(item, titleCol)
       return {
         raw: item,
         id: String(item._key || item.id || item.ID),
-        title: String(getNestedValue(item, titleCol) || 'Sem Título'),
+        title: formatFieldValue(rawTitle, titleFieldObj, relationalOptions) || 'Sem Título',
         start,
         end,
         color: String(getNestedValue(item, colorCol) || 'default')

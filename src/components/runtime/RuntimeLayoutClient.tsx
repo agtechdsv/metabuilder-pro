@@ -12,6 +12,8 @@ interface RuntimeLayoutClientProps {
   workspaceSlug: string
   projectSlug: string
   navigation: any[]
+  unpublishedViewIds?: string[]
+  unpublishedViewSlugs?: string[]
   isNoAuth?: boolean
 }
 
@@ -21,6 +23,8 @@ export function RuntimeLayoutClient({
   workspaceSlug, 
   projectSlug, 
   navigation,
+  unpublishedViewIds = [],
+  unpublishedViewSlugs = [],
   isNoAuth = false
 }: RuntimeLayoutClientProps) {
   const pathname = usePathname()
@@ -142,13 +146,35 @@ export function RuntimeLayoutClient({
     )
   }
 
+  const isPreview = searchParams.get('preview') === 'draft'
+
+  // Ocultar menus de views nunca publicadas, a menos que estejamos em modo preview
+  const filterUnpublished = (items: any[]): any[] => {
+    if (isPreview || (!unpublishedViewIds.length && !unpublishedViewSlugs.length)) return items
+    
+    return items.map(item => {
+      if (item.type === 'folder' && item.children) {
+        const filteredChildren = filterUnpublished(item.children)
+        if (filteredChildren.length === 0) return null
+        return { ...item, children: filteredChildren }
+      }
+      if (item.type === 'view') {
+        if (item.view_id && unpublishedViewIds.includes(item.view_id)) return null
+        if (item.target && unpublishedViewSlugs.includes(item.target.toLowerCase())) return null
+      }
+      return item
+    }).filter(Boolean)
+  }
+
+  const activeNavigation = filterUnpublished(navigation)
+
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-[#050505] transition-all duration-500 ease-in-out">
       <DynamicSidebar 
         project={project}
         workspaceSlug={workspaceSlug}
         projectSlug={projectSlug}
-        navigation={navigation}
+        navigation={activeNavigation}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
       />
@@ -158,7 +184,7 @@ export function RuntimeLayoutClient({
           project={project}
           isCollapsed={isCollapsed}
           setIsCollapsed={setIsCollapsed}
-          navigation={navigation}
+          navigation={activeNavigation}
           workspaceSlug={workspaceSlug}
           projectSlug={projectSlug}
         />

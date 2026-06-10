@@ -82,13 +82,14 @@ interface ViewPageContentProps {
     allow_runtime_edit: boolean
   }
   exportFormats?: string[]
-  galleryClickBehavior?: 'lightbox' | 'thumbnail'
+  galleryClickBehavior?: 'fullscreen' | 'thumbnail'
   customActions?: any[]
   customSlots?: any[]
   isAutomationsEnabled?: boolean
   formHeaderTitle?: string
   formHeaderSubtitleField?: string
   projectRelations?: any[]
+  initialItemsPerPage?: number
 }
 
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
@@ -141,7 +142,8 @@ export default function ViewPageContent({
   isAutomationsEnabled = false,
   formHeaderTitle,
   formHeaderSubtitleField,
-  projectRelations = []
+  projectRelations = [],
+  initialItemsPerPage
 }: ViewPageContentProps) {
   const router = useRouter()
   const { t } = useI18n()
@@ -2104,6 +2106,7 @@ export default function ViewPageContent({
               customActions={gridCustomActions}
               onCustomAction={handleCustomAction}
               projectRelations={projectRelations}
+              initialItemsPerPage={initialItemsPerPage}
             />
           </>
         )}

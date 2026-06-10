@@ -307,6 +307,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       details_item_titles: {} as Record<string, string>,
       export_formats: ['xlsx', 'csv', 'json'],
       gallery_click_behavior: 'lightbox',
+      items_per_page: undefined as number | undefined,
       form_header_title: '',
       form_header_subtitle_field: '',
       scheduler_config: {
@@ -903,6 +904,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           details_item_titles: sourceData.layout_config?.details_item_titles || {},
           export_formats: sourceData.layout_config?.export_formats || ['xlsx', 'csv', 'json'],
           gallery_click_behavior: sourceData.layout_config?.gallery_click_behavior || 'lightbox',
+          items_per_page: sourceData.layout_config?.items_per_page || undefined,
           form_header_title: sourceData.layout_config?.form_header_title || '',
           form_header_subtitle_field: sourceData.layout_config?.form_header_subtitle_field || '',
           scheduler_config: sourceData.layout_config?.scheduler_config || {
@@ -3187,6 +3189,79 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
           </div>
 
           <div className="flex-1 space-y-10 min-w-0">
+            {/* ZONA: CONFIGURAÇÕES GERAIS */}
+            <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
+                    <Database className="w-4 h-4" />
+                  </div>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Configuração de Padrões</h4>
+                </div>
+              </div>
+
+              <div className={cn("grid grid-cols-1 gap-4", config.logic_type === 'timeline' ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Registros por Página (LIMIT)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="500"
+                    placeholder="Ex: 50"
+                    value={config.layout_config.items_per_page || ''}
+                    onChange={e => setConfig({
+                      ...config,
+                      layout_config: { ...config.layout_config, items_per_page: e.target.value ? parseInt(e.target.value, 10) : undefined }
+                    })}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                  />
+                  <p className="text-[10px] text-neutral-400 font-medium italic ml-1">Deixe em branco para usar o padrão do sistema.</p>
+                </div>
+                
+                {config.logic_type === 'timeline' && (
+                  <>
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Ordem (Horizontal)</label>
+                      <select
+                        value={(config.layout_config as any).timeline_config?.timeline_order_horizontal || 'asc'}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: {
+                            ...config.layout_config,
+                            timeline_config: { ...(config.layout_config as any).timeline_config, timeline_order_horizontal: e.target.value }
+                          }
+                        })}
+                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      >
+                        <option value="asc">Mais Antigo Primeiro (ASC)</option>
+                        <option value="desc">Mais Recente Primeiro (DESC)</option>
+                      </select>
+                      <p className="text-[10px] text-neutral-400 font-medium italic ml-1">Ordem ao exibir em tela horizontal.</p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Ordem (Vertical)</label>
+                      <select
+                        value={(config.layout_config as any).timeline_config?.timeline_order_vertical || 'asc'}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: {
+                            ...config.layout_config,
+                            timeline_config: { ...(config.layout_config as any).timeline_config, timeline_order_vertical: e.target.value }
+                          }
+                        })}
+                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
+                      >
+                        <option value="asc">Mais Antigo Primeiro (ASC)</option>
+                        <option value="desc">Mais Recente Primeiro (DESC)</option>
+                      </select>
+                      <p className="text-[10px] text-neutral-400 font-medium italic ml-1">Ordem ao exibir em tela vertical.</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
             {/* ZONA: KANBAN CONFIG */}
             {config.logic_type === 'kanban' && (
               <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
@@ -5443,6 +5518,10 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
               config.logic_type === 'master_detail' ||
               config.logic_type === 'scheduler' ||
               config.logic_type === 'galeria' ||
+              config.logic_type === 'timeline' ||
+              config.logic_type === 'gantt' ||
+              config.logic_type === 'blueprint' ||
+              config.logic_type === 'map' ||
               config.logic_type === 'personalizado' ||
               config.logic_type === 'analytics') && (
                 <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] space-y-3 shadow-sm overflow-hidden transition-all duration-300">
@@ -5917,6 +5996,115 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                       <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.content_config')}</h3>
                     </div>
                     <div className="space-y-4">
+                      {editingFieldZone === 'filter' && (
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Operador de Filtro (Busca)</label>
+                            <select
+                              value={currentFieldMeta.content?.filter_operator || 'ilike'}
+                              onChange={e => updateMeta('content', 'filter_operator', e.target.value)}
+                              className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none cursor-pointer focus:border-indigo-500 transition-colors"
+                            >
+                              <option value="ilike">Contém (Busca por texto - Padrão)</option>
+                              <option value="=">Igual (=)</option>
+                              <option value=">">Maior que (&gt;)</option>
+                              <option value=">=">Maior ou igual (&gt;=)</option>
+                              <option value="<">Menor que (&lt;)</option>
+                              <option value="<=">Menor ou igual (&lt;=)</option>
+                              <option value="!=">Diferente (!=)</option>
+                              <option value="between">Intervalo (De / Até)</option>
+                            </select>
+                          </div>
+
+                          {(() => {
+                            const isDateField = models.some((m: any) => m.fields?.some((f: any) => (f.id === editingFieldId || f.db_column_name === editingFieldId) && (f.data_type?.includes('date') || f.data_type?.includes('timestamp'))));
+                            const inputType = isDateField ? 'date' : 'text';
+
+                            return (
+                              <div className="space-y-4">
+                                {isDateField && (
+                                  <div className="space-y-2">
+                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Tipo de Valor Padrão</label>
+                                    <select
+                                      value={currentFieldMeta.content?.default_value_type || 'fixed'}
+                                      onChange={e => updateMeta('content', 'default_value_type', e.target.value)}
+                                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+                                    >
+                                      <option value="fixed">Fixo (Escolher Data)</option>
+                                      <option value="relative">Dinâmico (Últimos...)</option>
+                                    </select>
+                                  </div>
+                                )}
+
+                                {currentFieldMeta.content?.default_value_type === 'relative' && isDateField ? (
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-2">
+                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Quantidade</label>
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        placeholder="Ex: 30"
+                                        value={currentFieldMeta.content?.default_value_relative_number || ''}
+                                        onChange={e => updateMeta('content', 'default_value_relative_number', e.target.value)}
+                                        className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Unidade</label>
+                                      <select
+                                        value={currentFieldMeta.content?.default_value_relative_unit || 'days'}
+                                        onChange={e => updateMeta('content', 'default_value_relative_unit', e.target.value)}
+                                        className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+                                      >
+                                        <option value="hours">Hora(s)</option>
+                                        <option value="days">Dia(s)</option>
+                                        <option value="weeks">Semana(s)</option>
+                                        <option value="months">Meses</option>
+                                        <option value="years">Ano(s)</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                ) : currentFieldMeta.content?.filter_operator === 'between' ? (
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-2">
+                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor Padrão (De)</label>
+                                      <input
+                                        type={inputType}
+                                        placeholder="Ex: 2024-01-01"
+                                        value={currentFieldMeta.content?.default_value_start || ''}
+                                        onChange={e => updateMeta('content', 'default_value_start', e.target.value)}
+                                        className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor Padrão (Até)</label>
+                                      <input
+                                        type={inputType}
+                                        placeholder="Ex: 2024-12-31"
+                                        value={currentFieldMeta.content?.default_value_end || ''}
+                                        onChange={e => updateMeta('content', 'default_value_end', e.target.value)}
+                                        className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+                                      />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-2">
+                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor Padrão Inicial</label>
+                                    <input
+                                      type={inputType}
+                                      placeholder="Valor que inicia na busca"
+                                      value={currentFieldMeta.content?.default_value || ''}
+                                      onChange={e => updateMeta('content', 'default_value', e.target.value)}
+                                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      )}
+
                       <div className="space-y-2">
                         <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.mask')}</label>
                         <div className="flex flex-col gap-2">

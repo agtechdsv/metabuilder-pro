@@ -49,13 +49,14 @@ interface ViewContainerProps {
   onFiltersChange?: (filters: Record<string, string>) => void
   tunnelChannel?: any
   isTunnelReady?: boolean
-  galleryClickBehavior?: 'lightbox' | 'thumbnail'
+  galleryClickBehavior?: 'fullscreen' | 'thumbnail'
   galleryConfig?: any
   customActions?: any[]
   externalRefreshTrigger?: number
   onCustomAction?: (action: any, row?: any) => void
   projectRelations?: any[]
   detailsDisplayMode?: Record<string, string>
+  initialItemsPerPage?: number
 }
 
 import DynamicCardList from './DynamicCardList'
@@ -163,7 +164,8 @@ export default function ViewContainer({
   customActions = [],
   externalRefreshTrigger = 0,
   onCustomAction,
-  projectRelations = []
+  projectRelations = [],
+  initialItemsPerPage
 }: ViewContainerProps) {
   const { toast } = useToast()
   const router = useRouter()
@@ -324,8 +326,45 @@ export default function ViewContainer({
       sessionStorage.setItem(`metabuilder_viewmode_${projectId}_${modelName}`, mode);
     }
   }
+  const computeDynamicDate = (num: number, unit: string) => {
+    const d = new Date()
+    if (unit === 'hours') d.setHours(d.getHours() - num)
+    if (unit === 'days') d.setDate(d.getDate() - num)
+    if (unit === 'weeks') d.setDate(d.getDate() - (num * 7))
+    if (unit === 'months') d.setMonth(d.getMonth() - num)
+    if (unit === 'years') d.setFullYear(d.getFullYear() - num)
+    return d.toISOString().split('T')[0]
+  }
+
   const [searchQuery, setSearchQuery] = useState('')
-  const [internalFilters, setInternalFilters] = useState<Record<string, any>>({})
+  const [internalFilters, setInternalFilters] = useState<Record<string, any>>(() => {
+    const defaults: Record<string, any> = {}
+    if (filterFields && filterFields.length > 0) {
+      filterFields.forEach((f: any) => {
+        const zc = f.config?.filter_config || f.config || {}
+        const op = zc.content?.filter_operator || 'ilike'
+        
+        if (zc.content?.default_value_type === 'relative') {
+          const num = parseInt(zc.content.default_value_relative_number || '1', 10)
+          const unit = zc.content.default_value_relative_unit || 'days'
+          const computedDate = computeDynamicDate(num, unit)
+          
+          if (op === 'between') {
+            defaults[`${f.db_column_name}_start`] = computedDate
+            defaults[`${f.db_column_name}_end`] = new Date().toISOString().split('T')[0]
+          } else {
+            defaults[f.db_column_name] = computedDate
+          }
+        } else if (op === 'between') {
+          if (zc.content?.default_value_start) defaults[`${f.db_column_name}_start`] = zc.content.default_value_start
+          if (zc.content?.default_value_end) defaults[`${f.db_column_name}_end`] = zc.content.default_value_end
+        } else {
+          if (zc.content?.default_value) defaults[f.db_column_name] = zc.content.default_value
+        }
+      })
+    }
+    return defaults
+  })
   const filterValues = { ...(externalFilters || {}), ...internalFilters }
   
   const setFilterValues = (newVal: any) => {
@@ -502,13 +541,21 @@ export default function ViewContainer({
   // podemos inicializar direto do sessionStorage sem medo de Hydration Mismatch.
   const [data, setData] = useState<any[]>(() => getCachedData(`${projectId}:${modelName}`) || [])
   const [isLoading, setIsLoading] = useState(!getCachedData(`${projectId}:${modelName}`))
+  const [isFetchingBackground, setIsFetchingBackground] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Paginação e Ordenação
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(viewMode === 'list' ? 15 : 10)
+  const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage || (viewMode === 'list' ? 15 : 10))
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null)
   const [totalServerRows, setTotalServerRows] = useState<number>(0)
+  const [timelineDirection, setTimelineDirection] = useState<'horizontal' | 'vertical'>('vertical')
+
+  useEffect(() => {
+    if (timelineConfig?.layout_direction) {
+      setTimelineDirection(timelineConfig.layout_direction)
+    }
+  }, [timelineConfig?.layout_direction])
 
   // Recupera do cache inicial se necessário (redundante com useState inicial mas bom para sincronia)
   useEffect(() => {
@@ -519,14 +566,18 @@ export default function ViewContainer({
     }
   }, [projectId, modelName])
 
+  // Sincroniza itemsPerPage ao inicializar ou mudar de modo, respeitando a configuração do Studio
+  useEffect(() => {
+    if (initialItemsPerPage) {
+      setItemsPerPage(initialItemsPerPage)
+    } else {
+      setItemsPerPage(viewMode === 'list' ? 15 : 10)
+    }
+    setCurrentPage(1)
+  }, [viewMode, initialItemsPerPage])
+
   // Cache global para evitar fetch no re-mount por troca de idioma
   const [hasFetchedInitial, setHasFetchedInitial] = useState(false)
-
-  // Atualiza itemsPerPage padrão ao mudar de modo, se o usuário ainda não tiver mudado manualmente
-  useEffect(() => {
-    setItemsPerPage(viewMode === 'list' ? 15 : 10)
-    setCurrentPage(1)
-  }, [viewMode])
 
   const supabase = createClient()
 
@@ -562,9 +613,6 @@ export default function ViewContainer({
            activeQueriesRef.current.delete(qId)
            return
         }
-
-        const currentConfigs = queryConfigsRef.current.get(qId)
-        const shouldAppend = currentConfigs?.append
         
         let resultData = payload.payload.data || []
         
@@ -627,6 +675,7 @@ export default function ViewContainer({
         setError(payload.payload.error)
       }
       setIsLoading(false)
+      setIsFetchingBackground(false)
       activeQueriesRef.current.delete(qId)
     }
 
@@ -665,6 +714,7 @@ export default function ViewContainer({
       );
       setData(uniqueCached)
       setIsLoading(false)
+      setIsFetchingBackground(false)
       return
     }
 
@@ -672,7 +722,11 @@ export default function ViewContainer({
     queryConfigsRef.current.set(queryId, { append })
     activeQueriesRef.current.add(queryId)
     
-    if (!cached || append) setIsLoading(true)
+    if (!cached || data.length === 0 || append) {
+      setIsLoading(true)
+    } else {
+      setIsFetchingBackground(true)
+    }
     setError(null)
     
     console.log(`[MetaBuilder] Solicitando dados via Túnel (${queryId})...`, { table: modelName })
@@ -921,18 +975,31 @@ export default function ViewContainer({
             const columns = selectExprs.length > 0 ? selectExprs.join(', ') : '*'
           
           const currentOffset = append ? data.length : (currentPage - 1) * itemsPerPage;
+          let orderSql = `"${modelName}"."${primaryKeyName}" DESC`;
+          if (logicType === 'timeline' && timelineConfig?.date_field) {
+            const dateFieldObj = displayFields.find((f: any) => f.id === timelineConfig.date_field);
+            const dateColumnName = dateFieldObj ? dateFieldObj.db_column_name : timelineConfig.date_field;
+            
+            const timelineOrderHorizontal = timelineConfig.timeline_order_horizontal || 'asc';
+            const timelineOrderVertical = timelineConfig.timeline_order_vertical || 'asc';
+            const orderConf = timelineDirection === 'horizontal' ? timelineOrderHorizontal : timelineOrderVertical;
+            
+            orderSql = `"${modelName}"."${dateColumnName}" ${orderConf.toUpperCase()}, "${modelName}"."${primaryKeyName}" DESC`;
+          }
+
           let rawQuery = '';
-          if (joins && joins.length > 0) {
+          const joinsSql = buildJoinsSql(joins);
+          if (joinsSql) {
             rawQuery = `SELECT ${columns} FROM (
-    SELECT "${modelName}".* FROM "${modelName}"
-    ${buildJoinsSql(joins)}
+    SELECT DISTINCT "${modelName}".* FROM "${modelName}"
+    ${joinsSql}
     __WHERE_PLACEHOLDER__
-    GROUP BY "${modelName}"."${primaryKeyName}"
-    ORDER BY "${modelName}"."${primaryKeyName}" DESC
+    ORDER BY ${orderSql}
     LIMIT ${itemsPerPage} OFFSET ${currentOffset}
-  ) AS "${modelName}" ${buildJoinsSql(joins)}`
+  ) AS "${modelName}" ${joinsSql}
+  ORDER BY ${orderSql}`
           } else {
-            rawQuery = `SELECT ${columns} FROM "${modelName}" __WHERE_PLACEHOLDER__ ORDER BY "${primaryKeyName}" DESC`
+            rawQuery = `SELECT ${columns} FROM "${modelName}" __WHERE_PLACEHOLDER__ ORDER BY ${orderSql}`
           }
 
           const currentModel = project?.models?.find((m: any) => m.db_table_name === modelName)
@@ -952,11 +1019,65 @@ export default function ViewContainer({
             offset: logicType === 'master_detail' ? null : currentOffset
           }
 
-          if (currentFilters && Object.keys(currentFilters).length > 0) {
-            payload.filters = currentFilters
+          const dynamicAdvancedFilters: any[] = []
+          const cleanFilters = { ...(currentFilters || {}) }
+
+          if (filterFields && filterFields.length > 0) {
+            filterFields.forEach((f: any) => {
+              const zoneConfig = f.config?.filter_config || f.config || {}
+              const op = zoneConfig.content?.filter_operator
+              if (op && op !== 'ilike') {
+                if (op === 'between') {
+                  const valStart = cleanFilters[`${f.db_column_name}_start`]
+                  const valEnd = cleanFilters[`${f.db_column_name}_end`]
+                  if (valStart && valEnd) {
+                    dynamicAdvancedFilters.push({
+                      field: f.db_column_name,
+                      operator: 'between',
+                      value: valStart,
+                      value2: valEnd,
+                      logic: 'AND'
+                    })
+                  } else if (valStart) {
+                    dynamicAdvancedFilters.push({
+                      field: f.db_column_name,
+                      operator: '>=',
+                      value: valStart,
+                      logic: 'AND'
+                    })
+                  } else if (valEnd) {
+                    dynamicAdvancedFilters.push({
+                      field: f.db_column_name,
+                      operator: '<=',
+                      value: valEnd,
+                      logic: 'AND'
+                    })
+                  }
+                  delete cleanFilters[`${f.db_column_name}_start`]
+                  delete cleanFilters[`${f.db_column_name}_end`]
+                } else {
+                  const val = cleanFilters[f.db_column_name]
+                  if (val) {
+                    dynamicAdvancedFilters.push({
+                      field: f.db_column_name,
+                      operator: op,
+                      value: val,
+                      logic: 'AND'
+                    })
+                    delete cleanFilters[f.db_column_name]
+                  }
+                }
+              }
+            })
           }
-          if (advancedStaticFilters && advancedStaticFilters.length > 0) {
-            payload.advancedFilters = advancedStaticFilters
+
+          const allAdvancedFilters = [...(advancedStaticFilters || []), ...dynamicAdvancedFilters]
+
+          if (Object.keys(cleanFilters).length > 0) {
+            payload.filters = cleanFilters
+          }
+          if (allAdvancedFilters.length > 0) {
+            payload.advancedFilters = allAdvancedFilters
           }
 
           // Count payload
@@ -968,16 +1089,17 @@ export default function ViewContainer({
             tableName: modelName,
             schemaName: actualSchemaName,
             action: 'count_records',
-            query: `SELECT COUNT(DISTINCT "${modelName}"."id") as total FROM "${modelName}" ${buildJoinsSql(joins)} __WHERE_PLACEHOLDER__`,
+            query: `SELECT COUNT(DISTINCT "${modelName}"."id") as total FROM "${modelName}" ${joinsSql} __WHERE_PLACEHOLDER__`,
             sql: '',
             token: project?.secret_token || 'test-token',
             joins: joins
           }
-          if (currentFilters && Object.keys(currentFilters).length > 0) {
-            countPayload.filters = currentFilters
+          
+          if (Object.keys(cleanFilters).length > 0) {
+            countPayload.filters = cleanFilters
           }
-          if (advancedStaticFilters && advancedStaticFilters.length > 0) {
-            countPayload.advancedFilters = advancedStaticFilters
+          if (allAdvancedFilters.length > 0) {
+            countPayload.advancedFilters = allAdvancedFilters
           }
 
           // Pequeno delay para garantir que o canal de broadcast esteja "quente"
@@ -1005,11 +1127,15 @@ export default function ViewContainer({
               if (prev) {
                 console.warn(`[MetaBuilder] Timeout na requisição ${queryId}`)
                 setError('Tempo limite excedido na requisição. Verifique sua conexão ou a configuração da tabela.')
-                return false
+                activeQueriesRef.current.delete(queryId)
               }
-              return prev
+              return false
             })
-          }, 10000)
+            setIsFetchingBackground(prev => {
+              if (prev) activeQueriesRef.current.delete(queryId)
+              return false
+            })
+          }, 15000)
       }, 100)
     }
 
@@ -1162,6 +1288,7 @@ export default function ViewContainer({
         );
         setData(uniqueCached)
         setIsLoading(false)
+        setIsFetchingBackground(false)
         // NÃO damos return! Deixamos prosseguir para fazer o fetch silencioso em background
       }
     }
@@ -1180,8 +1307,33 @@ export default function ViewContainer({
   }
 
   const handleClear = () => {
-    setFilterValues({})
-    fetchData(externalFilters || {}, true) // Limpar força o refresh, mantendo filtros externos (ex: chaves estrangeiras)
+    const defaults: Record<string, any> = {}
+    if (filterFields && filterFields.length > 0) {
+      filterFields.forEach((f: any) => {
+        const zc = f.config?.filter_config || f.config || {}
+        const op = zc.content?.filter_operator || 'ilike'
+        
+        if (zc.content?.default_value_type === 'relative') {
+          const num = parseInt(zc.content.default_value_relative_number || '1', 10)
+          const unit = zc.content.default_value_relative_unit || 'days'
+          const computedDate = computeDynamicDate(num, unit)
+          
+          if (op === 'between') {
+            defaults[`${f.db_column_name}_start`] = computedDate
+            defaults[`${f.db_column_name}_end`] = new Date().toISOString().split('T')[0]
+          } else {
+            defaults[f.db_column_name] = computedDate
+          }
+        } else if (op === 'between') {
+          if (zc.content?.default_value_start) defaults[`${f.db_column_name}_start`] = zc.content.default_value_start
+          if (zc.content?.default_value_end) defaults[`${f.db_column_name}_end`] = zc.content.default_value_end
+        } else {
+          if (zc.content?.default_value) defaults[f.db_column_name] = zc.content.default_value
+        }
+      })
+    }
+    setFilterValues(defaults)
+    fetchData({ ...(externalFilters || {}), ...defaults }, true) // Limpar força o refresh e restaura os valores padrão do Studio
   }
 
   // Cache global para evitar fetch no re-mount por troca de idioma
@@ -1203,7 +1355,7 @@ export default function ViewContainer({
     if (isTunnelReady) {
       fetchDataRef.current(currentFiltersRef.current, true)
     }
-  }, [currentPage, itemsPerPage])
+  }, [currentPage, itemsPerPage, timelineDirection])
 
   useEffect(() => {
     if (refreshTrigger > 0 && fetchDataRef.current) {
@@ -1274,6 +1426,22 @@ export default function ViewContainer({
               {action.label}
             </button>
           ))}
+        </div>
+
+        {/* Global Record Count Indicator */}
+        <div className="hidden md:flex flex-1 justify-center">
+          <div className="flex items-center text-[11px] font-medium text-neutral-500 bg-white/50 dark:bg-neutral-900/30 px-4 py-1.5 rounded-full border border-neutral-200/50 dark:border-neutral-800/50 shadow-sm backdrop-blur-sm transition-all hover:bg-white dark:hover:bg-neutral-900/50">
+            {isLoading && data.length === 0 ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500" />
+                {t('runtime.connecting') || 'Carregando...'}
+              </span>
+            ) : (
+              <span>
+                <span className="opacity-70">{t('runtime.showing', 'Exibindo')}</span> <span className="font-black text-indigo-600 dark:text-indigo-400 mx-1">{data.length}</span> <span className="opacity-70">{t('runtime.records_of', 'registros de um total de')}</span> <span className="font-black mx-1 text-neutral-700 dark:text-neutral-300">{totalServerRows}</span>
+              </span>
+            )}
+          </div>
         </div>
 
       {displayType === 'both' && (
@@ -1387,6 +1555,35 @@ export default function ViewContainer({
                         )
                       }
 
+                      if (zoneConfig.content?.filter_operator === 'between') {
+                        return (
+                          <div className="flex items-center gap-2 w-full">
+                            <div className="relative flex-1">
+                              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" />
+                              <input 
+                                type={fieldType === 'number' ? 'number' : fieldType === 'date' ? 'date' : 'text'}
+                                placeholder="De"
+                                value={filterValues[`${field.db_column_name}_start`] || ''}
+                                onChange={e => setFilterValues({ ...filterValues, [`${field.db_column_name}_start`]: e.target.value })}
+                                style={style}
+                                className={commonClasses}
+                              />
+                            </div>
+                            <span className="text-neutral-400 font-bold text-xs">-</span>
+                            <div className="relative flex-1">
+                              <input 
+                                type={fieldType === 'number' ? 'number' : fieldType === 'date' ? 'date' : 'text'}
+                                placeholder="Até"
+                                value={filterValues[`${field.db_column_name}_end`] || ''}
+                                onChange={e => setFilterValues({ ...filterValues, [`${field.db_column_name}_end`]: e.target.value })}
+                                style={style}
+                                className={cn(commonClasses, "pl-4")}
+                              />
+                            </div>
+                          </div>
+                        )
+                      }
+
                       return (
                         <>
                           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" />
@@ -1452,7 +1649,7 @@ export default function ViewContainer({
            <p className="text-red-500 font-bold">{error}</p>
         </div>
       ) : viewMode === 'list' ? (
-        <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-xl dark:shadow-none backdrop-blur-sm flex flex-col w-full">
+        <div className={cn("bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-xl dark:shadow-none backdrop-blur-sm flex flex-col w-full transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
           <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
             <table className="w-full text-left border-collapse min-w-[1200px]">
               <thead className="sticky top-0 z-20">
@@ -1575,13 +1772,14 @@ export default function ViewContainer({
           </div>
         </div>
       ) : viewMode === 'kanban' ? (
-        <div className="space-y-6">
-          <DynamicKanban 
+        <div className={cn("space-y-6 transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+          <DynamicKanban
             data={data}
             fields={displayFields}
             groupField={actualGroupField}
             kanbanGroupDisplayField={correctedKanbanGroupDisplayField}
             kanbanCardFields={kanbanCardFields}
+            relationalOptions={relationalOptions}
             dictionary={dictionary}
             onMove={handleMove}
             onView={onView}
@@ -1602,10 +1800,12 @@ export default function ViewContainer({
           )}
         </div>
       ) : viewMode === 'scheduler' ? (
-        <DynamicScheduler 
-          data={data}
+        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+          <DynamicScheduler 
+            data={data}
           fields={displayFields}
           schedulerConfig={schedulerConfig || {}}
+          relationalOptions={relationalOptions}
           onMove={handleMove}
           onAdd={onAdd}
           onView={onView}
@@ -1613,41 +1813,62 @@ export default function ViewContainer({
           onDelete={onDelete}
           dictionary={dictionary}
         />
+        </div>
       ) : viewMode === 'timeline' ? (
-        <DynamicTimeline
-          data={data}
+        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+          <DynamicTimeline
+            data={data}
           fields={displayFields}
           timelineConfig={timelineConfig || {}}
+          relationalOptions={relationalOptions}
           onView={onView}
           onEdit={onEdit}
           onDelete={onDelete}
           onRefresh={() => fetchData(currentFiltersRef.current, true)}
           dictionary={dictionary}
+          onLoadMore={() => fetchData(currentFiltersRef.current, false, true)}
+          hasMore={data.length < totalServerRows}
+          totalRecords={totalServerRows}
+          direction={timelineDirection}
+          onDirectionChange={(newDir) => {
+            setTimelineDirection(newDir);
+            setData([]);
+            setCurrentPage(1);
+          }}
         />
+        </div>
       ) : viewMode === 'map' ? (
-        <DynamicMap
-          data={data}
+        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+          <DynamicMap
+            data={data}
           fields={displayFields}
           mapConfig={mapConfig || {}}
+          relationalOptions={relationalOptions}
           onView={onView!}
           onEdit={onEdit!}
           onDelete={onDelete!}
         />
+        </div>
       ) : viewMode === 'gantt' ? (
-        <DynamicGantt
-          data={data}
+        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+          <DynamicGantt
+            data={data}
           fields={displayFields}
           ganttConfig={ganttConfig || {}}
+          relationalOptions={relationalOptions}
           onView={onView!}
           onEdit={onEdit!}
           onDelete={onDelete!}
           dictionary={dictionary}
         />
+        </div>
       ) : viewMode === 'blueprint' ? (
-        <DynamicBlueprint
-          data={data}
+        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+          <DynamicBlueprint
+            data={data}
           fields={displayFields}
           blueprintConfig={blueprintConfig || {}}
+          relationalOptions={relationalOptions}
           onView={onView!}
           onEdit={onEdit!}
           onDelete={onDelete!}
@@ -1655,11 +1876,14 @@ export default function ViewContainer({
           onRefresh={() => fetchData(currentFiltersRef.current, true)}
           dictionary={dictionary}
         />
+        </div>
       ) : viewMode === 'mapa_mental' ? (
-        <DynamicMindMap 
-          data={data}
+        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+          <DynamicMindMap 
+            data={data}
           fields={displayFields}
           centralFieldId={mindmapCentralField}
+          relationalOptions={relationalOptions}
           mindmapLevels={mindmapLevels}
           projectId={projectId}
           onView={onView}
@@ -1672,19 +1896,23 @@ export default function ViewContainer({
           tunnelChannel={tunnelChannel}
           isTunnelReady={isTunnelReady}
         />
+        </div>
       ) : viewMode === 'galeria' ? (
-        <DynamicGallery 
-          data={data}
+        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+          <DynamicGallery 
+            data={data}
           fields={displayFields}
           buttonsConfig={buttonsConfig}
+          relationalOptions={relationalOptions}
           onView={onView}
           onEdit={onEdit}
           onDelete={onDelete}
           galleryClickBehavior={galleryClickBehavior}
           galleryConfig={galleryConfig}
         />
+        </div>
       ) : (
-        <div className="space-y-6">
+        <div className={cn("space-y-6 transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
           <DynamicCardList 
             fields={displayFields.filter(f => !f.hidden)}
             data={paginatedData}

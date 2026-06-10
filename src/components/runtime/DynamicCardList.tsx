@@ -2,6 +2,9 @@
 
 import { Pencil, Trash2, Calendar, Hash, Type, Search, Zap, Link, Database, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { DynamicIcon } from '@/components/runtime/DynamicIcon'
+import { evaluateFormula } from '@/lib/formulaEvaluator'
+import { formatFieldValue } from '@/lib/formatters'
 
 interface DynamicCardListProps {
   fields: any[]
@@ -90,46 +93,6 @@ const getFontSize = (size?: string) => {
   if (!size) return undefined;
   if (!isNaN(Number(size))) return `${size}px`;
   return size;
-}
-
-const applyMask = (value: any, mask: string) => {
-  if (!mask || value === null || value === undefined || value === '') return value
-
-  let normalizedMask = mask
-  if (mask.includes('0.000,00')) normalizedMask = '0.000,00'
-  else if (mask.includes('0.000')) normalizedMask = '0.000'
-
-  if (normalizedMask === '0.000') {
-    const num = Number(value)
-    if (!isNaN(num)) return num.toLocaleString('pt-BR')
-    return value
-  }
-
-  if (normalizedMask === '0.000,00') {
-    const num = Number(value)
-    if (!isNaN(num)) return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    return value
-  }
-
-  const strVal = String(value)
-  const numbers = strVal.replace(/\D/g, '')
-  let maskedValue = ''
-  let numberIndex = 0
-
-  for (let i = 0; i < mask.length; i++) {
-    if (numberIndex >= numbers.length) break
-
-    if (mask[i] === '0') {
-      maskedValue += numbers[numberIndex]
-      numberIndex++
-    } else {
-      maskedValue += mask[i]
-      if (strVal[numberIndex] === mask[i]) {
-        numberIndex++
-      }
-    }
-  }
-  return maskedValue
 }
 
 export default function DynamicCardList({ 
@@ -292,32 +255,7 @@ export default function DynamicCardList({
                  }
               }
 
-              let displayVal = typeof finalVal === 'object' && finalVal !== null ? JSON.stringify(finalVal) : String(finalVal ?? '')
-              
-              const fieldDataType = (field.data_type || '').toLowerCase();
-              const isDateType = comp.type === 'date' || (fieldDataType.includes('date') && !fieldDataType.includes('time') && !fieldDataType.includes('timestamp'));
-              const isDateTimeType = comp.type === 'datetime-local' || comp.type === 'datetime' || fieldDataType.includes('time') || fieldDataType.includes('timestamp');
-
-              if (displayVal && isDateType) {
-                const d = new Date(String(finalVal))
-                if (!isNaN(d.getTime())) {
-                  if (String(finalVal).length <= 10) {
-                    displayVal = d.toLocaleDateString('pt-BR', { timeZone: 'UTC' })
-                  } else {
-                    displayVal = d.toLocaleDateString('pt-BR')
-                  }
-                }
-              } else if (displayVal && isDateTimeType) {
-                const d = new Date(String(finalVal))
-                if (!isNaN(d.getTime())) {
-                  displayVal = d.toLocaleString('pt-BR')
-                }
-              }
-
-              const maskStr = zoneConfig.content?.mask || ''
-              if (maskStr && !isDateType && !isDateTimeType) {
-                 displayVal = applyMask(displayVal, maskStr)
-              }
+              let displayVal = formatFieldValue(finalVal, field, relationalOptions, zoneConfig);
 
               if (isFirst) {
                 return (

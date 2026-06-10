@@ -7,6 +7,7 @@ import { useI18n } from '@/i18n/I18nContext'
 import { format, differenceInDays, addDays, startOfDay, isSameDay, isWeekend, startOfMonth, endOfMonth, eachDayOfInterval, getDaysInMonth, addMonths } from 'date-fns'
 import { ptBR, es, enUS } from 'date-fns/locale'
 import { motion, AnimatePresence } from 'framer-motion'
+import { formatFieldValue } from '@/lib/formatters'
 
 interface DynamicGanttProps {
   data: any[]
@@ -21,6 +22,7 @@ interface DynamicGanttProps {
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
   dictionary?: any
+  relationalOptions?: Record<string, any[]>
 }
 
 export default function DynamicGantt({
@@ -30,7 +32,8 @@ export default function DynamicGantt({
   onView,
   onEdit,
   onDelete,
-  dictionary
+  dictionary,
+  relationalOptions = {}
 }: DynamicGanttProps) {
   const { t, language } = useI18n()
   const dateLocale = language === 'pt' ? ptBR : language === 'es' ? es : enUS
@@ -57,6 +60,8 @@ export default function DynamicGantt({
     const titleField = getFieldKey(ganttConfig.title_field)
     const progressField = ganttConfig.progress_field ? getFieldKey(ganttConfig.progress_field) : null
 
+    const titleFieldObj = fields.find(f => f.db_column_name === titleField)
+
     return data.map((row, index) => {
       const startDateStr = row[startField]
       const endDateStr = row[endField]
@@ -64,7 +69,7 @@ export default function DynamicGantt({
       const startDate = startDateStr ? startOfDay(new Date(startDateStr)) : null
       const endDate = endDateStr ? startOfDay(new Date(endDateStr)) : null
       
-      const title = row[titleField] || `Task #${index + 1}`
+      const title = formatFieldValue(row[titleField], titleFieldObj, relationalOptions) || `Task #${index + 1}`
       const progress = progressField ? Number(row[progressField]) || 0 : null
 
       return {

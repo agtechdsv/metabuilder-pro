@@ -24,6 +24,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import dagre from 'dagre'
+import { formatFieldValue } from '@/lib/formatters'
 import { MoreVertical, CheckCircle2, Circle, AlertCircle, PlayCircle, Eye, Pencil, Trash2, Settings2, Wand2, RefreshCcw, Activity } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
@@ -46,6 +47,7 @@ interface DynamicBlueprintProps {
   dictionary?: any
   onMove?: (recordId: string, updates: any) => void
   onRefresh?: () => void
+  relationalOptions?: Record<string, any[]>
 }
 const BlueprintNode = memo(({ data, selected }: NodeProps) => {
   const { title, description, status, onView, onEdit, onDelete, rawData, scale = 1, direction = 'TB' } = data as any
@@ -224,7 +226,8 @@ function DynamicBlueprintContent({
   onDelete,
   onMove,
   onRefresh,
-  dictionary
+  dictionary = {},
+  relationalOptions = {}
 }: DynamicBlueprintProps) {
   const { toast } = useToast()
   const { fitView } = useReactFlow()
@@ -327,6 +330,9 @@ function DynamicBlueprintContent({
       return depths[id]
     }
 
+    const titleFieldObj = fields.find(f => f.db_column_name === titleCol)
+    const descFieldObj = fields.find(f => f.db_column_name === descCol)
+
     data.forEach(row => {
       const id = String(row[pkCol] || row['id'] || row['ID'])
       const predecessorId = row[predCol]
@@ -336,8 +342,8 @@ function DynamicBlueprintContent({
         id,
         type: 'blueprintNode',
         data: {
-          title: row[titleCol],
-          description: descCol ? row[descCol] : '',
+          title: formatFieldValue(row[titleCol], titleFieldObj, relationalOptions) || 'Sem Título',
+          description: descCol ? formatFieldValue(row[descCol], descFieldObj, relationalOptions) : '',
           status: statusCol ? row[statusCol] : '',
           rawData: row,
           onView,

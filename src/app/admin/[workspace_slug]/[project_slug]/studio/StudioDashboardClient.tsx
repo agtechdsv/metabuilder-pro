@@ -877,10 +877,10 @@ export function StudioDashboardClient({
                           )}
                         </div>
                         <h4 className={`text-lg font-bold tracking-tight transition-colors ${view.layout_config?.is_active !== false ? 'text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400' : 'text-neutral-400 italic'}`}>
-                          {view.name}
+                          {view.draft_config?.name || view.name}
                         </h4>
                         <p className="text-xs text-neutral-400 font-mono flex items-center gap-1.5 tracking-tight">
-                          <span className="opacity-50">/</span>{view.slug}
+                          <span className="opacity-50">/</span>{view.draft_config?.slug || view.slug}
                         </p>
                       </div>
 
@@ -930,23 +930,27 @@ export function StudioDashboardClient({
                               <Eye className="w-5 h-5 group-hover/preview:scale-110 transition-transform" />
                             </Link>
                           )}
+                          {(view.layout_config && Object.keys(view.layout_config).length > 0) && (
+                            <Link
+                              href={`/${workspace_slug}/${project_slug}/${view.slug}`}
+                              target="_blank"
+                              className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-indigo-600 dark:hover:text-white shadow-sm group/publish"
+                              title="Acessar versão publicada"
+                            >
+                              <ArrowRight className="w-5 h-5 group-hover/publish:translate-x-0.5 transition-transform" />
+                            </Link>
+                          )}
+                        </>
+                      ) : (
+                        (view.layout_config && Object.keys(view.layout_config).length > 0) && (
                           <Link
                             href={`/${workspace_slug}/${project_slug}/${view.slug}`}
                             target="_blank"
-                            className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-indigo-600 dark:hover:text-white shadow-sm group/publish"
-                            title="Acessar versão publicada"
+                            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
                           >
-                            <ArrowRight className="w-5 h-5 group-hover/publish:translate-x-0.5 transition-transform" />
+                            <ArrowRight className="w-4 h-4" /> {t('dashboard.projects.studio.access_use_case')}
                           </Link>
-                        </>
-                      ) : (
-                        <Link
-                          href={`/${workspace_slug}/${project_slug}/${view.slug}`}
-                          target="_blank"
-                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
-                        >
-                          <ArrowRight className="w-4 h-4" /> {t('dashboard.projects.studio.access_use_case')}
-                        </Link>
+                        )
                       )}
                     </div>
                   </div>

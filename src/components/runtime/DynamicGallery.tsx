@@ -17,9 +17,14 @@ import {
   Calendar, 
   Hash, 
   Type,
-  LayoutGrid
+  LayoutGrid,
+  FileIcon, 
+  ImageIcon, 
+  Maximize2, 
+  RefreshCw
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatFieldValue } from '@/lib/formatters'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
 
@@ -30,7 +35,8 @@ interface DynamicGalleryProps {
   onView?: (row: any) => void
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
-  galleryClickBehavior?: 'lightbox' | 'thumbnail'
+  relationalOptions?: Record<string, any[]>
+  galleryClickBehavior?: 'fullscreen' | 'thumbnail'
   galleryConfig?: {
     image_field?: string
     title_field?: string
@@ -45,8 +51,9 @@ export default function DynamicGallery({
   onView,
   onEdit,
   onDelete,
-  galleryClickBehavior = 'lightbox',
-  galleryConfig
+  relationalOptions = {},
+  galleryClickBehavior = 'fullscreen',
+  galleryConfig = {}
 }: DynamicGalleryProps) {
   const { t } = useI18n()
   const { toast } = useToast()
@@ -104,22 +111,26 @@ export default function DynamicGallery({
         const col = f.db_column_name.toLowerCase()
         return col === 'title' || col === 'name' || col === 'nome' || col === 'titulo' || col === 'label'
       })
+      let titleFieldObj = titleField;
+      
       if (titleField) {
-        title = String(allValues[titleField.db_column_name] || '')
+        title = formatFieldValue(allValues[titleField.db_column_name], titleField, relationalOptions) || ''
       } else {
         const titleKey = Object.keys(allValues).find(key => {
           const k = key.toLowerCase()
           return k === 'title' || k === 'name' || k === 'nome' || k === 'titulo' || k === 'label'
         })
         if (titleKey) {
-          title = String(allValues[titleKey] || '')
+          titleFieldObj = fields.find(f => f.db_column_name === titleKey);
+          title = titleFieldObj ? formatFieldValue(allValues[titleKey], titleFieldObj, relationalOptions) : String(allValues[titleKey] || '')
         } else {
           const textFields = fields.filter(f => {
             const col = f.db_column_name.toLowerCase()
             return !col.includes('id') && !col.includes('url') && !col.includes('image') && !col.includes('imagem') && !col.includes('link')
           })
           if (textFields.length > 0) {
-            title = String(allValues[textFields[0].db_column_name] || '')
+            titleFieldObj = textFields[0];
+            title = formatFieldValue(allValues[textFields[0].db_column_name], textFields[0], relationalOptions) || ''
           } else {
             const firstStringKey = Object.keys(allValues).find(key => {
               const val = allValues[key]
@@ -127,7 +138,8 @@ export default function DynamicGallery({
               return typeof val === 'string' && val.length > 0 && !k.includes('id') && !k.includes('url') && !k.includes('image') && !k.includes('imagem') && !k.includes('link') && !val.startsWith('http') && !val.startsWith('data:')
             })
             if (firstStringKey) {
-              title = String(allValues[firstStringKey] || '')
+              titleFieldObj = fields.find(f => f.db_column_name === firstStringKey);
+              title = titleFieldObj ? formatFieldValue(allValues[firstStringKey], titleFieldObj, relationalOptions) : String(allValues[firstStringKey] || '')
             } else {
               title = `Asset #${row.id || ''}`
             }
