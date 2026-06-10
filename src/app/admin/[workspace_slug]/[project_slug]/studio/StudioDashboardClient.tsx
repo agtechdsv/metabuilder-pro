@@ -854,6 +854,11 @@ export function StudioDashboardClient({
                           <div className="px-2.5 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[9px] font-black rounded-lg border border-indigo-500/20 uppercase tracking-widest w-fit">
                             {t(`wizard.logic.types.${view.logic_type}.title`, view.logic_type?.replace('_', ' + ') || 'Custom')}
                           </div>
+                          {view.draft_config && (
+                            <div className="px-2.5 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[9px] font-black rounded-lg border border-amber-500/20 uppercase tracking-widest w-fit animate-pulse" title="Existem alterações salvas que ainda não foram publicadas.">
+                              Rascunho Pendente
+                            </div>
+                          )}
                           {canCreate ? (
                             <button
                               onClick={() => handleToggleActive(view)}
@@ -915,12 +920,23 @@ export function StudioDashboardClient({
                           >
                             <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure')}
                           </button>
+                          {view.draft_config && (
+                            <Link
+                              href={`/${workspace_slug}/${project_slug}/${view.slug}?preview=draft`}
+                              target="_blank"
+                              className="w-14 flex items-center justify-center bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 rounded-2xl border border-amber-200 dark:border-amber-500/30 transition-all text-amber-600 dark:text-amber-500 shadow-sm group/preview"
+                              title="Visualizar Rascunho"
+                            >
+                              <Eye className="w-5 h-5 group-hover/preview:scale-110 transition-transform" />
+                            </Link>
+                          )}
                           <Link
                             href={`/${workspace_slug}/${project_slug}/${view.slug}`}
                             target="_blank"
-                            className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-indigo-600 dark:hover:text-white shadow-sm"
+                            className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-indigo-600 dark:hover:text-white shadow-sm group/publish"
+                            title="Acessar versão publicada"
                           >
-                            <ArrowRight className="w-5 h-5" />
+                            <ArrowRight className="w-5 h-5 group-hover/publish:translate-x-0.5 transition-transform" />
                           </Link>
                         </>
                       ) : (

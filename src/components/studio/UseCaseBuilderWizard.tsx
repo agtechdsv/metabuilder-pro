@@ -127,6 +127,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   const [currentStep, setCurrentStep] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isDiscardModalOpen, setIsDiscardModalOpen] = useState(false)
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false)
   const [currentStatus, setCurrentStatus] = useState<string>(initialData?.status || 'draft')
   const [models, setModels] = useState<any[]>([])
   const [enumerations, setEnumerations] = useState<any[]>([])
@@ -226,6 +228,26 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       onSaveSuccess()
     } catch (err: any) {
       toast('Erro ao publicar: ' + err.message, 'error')
+    } finally {
+      setIsSaving(false)
+      setIsPublishModalOpen(false)
+    }
+  }
+
+  const executeDiscardDraft = async () => {
+    if (!initialData?.id) return
+    
+    setIsSaving(true)
+    try {
+      const { error } = await supabase.from('ui_views').update({ draft_config: null }).eq('id', initialData.id)
+      if (error) throw error
+      
+      toast('Rascunho descartado com sucesso.', 'success')
+      setIsDiscardModalOpen(false)
+      onSaveSuccess()
+      onClose()
+    } catch (err: any) {
+      toast('Erro ao descartar: ' + err.message, 'error')
     } finally {
       setIsSaving(false)
     }
@@ -1386,13 +1408,25 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
                   </div>
 
                   {initialData.draft_config && (
-                    <button
-                      onClick={handlePublish}
-                      disabled={isSaving}
-                      className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20 disabled:opacity-50 active:scale-95"
-                    >
-                      🚀 Publicar
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          console.log('[DiscardDraft] Button clicked, isSaving:', isSaving, 'isDiscardModalOpen:', isDiscardModalOpen)
+                          setIsDiscardModalOpen(true)
+                        }}
+                        className="flex items-center gap-2 px-6 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-red-500/5 active:scale-95 border border-red-500/20"
+                        title="Descartar todas as alterações não publicadas"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Descartar Rascunho
+                      </button>
+                      <button
+                        onClick={() => setIsPublishModalOpen(true)}
+                        disabled={isSaving}
+                        className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20 disabled:opacity-50 active:scale-95"
+                      >
+                        🚀 Publicar
+                      </button>
+                    </>
                   )}
                 </>
               )}
@@ -1497,6 +1531,125 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           </button>
         </div>
       </div>
+
+      {/* Discard Draft Confirmation — rendered inline with high z-index */}
+      {isDiscardModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setIsDiscardModalOpen(false)}
+          />
+          {/* Dialog */}
+          <div className="relative bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="p-8 pb-4">
+              <div className="flex justify-between items-start">
+                <h3 className="text-xl font-bold text-neutral-900 dark:text-white">Descartar Rascunho</h3>
+                <button
+                  onClick={() => setIsDiscardModalOpen(false)}
+                  className="p-2 hover:bg-neutral-100 dark:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-neutral-900 dark:hover:text-white ml-auto"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="px-8 pb-8 space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-5 h-5 text-red-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-neutral-800 dark:text-neutral-200 mb-1">
+                    Tem certeza que deseja descartar?
+                  </p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                    Todas as alterações não publicadas serão permanentemente perdidas e o caso de uso voltará ao estado da última versão publicada. Esta ação não pode ser desfeita.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsDiscardModalOpen(false)}
+                  disabled={isSaving}
+                  className="flex-1 px-4 py-3 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={executeDiscardDraft}
+                  disabled={isSaving}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl shadow-red-500/20 active:scale-95 disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {isSaving ? 'Descartando...' : 'Sim, Descartar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Publish Draft Confirmation — rendered inline with high z-index */}
+      {isPublishModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setIsPublishModalOpen(false)}
+          />
+          {/* Dialog */}
+          <div className="relative bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="p-8 pb-4">
+              <div className="flex justify-between items-start">
+                <h3 className="text-xl font-bold text-neutral-900 dark:text-white">Publicar Alterações</h3>
+                <button
+                  onClick={() => setIsPublishModalOpen(false)}
+                  className="p-2 hover:bg-neutral-100 dark:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-neutral-900 dark:hover:text-white ml-auto"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="px-8 pb-8 space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-neutral-800 dark:text-neutral-200 mb-1">
+                    Tem certeza que deseja publicar?
+                  </p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                    Todas as alterações do rascunho serão aplicadas e ficarão disponíveis imediatamente para os usuários finais em produção.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPublishModalOpen(false)}
+                  disabled={isSaving}
+                  className="flex-1 px-4 py-3 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePublish}
+                  disabled={isSaving}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20 active:scale-95 disabled:opacity-50"
+                >
+                  {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                  {isSaving ? 'Publicando...' : 'Sim, Publicar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
@@ -7402,6 +7555,9 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
           </div>
         )}
       </Modal>
+
+
+
     </div>
   )
 }

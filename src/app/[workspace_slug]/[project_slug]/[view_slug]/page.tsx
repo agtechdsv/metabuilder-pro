@@ -18,14 +18,17 @@ interface PageProps {
     project_slug: string
     view_slug: string
   }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 /**
  * MetaBuilderPRO - Página Dinâmica com Slugs Amigáveis
  * Rota: /[workspace_slug]/[project_slug]/[view_slug]
  */
-export default async function SlugPage({ params }: PageProps) {
+export default async function SlugPage({ params, searchParams }: PageProps) {
   const { workspace_slug, project_slug, view_slug } = await params
+  const search = await searchParams
+  const isPreview = search?.preview === 'draft'
 
   // Usamos a Service Role para resolver os slugs e metadados com bypass de RLS
   const supabase = createClient(
@@ -280,6 +283,49 @@ export default async function SlugPage({ params }: PageProps) {
     const { data: allModels } = await supabase.from('models').select('id, display_name, db_table_name, db_schema_name, fields(*)').eq('project_id', project.id)
     const dictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.display_name }), {}) || {}
     const tableDictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.db_table_name }), {}) || {}
+
+    if (isPreview && view.draft_config) {
+      const draftMeta = view.draft_config.layout_config?.fields_metadata || {}
+      const validFormFields: string[] = view.draft_config.layout_config?.form_fields || []
+      const validGridFields: string[] = view.draft_config.layout_config?.grid_fields || []
+      const validFilterFields: string[] = view.draft_config.layout_config?.filter_fields || []
+
+      const allFields = allModels?.flatMap(m => m.fields) || []
+      const componentMap: Record<string, any> = {}
+
+      const addComponent = (fid: string, zone: string) => {
+        const field = allFields.find(f => f.id === fid)
+        if (!field) return
+        const zoneMeta = draftMeta[`${zone}-${fid}`]
+        const globalMeta = draftMeta[fid] || {}
+        const metadata = zoneMeta || globalMeta
+
+        if (!componentMap[fid]) {
+          componentMap[fid] = {
+            label: metadata.label?.text || field.display_name || field.db_column_name,
+            order_index: 0,
+            is_visible: true,
+            config: { zones: [zone], [`${zone}_config`]: metadata, ...metadata },
+            field: field
+          }
+        } else {
+          if (!componentMap[fid].config.zones.includes(zone)) componentMap[fid].config.zones.push(zone)
+          componentMap[fid].config[`${zone}_config`] = metadata
+          if (zone === 'form' && metadata.label?.text) componentMap[fid].label = metadata.label.text
+        }
+      }
+
+      validFilterFields.forEach(fid => addComponent(fid, 'filter'))
+      validGridFields.forEach(fid => addComponent(fid, 'grid'))
+      validFormFields.forEach(fid => addComponent(fid, 'form'))
+
+      view.layout_config = view.draft_config.layout_config || {}
+      view.buttons_config = view.draft_config.buttons_config || []
+      view.name = view.draft_config.name || view.name
+      view.logic_type = view.draft_config.logic_type || view.logic_type
+      view.model_id = view.draft_config.model_id || view.model_id
+      view.ui_components = Object.values(componentMap)
+    }
 
     // Busca o Santo Graal — relacionamentos do projeto
     const { data: projectRelations } = await supabase
@@ -665,7 +711,12 @@ export default async function SlugPage({ params }: PageProps) {
 
     return (
       <TranslationProvider locale={locale}>
-        {isUnpublished && (
+        {isPreview && view.draft_config ? (
+          <div className="bg-indigo-500/10 border-b border-indigo-500/20 text-indigo-600 p-4 text-center font-bold text-sm flex items-center justify-center gap-2">
+            <AlertCircle className="w-5 h-5" />
+            Você está visualizando o rascunho atual. Os usuários finais ainda vêem a última versão publicada.
+          </div>
+        ) : isUnpublished && (
           <div className="bg-amber-500/10 border-b border-amber-500/20 text-amber-600 p-4 text-center font-bold text-sm flex items-center justify-center gap-2">
             <AlertCircle className="w-5 h-5" />
             Este caso de uso é um rascunho e ainda não foi publicado.

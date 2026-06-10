@@ -276,7 +276,7 @@ export default function ViewPageContent({
       validColumnNames.add(pk);
 
       searchParams.forEach((value, key) => {
-        if (key !== 'embedded') {
+        if (key !== 'embedded' && key !== 'preview') {
           if (!validColumnNames.has(key) && (key.endsWith('_id') || key === 'id')) {
              paramsObj[pk] = value;
           } else if (validColumnNames.has(key)) {
