@@ -254,8 +254,29 @@ export default function DynamicGrid({
               ? JSON.stringify(finalVal) 
               : String(finalVal ?? '')
               
+            const fieldDataType = (field.data_type || '').toLowerCase();
+            const isDateType = comp.type === 'date' || (fieldDataType.includes('date') && !fieldDataType.includes('time') && !fieldDataType.includes('timestamp'));
+            const isDateTimeType = comp.type === 'datetime-local' || comp.type === 'datetime' || fieldDataType.includes('time') || fieldDataType.includes('timestamp');
+
+            if (val && isDateType) {
+              const d = new Date(String(finalVal))
+              if (!isNaN(d.getTime())) {
+                // If it's just a date without time, assume UTC to prevent timezone shift
+                if (String(finalVal).length <= 10) {
+                  val = d.toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+                } else {
+                  val = d.toLocaleDateString('pt-BR')
+                }
+              }
+            } else if (val && isDateTimeType) {
+              const d = new Date(String(finalVal))
+              if (!isNaN(d.getTime())) {
+                val = d.toLocaleString('pt-BR')
+              }
+            }
+
             const maskStr = zoneConfig.content?.mask || ''
-            if (maskStr) {
+            if (maskStr && !isDateType && !isDateTimeType) {
                val = applyMask(val, maskStr)
             }
             

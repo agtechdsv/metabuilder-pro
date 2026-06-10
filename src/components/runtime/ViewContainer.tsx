@@ -309,9 +309,21 @@ export default function ViewContainer({
       }
     }
   }
-  const [viewMode, setViewMode] = useState<'list' | 'card' | 'kanban' | 'mapa_mental' | 'scheduler' | 'galeria' | 'timeline' | 'map' | 'gantt' | 'blueprint'>(
-    logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'blueprint' ? 'blueprint' : logicType === 'timeline' ? 'timeline' : logicType === 'map' ? 'map' : logicType === 'gantt' ? 'gantt' : logicType === 'kanban' ? 'kanban' : logicType === 'scheduler' ? 'scheduler' : logicType === 'galeria' ? 'galeria' : (displayType === 'both' ? defaultView : (displayType as any))
-  )
+  const initialViewMode = logicType === 'mapa_mental' ? 'mapa_mental' : logicType === 'blueprint' ? 'blueprint' : logicType === 'timeline' ? 'timeline' : logicType === 'map' ? 'map' : logicType === 'gantt' ? 'gantt' : logicType === 'kanban' ? 'kanban' : logicType === 'scheduler' ? 'scheduler' : logicType === 'galeria' ? 'galeria' : (displayType === 'both' ? defaultView : (displayType as any))
+  const [viewMode, setViewModeState] = useState<'list' | 'card' | 'kanban' | 'mapa_mental' | 'scheduler' | 'galeria' | 'timeline' | 'map' | 'gantt' | 'blueprint'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem(`metabuilder_viewmode_${projectId}_${modelName}`);
+      if (saved) return saved as any;
+    }
+    return initialViewMode;
+  });
+
+  const setViewMode = (mode: 'list' | 'card' | 'kanban' | 'mapa_mental' | 'scheduler' | 'galeria' | 'timeline' | 'map' | 'gantt' | 'blueprint') => {
+    setViewModeState(mode);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(`metabuilder_viewmode_${projectId}_${modelName}`, mode);
+    }
+  }
   const [searchQuery, setSearchQuery] = useState('')
   const [internalFilters, setInternalFilters] = useState<Record<string, any>>({})
   const filterValues = { ...(externalFilters || {}), ...internalFilters }
@@ -1682,6 +1694,7 @@ export default function ViewContainer({
             onDelete={onDelete}
             customActions={customActions}
             onCustomAction={handleCustomAction}
+            relationalOptions={relationalOptions}
           />
 
           {/* Paginador Footer para Cards */}

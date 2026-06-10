@@ -12,6 +12,7 @@ interface DynamicCardListProps {
   onDelete?: (row: any) => void
   customActions?: any[]
   onCustomAction?: (action: any, row: any) => void
+  relationalOptions?: Record<string, any[]>
 }
 
 const getActionColorClasses = (color: string) => {
@@ -139,7 +140,8 @@ export default function DynamicCardList({
   onEdit,
   onDelete,
   customActions = [],
-  onCustomAction
+  onCustomAction,
+  relationalOptions = {}
 }: DynamicCardListProps) {
   const canView = buttonsConfig.find((b: any) => b.id === 'view')?.visible === true
   const canEdit = buttonsConfig.find((b: any) => b.id === 'edit')?.visible === true
@@ -278,9 +280,42 @@ export default function DynamicCardList({
               const isFirst = fIdx === 0
               const zoneConfig = field.config?.grid_config || field.config || {}
               
-              let displayVal = typeof rawVal === 'object' && rawVal !== null ? JSON.stringify(rawVal) : String(rawVal ?? '')
+              const comp = zoneConfig.component || field.config?.component || {}
+              let finalVal = rawVal
+              if (comp.type === 'select' || comp.type === 'Combo (Select)' || comp.options_type === 'relational') {
+                 const opts = relationalOptions[field.id]
+                 if (opts && opts.length > 0) {
+                   const found = opts.find((o: any) => String(o.value) === String(rawVal))
+                   if (found) {
+                     finalVal = found.label
+                   }
+                 }
+              }
+
+              let displayVal = typeof finalVal === 'object' && finalVal !== null ? JSON.stringify(finalVal) : String(finalVal ?? '')
+              
+              const fieldDataType = (field.data_type || '').toLowerCase();
+              const isDateType = comp.type === 'date' || (fieldDataType.includes('date') && !fieldDataType.includes('time') && !fieldDataType.includes('timestamp'));
+              const isDateTimeType = comp.type === 'datetime-local' || comp.type === 'datetime' || fieldDataType.includes('time') || fieldDataType.includes('timestamp');
+
+              if (displayVal && isDateType) {
+                const d = new Date(String(finalVal))
+                if (!isNaN(d.getTime())) {
+                  if (String(finalVal).length <= 10) {
+                    displayVal = d.toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+                  } else {
+                    displayVal = d.toLocaleDateString('pt-BR')
+                  }
+                }
+              } else if (displayVal && isDateTimeType) {
+                const d = new Date(String(finalVal))
+                if (!isNaN(d.getTime())) {
+                  displayVal = d.toLocaleString('pt-BR')
+                }
+              }
+
               const maskStr = zoneConfig.content?.mask || ''
-              if (maskStr) {
+              if (maskStr && !isDateType && !isDateTimeType) {
                  displayVal = applyMask(displayVal, maskStr)
               }
 
