@@ -113,6 +113,7 @@ export default async function StudioDashboard({ params }: StudioDashboardProps) 
     .from('ui_views')
     .select('*')
     .eq('project_id', project.id)
+    .order('name', { ascending: true })
 
   const viewsList = views || []
   const hasDownloads = viewsList.some(v => v.slug === 'downloads')

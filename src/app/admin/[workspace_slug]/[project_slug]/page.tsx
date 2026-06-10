@@ -50,7 +50,7 @@ export default async function ProjectDashboard({ params }: ProjectDashboardProps
     .from('ui_views')
     .select('*')
     .eq('project_id', project.id)
-    .order('created_at', { ascending: false })
+    .order('name', { ascending: true })
 
   return (
     <ProjectDashboardClient 

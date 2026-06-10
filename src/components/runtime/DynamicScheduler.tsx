@@ -11,7 +11,8 @@ import {
   MoreVertical, 
   LayoutGrid, 
   Layers,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react'
 import { formatFieldValue } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
@@ -402,14 +403,27 @@ export default function DynamicScheduler({
                                 onEdit?.(evt.raw)
                               }}
                               className={cn(
-                                "text-[9px] font-bold py-1 px-2 border rounded-lg flex items-center gap-1.5 transition-all cursor-grab active:cursor-grabbing truncate shadow-sm",
+                                "group/evt text-[9px] font-bold py-1 px-2 border rounded-lg flex items-center justify-between transition-all cursor-grab active:cursor-grabbing truncate shadow-sm",
                                 col.bg,
                                 col.text,
                                 col.border
                               )}
                             >
-                              <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", col.badge)}></span>
-                              <span className="truncate">{evt.title}</span>
+                              <div className="flex items-center gap-1.5 overflow-hidden flex-1">
+                                <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", col.badge)}></span>
+                                <span className="truncate">{evt.title}</span>
+                              </div>
+                              {onDelete && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    onDelete(evt.raw)
+                                  }}
+                                  className="opacity-0 group-hover/evt:opacity-100 p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded flex-shrink-0 transition-opacity"
+                                >
+                                  <Trash2 className="w-2.5 h-2.5 text-rose-500" />
+                                </button>
+                              )}
                             </div>
                           )
                         })}
@@ -471,13 +485,13 @@ export default function DynamicScheduler({
                             onDragStart={(e) => handleDragStart(e, evt.id)}
                             onClick={() => onEdit?.(evt.raw)}
                             className={cn(
-                              "p-3 rounded-2xl border flex flex-col gap-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-all text-left",
+                              "group/evt p-3 rounded-2xl border flex flex-col gap-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-all text-left relative",
                               col.bg,
                               col.text,
                               col.border
                             )}
                           >
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 pr-5">
                               <span className={cn("w-2 h-2 rounded-full", col.badge)}></span>
                               <span className="text-[10px] font-black tracking-tight line-clamp-2 leading-snug">{evt.title}</span>
                             </div>
@@ -488,6 +502,18 @@ export default function DynamicScheduler({
                                 {evt.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
+
+                            {onDelete && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  onDelete(evt.raw)
+                                }}
+                                className="absolute top-2 right-2 opacity-0 group-hover/evt:opacity-100 p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-opacity"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                              </button>
+                            )}
                           </div>
                         )
                       })}
@@ -558,9 +584,22 @@ export default function DynamicScheduler({
                         </div>
                       </div>
 
-                      <button className="opacity-0 group-hover/evt:opacity-100 p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg text-neutral-400">
-                        <MoreVertical className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1 opacity-0 group-hover/evt:opacity-100 transition-opacity">
+                        {onDelete && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onDelete(evt.raw)
+                            }}
+                            className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg text-rose-500"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg text-neutral-400">
+                          <MoreVertical className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   )
                 })}

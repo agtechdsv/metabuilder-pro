@@ -1437,9 +1437,24 @@ export default function ViewContainer({
                 {t('runtime.connecting') || 'Carregando...'}
               </span>
             ) : (
-              <span>
-                <span className="opacity-70">{t('runtime.showing', 'Exibindo')}</span> <span className="font-black text-indigo-600 dark:text-indigo-400 mx-1">{data.length}</span> <span className="opacity-70">{t('runtime.records_of', 'registros de um total de')}</span> <span className="font-black mx-1 text-neutral-700 dark:text-neutral-300">{totalServerRows}</span>
-              </span>
+              <div className="flex items-center gap-3">
+                <span>
+                  <span className="opacity-70">{t('runtime.showing', 'Exibindo')}</span> <span className="font-black text-indigo-600 dark:text-indigo-400 mx-1">{data.length}</span> <span className="opacity-70">{t('runtime.records_of', 'registros de um total de')}</span> <span className="font-black mx-1 text-neutral-700 dark:text-neutral-300">{totalServerRows}</span>
+                </span>
+                
+                {data.length < totalServerRows && logicType !== 'tabela' && (
+                  <button
+                    onClick={() => fetchData(filterValues, false, true)}
+                    disabled={isLoading}
+                    className="flex items-center gap-1.5 px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-md hover:bg-indigo-500/20 transition-colors disabled:opacity-50 border border-indigo-500/20 hover:border-indigo-500/40"
+                  >
+                    {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCcw className="w-3 h-3" />}
+                    <span className="text-[9px] font-black uppercase tracking-wider">
+                      {t('runtime.load_more_short', 'Carregar Mais')} +{Math.min(itemsPerPage, totalServerRows - data.length)}
+                    </span>
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>

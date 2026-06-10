@@ -689,27 +689,6 @@ export default function DynamicTimeline({
         </div>
       </div>
       )}
-
-      {hasMore && onLoadMore && (
-        <div className={cn("flex justify-center mt-12 mb-4", direction === 'horizontal' ? "w-full min-w-[200px] shrink-0 self-center" : "w-full")}>
-          <button 
-            onClick={onLoadMore}
-            className="flex flex-col items-center justify-center gap-2 px-8 py-4 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-indigo-600 dark:text-indigo-400 border-2 border-indigo-100 dark:border-indigo-900/50 rounded-2xl shadow-xl shadow-indigo-500/10 hover:shadow-indigo-500/20 transition-all hover:-translate-y-1 group"
-          >
-            <div className="bg-indigo-100 dark:bg-indigo-900/50 p-2 rounded-full group-hover:scale-110 transition-transform">
-              {direction === 'horizontal' ? <ArrowRight className="w-5 h-5" /> : <ArrowDown className="w-5 h-5" />}
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="font-black tracking-widest text-[11px] uppercase">
-                {dictionary?.runtime?.load_more_records || 'Carregar mais registros'}
-              </span>
-              <span className="text-[10px] text-neutral-400 font-medium">
-                ({data.length} de {totalRecords})
-              </span>
-            </div>
-          </button>
-        </div>
-      )}
     </div>
   </div>
   )
