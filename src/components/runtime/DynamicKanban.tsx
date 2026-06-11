@@ -23,9 +23,10 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MoreVertical, Calendar, User, Tag, GripVertical, Plus } from 'lucide-react'
+import { MoreVertical, Calendar, User, Tag, GripVertical, Plus, Minimize2, Maximize2, ZoomIn, LayoutGrid } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatFieldValue } from '@/lib/formatters'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface DynamicKanbanProps {
   data: any[]
@@ -55,6 +56,15 @@ export default function DynamicKanban({
   relationalOptions = {}
 }: DynamicKanbanProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
+  const { t } = useI18n()
+  const [scale, setScale] = useState(1.0)
+  
+  const scales = [
+    { value: 0.8, icon: <Minimize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_small', 'Pequeno') },
+    { value: 1.0, icon: <LayoutGrid className="w-3.5 h-3.5" />, label: t('runtime.scale_normal', 'Normal') },
+    { value: 1.2, icon: <Maximize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_large', 'Grande') },
+    { value: 1.5, icon: <ZoomIn className="w-3.5 h-3.5" />, label: t('runtime.scale_xl', 'Extra Grande') }
+  ]
   
   // Agrupar dados por colunas baseadas no groupField
   const groupColumnName = groupField?.db_column_name || 'status'
@@ -108,7 +118,27 @@ export default function DynamicKanban({
   }
 
   return (
-    <div className="flex gap-6 overflow-x-auto overflow-y-hidden pb-6 h-[calc(100vh-240px)] min-h-[500px] custom-scrollbar px-4 -mx-4">
+    <div className="flex flex-col h-full w-full">
+      <div className="flex justify-end mb-4 px-4 w-full">
+        <div className="flex items-center bg-neutral-100 dark:bg-neutral-800/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800">
+          {scales.map(s => (
+            <button
+              key={s.value}
+              onClick={() => setScale(s.value)}
+              title={s.label}
+              className={cn(
+                "p-1.5 rounded-lg transition-all",
+                scale === s.value 
+                  ? "bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400 shadow-sm" 
+                  : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+              )}
+            >
+              {s.icon}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex gap-6 overflow-x-auto overflow-y-hidden pb-6 h-[calc(100vh-240px)] min-h-[500px] custom-scrollbar px-4 -mx-4" style={{ zoom: scale }}>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -166,6 +196,7 @@ export default function DynamicKanban({
           ) : null}
         </DragOverlay>
       </DndContext>
+    </div>
     </div>
   )
 }

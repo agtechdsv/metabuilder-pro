@@ -26,7 +26,10 @@ import {
   Workflow,
   Download,
   Menu,
-  X
+  X,
+  ZoomIn,
+  Minimize2,
+  Maximize2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -221,6 +224,20 @@ export function StudioDashboardClient({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isBpmConfigModalOpen, setIsBpmConfigModalOpen] = useState(false)
   const [bpmConfig, setBpmConfig] = useState<any>(automationsView?.layout_config || { default_auto_align: false, error_email: '', log_retention: 30, timeout_mins: 5 })
+
+  const [scale, setScale] = useState(1.0)
+
+  const scales = [
+    { value: 0.8, icon: <Minimize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_small', 'Pequeno') },
+    { value: 1.0, icon: <LayoutGrid className="w-3.5 h-3.5" />, label: t('runtime.scale_normal', 'Normal') },
+    { value: 1.2, icon: <Maximize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_large', 'Grande') },
+    { value: 1.5, icon: <ZoomIn className="w-3.5 h-3.5" />, label: t('runtime.scale_xl', 'Extra Grande') }
+  ]
+
+  const gridColumns = scale === 0.8 ? 'grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-7' :
+                      scale === 1.2 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-4' :
+                      scale === 1.5 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3' :
+                      'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6'
 
   const refreshData = () => {
     setViewToEdit(null)
@@ -657,6 +674,23 @@ export function StudioDashboardClient({
                 {t('dashboard.projects.studio.use_cases')}
               </h3>
               <div className="flex items-center gap-4">
+                <div className="flex items-center bg-neutral-100 dark:bg-neutral-800/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 hidden md:flex">
+                  {scales.map(s => (
+                    <button
+                      key={s.value}
+                      onClick={() => setScale(s.value)}
+                      title={s.label}
+                      className={cn(
+                        "p-1.5 rounded-lg transition-all",
+                        scale === s.value 
+                          ? "bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400 shadow-sm" 
+                          : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+                      )}
+                    >
+                      {s.icon}
+                    </button>
+                  ))}
+                </div>
                 <button
                   onClick={handleRefresh}
                   disabled={isRefreshing}
@@ -671,19 +705,19 @@ export function StudioDashboardClient({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+            <div className={cn("grid gap-4 transition-all duration-500", gridColumns)}>
               {/* 1. Card Fixo do Portal de Login (Sistema) */}
               <div className="group relative p-5 bg-gradient-to-br from-indigo-600/5 to-purple-600/5 dark:from-indigo-600/10 dark:to-purple-600/10 border border-indigo-500/20 dark:border-indigo-500/30 rounded-[1.5rem] hover:border-indigo-500 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-1">
+                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-indigo-600 text-white text-[9px] font-black rounded-full uppercase tracking-widest shadow-lg shadow-indigo-500/20 z-10 border border-white/10 dark:border-black/10 min-w-[140px] text-center">
+                  {t('dashboard.projects.system_label')}
+                </div>
                 <div className="flex flex-col h-full gap-4">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <h4 className="text-lg font-black tracking-tight text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        <h4 className="text-base font-black tracking-tight text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                           {t('dashboard.projects.studio.login_portal')}
                         </h4>
-                        <div className="px-2 py-0.5 bg-indigo-600 text-white text-[8px] font-black rounded-lg uppercase tracking-widest shadow-lg shadow-indigo-500/20">
-                          {t('dashboard.projects.system_label')}
-                        </div>
                       </div>
                       <p className="text-[10px] text-neutral-400 font-mono flex items-center gap-1.5 tracking-tight">
                         <span className="opacity-50">/</span>{workspace_slug}/{project_slug}/login
@@ -699,7 +733,7 @@ export function StudioDashboardClient({
                       <>
                         <Link
                           href={`/admin/${workspace_slug}/${project_slug}/studio/auth`}
-                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-indigo-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-indigo-500/20"
+                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-indigo-600 text-white rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-indigo-500/20"
                         >
                           <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure_login')}
                         </Link>
@@ -715,7 +749,7 @@ export function StudioDashboardClient({
                       <Link
                         href={`/${workspace_slug}/${project_slug}/login`}
                         target="_blank"
-                        className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-indigo-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-indigo-500/20"
+                        className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-indigo-600 text-white rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-indigo-500/20"
                       >
                         <ExternalLink className="w-4 h-4" /> {t('dashboard.projects.studio.view_portal')}
                       </Link>
@@ -726,38 +760,38 @@ export function StudioDashboardClient({
 
               {/* 2. Card do BPM/Automações (Sistema) */}
               <div className="group relative p-5 bg-gradient-to-br from-emerald-600/5 to-teal-600/5 dark:from-emerald-600/10 dark:to-teal-600/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-[1.5rem] hover:border-emerald-500 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-1">
+                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-emerald-600 text-white text-[9px] font-black rounded-full uppercase tracking-widest shadow-lg shadow-emerald-500/20 z-10 border border-white/10 dark:border-black/10 min-w-[140px] text-center">
+                  {t('dashboard.projects.system_label')}
+                </div>
                 <div className="flex flex-col h-full gap-4">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <h4 className={`text-lg font-black tracking-tight transition-colors ${isAutomationsActive ? 'text-neutral-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400' : 'text-neutral-400 italic'}`}>
+                        <h4 className={`text-base font-black tracking-tight transition-colors ${isAutomationsActive ? 'text-neutral-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400' : 'text-neutral-400 italic'}`}>
                           {t('dashboard.projects.studio.automations_bpm')}
                         </h4>
-                        <div className="px-2 py-0.5 bg-emerald-600 text-white text-[8px] font-black rounded-lg uppercase tracking-widest shadow-lg shadow-emerald-500/20">
-                          {t('dashboard.projects.system_label')}
-                        </div>
                       </div>
                       <p className="text-[10px] text-neutral-400 font-mono flex items-center gap-1.5 tracking-tight">
                         <span className="opacity-50">/</span>{workspace_slug}/{project_slug}/automations
                       </p>
                     </div>
-                    <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                    <div className="p-2 bg-emerald-500/10 rounded-2xl text-emerald-600 dark:text-emerald-400 flex flex-col items-center gap-2">
                        {canCreate ? (
                          <button
                            onClick={handleToggleAutomations}
-                           className={`p-1 rounded-md transition-colors ${isAutomationsActive ? 'text-emerald-500 hover:bg-emerald-500/20' : 'text-neutral-400 hover:bg-neutral-500/10'}`}
+                           className={`p-1.5 rounded-xl transition-colors ${isAutomationsActive ? 'text-emerald-500 hover:bg-emerald-500/20' : 'text-neutral-400 hover:bg-neutral-500/10'}`}
                            title={isAutomationsActive ? t('dashboard.projects.studio.status_active') : t('dashboard.projects.studio.status_inactive')}
                          >
                            {isAutomationsActive ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
                          </button>
                        ) : (
                          <span
-                           className={`p-1 rounded-md cursor-default ${isAutomationsActive ? 'text-emerald-500' : 'text-neutral-400'}`}
+                           className={`p-1.5 rounded-xl cursor-default ${isAutomationsActive ? 'text-emerald-500' : 'text-neutral-400'}`}
                          >
                            {isAutomationsActive ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
                          </span>
                        )}
-                      <Workflow className="w-5 h-5" />
+                      <div className="p-1.5"><Workflow className="w-4 h-4" /></div>
                     </div>
                   </div>
 
@@ -766,7 +800,7 @@ export function StudioDashboardClient({
                       <>
                         <button
                           onClick={() => setIsBpmConfigModalOpen(true)}
-                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-emerald-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-emerald-500/20"
+                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-emerald-600 text-white rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-emerald-500/20"
                         >
                           <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure_module')}
                         </button>
@@ -785,7 +819,7 @@ export function StudioDashboardClient({
                         <Link
                           href={`/${workspace_slug}/${project_slug}/automations`}
                           target="_blank"
-                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-emerald-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-emerald-500/20"
+                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-emerald-600 text-white rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-emerald-500/20"
                         >
                           <ExternalLink className="w-4 h-4" /> {t('dashboard.projects.studio.access_bpm')}
                         </Link>
@@ -797,38 +831,38 @@ export function StudioDashboardClient({
 
               {/* 3. Card da Central de Downloads (Sistema) */}
               <div className="group relative p-5 bg-gradient-to-br from-blue-600/5 to-cyan-600/5 dark:from-blue-600/10 dark:to-cyan-600/10 border border-blue-500/20 dark:border-blue-500/30 rounded-[1.5rem] hover:border-blue-500 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-1">
+                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-full uppercase tracking-widest shadow-lg shadow-blue-500/20 z-10 border border-white/10 dark:border-black/10 min-w-[140px] text-center">
+                  {t('dashboard.projects.system_label')}
+                </div>
                 <div className="flex flex-col h-full gap-4">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <h4 className={`text-lg font-black tracking-tight transition-colors ${isDownloadsActive ? 'text-neutral-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400' : 'text-neutral-400 italic'}`}>
+                        <h4 className={`text-base font-black tracking-tight transition-colors ${isDownloadsActive ? 'text-neutral-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400' : 'text-neutral-400 italic'}`}>
                           {t('dashboard.projects.studio.downloads_center')}
                         </h4>
-                        <div className="px-2 py-0.5 bg-blue-600 text-white text-[8px] font-black rounded-lg uppercase tracking-widest shadow-lg shadow-blue-500/20">
-                          {t('dashboard.projects.system_label')}
-                        </div>
                       </div>
                       <p className="text-[10px] text-neutral-400 font-mono flex items-center gap-1.5 tracking-tight">
                         <span className="opacity-50">/</span>{workspace_slug}/{project_slug}/downloads
                       </p>
                     </div>
-                    <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                    <div className="p-2 bg-blue-500/10 rounded-2xl text-blue-600 dark:text-blue-400 flex flex-col items-center gap-2">
                        {canCreate ? (
                          <button
                            onClick={handleToggleDownloads}
-                           className={`p-1 rounded-md transition-colors ${isDownloadsActive ? 'text-blue-500 hover:bg-blue-500/20' : 'text-neutral-400 hover:bg-neutral-500/10'}`}
+                           className={`p-1.5 rounded-xl transition-colors ${isDownloadsActive ? 'text-blue-500 hover:bg-blue-500/20' : 'text-neutral-400 hover:bg-neutral-500/10'}`}
                            title={isDownloadsActive ? t('dashboard.projects.studio.status_active') : t('dashboard.projects.studio.status_inactive')}
                          >
                            {isDownloadsActive ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
                          </button>
                        ) : (
                          <span
-                           className={`p-1 rounded-md cursor-default ${isDownloadsActive ? 'text-blue-500' : 'text-neutral-400'}`}
+                           className={`p-1.5 rounded-xl cursor-default ${isDownloadsActive ? 'text-blue-500' : 'text-neutral-400'}`}
                          >
                            {isDownloadsActive ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
                          </span>
                        )}
-                      <Download className="w-5 h-5" />
+                      <div className="p-1.5"><Download className="w-4 h-4" /></div>
                     </div>
                   </div>
 
@@ -837,7 +871,7 @@ export function StudioDashboardClient({
                       <>
                         <button
                           onClick={handleToggleDownloads}
-                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-blue-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-blue-500/20"
+                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-blue-600 text-white rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-blue-500/20"
                         >
                           <Settings2 className="w-4 h-4" /> {isDownloadsActive ? t('dashboard.projects.studio.disable_module') : t('dashboard.projects.studio.enable_module')}
                         </button>
@@ -856,7 +890,7 @@ export function StudioDashboardClient({
                         <Link
                           href={`/${workspace_slug}/${project_slug}/downloads`}
                           target="_blank"
-                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-blue-600 text-white rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-blue-500/20"
+                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-blue-600 text-white rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-blue-500/20"
                         >
                           <ExternalLink className="w-4 h-4" /> {t('dashboard.projects.studio.access_downloads')}
                         </Link>
@@ -871,36 +905,14 @@ export function StudioDashboardClient({
                   key={view.id}
                   className="group relative p-5 bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] hover:border-indigo-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl dark:shadow-none hover:-translate-y-1"
                 >
-                  <div className="flex flex-col gap-4">
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 text-[10px] font-black rounded-full capitalize tracking-widest shadow-lg shadow-indigo-500/10 z-10 border border-indigo-200 dark:border-indigo-800 whitespace-nowrap min-w-[140px] text-center">
+                    {t(`wizard.logic.types.${view.logic_type}.title`, view.logic_type?.replace('_', ' + ') || 'Custom')}
+                  </div>
+
+                  <div className="flex flex-col gap-4 h-full">
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <div className="px-2.5 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[9px] font-black rounded-lg border border-indigo-500/20 uppercase tracking-widest w-fit">
-                            {t(`wizard.logic.types.${view.logic_type}.title`, view.logic_type?.replace('_', ' + ') || 'Custom')}
-                          </div>
-                          {view.draft_config && (
-                            <div className="px-2.5 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[9px] font-black rounded-lg border border-amber-500/20 uppercase tracking-widest w-fit animate-pulse" title="Existem alterações salvas que ainda não foram publicadas.">
-                              Rascunho Pendente
-                            </div>
-                          )}
-                          {canCreate ? (
-                            <button
-                              onClick={() => handleToggleActive(view)}
-                              className={`p-1 rounded-md transition-colors ${view.layout_config?.is_active !== false ? 'text-emerald-500 hover:bg-emerald-500/10' : 'text-neutral-400 hover:bg-neutral-500/10'}`}
-                              title={view.layout_config?.is_active !== false ? t('dashboard.projects.studio.status_active') : t('dashboard.projects.studio.status_inactive')}
-                            >
-                              {view.layout_config?.is_active !== false ? <Power className="w-3.5 h-3.5" /> : <PowerOff className="w-3.5 h-3.5" />}
-                            </button>
-                          ) : (
-                            <span
-                              className={`p-1 rounded-md cursor-default ${view.layout_config?.is_active !== false ? 'text-emerald-500' : 'text-neutral-400'}`}
-                              title={view.layout_config?.is_active !== false ? t('dashboard.projects.studio.status_active') : t('dashboard.projects.studio.status_inactive')}
-                            >
-                              {view.layout_config?.is_active !== false ? <Power className="w-3.5 h-3.5" /> : <PowerOff className="w-3.5 h-3.5" />}
-                            </span>
-                          )}
-                        </div>
-                        <h4 className={`text-lg font-bold tracking-tight transition-colors ${view.layout_config?.is_active !== false ? 'text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400' : 'text-neutral-400 italic'}`}>
+                        <h4 className={`text-base font-bold tracking-tight transition-colors ${view.layout_config?.is_active !== false ? 'text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400' : 'text-neutral-400 italic'}`}>
                           {view.draft_config?.name || view.name}
                         </h4>
                         <p className="text-xs text-neutral-400 font-mono flex items-center gap-1.5 tracking-tight">
@@ -908,7 +920,23 @@ export function StudioDashboardClient({
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-1">
+                      <div className="flex flex-col items-center gap-1">
+                          {canCreate ? (
+                            <button
+                              onClick={() => handleToggleActive(view)}
+                              className={`p-2 rounded-xl transition-colors ${view.layout_config?.is_active !== false ? 'text-emerald-500 hover:bg-emerald-500/10' : 'text-neutral-400 hover:bg-neutral-500/10'}`}
+                              title={view.layout_config?.is_active !== false ? t('dashboard.projects.studio.status_active') : t('dashboard.projects.studio.status_inactive')}
+                            >
+                              {view.layout_config?.is_active !== false ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
+                            </button>
+                          ) : (
+                            <span
+                              className={`p-2 rounded-xl cursor-default ${view.layout_config?.is_active !== false ? 'text-emerald-500' : 'text-neutral-400'}`}
+                              title={view.layout_config?.is_active !== false ? t('dashboard.projects.studio.status_active') : t('dashboard.projects.studio.status_inactive')}
+                            >
+                              {view.layout_config?.is_active !== false ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
+                            </span>
+                          )}
                         {canCreate && (
                           project.navigation?.some((item: any) => item.type === 'view' && item.target === view.slug) ? (
                             <button
@@ -953,7 +981,7 @@ export function StudioDashboardClient({
                               setViewToEdit(view)
                               setViewMode('builder')
                             }}
-                            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
+                            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
                           >
                             <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure')}
                           </button>
@@ -961,7 +989,7 @@ export function StudioDashboardClient({
                             <Link
                               href={`/${workspace_slug}/${project_slug}/${view.slug}?preview=draft`}
                               target="_blank"
-                              className="w-14 flex items-center justify-center bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 rounded-2xl border border-amber-200 dark:border-amber-500/30 transition-all text-amber-600 dark:text-amber-500 shadow-sm group/preview"
+                              className="w-14 flex items-center justify-center bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 rounded-2xl border border-amber-200 dark:border-amber-500/30 transition-all text-amber-600 dark:text-amber-500 shadow-sm group/preview animate-pulse"
                               title="Visualizar Rascunho"
                             >
                               <Eye className="w-5 h-5 group-hover/preview:scale-110 transition-transform" />
@@ -983,7 +1011,7 @@ export function StudioDashboardClient({
                           <Link
                             href={`/${workspace_slug}/${project_slug}/${view.slug}`}
                             target="_blank"
-                            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-xs font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
+                            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
                           >
                             <ArrowRight className="w-4 h-4" /> {t('dashboard.projects.studio.access_use_case')}
                           </Link>

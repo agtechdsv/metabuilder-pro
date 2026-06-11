@@ -24,7 +24,7 @@ import dagre from 'dagre';
 import { FlowSidebar } from './FlowSidebar';
 import { TriggerNode, ActionNode, ConditionNode } from './nodes/CustomNodes';
 import RichTextEditor from './RichTextEditor';
-import { Save, Play, Wand2, X, ArrowLeft, Loader2, Plus, Trash2, Check, Edit2, Box } from 'lucide-react';
+import { Save, Play, Wand2, X, ArrowLeft, Loader2, Plus, Trash2, Check, Edit2, Box, Minimize2, Maximize2, ZoomIn, LayoutGrid } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Modal } from '@/components/ui/Modal';
 import ButtonEdge from './edges/ButtonEdge';
@@ -32,6 +32,7 @@ import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/components/ui/Toast';
 import { wrapEmailInTemplate, EmailTemplateType } from '@/utils/emailTemplates';
 import { useI18n } from '@/i18n/I18nContext';
+import { cn } from '@/lib/utils';
 
 const nodeTypes = {
   trigger: TriggerNode,
@@ -116,8 +117,21 @@ function BpmCanvasContent({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
-  const { fitView } = useReactFlow();
+  const { fitView, zoomTo, getZoom } = useReactFlow();
   const [localViews, setLocalViews] = useState(initialViews);
+  
+  const [scale, setScale] = useState(1.0);
+  const scales = [
+    { value: 0.8, icon: <Minimize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_small', 'Pequeno') },
+    { value: 1.0, icon: <LayoutGrid className="w-3.5 h-3.5" />, label: t('runtime.scale_normal', 'Normal') },
+    { value: 1.2, icon: <Maximize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_large', 'Grande') },
+    { value: 1.5, icon: <ZoomIn className="w-3.5 h-3.5" />, label: t('runtime.scale_xl', 'Extra Grande') }
+  ];
+
+  const handleZoom = (val: number) => {
+    setScale(val);
+    zoomTo(val, { duration: 300 });
+  };
   const router = useRouter();
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -826,6 +840,27 @@ function BpmCanvasContent({
                 <Wand2 className="w-5 h-5" />
                 {t('bpm.canvas.auto_align')}
               </button>
+            </Panel>
+            
+            {/* Custom Zoom Controls */}
+            <Panel position="bottom-center" className="mb-6 z-50">
+              <div className="flex items-center bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-xl">
+                {scales.map(s => (
+                  <button
+                    key={s.value}
+                    onClick={() => handleZoom(s.value)}
+                    title={s.label}
+                    className={cn(
+                      "p-2 rounded-xl transition-all",
+                      scale === s.value 
+                        ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm" 
+                        : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                    )}
+                  >
+                    {s.icon}
+                  </button>
+                ))}
+              </div>
             </Panel>
           </ReactFlow>
         </div>

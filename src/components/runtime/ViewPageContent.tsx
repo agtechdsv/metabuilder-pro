@@ -1107,7 +1107,8 @@ export default function ViewPageContent({
           console.warn(`[MetaBuilder:handleSaveDetail] No columns to update. Skipping.`)
           setIsProcessing(false)
           setIsDetailModalOpen(false)
-          fetchData()
+          setDetailRefreshKey(prev => prev + 1)
+          setRefreshKey(prev => prev + 1)
           return
         }
         const setClause = Object.entries(sanitizedData)

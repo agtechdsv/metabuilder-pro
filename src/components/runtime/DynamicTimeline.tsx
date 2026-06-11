@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Calendar, Clock, Edit2, Eye, Trash2, Tag, FileText, Settings2, RefreshCcw, ArrowRight, ArrowDown } from 'lucide-react'
+import { Calendar, Clock, Edit2, Eye, Trash2, Tag, FileText, Settings2, RefreshCcw, ArrowRight, ArrowDown, Minimize2, Maximize2, ZoomIn, LayoutGrid } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { format, parseISO, isValid } from 'date-fns'
@@ -90,6 +90,13 @@ export default function DynamicTimeline({
   const [style, setStyle] = useState(timelineConfig.layout_style || 'cards')
   const [animated, setAnimated] = useState(timelineConfig.animated !== false)
   const [scale, setScale] = useState(timelineConfig.card_scale ?? 1.0)
+
+  const scales = [
+    { value: 0.8, icon: <Minimize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_small', 'Pequeno') },
+    { value: 1.0, icon: <LayoutGrid className="w-3.5 h-3.5" />, label: t('runtime.scale_normal', 'Normal') },
+    { value: 1.2, icon: <Maximize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_large', 'Grande') },
+    { value: 1.5, icon: <ZoomIn className="w-3.5 h-3.5" />, label: t('runtime.scale_xl', 'Extra Grande') }
+  ]
 
   useEffect(() => {
     setMode(timelineConfig.layout_mode || 'alternating')
@@ -355,15 +362,24 @@ export default function DynamicTimeline({
             </select>
           </div>
 
-          <div className="flex items-center gap-3 ml-2 sm:ml-4 border-l border-neutral-200 dark:border-neutral-800 pl-4 sm:pl-6">
-            <span className="text-[10px] font-bold text-neutral-500 uppercase">Escala:</span>
-            <input 
-              type="range" min="0.6" max="1.4" step="0.1" 
-              value={scale} 
-              onChange={e => setScale(Number(e.target.value))}
-              className="w-20 sm:w-24 h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-indigo-500" 
-            />
-            <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded">{scale.toFixed(1)}x</span>
+          <div className="flex items-center gap-1 ml-2 sm:ml-4 border-l border-neutral-200 dark:border-neutral-800 pl-4 sm:pl-6">
+            <div className="flex items-center bg-neutral-100 dark:bg-neutral-800/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800">
+              {scales.map(s => (
+                <button
+                  key={s.value}
+                  onClick={() => setScale(s.value)}
+                  title={s.label}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-all",
+                    scale === s.value 
+                      ? "bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400 shadow-sm" 
+                      : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+                  )}
+                >
+                  {s.icon}
+                </button>
+              ))}
+            </div>
           </div>
 
           {onRefresh && (

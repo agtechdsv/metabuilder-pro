@@ -1049,7 +1049,9 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       return [fromModel?.id, toModel?.id].filter(Boolean)
     })
 
-    const allInvolved = Array.from(new Set([...widgetModels, ...joinModels])).filter(Boolean) as string[]
+    // Preserva o master_model (selecionado no Passo 2)
+    const masterModelId = config.layout_config?.master_model_id || config.selected_models?.[0];
+    const allInvolved = Array.from(new Set([masterModelId, ...widgetModels, ...joinModels])).filter(Boolean) as string[]
 
     // Só atualizamos se houver mudança real para evitar loops de renderização
     if (JSON.stringify([...allInvolved].sort()) !== JSON.stringify([...config.selected_models].sort())) {
@@ -1059,7 +1061,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         tables_config: allInvolved
       }))
     }
-  }, [config.layout_config.analytics_config.widgets, config.layout_config.joins, config.logic_type, models])
+  }, [config.layout_config.analytics_config?.widgets, config.layout_config.joins, config.logic_type, models, config.layout_config.master_model_id, config.selected_models])
 
   useEffect(() => {
     const loadModels = async () => {
@@ -1076,10 +1078,10 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
 
   const steps = [
     { id: 1, title: t('wizard.steps.logic'), icon: <Settings2 className="w-4 h-4" /> },
-    { id: 2, title: t('wizard.steps.tables'), icon: <Database className="w-4 h-4" />, hidden: config.logic_type === 'analytics' },
+    { id: 2, title: t('wizard.steps.tables'), icon: <Database className="w-4 h-4" /> },
     { id: 3, title: t('wizard.steps.layout'), icon: <Layout className="w-4 h-4" /> },
     { id: 4, title: t('wizard.steps.actions'), icon: <MousePointer2 className="w-4 h-4" /> }
-  ].filter(s => !s.hidden)
+  ].filter((s: any) => !s.hidden)
 
   const isStepValid = (step: number) => {
     if (step === 1) return !!(config.name && config.slug && config.logic_type)

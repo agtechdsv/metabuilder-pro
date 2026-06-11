@@ -12,10 +12,14 @@ import {
   LayoutGrid, 
   Layers,
   Sparkles,
-  Trash2
+  Trash2,
+  Minimize2,
+  Maximize2,
+  ZoomIn
 } from 'lucide-react'
 import { formatFieldValue } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n/I18nContext'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface DynamicSchedulerProps {
@@ -50,6 +54,15 @@ export default function DynamicScheduler({
 }: DynamicSchedulerProps) {
   const [currentView, setCurrentView] = useState<'month' | 'week' | 'day'>('month')
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
+  const { t } = useI18n()
+
+  const [scale, setScale] = useState(1.0)
+  const scales = [
+    { value: 0.8, icon: <Minimize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_small', 'Pequeno') },
+    { value: 1.0, icon: <LayoutGrid className="w-3.5 h-3.5" />, label: t('runtime.scale_normal', 'Normal') },
+    { value: 1.2, icon: <Maximize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_large', 'Grande') },
+    { value: 1.5, icon: <ZoomIn className="w-3.5 h-3.5" />, label: t('runtime.scale_xl', 'Extra Grande') }
+  ]
 
   // Mapeia colunas do banco com base no schedulerConfig
   const titleCol = fields.find(f => f.id === schedulerConfig.title_field)?.db_column_name || 'title'
@@ -311,6 +324,25 @@ export default function DynamicScheduler({
             </button>
           </div>
 
+          {/* Zoom controls */}
+          <div className="flex items-center bg-neutral-100 dark:bg-neutral-950 p-1 rounded-xl border border-neutral-200/50 dark:border-neutral-800/50 shadow-sm hidden md:flex">
+            {scales.map(s => (
+              <button
+                key={s.value}
+                onClick={() => setScale(s.value)}
+                title={s.label}
+                className={cn(
+                  "p-1.5 rounded-lg transition-all",
+                  scale === s.value 
+                    ? "bg-white dark:bg-neutral-900 text-indigo-600 dark:text-indigo-400 shadow-sm" 
+                    : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+                )}
+              >
+                {s.icon}
+              </button>
+            ))}
+          </div>
+
           {/* View Toggle tabs */}
           <div className="flex p-1 bg-neutral-100 dark:bg-neutral-950 rounded-xl border border-neutral-200/50 dark:border-neutral-800/50 shadow-sm">
             {(['month', 'week', 'day'] as const).map(v => (
@@ -332,7 +364,7 @@ export default function DynamicScheduler({
       </div>
 
       {/* Main Calendar Views */}
-      <div className="min-h-[500px]">
+      <div className="min-h-[500px]" style={{ zoom: scale }}>
         <AnimatePresence mode="wait">
           {currentView === 'month' && (
             <motion.div 

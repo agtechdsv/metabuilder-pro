@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useMemo, useRef, useState } from 'react'
-import { Edit2, Eye, Trash2, CalendarDays, Clock, LayoutList } from 'lucide-react'
+import { Edit2, Eye, Trash2, CalendarDays, Clock, LayoutList, Minimize2, Maximize2, ZoomIn, LayoutGrid } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { format, differenceInDays, addDays, startOfDay, isSameDay, isWeekend, startOfMonth, endOfMonth, eachDayOfInterval, getDaysInMonth, addMonths } from 'date-fns'
@@ -39,10 +39,18 @@ export default function DynamicGantt({
   const dateLocale = language === 'pt' ? ptBR : language === 'es' ? es : enUS
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
+  const [scale, setScale] = useState(1.0)
+  const scales = [
+    { value: 0.8, icon: <Minimize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_small', 'Pequeno') },
+    { value: 1.0, icon: <LayoutGrid className="w-3.5 h-3.5" />, label: t('runtime.scale_normal', 'Normal') },
+    { value: 1.2, icon: <Maximize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_large', 'Grande') },
+    { value: 1.5, icon: <ZoomIn className="w-3.5 h-3.5" />, label: t('runtime.scale_xl', 'Extra Grande') }
+  ]
+
   // Layout Constants
   const HEADER_HEIGHT = 60
   const ROW_HEIGHT = 56
-  const DAY_WIDTH = 40 // Width of each day column in pixels
+  const DAY_WIDTH = 40 * scale // Width of each day column in pixels
   const SIDEBAR_WIDTH = 280
 
   // Helper to map Field ID to DB Column Name
@@ -193,6 +201,23 @@ export default function DynamicGantt({
             >
                 Hoje
             </button>
+            <div className="flex items-center bg-white dark:bg-neutral-800 p-1 rounded-xl border border-neutral-200 dark:border-neutral-700">
+              {scales.map(s => (
+                <button
+                  key={s.value}
+                  onClick={() => setScale(s.value)}
+                  title={s.label}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-all",
+                    scale === s.value 
+                      ? "bg-neutral-100 dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400 shadow-sm" 
+                      : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+                  )}
+                >
+                  {s.icon}
+                </button>
+              ))}
+            </div>
         </div>
       </div>
 

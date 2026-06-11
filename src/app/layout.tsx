@@ -45,8 +45,9 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <script
+        <Script
           id="oauth-redirect"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
             try {

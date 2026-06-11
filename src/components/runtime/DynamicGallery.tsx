@@ -20,7 +20,9 @@ import {
   LayoutGrid,
   FileIcon, 
   ImageIcon, 
-  Maximize2, 
+  Maximize2,
+  Minimize2,
+  ZoomIn,
   RefreshCw,
   Printer
 } from 'lucide-react'
@@ -64,6 +66,13 @@ export default function DynamicGallery({
   const [activeFilter, setActiveFilter] = useState<'all' | 'image' | 'document'>('all')
   const [selectedAsset, setSelectedAsset] = useState<any | null>(null)
   const [scale, setScale] = useState(1.0)
+
+  const scales = [
+    { value: 0.8, icon: <Minimize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_small', 'Pequeno') },
+    { value: 1.0, icon: <LayoutGrid className="w-3.5 h-3.5" />, label: t('runtime.scale_normal', 'Normal') },
+    { value: 1.2, icon: <Maximize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_large', 'Grande') },
+    { value: 1.5, icon: <ZoomIn className="w-3.5 h-3.5" />, label: t('runtime.scale_xl', 'Extra Grande') }
+  ]
 
   const canView = buttonsConfig.find((b: any) => b.id === 'view')?.visible === true
   const canEdit = buttonsConfig.find((b: any) => b.id === 'edit')?.visible === true
@@ -581,15 +590,24 @@ export default function DynamicGallery({
         
         <div className="flex items-center gap-4 w-full sm:w-auto justify-center sm:justify-end flex-wrap sm:flex-nowrap">
           {/* Slider de Escala */}
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest hidden sm:inline-block">Escala:</span>
-            <input 
-              type="range" min="0.6" max="1.6" step="0.1" 
-              value={scale} 
-              onChange={e => setScale(Number(e.target.value))}
-              className="w-20 sm:w-24 h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-indigo-500" 
-            />
-            <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded hidden sm:inline-block">{scale.toFixed(1)}x</span>
+          <div className="flex items-center gap-1">
+            <div className="flex items-center bg-neutral-100 dark:bg-neutral-800/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 hidden md:flex">
+              {scales.map(s => (
+                <button
+                  key={s.value}
+                  onClick={() => setScale(s.value)}
+                  title={s.label}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-all",
+                    scale === s.value 
+                      ? "bg-white dark:bg-neutral-700 text-rose-500 dark:text-rose-400 shadow-sm" 
+                      : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+                  )}
+                >
+                  {s.icon}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Filtros em Abas */}

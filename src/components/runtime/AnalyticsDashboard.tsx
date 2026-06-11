@@ -8,7 +8,7 @@ import {
 } from 'recharts'
 import { 
   TrendingUp, Users, DollarSign, Activity, Loader2, 
-  AlertCircle, ChevronDown, Plus, Pencil, Trash2, Maximize2, Minimize2, Gauge,
+  AlertCircle, ChevronDown, Plus, Pencil, Trash2, Maximize2, Minimize2, ZoomIn, LayoutGrid, Gauge,
   GripVertical, MousePointer2, Save, Search, BarChart3
 } from 'lucide-react'
 import { 
@@ -50,6 +50,9 @@ interface Widget {
   gauge_start?: number
   gauge_end?: number
   use_formula?: boolean
+  date_granularity?: string
+  sort_by?: string
+  limit_top_n?: number
 }
 
 interface AnalyticsDashboardProps {
@@ -101,7 +104,23 @@ export default function AnalyticsDashboard({
   }, [config.widgets])
   
   const supabase = createClient()
-  const { t } = useI18n()
+  const { t, language } = useI18n()
+
+  const [scale, setScale] = useState(1.0)
+  const scales = [
+    { value: 0.8, icon: <Minimize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_small', 'Pequeno') },
+    { value: 1.0, icon: <LayoutGrid className="w-3.5 h-3.5" />, label: t('runtime.scale_normal', 'Normal') },
+    { value: 1.2, icon: <Maximize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_large', 'Grande') },
+    { value: 1.5, icon: <ZoomIn className="w-3.5 h-3.5" />, label: t('runtime.scale_xl', 'Extra Grande') }
+  ]
+
+  const formatNumber = (val: any) => {
+    if (val === null || val === undefined) return ''
+    const num = Number(val)
+    if (isNaN(num)) return String(val)
+    const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
+    return new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(num)
+  }
 
   // Mapeia IDs de widgets para evitar loops de refresh infinitos
   const lastQueryIds = useRef<Record<string, string>>({})
@@ -229,22 +248,23 @@ export default function AnalyticsDashboard({
       selectStr = fieldMeta?.db_column_name || widget.field || '*'
     }
 
+    let groupCol = widget.group_by
     if (widget.group_by && !selectStr.includes(widget.group_by)) {
         const allModels = Array.isArray(project.models) ? project.models : Object.values(project.models || {})
-        let groupCol = widget.group_by
         const parts = widget.group_by.split('.')
-        const targetTableName = parts.length > 1 ? parts[0] : tableName
+        const targetTableName = parts.length > 1 ? parts[0] : null
         const targetFieldName = parts.length > 1 ? parts[1] : widget.group_by
 
         for (const m of (allModels as any[])) {
-          if (m.db_table_name === targetTableName) {
-            const fields = Array.isArray(m.fields) ? m.fields : Object.values(m.fields || {})
-            const found = fields.find((f: any) => String(f.id) === String(targetFieldName) || f.db_column_name === targetFieldName || f.name === targetFieldName)
-            if (found) groupCol = found.db_column_name
+          if (targetTableName && m.db_table_name !== targetTableName) continue
+          const fields = Array.isArray(m.fields) ? m.fields : Object.values(m.fields || {})
+          const found = fields.find((f: any) => String(f.id) === String(targetFieldName) || f.db_column_name === targetFieldName || f.name === targetFieldName)
+          if (found) {
+            groupCol = `${m.db_table_name}.${found.db_column_name}`
             break
           }
         }
-        if (!selectStr.includes(groupCol)) selectStr += `, ${groupCol}`
+        if (typeof groupCol === 'string' && !selectStr.includes(groupCol)) selectStr += `, ${groupCol}`
     }
 
     // Build JOINs using the Santo Graal BFS path-finder
@@ -254,11 +274,19 @@ export default function AnalyticsDashboard({
 
     // Tables referenced in the query (group_by may reference a foreign table)
     const referencedTables: string[] = []
-    if (widget.group_by && widget.group_by.includes('.')) {
-      referencedTables.push(widget.group_by.split('.')[0])
+    
+    // Adicionamos as tabelas necessárias pelo Agrupamento resolvido
+    if (typeof groupCol === 'string' && groupCol.includes('.')) {
+      referencedTables.push(groupCol.split('.')[0])
     }
-    if (widget.field && typeof widget.field === 'string' && widget.field.includes('.')) {
-      referencedTables.push(widget.field.split('.')[0])
+
+    if (widget.field && typeof widget.field === 'string') {
+      const matches = widget.field.match(/[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+/g)
+      if (matches) {
+        matches.forEach(m => referencedTables.push(m.split('.')[0]))
+      } else if (widget.field.includes('.')) {
+        referencedTables.push(widget.field.split('.')[0])
+      }
     }
     // Also respect manually configured widget joins (legacy support)
     const legacyJoins = [...(widget.joins || []), ...(joins || [])]
@@ -270,14 +298,18 @@ export default function AnalyticsDashboard({
     })
 
     let joinSql = ''
+    const joinedTables = new Set<string>([tableName])
+
     if (resolvedRelations.length > 0 && referencedTables.length > 0) {
       // Use Santo Graal BFS
       const uniqueReferenced = [...new Set(referencedTables.filter(t => t !== tableName))]
       const steps = resolveAllJoins(resolvedRelations, tableName, uniqueReferenced)
-      joinSql = buildJoinSql(steps)
-    } else if (legacyJoins.length > 0) {
-      // Fallback: use the old manual processJoins loop
-      const joinedTables = new Set<string>([tableName])
+      joinSql += buildJoinSql(steps)
+      steps.forEach(s => { joinedTables.add(s.fromTable); joinedTables.add(s.toTable) })
+    }
+    
+    // Always process legacyJoins just in case
+    if (legacyJoins.length > 0) {
       const processJoins = () => {
         let added = false
         legacyJoins.forEach((j: any) => {
@@ -301,6 +333,53 @@ export default function AnalyticsDashboard({
       while (processJoins() && iterations < 10) { iterations++ }
     }
 
+    // Heuristic Auto-Join: If a referenced table is STILL missing, scan models for a foreign key
+    const missingTables = referencedTables.filter(t => !joinedTables.has(t) && t !== tableName)
+    missingTables.forEach(refTable => {
+       const joinedList = Array.from(joinedTables)
+       for (const jt of joinedList) {
+          const jtModel = (allModels as any[]).find(m => m.db_table_name === jt)
+          if (jtModel) {
+             const fields = Array.isArray(jtModel.fields) ? jtModel.fields : Object.values(jtModel.fields || {})
+             const isRel = (f: any) => (f.type === 'relation' && (f.relation?.table === refTable || f.relation_table === refTable)) || f.db_column_name === `${refTable}_id` || f.db_column_name === `${refTable.replace(/s$/, '')}_id`
+             const relField = fields.find(isRel)
+             if (relField) {
+                const localCol = relField.db_column_name || 'id'
+                const foreignCol = relField.relation?.foreign_field || relField.relation_key || 'id'
+                joinSql += ` LEFT JOIN "${refTable}" ON "${jt}"."${localCol}" = "${refTable}"."${foreignCol}"`
+                joinedTables.add(refTable)
+                break;
+             }
+          }
+          const refModel = (allModels as any[]).find(m => m.db_table_name === refTable)
+          if (refModel) {
+             const fields = Array.isArray(refModel.fields) ? refModel.fields : Object.values(refModel.fields || {})
+             const isRelReverse = (f: any) => (f.type === 'relation' && (f.relation?.table === jt || f.relation_table === jt)) || f.db_column_name === `${jt}_id` || f.db_column_name === `${jt.replace(/s$/, '')}_id`
+             const relField = fields.find(isRelReverse)
+             if (relField) {
+                const localCol = relField.db_column_name || 'id'
+                const foreignCol = relField.relation?.foreign_field || relField.relation_key || 'id'
+                joinSql += ` LEFT JOIN "${refTable}" ON "${refTable}"."${localCol}" = "${jt}"."${foreignCol}"`
+                joinedTables.add(refTable)
+                break;
+             }
+          }
+       }
+    })
+
+    // Final safety net: Remove any columns from selectStr that belong to unjoined tables to prevent crashes
+    if (selectStr !== '*') {
+      selectStr = selectStr.split(',').filter(s => {
+        const col = s.trim()
+        if (col === '*') return true
+        if (col.includes('.')) {
+          const t = col.split('.')[0]
+          return joinedTables.has(t) || t === tableName
+        }
+        return true
+      }).join(', ')
+    }
+
     // Build Filters
     let whereClause = '1=1'
     Object.entries(filters).forEach(([key, val]) => {
@@ -309,9 +388,20 @@ export default function AnalyticsDashboard({
       const filterCol = key.includes('.') ? key.split('.')[1] : key
       whereClause += ` AND "${filterTable}"."${filterCol}" ILIKE '%${String(val).replace(/'/g, "''")}%'`
     })
+    let sqlSelect = '*'
+    if (selectStr !== '*') {
+      sqlSelect = selectStr.split(',').map(s => {
+        const col = s.trim()
+        if (col === '*') return '*'
+        if (col.includes('.')) {
+          const p = col.split('.')
+          return `"${p[0]}"."${p[1]}"`
+        }
+        return `"${tableName}"."${col}"`
+      }).join(', ')
+    }
 
-    const sql = `SELECT "${tableName}".${selectStr} FROM "${tableName}"${joinSql} WHERE ${whereClause} LIMIT 1000`
-    
+    const sql = `SELECT ${sqlSelect} FROM "${tableName}"${joinSql} WHERE ${whereClause} LIMIT 1000`
     console.log(`[BI DEBUG] Solicitando dados para widget via Túnel:`, sql)
 
     // Pequeno delay para garantir que o canal esteja pronto
@@ -344,6 +434,7 @@ export default function AnalyticsDashboard({
     if (!isFormula) {
       const fieldMeta = model?.fields?.find((f: any) => String(f.id) === String(widget.field))
       fieldName = fieldMeta?.db_column_name || widget.field || '*'
+      if (fieldName.includes('.')) fieldName = fieldName.split('.')[1]
     }
 
     if (!widget.group_by && (widget.type === 'kpi' || widget.type === 'gauge')) {
@@ -357,7 +448,8 @@ export default function AnalyticsDashboard({
       const values = records.map((r, idx) => {
         if (isFormula) {
           try {
-            const calcFn = new Function('r', `with(r) { try { return ${formula}; } catch(e) { return 0; } }`)
+            const evalFormula = formula.replace(/[a-zA-Z0-9_]+\.([a-zA-Z0-9_]+)/g, "$1")
+            const calcFn = new Function('r', `with(r) { try { return ${evalFormula}; } catch(e) { return 0; } }`)
             const result = Number(calcFn(r))
             return isNaN(result) ? 0 : result
           } catch (e) { return 0 }
@@ -395,24 +487,27 @@ export default function AnalyticsDashboard({
 
     if (widget.group_by) {
       const parts = widget.group_by.split('.')
-      const targetTableName = parts.length > 1 ? parts[0] : tableName
+      const targetTableName = parts.length > 1 ? parts[0] : null
       const targetFieldName = parts.length > 1 ? parts[1] : widget.group_by
 
       for (const m of (allModels as any[])) {
-        if (m.db_table_name === targetTableName) {
-          const fields = Array.isArray(m.fields) ? m.fields : Object.values(m.fields || {})
-          const found = fields.find((f: any) => String(f.id) === String(targetFieldName) || f.db_column_name === targetFieldName || f.name === targetFieldName)
-          if (found) {
-            groupByFieldMeta = found
-            groupByTableName = m.db_table_name
-            resolvedGroupByPath = found.db_column_name
-            break
-          }
+        if (targetTableName && m.db_table_name !== targetTableName) continue
+        const fields = Array.isArray(m.fields) ? m.fields : Object.values(m.fields || {})
+        const found = fields.find((f: any) => String(f.id) === String(targetFieldName) || f.db_column_name === targetFieldName || f.name === targetFieldName)
+        if (found) {
+          groupByFieldMeta = found
+          groupByTableName = m.db_table_name
+          resolvedGroupByPath = found.db_column_name
+          break
         }
       }
     }
 
-    const groupByPath = resolvedGroupByPath || widget.group_by
+    let groupByPath = resolvedGroupByPath || widget.group_by
+    if (groupByPath && groupByPath.includes('.')) {
+      groupByPath = groupByPath.split('.')[1]
+    }
+    
     const grouped = records.reduce((acc: any, curr: any) => {
       let key = 'N/A'
       let rawKey = curr[groupByPath]
@@ -427,6 +522,31 @@ export default function AnalyticsDashboard({
           if (deepKey) rawKey = curr[deepKey]
         }
       }
+
+      if (rawKey && widget.date_granularity) {
+         if (typeof rawKey === 'string' && rawKey.match(/^\d{4}-\d{2}-\d{2}/)) {
+           const dateMatch = rawKey.match(/^(\d{4})-(\d{2})-(\d{2})/)
+           if (dateMatch) {
+              const [_, y, m, d] = dateMatch
+              if (widget.date_granularity === 'month') rawKey = `${y}-${m}`
+              else if (widget.date_granularity === 'year') rawKey = `${y}`
+              else if (widget.date_granularity === 'day') rawKey = `${y}-${m}-${d}`
+           }
+         } else {
+           const dObj = new Date(rawKey)
+           if (!isNaN(dObj.getTime())) {
+              const y = dObj.getFullYear()
+              const m = dObj.getMonth() + 1
+              const day = dObj.getDate()
+              const mStr = m < 10 ? '0' + m : m
+              const dStr = day < 10 ? '0' + day : day
+              if (widget.date_granularity === 'month') rawKey = `${y}-${mStr}`
+              else if (widget.date_granularity === 'year') rawKey = `${y}`
+              else if (widget.date_granularity === 'day') rawKey = `${y}-${mStr}-${dStr}`
+           }
+         }
+      }
+
       key = String(rawKey || 'N/A')
       
       if (!acc[key]) acc[key] = { name: key, value: 0, count: 0 }
@@ -434,7 +554,8 @@ export default function AnalyticsDashboard({
       let val = 0
       if (isFormula) {
         try {
-          const calcFn = new Function('r', `with(r) { try { return ${formula}; } catch(e) { return 0; } }`)
+          const evalFormula = formula.replace(/[a-zA-Z0-9_]+\.([a-zA-Z0-9_]+)/g, "$1")
+          const calcFn = new Function('r', `with(r) { try { return ${evalFormula}; } catch(e) { return 0; } }`)
           val = Number(calcFn(curr))
         } catch (e) { val = 0 }
       } else {
@@ -459,10 +580,20 @@ export default function AnalyticsDashboard({
       return acc
     }, {})
 
-    const finalData = Object.values(grouped).map((item: any) => ({
+    let finalData = Object.values(grouped).map((item: any) => ({
       name: String(item.name),
       value: widget.calc === 'AVG' ? item.value / (item.count || 1) : item.value
     }))
+
+    const sortMode = widget.sort_by || 'value_desc'
+    if (sortMode === 'value_asc') finalData.sort((a, b) => a.value - b.value)
+    else if (sortMode === 'label_asc') finalData.sort((a, b) => a.name.localeCompare(b.name))
+    else if (sortMode === 'label_desc') finalData.sort((a, b) => b.name.localeCompare(a.name))
+    else finalData.sort((a, b) => b.value - a.value)
+
+    if (widget.limit_top_n && widget.limit_top_n > 0) {
+      finalData = finalData.slice(0, widget.limit_top_n)
+    }
 
     setData(prev => ({ ...prev, [widget.id]: finalData }))
   }
@@ -513,7 +644,7 @@ export default function AnalyticsDashboard({
               (widget.width === 'half') ? 'text-5xl' :
               'text-6xl'
             )}>
-              {rawVal % 1 !== 0 ? rawVal.toFixed(1) : rawVal.toLocaleString()}
+              {formatNumber(rawVal)}
             </span>
           </div>
         </div>
@@ -540,7 +671,7 @@ export default function AnalyticsDashboard({
 
     const padding = (size === 'normal' || isExpanded) ? (width === 'quarter' ? 'p-4' : 'p-8') : "p-4 text-center"
     const rawVal = typeof val === 'number' ? val : 0
-    const formattedVal = rawVal % 1 !== 0 ? rawVal.toFixed(1) : rawVal.toLocaleString()
+    const formattedVal = formatNumber(rawVal)
     return (
       <div className={cn("flex flex-col items-center justify-center transition-all duration-700", padding)}>
         {title && <span className={cn("font-black uppercase tracking-tight text-neutral-400 mb-1 truncate max-w-full", (size === 'normal' || isExpanded) ? "text-sm" : "text-[10px]")}>{title}</span>}
@@ -603,16 +734,16 @@ export default function AnalyticsDashboard({
             <BarChart data={val || []}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888822" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#888888' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#888888' }} />
-              <Tooltip cursor={{ fill: '#88888811' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#888888' }} tickFormatter={formatNumber} />
+              <Tooltip cursor={{ fill: '#88888811' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} formatter={(value: any) => [formatNumber(value), widget.calc]} />
               <Bar dataKey="value" fill="#6366f1" radius={[6, 6, 0, 0]} />
             </BarChart>
           ) : widget.type === 'line' ? (
             <LineChart data={val || []}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888822" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#888888' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#888888' }} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#888888' }} tickFormatter={formatNumber} />
+              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} formatter={(value: any) => [formatNumber(value), widget.calc]} />
               <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
             </LineChart>
           ) : (
@@ -620,7 +751,7 @@ export default function AnalyticsDashboard({
               <Pie data={val || []} innerRadius={height * 0.25} outerRadius={height * 0.35} paddingAngle={5} dataKey="value">
                 {(val || []).map((_: any, index: number) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
               </Pie>
-              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} formatter={(value: any) => [formatNumber(value), widget.calc]} />
               <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 900 }} />
             </PieChart>
           )}
@@ -693,6 +824,23 @@ export default function AnalyticsDashboard({
           {isEditMode ? <Save className="w-3.5 h-3.5" /> : <MousePointer2 className="w-3.5 h-3.5" />}
           {isEditMode ? 'Salvar Layout' : 'Organizar Dashboard'}
         </button>
+        <div className="flex items-center bg-white dark:bg-neutral-900 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 ml-4 hidden md:flex">
+          {scales.map(s => (
+            <button
+              key={s.value}
+              onClick={() => setScale(s.value)}
+              title={s.label}
+              className={cn(
+                "p-1.5 rounded-lg transition-all",
+                scale === s.value 
+                  ? "bg-neutral-100 dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 shadow-sm" 
+                  : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+              )}
+            >
+              {s.icon}
+            </button>
+          ))}
+        </div>
       </div>
 
       {expandedGaugeId && (
@@ -737,7 +885,7 @@ export default function AnalyticsDashboard({
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={localWidgets.map(w => w.id)} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-12 gap-8">
+          <div className="grid grid-cols-12 gap-8" style={{ zoom: scale }}>
             {localWidgets.map((widget) => <SortableWidget key={widget.id} widget={widget} />)}
             {config.allow_runtime_edit && onAddWidget && !isEditMode && (
               <button onClick={onAddWidget} className="col-span-12 lg:col-span-4 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-5 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all group min-h-[350px]">
