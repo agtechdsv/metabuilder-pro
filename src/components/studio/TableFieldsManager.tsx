@@ -33,6 +33,7 @@ interface FieldEdit {
   is_searchable: boolean
   is_sortable: boolean
   order_index: number
+  ui_widget: string
 }
 
 export function TableFieldsManager({ project, models, onSaveSuccess }: TableFieldsManagerProps) {
@@ -83,7 +84,8 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
             is_visible_in_form: f.is_visible_in_form !== false,
             is_searchable: f.is_searchable !== false,
             is_sortable: f.is_sortable !== false,
-            order_index: typeof f.order_index === 'number' ? f.order_index : 0
+            order_index: typeof f.order_index === 'number' ? f.order_index : 0,
+            ui_widget: f.ui_widget || 'text'
           }
         })
         setFieldEdits(edits)
@@ -143,7 +145,8 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
           edit.is_visible_in_form !== (f.is_visible_in_form !== false) ||
           edit.is_searchable !== (f.is_searchable === true) ||
           edit.is_sortable !== (f.is_sortable !== false) ||
-          edit.order_index !== (typeof f.order_index === 'number' ? f.order_index : 0)
+          edit.order_index !== (typeof f.order_index === 'number' ? f.order_index : 0) ||
+          edit.ui_widget !== (f.ui_widget || 'text')
 
         if (!hasChanged) {
           return Promise.resolve({ error: null })
@@ -157,7 +160,8 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
             is_visible_in_form: edit.is_visible_in_form,
             is_searchable: edit.is_searchable,
             is_sortable: edit.is_sortable,
-            order_index: edit.order_index
+            order_index: edit.order_index,
+            ui_widget: edit.ui_widget
           })
           .eq('id', f.id)
       })
@@ -187,7 +191,8 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
         is_visible_in_form: true,
         is_searchable: true,
         is_sortable: true,
-        order_index: 0
+        order_index: 0,
+        ui_widget: 'text'
       }
 
       const updated = {
@@ -427,7 +432,8 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                         is_visible_in_form: true,
                         is_searchable: false,
                         is_sortable: true,
-                        order_index: 0
+                        order_index: 0,
+                        ui_widget: 'text'
                       }
                       return (
                         <div key={f.id} className="p-5 bg-neutral-50 dark:bg-neutral-955 border border-neutral-100 dark:border-neutral-850 rounded-2xl space-y-4">
@@ -474,6 +480,22 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                                 onChange={e => handleFieldChange(f.id, 'order_index', parseInt(e.target.value) || 0)}
                                 className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
                               />
+                            </div>
+                            <div className="space-y-1.5 md:col-span-2">
+                              <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Tipo de Interface</label>
+                              <select
+                                value={edit.ui_widget || 'text'}
+                                onChange={e => handleFieldChange(f.id, 'ui_widget', e.target.value)}
+                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 transition-colors appearance-none"
+                              >
+                                <option value="text">Texto (Padrão)</option>
+                                <option value="number">Número</option>
+                                <option value="date">Data/Hora</option>
+                                <option value="switch">Switch (Booleano)</option>
+                                <option value="image_uploader">Imagem (Upload Base64)</option>
+                                <option value="document_uploader">Documento (Upload Base64)</option>
+                                <option value="file_uploader">Arquivo Genérico (Base64)</option>
+                              </select>
                             </div>
                           </div>
 

@@ -364,7 +364,7 @@ export default function DynamicMindMap({
         const channelName = `tunnel:${project?.id}`;
         const channel = supabase.channel(channelName);
         channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult);
-        channel.subscribe((status) => {
+        channel.subscribe((status: string) => {
           if (status === 'SUBSCRIBED') {
             channel.send({
               type: 'broadcast',

@@ -69,6 +69,7 @@ import DynamicMap from './DynamicMap'
 import DynamicGantt from './DynamicGantt'
 import DynamicBlueprint from './DynamicBlueprint'
 import { createClient } from '@/utils/supabase/client'
+import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
 import { Loader2 } from 'lucide-react'
 
 // Cache persistente entre reloads de página (essencial para troca de idioma via cookie/hard reload)
@@ -732,7 +733,7 @@ export default function ViewContainer({
     console.log(`[MetaBuilder] Solicitando dados via Túnel (${queryId})...`, { table: modelName })
     
     const channelName = `tunnel:${projectId}`
-    const channel = supabase.channel(channelName)
+    const channel = wrapChannelWithChunking(supabase.channel(channelName))
 
     // Aguarda um momento para o canal estar pronto e envia
     setTimeout(() => {
@@ -1252,10 +1253,10 @@ export default function ViewContainer({
     } else {
       console.log(`[MetaBuilder] ⚠️ Canal compartilhado não pronto. Usando canal temporário.`)
       const channelName = `tunnel:${projectId}`
-      const channel = supabase.channel(channelName)
+      const channel = wrapChannelWithChunking(supabase.channel(channelName))
 
       channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
-      channel.subscribe((status) => {
+      channel.subscribe((status: string) => {
         if (status === 'SUBSCRIBED') {
           channel.send({
             type: 'broadcast',
@@ -1263,7 +1264,7 @@ export default function ViewContainer({
             payload
           })
           // Limpa canal após um tempo
-          setTimeout(() => supabase.removeChannel(channel), 5000)
+          setTimeout(() => supabase.removeChannel((channel as any)._channel || channel), 5000)
         }
       })
     }

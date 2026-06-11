@@ -93,6 +93,7 @@ interface ViewPageContentProps {
 }
 
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
+import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
 
 export default function ViewPageContent({
   workspace,
@@ -474,7 +475,7 @@ export default function ViewPageContent({
     if (!project?.id) return
 
     const channelName = `tunnel:${project.id}`
-    const channel = supabase.channel(channelName)
+    const channel = wrapChannelWithChunking(supabase.channel(channelName))
     
     console.log(`[MetaBuilder] 📡 Abrindo Túnel Centralizado: ${channelName}`)
     
@@ -799,7 +800,7 @@ export default function ViewPageContent({
           detailData = await new Promise<any[]>((resolve, reject) => {
             const isTemporary = !tunnelChannel || !isTunnelReady
             const channelName = `tunnel:${project.id}`
-            const channel = isTemporary ? supabase.channel(channelName) : tunnelChannel
+            const channel = isTemporary ? wrapChannelWithChunking(supabase.channel(channelName)) : tunnelChannel
             let resolved = false
 
             const handleResult = (payload: any) => {
@@ -1042,7 +1043,7 @@ export default function ViewPageContent({
     setIsProcessing(true)
     const queryId = crypto.randomUUID()
     const isTemporary = !tunnelChannel || !isTunnelReady
-    const channel = isTemporary ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
+    const channel = isTemporary ? wrapChannelWithChunking(supabase.channel(`tunnel:${project.id}`)) : tunnelChannel
 
     try {
       const action = detailModalMode
@@ -1167,7 +1168,7 @@ export default function ViewPageContent({
 
           const result = await new Promise<{ success: boolean; error?: string; data?: any[] }>((resolve) => {
             const isTemp = !tunnelChannel || !isTunnelReady
-            const ch = isTemp ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
+            const ch = isTemp ? wrapChannelWithChunking(supabase.channel(`tunnel:${project.id}`)) : tunnelChannel
             let settled = false
 
             const handleResult = (payload: any) => {
@@ -1398,7 +1399,7 @@ export default function ViewPageContent({
 
       const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
         const isTemp = !tunnelChannel || !isTunnelReady
-        const ch = isTemp ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
+        const ch = isTemp ? wrapChannelWithChunking(supabase.channel(`tunnel:${project.id}`)) : tunnelChannel
         let settled = false
 
         const handleResult = (payload: any) => {
@@ -1480,7 +1481,7 @@ export default function ViewPageContent({
     setIsProcessing(true)
     const queryId = crypto.randomUUID()
     const isTemporary = !tunnelChannel || !isTunnelReady
-    const channel = isTemporary ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
+    const channel = isTemporary ? wrapChannelWithChunking(supabase.channel(`tunnel:${project.id}`)) : tunnelChannel
 
     try {
       const action = drawerMode === 'create' ? 'insert' : 'update'
@@ -1548,7 +1549,7 @@ export default function ViewPageContent({
 
           const result = await new Promise<{ success: boolean; error?: string; data?: any[] }>((resolve) => {
             const isTemp = !tunnelChannel || !isTunnelReady
-            const ch = isTemp ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
+            const ch = isTemp ? wrapChannelWithChunking(supabase.channel(`tunnel:${project.id}`)) : tunnelChannel
             let settled = false
 
             const handleResult = (payload: any) => {
@@ -1823,7 +1824,7 @@ export default function ViewPageContent({
 
       const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
         const isTemp = !tunnelChannel || !isTunnelReady
-        const ch = isTemp ? supabase.channel(`tunnel:${project.id}`) : tunnelChannel
+        const ch = isTemp ? wrapChannelWithChunking(supabase.channel(`tunnel:${project.id}`)) : tunnelChannel
         let settled = false
 
         const handleResult = (payload: any) => {

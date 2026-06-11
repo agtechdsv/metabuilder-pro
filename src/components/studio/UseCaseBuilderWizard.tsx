@@ -306,6 +306,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       details_tab_titles: {} as Record<string, string>,
       details_item_titles: {} as Record<string, string>,
       export_formats: ['xlsx', 'csv', 'json'],
+      gallery_config: {} as any,
       gallery_click_behavior: 'lightbox',
       items_per_page: undefined as number | undefined,
       form_header_title: '',
@@ -903,6 +904,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           details_tab_titles: sourceData.layout_config?.details_tab_titles || {},
           details_item_titles: sourceData.layout_config?.details_item_titles || {},
           export_formats: sourceData.layout_config?.export_formats || ['xlsx', 'csv', 'json'],
+          gallery_config: sourceData.layout_config?.gallery_config || {},
           gallery_click_behavior: sourceData.layout_config?.gallery_click_behavior || 'lightbox',
           items_per_page: sourceData.layout_config?.items_per_page || undefined,
           form_header_title: sourceData.layout_config?.form_header_title || '',
@@ -5507,6 +5509,114 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     Selecione "Ver no próprio Thumbnail" para exibir a imagem inteira (sem cortes) diretamente no card, desabilitando a modal de visualização ao clicar.
                   </p>
                 </div>
+
+                {/* CAMPOS DO CARD DA GALERIA */}
+                <div className="space-y-3 border-t border-neutral-100 dark:border-neutral-800 pt-4 mt-6">
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campos do Card da Galeria</label>
+                    <p className="text-[10px] text-neutral-500 ml-1 mt-0.5">Selecione quais campos aparecerão no corpo do card (opcional). Deixe vazio para usar apenas Título e Arquivo.</p>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <select
+                      id="main_gallery_card_fields_select"
+                      className="flex-1 px-4 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500"
+                    >
+                      <option value="">Adicionar campo...</option>
+                      {(() => {
+                        const rootId = config.selected_models[0];
+                        const rootModel = models.find((m: any) => m.id === rootId);
+
+                        const orderedModels = [
+                          rootModel,
+                          ...models.filter((m: any) => m.id !== rootId)
+                        ].filter(Boolean);
+
+                        return orderedModels.map((m: any) => {
+                          const isMain = m.id === rootId;
+                          const tName = m.db_table_name;
+                          return (
+                            <optgroup key={`opt-${m.id}`} label={`Tabela: ${tName}`} className="font-bold text-emerald-600 dark:text-emerald-400">
+                              {m.fields
+                                .filter((f:any) => !(config.layout_config.gallery_config?.card_fields || []).includes(isMain ? f.db_column_name : `${tName}.${f.db_column_name}`))
+                                .map((f:any) => (
+                                  <option 
+                                    key={`${tName}-${f.id}`} 
+                                    value={isMain ? f.db_column_name : `${tName}.${f.db_column_name}`}
+                                    className="text-neutral-700 dark:text-neutral-300 font-normal"
+                                  >
+                                    {f.display_name || f.db_column_name}
+                                  </option>
+                                ))}
+                            </optgroup>
+                          );
+                        });
+                      })()}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const select = document.getElementById('main_gallery_card_fields_select') as HTMLSelectElement;
+                        if (select && select.value) {
+                          const currentFields = config.layout_config.gallery_config?.card_fields || [];
+                          setConfig({
+                            ...config,
+                            layout_config: {
+                              ...config.layout_config,
+                              gallery_config: {
+                                ...(config.layout_config.gallery_config || {}),
+                                card_fields: [...currentFields, select.value]
+                              }
+                            }
+                          });
+                          select.value = '';
+                        }
+                      }}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-colors"
+                    >
+                      + Add
+                    </button>
+                  </div>
+
+                  {((config.layout_config.gallery_config?.card_fields?.length || 0) > 0) && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {config.layout_config.gallery_config?.card_fields.map((fieldCol: string, i: number) => {
+                        let label = fieldCol;
+                        if (fieldCol.includes('.')) {
+                          const [tName, cName] = fieldCol.split('.');
+                          label = `${tName} -> ${cName}`;
+                        } else {
+                          const fDef = models.find((m:any) => m.id === config.selected_models[0])?.fields.find((f:any) => f.db_column_name === fieldCol);
+                          if (fDef) label = fDef.display_name || fieldCol;
+                        }
+                        return (
+                          <div key={`gcf-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-[10px] font-bold text-neutral-600 dark:text-neutral-400">
+                            <span>{label}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newFields = [...(config.layout_config.gallery_config?.card_fields || [])];
+                                newFields.splice(i, 1);
+                                setConfig({
+                                  ...config,
+                                  layout_config: {
+                                    ...config.layout_config,
+                                    gallery_config: {
+                                      ...(config.layout_config.gallery_config || {}),
+                                      card_fields: newFields
+                                    }
+                                  }
+                                });
+                              }}
+                              className="text-neutral-400 hover:text-rose-500 transition-colors p-0.5 rounded-md hover:bg-rose-500/10"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -6239,6 +6349,9 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                           <option value="checkbox">{t('wizard.layout.drawer.component_types.checkbox')}</option>
                           <option value="switch">{t('wizard.layout.drawer.component_types.switch')}</option>
                           <option value="date">{t('wizard.layout.drawer.component_types.date')}</option>
+                          <option value="image_uploader">{t('wizard.layout.drawer.component_types.image_uploader')}</option>
+                          <option value="document_uploader">{t('wizard.layout.drawer.component_types.document_uploader')}</option>
+                          <option value="file_uploader">{t('wizard.layout.drawer.component_types.file_uploader')}</option>
                         </select>
                       </div>
 
@@ -6722,7 +6835,39 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
       </div>
 
       <div className="space-y-6">
-        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.interface_buttons')}</label>
+        <div className="flex items-center justify-between mb-2 ml-1">
+          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.actions.interface_buttons')}</label>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setConfig({
+                  ...config,
+                  buttons_config: config.buttons_config.map((b: any) => 
+                    (b.id !== 'export' && !isButtonDisabledByModel(b.id)) ? { ...b, visible: true } : b
+                  )
+                })
+              }}
+              className="text-[9px] font-bold px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors uppercase tracking-wider"
+            >
+              Selecionar Todos
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfig({
+                  ...config,
+                  buttons_config: config.buttons_config.map((b: any) => 
+                    (b.id !== 'export' && !isButtonDisabledByModel(b.id)) ? { ...b, visible: false } : b
+                  )
+                })
+              }}
+              className="text-[9px] font-bold px-2 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors uppercase tracking-wider"
+            >
+              Desmarcar Todos
+            </button>
+          </div>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {config.buttons_config.filter((b: any) => b.id !== 'export').map((btn: any) => {
             const isDisabled = isButtonDisabledByModel(btn.id)

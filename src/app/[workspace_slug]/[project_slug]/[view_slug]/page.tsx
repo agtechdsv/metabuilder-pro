@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+﻿import { createClient } from '@supabase/supabase-js'
 import { notFound, redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { Table, LayoutGrid, Plus, Search, Filter, AlertCircle } from 'lucide-react'
@@ -761,6 +761,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
           analyticsConfig={view.layout_config?.analytics_config}
           exportFormats={view.layout_config?.export_formats}
           galleryClickBehavior={view.layout_config?.gallery_click_behavior}
+          galleryConfig={view.layout_config?.gallery_config}
           customActions={view.layout_config?.custom_actions || []}
           customSlots={view.layout_config?.custom_slots || []}
           formHeaderTitle={view.layout_config?.form_header_title}

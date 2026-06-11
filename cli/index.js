@@ -20,7 +20,7 @@ global.TextDecoder = class TextDecoder extends originalTextDecoder {
 };
 
 require('dotenv').config({ path: '../.env.local' }); // Para facilitar os testes locais
-const { Client } = require('pg');
+const { Client, Pool } = require('pg');
 const inquirer = require('inquirer');
 const chalk = require('chalk');
 const axios = require('axios');
@@ -201,7 +201,8 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
   }
 
   const ws = require('ws');
-  const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
+  const { wrapChannelWithChunking } = require('./chunkedChannel');
+const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
     auth: { persistSession: false },
     realtime: {
       transport: ws
@@ -214,8 +215,8 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
   if (dbType === 'oracle') {
     oracleConnection = await oracledb.getConnection({ connectString: connectionString });
   } else {
-    pgClient = new Client({ connectionString });
-    await pgClient.connect();
+    pgClient = new Pool({ connectionString, max: 20 });
+    await pgClient.query('SELECT 1'); // Testa a conexão
   }
   
   console.log(chalk.green(`✓ Conexão contínua estabelecida com sucesso! (${connectionName || 'public'})`));
@@ -232,7 +233,7 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
   }
 
   const channelName = `tunnel:${projectId}`;
-  const channel = supabase.channel(channelName);
+  const channel = wrapChannelWithChunking(supabase.channel(channelName));
 
   console.log(chalk.cyan(`\n🎧 Agente MetaBuilderPRO ouvindo ativamente comandos no canal: ${channelName}...`));
   console.log(chalk.gray(`(Pressione Ctrl+C para encerrar o túnel)`));

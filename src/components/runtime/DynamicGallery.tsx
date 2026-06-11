@@ -21,7 +21,8 @@ import {
   FileIcon, 
   ImageIcon, 
   Maximize2, 
-  RefreshCw
+  RefreshCw,
+  Printer
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatFieldValue } from '@/lib/formatters'
@@ -505,13 +506,43 @@ export default function DynamicGallery({
     }
   }
 
-  const handleDownload = (asset: any) => {
-    if (!asset.downloadUrl) {
+  const handleDownload = async (asset: any) => {
+    const targetUrl = asset.downloadUrl || asset.url
+    if (!targetUrl) {
       toast('Nenhum link de download disponível para este arquivo.', 'info')
       return
     }
+    
     toast(`Iniciando download de ${asset.fileName}...`, 'success')
-    window.open(asset.downloadUrl, '_blank')
+    
+    if (targetUrl.startsWith('data:')) {
+      const a = document.createElement('a')
+      a.href = targetUrl
+      a.download = asset.fileName || 'download'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    } else {
+      try {
+        const response = await fetch(targetUrl)
+        if (!response.ok) throw new Error('Falha na resposta do servidor')
+        
+        const blob = await response.blob()
+        const objectUrl = window.URL.createObjectURL(blob)
+        
+        const a = document.createElement('a')
+        a.href = objectUrl
+        a.download = asset.fileName || 'download'
+        document.body.appendChild(a)
+        a.click()
+        
+        document.body.removeChild(a)
+        window.URL.revokeObjectURL(objectUrl)
+      } catch (err) {
+        console.warn('Falha no download via fetch (CORS ou erro). Usando fallback window.open:', err)
+        window.open(targetUrl, '_blank')
+      }
+    }
   }
 
   const handleRedirect = (asset: any) => {
@@ -754,13 +785,17 @@ export default function DynamicGallery({
       {/* Lightbox / Preview Modal */}
       <AnimatePresence>
         {selectedAsset && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4"
+            onClick={() => setSelectedAsset(null)}
+          >
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 350, damping: 25 }}
               className="w-full max-w-lg bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col"
+              onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
               <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-850 flex items-center justify-between">
@@ -779,9 +814,35 @@ export default function DynamicGallery({
               
               {/* Modal Body */}
               <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
-                <div className="aspect-video w-full rounded-2xl overflow-hidden bg-neutral-50 dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-800/80 flex items-center justify-center relative">
+                <div className="aspect-video w-full rounded-2xl overflow-hidden bg-neutral-50 dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-800/80 flex items-center justify-center relative group">
                   {selectedAsset.type === 'image' && selectedAsset.url ? (
-                    <img src={selectedAsset.url} alt="" className="w-full h-full object-contain" />
+                    <>
+                      <img src={selectedAsset.url} alt="" className="w-full h-full object-contain" />
+                      <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => handleDownload(selectedAsset)}
+                          className="p-2 bg-black/50 hover:bg-black/70 text-white rounded-lg backdrop-blur-sm transition-all shadow-md"
+                          title="Baixar Imagem"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const w = window.open('')
+                            if (w) {
+                              w.document.write(`<img src="${selectedAsset.url}" style="max-width:100%;" onload="window.print();window.close();" />`)
+                              w.document.close()
+                            }
+                          }}
+                          className="p-2 bg-black/50 hover:bg-black/70 text-white rounded-lg backdrop-blur-sm transition-all shadow-md"
+                          title="Imprimir Imagem"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </>
+                  ) : (selectedAsset.type === 'pdf' || selectedAsset.type === 'document' || selectedAsset.type === 'code') && (selectedAsset.url || selectedAsset.downloadUrl) ? (
+                    <iframe src={selectedAsset.url || selectedAsset.downloadUrl} className="w-full h-full border-0 bg-white" />
                   ) : (
                     <div className="flex flex-col items-center gap-2 select-none">
                       {renderFileIcon(selectedAsset.type)}

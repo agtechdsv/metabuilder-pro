@@ -1579,7 +1579,10 @@
           "radio": "Radio Buttons",
           "checkbox": "Checkbox Group",
           "switch": "Switch (Liga/Desliga)",
-          "date": "Data"
+          "date": "Data",
+          "image_uploader": "Imagem (Upload Base64)",
+          "document_uploader": "Documento (Upload Base64)",
+          "file_uploader": "Arquivo Genérico (Base64)"
         },
         "masks": {
           "none": "Nenhuma",

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
 import { DynamicIcon } from '@/components/runtime/DynamicIcon'
+import { FileUploaderInput } from '@/components/runtime/FileUploaderInput'
 
 // Helper para obter valores de forma insensível a maiúsculas/minúsculas e tolerante a prefixos
 const getCaseInsensitiveValue = (data: any, path: string) => {
@@ -957,6 +958,14 @@ export default function RecordForm({
                   value ? 'left-7' : 'left-1'
                 )} />
               </div>
+            ) : ['image_uploader', 'document_uploader', 'file_uploader'].includes(fieldType) ? (
+              <FileUploaderInput
+                value={value}
+                onChange={handleChange}
+                disabled={isDisabled}
+                type={fieldType === 'image_uploader' ? 'image' : fieldType === 'document_uploader' ? 'document' : 'any'}
+                maxSizeMB={5}
+              />
             ) : (
               <input
                 type={
