@@ -5580,29 +5580,57 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                   {((config.layout_config.gallery_config?.card_fields?.length || 0) > 0) && (
                     <div className="flex flex-wrap gap-2 mt-3">
                       {config.layout_config.gallery_config?.card_fields.map((fieldCol: string, i: number) => {
-                        let label = fieldCol;
+                        let defaultLabel = fieldCol;
                         if (fieldCol.includes('.')) {
                           const [tName, cName] = fieldCol.split('.');
-                          label = `${tName} -> ${cName}`;
+                          defaultLabel = `${tName} -> ${cName}`;
                         } else {
                           const fDef = models.find((m:any) => m.id === config.selected_models[0])?.fields.find((f:any) => f.db_column_name === fieldCol);
-                          if (fDef) label = fDef.display_name || fieldCol;
+                          if (fDef) defaultLabel = fDef.display_name || fieldCol;
                         }
+                        
+                        const currentLabel = config.layout_config.gallery_config?.card_fields_labels?.[fieldCol] || defaultLabel;
+
                         return (
-                          <div key={`gcf-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-[10px] font-bold text-neutral-600 dark:text-neutral-400">
-                            <span>{label}</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newFields = [...(config.layout_config.gallery_config?.card_fields || [])];
-                                newFields.splice(i, 1);
+                          <div key={`gcf-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                            <input
+                              type="text"
+                              value={currentLabel}
+                              onChange={(e) => {
                                 setConfig({
                                   ...config,
                                   layout_config: {
                                     ...config.layout_config,
                                     gallery_config: {
                                       ...(config.layout_config.gallery_config || {}),
-                                      card_fields: newFields
+                                      card_fields_labels: {
+                                        ...(config.layout_config.gallery_config?.card_fields_labels || {}),
+                                        [fieldCol]: e.target.value
+                                      }
+                                    }
+                                  }
+                                });
+                              }}
+                              className="bg-transparent text-[10px] font-bold text-neutral-600 dark:text-neutral-400 focus:outline-none focus:border-indigo-500 border-b border-transparent hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors w-auto min-w-[80px]"
+                              title="Clique para editar o label deste campo"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newFields = [...(config.layout_config.gallery_config?.card_fields || [])];
+                                newFields.splice(i, 1);
+                                
+                                const newLabels = { ...(config.layout_config.gallery_config?.card_fields_labels || {}) };
+                                delete newLabels[fieldCol];
+
+                                setConfig({
+                                  ...config,
+                                  layout_config: {
+                                    ...config.layout_config,
+                                    gallery_config: {
+                                      ...(config.layout_config.gallery_config || {}),
+                                      card_fields: newFields,
+                                      card_fields_labels: newLabels
                                     }
                                   }
                                 });

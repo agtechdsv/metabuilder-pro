@@ -1,4 +1,4 @@
-﻿import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 import { notFound, redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { Table, LayoutGrid, Plus, Search, Filter, AlertCircle } from 'lucide-react'
@@ -431,6 +431,45 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
         is_virtual: true
       })
     })
+
+    // Inject fields from gallery configuration if they are missing
+    if (view.logic_type === 'galeria' && view.layout_config?.gallery_config?.card_fields) {
+      const galleryFields = view.layout_config.gallery_config.card_fields as string[]
+      galleryFields.forEach((gf: string) => {
+        const alreadyExists = displayFields.some((df: any) => df.db_column_name === gf)
+        if (!alreadyExists) {
+          let foundField: any = null
+          if (gf.includes('.')) {
+            const [tName, cName] = gf.split('.')
+            const joinedModel = allModels?.find((m: any) => m.db_table_name === tName)
+            if (joinedModel) {
+              foundField = joinedModel.fields?.find((f: any) => f.db_column_name === cName)
+            }
+          } else {
+            const rootModel = allModels?.find((m: any) => m.id === view.model_id)
+            if (rootModel) {
+              foundField = rootModel.fields?.find((f: any) => f.db_column_name === gf)
+            }
+          }
+
+          if (foundField) {
+            displayFields.push({
+              id: foundField.id,
+              model_id: foundField.model_id,
+              model_name: tableDictionary[foundField.model_id] || '',
+              display_name: foundField.display_name || foundField.db_column_name,
+              db_column_name: resolveResultKey({ ...foundField, model_id: foundField.model_id }),
+              sql_expression: resolveSqlExpression({ ...foundField, model_id: foundField.model_id }),
+              data_type: foundField.data_type,
+              is_primary_key: foundField.is_primary_key,
+              is_sortable: foundField.is_sortable,
+              config: {},
+              hidden: true
+            })
+          }
+        }
+      })
+    }
 
     // Inject Virtual Fields into Form
     formFieldsOrder.filter((id: string) => id.startsWith('virt_')).forEach((id: string) => {

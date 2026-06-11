@@ -83,6 +83,7 @@ interface ViewPageContentProps {
   }
   exportFormats?: string[]
   galleryClickBehavior?: 'fullscreen' | 'thumbnail'
+  galleryConfig?: any
   customActions?: any[]
   customSlots?: any[]
   isAutomationsEnabled?: boolean
@@ -138,6 +139,7 @@ export default function ViewPageContent({
   exportFormats = ['xlsx', 'csv', 'json'],
   analyticsConfig: initialAnalyticsConfig,
   galleryClickBehavior,
+  galleryConfig,
   customActions = [],
   customSlots = [],
   isAutomationsEnabled = false,
@@ -479,7 +481,7 @@ export default function ViewPageContent({
     
     console.log(`[MetaBuilder] 📡 Abrindo Túnel Centralizado: ${channelName}`)
     
-    channel.subscribe((status) => {
+    channel.subscribe((status: string) => {
       if (status === 'SUBSCRIBED') {
         console.log(`[MetaBuilder] ✅ Túnel Centralizado PRONTO.`)
         setTunnelChannel(channel)
@@ -487,7 +489,7 @@ export default function ViewPageContent({
       }
     })
 
-    channel.on('broadcast', { event: 'bpm_workflow_completed' }, (payload) => {
+    channel.on('broadcast', { event: 'bpm_workflow_completed' }, (payload: any) => {
       console.log('[MetaBuilder] 🔄 BPM Workflow Completed! Silently refreshing UI...', payload)
       // Atualiza as listagens
       setRefreshKey(prev => prev + 1)
@@ -2100,6 +2102,7 @@ export default function ViewPageContent({
               tunnelChannel={tunnelChannel}
               isTunnelReady={isTunnelReady}
               galleryClickBehavior={galleryClickBehavior}
+              galleryConfig={galleryConfig}
               onAdd={handleOpenAdd}
               onView={handleOpenView}
               onEdit={handleOpenEdit}

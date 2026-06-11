@@ -42,6 +42,7 @@ interface DynamicGalleryProps {
     image_field?: string
     title_field?: string
     card_fields?: string[]
+    card_fields_labels?: Record<string, string>
   }
 }
 
@@ -384,8 +385,8 @@ export default function DynamicGallery({
             const val = allValues[col]
             if (val !== undefined && val !== null && val !== '') {
               metadata.push({
-                label: f.display_name,
-                value: typeof val === 'object' ? JSON.stringify(val) : String(val)
+                label: galleryConfig?.card_fields_labels?.[col] || galleryConfig?.card_fields_labels?.[f.id] || f.display_name,
+                value: formatFieldValue(val, f, relationalOptions) || String(val)
               })
             }
           }
@@ -404,8 +405,8 @@ export default function DynamicGallery({
             const val = allValues[col]
             if (val !== undefined && val !== null && val !== '') {
               metadata.push({
-                label: f.display_name,
-                value: typeof val === 'object' ? JSON.stringify(val) : String(val)
+                label: galleryConfig?.card_fields_labels?.[col] || galleryConfig?.card_fields_labels?.[f.id] || f.display_name,
+                value: formatFieldValue(val, f, relationalOptions) || String(val)
               })
             }
           }
@@ -742,11 +743,24 @@ export default function DynamicGallery({
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between border-t border-neutral-100 dark:border-neutral-850/60 pt-3">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">Tamanho</span>
-                      <span className="text-[10px] font-black text-neutral-700 dark:text-neutral-300">{asset.size}</span>
+                  {galleryConfig && Array.isArray(galleryConfig.card_fields) && galleryConfig.card_fields.length > 0 && asset.metadata.length > 0 && (
+                    <div className="flex flex-col gap-1.5 mt-2">
+                      {asset.metadata.map((meta, idx) => (
+                        <div key={idx} className="flex flex-col gap-0.5">
+                          <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">{meta.label}</span>
+                          <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300 line-clamp-2">{meta.value}</span>
+                        </div>
+                      ))}
                     </div>
+                  )}
+
+                  <div className="flex items-center justify-between border-t border-neutral-100 dark:border-neutral-850/60 pt-3 mt-auto">
+                    {asset.size && asset.size !== 'N/A' ? (
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">Tamanho</span>
+                        <span className="text-[10px] font-black text-neutral-700 dark:text-neutral-300">{asset.size}</span>
+                      </div>
+                    ) : <div />}
 
                     <div className="flex gap-1.5">
                       {asset.downloadUrl && (
