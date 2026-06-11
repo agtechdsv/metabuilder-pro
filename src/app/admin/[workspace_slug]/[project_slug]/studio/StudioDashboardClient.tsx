@@ -25,7 +25,8 @@ import {
   RefreshCw,
   Workflow,
   Download,
-  Menu
+  Menu,
+  X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -372,6 +373,29 @@ export function StudioDashboardClient({
       router.refresh()
     } catch (err: any) {
       toast(t('dashboard.projects.studio.toasts.use_case_add_to_menu_error') + err.message, 'error')
+    }
+  }
+
+  const handleRemoveFromMenu = async (view: any) => {
+    try {
+      const currentMenu = project.navigation || []
+      const updatedMenu = currentMenu.filter((item: any) => !(item.type === 'view' && item.target === view.slug))
+
+      const { error } = await supabase
+        .from('projects')
+        .update({ 
+          navigation: updatedMenu 
+        })
+        .eq('id', project.id)
+
+      if (error) throw error
+
+      project.navigation = updatedMenu
+
+      toast('Removido do Menu com sucesso', 'success')
+      router.refresh()
+    } catch (err: any) {
+      toast('Erro ao remover do menu: ' + err.message, 'error')
     }
   }
 
@@ -886,13 +910,26 @@ export function StudioDashboardClient({
 
                       <div className="flex items-center gap-1">
                         {canCreate && (
-                          <button
-                            onClick={() => handleAddToMenu(view)}
-                            className="p-2 text-neutral-300 hover:text-indigo-500 hover:bg-indigo-500/10 rounded-xl transition-all"
-                            title={t('dashboard.projects.studio.add_to_menu')}
-                          >
-                            <Menu className="w-4 h-4" />
-                          </button>
+                          project.navigation?.some((item: any) => item.type === 'view' && item.target === view.slug) ? (
+                            <button
+                              onClick={() => handleRemoveFromMenu(view)}
+                              className="relative p-2 text-indigo-500 bg-indigo-500/10 hover:bg-rose-500/10 hover:text-rose-500 rounded-xl transition-all group"
+                              title="Remover do Menu"
+                            >
+                              <Menu className="w-4 h-4" />
+                              <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full flex items-center justify-center text-white border-2 border-white dark:border-neutral-900 shadow-sm">
+                                <X className="w-2 h-2" strokeWidth={4} />
+                              </div>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleAddToMenu(view)}
+                              className="p-2 text-neutral-300 hover:text-indigo-500 hover:bg-indigo-500/10 rounded-xl transition-all"
+                              title={t('dashboard.projects.studio.add_to_menu')}
+                            >
+                              <Menu className="w-4 h-4" />
+                            </button>
+                          )
                         )}
                         {canDelete && (
                           <button

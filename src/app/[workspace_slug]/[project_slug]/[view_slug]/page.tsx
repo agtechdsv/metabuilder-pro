@@ -471,6 +471,16 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
       })
     }
 
+    // Re-sort displayFields para garantir que os campos virtuais respeitem a ordem
+    displayFields.sort((a: any, b: any) => {
+      const idxA = gridFieldsOrder.indexOf(a.id)
+      const idxB = gridFieldsOrder.indexOf(b.id)
+      if (idxA === -1 && idxB === -1) return 0
+      if (idxA === -1) return 1
+      if (idxB === -1) return -1
+      return idxA - idxB
+    })
+
     // Inject Virtual Fields into Form
     formFieldsOrder.filter((id: string) => id.startsWith('virt_')).forEach((id: string) => {
       const meta = view.layout_config?.fields_metadata?.[id] || {}
@@ -495,6 +505,16 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
         zone: 3,
         is_virtual: true
       })
+    })
+
+    // Re-sort formFields para garantir que os campos virtuais respeitem a ordem
+    formFields.sort((a: any, b: any) => {
+      const idxA = formFieldsOrder.indexOf(a.id)
+      const idxB = formFieldsOrder.indexOf(b.id)
+      if (idxA === -1 && idxB === -1) return 0
+      if (idxA === -1) return 1
+      if (idxB === -1) return -1
+      return idxA - idxB
     })
 
     // Extrai os campos de Filtro (Zona Filter)

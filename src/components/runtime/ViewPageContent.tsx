@@ -1082,7 +1082,15 @@ export default function ViewPageContent({
           typeof v === 'object'                          // skip objects/arrays (joined relations)
         ) continue
 
-        sanitizedData[k] = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
+        const newValue = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
+
+        if (action === 'edit' && selectedDetail) {
+          const originalRaw = selectedDetail[k] ?? selectedDetail[lowKey] ?? selectedDetail[k.toUpperCase()]
+          const originalValue = (originalRaw === null || originalRaw === '' || String(originalRaw).trim() === '') ? null : String(originalRaw)
+          if (newValue === originalValue) continue
+        }
+
+        sanitizedData[k] = newValue
       }
 
       // Se for inclusão, garantir que a FK para o mestre esteja correta
@@ -1096,26 +1104,11 @@ export default function ViewPageContent({
 
       if (action === 'edit') {
         if (Object.keys(sanitizedData).length === 0) {
-          // Nothing to update — use all non-pk, non-internal fields from formData as fallback
-          console.warn(`[MetaBuilder:handleSaveDetail] sanitizedData empty for table=${tableName}. Attempting fallback with all formData fields.`)
-          for (const [k, v] of Object.entries(formData)) {
-            const lowKey = k.toLowerCase()
-            if (
-              k.startsWith('_') ||
-              k.includes('.') ||
-              lowKey === detailPkName.toLowerCase() ||
-              lowKey === 'created_at' ||
-              lowKey === 'updated_at' ||
-              v === undefined ||
-              typeof v === 'object'
-            ) continue
-            sanitizedData[k] = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
-          }
-          if (Object.keys(sanitizedData).length === 0) {
-            console.warn(`[MetaBuilder:handleSaveDetail] Fallback sanitizedData also empty — nothing to save.`)
-            setIsProcessing(false)
-            return
-          }
+          console.warn(`[MetaBuilder:handleSaveDetail] No columns to update. Skipping.`)
+          setIsProcessing(false)
+          setIsDetailModalOpen(false)
+          fetchData()
+          return
         }
         const setClause = Object.entries(sanitizedData)
           .map(([k, v]) => (v === null || v === '' || String(v).trim() === '') ? `${k} = NULL` : `${k} = '${String(v).replace(/'/g, "''")}'`)
@@ -1522,7 +1515,16 @@ export default function ViewPageContent({
             typeof v === 'object'           // skip objects and arrays (joined relations)
           ) continue
 
-          sanitizedData[k] = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
+          const newValue = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
+
+          // Dirty tracking: envia apenas os campos que foram realmente alterados!
+          if (action === 'update' && selectedRow) {
+            const originalRaw = selectedRow[k] ?? selectedRow[lowKey] ?? selectedRow[k.toUpperCase()]
+            const originalValue = (originalRaw === null || originalRaw === '' || String(originalRaw).trim() === '') ? null : String(originalRaw)
+            if (newValue === originalValue) continue
+          }
+
+          sanitizedData[k] = newValue
         }
 
         const sendWithRetry = async (): Promise<{ success: boolean; data?: any[] }> => {
@@ -1532,6 +1534,12 @@ export default function ViewPageContent({
 
         while (attempts < MAX_RETRIES) {
           attempts++
+          
+          if (action === 'update' && Object.keys(currentData).length === 0) {
+            console.warn(`[MetaBuilder:handleSave] No columns to update in master record. Skipping.`)
+            return { success: true, data: [formData] }
+          }
+
           // RAW SQL Builder
           let currentQuery = ''
           if (action === 'update' && pkValue && Object.keys(currentData).length > 0) {
@@ -1670,7 +1678,20 @@ export default function ViewPageContent({
           for (const [k, v] of Object.entries(detail)) {
             const lowKey = k.toLowerCase()
             if (INTERNAL_KEYS.has(lowKey) || k.startsWith('_') || k.startsWith('virt_') || k.includes('.') || lowKey === detailPkName.toLowerCase() || lowKey === 'created_at' || lowKey === 'updated_at' || v === undefined || typeof v === 'object') continue
-            sanitizedDetail[k] = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
+            
+            const newValue = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
+            
+            // Dirty tracking para detalhes
+            if (!isNewDetail && selectedRow && selectedRow._details) {
+              const origDetail = selectedRow._details.find((d: any) => d[detailPkName] === dPkValue || d[detailPkName.toUpperCase()] === dPkValue || d.id === dPkValue || d.ID === dPkValue)
+              if (origDetail) {
+                const originalRaw = origDetail[k] ?? origDetail[lowKey] ?? origDetail[k.toUpperCase()]
+                const originalValue = (originalRaw === null || originalRaw === '' || String(originalRaw).trim() === '') ? null : String(originalRaw)
+                if (newValue === originalValue) continue
+              }
+            }
+            
+            sanitizedDetail[k] = newValue
           }
 
           if (isNewDetail && logicType === 'master_detail' && joins) {

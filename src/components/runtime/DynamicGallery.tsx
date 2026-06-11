@@ -63,6 +63,7 @@ export default function DynamicGallery({
   const [searchQuery, setSearchQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState<'all' | 'image' | 'document'>('all')
   const [selectedAsset, setSelectedAsset] = useState<any | null>(null)
+  const [scale, setScale] = useState(1.0)
 
   const canView = buttonsConfig.find((b: any) => b.id === 'view')?.visible === true
   const canEdit = buttonsConfig.find((b: any) => b.id === 'edit')?.visible === true
@@ -578,28 +579,47 @@ export default function DynamicGallery({
           />
         </div>
         
-        {/* Filtros em Abas */}
-        <div className="flex gap-1 bg-neutral-100 dark:bg-neutral-900/80 p-1 rounded-xl w-full sm:w-auto justify-center sm:justify-start border border-neutral-200/50 dark:border-neutral-800/80">
-          {(['all', 'image', 'document'] as const).map((filter) => (
-            <button
-              key={filter}
-              type="button"
-              onClick={() => setActiveFilter(filter)}
-              className={cn(
-                "px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all capitalize",
-                activeFilter === filter
-                  ? 'bg-white dark:bg-neutral-800 text-rose-500 dark:text-rose-400 shadow-sm border border-neutral-200/20'
-                  : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-350'
-              )}
-            >
-              {filter === 'all' ? 'Todos' : filter === 'image' ? 'Imagens' : 'Documentos'}
-            </button>
-          ))}
+        <div className="flex items-center gap-4 w-full sm:w-auto justify-center sm:justify-end flex-wrap sm:flex-nowrap">
+          {/* Slider de Escala */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest hidden sm:inline-block">Escala:</span>
+            <input 
+              type="range" min="0.6" max="1.6" step="0.1" 
+              value={scale} 
+              onChange={e => setScale(Number(e.target.value))}
+              className="w-20 sm:w-24 h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-indigo-500" 
+            />
+            <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded hidden sm:inline-block">{scale.toFixed(1)}x</span>
+          </div>
+
+          {/* Filtros em Abas */}
+          <div className="flex gap-1 bg-neutral-100 dark:bg-neutral-900/80 p-1 rounded-xl w-full sm:w-auto justify-center sm:justify-start border border-neutral-200/50 dark:border-neutral-800/80">
+            {(['all', 'image', 'document'] as const).map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setActiveFilter(filter)}
+                className={cn(
+                  "px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all capitalize",
+                  activeFilter === filter
+                    ? 'bg-white dark:bg-neutral-800 text-rose-500 dark:text-rose-400 shadow-sm border border-neutral-200/20'
+                    : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-350'
+                )}
+              >
+                {filter === 'all' ? 'Todos' : filter === 'image' ? 'Imagens' : 'Documentos'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Grid de Cards da Galeria */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div 
+        className="grid gap-6"
+        style={{
+          gridTemplateColumns: `repeat(auto-fill, minmax(${Math.max(200, 320 * scale)}px, 1fr))`
+        }}
+      >
         <AnimatePresence mode="popLayout">
           {filteredAssets.length > 0 ? (
             filteredAssets.map((asset) => (
@@ -735,10 +755,16 @@ export default function DynamicGallery({
                 {/* Corpo do Card */}
                 <div className="p-5 flex-grow flex flex-col justify-between gap-4">
                   <div className="space-y-1">
-                    <h4 className="text-xs font-black text-neutral-800 dark:text-white leading-snug line-clamp-2 min-h-[2rem]">
+                    <h4 
+                      className="font-black text-neutral-800 dark:text-white leading-snug line-clamp-2 min-h-[2rem]"
+                      style={{ fontSize: `${12 * scale}px` }}
+                    >
                       {asset.title}
                     </h4>
-                    <p className="text-[9px] font-bold text-neutral-400 dark:text-neutral-500 font-mono truncate" title={asset.fileName}>
+                    <p 
+                      className="font-bold text-neutral-400 dark:text-neutral-500 font-mono truncate" title={asset.fileName}
+                      style={{ fontSize: `${9 * scale}px` }}
+                    >
                       {asset.fileName}
                     </p>
                   </div>
@@ -747,8 +773,18 @@ export default function DynamicGallery({
                     <div className="flex flex-col gap-1.5 mt-2">
                       {asset.metadata.map((meta, idx) => (
                         <div key={idx} className="flex flex-col gap-0.5">
-                          <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">{meta.label}</span>
-                          <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-300 line-clamp-2">{meta.value}</span>
+                          <span 
+                            className="font-black text-neutral-400 uppercase tracking-widest"
+                            style={{ fontSize: `${8 * scale}px` }}
+                          >
+                            {meta.label}
+                          </span>
+                          <span 
+                            className="font-bold text-neutral-700 dark:text-neutral-300 line-clamp-2"
+                            style={{ fontSize: `${10 * scale}px` }}
+                          >
+                            {meta.value}
+                          </span>
                         </div>
                       ))}
                     </div>

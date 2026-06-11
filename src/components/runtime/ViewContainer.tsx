@@ -1430,35 +1430,37 @@ export default function ViewContainer({
         </div>
 
         {/* Global Record Count Indicator */}
-        <div className="hidden md:flex flex-1 justify-center">
-          <div className="flex items-center text-[11px] font-medium text-neutral-500 bg-white/50 dark:bg-neutral-900/30 px-4 py-1.5 rounded-full border border-neutral-200/50 dark:border-neutral-800/50 shadow-sm backdrop-blur-sm transition-all hover:bg-white dark:hover:bg-neutral-900/50">
-            {isLoading && data.length === 0 ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500" />
-                {t('runtime.connecting') || 'Carregando...'}
-              </span>
-            ) : (
-              <div className="flex items-center gap-3">
-                <span>
-                  <span className="opacity-70">{t('runtime.showing', 'Exibindo')}</span> <span className="font-black text-indigo-600 dark:text-indigo-400 mx-1">{data.length}</span> <span className="opacity-70">{t('runtime.records_of', 'registros de um total de')}</span> <span className="font-black mx-1 text-neutral-700 dark:text-neutral-300">{totalServerRows}</span>
+        {(!logicType?.includes('pesquisa') && logicType !== 'tabela') && (
+          <div className="hidden md:flex flex-1 justify-center">
+            <div className="flex items-center text-[11px] font-medium text-neutral-500 bg-white/50 dark:bg-neutral-900/30 px-4 py-1.5 rounded-full border border-neutral-200/50 dark:border-neutral-800/50 shadow-sm backdrop-blur-sm transition-all hover:bg-white dark:hover:bg-neutral-900/50">
+              {isLoading && data.length === 0 ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500" />
+                  {t('runtime.connecting') || 'Carregando...'}
                 </span>
-                
-                {data.length < totalServerRows && logicType !== 'tabela' && (
-                  <button
-                    onClick={() => fetchData(filterValues, false, true)}
-                    disabled={isLoading}
-                    className="flex items-center gap-1.5 px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-md hover:bg-indigo-500/20 transition-colors disabled:opacity-50 border border-indigo-500/20 hover:border-indigo-500/40"
-                  >
-                    {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCcw className="w-3 h-3" />}
-                    <span className="text-[9px] font-black uppercase tracking-wider">
-                      {t('runtime.load_more_short', 'Carregar Mais')} +{Math.min(itemsPerPage, totalServerRows - data.length)}
-                    </span>
-                  </button>
-                )}
-              </div>
-            )}
+              ) : (
+                <div className="flex items-center gap-3">
+                  <span>
+                    <span className="opacity-70">{t('runtime.showing', 'Exibindo')}</span> <span className="font-black text-indigo-600 dark:text-indigo-400 mx-1">{data.length}</span> <span className="opacity-70">{t('runtime.records_of', 'registros de um total de')}</span> <span className="font-black mx-1 text-neutral-700 dark:text-neutral-300">{totalServerRows}</span>
+                  </span>
+                  
+                  {data.length < totalServerRows && logicType !== 'tabela' && (
+                    <button
+                      onClick={() => fetchData(filterValues, false, true)}
+                      disabled={isLoading}
+                      className="flex items-center gap-1.5 px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-md hover:bg-indigo-500/20 transition-colors disabled:opacity-50 border border-indigo-500/20 hover:border-indigo-500/40"
+                    >
+                      {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCcw className="w-3 h-3" />}
+                      <span className="text-[9px] font-black uppercase tracking-wider">
+                        {t('runtime.load_more_short', 'Carregar Mais')} +{Math.min(itemsPerPage, totalServerRows - data.length)}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
       {displayType === 'both' && (
           <div className="flex items-center gap-4">
@@ -1742,7 +1744,7 @@ export default function ViewContainer({
                 <option value={50}>50 {t('runtime.rows')}</option>
               </select>
               <span className="mx-2 opacity-20">|</span>
-              <span className="opacity-60">{t('runtime.total')}: <span className="text-neutral-900 dark:text-white">{data.length}</span></span>
+              <span className="opacity-60">{t('runtime.total')}: <span className="text-neutral-900 dark:text-white">{totalServerRows}</span></span>
               {data.length >= 100 && (data.length % 100 === 0) && (
                 <button
                   onClick={() => fetchData(filterValues, false, true)}
