@@ -254,18 +254,25 @@ function DynamicBlueprintContent({
   const getCol = useCallback((fieldId?: string) => {
     if (!fieldId) return null
     const f = fields.find(f => f.id === fieldId)
-    return f ? (f.db_column_name.split('.').pop() || f.db_column_name) : null
+    return f ? f.db_column_name : null
   }, [fields])
 
   const pkCol = useMemo(() => {
     const pk = fields.find(f => f.is_primary_key)
-    return pk ? (pk.db_column_name.split('.').pop() || pk.db_column_name) : 'id'
+    return pk ? pk.db_column_name : 'id'
   }, [fields])
 
   const titleCol = getCol(title_field)
   const descCol = getCol(desc_field)
   const statusCol = getCol(status_field)
   const predCol = getCol(predecessor_field)
+
+  const getRowVal = useCallback((r: any, col: string | null) => {
+    if (!col || !r) return undefined
+    if (r[col] !== undefined) return r[col]
+    const shortCol = col.split('.').pop() || col
+    return r[shortCol]
+  }, [])
 
   const getLayoutedElements = (nodes: Node[], edges: Edge[], dir = 'TB') => {
     const dagreGraph = new dagre.graphlib.Graph()
@@ -315,13 +322,13 @@ function DynamicBlueprintContent({
       if (visited.has(id)) return 0 // fallback de ciclo
       visited.add(id)
       
-      const row = data.find((r: any) => String(r[pkCol] || r.id) === id)
+      const row = data.find((r: any) => String(getRowVal(r, pkCol) || r.id) === id)
       if (!row) {
         depths[id] = 0
         return 0
       }
 
-      const parentId = String(row[predCol])
+      const parentId = String(getRowVal(row, predCol))
       if (!parentId || parentId === 'undefined' || parentId === 'null' || parentId === id) {
         depths[id] = 0
       } else {
@@ -334,17 +341,17 @@ function DynamicBlueprintContent({
     const descFieldObj = fields.find(f => f.db_column_name === descCol)
 
     data.forEach(row => {
-      const id = String(row[pkCol] || row['id'] || row['ID'])
-      const predecessorId = row[predCol]
+      const id = String(getRowVal(row, pkCol) || row['id'] || row['ID'])
+      const predecessorId = getRowVal(row, predCol)
       const depth = getDepth(id)
 
       nodes.push({
         id,
         type: 'blueprintNode',
         data: {
-          title: formatFieldValue(row[titleCol], titleFieldObj, relationalOptions) || 'Sem Título',
-          description: descCol ? formatFieldValue(row[descCol], descFieldObj, relationalOptions) : '',
-          status: statusCol ? row[statusCol] : '',
+          title: formatFieldValue(getRowVal(row, titleCol), titleFieldObj, relationalOptions) || 'Sem Título',
+          description: descCol ? formatFieldValue(getRowVal(row, descCol), descFieldObj, relationalOptions) : '',
+          status: statusCol ? getRowVal(row, statusCol) : '',
           rawData: row,
           onView,
           onEdit,
@@ -371,7 +378,7 @@ function DynamicBlueprintContent({
               animated: animatedEdges,
               onDeleteEdge: () => {
                 if (predCol) {
-                  onMove?.(id, { [predCol]: null })
+                  onMove?.(id, { [predCol.split('.').pop() || predCol]: null })
                 }
               }
             }
@@ -419,7 +426,7 @@ function DynamicBlueprintContent({
         data: {
           onDeleteEdge: () => {
             if (predCol) {
-              onMove?.(connection.target, { [predCol]: null })
+              onMove?.(connection.target, { [predCol.split('.').pop() || predCol]: null })
             }
           }
         }
@@ -429,7 +436,7 @@ function DynamicBlueprintContent({
       const targetData = targetNode?.data?.rawData
 
       if (targetData && predCol) {
-        onMove?.(connection.target, { [predCol]: connection.source })
+        onMove?.(connection.target, { [predCol.split('.').pop() || predCol]: connection.source })
       } else {
         toast('Conexão ignorada: Dados do alvo ausentes.', 'error')
       }
@@ -440,7 +447,7 @@ function DynamicBlueprintContent({
     deletedEdges.forEach(edge => {
       if (predCol) {
         // Envia null para limpar a chave estrangeira (remover a relação pai-filho)
-        onMove?.(edge.target, { [predCol]: null })
+        onMove?.(edge.target, { [predCol.split('.').pop() || predCol]: null })
       }
     })
   }, [predCol, onMove])

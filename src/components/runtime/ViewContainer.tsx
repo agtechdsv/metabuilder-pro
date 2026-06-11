@@ -1948,6 +1948,20 @@ export default function ViewContainer({
         </div>
       )}
 
+      {/* Botão Global de Carregar Mais para views sem paginação própria */}
+      {viewMode !== 'list' && viewMode !== 'card' && data.length >= itemsPerPage && (data.length % itemsPerPage === 0) && (
+        <div className="flex justify-center w-full mt-6 mb-4">
+          <button
+            onClick={() => fetchData(filterValues, false, true)}
+            disabled={isLoading}
+            className="px-6 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all shadow-sm disabled:opacity-50 flex items-center gap-2"
+          >
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin text-indigo-500" /> : <RefreshCcw className="w-4 h-4 text-indigo-500" />}
+            {t('runtime.load_more_dynamic', `Carregar mais ${itemsPerPage}`)}
+          </button>
+        </div>
+      )}
+
       {/* Modal / Drawer for UseCase Actions */}
       <Modal 
         isOpen={isIframeModalOpen} 
