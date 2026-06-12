@@ -83,8 +83,8 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
 
   const renderMenuItem = (item: MenuItem, isChild = false) => {
     const isActive = item.type === 'view' 
-      ? pathname.includes(`/${workspaceSlug}/${projectSlug}/${item.target}`)
-      : pathname.includes(`/dashboard/${item.id}`)
+        ? pathname === `/${workspaceSlug}/${projectSlug}/${item.target}` || pathname.startsWith(`/${workspaceSlug}/${projectSlug}/${item.target}/`)
+        : pathname === `/${workspaceSlug}/${projectSlug}/dashboard/${item.id}` || pathname.startsWith(`/${workspaceSlug}/${projectSlug}/dashboard/${item.id}/`)
     
     const isFolder = item.type === 'folder'
     const isExpanded = expandedFolders.includes(item.id)
