@@ -29,7 +29,8 @@ import {
   X,
   ZoomIn,
   Minimize2,
-  Maximize2
+  Maximize2,
+  UploadCloud
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -216,6 +217,9 @@ export function StudioDashboardClient({
   const [viewToEdit, setViewToEdit] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [viewToDelete, setViewToDelete] = useState<any>(null)
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false)
+  const [viewToPublish, setViewToPublish] = useState<any>(null)
+  const [isPublishing, setIsPublishing] = useState(false)
   const userViews = views?.filter(view => view.slug !== 'downloads' && view.slug !== 'automations') || []
   const downloadsView = views?.find(view => view.slug === 'downloads')
   const isDownloadsActive = downloadsView ? (downloadsView.layout_config?.is_active !== false) : true
@@ -307,6 +311,99 @@ export function StudioDashboardClient({
       router.refresh()
     } catch (err: any) {
       toast(t('dashboard.projects.studio.toasts.error_delete') + err.message, 'error')
+    }
+  }
+
+  const handlePublishView = async () => {
+    if (!viewToPublish?.id) return
+    setIsPublishing(true)
+    try {
+      const draft = viewToPublish.draft_config
+
+      let payloadToUpdate: any = {}
+
+      if (!draft) {
+        // If there's no draft, it's a completely unpublished view being published directly
+        payloadToUpdate = {
+          status: 'delivered',
+          layout_config: viewToPublish.layout_config && Object.keys(viewToPublish.layout_config).length > 0 ? viewToPublish.layout_config : { is_active: true }
+        }
+      } else {
+        payloadToUpdate = {
+          name: draft.name,
+          slug: draft.slug,
+          logic_type: draft.logic_type,
+          has_arguments: draft.has_arguments,
+          tables_config: draft.tables_config,
+          query_type: draft.query_type,
+          custom_query: draft.custom_query,
+          layout_config: draft.layout_config,
+          buttons_config: draft.buttons_config,
+          model_id: draft.model_id,
+          status: 'delivered',
+          draft_config: null,
+        }
+      }
+
+      const { error: publishError } = await supabase
+        .from('ui_views')
+        .update(payloadToUpdate)
+        .eq('id', viewToPublish.id)
+
+      if (publishError) throw publishError
+
+      if (draft) {
+        await supabase.from('ui_components').delete().eq('view_id', viewToPublish.id)
+
+        const draftLayout = draft.layout_config || {}
+        const draftMeta = draftLayout.fields_metadata || {}
+        const validFormFields: string[] = draftLayout.form_fields || []
+        const validGridFields: string[] = draftLayout.grid_fields || []
+        const validFilterFields: string[] = draftLayout.filter_fields || []
+
+        const componentMap: Record<string, any> = {}
+
+        const addComponent = (fid: string, zone: string) => {
+          if (fid.startsWith('virt_')) return
+          const zoneMeta = draftMeta[`${zone}-${fid}`]
+          const globalMeta = draftMeta[fid] || {}
+          const metadata = zoneMeta || globalMeta
+          const labelText = metadata.label?.text || fid
+          if (!componentMap[fid]) {
+            componentMap[fid] = {
+              view_id: viewToPublish.id,
+              field_id: fid,
+              component_type: zone,
+              label: labelText,
+              is_visible: true,
+              config: { zones: [zone], [`${zone}_config`]: metadata, ...metadata }
+            }
+          } else {
+            if (!componentMap[fid].config.zones.includes(zone)) componentMap[fid].config.zones.push(zone)
+            componentMap[fid].config[`${zone}_config`] = metadata
+            if (zone === 'form' && metadata.label?.text) componentMap[fid].label = metadata.label.text
+          }
+        }
+
+        validFilterFields.forEach((fid: string) => addComponent(fid, 'filter'))
+        validGridFields.forEach((fid: string) => addComponent(fid, 'grid'))
+        validFormFields.forEach((fid: string) => addComponent(fid, 'form'))
+
+        const componentsToInsert = Object.values(componentMap)
+        if (componentsToInsert.length > 0) {
+          const { error: compError } = await supabase.from('ui_components').insert(componentsToInsert)
+          if (compError) throw compError
+        }
+      }
+
+      toast('Caso de Uso publicado com sucesso! Os usuários já podem acessar.', 'success')
+      setIsPublishModalOpen(false)
+      setViewToPublish(null)
+      router.refresh()
+    } catch (err: any) {
+      toast('Erro ao publicar: ' + err.message, 'error')
+    } finally {
+      setIsPublishing(false)
     }
   }
 
@@ -985,15 +1082,29 @@ export function StudioDashboardClient({
                           >
                             <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure')}
                           </button>
-                          {view.draft_config && (
-                            <Link
-                              href={`/${workspace_slug}/${project_slug}/${view.slug}?preview=draft`}
-                              target="_blank"
-                              className="w-14 flex items-center justify-center bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 rounded-2xl border border-amber-200 dark:border-amber-500/30 transition-all text-amber-600 dark:text-amber-500 shadow-sm group/preview animate-pulse"
-                              title="Visualizar Rascunho"
-                            >
-                              <Eye className="w-5 h-5 group-hover/preview:scale-110 transition-transform" />
-                            </Link>
+                          {(view.draft_config || !view.layout_config || Object.keys(view.layout_config).length === 0 || view.status === 'draft') && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setViewToPublish(view)
+                                  setIsPublishModalOpen(true)
+                                }}
+                                className="w-14 flex items-center justify-center bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 rounded-2xl border border-emerald-200 dark:border-emerald-500/30 transition-all text-emerald-600 dark:text-emerald-500 shadow-sm group/publish-draft"
+                                title="Publicar Alterações"
+                              >
+                                <UploadCloud className="w-5 h-5 group-hover/publish-draft:scale-110 transition-transform" />
+                              </button>
+                              {view.draft_config && (
+                                <Link
+                                  href={`/${workspace_slug}/${project_slug}/${view.slug}?preview=draft`}
+                                  target="_blank"
+                                  className="w-14 flex items-center justify-center bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 rounded-2xl border border-amber-200 dark:border-amber-500/30 transition-all text-amber-600 dark:text-amber-500 shadow-sm group/preview animate-pulse"
+                                  title="Visualizar Rascunho"
+                                >
+                                  <Eye className="w-5 h-5 group-hover/preview:scale-110 transition-transform" />
+                                </Link>
+                              )}
+                            </>
                           )}
                           {(view.layout_config && Object.keys(view.layout_config).length > 0) && (
                             <Link
@@ -1063,6 +1174,38 @@ export function StudioDashboardClient({
                 className="w-full py-4 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all"
               >
                 {t('dashboard.projects.studio.delete_confirm.cancel')}
+              </button>
+            </div>
+          </div>
+        </Modal>
+
+        <Modal
+          isOpen={isPublishModalOpen}
+          onClose={() => setIsPublishModalOpen(false)}
+          title="Publicar Alterações"
+        >
+          <div className="space-y-6">
+            <div className="flex items-start gap-4 p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl">
+              <UploadCloud className="w-6 h-6 text-emerald-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-bold text-emerald-600">Tem certeza que deseja publicar?</p>
+                <p className="text-xs text-neutral-500 mt-1">Isso tornará todas as alterações do "{viewToPublish?.name}" visíveis imediatamente para os usuários.</p>
+              </div>
+            </div>
+            
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handlePublishView}
+                disabled={isPublishing}
+                className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-2xl font-bold transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)]"
+              >
+                {isPublishing ? 'Publicando...' : 'Sim, Publicar'}
+              </button>
+              <button
+                onClick={() => setIsPublishModalOpen(false)}
+                className="w-full py-4 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all"
+              >
+                Cancelar
               </button>
             </div>
           </div>

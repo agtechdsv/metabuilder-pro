@@ -525,7 +525,10 @@ export default function ViewPageContent({
 
     return () => {
       console.log(`[MetaBuilder] 🔌 Fechando Túnel Centralizado.`)
-      channel.unsubscribe()
+      try {
+        channel.unsubscribe()
+        supabase.removeChannel(channel._channel || channel)
+      } catch (e) {}
       setTunnelChannel(null)
       setIsTunnelReady(false)
     }
@@ -553,12 +556,19 @@ export default function ViewPageContent({
         console.log(`[MetaBuilder] ✅ Registro encontrado para edição:`, record)
       }
       // Limpa o listener após receber
-      try {
-        const bindings = tunnelChannel.bindings?.broadcast
-        if (Array.isArray(bindings)) {
-          tunnelChannel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult)
-        }
-      } catch (e) {}
+      const cleanup = () => {
+        try {
+          if (tunnelChannel.removeListener) {
+            tunnelChannel.removeListener(`query_result_${queryId}`, handleResult)
+            tunnelChannel.removeListener('sql_result', handleResult)
+          }
+          const bindings = tunnelChannel.bindings?.broadcast
+          if (Array.isArray(bindings)) {
+            tunnelChannel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult)
+          }
+        } catch (e) {}
+      }
+      cleanup()
     }
 
     tunnelChannel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)

@@ -37,6 +37,12 @@ export function wrapChannelWithChunking(channel: any) {
 
   const wrapper = {
     _channel: channel,
+    get bindings() {
+      return channel.bindings;
+    },
+    get channelAdapter() {
+      return channel.channelAdapter;
+    },
     send: (msg: any) => {
       const payloadStr = JSON.stringify(msg.payload);
       if (payloadStr.length <= CHUNK_SIZE) {
@@ -64,7 +70,7 @@ export function wrapChannelWithChunking(channel: any) {
             }
           });
           results.push(await p);
-          await new Promise(resolve => setTimeout(resolve, 20));
+          await new Promise(resolve => setTimeout(resolve, 150));
         }
         return results;
       };
@@ -79,6 +85,11 @@ export function wrapChannelWithChunking(channel: any) {
       // Also listen natively for non-chunked messages
       channel.on(type, filter, callback);
       return wrapper;
+    },
+    removeListener: (event: string, callback: Function) => {
+      if (listeners[event]) {
+        listeners[event] = listeners[event].filter(cb => cb !== callback);
+      }
     },
     subscribe: (callback?: any) => channel.subscribe(callback),
     unsubscribe: () => channel.unsubscribe()

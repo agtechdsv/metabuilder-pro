@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { DynamicSidebar } from './DynamicSidebar'
 import { RuntimeGlobalHeader } from './RuntimeGlobalHeader'
-import { DynamicIcon } from './DynamicIcon'
+import DynamicIcon from './DynamicIcon'
 
 interface RuntimeLayoutClientProps {
   children: React.ReactNode

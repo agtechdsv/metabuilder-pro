@@ -6,7 +6,7 @@ import { Loader2, Save, Eye, Pencil, Plus, Trash2, ArrowLeft, Check, ChevronDown
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
-import { DynamicIcon } from '@/components/runtime/DynamicIcon'
+import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { FileUploaderInput } from '@/components/runtime/FileUploaderInput'
 
 // Helper para obter valores de forma insensível a maiúsculas/minúsculas e tolerante a prefixos

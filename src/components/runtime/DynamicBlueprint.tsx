@@ -25,8 +25,9 @@ import {
 import '@xyflow/react/dist/style.css'
 import dagre from 'dagre'
 import { formatFieldValue } from '@/lib/formatters'
-import { MoreVertical, CheckCircle2, Circle, AlertCircle, PlayCircle, Eye, Pencil, Trash2, Settings2, Wand2, RefreshCcw, Activity } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { MoreVertical, CheckCircle2, Circle, AlertCircle, PlayCircle, Eye, Pencil, Trash2, Settings2, Wand2, RefreshCcw, Activity, Zap } from 'lucide-react'
+import DynamicIcon from '@/components/runtime/DynamicIcon'
+import { cn, getActionColorClasses } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 
 interface DynamicBlueprintProps {
@@ -41,16 +42,18 @@ interface DynamicBlueprintProps {
     direction?: string
     animated_edges?: boolean
   }
-  onView: (row: any) => void
-  onEdit: (row: any) => void
-  onDelete: (row: any) => void
+  onView?: (row: any) => void
+  onEdit?: (row: any) => void
+  onDelete?: (row: any) => void
   dictionary?: any
   onMove?: (recordId: string, updates: any) => void
   onRefresh?: () => void
   relationalOptions?: Record<string, any[]>
+  customActions?: any[]
+  onCustomAction?: (action: any, row?: any) => void
 }
 const BlueprintNode = memo(({ data, selected }: NodeProps) => {
-  const { title, description, status, onView, onEdit, onDelete, rawData, scale = 1, direction = 'TB' } = data as any
+  const { title, description, status, onView, onEdit, onDelete, customActions = [], onCustomAction, rawData, scale = 1, direction = 'TB' } = data as any
 
   let statusColor = 'bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:border-neutral-700'
   let StatusIcon = Circle
@@ -129,6 +132,21 @@ const BlueprintNode = memo(({ data, selected }: NodeProps) => {
         <div className="h-px bg-neutral-200 dark:bg-neutral-800" />
         <button onClick={(e) => { e.stopPropagation(); onEdit?.(rawData); }} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-indigo-500" title="Editar"><Pencil className="w-4 h-4" /></button>
         <div className="h-px bg-neutral-200 dark:bg-neutral-800" />
+        {customActions.filter((a: any) => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('row')).map((action: any) => {
+          const colors = getActionColorClasses(action.color)
+          return (
+            <React.Fragment key={action.id}>
+              <button
+                title={action.label}
+                onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, rawData) }}
+                className={cn("p-2 transition-colors", colors.text, colors.hover)}
+              >
+                {action.icon ? <DynamicIcon icon={action.icon} className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
+              </button>
+              <div className="h-px bg-neutral-200 dark:bg-neutral-800" />
+            </React.Fragment>
+          )
+        })}
         <button onClick={(e) => { e.stopPropagation(); onDelete?.(rawData); }} className="p-2 hover:bg-red-50 dark:hover:bg-red-900/30 text-neutral-400 hover:text-red-500" title="Excluir"><Trash2 className="w-4 h-4" /></button>
       </div>
     </div>
@@ -227,7 +245,9 @@ function DynamicBlueprintContent({
   onMove,
   onRefresh,
   dictionary = {},
-  relationalOptions = {}
+  relationalOptions = {},
+  customActions = [],
+  onCustomAction
 }: DynamicBlueprintProps) {
   const { toast } = useToast()
   const { fitView } = useReactFlow()
@@ -356,6 +376,8 @@ function DynamicBlueprintContent({
           onView,
           onEdit,
           onDelete,
+          customActions,
+          onCustomAction,
           scale,
           direction,
           animated: animatedEdges,

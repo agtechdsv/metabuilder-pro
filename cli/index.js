@@ -338,9 +338,33 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
                 });
                 
                 if (tablePart === safeTable || isJoinedStr || isJoinedCli) {
-                  conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) ILIKE $${i}`);
-                  params.push(`%${value}%`);
-                  i++;
+                  if (columnPart === 'id' || columnPart.endsWith('_id') || columnPart.endsWith('ID') || columnPart.endsWith('Id')) {
+                    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value));
+                    const isNumeric = /^\d+$/.test(String(value));
+                    if (Array.isArray(value)) {
+                      const placeholders = value.map((_, idx) => `$${i + idx}`);
+                      conditions.push(`"${tablePart}"."${columnPart}" IN (${placeholders.join(', ')})`);
+                      params.push(...value);
+                      i += value.length;
+                    } else if (isUUID || isNumeric) {
+                      conditions.push(`"${tablePart}"."${columnPart}" = '${value}'`);
+                    } else {
+                      conditions.push(`"${tablePart}"."${columnPart}" = $${i}`);
+                      params.push(value);
+                      i++;
+                    }
+                  } else {
+                    if (Array.isArray(value)) {
+                      const placeholders = value.map((_, idx) => `$${i + idx}`);
+                      conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) IN (${placeholders.join(', ')})`);
+                      params.push(...value);
+                      i += value.length;
+                    } else {
+                      conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) ILIKE $${i}`);
+                      params.push(`%${value}%`);
+                      i++;
+                    }
+                  }
                 } else {
                   console.log(chalk.yellow(`[ AVISO ] Filtro na tabela estrangeira '${tablePart}' ignorado pois ela não tem JOIN na query atual.`));
                 }
@@ -498,9 +522,21 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
                 });
                 
                 if (tablePart === safeTable || isJoinedStr || isJoinedCli) {
-                  conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) ILIKE $${i}`);
-                  params.push(`%${value}%`);
-                  i++;
+                  if (columnPart === 'id' || columnPart.endsWith('_id') || columnPart.endsWith('ID') || columnPart.endsWith('Id')) {
+                    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+                    const isNumeric = /^\d+$/.test(value);
+                    if (isUUID || isNumeric) {
+                      conditions.push(`"${tablePart}"."${columnPart}" = '${value}'`);
+                    } else {
+                      conditions.push(`"${tablePart}"."${columnPart}" = $${i}`);
+                      params.push(value);
+                      i++;
+                    }
+                  } else {
+                    conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) ILIKE $${i}`);
+                    params.push(`%${value}%`);
+                    i++;
+                  }
                 }
               }
             }

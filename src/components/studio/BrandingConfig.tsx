@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { Save, Palette, Type, Layout } from 'lucide-react'
 import { IconPicker } from './IconPicker'
-import { DynamicIcon } from '@/components/runtime/DynamicIcon'
+import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { cn } from '@/lib/utils'
 
 interface BrandingConfigProps {

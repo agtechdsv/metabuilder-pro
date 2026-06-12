@@ -39,6 +39,12 @@ function wrapChannelWithChunking(channel) {
 
   const wrapper = {
     _channel: channel,
+    get bindings() {
+      return channel.bindings;
+    },
+    get channelAdapter() {
+      return channel.channelAdapter;
+    },
     send: (msg) => {
       const payloadStr = JSON.stringify(msg.payload);
       if (payloadStr.length <= CHUNK_SIZE) {
@@ -66,7 +72,8 @@ function wrapChannelWithChunking(channel) {
             }
           });
           results.push(await p);
-          await new Promise(resolve => setTimeout(resolve, 20));
+          // Wait 150ms between chunks to avoid Supabase Realtime 10 msgs/sec rate limit
+          await new Promise(resolve => setTimeout(resolve, 150));
         }
         return results;
       };
@@ -81,6 +88,12 @@ function wrapChannelWithChunking(channel) {
       // Also listen natively for non-chunked messages
       channel.on(type, filter, callback);
       return wrapper; // Return wrapper for chaining
+    },
+    // Add custom off/removeListener logic
+    removeListener: (event, callback) => {
+      if (listeners[event]) {
+        listeners[event] = listeners[event].filter(cb => cb !== callback);
+      }
     },
     subscribe: (callback) => channel.subscribe(callback),
     unsubscribe: () => channel.unsubscribe()

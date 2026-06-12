@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
-import { DynamicIcon } from './DynamicIcon'
+import DynamicIcon from './DynamicIcon'
 import { useI18n } from '@/i18n/I18nContext'
 
 interface MenuItem {

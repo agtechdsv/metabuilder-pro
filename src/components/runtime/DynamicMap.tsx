@@ -1,7 +1,9 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
-import { Eye, Pencil, Trash2, MapPin } from 'lucide-react'
+import { Eye, Pencil, Trash2, MapPin, Zap } from 'lucide-react'
+import DynamicIcon from '@/components/runtime/DynamicIcon'
+import { cn, getActionColorClasses } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import L from 'leaflet'
 import { formatFieldValue } from '@/lib/formatters'
@@ -29,10 +31,12 @@ export interface DynamicMapProps {
   onEdit: (record: any) => void
   onDelete: (record: any) => void
   onView: (record: any) => void
+  customActions?: any[]
+  onCustomAction?: (action: any, record?: any) => void
   relationalOptions?: Record<string, any[]>
 }
 
-export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, onView, relationalOptions = {} }: DynamicMapProps) {
+export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, onView, customActions = [], onCustomAction, relationalOptions = {} }: DynamicMapProps) {
   const { t } = useI18n()
   const [isMounted, setIsMounted] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
@@ -222,11 +226,24 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
                   </button>
                   <button
                     onClick={() => onDelete(point.record)}
-                    className="p-1.5 rounded-md hover:bg-red-50 text-red-500 transition-colors ml-auto"
+                    className="p-1.5 rounded-md hover:bg-red-50 text-red-500 transition-colors"
                     title={t('runtime.delete', 'Excluir')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                  {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('row')).map(action => {
+                    const colors = getActionColorClasses(action.color)
+                    return (
+                      <button
+                        key={action.id}
+                        title={action.label}
+                        onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, point.record) }}
+                        className={cn("p-1.5 rounded-md shadow-sm transition-colors", colors.bg, colors.text, colors.hover)}
+                      >
+                        {action.icon ? <DynamicIcon icon={action.icon} className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             </RL.Popup>

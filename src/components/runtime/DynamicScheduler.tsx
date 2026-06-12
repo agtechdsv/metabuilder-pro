@@ -15,10 +15,12 @@ import {
   Trash2,
   Minimize2,
   Maximize2,
-  ZoomIn
+  ZoomIn,
+  Zap
 } from 'lucide-react'
+import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { formatFieldValue } from '@/lib/formatters'
-import { cn } from '@/lib/utils'
+import { cn, getActionColorClasses } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -38,6 +40,8 @@ interface DynamicSchedulerProps {
   onDelete?: (row: any) => void
   dictionary?: any
   relationalOptions?: Record<string, any[]>
+  customActions?: any[]
+  onCustomAction?: (action: any, row?: any) => void
 }
 
 export default function DynamicScheduler({
@@ -50,7 +54,9 @@ export default function DynamicScheduler({
   onEdit,
   onDelete,
   dictionary = {},
-  relationalOptions = {}
+  relationalOptions = {},
+  customActions = [],
+  onCustomAction
 }: DynamicSchedulerProps) {
   const [currentView, setCurrentView] = useState<'month' | 'week' | 'day'>('month')
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
@@ -456,6 +462,19 @@ export default function DynamicScheduler({
                                   <Trash2 className="w-2.5 h-2.5 text-rose-500" />
                                 </button>
                               )}
+                              {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('row')).map(action => {
+                                const colors = getActionColorClasses(action.color)
+                                return (
+                                  <button
+                                    key={action.id}
+                                    title={action.label}
+                                    onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, evt.raw) }}
+                                    className={cn("opacity-0 group-hover/evt:opacity-100 p-0.5 rounded flex-shrink-0 transition-opacity", colors.text, colors.hover)}
+                                  >
+                                    {action.icon ? <DynamicIcon icon={action.icon} className="w-2.5 h-2.5" /> : <Zap className="w-2.5 h-2.5" />}
+                                  </button>
+                                )
+                              })}
                             </div>
                           )
                         })}
@@ -535,17 +554,32 @@ export default function DynamicScheduler({
                               </span>
                             </div>
 
-                            {onDelete && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  onDelete(evt.raw)
-                                }}
-                                className="absolute top-2 right-2 opacity-0 group-hover/evt:opacity-100 p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-opacity"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                              </button>
-                            )}
+                            <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover/evt:opacity-100 transition-opacity">
+                              {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('row')).map(action => {
+                                const colors = getActionColorClasses(action.color)
+                                return (
+                                  <button
+                                    key={action.id}
+                                    title={action.label}
+                                    onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, evt.raw) }}
+                                    className={cn("p-1 rounded-lg transition-colors hover:bg-black/10 dark:hover:bg-white/10", colors.text)}
+                                  >
+                                    {action.icon ? <DynamicIcon icon={action.icon} className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
+                                  </button>
+                                )
+                              })}
+                              {onDelete && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    onDelete(evt.raw)
+                                  }}
+                                  className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         )
                       })}
@@ -617,6 +651,19 @@ export default function DynamicScheduler({
                       </div>
 
                       <div className="flex items-center gap-1 opacity-0 group-hover/evt:opacity-100 transition-opacity">
+                        {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('row')).map(action => {
+                          const colors = getActionColorClasses(action.color)
+                          return (
+                            <button
+                              key={action.id}
+                              title={action.label}
+                              onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, evt.raw) }}
+                              className={cn("p-1.5 rounded-lg transition-colors hover:bg-neutral-200 dark:hover:bg-neutral-800", colors.text)}
+                            >
+                              {action.icon ? <DynamicIcon icon={action.icon} className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
+                            </button>
+                          )
+                        })}
                         {onDelete && (
                           <button 
                             onClick={(e) => {

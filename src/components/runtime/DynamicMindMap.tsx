@@ -32,6 +32,8 @@ interface DynamicMindMapProps {
   tunnelChannel?: any
   isTunnelReady?: boolean
   relationalOptions?: Record<string, any[]>
+  customActions?: any[]
+  onCustomAction?: (action: any, rowData?: any) => Promise<void>
 }
 
 // Componente interno para Tooltip Estilizada (Multi-Tema)
@@ -84,7 +86,9 @@ export default function DynamicMindMap({
   project,
   tunnelChannel,
   isTunnelReady,
-  relationalOptions = {}
+  relationalOptions = {},
+  customActions = [],
+  onCustomAction
 }: DynamicMindMapProps) {
   const { t, language } = useI18n()
   const localeStr = language === 'pt' ? 'pt-BR' : language === 'en' ? 'en-US' : 'es-ES'

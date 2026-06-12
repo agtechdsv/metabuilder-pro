@@ -7,7 +7,7 @@ import { HeaderActions } from '@/components/layout/HeaderActions'
 import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
 import { findBreadcrumbPath } from '@/lib/navigation-utils'
-import { DynamicIcon } from '@/components/runtime/DynamicIcon'
+import DynamicIcon from '@/components/runtime/DynamicIcon'
 
 interface RuntimeGlobalHeaderProps {
   project: any

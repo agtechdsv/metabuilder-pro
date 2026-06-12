@@ -41,7 +41,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { IconPicker } from './IconPicker'
-import { DynamicIcon } from '@/components/runtime/DynamicIcon'
+import DynamicIcon from '@/components/runtime/DynamicIcon'
 
 interface MenuItem {
   id: string

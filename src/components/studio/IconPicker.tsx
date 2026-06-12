@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import * as LucideIcons from 'lucide-react'
 import { Search, X, Code, Grid, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { DynamicIcon } from '@/components/runtime/DynamicIcon'
+import DynamicIcon from '@/components/runtime/DynamicIcon'
 
 interface IconPickerProps {
   currentIcon: string

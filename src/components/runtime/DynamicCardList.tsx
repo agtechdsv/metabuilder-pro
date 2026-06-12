@@ -2,7 +2,7 @@
 
 import { Pencil, Trash2, Calendar, Hash, Type, Search, Zap, Link, Database, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { DynamicIcon } from '@/components/runtime/DynamicIcon'
+import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { evaluateFormula } from '@/lib/formulaEvaluator'
 import { formatFieldValue } from '@/lib/formatters'
 

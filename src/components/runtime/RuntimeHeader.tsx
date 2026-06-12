@@ -4,7 +4,7 @@ import { ChevronRight, Home, Layout, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { HeaderActions } from '@/components/layout/HeaderActions'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { DynamicIcon } from './DynamicIcon'
+import DynamicIcon from './DynamicIcon'
 import { X } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 

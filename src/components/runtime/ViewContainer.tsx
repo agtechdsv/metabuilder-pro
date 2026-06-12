@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { LayoutGrid, List, Search, Filter, Plus, Pencil, Trash2, RefreshCcw, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Zap, Link, Database, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import DynamicGrid from '@/components/DynamicGrid'
-import { DynamicIcon } from '@/components/runtime/DynamicIcon'
+import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { useI18n } from '@/i18n/I18nContext'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
@@ -413,6 +413,10 @@ export default function ViewContainer({
                 let resolved = false
                 const cleanup = () => {
                   try {
+                    if (tunnelChannel.removeListener) {
+                      tunnelChannel.removeListener(`query_result_${queryId}`, handleResult)
+                      tunnelChannel.removeListener('sql_result', handleResult)
+                    }
                     const bindings = tunnelChannel.bindings?.broadcast
                     if (Array.isArray(bindings)) {
                       tunnelChannel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult)
@@ -692,6 +696,9 @@ export default function ViewContainer({
     tunnelChannel.on('broadcast', { event: 'sql_result' }, handleSqlResult)
 
     return () => {
+      if (tunnelChannel.removeListener) {
+        tunnelChannel.removeListener('sql_result', handleSqlResult)
+      }
       const bindings = tunnelChannel.bindings?.broadcast
       if (Array.isArray(bindings)) {
         const binding = bindings.find((b: any) => b.callback === handleSqlResult)
@@ -746,32 +753,34 @@ export default function ViewContainer({
 
     // Aguarda um momento para o canal estar pronto e envia
     setTimeout(() => {
-          // ─── Santo Graal BFS Join Resolver ────────────────────────────────
-          const buildJoinsSql = (joinsList: any[]) => {
+          // 🧠🧠🧠 Santo Graal BFS Join Resolver 🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠
+          const buildJoinsSql = (joinsList: any[], includeFilters: boolean = true) => {
             const allModels = project?.models || []
 
             // Collect required tables from filters, display fields and filter fields
             const requiredTables = new Set<string>()
-            if (currentFilters) {
-              Object.keys(currentFilters).forEach(key => {
-                if (key.includes('.')) requiredTables.add(key.split('.')[0])
-              })
+            if (includeFilters) {
+              if (currentFilters) {
+                Object.keys(currentFilters).forEach(key => {
+                  if (key.includes('.')) requiredTables.add(key.split('.')[0])
+                })
+              }
+              if (filterFields) {
+                filterFields.forEach(f => {
+                  const col = f.sql_expression || f.db_column_name
+                  if (col && col.includes('.')) requiredTables.add(col.split('.')[0])
+                })
+              }
+              if (advancedStaticFilters) {
+                advancedStaticFilters.forEach(f => {
+                  if (f.field && f.field.includes('.')) requiredTables.add(f.field.split('.')[0])
+                })
+              }
             }
             if (displayFields) {
               displayFields.forEach(f => {
                 const col = f.sql_expression || f.db_column_name
                 if (col && col.includes('.')) requiredTables.add(col.split('.')[0])
-              })
-            }
-            if (filterFields) {
-              filterFields.forEach(f => {
-                const col = f.sql_expression || f.db_column_name
-                if (col && col.includes('.')) requiredTables.add(col.split('.')[0])
-              })
-            }
-            if (advancedStaticFilters) {
-              advancedStaticFilters.forEach(f => {
-                if (f.field && f.field.includes('.')) requiredTables.add(f.field.split('.')[0])
               })
             }
 
@@ -964,24 +973,7 @@ export default function ViewContainer({
               })
             }
 
-            // 4. Selecionar filterFields (tabela principal ou joins)
-            if (filterFields && filterFields.length > 0) {
-              filterFields.forEach(f => {
-                if (!f) return
-                const isMasterModel = !f.model_name || f.model_name.toLowerCase() === modelName.toLowerCase()
-                const isJoinedModel = joins && joins.some((j: any) => {
-                  const toTable = j.toTable || j.to
-                  return toTable && f.model_name && toTable.toLowerCase() === f.model_name.toLowerCase()
-                })
-                if (isMasterModel || isJoinedModel) {
-                  const expr = f.sql_expression || f.db_column_name
-                  if (expr) {
-                    addSelectExpr(expr, f.db_column_name)
-                  }
-                }
-              })
-            }
-
+            // 4. (Removido: Não selecionamos filterFields pois eles só devem ser usados no WHERE, evitando multiplicar linhas com joins 1:N no select externo)
             const columns = selectExprs.length > 0 ? selectExprs.join(', ') : '*'
           
           const currentOffset = append ? data.length : (currentPage - 1) * itemsPerPage;
@@ -998,15 +990,32 @@ export default function ViewContainer({
           }
 
           let rawQuery = '';
-          const joinsSql = buildJoinsSql(joins);
+          const joinsSql = buildJoinsSql(joins, true);
           if (joinsSql) {
+            // Filtrar joins para a query externa para evitar duplicação de linhas (1:N joins não utilizados nas colunas)
+            const requiredOuterJoins = (joins || []).filter((j: any) => {
+              const toTable = j.toTable || j.to;
+              const fromTable = j.table || j.from;
+              if (!toTable || !fromTable) return false;
+
+              const isToMaster = toTable.toLowerCase() === modelName.toLowerCase();
+              const isFromMaster = fromTable.toLowerCase() === modelName.toLowerCase();
+
+              // Se a tabela não for a principal, ela DEVE estar selecionada nas colunas para o JOIN ser justificado
+              if (!isToMaster && !columns.includes(`"${toTable}"`)) return false;
+              if (!isFromMaster && !columns.includes(`"${fromTable}"`)) return false;
+
+              return true;
+            });
+            const outerJoinsSql = buildJoinsSql(requiredOuterJoins, false);
+
             rawQuery = `SELECT ${columns} FROM (
     SELECT DISTINCT "${modelName}".* FROM "${modelName}"
     ${joinsSql}
     __WHERE_PLACEHOLDER__
     ORDER BY ${orderSql}
     LIMIT ${itemsPerPage} OFFSET ${currentOffset}
-  ) AS "${modelName}" ${joinsSql}
+  ) AS "${modelName}" ${outerJoinsSql}
   ORDER BY ${orderSql}`
           } else {
             rawQuery = `SELECT ${columns} FROM "${modelName}" __WHERE_PLACEHOLDER__ ORDER BY ${orderSql}`
@@ -1795,19 +1804,9 @@ export default function ViewContainer({
             onView={onView}
             onEdit={onEdit}
             onDelete={onDelete}
+            customActions={customActions}
+            onCustomAction={handleCustomAction}
           />
-          {data.length >= 100 && (data.length % 100 === 0) && (
-            <div className="flex justify-center pt-2">
-              <button
-                onClick={() => fetchData(filterValues, false, true)}
-                disabled={isLoading}
-                className="flex items-center gap-2 px-8 py-3 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black rounded-full text-[11px] font-black capitalize tracking-wider transition-all shadow-xl disabled:opacity-50"
-              >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCcw className="w-4 h-4" />}
-                {t('runtime.load_more_records', 'Carregar Próximos 100 Registros')} (Total: {data.length})
-              </button>
-            </div>
-          )}
         </div>
       ) : viewMode === 'scheduler' ? (
         <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
@@ -1822,6 +1821,8 @@ export default function ViewContainer({
           onEdit={onEdit}
           onDelete={onDelete}
           dictionary={dictionary}
+          customActions={customActions}
+          onCustomAction={handleCustomAction}
         />
         </div>
       ) : viewMode === 'timeline' ? (
@@ -1836,6 +1837,8 @@ export default function ViewContainer({
           onDelete={onDelete}
           onRefresh={() => fetchData(currentFiltersRef.current, true)}
           dictionary={dictionary}
+          customActions={customActions}
+          onCustomAction={handleCustomAction}
           onLoadMore={() => fetchData(currentFiltersRef.current, false, true)}
           hasMore={data.length < totalServerRows}
           totalRecords={totalServerRows}
@@ -1857,6 +1860,8 @@ export default function ViewContainer({
           onView={onView!}
           onEdit={onEdit!}
           onDelete={onDelete!}
+          customActions={customActions}
+          onCustomAction={handleCustomAction}
         />
         </div>
       ) : viewMode === 'gantt' ? (
@@ -1887,6 +1892,8 @@ export default function ViewContainer({
           onMove={handleMove}
           onRefresh={() => fetchData(currentFiltersRef.current, true)}
           dictionary={dictionary}
+          customActions={customActions}
+          onCustomAction={handleCustomAction}
         />
         </div>
       ) : viewMode === 'mapa_mental' ? (
@@ -1907,6 +1914,8 @@ export default function ViewContainer({
           project={project}
           tunnelChannel={tunnelChannel}
           isTunnelReady={isTunnelReady}
+          customActions={customActions}
+          onCustomAction={handleCustomAction}
         />
         </div>
       ) : viewMode === 'galeria' ? (
@@ -1921,6 +1930,8 @@ export default function ViewContainer({
           onDelete={onDelete}
           galleryClickBehavior={galleryClickBehavior}
           galleryConfig={galleryConfig}
+          customActions={customActions}
+          onCustomAction={handleCustomAction}
         />
         </div>
       ) : (
@@ -1974,15 +1985,15 @@ export default function ViewContainer({
       )}
 
       {/* Botão Global de Carregar Mais para views sem paginação própria */}
-      {viewMode !== 'list' && viewMode !== 'card' && data.length >= itemsPerPage && (data.length % itemsPerPage === 0) && (
-        <div className="flex justify-center w-full mt-6 mb-4">
+      {viewMode !== 'list' && viewMode !== 'card' && data.length > 0 && data.length < totalServerRows && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
           <button
             onClick={() => fetchData(filterValues, false, true)}
             disabled={isLoading}
-            className="px-6 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all shadow-sm disabled:opacity-50 flex items-center gap-2"
+            className="px-6 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-full text-[11px] font-black uppercase tracking-[0.2em] transition-all shadow-2xl disabled:opacity-50 flex items-center gap-2 ring-1 ring-black/5 dark:ring-white/10"
           >
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin text-indigo-500" /> : <RefreshCcw className="w-4 h-4 text-indigo-500" />}
-            {t('runtime.load_more_dynamic', `Carregar mais ${itemsPerPage}`)}
+            {t('runtime.load_more_dynamic', 'Carregar mais')} ({data.length} de {totalServerRows})
           </button>
         </div>
       )}

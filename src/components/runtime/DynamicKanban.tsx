@@ -23,8 +23,9 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MoreVertical, Calendar, User, Tag, GripVertical, Plus, Minimize2, Maximize2, ZoomIn, LayoutGrid } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { MoreVertical, Calendar, User, Tag, GripVertical, Plus, Minimize2, Maximize2, ZoomIn, LayoutGrid, Zap } from 'lucide-react'
+import DynamicIcon from '@/components/runtime/DynamicIcon'
+import { cn, getActionColorClasses } from '@/lib/utils'
 import { formatFieldValue } from '@/lib/formatters'
 import { useI18n } from '@/i18n/I18nContext'
 
@@ -37,6 +38,8 @@ interface DynamicKanbanProps {
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
   dictionary?: any
+  customActions?: any[]
+  onCustomAction?: (action: any, row?: any) => void
   kanbanGroupDisplayField?: string
   kanbanCardFields?: string[]
   relationalOptions?: Record<string, any[]>
@@ -51,6 +54,8 @@ export default function DynamicKanban({
   onEdit,
   onDelete,
   dictionary = {},
+  customActions = [],
+  onCustomAction,
   kanbanGroupDisplayField,
   kanbanCardFields,
   relationalOptions = {}
@@ -179,6 +184,8 @@ export default function DynamicKanban({
             onView={onView}
             onEdit={onEdit}
             onDelete={onDelete}
+            customActions={customActions}
+            onCustomAction={onCustomAction}
             relationalOptions={relationalOptions}
           />
           )
@@ -191,6 +198,8 @@ export default function DynamicKanban({
               item={data.find(item => String(item._key || item.id || item.ID) === activeId)}
               fields={fields}
               isOverlay
+              customActions={customActions}
+              onCustomAction={onCustomAction}
               relationalOptions={relationalOptions}
             />
           ) : null}
@@ -201,7 +210,7 @@ export default function DynamicKanban({
   )
 }
 
-function KanbanColumn({ id, title, items, fields, onView, onEdit, onDelete, relationalOptions }: any) {
+function KanbanColumn({ id, title, items, fields, onView, onEdit, onDelete, relationalOptions, customActions = [], onCustomAction }: any) {
   return (
     <div className="flex-shrink-0 w-80 flex flex-col bg-neutral-50/50 dark:bg-neutral-900/30 border border-neutral-200/50 dark:border-neutral-800/50 rounded-[2rem] overflow-hidden h-full">
       {/* Column Header */}
@@ -237,6 +246,8 @@ function KanbanColumn({ id, title, items, fields, onView, onEdit, onDelete, rela
                 onView={onView}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                customActions={customActions}
+                onCustomAction={onCustomAction}
                 relationalOptions={relationalOptions}
               />
             ))}
@@ -259,7 +270,7 @@ function getNestedValue(obj: any, path: string) {
   return path.split('.').reduce((acc, part) => acc && acc[part], obj)
 }
 
-function KanbanCard({ id, item, fields, isOverlay, onView, onEdit, onDelete, relationalOptions }: any) {
+function KanbanCard({ id, item, fields, isOverlay, onView, onEdit, onDelete, relationalOptions, customActions = [], onCustomAction }: any) {
   const {
     attributes,
     listeners,
@@ -328,15 +339,30 @@ function KanbanCard({ id, item, fields, isOverlay, onView, onEdit, onDelete, rel
               </span>
             )}
           </div>
-          <div 
-             className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-neutral-100 dark:hover:bg-neutral-800 relative z-20 cursor-pointer" 
-             onPointerDown={(e) => e.stopPropagation()}
-             onClick={(e) => {
-               e.stopPropagation()
-               onView?.(item)
-             }}
-          >
-             <MoreVertical className="w-3.5 h-3.5 text-neutral-400" />
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity relative z-20 cursor-pointer">
+            {customActions.filter((a: any) => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('row')).map((action: any) => {
+              const colors = getActionColorClasses(action.color)
+              return (
+                <button
+                  key={action.id}
+                  title={action.label}
+                  onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, item) }}
+                  className={cn("p-1 rounded-md transition-all", colors.text, colors.hover)}
+                >
+                  {action.icon ? <DynamicIcon icon={action.icon} className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
+                </button>
+              )
+            })}
+            <div 
+               className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800" 
+               onPointerDown={(e) => e.stopPropagation()}
+               onClick={(e) => {
+                 e.stopPropagation()
+                 onView?.(item)
+               }}
+            >
+               <MoreVertical className="w-3.5 h-3.5 text-neutral-400" />
+            </div>
           </div>
         </div>
 

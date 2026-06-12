@@ -23,7 +23,7 @@ import { Drawer } from '@/components/ui/Drawer'
 import { Modal } from '@/components/ui/Modal'
 import { useI18n } from '@/i18n/I18nContext'
 import { IconPicker } from '@/components/studio/IconPicker'
-import { DynamicIcon } from '@/components/runtime/DynamicIcon'
+import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 

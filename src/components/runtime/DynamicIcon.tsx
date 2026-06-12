@@ -9,7 +9,7 @@ interface DynamicIconProps extends LucideProps {
   className?: string
 }
 
-export function DynamicIcon({ icon, className, ...props }: DynamicIconProps) {
+export default function DynamicIcon({ icon, className, ...props }: DynamicIconProps) {
   if (!icon) return <LucideIcons.HelpCircle className={className} {...props} />
 
   // Se o ícone não for uma string (pode ser um JSX/Elemento React), renderiza direto

@@ -24,9 +24,11 @@ import {
   Minimize2,
   ZoomIn,
   RefreshCw,
-  Printer
+  Printer,
+  Zap
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, getActionColorClasses } from '@/lib/utils'
+import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { formatFieldValue } from '@/lib/formatters'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
@@ -46,6 +48,8 @@ interface DynamicGalleryProps {
     card_fields?: string[]
     card_fields_labels?: Record<string, string>
   }
+  customActions?: any[]
+  onCustomAction?: (action: any, row?: any) => void
 }
 
 export default function DynamicGallery({
@@ -57,7 +61,9 @@ export default function DynamicGallery({
   onDelete,
   relationalOptions = {},
   galleryClickBehavior = 'fullscreen',
-  galleryConfig = {}
+  galleryConfig = {},
+  customActions = [],
+  onCustomAction
 }: DynamicGalleryProps) {
   const { t } = useI18n()
   const { toast } = useToast()
@@ -767,6 +773,19 @@ export default function DynamicGallery({
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     )}
+                    {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('row')).map(action => {
+                      const colors = getActionColorClasses(action.color)
+                      return (
+                        <button
+                          key={action.id}
+                          title={action.label}
+                          onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, asset.raw) }}
+                          className={cn("p-1.5 rounded-lg shadow-sm transition-colors", colors.bg, colors.text, colors.hover)}
+                        >
+                          {action.icon ? <DynamicIcon icon={action.icon} className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
 

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { DynamicIcon } from './DynamicIcon'
+import DynamicIcon from './DynamicIcon'
 import { useI18n } from '@/i18n/I18nContext'
 
 import { RuntimeHeader } from './RuntimeHeader'

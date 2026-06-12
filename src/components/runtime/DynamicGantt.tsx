@@ -8,7 +8,7 @@ import { format, differenceInDays, addDays, startOfDay, isSameDay, isWeekend, st
 import { ptBR, es, enUS } from 'date-fns/locale'
 import { motion, AnimatePresence } from 'framer-motion'
 import { formatFieldValue } from '@/lib/formatters'
-import { DynamicIcon } from './DynamicIcon'
+import DynamicIcon from './DynamicIcon'
 
 interface DynamicGanttProps {
   data: any[]

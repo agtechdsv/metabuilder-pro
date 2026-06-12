@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Calendar, Clock, Edit2, Eye, Trash2, Tag, FileText, Settings2, RefreshCcw, ArrowRight, ArrowDown, Minimize2, Maximize2, ZoomIn, LayoutGrid } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Calendar, Clock, Edit2, Eye, Trash2, Tag, FileText, Settings2, RefreshCcw, ArrowRight, ArrowDown, Minimize2, Maximize2, ZoomIn, LayoutGrid, Zap } from 'lucide-react'
+import DynamicIcon from '@/components/runtime/DynamicIcon'
+import { cn, getActionColorClasses } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { format, parseISO, isValid } from 'date-fns'
 import { ptBR, es, enUS } from 'date-fns/locale'
@@ -36,6 +37,8 @@ interface DynamicTimelineProps {
   onRefresh?: () => void
   dictionary?: any
   relationalOptions?: Record<string, any[]>
+  customActions?: any[]
+  onCustomAction?: (action: any, row?: any) => void
   onLoadMore?: () => void
   hasMore?: boolean
   totalRecords?: number
@@ -53,6 +56,8 @@ export default function DynamicTimeline({
   onRefresh,
   dictionary,
   relationalOptions = {},
+  customActions = [],
+  onCustomAction,
   onLoadMore,
   hasMore,
   totalRecords,
@@ -184,13 +189,32 @@ export default function DynamicTimeline({
         )}
         {onDelete && (
           <button 
-            onClick={() => onDelete(item)} 
+            onClick={(e) => { e.stopPropagation(); onDelete(item) }} 
             className="bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 rounded-lg transition-all shadow-sm"
             style={{ padding: `${scale * 6}px` }}
           >
             <Trash2 style={{ width: `${scale * 14}px`, height: `${scale * 14}px` }} />
           </button>
         )}
+        {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('row')).map(action => {
+          const colors = getActionColorClasses(action.color)
+          return (
+            <button
+              key={action.id}
+              title={action.label}
+              onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, item) }}
+              className={cn(
+                "rounded-lg transition-all shadow-sm",
+                colors.bg,
+                colors.text,
+                colors.hover
+              )}
+              style={{ padding: `${scale * 6}px` }}
+            >
+              {action.icon ? <DynamicIcon icon={action.icon} style={{ width: `${scale * 14}px`, height: `${scale * 14}px` }} /> : <Zap style={{ width: `${scale * 14}px`, height: `${scale * 14}px` }} />}
+            </button>
+          )
+        })}
       </div>
     </div>
   )
@@ -280,12 +304,25 @@ export default function DynamicTimeline({
             <Edit2 style={{ width: `${scale * 16}px`, height: `${scale * 16}px` }} />
           </button>
         )}
-        {onDelete && (
-          <button onClick={() => onDelete(item)} className="text-red-400 hover:text-red-600 transition-colors p-1">
-            <Trash2 style={{ width: `${scale * 16}px`, height: `${scale * 16}px` }} />
-          </button>
-        )}
-      </div>
+          {onDelete && (
+            <button onClick={(e) => { e.stopPropagation(); onDelete(item) }} className="text-red-400 hover:text-red-600 transition-colors p-1">
+              <Trash2 style={{ width: `${scale * 16}px`, height: `${scale * 16}px` }} />
+            </button>
+          )}
+          {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('row')).map(action => {
+            const colors = getActionColorClasses(action.color)
+            return (
+              <button
+                key={action.id}
+                title={action.label}
+                onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, item) }}
+                className={cn("transition-colors p-1", colors.text, colors.hover)}
+              >
+                {action.icon ? <DynamicIcon icon={action.icon} style={{ width: `${scale * 16}px`, height: `${scale * 16}px` }} /> : <Zap style={{ width: `${scale * 16}px`, height: `${scale * 16}px` }} />}
+              </button>
+            )
+          })}
+        </div>
     )
 
     let elementsOrder = [dateEl, statusEl, titleEl, descEl, actionsEl]
