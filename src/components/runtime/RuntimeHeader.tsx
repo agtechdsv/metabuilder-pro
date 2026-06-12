@@ -1,9 +1,9 @@
 'use client'
 
-import { ChevronRight, Home, Layout } from 'lucide-react'
+import { ChevronRight, Home, Layout, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { HeaderActions } from '@/components/layout/HeaderActions'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { DynamicIcon } from './DynamicIcon'
 import { X } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
@@ -23,11 +23,22 @@ interface RuntimeHeaderProps {
 export function RuntimeHeader({ viewName, subtitle, icon, actions }: RuntimeHeaderProps) {
   const { t } = useI18n()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const isEmbedded = searchParams?.get('embedded') === 'true'
+  const returnTo = searchParams?.get('return_to')
 
   return (
     <div className={`px-10 py-8 flex items-center justify-between ${!isEmbedded ? 'animate-in fade-in slide-in-from-top-4 duration-700' : 'sticky top-0 z-50 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-md border-b border-neutral-100 dark:border-neutral-800 shadow-sm'}`}>
       <div className="flex items-center gap-5">
+        {returnTo && !isEmbedded && (
+          <button 
+            onClick={() => router.push(decodeURIComponent(returnTo))}
+            className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm text-neutral-600 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-600 dark:hover:border-indigo-500 transition-all hover:-translate-x-1"
+            title={t('common.back', 'Voltar para anterior')}
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+        )}
         <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20 text-white">
           <DynamicIcon icon={icon || 'Layout'} size={24} />
         </div>

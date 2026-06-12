@@ -263,7 +263,15 @@ export default function ViewContainer({
       
       const selectedFields = action.usecase_selected_fields || []
       const fieldsParams = selectedFields
-        .map((f: string) => `${f}=${rowData?.[f] !== undefined ? encodeURIComponent(rowData[f]) : ''}`)
+        .map((f: any) => {
+          if (typeof f === 'string') {
+            return `${f}=${rowData?.[f] !== undefined ? encodeURIComponent(rowData[f]) : ''}`
+          } else if (f && typeof f === 'object' && f.source && f.target) {
+            return `${f.target}=${rowData?.[f.source] !== undefined ? encodeURIComponent(rowData[f.source]) : ''}`
+          }
+          return ''
+        })
+        .filter(Boolean)
         .join('&')
         
       const allParams = [fieldsParams, params].filter(Boolean).join('&')
@@ -284,8 +292,9 @@ export default function ViewContainer({
         setIframeTitle(action.label || 'Visualizar')
         setIsIframeDrawerOpen(true)
       } else {
-        // page mode
-        router.push(url)
+        const returnTo = encodeURIComponent(window.location.pathname + window.location.search)
+        const finalUrl = url + (url.includes('?') ? '&' : '?') + `return_to=${returnTo}`
+        router.push(finalUrl)
       }
     }
     else if (action.trigger_type === 'rest') {
@@ -1373,6 +1382,20 @@ export default function ViewContainer({
     }
   }, [externalRefreshTrigger])
 
+  const prevExternalFiltersStr = useRef(JSON.stringify(externalFilters || {}))
+  useEffect(() => {
+    const currentStr = JSON.stringify(externalFilters || {})
+    if (prevExternalFiltersStr.current !== currentStr) {
+      prevExternalFiltersStr.current = currentStr
+      if (hasFetchedInitial && isTunnelReady && fetchDataRef.current) {
+        console.log(`[MetaBuilder] Refreshing data because externalFilters changed...`, externalFilters)
+        const newFilterValues = { ...(externalFilters || {}), ...internalFilters }
+        fetchDataRef.current(newFilterValues, true)
+      }
+    }
+  }, [externalFilters, hasFetchedInitial, isTunnelReady, internalFilters])
+
+
   // Lógica de Ordenação Local
   const sortedData = [...data].sort((a, b) => {
     if (!sortConfig) return 0
@@ -1847,6 +1870,8 @@ export default function ViewContainer({
           onEdit={onEdit!}
           onDelete={onDelete!}
           dictionary={dictionary}
+          customActions={customActions}
+          onCustomAction={handleCustomAction}
         />
         </div>
       ) : viewMode === 'blueprint' ? (

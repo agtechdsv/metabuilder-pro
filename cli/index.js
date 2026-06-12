@@ -423,6 +423,10 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             result = await pgClient.query(sql, params);
           }
           console.log(chalk.green(`[ OK ] SELECT: Retornou ${result.rows.length} linhas (Limit: ${limit}, Offset: ${offset}).`));
+          if (result.rows.length === 0) {
+             console.log(chalk.yellow(`[ DEBUG ] SQL: ${sql}`));
+             console.log(chalk.yellow(`[ DEBUG ] PARAMS: ${JSON.stringify(params)}`));
+          }
         } else if (action === 'count_records') {
           const filters = payload.payload.filters;
           const advancedFilters = payload.payload.advancedFilters || [];

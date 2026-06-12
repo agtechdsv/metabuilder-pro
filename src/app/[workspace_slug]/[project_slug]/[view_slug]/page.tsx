@@ -387,7 +387,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
         is_primary_key: c.field.is_primary_key,
         data_type: c.field.data_type,
         is_sortable: c.field.is_sortable,
-        config: c.config
+        config: Object.keys(c.config || {}).length > 0 ? { ...(c.field.config || {}), ...(c.config || {}) } : c.field.config
       }))
 
     // Extrai os campos do Formulário (Zona Form)
@@ -410,7 +410,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
         sql_expression: resolveSqlExpression(c.field),
         data_type: c.field.data_type,
         is_primary_key: c.field.is_primary_key,
-        config: c.config,
+        config: Object.keys(c.config || {}).length > 0 ? { ...(c.field.config || {}), ...(c.config || {}) } : c.field.config,
         zone: 3
       }))
 
@@ -536,7 +536,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
         db_column_name: resolveResultKey(c.field),
         sql_expression: resolveSqlExpression(c.field),
         data_type: c.field.data_type,
-        config: c.config
+        config: Object.keys(c.config || {}).length > 0 ? { ...(c.field.config || {}), ...(c.config || {}) } : c.field.config
       }))
 
     const primaryKeyField = allComponents.find((c: any) => c.field?.is_primary_key)?.field

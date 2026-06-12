@@ -281,11 +281,9 @@ export default function ViewPageContent({
       validColumnNames.add(pk);
 
       searchParams.forEach((value, key) => {
-        if (key !== 'embedded' && key !== 'preview') {
-          if (!validColumnNames.has(key) && (key.endsWith('_id') || key === 'id')) {
+        if (key !== 'embedded' && key !== 'preview' && key !== 'return_to') {
+          if (key === 'id') {
              paramsObj[pk] = value;
-          } else if (validColumnNames.has(key)) {
-             paramsObj[key] = value;
           } else {
              paramsObj[key] = value;
           }
@@ -427,7 +425,15 @@ export default function ViewPageContent({
       const params = interpolate(action.usecase_params) || ''
       const selectedFields = action.usecase_selected_fields || []
       const fieldsParams = selectedFields
-        .map((f: string) => `${f}=${rowData?.[f] !== undefined ? encodeURIComponent(rowData[f]) : ''}`)
+        .map((f: any) => {
+          if (typeof f === 'string') {
+            return `${f}=${rowData?.[f] !== undefined ? encodeURIComponent(rowData[f]) : ''}`
+          } else if (f && typeof f === 'object' && f.source && f.target) {
+            return `${f.target}=${rowData?.[f.source] !== undefined ? encodeURIComponent(rowData[f.source]) : ''}`
+          }
+          return ''
+        })
+        .filter(Boolean)
         .join('&')
         
       const allParams = [fieldsParams, params].filter(Boolean).join('&')
@@ -447,7 +453,9 @@ export default function ViewPageContent({
         setIframeTitle(action.label || 'Visualizar')
         setIsIframeDrawerOpen(true)
       } else {
-        router.push(url)
+        const returnTo = encodeURIComponent(window.location.pathname + window.location.search)
+        const finalUrl = url + (url.includes('?') ? '&' : '?') + `return_to=${returnTo}`
+        router.push(finalUrl)
       }
     }
     else if (action.trigger_type === 'rest') {

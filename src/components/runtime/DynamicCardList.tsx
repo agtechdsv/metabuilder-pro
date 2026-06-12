@@ -226,10 +226,7 @@ export default function DynamicCardList({
                       colors.hover
                     )}
                   >
-                    {action.icon === 'Zap' && <Zap className="w-3.5 h-3.5" />}
-                    {action.icon === 'Link' && <Link className="w-3.5 h-3.5" />}
-                    {action.icon === 'Database' && <Database className="w-3.5 h-3.5" />}
-                    {action.icon === 'Globe' && <Globe className="w-3.5 h-3.5" />}
+                    {action.icon ? <DynamicIcon icon={action.icon} className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
                   </button>
                 )
               })}

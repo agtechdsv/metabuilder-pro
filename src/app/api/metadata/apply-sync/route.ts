@@ -371,13 +371,26 @@ export async function POST(request: Request) {
           if (newConfig.custom_actions && Array.isArray(newConfig.custom_actions)) {
             newConfig.custom_actions.forEach((act: any) => {
                if (act.usecase_selected_fields && Array.isArray(act.usecase_selected_fields)) {
-                  act.usecase_selected_fields = act.usecase_selected_fields.map((f: string) => {
-                     let newName = f;
-                     Object.entries(mappedFields).forEach(([fieldId, newColName]) => {
-                        const oldField = oldFieldNames[fieldId];
-                        if (oldField && oldField.col === f) { newName = newColName as string; hasChanges = true; }
-                     });
-                     return newName;
+                  act.usecase_selected_fields = act.usecase_selected_fields.map((f: any) => {
+                     if (typeof f === 'string') {
+                       let newName = f;
+                       Object.entries(mappedFields).forEach(([fieldId, newColName]) => {
+                          const oldField = oldFieldNames[fieldId];
+                          if (oldField && oldField.col === f) { newName = newColName as string; hasChanges = true; }
+                       });
+                       return newName;
+                     } else if (f && typeof f === 'object' && f.source && f.target) {
+                       let newSource = f.source;
+                       let newTarget = f.target;
+                       Object.entries(mappedFields).forEach(([fieldId, newColName]) => {
+                          const oldField = oldFieldNames[fieldId];
+                          if (oldField && oldField.col === f.source) { newSource = newColName as string; hasChanges = true; }
+                          // Note: target usually belongs to the DESTINATION usecase, so we might not be able to map it here directly unless it's the same project. We will map it anyway just in case.
+                          if (oldField && oldField.col === f.target) { newTarget = newColName as string; hasChanges = true; }
+                       });
+                       return { ...f, source: newSource, target: newTarget };
+                     }
+                     return f;
                   });
                }
             });

@@ -1,13 +1,14 @@
 'use client'
 
 import React, { useMemo, useRef, useState } from 'react'
-import { Edit2, Eye, Trash2, CalendarDays, Clock, LayoutList, Minimize2, Maximize2, ZoomIn, LayoutGrid } from 'lucide-react'
+import { Edit2, Eye, Trash2, CalendarDays, Clock, LayoutList, Minimize2, Maximize2, ZoomIn, LayoutGrid, Zap, Link, Database, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { format, differenceInDays, addDays, startOfDay, isSameDay, isWeekend, startOfMonth, endOfMonth, eachDayOfInterval, getDaysInMonth, addMonths } from 'date-fns'
 import { ptBR, es, enUS } from 'date-fns/locale'
 import { motion, AnimatePresence } from 'framer-motion'
 import { formatFieldValue } from '@/lib/formatters'
+import { DynamicIcon } from './DynamicIcon'
 
 interface DynamicGanttProps {
   data: any[]
@@ -21,6 +22,8 @@ interface DynamicGanttProps {
   onView?: (row: any) => void
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
+  customActions?: any[]
+  onCustomAction?: (action: any, row: any) => void
   dictionary?: any
   relationalOptions?: Record<string, any[]>
 }
@@ -32,9 +35,81 @@ export default function DynamicGantt({
   onView,
   onEdit,
   onDelete,
+  customActions = [],
+  onCustomAction,
   dictionary,
   relationalOptions = {}
 }: DynamicGanttProps) {
+  const getActionColorClasses = (color: string) => {
+    const normalized = color?.toLowerCase() || 'indigo'
+    switch (normalized) {
+      case 'emerald':
+        return {
+          text: 'text-emerald-600 dark:text-emerald-400',
+          bg: 'bg-emerald-50 dark:bg-emerald-950/30',
+          border: 'border-emerald-200 dark:border-emerald-800/50',
+          hover: 'hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-300'
+        }
+      case 'amber':
+        return {
+          text: 'text-amber-600 dark:text-amber-400',
+          bg: 'bg-amber-50 dark:bg-amber-950/30',
+          border: 'border-amber-200 dark:border-amber-800/50',
+          hover: 'hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-700 dark:hover:text-amber-300'
+        }
+      case 'red':
+        return {
+          text: 'text-red-600 dark:text-red-400',
+          bg: 'bg-red-50 dark:bg-red-950/30',
+          border: 'border-red-200 dark:border-red-800/50',
+          hover: 'hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-700 dark:hover:text-red-300'
+        }
+      case 'rose':
+        return {
+          text: 'text-rose-600 dark:text-rose-400',
+          bg: 'bg-rose-50 dark:bg-rose-950/30',
+          border: 'border-rose-200 dark:border-rose-800/50',
+          hover: 'hover:bg-rose-100 dark:hover:bg-rose-900/30 hover:text-rose-700 dark:hover:text-rose-300'
+        }
+      case 'fuchsia':
+        return {
+          text: 'text-fuchsia-600 dark:text-fuchsia-400',
+          bg: 'bg-fuchsia-50 dark:bg-fuchsia-950/30',
+          border: 'border-fuchsia-200 dark:border-fuchsia-800/50',
+          hover: 'hover:bg-fuchsia-100 dark:hover:bg-fuchsia-900/30 hover:text-fuchsia-700 dark:hover:text-fuchsia-300'
+        }
+      case 'sky':
+        return {
+          text: 'text-sky-600 dark:text-sky-400',
+          bg: 'bg-sky-50 dark:bg-sky-950/30',
+          border: 'border-sky-200 dark:border-sky-800/50',
+          hover: 'hover:bg-sky-100 dark:hover:bg-sky-900/30 hover:text-sky-700 dark:hover:text-sky-300'
+        }
+      case 'violet':
+        return {
+          text: 'text-violet-600 dark:text-violet-400',
+          bg: 'bg-violet-50 dark:bg-violet-950/30',
+          border: 'border-violet-200 dark:border-violet-800/50',
+          hover: 'hover:bg-violet-100 dark:hover:bg-violet-900/30 hover:text-violet-700 dark:hover:text-violet-300'
+        }
+      case 'neutral':
+        return {
+          text: 'text-neutral-600 dark:text-neutral-400',
+          bg: 'bg-neutral-100 dark:bg-neutral-800/50',
+          border: 'border-neutral-200 dark:border-neutral-700/50',
+          hover: 'hover:bg-neutral-200 dark:hover:bg-neutral-700/50 hover:text-neutral-800 dark:hover:text-neutral-200'
+        }
+      case 'indigo':
+      default:
+        return {
+          text: 'text-indigo-600 dark:text-indigo-400',
+          bg: 'bg-indigo-50 dark:bg-indigo-950/30',
+          border: 'border-indigo-200 dark:border-indigo-800/50',
+          hover: 'hover:bg-indigo-100 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300'
+        }
+    }
+  }
+
   const { t, language } = useI18n()
   const dateLocale = language === 'pt' ? ptBR : language === 'es' ? es : enUS
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -270,6 +345,23 @@ export default function DynamicGantt({
                                 <Trash2 className="w-3.5 h-3.5" />
                             </button>
                             )}
+                            {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('row')).map(action => {
+                                const colors = getActionColorClasses(action.color)
+                                return (
+                                    <button
+                                      key={action.id}
+                                      title={action.label}
+                                      onClick={() => onCustomAction?.(action, task.raw)}
+                                      className={cn(
+                                          "p-1.5 rounded-md transition-all active:scale-90",
+                                          colors.text,
+                                          colors.hover
+                                      )}
+                                    >
+                                      {action.icon ? <DynamicIcon icon={action.icon} className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
+                                    </button>
+                                )
+                            })}
                         </div>
                     </div>
                 ))}

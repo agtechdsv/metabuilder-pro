@@ -83,8 +83,10 @@ export const formatFieldValue = (
   const comp = zoneConfig?.component || field?.config?.grid_config?.component || field?.config?.form_config?.component || field?.config?.component || {}
   
   // 1. Resolve Relational Labels (Enumerations, Relational)
-  if (['select', 'radio', 'checkbox'].includes(comp.type) && relationalOptions && field.db_table_name) {
-    const options = relationalOptions[field.db_table_name] || []
+  const isRelComp = ['select', 'radio', 'checkbox', 'Combo (Select)'].includes(comp.type) || comp.options_type === 'relational' || comp.options_type === 'enumeration'
+    
+  if (isRelComp && relationalOptions && field.id) {
+    const options = relationalOptions[field.id] || []
     if (options.length > 0) {
       if (comp.options_type === 'enumeration') {
         const option = options.find((opt: any) => String(opt.id) === String(rawVal))

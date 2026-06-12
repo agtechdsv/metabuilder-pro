@@ -759,7 +759,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
 
       const { data: viewsData } = await supabase
         .from('ui_views')
-        .select('name, slug, logic_type')
+        .select('name, slug, logic_type, draft_config, model_id')
         .eq('project_id', project.id)
         .order('name')
 
@@ -1493,7 +1493,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           <StepLayout config={config} setConfig={setConfig} models={models} enumerations={enumerations} relations={relations} />
         )}
         {steps[currentStep - 1]?.id === 4 && (
-          <StepActions config={config} setConfig={setConfig} models={models} useCases={useCases} isDownloadsActive={isDownloadsActive} bpmWorkflows={bpmWorkflows} />
+          <StepActions config={config} setConfig={setConfig} models={models} useCases={useCases} isDownloadsActive={isDownloadsActive} bpmWorkflows={bpmWorkflows} relations={relations} />
         )}
       </div>
 
@@ -6754,7 +6754,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
   )
 }
 
-function StepActions({ config, setConfig, models, useCases, isDownloadsActive, bpmWorkflows }: any) {
+function StepActions({ config, setConfig, models, useCases, isDownloadsActive, bpmWorkflows, relations = [] }: any) {
   const params = useParams()
   const { workspace_slug, project_slug } = params as { workspace_slug: string, project_slug: string }
   const { t } = useI18n()
@@ -7581,47 +7581,171 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                     </div>
                     <div className="space-y-4 mt-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.fields_as_params', 'Campos do Registro como Parâmetros')}</label>
-                        <div className="space-y-4 p-4 bg-white dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl max-h-48 overflow-y-auto custom-scrollbar">
-                          {models?.filter((m: any) => config.selected_models?.includes(m.id)).map((model: any) => (
-                            <div key={model.id} className="space-y-2">
-                              <div className="flex items-center gap-2 mb-1">
-                                <div className="w-1 h-3 bg-indigo-500 rounded-full"></div>
-                                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                                  {model.display_name || model.db_table_name}
-                                </span>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {model.fields?.map((field: any) => {
-                                  const isSelected = (editingAction.usecase_selected_fields || []).includes(field.db_column_name)
-                                  return (
-                                    <button
-                                      key={field.id}
-                                      type="button"
-                                      onClick={() => {
-                                        const current = editingAction.usecase_selected_fields || []
-                                        const next = isSelected
-                                          ? current.filter((f: string) => f !== field.db_column_name)
-                                          : [...current, field.db_column_name]
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.fields_as_params', 'Mapeamento de Parâmetros (De : Para)')}</label>
+                        <div className="space-y-2 p-4 bg-white dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+                          
+                          {/* Table Header */}
+                          <div className="flex gap-4 px-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
+                            <div className="flex-1 text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                              Origem {(() => {
+                                const sourceModels = models?.filter((m: any) => config.selected_models?.includes(m.id)) || []
+                                return sourceModels[0] ? `(Tabela: ${sourceModels[0].db_table_name})` : ''
+                              })()}
+                            </div>
+                            <div className="flex-1 text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                              Destino {(() => {
+                                const destUsecase = useCases?.find((uc: any) => uc.slug === editingAction.usecase_slug)
+                                const destConfig = destUsecase?.draft_config || destUsecase?.config || {}
+                                const destModelIds = destUsecase?.model_id ? [destUsecase.model_id] : (destConfig.selected_models || [])
+                                const destModels = models?.filter((m: any) => destModelIds.includes(m.id)) || []
+                                return destModels[0] ? `(Tabela: ${destModels[0].db_table_name})` : ''
+                              })()}
+                            </div>
+                            <div className="w-8"></div>
+                          </div>
+
+                          {/* Rows */}
+                          {(() => {
+                            const rawMappings = editingAction.usecase_selected_fields || []
+                            const normalizedMappings = rawMappings.map((f: any) => {
+                              if (typeof f === 'string') return { source: f, target: f }
+                              return f
+                            })
+                            
+                            const sourceModels = models?.filter((m: any) => config.selected_models?.includes(m.id)) || []
+                            const destUsecase = useCases?.find((uc: any) => uc.slug === editingAction.usecase_slug)
+                            const destConfig = destUsecase?.draft_config || destUsecase?.config || {}
+                            const destModelIds = destUsecase?.model_id ? [destUsecase.model_id] : (destConfig.selected_models || [])
+                            const destModels = models?.filter((m: any) => destModelIds.includes(m.id)) || []
+
+                            const getModelsWithRelations = (baseModels: any[]) => {
+                              const result: any[] = [];
+                              const baseModelIds = baseModels.map(m => m.id);
+
+                              baseModels.forEach(baseModel => {
+                                result.push({ 
+                                  model: baseModel, 
+                                  prefix: '', 
+                                  label: `Tabela: ${baseModel.db_table_name}` 
+                                });
+
+                                const explicitRels = (relations || []).filter((r: any) => 
+                                  r.from_model_id === baseModel.id || r.to_model_id === baseModel.id
+                                );
+
+                                const relatedModelIds = explicitRels.map((r: any) => {
+                                  if (r.from_model_id === baseModel.id) return r.to_model_id;
+                                  if (r.to_model_id === baseModel.id) return r.from_model_id;
+                                  return null;
+                                }).filter(Boolean);
+
+                                const uniqueRelatedIds = Array.from(new Set(relatedModelIds));
+
+                                uniqueRelatedIds.forEach((relatedId: any) => {
+                                  if (!baseModelIds.includes(relatedId)) {
+                                    const relatedModel = models.find((m: any) => m.id === relatedId);
+                                    if (relatedModel) {
+                                      result.push({
+                                        model: relatedModel,
+                                        prefix: `${relatedModel.db_table_name}.`,
+                                        label: `Relação: ${baseModel.db_table_name} > ${relatedModel.db_table_name}`
+                                      });
+                                    }
+                                  }
+                                });
+                              });
+
+                              const uniqueResult: any[] = [];
+                              const seenPrefixes = new Set();
+                              result.forEach(item => {
+                                const key = item.prefix || item.model.id;
+                                if (!seenPrefixes.has(key)) {
+                                  seenPrefixes.add(key);
+                                  uniqueResult.push(item);
+                                }
+                              });
+
+                              return uniqueResult;
+                            };
+
+                            const sourceGroups = getModelsWithRelations(sourceModels);
+                            const destGroups = getModelsWithRelations(destModels);
+
+                            return (
+                              <>
+                                {normalizedMappings.map((mapping: any, index: number) => (
+                                  <div key={index} className="flex gap-4 items-center animate-in fade-in slide-in-from-top-2">
+                                    <select
+                                      value={mapping.source || ''}
+                                      onChange={(e) => {
+                                        const next = [...normalizedMappings]
+                                        next[index] = { ...next[index], source: e.target.value }
                                         setEditingAction({ ...editingAction, usecase_selected_fields: next })
                                       }}
-                                      className={cn(
-                                        "px-2.5 py-1.5 text-[10px] font-bold rounded-lg border transition-all",
-                                        isSelected
-                                          ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-500/20"
-                                          : "bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-indigo-500"
-                                      )}
+                                      className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
                                     >
-                                      {field.display_name || field.db_column_name}
+                                      <option value="">Selecione para inserir...</option>
+                                      {sourceGroups.map((g: any, i: number) => (
+                                        <optgroup key={i} label={g.label}>
+                                          {g.model.fields?.map((f: any) => (
+                                            <option key={f.id} value={`${g.prefix}${f.db_column_name}`}>
+                                              {g.prefix ? `${g.prefix}${f.db_column_name}` : f.db_column_name}
+                                            </option>
+                                          ))}
+                                        </optgroup>
+                                      ))}
+                                    </select>
+                                    
+                                    <select
+                                      value={mapping.target || ''}
+                                      onChange={(e) => {
+                                        const next = [...normalizedMappings]
+                                        next[index] = { ...next[index], target: e.target.value }
+                                        setEditingAction({ ...editingAction, usecase_selected_fields: next })
+                                      }}
+                                      className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-rose-500"
+                                    >
+                                      <option value="">Selecione para inserir...</option>
+                                      {destGroups.map((g: any, i: number) => (
+                                        <optgroup key={i} label={g.label}>
+                                          {g.model.fields?.map((f: any) => (
+                                            <option key={f.id} value={`${g.prefix}${f.db_column_name}`}>
+                                              {g.prefix ? `${g.prefix}${f.db_column_name}` : f.db_column_name}
+                                            </option>
+                                          ))}
+                                        </optgroup>
+                                      ))}
+                                    </select>
+                                    
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const next = normalizedMappings.filter((_: any, i: number) => i !== index)
+                                        setEditingAction({ ...editingAction, usecase_selected_fields: next })
+                                      }}
+                                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 text-neutral-400 transition-colors"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
                                     </button>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                          {(!models || models.filter((m: any) => config.selected_models?.includes(m.id)).length === 0) && (
-                            <p className="text-[10px] text-neutral-400 p-1">{t('wizard.actions.no_models_selected', 'Nenhum modelo selecionado no passo 1.')}</p>
-                          )}
+                                  </div>
+                                ))}
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingAction({ 
+                                      ...editingAction, 
+                                      usecase_selected_fields: [...normalizedMappings, { source: '', target: '' }] 
+                                    })
+                                  }}
+                                  className="mt-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                                >
+                                  <Plus className="w-3 h-3" /> Adicionar Parâmetro
+                                </button>
+                              </>
+                            )
+                          })()}
+
                         </div>
                       </div>
                       <div className="space-y-2">
