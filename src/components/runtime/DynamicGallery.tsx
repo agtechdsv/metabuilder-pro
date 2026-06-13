@@ -133,6 +133,8 @@ export default function DynamicGallery({
       
       if (titleField) {
         title = formatFieldValue(allValues[titleField.db_column_name], titleField, relationalOptions) || ''
+      } else if (galleryConfig?.title_field && getNestedValue(allValues, galleryConfig.title_field) !== undefined) {
+        title = String(getNestedValue(allValues, galleryConfig.title_field))
       } else {
         const titleKey = Object.keys(allValues).find(key => {
           const k = key.toLowerCase()
@@ -174,6 +176,8 @@ export default function DynamicGallery({
       })
       if (imageField && allValues[imageField.db_column_name]) {
         previewUrl = formatBase64(String(allValues[imageField.db_column_name]))
+      } else if (galleryConfig?.image_field && getNestedValue(allValues, galleryConfig.image_field)) {
+        previewUrl = formatBase64(String(getNestedValue(allValues, galleryConfig.image_field)))
       } else {
         const imageKey = Object.keys(allValues).find(key => {
           const col = key.toLowerCase()

@@ -71,10 +71,10 @@ export default function DynamicScheduler({
   ]
 
   // Mapeia colunas do banco com base no schedulerConfig
-  const titleCol = fields.find(f => f.id === schedulerConfig.title_field)?.db_column_name || 'title'
-  const startCol = fields.find(f => f.id === schedulerConfig.start_date_field)?.db_column_name || 'start_date'
-  const endCol = fields.find(f => f.id === schedulerConfig.end_date_field)?.db_column_name || 'end_date'
-  const colorCol = fields.find(f => f.id === schedulerConfig.color_field)?.db_column_name || 'color'
+  const titleCol = fields.find(f => f.id === schedulerConfig.title_field)?.db_column_name || schedulerConfig.title_field || 'title'
+  const startCol = fields.find(f => f.id === schedulerConfig.start_date_field)?.db_column_name || schedulerConfig.start_date_field || 'start_date'
+  const endCol = fields.find(f => f.id === schedulerConfig.end_date_field)?.db_column_name || schedulerConfig.end_date_field || 'end_date'
+  const colorCol = fields.find(f => f.id === schedulerConfig.color_field)?.db_column_name || schedulerConfig.color_field || 'color'
 
   // Auxiliar para pegar valores aninhados (em caso de joins)
   const getNestedValue = (obj: any, path: string) => {

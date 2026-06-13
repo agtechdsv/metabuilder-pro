@@ -8,6 +8,7 @@ import RecordForm from './RecordForm'
 import dynamic from 'next/dynamic'
 import { createClient } from '@/utils/supabase/client'
 import AnalyticsDashboard from './AnalyticsDashboard'
+import { resolveRelations, resolveAllJoins } from '@/lib/relations'
 
 // Use dynamic import for ViewContainer to avoid SSR issues
 const ViewContainer = dynamic(() => import('./ViewContainer'), { ssr: false })
@@ -266,12 +267,30 @@ export default function CustomUseCaseRenderer({
         }
       }
 
+      let generatedJoins = joins ? [...joins] : [];
       let isJoinedIndirectly = false;
-      if (useMasterId && !foreignKey && joins && joins.length > 0) {
-        // Verifica se masterModelName está presente em algum join, o que permite o backend processar a junção
-        const hasMaster = joins.some((j: any) => (j.from || j.table)?.toLowerCase() === masterModelName?.toLowerCase() || (j.to || j.toTable)?.toLowerCase() === masterModelName?.toLowerCase());
-        if (hasMaster) {
-          isJoinedIndirectly = true;
+      if (useMasterId && !foreignKey) {
+        if (generatedJoins.length > 0) {
+          const hasMaster = generatedJoins.some((j: any) => (j.from || j.table)?.toLowerCase() === masterModelName?.toLowerCase() || (j.to || j.toTable)?.toLowerCase() === masterModelName?.toLowerCase());
+          if (hasMaster) {
+            isJoinedIndirectly = true;
+          }
+        }
+        
+        if (!isJoinedIndirectly && projectRelations && projectRelations.length > 0 && masterModelName && slotModelName) {
+          const resolvedRelations = resolveRelations(projectRelations, []);
+          const steps = resolveAllJoins(resolvedRelations, slotModelName, [masterModelName]);
+          if (steps.length > 0) {
+            isJoinedIndirectly = true;
+            const bfsJoins = steps.map(step => ({
+              type: 'LEFT',
+              from: step.sourceTable,
+              localField: step.sourceColumn,
+              to: step.targetTable,
+              foreignField: step.targetColumn
+            }));
+            generatedJoins = [...generatedJoins, ...bfsJoins];
+          }
         }
       }
 
@@ -339,7 +358,7 @@ export default function CustomUseCaseRenderer({
               onEditDetail={onEditDetail}
               onDeleteDetail={onDeleteDetail}
               onAddDetail={onAddDetail}
-              joins={joins}
+              joins={generatedJoins}
               dictionary={dictionary}
               customActions={customActions}
               onCustomAction={onCustomAction}
@@ -365,11 +384,12 @@ export default function CustomUseCaseRenderer({
             filterFields={slotFilterFields}
             formFields={slotFormFields}
             displayType="list"
-            logicType={['kanban', 'timeline', 'mapa_mental', 'galeria'].includes(slot.type) ? slot.type : 'pesquisa'}
+            logicType={['kanban', 'timeline', 'mapa_mental', 'galeria', 'scheduler'].includes(slot.type) ? slot.type : 'pesquisa'}
             kanbanGroupField={slot.kanban_group_field}
             kanbanGroupDisplayField={slot.kanban_group_display_field}
             kanbanCardFields={slot.kanban_card_fields}
             timelineConfig={slot.timeline_config}
+            schedulerConfig={slot.scheduler_config}
             mindmapCentralField={slot.mindmap_central_field}
             mindmapLevels={slot.mindmap_levels}
             externalFilters={externalFilters}
@@ -380,7 +400,10 @@ export default function CustomUseCaseRenderer({
             isTunnelReady={isTunnelReady}
             dictionary={dictionary}
             project={project}
-            joins={joins}
+            onEdit={onEditDetail}
+            onDelete={onDeleteDetail}
+            onAdd={() => onAddDetail && onAddDetail(slotModelName!)}
+            joins={generatedJoins}
             customActions={customActions}
             onCustomAction={onCustomAction}
             galleryClickBehavior={slot.gallery_click_behavior || 'lightbox'}

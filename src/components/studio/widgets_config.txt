@@ -1,0 +1,300 @@
+                          {/* Configurações Agenda Específicas */}
+                          {slot.type === 'scheduler' && (
+                            <>
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Data Inicial</label>
+                                  <select
+                                    value={slot.scheduler_config?.start_date_field || ''}
+                                    onChange={e => {
+                                      const newSlots = [...(config.layout_config.custom_slots || [])];
+                                      newSlots[idx].scheduler_config = { ...newSlots[idx].scheduler_config, start_date_field: e.target.value };
+                                      setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                    }}
+                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                  >
+                                    <option value="">Selecione o campo...</option>
+                                    {renderRelatedFieldsOptions(slot.model_id)}
+                                  </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Título</label>
+                                    <select
+                                      value={slot.scheduler_config?.title_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].scheduler_config = { ...newSlots[idx].scheduler_config, title_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Selecione o campo...</option>
+                                      {renderRelatedFieldsOptions(slot.model_id)}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Data Final (Opcional)</label>
+                                    <select
+                                      value={slot.scheduler_config?.end_date_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].scheduler_config = { ...newSlots[idx].scheduler_config, end_date_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Selecione o campo...</option>
+                                      {renderRelatedFieldsOptions(slot.model_id)}
+                                    </select>
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Cor (Opcional)</label>
+                                  <select
+                                    value={slot.scheduler_config?.color_field || ''}
+                                    onChange={e => {
+                                      const newSlots = [...(config.layout_config.custom_slots || [])];
+                                      newSlots[idx].scheduler_config = { ...newSlots[idx].scheduler_config, color_field: e.target.value };
+                                      setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                    }}
+                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                  >
+                                    <option value="">Selecione o campo...</option>
+                                    {renderRelatedFieldsOptions(slot.model_id)}
+                                  </select>
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          {/* Configurações Blueprint Específicas */}
+                          {slot.type === 'blueprint' && (
+                            <>
+                              <div className="space-y-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Título</label>
+                                    <select
+                                      value={slot.blueprint_config?.title_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].blueprint_config = { ...newSlots[idx].blueprint_config, title_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Selecione o campo...</option>
+                                      {renderRelatedFieldsOptions(slot.model_id)}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Status</label>
+                                    <select
+                                      value={slot.blueprint_config?.status_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].blueprint_config = { ...newSlots[idx].blueprint_config, status_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Selecione o campo...</option>
+                                      {renderRelatedFieldsOptions(slot.model_id)}
+                                    </select>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Descrição</label>
+                                    <select
+                                      value={slot.blueprint_config?.desc_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].blueprint_config = { ...newSlots[idx].blueprint_config, desc_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Selecione o campo...</option>
+                                      {renderRelatedFieldsOptions(slot.model_id)}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo Predecessora (Ligação)</label>
+                                    <select
+                                      value={slot.blueprint_config?.predecessor_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].blueprint_config = { ...newSlots[idx].blueprint_config, predecessor_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Selecione o campo...</option>
+                                      {renderRelatedFieldsOptions(slot.model_id)}
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          {/* Configurações Gantt Específicas */}
+                          {slot.type === 'gantt' && (
+                            <>
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Título</label>
+                                  <select
+                                    value={slot.gantt_config?.title_field || ''}
+                                    onChange={e => {
+                                      const newSlots = [...(config.layout_config.custom_slots || [])];
+                                      newSlots[idx].gantt_config = { ...newSlots[idx].gantt_config, title_field: e.target.value };
+                                      setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                    }}
+                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                  >
+                                    <option value="">Selecione o campo...</option>
+                                    {renderRelatedFieldsOptions(slot.model_id)}
+                                  </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo Data Inicial</label>
+                                    <select
+                                      value={slot.gantt_config?.start_date_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].gantt_config = { ...newSlots[idx].gantt_config, start_date_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Selecione o campo...</option>
+                                      {renderRelatedFieldsOptions(slot.model_id)}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo Data Final</label>
+                                    <select
+                                      value={slot.gantt_config?.end_date_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].gantt_config = { ...newSlots[idx].gantt_config, end_date_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Selecione o campo...</option>
+                                      {renderRelatedFieldsOptions(slot.model_id)}
+                                    </select>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo Progresso (%)</label>
+                                    <select
+                                      value={slot.gantt_config?.progress_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].gantt_config = { ...newSlots[idx].gantt_config, progress_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Selecione o campo...</option>
+                                      {renderRelatedFieldsOptions(slot.model_id)}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo Predecessora</label>
+                                    <select
+                                      value={slot.gantt_config?.predecessor_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].gantt_config = { ...newSlots[idx].gantt_config, predecessor_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Selecione o campo...</option>
+                                      {renderRelatedFieldsOptions(slot.model_id)}
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          {/* Configurações Map Específicas */}
+                          {slot.type === 'map' && (
+                            <>
+                              <div className="space-y-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo Latitude</label>
+                                    <select
+                                      value={slot.map_config?.lat_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].map_config = { ...newSlots[idx].map_config, lat_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Selecione o campo...</option>
+                                      {renderRelatedFieldsOptions(slot.model_id)}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo Longitude</label>
+                                    <select
+                                      value={slot.map_config?.lng_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].map_config = { ...newSlots[idx].map_config, lng_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Selecione o campo...</option>
+                                      {renderRelatedFieldsOptions(slot.model_id)}
+                                    </select>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Título</label>
+                                    <select
+                                      value={slot.map_config?.title_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].map_config = { ...newSlots[idx].map_config, title_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Selecione o campo...</option>
+                                      {renderRelatedFieldsOptions(slot.model_id)}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Descrição</label>
+                                    <select
+                                      value={slot.map_config?.desc_field || ''}
+                                      onChange={e => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].map_config = { ...newSlots[idx].map_config, desc_field: e.target.value };
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }}
+                                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                    >
+                                      <option value="">Selecione o campo...</option>
+                                      {renderRelatedFieldsOptions(slot.model_id)}
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
