@@ -65,6 +65,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { JoinsEditor } from './JoinsEditor'
 import { cn } from '@/lib/utils'
+import { findJoinPath, resolveRelations, resolveAllJoins, buildJoinSql, extractTableNames, getModelsWithRelations } from '@/lib/relationPathFinder'
 import { Drawer } from '@/components/ui/Drawer'
 import { Modal } from '@/components/ui/Modal'
 import { IconPicker } from './IconPicker'
@@ -6549,11 +6550,16 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                         updateMeta('content', 'formula_tokens', tokens);
                       }}
                       availableFields={[
-                        ...(models || []).flatMap((m: any) => 
-                          (m.fields || []).map((f: any) => ({
+                        ...getModelsWithRelations(
+                          models?.filter((m: any) => config.selected_models?.includes(m.id)) || [],
+                          relations,
+                          models,
+                          config.layout_config?.max_relation_depth || 2
+                        ).flatMap((g: any) => 
+                          (g.model.fields || []).map((f: any) => ({
                             id: f.id,
-                            modelName: m.display_name || m.name,
-                            db_column_name: m.id === (config.layout_config?.master_model_id || config.selected_models?.[0]) ? f.db_column_name : `${m.db_table_name}.${f.db_column_name}`,
+                            modelName: g.label,
+                            db_column_name: g.prefix ? `${g.prefix}${f.db_column_name}` : f.db_column_name,
                             display_name: f.display_name
                           }))
                         ),
@@ -7642,86 +7648,9 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                             const destModelIds = destUsecase?.model_id ? [destUsecase.model_id] : (destConfig.selected_models || [])
                             const destModels = models?.filter((m: any) => destModelIds.includes(m.id)) || []
 
-                            const getModelsWithRelations = (baseModels: any[], maxDepth = 2) => {
-                              const result: any[] = [];
-                              const baseModelIds = baseModels.map(m => m.id);
-
-                              baseModels.forEach(baseModel => {
-                                const queue = [{
-                                  model: baseModel,
-                                  depth: 0,
-                                  path: baseModel.db_table_name,
-                                  prefix: ''
-                                }];
-
-                                const visitedIds = new Set<string>();
-
-                                while (queue.length > 0) {
-                                  const current = queue.shift()!;
-                                  
-                                  if (visitedIds.has(current.model.id)) continue;
-                                  visitedIds.add(current.model.id);
-
-                                  if (current.depth === 0) {
-                                    result.push({
-                                      model: current.model,
-                                      prefix: '',
-                                      label: `Tabela: ${current.model.db_table_name}`
-                                    });
-                                  } else {
-                                    result.push({
-                                      model: current.model,
-                                      prefix: `${current.model.db_table_name}.`,
-                                      label: `Relação: ${current.path}`
-                                    });
-                                  }
-
-                                  if (current.depth < maxDepth) {
-                                    const explicitRels = (relations || []).filter((r: any) => 
-                                      r.from_model_id === current.model.id || r.to_model_id === current.model.id
-                                    );
-
-                                    const relatedModelIds = explicitRels.map((r: any) => {
-                                      if (r.from_model_id === current.model.id) return r.to_model_id;
-                                      if (r.to_model_id === current.model.id) return r.from_model_id;
-                                      return null;
-                                    }).filter(Boolean);
-
-                                    const uniqueRelatedIds = Array.from(new Set(relatedModelIds));
-
-                                    uniqueRelatedIds.forEach((relatedId: any) => {
-                                      if (!visitedIds.has(relatedId) && !baseModelIds.includes(relatedId)) {
-                                        const relatedModel = models.find((m: any) => m.id === relatedId);
-                                        if (relatedModel) {
-                                          queue.push({
-                                            model: relatedModel,
-                                            depth: current.depth + 1,
-                                            path: `${current.path} > ${relatedModel.db_table_name}`,
-                                            prefix: `${relatedModel.db_table_name}.`
-                                          });
-                                        }
-                                      }
-                                    });
-                                  }
-                                }
-                              });
-
-                              const uniqueResult: any[] = [];
-                              const seenPrefixes = new Set();
-                              result.forEach(item => {
-                                const key = item.prefix || item.model.id;
-                                if (!seenPrefixes.has(key)) {
-                                  seenPrefixes.add(key);
-                                  uniqueResult.push(item);
-                                }
-                              });
-
-                              return uniqueResult;
-                            };
-
                             const maxRelDepth = config.layout_config?.max_relation_depth || 2;
-                            const sourceGroups = getModelsWithRelations(sourceModels, maxRelDepth);
-                            const destGroups = getModelsWithRelations(destModels, maxRelDepth);
+                            const sourceGroups = getModelsWithRelations(sourceModels, relations, models, maxRelDepth);
+                            const destGroups = getModelsWithRelations(destModels, relations, models, maxRelDepth);
 
                             return (
                               <>

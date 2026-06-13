@@ -288,3 +288,84 @@ export function hasPath(
 ): boolean {
   return findJoinPath(relations, fromTable, toTable) !== null
 }
+
+export function getModelsWithRelations(
+  baseModels: any[], 
+  relations: any[], 
+  models: any[], 
+  maxDepth = 2
+) {
+  const result: any[] = [];
+  const baseModelIds = baseModels.map(m => m.id);
+
+  baseModels.forEach(baseModel => {
+    const queue = [{
+      model: baseModel,
+      depth: 0,
+      path: baseModel.db_table_name,
+      prefix: ''
+    }];
+
+    const visitedIds = new Set<string>();
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      
+      if (visitedIds.has(current.model.id)) continue;
+      visitedIds.add(current.model.id);
+
+      if (current.depth === 0) {
+        result.push({
+          model: current.model,
+          prefix: '',
+          label: `Tabela: ${current.model.db_table_name}`
+        });
+      } else {
+        result.push({
+          model: current.model,
+          prefix: `${current.model.db_table_name}.`,
+          label: `Relação: ${current.path}`
+        });
+      }
+
+      if (current.depth < maxDepth) {
+        const explicitRels = (relations || []).filter((r: any) => 
+          r.from_model_id === current.model.id || r.to_model_id === current.model.id
+        );
+
+        const relatedModelIds = explicitRels.map((r: any) => {
+          if (r.from_model_id === current.model.id) return r.to_model_id;
+          if (r.to_model_id === current.model.id) return r.from_model_id;
+          return null;
+        }).filter(Boolean);
+
+        const uniqueRelatedIds = Array.from(new Set(relatedModelIds));
+
+        uniqueRelatedIds.forEach((relatedId: any) => {
+          if (!visitedIds.has(relatedId) && !baseModelIds.includes(relatedId)) {
+            const relatedModel = models.find((m: any) => m.id === relatedId);
+            if (relatedModel) {
+              queue.push({
+                model: relatedModel,
+                depth: current.depth + 1,
+                path: `${current.path} > ${relatedModel.db_table_name}`,
+                prefix: `${relatedModel.db_table_name}.`
+              });
+            }
+          }
+        });
+      }
+    }
+  });
+
+  const uniqueResult: any[] = [];
+  const seenPrefixes = new Set();
+  result.forEach(item => {
+    const key = item.prefix || item.model.id;
+    if (!seenPrefixes.has(key)) {
+      seenPrefixes.add(key);
+      uniqueResult.push(item);
+    }
+  });
+  return uniqueResult;
+}

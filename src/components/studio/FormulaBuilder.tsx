@@ -241,7 +241,7 @@ export default function FormulaBuilder({ value = [], onChange, availableFields =
                   return acc;
                 }, {})
               ).map(([modelName, fields]: [string, any]) => (
-                <optgroup key={modelName} label={`Tabela: ${modelName}`} className="font-bold text-emerald-600 dark:text-emerald-400">
+                <optgroup key={modelName} label={modelName.startsWith('Tabela:') || modelName.startsWith('Relação:') ? modelName : `Tabela: ${modelName}`} className="font-bold text-emerald-600 dark:text-emerald-400">
                   {fields.map((f: any) => (
                     <option key={f.id} value={f.id} className="text-neutral-700 dark:text-neutral-300 font-normal">
                       {f.display_name || f.db_column_name}
