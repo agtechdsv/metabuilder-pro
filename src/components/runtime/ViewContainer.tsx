@@ -404,7 +404,8 @@ export default function ViewContainer({
             
             let data: any[] = []
 
-            if (projectId && tunnelChannel && isTunnelReady) {
+            if (projectId) {
+              if (!tunnelChannel || !isTunnelReady) continue;
               const queryId = crypto.randomUUID()
               const rawQuery = `SELECT "${comp.rel_label}", "${comp.rel_value}" FROM "${comp.rel_table}"`
               const schemaToUse = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === comp.rel_table?.toLowerCase())?.db_schema_name || project?.slug || 'public'
@@ -759,21 +760,31 @@ export default function ViewContainer({
 
             // Collect required tables from filters, display fields and filter fields
             const requiredTables = new Set<string>()
+            const filterTables = new Set<string>()
             if (includeFilters) {
               if (currentFilters) {
                 Object.keys(currentFilters).forEach(key => {
-                  if (key.includes('.')) requiredTables.add(key.split('.')[0])
+                  if (key.includes('.')) {
+                    requiredTables.add(key.split('.')[0])
+                    filterTables.add(key.split('.')[0])
+                  }
                 })
               }
               if (filterFields) {
                 filterFields.forEach(f => {
                   const col = f.sql_expression || f.db_column_name
-                  if (col && col.includes('.')) requiredTables.add(col.split('.')[0])
+                  if (col && col.includes('.')) {
+                    requiredTables.add(col.split('.')[0])
+                    filterTables.add(col.split('.')[0])
+                  }
                 })
               }
               if (advancedStaticFilters) {
                 advancedStaticFilters.forEach(f => {
-                  if (f.field && f.field.includes('.')) requiredTables.add(f.field.split('.')[0])
+                  if (f.field && f.field.includes('.')) {
+                    requiredTables.add(f.field.split('.')[0])
+                    filterTables.add(f.field.split('.')[0])
+                  }
                 })
               }
             }
@@ -799,7 +810,7 @@ export default function ViewContainer({
             if (projectRelations.length > 0) {
               const resolvedRelations = resolveRelations(projectRelations, allModels)
               const steps = resolveAllJoins(resolvedRelations, modelName, additionalTables)
-              return buildJoinSql(steps)
+              return buildJoinSql(steps, filterTables)
             }
 
             // ── Path 2: Fallback — resolve from legacy joins list + heuristic FK matching ──
@@ -898,7 +909,8 @@ export default function ViewContainer({
                   targetTable = j.table; existingTable = j.toTable; localOn = j.toOn; foreignOn = j.on
                 }
                 if (targetTable) {
-                  sqlParts.push(`LEFT JOIN "${targetTable}" ON "${existingTable}"."${localOn}" = "${targetTable}"."${foreignOn}"`)
+                  const joinType = filterTables.has(targetTable.toLowerCase()) ? 'INNER JOIN' : 'LEFT JOIN'
+                  sqlParts.push(`${joinType} "${targetTable}" ON "${existingTable}"."${localOn}" = "${targetTable}"."${foreignOn}"`)
                   joinedTables.add(targetTable.toLowerCase())
                   remaining.splice(i, 1)
                   changed = true

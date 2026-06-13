@@ -729,11 +729,25 @@ export default function ViewPageContent({
   
   const isOpen = isModal ? isModalOpen : (isPage ? isPageVisible : isDrawerOpen)
 
-  const handleOpenAdd = (initialData: any = {}) => {
-    // Prevent React synthetic events from being used as initialData
+  const handleOpenAdd = (inData: any = {}) => {
+    // Prevent React synthetic events from being used as inData
+    let initialData = { ...inData }
     if (initialData && typeof initialData === 'object' && ('nativeEvent' in initialData || initialData._reactName || typeof initialData.preventDefault === 'function')) {
       initialData = {}
     }
+    
+    if (logicType === 'master_detail') {
+      initialData._details = []
+      const detailTables = Array.from(new Set(detailFields.map(f => f.model_name))).filter(Boolean) as string[]
+      detailTables.forEach(tableName => {
+        initialData._details.push({
+          model_name: tableName,
+          _isNew: true,
+          id: crypto.randomUUID()
+        })
+      })
+    }
+
     setAutoOpenSlotConfig(null)
     setDrawerMode('create')
     setSelectedRow(initialData)
@@ -1713,10 +1727,47 @@ export default function ViewPageContent({
             sanitizedDetail[k] = newValue
           }
 
-          if (isNewDetail && logicType === 'master_detail' && joins) {
-            const join = joins.find(j => j.to?.toLowerCase() === detailTableName?.toLowerCase())
-            if (join) {
-               sanitizedDetail[join.foreignKey] = String(masterId)
+          if (isNewDetail) {
+            let fkColName = ''
+            
+            if (projectRelations && projectRelations.length > 0 && project?.models) {
+              const masterModel = project.models.find((m: any) => m.db_table_name === modelName)
+              const detailModel = project.models.find((m: any) => m.db_table_name === detailTableName)
+              if (masterModel && detailModel) {
+                const rel = projectRelations.find((r: any) => 
+                  (r.from_model_id === masterModel.id && r.to_model_id === detailModel.id) ||
+                  (r.from_model_id === detailModel.id && r.to_model_id === masterModel.id)
+                )
+                if (rel && rel.from_model_id === detailModel.id) {
+                   const f = detailModel.fields?.find((f: any) => f.id === rel.from_field_id)
+                   if (f) fkColName = f.db_column_name
+                } else if (rel && rel.to_model_id === detailModel.id) {
+                   const f = detailModel.fields?.find((f: any) => f.id === rel.to_field_id)
+                   if (f) fkColName = f.db_column_name
+                }
+              }
+            }
+            
+            if (!fkColName && joins && joins.length > 0) {
+              const join = joins.find(j => (j.to || j.toTable || j.table)?.toLowerCase() === detailTableName?.toLowerCase())
+              if (join) {
+                 fkColName = join.foreignKey || join.foreign_field || join.toOn || join.on
+              }
+            }
+
+            if (!fkColName && project?.models) {
+               const detailModel = project.models.find((m: any) => m.db_table_name === detailTableName)
+               const masterSingular = modelName.endsWith('s') ? modelName.slice(0, -1) : modelName
+               const possibleFk = detailModel?.fields?.find((f: any) => f.db_column_name.toLowerCase().includes(masterSingular.toLowerCase()) && f.db_column_name.toLowerCase().endsWith('_id'))
+               if (possibleFk) fkColName = possibleFk.db_column_name
+            }
+            
+            if (!fkColName) {
+              fkColName = modelName.endsWith('s') ? `${modelName.slice(0, -1)}_id` : `${modelName}_id`
+            }
+            
+            if (fkColName) {
+               sanitizedDetail[fkColName] = String(masterId)
             }
           }
 

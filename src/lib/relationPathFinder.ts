@@ -254,12 +254,12 @@ export function resolveAllJoins(
 /**
  * Converte um array de JoinStep em cláusula SQL de LEFT JOINs.
  */
-export function buildJoinSql(steps: JoinStep[]): string {
+export function buildJoinSql(steps: JoinStep[], filterTables?: Set<string>): string {
   return steps
-    .map(
-      s =>
-        ` LEFT JOIN "${s.toTable}" ON "${s.fromTable}"."${s.fromField}" = "${s.toTable}"."${s.toField}"`
-    )
+    .map(s => {
+      const joinType = filterTables?.has(s.toTable.toLowerCase()) ? 'INNER JOIN' : 'LEFT JOIN'
+      return ` ${joinType} "${s.toTable}" ON "${s.fromTable}"."${s.fromField}" = "${s.toTable}"."${s.toField}"`
+    })
     .join('')
 }
 

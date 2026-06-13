@@ -1917,13 +1917,37 @@ function StepTables({ config, setConfig, models, relations = [] }: any) {
         <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg flex-shrink-0 mt-0.5">
           <Share2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
         </div>
-        <div className="space-y-1">
-          <p className="text-[11px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">
-            Santo Graal ativo
-          </p>
-          <p className="text-[11px] text-indigo-600 dark:text-indigo-400 leading-relaxed">
-            O sistema detecta automaticamente todas as tabelas relacionadas à tabela raiz e disponibiliza seus campos na etapa seguinte. Você não precisa selecionar manualmente as tabelas de JOIN.
-          </p>
+        <div className="flex-1 space-y-3">
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400 mb-1">
+              Santo Graal ativo
+            </p>
+            <p className="text-[11px] text-indigo-600 dark:text-indigo-400 leading-relaxed">
+              O sistema detecta automaticamente todas as tabelas relacionadas à tabela raiz e disponibiliza seus campos na etapa seguinte. Você não precisa selecionar manualmente as tabelas de JOIN.
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-3 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900/50 w-fit">
+            <label className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Profundidade Máxima (Níveis)</label>
+            <select
+              value={config.layout_config?.max_relation_depth || 2}
+              onChange={(e) => {
+                setConfig({
+                  ...config,
+                  layout_config: {
+                    ...config.layout_config,
+                    max_relation_depth: parseInt(e.target.value, 10)
+                  }
+                })
+              }}
+              className="text-xs bg-white dark:bg-neutral-900 border border-indigo-200 dark:border-indigo-800 rounded px-2 py-1 outline-none text-indigo-900 dark:text-indigo-300 cursor-pointer"
+            >
+              <option value={1}>1 Nível (Apenas Relacionamentos Diretos)</option>
+              <option value={2}>2 Níveis (Padrão - Inclui Nível 2)</option>
+              <option value={3}>3 Níveis (Profundo)</option>
+              <option value={4}>4 Níveis (Extremo - Pode causar lentidão)</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -4215,7 +4239,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                               ...prev.layout_config, 
                               mindmap_levels: [{
                                 id: Math.random().toString(36).substr(2, 9),
-                                model_id: config.model_id,
+                                model_id: config.selected_models?.[0] || '',
                                 foreign_key: '',
                                 relation_type: 'direct',
                                 through_table: '',
@@ -7618,41 +7642,68 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                             const destModelIds = destUsecase?.model_id ? [destUsecase.model_id] : (destConfig.selected_models || [])
                             const destModels = models?.filter((m: any) => destModelIds.includes(m.id)) || []
 
-                            const getModelsWithRelations = (baseModels: any[]) => {
+                            const getModelsWithRelations = (baseModels: any[], maxDepth = 2) => {
                               const result: any[] = [];
                               const baseModelIds = baseModels.map(m => m.id);
 
                               baseModels.forEach(baseModel => {
-                                result.push({ 
-                                  model: baseModel, 
-                                  prefix: '', 
-                                  label: `Tabela: ${baseModel.db_table_name}` 
-                                });
+                                const queue = [{
+                                  model: baseModel,
+                                  depth: 0,
+                                  path: baseModel.db_table_name,
+                                  prefix: ''
+                                }];
 
-                                const explicitRels = (relations || []).filter((r: any) => 
-                                  r.from_model_id === baseModel.id || r.to_model_id === baseModel.id
-                                );
+                                const visitedIds = new Set<string>();
 
-                                const relatedModelIds = explicitRels.map((r: any) => {
-                                  if (r.from_model_id === baseModel.id) return r.to_model_id;
-                                  if (r.to_model_id === baseModel.id) return r.from_model_id;
-                                  return null;
-                                }).filter(Boolean);
+                                while (queue.length > 0) {
+                                  const current = queue.shift()!;
+                                  
+                                  if (visitedIds.has(current.model.id)) continue;
+                                  visitedIds.add(current.model.id);
 
-                                const uniqueRelatedIds = Array.from(new Set(relatedModelIds));
-
-                                uniqueRelatedIds.forEach((relatedId: any) => {
-                                  if (!baseModelIds.includes(relatedId)) {
-                                    const relatedModel = models.find((m: any) => m.id === relatedId);
-                                    if (relatedModel) {
-                                      result.push({
-                                        model: relatedModel,
-                                        prefix: `${relatedModel.db_table_name}.`,
-                                        label: `Relação: ${baseModel.db_table_name} > ${relatedModel.db_table_name}`
-                                      });
-                                    }
+                                  if (current.depth === 0) {
+                                    result.push({
+                                      model: current.model,
+                                      prefix: '',
+                                      label: `Tabela: ${current.model.db_table_name}`
+                                    });
+                                  } else {
+                                    result.push({
+                                      model: current.model,
+                                      prefix: `${current.model.db_table_name}.`,
+                                      label: `Relação: ${current.path}`
+                                    });
                                   }
-                                });
+
+                                  if (current.depth < maxDepth) {
+                                    const explicitRels = (relations || []).filter((r: any) => 
+                                      r.from_model_id === current.model.id || r.to_model_id === current.model.id
+                                    );
+
+                                    const relatedModelIds = explicitRels.map((r: any) => {
+                                      if (r.from_model_id === current.model.id) return r.to_model_id;
+                                      if (r.to_model_id === current.model.id) return r.from_model_id;
+                                      return null;
+                                    }).filter(Boolean);
+
+                                    const uniqueRelatedIds = Array.from(new Set(relatedModelIds));
+
+                                    uniqueRelatedIds.forEach((relatedId: any) => {
+                                      if (!visitedIds.has(relatedId) && !baseModelIds.includes(relatedId)) {
+                                        const relatedModel = models.find((m: any) => m.id === relatedId);
+                                        if (relatedModel) {
+                                          queue.push({
+                                            model: relatedModel,
+                                            depth: current.depth + 1,
+                                            path: `${current.path} > ${relatedModel.db_table_name}`,
+                                            prefix: `${relatedModel.db_table_name}.`
+                                          });
+                                        }
+                                      }
+                                    });
+                                  }
+                                }
                               });
 
                               const uniqueResult: any[] = [];
@@ -7668,8 +7719,9 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                               return uniqueResult;
                             };
 
-                            const sourceGroups = getModelsWithRelations(sourceModels);
-                            const destGroups = getModelsWithRelations(destModels);
+                            const maxRelDepth = config.layout_config?.max_relation_depth || 2;
+                            const sourceGroups = getModelsWithRelations(sourceModels, maxRelDepth);
+                            const destGroups = getModelsWithRelations(destModels, maxRelDepth);
 
                             return (
                               <>

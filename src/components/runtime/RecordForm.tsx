@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { evaluateFormula } from '@/lib/formulaEvaluator'
 import { Loader2, Save, Eye, Pencil, Plus, Trash2, ArrowLeft, Check, ChevronDown, ChevronUp, Zap, Link, Database, Globe, Maximize2, PanelRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -289,6 +289,22 @@ export default function RecordForm({
   const { t } = useI18n()
   const [formData, setFormData] = useState<any>(initialData || {})
   const [activeTab, setActiveTab] = useState<'master' | string>(initialTab)
+
+  const formRef = useRef<HTMLFormElement>(null)
+  
+  useEffect(() => {
+    if (mode === 'view') return;
+    const timer = setTimeout(() => {
+      if (formRef.current) {
+        // Find the first visible and enabled input/textarea/select
+        const firstInput = formRef.current.querySelector('input:not([type="hidden"]):not([disabled]):not([readonly]), textarea:not([disabled]):not([readonly]), select:not([disabled]):not([readonly])') as HTMLElement
+        if (firstInput) {
+          firstInput.focus()
+        }
+      }
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [mode, initialData, refreshTrigger, activeTab])
   const [relationalOptions, setRelationalOptions] = useState<Record<string, any[]>>({})
   const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({})
   const [loadingSubDetails, setLoadingSubDetails] = useState<Record<string, boolean>>({})
@@ -475,7 +491,8 @@ export default function RecordForm({
         const isRelationalComp = comp?.type && (['select', 'radio', 'checkbox', 'Combo (Select)', 'Radio Buttons', 'Checkbox Group'].includes(comp.type) || comp.options_type === 'relational' || comp.options_type === 'enumeration')
         if (isRelationalComp && comp.options_type === 'relational' && comp.rel_table) {
           try {
-            if (projectId && tunnelChannel && isTunnelReady) {
+            if (projectId) {
+              if (!tunnelChannel || !isTunnelReady) continue;
               const queryId = crypto.randomUUID()
               const rawQuery = `SELECT "${comp.rel_label}", "${comp.rel_value}" FROM "${comp.rel_table}"`
 
@@ -643,8 +660,42 @@ export default function RecordForm({
   }
 
   useEffect(() => {
-    setFormData(initialData || {})
-  }, [initialData])
+    const data = { ...(initialData || {}) }
+    
+    console.log('[RecordForm Debug] useEffect initialData trigger.', { mode, initialDetailsLength: data._details?.length, detailTables })
+    
+    // Inject empty details for master_detail or cadastro if not provided
+    if (mode === 'create' && (!data._details || data._details.length === 0)) {
+      const dDetails: any[] = []
+      const newExpandedState: Record<string, boolean> = {}
+      
+      // Use the exact same detailTables array that determines the tabs
+      detailTables.forEach(tableName => {
+        const newId = crypto.randomUUID()
+        dDetails.push({
+          model_name: tableName,
+          _isNew: true,
+          id: newId
+        })
+        newExpandedState[`detail-${tableName}-${newId}`] = true
+      })
+      
+      console.log('[RecordForm Debug] Injecting empty details!', { dDetails })
+      data._details = dDetails
+      
+      // Expande automaticamente as abas recém injetadas
+      setExpandedDetails(prev => ({ ...prev, ...newExpandedState }))
+      
+      // Foco automático no primeiro campo da tela para o novo registro
+      setTimeout(() => {
+        const firstInput = document.querySelector('input:not([type="hidden"]), select, textarea') as HTMLElement
+        if (firstInput) firstInput.focus()
+      }, 300)
+    }
+    
+    setFormData(data)
+    // Using JSON.stringify(detailTables) to safely include it as a dependency without causing loops
+  }, [initialData, mode, logicType, masterModelId, fields, JSON.stringify(detailTables)])
 
   // Motor Reativo de Fórmulas
   useEffect(() => {
@@ -701,7 +752,15 @@ export default function RecordForm({
     });
 
     if (hasChanges) {
-      setFormData(newFormData);
+      setFormData((prev: any) => {
+        const next = { ...prev };
+        Object.keys(newFormData).forEach(k => {
+          if (newFormData[k] !== formData[k]) {
+            next[k] = newFormData[k];
+          }
+        });
+        return next;
+      });
     }
   }, [formData, fields]);
 
@@ -1109,6 +1168,15 @@ export default function RecordForm({
                   const newRecord = { id: newTempId, model_name: tableName, _isNew: true }
                   setFormData((prev: any) => ({ ...prev, _details: [...(prev._details || []), newRecord] }))
                   setExpandedDetails((prev: any) => ({ ...prev, [`detail-${tableName}-${newTempId}`]: true }))
+                  
+                  // Foco no primeiro campo do novo item
+                  setTimeout(() => {
+                    const container = document.getElementById(`detail-container-detail-${tableName}-${newTempId}`)
+                    if (container) {
+                      const firstInput = container.querySelector('input:not([type="hidden"]), select, textarea') as HTMLElement
+                      if (firstInput) firstInput.focus()
+                    }
+                  }, 150)
                 } else {
                   onAddDetail?.(tableName, parentData.id || parentData.ID)
                 }
@@ -1139,6 +1207,8 @@ export default function RecordForm({
             const seenIds = new Set();
             const detailsToRender = (parentData?._details || [])
               .filter((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase());
+            
+            console.log('[RecordForm Render] detailsToRender for', tableName, 'is', detailsToRender.length, 'items', { detailsToRender, parentDetails: parentData?._details });
 
             return detailsToRender.map((detail: any, idx: number) => {
               const pkField = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase()).find(f => f.is_primary_key) || { db_column_name: 'id' };
@@ -1150,7 +1220,7 @@ export default function RecordForm({
               seenIds.add(uniqueKey);
 
               return (
-                <div key={uniqueKey} className={cn("flex flex-col gap-1 rounded-2xl transition-all duration-300", expandedDetails[uniqueKey] ? "bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-500/20 p-0.5" : "")}>
+                <div key={uniqueKey} id={`detail-container-${uniqueKey}`} className={cn("flex flex-col gap-1 rounded-2xl transition-all duration-300", expandedDetails[uniqueKey] ? "bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-500/20 p-0.5" : "")}>
                   <div className={cn(
                     "py-2.5 px-3 border rounded-xl flex items-center justify-between group animate-in fade-in slide-in-from-top-2 duration-300 transition-all",
                     expandedDetails[uniqueKey]
@@ -1163,6 +1233,9 @@ export default function RecordForm({
                         expandedDetails[uniqueKey] ? "text-indigo-600 dark:text-indigo-400" : "text-neutral-700 dark:text-neutral-200"
                       )}>
                         {(() => {
+                          if (detail._isNew || String(detailIdValue).startsWith('temp-')) {
+                            return t('common.new_record', 'Novo Registro');
+                          }
                           const customField = detailsItemTitles?.[modelId || ''];
                           if (customField) {
                             const baseField = customField.includes('.') ? customField.split('.')[0] : customField;
@@ -1563,7 +1636,7 @@ export default function RecordForm({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
+      <form ref={formRef} onSubmit={handleSubmit} className="flex-1 flex flex-col">
         {/* Formulário Principal e Abas Híbridas */}
         <div className={cn("flex flex-col h-full", !isPageMode && "overflow-hidden")}>
           {(() => {
@@ -1691,6 +1764,15 @@ export default function RecordForm({
                                 const newTempId = `temp-${Date.now()}`
                                 setFormData((prev: any) => ({ ...prev, _details: [...(prev._details || []), { id: newTempId, model_name: activeTab, _isNew: true }] }))
                                 setExpandedDetails((prev: any) => ({ ...prev, [`detail-${activeTab}-${newTempId}`]: true }))
+                                
+                                // Foco no primeiro campo do novo item
+                                setTimeout(() => {
+                                  const container = document.getElementById(`detail-container-detail-${activeTab}-${newTempId}`)
+                                  if (container) {
+                                    const firstInput = container.querySelector('input:not([type="hidden"]), select, textarea') as HTMLElement
+                                    if (firstInput) firstInput.focus()
+                                  }
+                                }, 150)
                               } else {
                                 onAddDetail?.(activeTab, formData.id || formData.ID)
                               }
