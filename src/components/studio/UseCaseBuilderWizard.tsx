@@ -293,6 +293,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       master_model_id: '',
       detail_display_mode: 'tabs',
       mindmap_central_field: '',
+      mindmap_levels: [] as any[],
       action_interface_type: 'drawer',
       joins: [] as any[],
       fields_metadata: {} as Record<string, any>,
@@ -894,6 +895,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           master_model_id: sourceData.layout_config?.master_model_id || '',
           detail_display_mode: sourceData.layout_config?.detail_display_mode || 'tabs',
           mindmap_central_field: sourceData.layout_config?.mindmap_central_field || '',
+          mindmap_levels: sourceData.layout_config?.mindmap_levels || [],
           action_interface_type: sourceData.layout_config?.action_interface_type || 'drawer',
           joins: sourceData.layout_config?.joins || [],
           fields_metadata: sourceData.layout_config?.fields_metadata || {},
@@ -1121,7 +1123,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         return !!((layout_config as any).scheduler_config?.title_field && (layout_config as any).scheduler_config?.start_date_field) && hasGrid
       }
       if (logic_type === 'mapa_mental') {
-        return !!(layout_config as any).mindmap_central_field && hasGrid
+        return !!(layout_config as any).mindmap_levels?.length && hasGrid
       }
       if (logic_type === 'master_detail') {
         return config.selected_models.length >= 2 && !!(layout_config as any).master_model_id && hasGrid
@@ -1154,7 +1156,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         if (logic_type === 'personalizado' && (!(layout_config as any).custom_slots || !(layout_config as any).custom_slots.length)) toast("Por favor, adicione pelo menos uma aba no Layout Personalizado.", 'error')
         if (logic_type === 'blueprint' && (!(layout_config as any).blueprint_config?.title_field || !(layout_config as any).blueprint_config?.predecessor_field)) toast("Por favor, selecione os campos de Título e Predecessora para o Fluxograma.", 'error')
         if (logic_type === 'scheduler' && (!(layout_config as any).scheduler_config?.title_field || !(layout_config as any).scheduler_config?.start_date_field)) toast("Por favor, selecione os campos de título e data de início para o Calendário.", 'error')
-        if (logic_type === 'mapa_mental' && !(layout_config as any).mindmap_central_field) toast("Please select a central field for Mind Map.", 'error')
+        if (logic_type === 'mapa_mental' && !(layout_config as any).mindmap_levels?.length) toast("Por favor, configure a hierarquia do Mapa Mental.", 'error')
         if (logic_type === 'master_detail' && !(layout_config as any).master_model_id) toast("Please select the Master Table.", 'error')
       }
       return
@@ -4057,7 +4059,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                               className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none disabled:opacity-50"
                             >
                               <option value="">Selecione...</option>
-                              {models.map((m:any) => <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>)}
+                              {orderedModels.map((m:any) => <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>)}
                             </select>
                             {isRoot && <p className="text-[9px] text-neutral-400 mt-1 italic">Tabela base do Use Case.</p>}
                           </div>
@@ -4106,7 +4108,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
                                     >
                                       <option value="">Selecione a Tabela...</option>
-                                      {models.map((m:any) => <option key={`through-${m.id}`} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>)}
+                                      {orderedModels.map((m:any) => <option key={`through-${m.id}`} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>)}
                                     </select>
                                   </div>
                                 ) : level.relation_type === 'direct' ? (
@@ -4172,18 +4174,20 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                 })()}
 
                                 {level.relation_type === 'multilevel' && (
-                                  <MultiLevelPathBuilder
-                                    level={level}
-                                    models={models}
-                                    parentModelId={lIdx === 0 ? config.selected_models?.[0] : config.layout_config.mindmap_levels[lIdx - 1]?.model_id}
-                                    onChange={(newPath: any) => {
-                                      setConfig((prev: any) => {
-                                        const newLevels = [...(prev.layout_config.mindmap_levels || [])];
-                                        newLevels[lIdx].relation_path = newPath;
-                                        return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
-                                      });
-                                    }}
-                                  />
+                                  <div className="col-span-full">
+                                    <MultiLevelPathBuilder
+                                      level={level}
+                                      models={models}
+                                      parentModelId={lIdx === 0 ? config.selected_models?.[0] : config.layout_config.mindmap_levels[lIdx - 1]?.model_id}
+                                      onChange={(newPath: any) => {
+                                        setConfig((prev: any) => {
+                                          const newLevels = [...(prev.layout_config.mindmap_levels || [])];
+                                          newLevels[lIdx].relation_path = newPath;
+                                          return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
+                                        });
+                                      }}
+                                    />
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -4836,7 +4840,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                             className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none disabled:opacity-50"
                                           >
                                             <option value="">Selecione...</option>
-                                            {models.map((m:any) => <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>)}
+                                            {orderedModels.map((m:any) => <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>)}
                                           </select>
                                           {isRoot && <p className="text-[9px] text-neutral-400 mt-1 italic">Tabela base da aba.</p>}
                                         </div>
@@ -4880,7 +4884,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                                     className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
                                                   >
                                                     <option value="">Selecione a Tabela...</option>
-                                                    {models.map((m:any) => <option key={`through-${m.id}`} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>)}
+                                                    {orderedModels.map((m:any) => <option key={`through-${m.id}`} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>)}
                                                   </select>
                                                 </div>
                                               ) : level.relation_type === 'direct' ? (
@@ -4940,18 +4944,20 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                               })()}
 
                                               {level.relation_type === 'multilevel' && (
-                                                <MultiLevelPathBuilder
-                                                  level={level}
-                                                  models={models}
-                                                  parentModelId={lIdx === 0 ? config.selected_models?.[0] : slot.mindmap_levels[lIdx - 1]?.model_id}
-                                                  onChange={(newPath: any) => {
-                                                    setConfig((prev: any) => {
-                                                      const newSlots = [...(prev.layout_config.custom_slots || [])];
-                                                      newSlots[idx].mindmap_levels[lIdx].relation_path = newPath;
-                                                      return { ...prev, layout_config: { ...prev.layout_config, custom_slots: newSlots } };
-                                                    });
-                                                  }}
-                                                />
+                                                <div className="col-span-full">
+                                                  <MultiLevelPathBuilder
+                                                    level={level}
+                                                    models={models}
+                                                    parentModelId={lIdx === 0 ? config.selected_models?.[0] : slot.mindmap_levels[lIdx - 1]?.model_id}
+                                                    onChange={(newPath: any) => {
+                                                      setConfig((prev: any) => {
+                                                        const newSlots = [...(prev.layout_config.custom_slots || [])];
+                                                        newSlots[idx].mindmap_levels[lIdx].relation_path = newPath;
+                                                        return { ...prev, layout_config: { ...prev.layout_config, custom_slots: newSlots } };
+                                                      });
+                                                    }}
+                                                  />
+                                                </div>
                                               )}
                                             </div>
                                           </div>

@@ -9,7 +9,11 @@ import {
   RotateCcw,
   ArrowLeft,
   Maximize2,
-  Loader2
+  Loader2,
+  Eye,
+  Edit,
+  Trash2,
+  Zap
 } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import { cn } from '@/lib/utils'
@@ -536,7 +540,7 @@ export default function DynamicMindMap({
                   whileHover={{ scale: 1.05, zIndex: 40 }}
                   transition={{ type: "spring", stiffness: 100, damping: 20, delay: idx * 0.05 }}
                   className={cn(
-                    "absolute z-20 w-48 p-5 rounded-[2rem] border transition-all cursor-pointer overflow-hidden backdrop-blur-xl shadow-xl",
+                    "absolute z-20 w-48 p-5 rounded-[2rem] border transition-all cursor-pointer overflow-hidden backdrop-blur-xl shadow-xl group/node",
                     hasChildren 
                       ? "bg-white/90 dark:bg-slate-900/80 border-neutral-200 dark:border-white/10 hover:border-indigo-500/60" 
                       : "bg-white/40 dark:bg-slate-900/40 border-neutral-200 dark:border-white/5 opacity-90 hover:opacity-100"
@@ -582,6 +586,32 @@ export default function DynamicMindMap({
                       <span className="text-[9px] font-black text-neutral-400 dark:text-neutral-500">{child.children === undefined ? '?' : child.count || child.children.length}</span>
                     </div>
                   </div>
+                  
+                  {/* Hover Actions */}
+                  {child.rawData && (
+                    <div className="absolute top-2 right-2 flex gap-0.5 opacity-0 group-hover/node:opacity-100 transition-opacity bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-lg border border-neutral-200 dark:border-white/10 shadow-sm z-50">
+                      {onView && (
+                        <Tooltip text={t('actions.view', 'Visualizar')}>
+                          <button onClick={(e) => { e.stopPropagation(); onView(child.rawData) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Eye className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
+                        </Tooltip>
+                      )}
+                      {onEdit && (
+                        <Tooltip text={t('actions.edit', 'Editar')}>
+                          <button onClick={(e) => { e.stopPropagation(); onEdit(child.rawData) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Edit className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
+                        </Tooltip>
+                      )}
+                      {onDelete && (
+                        <Tooltip text={t('actions.delete', 'Excluir')}>
+                          <button onClick={(e) => { e.stopPropagation(); onDelete(child.rawData) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Trash2 className="w-3 h-3 text-neutral-500 hover:text-red-500" /></button>
+                        </Tooltip>
+                      )}
+                      {customActions?.map((action: any, i: number) => (
+                        <Tooltip key={i} text={action.label || 'Ação Customizada'}>
+                           <button onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, child.rawData) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Zap className="w-3 h-3 text-neutral-500 hover:text-amber-500" /></button>
+                        </Tooltip>
+                      ))}
+                    </div>
+                  )}
                   {hasChildren && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
                       {isLoading ? (
