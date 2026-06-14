@@ -345,7 +345,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         predecessor_field: ''
       },
       custom_actions: [] as any[],
-      custom_slots: [] as any[]
+      custom_slots: [] as any[],
+      max_relation_depth: 2
     },
     buttons_config: [
       { id: 'search', label: t('runtime.search'), labelKey: 'runtime.search', icon: 'search', action: 'search', visible: true },
@@ -944,7 +945,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
             predecessor_field: ''
           },
           custom_actions: sourceData.layout_config?.custom_actions || [],
-          custom_slots: sourceData.layout_config?.custom_slots || []
+          custom_slots: sourceData.layout_config?.custom_slots || [],
+          max_relation_depth: sourceData.layout_config?.max_relation_depth ?? 2
         },
         buttons_config: (() => {
           const defaults = [
@@ -2125,6 +2127,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
   const { toast } = useToast()
   const [expandedCustomSlot, setExpandedCustomSlot] = useState<number | null>(null)
   const [tabToDelete, setTabToDelete] = useState<number | null>(null)
+  const [editingSlotTabIconIndex, setEditingSlotTabIconIndex] = useState<number | null>(null)
 
   function formatLabelText(text: string) {
     if (!text) return ''
@@ -2155,6 +2158,49 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
       component: { type: 'text', rows: 3, width: '100%', options_type: 'relational', fixed_options: '', rel_table: '', rel_label: '', rel_value: '' },
       viacep: { enabled: false, logradouro: '', bairro: '', cidade: '', uf: '' }
     }
+  }
+
+  // ─── Santo Graal helpers para Personalizado ───────────────────────────────────
+  // Retorna todos os models alcançáveis a partir de um model_id via BFS do Santo Graal.
+  // Usa max_relation_depth definido na etapa 2 do wizard.
+  function getSlotRelatedFieldGroups(slotModelId: string) {
+    const slotModel = models.find((m: any) => m.id === slotModelId)
+    if (!slotModel) return []
+    const maxDepth = config.layout_config?.max_relation_depth ?? 2
+    return getModelsWithRelations([slotModel], relations, models, maxDepth)
+  }
+
+  // Retorna a lista de modelos alcançáveis a partir da tabela raiz do caso de uso (para o combo TABELA MODEL)
+  function getRootRelatedModels() {
+    const rootId = config.layout_config?.master_model_id || config.selected_models?.[0]
+    const rootModel = models.find((m: any) => m.id === rootId)
+    if (!rootModel) return []
+    const maxDepth = config.layout_config?.max_relation_depth ?? 2
+    return getModelsWithRelations([rootModel], relations, models, maxDepth)
+  }
+
+  // Renderiza <optgroup>/<option> agrupados por tabela, compatível com a imagem 3.
+  // noneLabel: texto da opção vazia (e.g. "Selecione o campo...")
+  // includeNone: se true, adiciona opção vazia no início
+  function renderSlotFieldOptions(slotModelId: string, includeNone = true, noneLabel = 'Selecione o campo...') {
+    const groups = getSlotRelatedFieldGroups(slotModelId)
+    return (
+      <>
+        {includeNone && <option value="">{noneLabel}</option>}
+        {groups.map((g: any) => (
+          <optgroup key={`grp-${g.model.id}-${g.prefix}`} label={g.label}>
+            {(g.model.fields || []).map((f: any) => (
+              <option
+                key={`${g.model.id}-${f.id}`}
+                value={g.prefix ? `${g.prefix}${f.db_column_name}` : f.db_column_name}
+              >
+                {f.display_name || f.db_column_name}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </>
+    )
   }
   const [expandedZones, setExpandedZones] = useState<Record<string, boolean>>({
     masterDetail: true,
@@ -4309,8 +4355,32 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                   {(config.layout_config.custom_slots || []).map((slot: any, idx: number) => (
                     <div key={slot.id} className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl flex flex-col gap-4">
                       <div className="flex gap-4 items-start w-full">
+                        <div className="space-y-2 flex-initial">
+                          <label className="text-[9px] font-black uppercase text-neutral-400">cone</label>
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setEditingSlotTabIconIndex(idx)}
+                              className="w-10 h-10 flex items-center justify-center bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg hover:bg-neutral-50"
+                            >
+                              <DynamicIcon icon={slot.icon || 'Layout'} className="w-5 h-5 text-neutral-500" />
+                            </button>
+                            {editingSlotTabIconIndex === idx && (
+                              <IconPicker
+                                currentIcon={slot.icon || 'Layout'}
+                                onSelect={(icon) => {
+                                  const newSlots = [...(config.layout_config.custom_slots || [])];
+                                  newSlots[idx].icon = icon;
+                                  setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                  setEditingSlotTabIconIndex(null);
+                                }}
+                                onClose={() => setEditingSlotTabIconIndex(null)}
+                              />
+                            )}
+                          </div>
+                        </div>
                         <div className="space-y-2 flex-1">
-                          <label className="text-[9px] font-black uppercase text-neutral-400">Título da Aba</label>
+                          <label className="text-[9px] font-black uppercase text-neutral-400">Ttulo da Aba</label>
                           <input
                             type="text"
                             value={slot.title || ''}
@@ -4335,8 +4405,13 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                             className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-rose-500"
                           >
                             <option value="">Selecione a tabela...</option>
-                            {models.filter((m: any) => config.selected_models.includes(m.id)).map((m: any) => (
-                              <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>
+                            {getRootRelatedModels().map((g: any) => (
+                              <option key={g.model.id} value={g.model.id}>
+                                {g.depth === 0
+                                  ? (g.model.display_name || g.model.db_table_name)
+                                  : `↳ ${g.model.display_name || g.model.db_table_name}`
+                                }
+                              </option>
                             ))}
                           </select>
                         </div>
@@ -4355,9 +4430,13 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                             <option value="grid">Grid de Dados</option>
                             <option value="kanban">Kanban</option>
                             <option value="timeline">Linha do Tempo</option>
+                            <option value="scheduler">Agenda / Calendário</option>
+                            <option value="gantt">Gráfico de Gantt</option>
                             <option value="mapa_mental">Mapa Mental</option>
                             <option value="analytics">Dashboard BI</option>
                             <option value="galeria">Galeria Assets</option>
+                             <option value="map">Mapa Geospatial</option>
+                             <option value="blueprint">Fluxograma (Blueprint)</option>
                           </select>
                         </div>
                         <button
@@ -4436,7 +4515,50 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                   </label>
                                 </div>
 
-                                {(slot.render_mode === 'button' || slot.render_mode === 'both') && (
+                                <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-indigo-100 dark:border-indigo-900/30">
+                                  <h5 className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">Permissões de Ação na Aba</h5>
+                                  <p className="text-[10px] text-neutral-500">Escolha quais ações os usuários poderão realizar nos registros desta aba.</p>
+                                  
+                                  <div className="flex flex-wrap gap-6 mt-2">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input type="checkbox" checked={slot.can_view !== false} onChange={(e) => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].can_view = e.target.checked;
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }} className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500" />
+                                      <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Visualizar</span>
+                                    </label>
+
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input type="checkbox" checked={slot.can_add !== false} onChange={(e) => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].can_add = e.target.checked;
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }} className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500" />
+                                      <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Novo</span>
+                                    </label>
+                                    
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input type="checkbox" checked={slot.can_edit !== false} onChange={(e) => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].can_edit = e.target.checked;
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }} className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500" />
+                                      <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Editar</span>
+                                    </label>
+                                    
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input type="checkbox" checked={slot.can_delete !== false} onChange={(e) => {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        newSlots[idx].can_delete = e.target.checked;
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                      }} className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500" />
+                                      <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Excluir</span>
+                                    </label>
+                                  </div>
+                                </div>
+
+                              {(slot.render_mode === 'button' || slot.render_mode === 'both') && (
                                   <div className="mt-4 p-4 bg-white dark:bg-neutral-950/50 border border-indigo-200 dark:border-indigo-800 rounded-lg space-y-4">
                                     <h6 className="text-[10px] font-black uppercase text-indigo-500">Configurações do Botão</h6>
                                     
@@ -4556,7 +4678,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                               </div>
                             </div>
                           )}
-                          {['grid', 'kanban', 'timeline', 'mapa_mental', 'galeria', 'analytics'].includes(slot.type) && (
+                          {['grid', 'kanban', 'timeline', 'mapa_mental', 'galeria', 'analytics', 'gantt', 'scheduler', 'map', 'blueprint'].includes(slot.type) && (
                             <div className="w-full p-4 mt-2 bg-rose-50/50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/30 rounded-xl space-y-4">
                           
                           {/* Configurações Kanban Específicas */}
@@ -4604,10 +4726,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                     }}
                                     className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-rose-500 shadow-sm"
                                   >
-                                    <option value="">Selecione o campo...</option>
-                                    {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
-                                      <option key={f.id} value={f.id}>{f.display_name || f.db_column_name}</option>
-                                    ))}
+                                    {renderSlotFieldOptions(slot.model_id, false)}
                                   </select>
                                 </div>
                                 {isGroupRelational && relTableModel && (
@@ -4637,66 +4756,84 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                   <label className="text-[9px] font-black uppercase text-rose-600 dark:text-rose-400">Campos do Card</label>
                                   <p className="text-[10px] text-neutral-500 mt-0.5">Selecione quais campos aparecerão no corpo do card (opcional. Deixe vazio para exibir todos).</p>
                                 </div>
-                                <div className="flex flex-wrap gap-2">
-                                  {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => {
-                                    const isSelected = (slot.kanban_card_fields || []).includes(f.db_column_name);
-                                    return (
-                                      <button
-                                        key={`card-${f.id}`}
-                                        onClick={() => {
-                                          const newSlots = [...(config.layout_config.custom_slots || [])];
-                                          const currentFields = newSlots[idx].kanban_card_fields || [];
-                                          if (isSelected) {
-                                            newSlots[idx].kanban_card_fields = currentFields.filter((c: string) => c !== f.db_column_name);
-                                          } else {
-                                            newSlots[idx].kanban_card_fields = [...currentFields, f.db_column_name];
-                                          }
-                                          setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
-                                        }}
-                                        className={cn(
-                                          "px-2 py-1 rounded-md text-[10px] font-bold transition-all border",
-                                          isSelected 
-                                            ? "bg-rose-500 text-white border-rose-500 shadow-sm" 
-                                            : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-rose-300"
-                                        )}
-                                      >
-                                        {f.display_name || f.db_column_name}
-                                      </button>
-                                    )
-                                  })}
-                                  {/* Auto-Join Fields */}
-                                  {models.filter((m:any) => m.id !== slot.model_id && config.selected_models.includes(m.id)).map((m:any) => (
-                                    m.fields.map((f:any) => {
-                                      const colName = `${m.db_table_name}.${f.db_column_name}`;
-                                      const isSelected = (slot.kanban_card_fields || []).includes(colName);
+                                <div className="flex gap-2 items-center mt-2">
+                                  <select
+                                    id={`kanban_card_fields_select_${idx}`}
+                                    className="flex-1 px-4 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-rose-500"
+                                  >
+                                    <option value="">Adicionar campo...</option>
+                                    {(() => {
+                                      const slotModelId = slot.model_id;
+                                      const groups = getSlotRelatedFieldGroups(slotModelId);
+                                      return groups.map((g: any) => (
+                                        <optgroup key={`opt-${g.model.id}-${g.prefix}`} label={g.label} className="font-bold text-emerald-600 dark:text-emerald-400">
+                                          {(g.model.fields || [])
+                                            .filter((f:any) => !(slot.kanban_card_fields || []).includes(g.prefix ? `${g.prefix}${f.db_column_name}` : f.db_column_name))
+                                            .map((f:any) => {
+                                            const val = g.prefix ? `${g.prefix}${f.db_column_name}` : f.db_column_name;
+                                            return (
+                                              <option 
+                                                key={`${g.model.id}-${f.id}`} 
+                                                value={val}
+                                                className="text-neutral-700 dark:text-neutral-300 font-normal"
+                                              >
+                                                {f.display_name || f.db_column_name}
+                                              </option>
+                                            )
+                                          })}
+                                        </optgroup>
+                                      ));
+                                    })()}
+                                  </select>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const select = document.getElementById(`kanban_card_fields_select_${idx}`) as HTMLSelectElement;
+                                      if (select && select.value) {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        const currentFields = newSlots[idx].kanban_card_fields || [];
+                                        newSlots[idx].kanban_card_fields = [...currentFields, select.value];
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                        select.value = '';
+                                      }
+                                    }}
+                                    className="px-4 py-2 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-colors"
+                                  >
+                                    + Add
+                                  </button>
+                                </div>
+                                {((slot.kanban_card_fields?.length || 0) > 0) && (
+                                  <div className="flex flex-wrap gap-2 mt-3">
+                                    {slot.kanban_card_fields.map((fieldCol: string, i: number) => {
+                                      let displayStr = fieldCol;
+                                      if (fieldCol.includes('.')) {
+                                        const [tName, cName] = fieldCol.split('.');
+                                        displayStr = `${tName.toUpperCase()} -> ${cName}`;
+                                      } else {
+                                        const fDef = models.find((m:any) => m.id === slot.model_id)?.fields.find((f:any) => f.db_column_name === fieldCol);
+                                        if (fDef) displayStr = fDef.display_name || fieldCol;
+                                      }
                                       return (
-                                        <button
-                                          key={`rel-card-${m.id}-${f.id}`}
-                                          onClick={() => {
-                                            const newSlots = [...(config.layout_config.custom_slots || [])];
-                                            const currentFields = newSlots[idx].kanban_card_fields || [];
-                                            if (isSelected) {
-                                              newSlots[idx].kanban_card_fields = currentFields.filter((c: string) => c !== colName);
-                                            } else {
-                                              newSlots[idx].kanban_card_fields = [...currentFields, colName];
-                                            }
-                                            setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
-                                          }}
-                                          className={cn(
-                                            "px-2 py-1 rounded-md text-[10px] font-bold transition-all border flex items-center gap-1",
-                                            isSelected 
-                                              ? "bg-indigo-500 text-white border-indigo-500 shadow-sm" 
-                                              : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-indigo-300"
-                                          )}
-                                        >
-                                          <span className="opacity-50">{m.db_table_name}</span>
-                                          <span>&rarr;</span>
-                                          <span>{f.display_name || f.db_column_name}</span>
-                                        </button>
-                                      )
-                                    })
-                                  ))}
+                                        <div key={`kcf-${idx}-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-[10px] font-bold text-neutral-600 dark:text-neutral-400">
+                                          <span>{displayStr}</span>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const newSlots = [...(config.layout_config.custom_slots || [])];
+                                              const newFields = [...(newSlots[idx].kanban_card_fields || [])];
+                                              newFields.splice(i, 1);
+                                              newSlots[idx].kanban_card_fields = newFields;
+                                              setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                            }}
+                                            className="ml-1 text-neutral-400 hover:text-red-500 transition-colors"
+                                          >
+                                            <X className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
+                                )}
                                 </div>
                               </>
                             );
@@ -4718,23 +4855,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                     }}
                                     className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
                                   >
-                                    <option value="">Selecione o campo de data...</option>
-                                    {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
-                                      <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                                    ))}
-                                    {config.layout_config?.joins?.length > 0 && config.layout_config.joins.map((j:any, jIdx: number) => {
-                                      const relatedModel = models.find((m:any) => m.db_table_name === (j.to === models.find((mod:any) => mod.id === slot.model_id)?.db_table_name ? j.from : j.to) || m.db_table_name === j.toTable);
-                                      if (!relatedModel) return null;
-                                      return (
-                                        <optgroup key={`j-${jIdx}`} label={`Relacionado: ${relatedModel.display_name || relatedModel.db_table_name}`}>
-                                          {relatedModel.fields.map((f:any) => (
-                                            <option key={`${relatedModel.id}-${f.id}`} value={`${relatedModel.db_table_name} -> ${f.db_column_name}`}>
-                                              {relatedModel.db_table_name} &rarr; {f.display_name || f.db_column_name}
-                                            </option>
-                                          ))}
-                                        </optgroup>
-                                      )
-                                    })}
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Selecione o campo de data...')}
                                   </select>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
@@ -4749,10 +4870,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                       }}
                                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
                                     >
-                                      <option value="">Nenhum</option>
-                                      {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
-                                        <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                                      ))}
+                                      {renderSlotFieldOptions(slot.model_id, true, 'Nenhum')}
                                     </select>
                                   </div>
                                   <div>
@@ -4766,10 +4884,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                       }}
                                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
                                     >
-                                      <option value="">Nenhum</option>
-                                      {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
-                                        <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                                      ))}
+                                      {renderSlotFieldOptions(slot.model_id, true, 'Nenhum')}
                                     </select>
                                   </div>
                                   <div>
@@ -4783,16 +4898,301 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                       }}
                                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
                                     >
-                                      <option value="">Nenhum</option>
-                                      {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
-                                        <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                                      ))}
+                                      {renderSlotFieldOptions(slot.model_id, true, 'Nenhum')}
                                     </select>
+                                  </div>
+                                </div>
+                                {/* Estilo e Comportamento Padrão */}
+                                <div className="mt-4 pt-4 border-t border-indigo-100/60 dark:border-indigo-900/30">
+                                  <label className="text-[9px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5 mb-3">
+                                    <span>⚙️</span> Estilo e Comportamento (Padrões do Dev)
+                                  </label>
+                                  <p className="text-[10px] text-neutral-400 mb-3">Defina os valores padrão que o usuário final verá ao abrir esta aba. Ele ainda poderá alterar.</p>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                      <label className="text-[9px] font-black uppercase text-neutral-400">Direção Padrão</label>
+                                      <select
+                                        value={slot.timeline_config?.style_defaults?.direction || 'vertical'}
+                                        onChange={e => {
+                                          const newSlots = [...(config.layout_config.custom_slots || [])];
+                                          newSlots[idx].timeline_config = { ...newSlots[idx].timeline_config, style_defaults: { ...newSlots[idx].timeline_config?.style_defaults, direction: e.target.value } };
+                                          setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                        }}
+                                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                      >
+                                        <option value="vertical">Vertical</option>
+                                        <option value="horizontal">Horizontal</option>
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label className="text-[9px] font-black uppercase text-neutral-400">Animação Padrão</label>
+                                      <select
+                                        value={slot.timeline_config?.style_defaults?.animation ?? 'on'}
+                                        onChange={e => {
+                                          const newSlots = [...(config.layout_config.custom_slots || [])];
+                                          newSlots[idx].timeline_config = { ...newSlots[idx].timeline_config, style_defaults: { ...newSlots[idx].timeline_config?.style_defaults, animation: e.target.value } };
+                                          setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                        }}
+                                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                      >
+                                        <option value="on">Ligada</option>
+                                        <option value="off">Desligada</option>
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label className="text-[9px] font-black uppercase text-neutral-400">Modo Padrão</label>
+                                      <select
+                                        value={slot.timeline_config?.style_defaults?.mode || 'zigzag'}
+                                        onChange={e => {
+                                          const newSlots = [...(config.layout_config.custom_slots || [])];
+                                          newSlots[idx].timeline_config = { ...newSlots[idx].timeline_config, style_defaults: { ...newSlots[idx].timeline_config?.style_defaults, mode: e.target.value } };
+                                          setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                        }}
+                                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                      >
+                                        <option value="zigzag">Zig-Zag</option>
+                                        <option value="linear">Linear</option>
+                                        <option value="alternado">Alternado</option>
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label className="text-[9px] font-black uppercase text-neutral-400">Aparência Padrão</label>
+                                      <select
+                                        value={slot.timeline_config?.style_defaults?.appearance || 'cards'}
+                                        onChange={e => {
+                                          const newSlots = [...(config.layout_config.custom_slots || [])];
+                                          newSlots[idx].timeline_config = { ...newSlots[idx].timeline_config, style_defaults: { ...newSlots[idx].timeline_config?.style_defaults, appearance: e.target.value } };
+                                          setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                        }}
+                                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
+                                      >
+                                        <option value="cards">Cards</option>
+                                        <option value="minimal">Minimal</option>
+                                        <option value="compact">Compact</option>
+                                      </select>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                             </>
                           )}
+
+                          {/* Configurações Gantt Específicas */}
+                          {slot.type === 'gantt' && (
+                            <div className="space-y-3 bg-amber-50/30 dark:bg-amber-950/10 p-4 rounded-xl border border-amber-100/50 dark:border-amber-900/30 mt-4">
+                              <h5 className="text-[10px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">Configuração do Gantt</h5>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Título da Tarefa</label>
+                                  <select value={slot.gantt_config?.title_field || ''} onChange={e => { const ns = [...(config.layout_config.custom_slots || [])]; ns[idx].gantt_config = { ...ns[idx].gantt_config, title_field: e.target.value }; setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: ns } }); }} className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-amber-500">
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Selecione...')}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Data de Início</label>
+                                  <select value={slot.gantt_config?.start_date_field || ''} onChange={e => { const ns = [...(config.layout_config.custom_slots || [])]; ns[idx].gantt_config = { ...ns[idx].gantt_config, start_date_field: e.target.value }; setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: ns } }); }} className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-amber-500">
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Selecione...')}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Data de Término</label>
+                                  <select value={slot.gantt_config?.end_date_field || ''} onChange={e => { const ns = [...(config.layout_config.custom_slots || [])]; ns[idx].gantt_config = { ...ns[idx].gantt_config, end_date_field: e.target.value }; setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: ns } }); }} className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-amber-500">
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Selecione...')}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Progresso (%)</label>
+                                  <select value={slot.gantt_config?.progress_field || ''} onChange={e => { const ns = [...(config.layout_config.custom_slots || [])]; ns[idx].gantt_config = { ...ns[idx].gantt_config, progress_field: e.target.value }; setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: ns } }); }} className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-amber-500">
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Nenhum')}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Configurações Scheduler/Calendário Específicas */}
+                          {slot.type === 'scheduler' && (
+                            <div className="space-y-3 bg-violet-50/30 dark:bg-violet-950/10 p-4 rounded-xl border border-violet-100/50 dark:border-violet-900/30 mt-4">
+                              <h5 className="text-[10px] font-black uppercase tracking-widest text-violet-700 dark:text-violet-400">Configuração da Agenda</h5>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Título do Evento</label>
+                                  <select value={slot.scheduler_config?.title_field || ''} onChange={e => { const ns = [...(config.layout_config.custom_slots || [])]; ns[idx].scheduler_config = { ...ns[idx].scheduler_config, title_field: e.target.value }; setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: ns } }); }} className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-violet-500">
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Selecione...')}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Início</label>
+                                  <select value={slot.scheduler_config?.start_date_field || ''} onChange={e => { const ns = [...(config.layout_config.custom_slots || [])]; ns[idx].scheduler_config = { ...ns[idx].scheduler_config, start_date_field: e.target.value }; setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: ns } }); }} className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-violet-500">
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Selecione...')}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Fim</label>
+                                  <select value={slot.scheduler_config?.end_date_field || ''} onChange={e => { const ns = [...(config.layout_config.custom_slots || [])]; ns[idx].scheduler_config = { ...ns[idx].scheduler_config, end_date_field: e.target.value }; setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: ns } }); }} className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-violet-500">
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Selecione...')}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Cor do Evento</label>
+                                  <select value={slot.scheduler_config?.color_field || ''} onChange={e => { const ns = [...(config.layout_config.custom_slots || [])]; ns[idx].scheduler_config = { ...ns[idx].scheduler_config, color_field: e.target.value }; setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: ns } }); }} className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-violet-500">
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Nenhum')}
+                                  </select>
+                                </div>
+                              </div>
+                              <div className="mt-4 space-y-3 pt-4 border-t border-violet-100 dark:border-violet-900/30">
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-violet-600 dark:text-violet-400">Campos do Card da Agenda</label>
+                                  <p className="text-[10px] text-neutral-500 mt-0.5">Selecione quais campos extras aparecerão no corpo do evento.</p>
+                                </div>
+                                <div className="flex gap-2 items-center mt-2">
+                                  <select
+                                    id={`scheduler_card_fields_select_${idx}`}
+                                    className="flex-1 px-4 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-violet-500"
+                                  >
+                                    <option value="">Adicionar campo...</option>
+                                    {(() => {
+                                      const slotModelId = slot.model_id;
+                                      const groups = getSlotRelatedFieldGroups(slotModelId);
+                                      return groups.map((g: any) => (
+                                        <optgroup key={`opt-${g.model.id}-${g.prefix}`} label={g.label} className="font-bold text-emerald-600 dark:text-emerald-400">
+                                          {(g.model.fields || [])
+                                            .filter((f:any) => !(slot.kanban_card_fields || []).includes(g.prefix ? `${g.prefix}${f.db_column_name}` : f.db_column_name))
+                                            .map((f:any) => {
+                                            const val = g.prefix ? `${g.prefix}${f.db_column_name}` : f.db_column_name;
+                                            return (
+                                              <option 
+                                                key={`${g.model.id}-${f.id}`} 
+                                                value={val}
+                                                className="text-neutral-700 dark:text-neutral-300 font-normal"
+                                              >
+                                                {f.display_name || f.db_column_name}
+                                              </option>
+                                            )
+                                          })}
+                                        </optgroup>
+                                      ));
+                                    })()}
+                                  </select>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const select = document.getElementById(`scheduler_card_fields_select_${idx}`) as HTMLSelectElement;
+                                      if (select && select.value) {
+                                        const newSlots = [...(config.layout_config.custom_slots || [])];
+                                        const currentFields = newSlots[idx].kanban_card_fields || [];
+                                        newSlots[idx].kanban_card_fields = [...currentFields, select.value];
+                                        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                        select.value = '';
+                                      }
+                                    }}
+                                    className="px-4 py-2 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-violet-700 transition-colors"
+                                  >
+                                    + Add
+                                  </button>
+                                </div>
+                                {((slot.kanban_card_fields?.length || 0) > 0) && (
+                                  <div className="flex flex-wrap gap-2 mt-3">
+                                    {slot.kanban_card_fields.map((fieldCol: string, i: number) => {
+                                      let displayStr = fieldCol;
+                                      if (fieldCol.includes('.')) {
+                                        const [tName, cName] = fieldCol.split('.');
+                                        displayStr = `${tName.toUpperCase()} -> ${cName}`;
+                                      } else {
+                                        const fDef = models.find((m:any) => m.id === slot.model_id)?.fields.find((f:any) => f.db_column_name === fieldCol);
+                                        if (fDef) displayStr = fDef.display_name || fieldCol;
+                                      }
+                                      return (
+                                        <div key={`scf-${idx}-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-[10px] font-bold text-neutral-600 dark:text-neutral-400">
+                                          <span>{displayStr}</span>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const newSlots = [...(config.layout_config.custom_slots || [])];
+                                              const newFields = [...(newSlots[idx].kanban_card_fields || [])];
+                                              newFields.splice(i, 1);
+                                              newSlots[idx].kanban_card_fields = newFields;
+                                              setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
+                                            }}
+                                            className="ml-1 text-neutral-400 hover:text-red-500 transition-colors"
+                                          >
+                                            <X className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Configurações Mapa Geospatial Específicas */}
+                          {slot.type === 'map' && (
+                            <div className="space-y-3 bg-emerald-50/30 dark:bg-emerald-950/10 p-4 rounded-xl border border-emerald-100/50 dark:border-emerald-900/30 mt-4">
+                              <h5 className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400">Configuração Geoespacial</h5>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Latitude</label>
+                                  <select value={slot.map_config?.lat_field || ''} onChange={e => { const ns = [...(config.layout_config.custom_slots || [])]; ns[idx].map_config = { ...ns[idx].map_config, lat_field: e.target.value }; setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: ns } }); }} className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-emerald-500">
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Selecione...')}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Longitude</label>
+                                  <select value={slot.map_config?.lng_field || ''} onChange={e => { const ns = [...(config.layout_config.custom_slots || [])]; ns[idx].map_config = { ...ns[idx].map_config, lng_field: e.target.value }; setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: ns } }); }} className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-emerald-500">
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Selecione...')}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Título do Marcador</label>
+                                  <select value={slot.map_config?.title_field || ''} onChange={e => { const ns = [...(config.layout_config.custom_slots || [])]; ns[idx].map_config = { ...ns[idx].map_config, title_field: e.target.value }; setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: ns } }); }} className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-emerald-500">
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Nenhum')}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Descrição do Marcador</label>
+                                  <select value={slot.map_config?.desc_field || ''} onChange={e => { const ns = [...(config.layout_config.custom_slots || [])]; ns[idx].map_config = { ...ns[idx].map_config, desc_field: e.target.value }; setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: ns } }); }} className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-emerald-500">
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Nenhum')}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Configurações Blueprint Específicas */}
+                          {slot.type === 'blueprint' && (
+                            <div className="space-y-3 bg-sky-50/30 dark:bg-sky-950/10 p-4 rounded-xl border border-sky-100/50 dark:border-sky-900/30 mt-4">
+                              <h5 className="text-[10px] font-black uppercase tracking-widest text-sky-700 dark:text-sky-400">Configuração do Fluxograma</h5>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Título do Nó</label>
+                                  <select value={slot.blueprint_config?.title_field || ''} onChange={e => { const ns = [...(config.layout_config.custom_slots || [])]; ns[idx].blueprint_config = { ...ns[idx].blueprint_config, title_field: e.target.value }; setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: ns } }); }} className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-sky-500">
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Selecione...')}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Descrição</label>
+                                  <select value={slot.blueprint_config?.desc_field || ''} onChange={e => { const ns = [...(config.layout_config.custom_slots || [])]; ns[idx].blueprint_config = { ...ns[idx].blueprint_config, desc_field: e.target.value }; setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: ns } }); }} className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-sky-500">
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Nenhum')}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Status / Cor</label>
+                                  <select value={slot.blueprint_config?.status_field || ''} onChange={e => { const ns = [...(config.layout_config.custom_slots || [])]; ns[idx].blueprint_config = { ...ns[idx].blueprint_config, status_field: e.target.value }; setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: ns } }); }} className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-sky-500">
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Nenhum')}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Predecessor (ID)</label>
+                                  <select value={slot.blueprint_config?.predecessor_field || ''} onChange={e => { const ns = [...(config.layout_config.custom_slots || [])]; ns[idx].blueprint_config = { ...ns[idx].blueprint_config, predecessor_field: e.target.value }; setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: ns } }); }} className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-sky-500">
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Nenhum')}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
 
                           {/* Configurações Mapa Mental Específicas */}
                           {slot.type === 'mapa_mental' && (
@@ -5073,10 +5473,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                     }}
                                     className="w-full bg-white dark:bg-neutral-950 border border-teal-200 dark:border-teal-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1 focus:border-teal-400"
                                   >
-                                    <option value="">Detecção Automática</option>
-                                    {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
-                                      <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                                    ))}
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Detecção Automática')}
                                   </select>
                                 </div>
                                 <div>
@@ -5090,10 +5487,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                     }}
                                     className="w-full bg-white dark:bg-neutral-950 border border-teal-200 dark:border-teal-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1 focus:border-teal-400"
                                   >
-                                    <option value="">Detecção Automática</option>
-                                    {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
-                                      <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                                    ))}
+                                    {renderSlotFieldOptions(slot.model_id, true, 'Detecção Automática')}
                                   </select>
                                 </div>
                                 <div className="col-span-full">
@@ -5103,13 +5497,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                       id={`gallery_card_fields_select_${idx}`}
                                       className="flex-1 bg-white dark:bg-neutral-950 border border-teal-200 dark:border-teal-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none focus:border-teal-400"
                                     >
-                                      <option value="">Adicionar campo...</option>
-                                      {models.find((m:any) => m.id === slot.model_id)?.fields
-                                        .filter((f:any) => !(slot.gallery_config?.card_fields || []).includes(f.db_column_name))
-                                        .map((f:any) => (
-                                          <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                                        ))
-                                      }
+                                      {renderSlotFieldOptions(slot.model_id, true, 'Adicionar campo...')}
                                     </select>
                                     <button
                                       type="button"
@@ -5328,17 +5716,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                         }}
                                         className="flex-[2] bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
                                       >
-                                        <option value="">Selecione o campo...</option>
-                                        {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
-                                          <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                                        ))}
-                                        <optgroup label="Tabelas Relacionadas (Auto-Join)">
-                                          {models.filter((m:any) => m.id !== slot.model_id && config.selected_models.includes(m.id)).map((m:any) => (
-                                            m.fields.map((f:any) => (
-                                              <option key={`rel-${f.id}`} value={f.db_column_name}>{m.display_name || m.db_table_name} &rarr; {f.display_name || f.db_column_name}</option>
-                                            ))
-                                          ))}
-                                        </optgroup>
+                                        {renderSlotFieldOptions(slot.model_id, true, 'Selecione o campo...')}
                                       </select>
                                       
                                       <select
@@ -5437,20 +5815,8 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                       }}
                                       className="flex-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
                                     >
-                                      <option value="">Selecione o campo para pesquisa...</option>
-                                      {models.find((m:any) => m.id === slot.model_id)?.fields.map((f:any) => (
-                                        <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                                      ))}
-                                      <optgroup label="Tabelas Relacionadas">
-                                        {models.filter((m:any) => m.id !== slot.model_id && config.selected_models.includes(m.id)).map((m:any) => (
-                                          m.fields.map((f:any) => (
-                                            <option key={`rel-dyn-${m.id}-${f.id}`} value={`${m.db_table_name}.${f.db_column_name}`}>
-                                              {m.db_table_name} &rarr; {f.display_name || f.db_column_name}
-                                            </option>
-                                          ))
-                                        ))}
-                                      </optgroup>
-                                    </select>
+                                      {renderSlotFieldOptions(slot.model_id, true, 'Selecione o campo para pesquisa...')}
+                                     </select>
                                     <input
                                       type="text"
                                       value={labelVal || ''}
@@ -8206,3 +8572,5 @@ function DraggableItem({ id, children, className }: any) {
     </div>
   )
 }
+
+

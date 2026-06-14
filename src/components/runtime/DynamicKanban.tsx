@@ -23,7 +23,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MoreVertical, Calendar, User, Tag, GripVertical, Plus, Minimize2, Maximize2, ZoomIn, LayoutGrid, Zap } from 'lucide-react'
+import { MoreVertical, Calendar, User, Tag, GripVertical, Plus, Minimize2, Maximize2, ZoomIn, LayoutGrid, Zap, Pencil, Trash2 } from 'lucide-react'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { cn, getActionColorClasses } from '@/lib/utils'
 import { formatFieldValue } from '@/lib/formatters'
@@ -346,6 +346,7 @@ function KanbanCard({ id, item, fields, isOverlay, onView, onEdit, onDelete, rel
                 <button
                   key={action.id}
                   title={action.label}
+                  onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, item) }}
                   className={cn("p-1 rounded-md transition-all", colors.text, colors.hover)}
                 >
@@ -353,6 +354,26 @@ function KanbanCard({ id, item, fields, isOverlay, onView, onEdit, onDelete, rel
                 </button>
               )
             })}
+            {onEdit && (
+              <div
+                className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-neutral-400 hover:text-blue-500 transition-all"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); onEdit(item) }}
+                title="Editar"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </div>
+            )}
+            {onDelete && (
+              <div
+                className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-neutral-400 hover:text-red-500 transition-all"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); onDelete(item) }}
+                title="Excluir"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </div>
+            )}
             <div 
                className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800" 
                onPointerDown={(e) => e.stopPropagation()}

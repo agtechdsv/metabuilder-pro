@@ -29,7 +29,7 @@ import {
 } from 'lucide-react'
 import { cn, getActionColorClasses } from '@/lib/utils'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
-import { formatFieldValue } from '@/lib/formatters'
+import { formatFieldValue, getNestedValue } from '@/lib/formatters'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
 
@@ -84,22 +84,7 @@ export default function DynamicGallery({
   const canEdit = buttonsConfig.find((b: any) => b.id === 'edit')?.visible === true
   const canDelete = buttonsConfig.find((b: any) => b.id === 'delete')?.visible === true
 
-  const getNestedValue = (obj: any, path: string) => {
-    if (!obj || !path) return undefined
-    if (obj[path] !== undefined) return obj[path]
-    const nested = path.split('.').reduce((acc, part) => acc && acc[part], obj)
-    if (nested !== undefined) return nested
-    if (path.includes('.')) {
-      const parts = path.split('.')
-      const lastPart = parts[parts.length - 1]
-      if (obj[lastPart] !== undefined) return obj[lastPart]
-    }
-    if (path.includes('.')) {
-      const underscorePath = path.replace(/\./g, '_')
-      if (obj[underscorePath] !== undefined) return obj[underscorePath]
-    }
-    return undefined
-  }
+
 
   // Mapeia uma linha genérica para o formato ideal de asset de galeria
   const mappedAssets = useMemo(() => {
@@ -402,7 +387,7 @@ export default function DynamicGallery({
         // Se gallery_card_fields estiver definido, usar apenas os campos selecionados
         if (galleryConfig && Array.isArray(galleryConfig.card_fields) && galleryConfig.card_fields.length > 0) {
           if (galleryConfig.card_fields.includes(col) || galleryConfig.card_fields.includes(f.id)) {
-            const val = allValues[col]
+            const val = getNestedValue(row, col)
             if (val !== undefined && val !== null && val !== '') {
               metadata.push({
                 label: galleryConfig?.card_fields_labels?.[col] || galleryConfig?.card_fields_labels?.[f.id] || f.display_name,
@@ -422,12 +407,15 @@ export default function DynamicGallery({
             col !== typeField?.db_column_name &&
             col !== 'id'
           ) {
-            const val = allValues[col]
-            if (val !== undefined && val !== null && val !== '') {
-              metadata.push({
-                label: galleryConfig?.card_fields_labels?.[col] || galleryConfig?.card_fields_labels?.[f.id] || f.display_name,
-                value: formatFieldValue(val, f, relationalOptions) || String(val)
-              })
+            const lowerCol = col.toLowerCase()
+            if (!lowerCol.includes('id') && !lowerCol.includes('image') && !lowerCol.includes('imagem') && !lowerCol.includes('foto') && !lowerCol.includes('file') && !lowerCol.includes('arquivo') && !lowerCol.includes('created') && !lowerCol.includes('updated')) {
+              const val = getNestedValue(row, col)
+              if (val !== undefined && val !== null && val !== '') {
+                metadata.push({
+                  label: galleryConfig?.card_fields_labels?.[col] || galleryConfig?.card_fields_labels?.[f.id] || f.display_name,
+                  value: formatFieldValue(val, f, relationalOptions) || String(val)
+                })
+              }
             }
           }
         }

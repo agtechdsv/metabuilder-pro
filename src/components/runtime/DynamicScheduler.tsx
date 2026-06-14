@@ -13,13 +13,14 @@ import {
   Layers,
   Sparkles,
   Trash2,
+  Pencil,
   Minimize2,
   Maximize2,
   ZoomIn,
   Zap
 } from 'lucide-react'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
-import { formatFieldValue } from '@/lib/formatters'
+import { formatFieldValue, getNestedValue } from '@/lib/formatters'
 import { cn, getActionColorClasses } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -42,6 +43,7 @@ interface DynamicSchedulerProps {
   relationalOptions?: Record<string, any[]>
   customActions?: any[]
   onCustomAction?: (action: any, row?: any) => void
+  kanbanCardFields?: string[]
 }
 
 export default function DynamicScheduler({
@@ -56,7 +58,8 @@ export default function DynamicScheduler({
   dictionary = {},
   relationalOptions = {},
   customActions = [],
-  onCustomAction
+  onCustomAction,
+  kanbanCardFields
 }: DynamicSchedulerProps) {
   const [currentView, setCurrentView] = useState<'month' | 'week' | 'day'>('month')
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
@@ -76,11 +79,7 @@ export default function DynamicScheduler({
   const endCol = fields.find(f => f.id === schedulerConfig.end_date_field)?.db_column_name || schedulerConfig.end_date_field || 'end_date'
   const colorCol = fields.find(f => f.id === schedulerConfig.color_field)?.db_column_name || schedulerConfig.color_field || 'color'
 
-  // Auxiliar para pegar valores aninhados (em caso de joins)
-  const getNestedValue = (obj: any, path: string) => {
-    if (!path) return undefined
-    return path.split('.').reduce((acc, part) => acc && acc[part], obj)
-  }
+
 
   // Parse de datas com segurança
   const parseEventDate = (dateVal: any): Date | null => {
@@ -447,10 +446,43 @@ export default function DynamicScheduler({
                                 col.border
                               )}
                             >
-                              <div className="flex items-center gap-1.5 overflow-hidden flex-1">
-                                <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", col.badge)}></span>
-                                <span className="truncate">{evt.title}</span>
+                              <div className="flex flex-col gap-1.5 overflow-hidden flex-1 w-full">
+                                <div className="flex items-center gap-1.5 w-full">
+                                  <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", col.badge)}></span>
+                                  <span className="truncate">{evt.title}</span>
+                                </div>
+                                {kanbanCardFields && kanbanCardFields.length > 0 && (
+                                  <div className="flex flex-col gap-1 mt-1 pl-3 w-full opacity-80 text-[8px]">
+                                    {kanbanCardFields.map((colName) => {
+                                      const val = getNestedValue(evt.raw, colName)
+                                      if (val === undefined || val === null || val === '') return null
+                                      let fDef = fields.find(f => f.db_column_name === colName)
+                                      if (!fDef && colName.includes('.')) {
+                                        fDef = fields.find(f => colName.endsWith(`.${f.db_column_name}`)) || { db_column_name: colName, display_name: colName.split('.')[1] }
+                                      } else if (!fDef) {
+                                        fDef = { db_column_name: colName, display_name: colName }
+                                      }
+                                      return (
+                                        <div key={colName} className="flex gap-1 items-start truncate w-full">
+                                          <span className="font-semibold uppercase truncate shrink-0 max-w-[40%]">{fDef?.display_name || colName}:</span>
+                                          <span className="font-normal truncate text-neutral-600 dark:text-neutral-300">{formatFieldValue(val, fDef, relationalOptions) || String(val)}</span>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                )}
                               </div>
+                              {onEdit && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    onEdit(evt.raw)
+                                  }}
+                                  className="opacity-0 group-hover/evt:opacity-100 p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded flex-shrink-0 transition-opacity"
+                                >
+                                  <Pencil className="w-2.5 h-2.5 text-blue-500" />
+                                </button>
+                              )}
                               {onDelete && (
                                 <button
                                   onClick={(e) => {
@@ -542,9 +574,31 @@ export default function DynamicScheduler({
                               col.border
                             )}
                           >
-                            <div className="flex items-center gap-1.5 pr-5">
-                              <span className={cn("w-2 h-2 rounded-full", col.badge)}></span>
-                              <span className="text-[10px] font-black tracking-tight line-clamp-2 leading-snug">{evt.title}</span>
+                            <div className="flex flex-col gap-1.5 w-full pr-5">
+                              <div className="flex items-center gap-1.5">
+                                <span className={cn("w-2 h-2 rounded-full", col.badge)}></span>
+                                <span className="text-[10px] font-black tracking-tight line-clamp-2 leading-snug">{evt.title}</span>
+                              </div>
+                              {kanbanCardFields && kanbanCardFields.length > 0 && (
+                                <div className="flex flex-col gap-1 mt-1 pl-3 w-full opacity-80 text-[8.5px]">
+                                  {kanbanCardFields.map((colName) => {
+                                    const val = getNestedValue(evt.raw, colName)
+                                    if (val === undefined || val === null || val === '') return null
+                                    let fDef = fields.find(f => f.db_column_name === colName)
+                                    if (!fDef && colName.includes('.')) {
+                                      fDef = fields.find(f => colName.endsWith(`.${f.db_column_name}`)) || { db_column_name: colName, display_name: colName.split('.')[1] }
+                                    } else if (!fDef) {
+                                      fDef = { db_column_name: colName, display_name: colName }
+                                    }
+                                    return (
+                                      <div key={colName} className="flex gap-1 items-start truncate w-full">
+                                        <span className="font-semibold uppercase truncate shrink-0 max-w-[40%]">{fDef?.display_name || colName}:</span>
+                                        <span className="font-normal truncate text-neutral-600 dark:text-neutral-300">{formatFieldValue(val, fDef, relationalOptions) || String(val)}</span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
                             </div>
                             
                             <div className="flex items-center gap-1 text-[8px] opacity-75 font-bold uppercase">
@@ -568,6 +622,17 @@ export default function DynamicScheduler({
                                   </button>
                                 )
                               })}
+                              {onEdit && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    onEdit(evt.raw)
+                                  }}
+                                  className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors text-blue-500"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                               {onDelete && (
                                 <button
                                   onClick={(e) => {
@@ -644,9 +709,31 @@ export default function DynamicScheduler({
                           <span>{evt.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <span className={cn("w-2 h-2 rounded-full", col.badge)}></span>
-                          <h4 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 leading-tight">{evt.title}</h4>
+                        <div className="flex flex-col gap-1 w-full max-w-[60%]">
+                          <div className="flex items-center gap-2">
+                            <span className={cn("w-2 h-2 rounded-full", col.badge)}></span>
+                            <h4 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 leading-tight">{evt.title}</h4>
+                          </div>
+                          {kanbanCardFields && kanbanCardFields.length > 0 && (
+                            <div className="flex flex-col gap-1 mt-1 pl-4 w-full opacity-80 text-[9px]">
+                              {kanbanCardFields.map((colName) => {
+                                const val = getNestedValue(evt.raw, colName)
+                                if (val === undefined || val === null || val === '') return null
+                                let fDef = fields.find(f => f.db_column_name === colName)
+                                if (!fDef && colName.includes('.')) {
+                                  fDef = fields.find(f => colName.endsWith(`.${f.db_column_name}`)) || { db_column_name: colName, display_name: colName.split('.')[1] }
+                                } else if (!fDef) {
+                                  fDef = { db_column_name: colName, display_name: colName }
+                                }
+                                return (
+                                  <div key={colName} className="flex gap-1 items-start truncate w-full">
+                                    <span className="font-semibold uppercase truncate shrink-0 max-w-[30%]">{fDef?.display_name || colName}:</span>
+                                    <span className="font-normal truncate text-neutral-600 dark:text-neutral-300">{formatFieldValue(val, fDef, relationalOptions) || String(val)}</span>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -664,6 +751,17 @@ export default function DynamicScheduler({
                             </button>
                           )
                         })}
+                        {onEdit && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onEdit(evt.raw)
+                            }}
+                            className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-blue-500"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         {onDelete && (
                           <button 
                             onClick={(e) => {

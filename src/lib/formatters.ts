@@ -89,16 +89,20 @@ export const formatFieldValue = (
     const options = relationalOptions[field.id] || []
     if (options.length > 0) {
       if (comp.options_type === 'enumeration') {
-        const option = options.find((opt: any) => String(opt.id) === String(rawVal))
+        const option = options.find((opt: any) => String(opt.value || opt.id) === String(rawVal))
         if (option) {
-          displayVal = option.name
+          displayVal = option.label || option.name
         }
       } else {
-        const option = options.find((opt: any) => String(opt.id || opt.ID || opt._key) === String(rawVal))
+        const option = options.find((opt: any) => String(opt.value || opt.id || opt.ID || opt._key) === String(rawVal))
         if (option) {
-          // Busca o campo principal de exibio
-          const displayField = Object.keys(option).find(k => k.toLowerCase().includes('nome') || k.toLowerCase().includes('titulo') || k.toLowerCase().includes('name') || k.toLowerCase().includes('title'))
-          displayVal = displayField ? option[displayField] : (option.nome || option.titulo || option.name || option.title || String(rawVal))
+          if (option.label) {
+            displayVal = option.label
+          } else {
+            // Busca o campo principal de exibio
+            const displayField = Object.keys(option).find(k => k.toLowerCase().includes('nome') || k.toLowerCase().includes('titulo') || k.toLowerCase().includes('name') || k.toLowerCase().includes('title'))
+            displayVal = displayField ? option[displayField] : (option.nome || option.titulo || option.name || option.title || String(rawVal))
+          }
         }
       }
     }

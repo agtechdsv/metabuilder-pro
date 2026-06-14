@@ -985,6 +985,38 @@ export default function ViewContainer({
               })
             }
 
+            // 3.5 Selecionar campos adicionais específicos de views
+            if (kanbanGroupField) {
+              const f = displayFields?.find(x => x.id === kanbanGroupField) || formFields?.find(x => x.id === kanbanGroupField)
+              addSelectExpr(f ? (f.sql_expression || f.db_column_name) : kanbanGroupField)
+            }
+            if (kanbanCardFields && kanbanCardFields.length > 0) {
+              kanbanCardFields.forEach(col => {
+                const f = displayFields?.find(x => x.id === col) || formFields?.find(x => x.id === col)
+                addSelectExpr(f ? (f.sql_expression || f.db_column_name) : col)
+              })
+            }
+            if (galleryConfig?.card_fields && galleryConfig.card_fields.length > 0) {
+              galleryConfig.card_fields.forEach((col: string) => {
+                const f = displayFields?.find(x => x.id === col) || formFields?.find(x => x.id === col)
+                addSelectExpr(f ? (f.sql_expression || f.db_column_name) : col)
+              })
+            }
+            if (schedulerConfig) {
+              const sFields = [schedulerConfig.start_date_field, schedulerConfig.end_date_field, schedulerConfig.title_field, schedulerConfig.color_field].filter(Boolean)
+              sFields.forEach(col => {
+                const f = displayFields?.find(x => x.id === col) || formFields?.find(x => x.id === col)
+                addSelectExpr(f ? (f.sql_expression || f.db_column_name) : col)
+              })
+            }
+            if (timelineConfig) {
+              const tFields = [timelineConfig.date_field, timelineConfig.title_field].filter(Boolean)
+              tFields.forEach(col => {
+                const f = displayFields?.find(x => x.id === col) || formFields?.find(x => x.id === col)
+                addSelectExpr(f ? (f.sql_expression || f.db_column_name) : col)
+              })
+            }
+
             // 4. (Removido: Não selecionamos filterFields pois eles só devem ser usados no WHERE, evitando multiplicar linhas com joins 1:N no select externo)
             const columns = selectExprs.length > 0 ? selectExprs.join(', ') : '*'
           
@@ -1826,6 +1858,7 @@ export default function ViewContainer({
             data={data}
           fields={displayFields}
           schedulerConfig={schedulerConfig || {}}
+          kanbanCardFields={kanbanCardFields}
           relationalOptions={relationalOptions}
           onMove={handleMove}
           onAdd={onAdd}
