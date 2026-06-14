@@ -78,6 +78,31 @@ export default function CustomUseCaseRenderer({
   projectRelations = []
 }: CustomUseCaseRendererProps) {
   const [activeTabId, setActiveTabId] = useState<string>(customSlots[0]?.id || '')
+  const [injectedUseCases, setInjectedUseCases] = useState<Record<string, any>>({})
+  
+  React.useEffect(() => {
+    async function fetchUseCases() {
+      if (!customSlots || !projectId) return;
+      const slugsToFetch = customSlots.map((s:any) => s.use_case_slug).filter(Boolean);
+      if (slugsToFetch.length === 0) return;
+      
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('usecases')
+        .select('*')
+        .eq('project_id', projectId)
+        .in('slug', slugsToFetch);
+        
+      if (data && !error) {
+        const mapping: Record<string, any> = {};
+        data.forEach((uc: any) => {
+          mapping[uc.slug] = uc;
+        });
+        setInjectedUseCases(mapping);
+      }
+    }
+    fetchUseCases();
+  }, [customSlots, projectId]);
   const [openSlotConfig, setOpenSlotConfig] = useState<{ id: string, type: 'modal' | 'drawer', recordId?: any } | null>(autoOpenSlotConfig || null)
 
   // Inline edit/add modal for ViewContainer-based slots (Kanban, Timeline, Gallery, Scheduler)
@@ -129,536 +154,113 @@ export default function CustomUseCaseRenderer({
   }
 
   const renderSlotContent = (slot: any) => {
-    const slotModelName = project?.models?.find((m: any) => m.id === slot.model_id)?.db_table_name
-
-    // Se for o slot mestre, ou se for um formulário, usamos o RecordForm
-    if (slot.type === 'form') {
-      // Filtra os campos que pertencem a este modelo
-      const slotFields = fields.filter(f => String(f.model_id) === String(slot.model_id) || f.model_name?.toLowerCase() === slotModelName?.toLowerCase())
-      
-      // Se for slot detalhe, o formulário deve ser de criação/edição do detalhe
-      // Como simplificação da Fase 1, o formulário no Personalizado renderiza os campos.
-      // A submissão do RecordForm principal já salva o `initialData` do mestre.
-      
+    const uc = injectedUseCases[slot.use_case_slug];
+    if (!uc) {
       return (
-        <div key={slot.id} className="p-6">
-          <RecordForm
-            mode={isMasterSlot ? mode : 'view'} // Por enquanto, formulários de detalhe ficam como view, ou precisariam de gestão de estado próprio
-            fields={slotFields.length > 0 ? slotFields : fields} // Fallback se não filtrar bem
-            initialData={initialData}
-            onSave={onSave}
-            onCancel={onClose}
-            isLoading={isLoading}
-            logicType="cadastro"
-            masterModelId={slot.model_id}
-            masterModelName={slotModelName}
-            projectId={projectId}
-            secretToken={secretToken}
-            tunnelChannel={tunnelChannel}
-            isTunnelReady={isTunnelReady}
-            project={project}
-            joins={joins}
-            dictionary={dictionary}
-            customActions={customActions}
-            onCustomAction={onCustomAction}
-            detailsItemTitles={detailsItemTitles}
-            hideHeader={true}
-          />
+        <div className="p-8 text-center text-neutral-500 flex flex-col items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mb-4"></div>
+          Carregando Caso de Uso Injetado...
         </div>
-      )
+      );
     }
-    if (slot.type === 'analytics') {
+
+    const useMasterId = slot.use_master_id !== false;
+    const hasStaticFilters = slot.static_filters && slot.static_filters.some((f: any) => f.field && f.value);
+    
+    // Configurações do Caso de Uso
+    const ucConfig = uc.config || {};
+    const ucLayout = uc.layout_config || {};
+    const ucDisplayFields = uc.display_fields || [];
+    const ucFormFields = uc.form_fields || [];
+    const ucFilterFields = uc.filter_fields || [];
+
+    // Se a aba exige vínculo com o Mestre e não temos o ID do mestre (ainda não foi salvo)
+    if (useMasterId && (mode === 'create' || !parentId)) {
       return (
-        <div key={slot.id} className="h-full bg-neutral-50 dark:bg-neutral-950">
-          <AnalyticsDashboard 
-            config={slot.analytics_config || { widgets: [], allow_runtime_edit: false }}
-            project={project}
-            joins={joins || []}
-            filters={{}}
-            onEditWidget={() => {}}
-            onAddWidget={() => {}}
-            onDeleteWidget={() => {}}
-            onSaveLayout={async (newConfig: any) => {}}
-            tunnelChannel={tunnelChannel}
-            isTunnelReady={isTunnelReady}
-            projectRelations={projectRelations}
-          />
+        <div key={slot.id} className="p-8 text-center text-neutral-500 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 m-6">
+          Salve o registro principal primeiro para visualizar os dados relacionados.
         </div>
       )
     }
 
-    if (['grid', 'kanban', 'timeline', 'mapa_mental', 'galeria', 'scheduler', 'gantt', 'map', 'blueprint'].includes(slot.type)) {
-      const useMasterId = slot.use_master_id !== false;
-      const hasStaticFilters = slot.static_filters && slot.static_filters.some((f: any) => f.field && f.value);
-      const slotModel = project?.models?.find((m: any) => m.id === slot.model_id || m.db_table_name === slotModelName);
+    let externalFilters: Record<string, any> = {};
+    let advancedStaticFilters: any[] = [];
+
+    // Lógica de Vínculo com o Mestre
+    if (useMasterId && parentId) {
+      // Tenta encontrar a relação direta entre uc.model_id e masterModelId
+      const targetModelName = project?.models?.find((m: any) => m.id === uc.model_id)?.db_table_name;
+      const mModelName = masterModelName || project?.models?.find((m: any) => m.id === masterModelId)?.db_table_name;
       
-      // Busca a view original (Kanban/Pesquisa) para herdar configs de exibição
-      const modelViews = project?.views?.filter((v: any) => String(v.model_id) === String(slot.model_id)) || [];
-      const referenceView = modelViews.find((v: any) => v.logic_type === 'kanban') || modelViews.find((v: any) => v.logic_type === 'pesquisa');
-
-      // ⚠️ CRITICAL: slotDisplayFields MUST include all slotModel.fields so that
-      // DynamicTimeline/DynamicKanban/DynamicGallery/DynamicScheduler can resolve
-      // field IDs (stored in timeline_config.title_field etc.) to db_column_names.
-      // We merge: slotModel.fields (all fields, for ID resolution) +
-      //           referenceView.display_fields (for display config/zone overrides)
-      // Deduplicated by field ID, with referenceView config taking precedence.
-      const allModelFields = slotModel?.fields || [];
-      const refViewFields = referenceView?.display_fields || [];
-      const refViewFieldMap = new Map(refViewFields.map((f: any) => [String(f.id), f]));
-      // Build merged list: start with all model fields, overlay referenceView config
-      const slotDisplayFields = allModelFields.map((mf: any) => {
-        return refViewFieldMap.get(String(mf.id)) || mf;
-      });
-      // Append any referenceView fields not in the model (e.g. computed/virtual)
-      refViewFields.forEach((rf: any) => {
-        if (!allModelFields.some((mf: any) => String(mf.id) === String(rf.id))) {
-          slotDisplayFields.push(rf);
-        }
-      });
-
-      // ⚠️ CRITICAL STEP 2: Extract ALL fields configured in specific views (Timeline, Kanban, etc)
-      // Some of these fields might belong to RELATED tables (e.g. 'clientes.nome_empresa').
-      // They are not in slotModel.fields, and if the user didn't explicitly add them to referenceView,
-      // they would be missing from the SELECT query, causing them not to display.
-      const usedFields = new Set<string>();
-
-      if (slot.kanban_card_fields) {
-        slot.kanban_card_fields.forEach((f: string) => usedFields.add(f));
-      }
-      if (slot.kanban_group_display_field) usedFields.add(slot.kanban_group_display_field);
-      if (slot.timeline_config) {
-        const tc = slot.timeline_config;
-        if (tc.title_field) usedFields.add(tc.title_field);
-        if (tc.date_field) usedFields.add(tc.date_field);
-        if (tc.desc_field) usedFields.add(tc.desc_field);
-        if (tc.icon_field) usedFields.add(tc.icon_field);
-      }
-      if (slot.scheduler_config) {
-        const sc = slot.scheduler_config;
-        if (sc.title_field) usedFields.add(sc.title_field);
-        if (sc.start_date_field) usedFields.add(sc.start_date_field);
-        if (sc.end_date_field) usedFields.add(sc.end_date_field);
-        if (sc.color_field) usedFields.add(sc.color_field);
-      }
-      if (slot.gallery_config) {
-        const gc = slot.gallery_config;
-        if (gc.title_field) usedFields.add(gc.title_field);
-        if (gc.image_field) usedFields.add(gc.image_field);
-        if (gc.description_field) usedFields.add(gc.description_field);
-        if (gc.category_field) usedFields.add(gc.category_field);
-        if (gc.card_fields && Array.isArray(gc.card_fields)) {
-          gc.card_fields.forEach((f: string) => usedFields.add(f));
+      let foreignKey = '';
+      if (joins) {
+        const directJoin = joins.find((j: any) => 
+          (j.from === targetModelName && j.to === mModelName) || 
+          (j.from === mModelName && j.to === targetModelName)
+        );
+        if (directJoin) {
+          foreignKey = directJoin.from === targetModelName ? directJoin.localKey : directJoin.foreignKey;
         }
       }
 
-      // Resolve those fields from any model in the project and add to slotDisplayFields if missing
-      usedFields.forEach(fieldIdentifier => {
-        // Skip if already in slotDisplayFields by ID or db_column_name
-        if (slotDisplayFields.some((f: any) => String(f.id) === fieldIdentifier || f.db_column_name === fieldIdentifier)) return;
-
-        let searchTable = null;
-        let searchCol = fieldIdentifier;
-        if (fieldIdentifier.includes('.')) {
-          const parts = fieldIdentifier.split('.');
-          searchTable = parts[0];
-          searchCol = parts[1];
-        }
-
-        for (const m of project?.models || []) {
-          if (searchTable && m.db_table_name !== searchTable) continue;
-          
-          const found = m.fields?.find((f: any) => String(f.id) === fieldIdentifier || f.db_column_name === searchCol);
-          if (found) {
-             let colName = found.db_column_name;
-             if (m.id !== slotModel?.id) {
-               colName = `${m.db_table_name}.${found.db_column_name}`;
-             }
-             slotDisplayFields.push({ ...found, db_column_name: colName });
-             break;
-          }
-        }
-      });
-
-      let slotFilterFields: any[] = [];
-      if (slot.dynamic_filters && slot.dynamic_filters.length > 0) {
-        slotFilterFields = slot.dynamic_filters.map((filterItem: any) => {
-          const isObject = typeof filterItem === 'object' && filterItem !== null;
-          let colName = isObject ? filterItem.field : filterItem;
-          let label = isObject ? filterItem.label : '';
-
-          let f = slotModel?.fields?.find((f:any) => f.db_column_name === colName);
-          if (!f) {
-            const parts = colName.split('.');
-            if (parts.length === 2) {
-              const tableName = parts[0];
-              const fieldName = parts[1];
-              const relModel = project?.models?.find((m: any) => m.db_table_name === tableName);
-              if (relModel) {
-                const foundField = relModel.fields?.find((f: any) => f.db_column_name === fieldName);
-                if (foundField) {
-                  f = JSON.parse(JSON.stringify(foundField)); // Deep clone
-                  const compType = f.config?.filter_config?.component?.type || f.config?.component?.type;
-                  const isAlreadyRelational = ['select', 'radio', 'checkbox', 'Combo (Select)'].includes(compType);
-                  
-                  if (!isAlreadyRelational) {
-                    // Transforma automaticamente campos de texto de outras tabelas em combo boxes
-                    if (!f.config) f.config = {};
-                    if (!f.config.filter_config) f.config.filter_config = {};
-                    f.config.filter_config.component = {
-                      type: 'select',
-                      options_type: 'relational',
-                      rel_table: tableName,
-                      rel_value: fieldName,
-                      rel_label: fieldName
-                    };
-                  }
-                }
-              }
-            } else {
-              for (const m of project?.models || []) {
-                f = m.fields?.find((f:any) => f.db_column_name === colName);
-                if (f) break;
-              }
-            }
-          }
-          if (f) {
-            return { ...f, db_column_name: colName, display_name: label || f.display_name || f.db_column_name };
-          }
-          return { db_column_name: colName, display_name: label || colName };
-        }).filter(Boolean);
-      }
-      
-      let slotFormFields = referenceView?.form_fields || [];
-      if (!slotFormFields || slotFormFields.length === 0) {
-        slotFormFields = allModelFields.filter((f: any) => !f.db_column_name.includes('id') && f.db_column_name !== 'criado_em').map((f: any) => ({
-          ...f,
-          visible: true,
-          editable: true,
-          required: false
-        }));
-      }
-
-      const slotButtonsConfig = [...(referenceView?.buttons_config || [])];
-      if (slot.can_add !== undefined) {
-        const btn = slotButtonsConfig.find(b => b.id === 'add');
-        if (btn) btn.visible = slot.can_add;
-        else slotButtonsConfig.push({ id: 'add', visible: slot.can_add });
-      }
-      if (slot.can_edit !== undefined) {
-        const btn = slotButtonsConfig.find(b => b.id === 'edit');
-        if (btn) btn.visible = slot.can_edit;
-        else slotButtonsConfig.push({ id: 'edit', visible: slot.can_edit });
-      }
-      if (slot.can_delete !== undefined) {
-        const btn = slotButtonsConfig.find(b => b.id === 'delete');
-        if (btn) btn.visible = slot.can_delete;
-        else slotButtonsConfig.push({ id: 'delete', visible: slot.can_delete });
-      }
-
-      if (useMasterId && (mode === 'create' || !parentId)) {
-        return (
-          <div key={slot.id} className="p-8 text-center text-neutral-500 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 m-6">
-            Salve o registro principal primeiro para visualizar os dados relacionados.
-          </div>
-        )
-      }
-
-      // Descobre a chave estrangeira (join) entre o mestre e este modelo de detalhe
-      const join = (joins || []).find(j => {
-        const fromT = (j.from || j.table)?.toLowerCase()
-        const toT = (j.to || j.toTable)?.toLowerCase()
-        return (fromT === masterModelName?.toLowerCase() && toT === slotModelName?.toLowerCase()) ||
-               (toT === masterModelName?.toLowerCase() && fromT === slotModelName?.toLowerCase())
-      })
-
-      let foreignKey: string | undefined = undefined;
-      if (join) {
-        const fromT = (join.from || join.table)?.toLowerCase()
-        if (fromT === slotModelName?.toLowerCase()) {
-          foreignKey = join.from_column || join.localKey || join.local_field
-        } else {
-          foreignKey = join.to_column || join.foreignKey || join.foreign_field
-        }
-      }
-
-      // Tenta inferir a chave estrangeira automaticamente se não encontrar no join explícito
-      if (!foreignKey && useMasterId && project?.models) {
-        if (slotModelName?.toLowerCase() === masterModelName?.toLowerCase()) {
-          // O Mestre e o Detalhe são a mesma tabela! O vínculo é o próprio ID do registro.
-          foreignKey = 'id';
-        } else {
-          const slotModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === slotModelName?.toLowerCase());
-          const masterModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === masterModelName?.toLowerCase());
-          if (slotModelDef && masterModelDef) {
-            const masterTableBase = masterModelDef.db_table_name?.toLowerCase() || '';
-            const singularMasterTable = masterTableBase.endsWith('s') ? masterTableBase.slice(0, -1) : masterTableBase;
-            
-            const fkField = slotModelDef.fields?.find((f: any) => 
-              f.foreign_key_table?.toLowerCase() === masterTableBase ||
-              f.db_column_name?.toLowerCase() === `${masterTableBase}_id` ||
-              f.db_column_name?.toLowerCase() === `id_${masterTableBase}` ||
-              f.db_column_name?.toLowerCase() === `${singularMasterTable}_id` ||
-              f.db_column_name?.toLowerCase() === `id_${singularMasterTable}` ||
-              (masterModelDef.name && f.db_column_name?.toLowerCase() === `${masterModelDef.name.toLowerCase()}_id`)
-            );
-            if (fkField) {
-              foreignKey = fkField.db_column_name;
-            }
-          }
-        }
-      }
-
-      let generatedJoins = joins ? [...joins] : [];
-      let isJoinedIndirectly = false;
-      if (useMasterId && !foreignKey) {
-        if (generatedJoins.length > 0) {
-          const hasMaster = generatedJoins.some((j: any) => (j.from || j.table)?.toLowerCase() === masterModelName?.toLowerCase() || (j.to || j.toTable)?.toLowerCase() === masterModelName?.toLowerCase());
-          if (hasMaster) {
-            isJoinedIndirectly = true;
-          }
-        }
-        
-      if (!isJoinedIndirectly && projectRelations && projectRelations.length > 0 && masterModelName && slotModelName) {
-          const resolvedRelations = resolveRelations(projectRelations, project?.models || [])
-          const steps = resolveAllJoins(resolvedRelations, slotModelName, [masterModelName])
-          if (steps.length > 0) {
-            isJoinedIndirectly = true
-            const bfsJoins = steps.map(step => ({
-              type: 'LEFT',
-              from: step.sourceTable,
-              localField: step.sourceColumn,
-              to: step.targetTable,
-              foreignField: step.targetColumn
-            }))
-            generatedJoins = [...generatedJoins, ...bfsJoins]
-          }
-        }
-      }
-
-      if (useMasterId && !foreignKey && !isJoinedIndirectly) {
-        return (
-          <div key={slot.id} className="p-8 text-center text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-500 rounded-xl border border-amber-200 dark:border-amber-800 m-6 flex flex-col items-center gap-2">
-            <span className="font-bold text-lg">⚠️ Atenção: Ligação com o Mestre Falhou</span>
-            <span>A aba está configurada para &quot;Vincular ao Mestre&quot;, mas não foi possível encontrar a chave estrangeira na tabela <strong>{slotModelName}</strong> que aponte para <strong>{masterModelName}</strong> e não existem joins configurados.</span>
-            <span className="text-sm opacity-80 mt-2">Certifique-se de que a tabela possui uma coluna de ligação (ex: {masterModelName?.endsWith('s') ? masterModelName.slice(0, -1) : masterModelName}_id) ou configure o relacionamento manualmente no Studio.</span>
-          </div>
-        )
-      }
-
-      // Monta os filtros externos básicos (para relacionamentos simples)
-      let externalFilters: Record<string, any> = {};
-      if (useMasterId && foreignKey && parentId) {
+      if (foreignKey) {
         externalFilters[foreignKey] = parentId;
-      }
-      
-      let advancedStaticFilters: any[] = [];
-      
-      // Se tiver parentId mas não tiver foreignKey direta (porém está indiretamente joinada)
-      if (useMasterId && !foreignKey && isJoinedIndirectly && parentId) {
+      } else {
+        // Fallback genérico de filtro estático
         advancedStaticFilters.push({
-          field: `${masterModelName}.id`,
+          field: `${mModelName}.id`,
           operator: '=',
           value: parentId,
           logic: 'AND'
         });
       }
-      if (hasStaticFilters) {
-        slot.static_filters.forEach((filter: any) => {
-          if (filter.field && filter.value) {
-            advancedStaticFilters.push({
-              field: filter.field,
-              operator: filter.operator || '=',
-              value: filter.value,
-              value2: filter.value2,
-              logic: filter.logic || 'AND'
-            });
-          }
-        });
-      }
-
-      // Fix 3: Auto-add joins for dynamic_filters fields that reference related tables
-      if (slotFilterFields.length > 0 && projectRelations && projectRelations.length > 0 && slotModelName) {
-        const resolvedRelationsForFilters = resolveRelations(projectRelations, project?.models || [])
-        for (const filterField of slotFilterFields) {
-          const colName = filterField.db_column_name || ''
-          // Check if the field references a different table (format: "table.field" or field found in related model)
-          const dotParts = colName.split('.')
-          const relatedTableName = dotParts.length === 2 ? dotParts[0] : null
-          if (relatedTableName && relatedTableName !== slotModelName) {
-            // Only add join if not already present
-            const alreadyJoined = generatedJoins.some((j: any) =>
-              (j.from || j.table) === relatedTableName || (j.to || j.toTable) === relatedTableName
-            )
-            if (!alreadyJoined) {
-              const steps = resolveAllJoins(resolvedRelationsForFilters, slotModelName, [relatedTableName])
-              if (steps.length > 0) {
-                const filterJoins = steps.map(step => ({
-                  type: 'LEFT',
-                  from: step.sourceTable,
-                  localField: step.sourceColumn,
-                  to: step.targetTable,
-                  foreignField: step.targetColumn
-                }))
-                generatedJoins = [...generatedJoins, ...filterJoins]
-              }
-            }
-          }
-        }
-      }
-
-      // Se for GRID, usar Master Id, e não tiver filtros customizados, usamos o RecordForm
-      // para preservar a interface de "Cortina" nativa do Mestre Detalhe.
-      if (slot.type === 'grid' && useMasterId && !hasStaticFilters) {
-        return (
-          <div key={slot.id} className="p-6 h-[calc(100vh-150px)] overflow-y-auto custom-scrollbar">
-            <RecordForm
-              mode={mode}
-              fields={fields}
-              initialData={initialData}
-              onSave={onSave}
-              onCancel={onClose}
-              isLoading={isLoading}
-              hideHeader={true}
-              logicType="master_detail"
-              masterModelId={masterModelId}
-              masterModelName={masterModelName}
-              renderOnlyDetail={slotModelName}
-              detailsInterfaceTypes={detailsInterfaceTypes}
-              detailsInlineTypes={detailsInlineTypes}
-              detailsItemTitles={detailsItemTitles}
-              onEditDetail={onEditDetail}
-              onDeleteDetail={onDeleteDetail}
-              onAddDetail={onAddDetail}
-              joins={generatedJoins}
-              dictionary={dictionary}
-              customActions={customActions}
-              onCustomAction={onCustomAction}
-              projectId={projectId}
-              secretToken={secretToken}
-              tunnelChannel={tunnelChannel}
-              isTunnelReady={isTunnelReady}
-              project={project}
-              refreshTrigger={refreshTrigger}
-            />
-          </div>
-        )
-      }
-
-      // Handlers locais que abrem modal inline (sem depender do ViewPageContent pai)
-      const canAdd = slot.can_add !== false
-      const canEdit = slot.can_edit !== false
-      const canDelete = slot.can_delete !== false
-
-      const handleLocalEdit = (row: any) => {
-        setInlineModalState({
-          isOpen: true,
-          mode: 'edit',
-          slotId: slot.id,
-          slotModelName: slotModelName!,
-          formFields: slotFormFields,
-          rowData: row,
-          isSaving: false
-        })
-      }
-
-      const handleLocalAdd = () => {
-        // pre-fill FK to master if applicable
-        const preData: any = {}
-        if (foreignKey && parentId && foreignKey !== 'id') {
-          preData[foreignKey] = parentId
-        }
-        setInlineModalState({
-          isOpen: true,
-          mode: 'create',
-          slotId: slot.id,
-          slotModelName: slotModelName!,
-          formFields: slotFormFields,
-          rowData: preData,
-          isSaving: false
-        })
-      }
-
-      const handleLocalDelete = (row: any) => {
-        onDeleteDetail?.(row)
-      }
-
-      // Para KANBAN ou quando as regras exigirem, usamos o poderoso ViewContainer
-      return (
-        <div key={slot.id} className="flex flex-col h-[calc(100vh-150px)]">
-          {/* Botão Novo dentro da aba */}
-          {canAdd && (
-            <div className="px-6 pt-4 flex justify-end">
-              <button
-                onClick={handleLocalAdd}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs tracking-wider transition-all shadow-lg shadow-indigo-500/20"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Novo Registro
-              </button>
-            </div>
-          )}
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-          <ViewContainer
-            externalRefreshTrigger={refreshTrigger || 0 + inlineRefreshKey}
-            projectId={projectId!}
-            modelName={slotModelName!}
-            displayFields={slotDisplayFields}
-            filterFields={slotFilterFields}
-            formFields={slotFormFields}
-            displayType="list"
-            logicType={['kanban', 'timeline', 'mapa_mental', 'galeria', 'scheduler'].includes(slot.type) ? slot.type : 'pesquisa'}
-            kanbanGroupField={slot.kanban_group_field}
-            kanbanGroupDisplayField={slot.kanban_group_display_field}
-            kanbanCardFields={(() => {
-              const rawCardFields = slot.kanban_card_fields || [];
-              if (!rawCardFields.length) return rawCardFields;
-              // Translate field IDs to db_column_names if they look like UUIDs
-              return rawCardFields.map((idOrName: string) => {
-                // If it already looks like a db_column_name (no hyphens/long UUID), keep as-is
-                const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(idOrName);
-                if (!isUuid) return idOrName;
-                const found = slotModel?.fields?.find((f: any) => String(f.id) === idOrName);
-                return found?.db_column_name || idOrName;
-              });
-            })()}
-            timelineConfig={slot.timeline_config ? {
-                ...slot.timeline_config,
-                // Merge style_defaults set by developer in Studio
-                ...(slot.timeline_config.style_defaults ? {
-                  layout_direction: slot.timeline_config.style_defaults.direction || slot.timeline_config.layout_direction,
-                  animated: slot.timeline_config.style_defaults.animation !== 'off',
-                  layout_mode: slot.timeline_config.style_defaults.mode === 'zigzag' ? 'alternating'
-                    : slot.timeline_config.style_defaults.mode === 'alternado' ? 'same_side'
-                    : slot.timeline_config.style_defaults.mode || slot.timeline_config.layout_mode,
-                  layout_style: slot.timeline_config.style_defaults.appearance === 'minimal' ? 'infographic'
-                    : slot.timeline_config.style_defaults.appearance === 'compact' ? 'infographic'
-                    : slot.timeline_config.style_defaults.appearance || slot.timeline_config.layout_style,
-                } : {})
-              } : undefined}
-            schedulerConfig={slot.scheduler_config}
-            mindmapCentralField={slot.mindmap_central_field}
-            mindmapLevels={slot.mindmap_levels}
-            externalFilters={externalFilters}
-            advancedStaticFilters={advancedStaticFilters}
-            buttonsConfig={slotButtonsConfig}
-            locale="pt-BR"
-            tunnelChannel={tunnelChannel}
-            isTunnelReady={isTunnelReady}
-            dictionary={dictionary}
-            project={project}
-            onEdit={canEdit ? handleLocalEdit : undefined}
-            onDelete={canDelete ? handleLocalDelete : undefined}
-            onAdd={canAdd ? handleLocalAdd : undefined}
-          />
-          </div>
-        </div>
-      )
     }
 
-    return null
+    if (hasStaticFilters) {
+      slot.static_filters.forEach((filter: any) => {
+        advancedStaticFilters.push({
+          field: filter.field,
+          operator: filter.operator || '=',
+          value: filter.value,
+          logic: 'AND'
+        });
+      });
+    }
+
+    return (
+      <div key={slot.id} className="h-full relative overflow-y-auto w-full">
+        <ViewContainer
+          externalRefreshTrigger={refreshTrigger}
+          projectId={projectId!}
+          modelName={project?.models?.find((m: any) => m.id === uc.model_id)?.db_table_name || ''}
+          displayFields={ucDisplayFields}
+          filterFields={ucFilterFields}
+          formFields={ucFormFields}
+          displayType="list"
+          logicType={uc.logic_type || 'grid'}
+          
+          kanbanGroupField={ucLayout.kanbanGroupField || ucConfig.kanbanGroupField}
+          kanbanGroupDisplayField={ucLayout.kanbanGroupDisplayField || ucConfig.kanbanGroupDisplayField}
+          kanbanCardFields={ucLayout.kanbanCardFields || ucConfig.kanbanCardFields}
+          timelineConfig={ucLayout.timelineConfig || ucConfig.timelineConfig}
+          schedulerConfig={ucLayout.schedulerConfig || ucConfig.schedulerConfig}
+          mapConfig={ucLayout.mapConfig || ucConfig.mapConfig}
+          ganttConfig={ucLayout.ganttConfig || ucConfig.ganttConfig}
+          blueprintConfig={ucLayout.blueprintConfig || ucConfig.blueprintConfig}
+          buttonsConfig={ucLayout.buttonsConfig || ucConfig.buttonsConfig || []}
+          
+          externalFilters={externalFilters}
+          advancedStaticFilters={advancedStaticFilters.length > 0 ? advancedStaticFilters : undefined}
+          
+          locale="pt-BR"
+          project={project}
+          joins={ucLayout.joins || joins}
+          dictionary={dictionary}
+        />
+      </div>
+    );
   }
 
-  // Salvar registro do slot inline (edit ou create)
   const handleInlineSave = async (formData: any) => {
     if (!inlineModalState) return
     setInlineModalState(prev => prev ? { ...prev, isSaving: true } : null)
