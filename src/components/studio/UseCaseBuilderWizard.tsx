@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 // Refined UseCaseBuilderWizard - Metadata Driven Actions Order
 
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -225,7 +225,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       setCurrentStatus('delivered')
       flushTextChanges()
       logAction('LIFECYCLE', 'Publicou o Caso de Uso')
-      toast('Caso de Uso publicado com sucesso! Os usuÃƒÂ¡rios jÃƒÂ¡ podem acessar.', 'success')
+      toast('Caso de Uso publicado com sucesso! Os usuários já podem acessar.', 'success')
       onSaveSuccess()
     } catch (err: any) {
       toast('Erro ao publicar: ' + err.message, 'error')
@@ -272,7 +272,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     textChangesRef.current = {}
   }, [logAction])
 
-  // ConfiguraÃƒÂ§ÃƒÂ£o da View sendo criada
+  // Configuração da View sendo criada
   const [config, setConfig] = useState({
     name: '',
     slug: '',
@@ -359,11 +359,11 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     ]
   })
 
-  // Telemetria AutomÃƒÂ¡tica (Hook de MudanÃƒÂ§a de Estado)
+  // Telemetria Automática (Hook de Mudança de Estado)
   useEffect(() => {
     if (currentStep && currentStep > 1) {
       flushTextChanges()
-      logAction('NAVIGATION', `AvanÃƒÂ§ou para Etapa ${currentStep}`)
+      logAction('NAVIGATION', `Avançou para Etapa ${currentStep}`)
     }
   }, [currentStep, logAction, flushTextChanges])
 
@@ -378,7 +378,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     return false
   }
 
-  // ForÃƒÂ§ar desmarcaÃƒÂ§ÃƒÂ£o de botÃƒÂµes desabilitados pelas permissÃƒÂµes do modelo
+  // Forçar desmarcação de botões desabilitados pelas permissões do modelo
   useEffect(() => {
     let changed = false
     const newButtonsConfig = config.buttons_config.map((b: any) => {
@@ -398,14 +398,14 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   }, [config.selected_models, models, config.buttons_config])
 
 
-  // Helpers de modo ediÃƒÂ§ÃƒÂ£o
+  // Helpers de modo edição
   const isEditMode = !!initialData
   const viewId = initialData?.id
 
-  // Popula os dados iniciais se estiver em modo ediÃƒÂ§ÃƒÂ£o
+  // Popula os dados iniciais se estiver em modo edição
   const [isInitialized, setIsInitialized] = useState(false)
 
-  // Se for criaÃƒÂ§ÃƒÂ£o de novo caso de uso, inicializa imediatamente para habilitar logs de telemetria
+  // Se for criação de novo caso de uso, inicializa imediatamente para habilitar logs de telemetria
   useEffect(() => {
     if (!initialData) {
       setIsInitialized(true)
@@ -450,7 +450,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   // Ref para guardar o estado anterior do config para o diff
   const prevConfigRef = useRef<typeof config | null>(null)
 
-  // LÃƒÂ³gica de diff sÃƒÂ­ncrona para "Dar nome aos bois" sem perder a ordem sequencial das aÃƒÂ§ÃƒÂµes
+  // Lógica de diff síncrona para "Dar nome aos bois" sem perder a ordem sequencial das ações
   useEffect(() => {
     if (!isInitialized) return
 
@@ -458,16 +458,16 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     const curr = config
 
     if (!prev) {
-      // Primeira inicializaÃƒÂ§ÃƒÂ£o: apenas grava a baseline, sem logar
+      // Primeira inicialização: apenas grava a baseline, sem logar
       prevConfigRef.current = curr
       return
     }
 
     const changes: string[] = []
 
-    // --- Etapa 1: LÃƒÂ³gica (Selects e Toggles) ---
+    // --- Etapa 1: Lógica (Selects e Toggles) ---
     if (prev.logic_type !== curr.logic_type && curr.logic_type)
-      changes.push(`Alterou a lÃƒÂ³gica de "${prev.logic_type || 'nenhuma'}" para "${curr.logic_type}"`)
+      changes.push(`Alterou a lógica de "${prev.logic_type || 'nenhuma'}" para "${curr.logic_type}"`)
     if (prev.has_arguments !== curr.has_arguments)
       changes.push(curr.has_arguments ? 'Habilitou filtros de argumento (Pesquisa com Filtro)' : 'Desabilitou filtros de argumento')
     if (prev.query_type !== curr.query_type)
@@ -494,7 +494,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           zoneLabel = ' no Grid'
         } else if (changedFid.startsWith('form-')) {
           actualId = changedFid.replace('form-', '')
-          zoneLabel = ' no FormulÃƒÂ¡rio'
+          zoneLabel = ' no Formulário'
         }
         textChangesRef.current.fields_metadata = `Alterou as propriedades do campo "${getFormattedFieldName(actualId)}"${zoneLabel} (Etapa 3)`
       } else {
@@ -547,7 +547,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     const zones: Array<{ key: 'filter_fields' | 'grid_fields' | 'form_fields'; label: string }> = [
       { key: 'filter_fields', label: 'Filtro' },
       { key: 'grid_fields', label: 'Grid/Listagem' },
-      { key: 'form_fields', label: 'FormulÃƒÂ¡rio' },
+      { key: 'form_fields', label: 'Formulário' },
     ]
     zones.forEach(({ key, label }) => {
       const prevFields: string[] = prev.layout_config[key] || []
@@ -593,13 +593,13 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     // --- Layout: Display Type, Grouping, Default View ---
     if (currentStep >= 3) {
       if (prev.layout_config.display_type !== curr.layout_config.display_type)
-        changes.push(`Alterou visualizaÃƒÂ§ÃƒÂ£o padrÃƒÂ£o para "${curr.layout_config.display_type}"`)
+        changes.push(`Alterou visualização padrão para "${curr.layout_config.display_type}"`)
       if (prev.layout_config.grouping_type !== curr.layout_config.grouping_type)
-        changes.push(`Alterou agrupamento do formulÃƒÂ¡rio para "${curr.layout_config.grouping_type}"`)
+        changes.push(`Alterou agrupamento do formulário para "${curr.layout_config.grouping_type}"`)
       if (prev.layout_config.default_view !== curr.layout_config.default_view)
-        changes.push(`Alterou modo de visualizaÃƒÂ§ÃƒÂ£o padrÃƒÂ£o para "${curr.layout_config.default_view}"`)
+        changes.push(`Alterou modo de visualização padrão para "${curr.layout_config.default_view}"`)
       if (prev.layout_config.action_interface_type !== curr.layout_config.action_interface_type)
-        changes.push(`Alterou interface de aÃƒÂ§ÃƒÂ£o de "${prev.layout_config.action_interface_type}" para "${curr.layout_config.action_interface_type}"`)
+        changes.push(`Alterou interface de ação de "${prev.layout_config.action_interface_type}" para "${curr.layout_config.action_interface_type}"`)
       if (prev.layout_config.kanban_group_field !== curr.layout_config.kanban_group_field && curr.layout_config.kanban_group_field)
         changes.push(`Definiu campo de agrupamento do Kanban: "${curr.layout_config.kanban_group_field}"`)
       if (prev.layout_config.master_model_id !== curr.layout_config.master_model_id)
@@ -622,9 +622,9 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       fields.forEach(field => {
         if (prevSpec[field] !== currSpec[field] && currSpec[field]) {
           const fieldLabels: Record<string, string> = {
-            date_field: 'Data', title_field: 'TÃƒÂ­tulo', desc_field: 'DescriÃƒÂ§ÃƒÂ£o',
-            icon_field: 'ÃƒÂcone', lat_field: 'Latitude', lng_field: 'Longitude',
-            start_date_field: 'Data InÃƒÂ­cio', end_date_field: 'Data Fim',
+            date_field: 'Data', title_field: 'Título', desc_field: 'Descrição',
+            icon_field: 'Ícone', lat_field: 'Latitude', lng_field: 'Longitude',
+            start_date_field: 'Data Início', end_date_field: 'Data Fim',
             progress_field: 'Progresso', predecessor_field: 'Predecessora',
             status_field: 'Status', color_field: 'Cor'
           }
@@ -643,7 +643,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         changes.push(`Adicionou ${currWidgets.length - prevWidgets.length} widget(s) ao Dashboard BI`)
       if (currWidgets.length < prevWidgets.length)
         changes.push(`Removeu ${prevWidgets.length - currWidgets.length} widget(s) do Dashboard BI`)
-      // Detectar ediÃƒÂ§ÃƒÂ£o de widget existente
+      // Detectar edição de widget existente
       currWidgets.forEach((w: any) => {
         const prevW = prevWidgets.find((pw: any) => pw.id === w.id)
         if (prevW && JSON.stringify(prevW) !== JSON.stringify(w))
@@ -651,44 +651,44 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       })
     }
 
-    // --- Etapa 4: BotÃƒÂµes e ConfiguraÃƒÂ§ÃƒÂµes de AÃƒÂ§ÃƒÂ£o ---
-    const step4Label = '(Etapa 4 (AÃƒÂ§ÃƒÂµes & Query))'
+    // --- Etapa 4: Botões e Configurações de Ação ---
+    const step4Label = '(Etapa 4 (Ações & Query))'
     const prevButtons = prev.buttons_config || []
     const currButtons = curr.buttons_config || []
     currButtons.forEach((btn: any) => {
       const prevBtn = prevButtons.find((b: any) => b.id === btn.id)
       if (prevBtn && prevBtn.visible !== btn.visible) {
-        // Apenas registra a alteraÃƒÂ§ÃƒÂ£o do botÃƒÂ£o se o usuÃƒÂ¡rio estiver na Etapa 4
-        // para evitar registrar o auto-suggest de botÃƒÂµes que roda na Etapa 1
+        // Apenas registra a alteração do botão se o usuário estiver na Etapa 4
+        // para evitar registrar o auto-suggest de botões que roda na Etapa 1
         if (currentStep >= 4) {
-          changes.push(`${btn.visible ? 'Habilitou' : 'Desabilitou'} o botÃƒÂ£o "${btn.label || btn.id}" ${step4Label}`)
+          changes.push(`${btn.visible ? 'Habilitou' : 'Desabilitou'} o botão "${btn.label || btn.id}" ${step4Label}`)
         }
       }
       if (prevBtn && prevBtn.label !== btn.label && btn.label) {
         if (currentStep >= 4) {
-          changes.push(`Renomeou o botÃƒÂ£o "${prevBtn.label}" para "${btn.label}" ${step4Label}`)
+          changes.push(`Renomeou o botão "${prevBtn.label}" para "${btn.label}" ${step4Label}`)
         }
       }
     })
 
-    // --- Etapa 4: AÃƒÂ§ÃƒÂµes Customizadas ---
+    // --- Etapa 4: Ações Customizadas ---
     const prevActions = prev.layout_config.custom_actions || []
     const currActions = curr.layout_config.custom_actions || []
     if (currentStep >= 4) {
       if (currActions.length > prevActions.length)
-        changes.push(`Adicionou ${currActions.length - prevActions.length} aÃƒÂ§ÃƒÂ£o(ÃƒÂµes) customizada(s) ${step4Label}`)
+        changes.push(`Adicionou ${currActions.length - prevActions.length} ação(ões) customizada(s) ${step4Label}`)
       if (currActions.length < prevActions.length)
-        changes.push(`Removeu ${prevActions.length - currActions.length} aÃƒÂ§ÃƒÂ£o(ÃƒÂµes) customizada(s) ${step4Label}`)
+        changes.push(`Removeu ${prevActions.length - currActions.length} ação(ões) customizada(s) ${step4Label}`)
 
       currActions.forEach((a: any) => {
         const prevA = prevActions.find((pa: any) => pa.id === a.id)
         if (prevA && JSON.stringify(prevA) !== JSON.stringify(a)) {
-          changes.push(`Editou a aÃƒÂ§ÃƒÂ£o customizada "${a.label || a.id}" ${step4Label}`)
+          changes.push(`Editou a ação customizada "${a.label || a.id}" ${step4Label}`)
         }
       })
     }
 
-    // --- Etapa 4: Formatos de ExportaÃƒÂ§ÃƒÂ£o ---
+    // --- Etapa 4: Formatos de Exportação ---
     const prevFormats: string[] = prev.layout_config.export_formats || ['xlsx', 'csv', 'json']
     const currFormats: string[] = curr.layout_config.export_formats || ['xlsx', 'csv', 'json']
     const formatLabels: Record<string, string> = {
@@ -703,11 +703,11 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     if (currentStep >= 4) {
       addedFormats.forEach(fmt => {
         const fmtLabel = formatLabels[fmt] || fmt
-        changes.push(`Habilitou o botÃƒÂ£o "${fmtLabel}" ${step4Label}`)
+        changes.push(`Habilitou o botão "${fmtLabel}" ${step4Label}`)
       })
       removedFormats.forEach(fmt => {
         const fmtLabel = formatLabels[fmt] || fmt
-        changes.push(`Desabilitou o botÃƒÂ£o "${fmtLabel}" ${step4Label}`)
+        changes.push(`Desabilitou o botão "${fmtLabel}" ${step4Label}`)
       })
     }
 
@@ -752,7 +752,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
 
       if (enumsData) setEnumerations(enumsData)
 
-      // 3. Buscamos apenas as relaÃƒÂ§ÃƒÂµes deste projeto
+      // 3. Buscamos apenas as relações deste projeto
       const { data: relsData } = await supabase
         .from('relations')
         .select('*')
@@ -772,7 +772,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         setUseCases(unique)
       }
 
-      // 4. Busca os workflows BPM deste projeto para a aba de BPM/AutomaÃƒÂ§ÃƒÂ£o
+      // 4. Busca os workflows BPM deste projeto para a aba de BPM/Automação
       const { data: bpmData } = await supabase
         .from('bpm_workflows')
         .select('id, name')
@@ -786,17 +786,17 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     loadData()
   }, [supabase, project_slug])
 
-  // Brinde UX: SugestÃƒÂ£o automÃƒÂ¡tica de Joins baseada na tabela 'relations' (vinda do tunnel)
+  // Brinde UX: Sugestão automática de Joins baseada na tabela 'relations' (vinda do tunnel)
   useEffect(() => {
-    // Se estiver em modo ediÃƒÂ§ÃƒÂ£o ou se jÃƒÂ¡ houver joins configurados, nÃƒÂ£o sobrescrevemos
-    // ou se nÃƒÂ£o houver modelos suficientes selecionados
+    // Se estiver em modo edição ou se já houver joins configurados, não sobrescrevemos
+    // ou se não houver modelos suficientes selecionados
     if (config.layout_config.joins.length > 0 || config.selected_models.length <= 1) return
 
     if (currentStep === 3) {
       const autoJoins: any[] = []
 
       if (relations.length > 0) {
-        // Filtra relaÃƒÂ§ÃƒÂµes onde AMBOS os modelos estÃƒÂ£o selecionados no Wizard
+        // Filtra relações onde AMBOS os modelos estão selecionados no Wizard
         const relevantRelations = relations.filter(rel =>
           config.selected_models.includes(rel.foreign_table_id) &&
           config.selected_models.includes(rel.referenced_table_id)
@@ -822,7 +822,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         })
       }
 
-      // NOVO: Fallback (HeurÃƒÂ­stica) para caso nÃƒÂ£o encontre relaÃƒÂ§ÃƒÂµes via banco de dados
+      // NOVO: Fallback (Heurística) para caso não encontre relações via banco de dados
       if (autoJoins.length === 0) {
         const selectedModelsData = models.filter(m => config.selected_models.includes(m.id))
         for (let i = 0; i < selectedModelsData.length; i++) {
@@ -970,13 +970,13 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     }
   }, [initialData, isInitialized])
 
-  // SugestÃƒÂ£o automÃƒÂ¡tica de botÃƒÂµes baseado na lÃƒÂ³gica selecionada
+  // Sugestão automática de botões baseado na lógica selecionada
   useEffect(() => {
-    // Se estivermos em modo ediÃƒÂ§ÃƒÂ£o (initialData presente), NUNCA rodamos a sugestÃƒÂ£o automÃƒÂ¡tica
-    // para nÃƒÂ£o atropelar as escolhas jÃƒÂ¡ salvas e persistidas pelo usuÃƒÂ¡rio.
+    // Se estivermos em modo edição (initialData presente), NUNCA rodamos a sugestão automática
+    // para não atropelar as escolhas já salvas e persistidas pelo usuário.
     if (initialData) return
 
-    // SÃƒÂ³ sugerimos enquanto o usuÃƒÂ¡rio nÃƒÂ£o chegou na etapa de ediÃƒÂ§ÃƒÂ£o manual (Passo 4)
+    // Só sugerimos enquanto o usuário não chegou na etapa de edição manual (Passo 4)
     if (currentStep < 4) {
       const isPesquisa = config.logic_type === 'pesquisa'
       const isCadastro = config.logic_type === 'cadastro'
@@ -994,7 +994,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         searchVis = hasArgs
         viewVis = true
       } else if (isBoth || isMasterDetail) {
-        // Para Mestre-Detalhe ou Pesquisa+Cadastro, mostramos todos por padrÃƒÂ£o (UX solicitada)
+        // Para Mestre-Detalhe ou Pesquisa+Cadastro, mostramos todos por padrão (UX solicitada)
         searchVis = true
         viewVis = true
         addVis = true
@@ -1019,7 +1019,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     }
   }, [config.logic_type, config.has_arguments, currentStep, isInitialized, initialData])
 
-  // Limpeza automÃƒÂ¡tica de campos se a lÃƒÂ³gica mudar
+  // Limpeza automática de campos se a lógica mudar
   useEffect(() => {
     const isPesquisaOnly = config.logic_type === 'pesquisa'
     const isCadastroOnly = config.logic_type === 'cadastro'
@@ -1058,7 +1058,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     const masterModelId = config.layout_config?.master_model_id || config.selected_models?.[0];
     const allInvolved = Array.from(new Set([masterModelId, ...widgetModels, ...joinModels])).filter(Boolean) as string[]
 
-    // SÃƒÂ³ atualizamos se houver mudanÃƒÂ§a real para evitar loops de renderizaÃƒÂ§ÃƒÂ£o
+    // Só atualizamos se houver mudança real para evitar loops de renderização
     if (JSON.stringify([...allInvolved].sort()) !== JSON.stringify([...config.selected_models].sort())) {
       setConfig(prev => ({
         ...prev,
@@ -1082,10 +1082,10 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   }, [supabase])
 
   const steps = [
-    { id: 1, title: t('wizard.steps.logic', 'LÃƒÂ³gica'), icon: <Settings2 className="w-4 h-4" /> },
+    { id: 1, title: t('wizard.steps.logic', 'Lógica'), icon: <Settings2 className="w-4 h-4" /> },
     { id: 2, title: config.logic_type === 'personalizado' ? t('wizard.steps.tables_layout', 'Tabelas & Layout') : t('wizard.steps.tables', 'Tabelas'), icon: <Database className="w-4 h-4" /> },
     { id: 3, title: t('wizard.steps.layout', 'Campos & Layout'), icon: <Layout className="w-4 h-4" />, hidden: config.logic_type === 'personalizado' },
-    { id: 4, title: t('wizard.steps.actions', 'Query & AÃƒÂ§ÃƒÂµes Finais'), icon: <MousePointer2 className="w-4 h-4" /> }
+    { id: 4, title: t('wizard.steps.actions', 'Query & Ações Finais'), icon: <MousePointer2 className="w-4 h-4" /> }
   ].filter((s: any) => !s.hidden)
 
   const isStepValid = (step: number) => {
@@ -1155,12 +1155,12 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         if (!layout_config.form_fields.length && (logic_type === 'cadastro' || logic_type === 'pesquisa_cadastro' || logic_type === 'master_detail')) toast(t('wizard.buttons.validation.form_required'), 'error')
         if (has_arguments && !layout_config.filter_fields.length && logic_type.includes('pesquisa')) toast(t('wizard.buttons.validation.filter_required'), 'error')
         if (logic_type === 'kanban' && !layout_config.kanban_group_field) toast("Please select a grouping field for Kanban.", 'error')
-        if (logic_type === 'timeline' && (!(layout_config as any).timeline_config?.date_field || !(layout_config as any).timeline_config?.title_field)) toast("Por favor, selecione os campos de data e tÃƒÂ­tulo para a Linha do Tempo.", 'error')
-        if (logic_type === 'map' && (!(layout_config as any).map_config?.lat_field || !(layout_config as any).map_config?.lng_field || !(layout_config as any).map_config?.title_field)) toast("Por favor, selecione os campos de Latitude, Longitude e TÃƒÂ­tulo para o Mapa.", 'error')
-        if (logic_type === 'gantt' && (!(layout_config as any).gantt_config?.title_field || !(layout_config as any).gantt_config?.start_date_field || !(layout_config as any).gantt_config?.end_date_field)) toast("Por favor, selecione os campos de TÃƒÂ­tulo, Data Inicial e Data Final para o Gantt.", 'error')
+        if (logic_type === 'timeline' && (!(layout_config as any).timeline_config?.date_field || !(layout_config as any).timeline_config?.title_field)) toast("Por favor, selecione os campos de data e título para a Linha do Tempo.", 'error')
+        if (logic_type === 'map' && (!(layout_config as any).map_config?.lat_field || !(layout_config as any).map_config?.lng_field || !(layout_config as any).map_config?.title_field)) toast("Por favor, selecione os campos de Latitude, Longitude e Título para o Mapa.", 'error')
+        if (logic_type === 'gantt' && (!(layout_config as any).gantt_config?.title_field || !(layout_config as any).gantt_config?.start_date_field || !(layout_config as any).gantt_config?.end_date_field)) toast("Por favor, selecione os campos de Título, Data Inicial e Data Final para o Gantt.", 'error')
         if (logic_type === 'personalizado' && (!(layout_config as any).custom_slots || !(layout_config as any).custom_slots.length)) toast("Por favor, adicione pelo menos uma aba no Layout Personalizado.", 'error')
-        if (logic_type === 'blueprint' && (!(layout_config as any).blueprint_config?.title_field || !(layout_config as any).blueprint_config?.predecessor_field)) toast("Por favor, selecione os campos de TÃƒÂ­tulo e Predecessora para o Fluxograma.", 'error')
-        if (logic_type === 'scheduler' && (!(layout_config as any).scheduler_config?.title_field || !(layout_config as any).scheduler_config?.start_date_field)) toast("Por favor, selecione os campos de tÃƒÂ­tulo e data de inÃƒÂ­cio para o CalendÃƒÂ¡rio.", 'error')
+        if (logic_type === 'blueprint' && (!(layout_config as any).blueprint_config?.title_field || !(layout_config as any).blueprint_config?.predecessor_field)) toast("Por favor, selecione os campos de Título e Predecessora para o Fluxograma.", 'error')
+        if (logic_type === 'scheduler' && (!(layout_config as any).scheduler_config?.title_field || !(layout_config as any).scheduler_config?.start_date_field)) toast("Por favor, selecione os campos de título e data de início para o Calendário.", 'error')
         if (logic_type === 'mapa_mental' && !(layout_config as any).mindmap_levels?.length) toast("Por favor, configure a hierarquia do Mapa Mental.", 'error')
         if (logic_type === 'master_detail' && !(layout_config as any).master_model_id) toast("Please select the Master Table.", 'error')
       }
@@ -1185,7 +1185,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
 
   const handleSave = async () => {
     if (!canCreate) {
-      toast("VocÃƒÂª nÃƒÂ£o tem permissÃƒÂ£o para salvar alteraÃƒÂ§ÃƒÂµes.", 'error')
+      toast("Você não tem permissão para salvar alterações.", 'error')
       return
     }
 
@@ -1228,12 +1228,12 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         filter_fields: validFilterFields,
       }
 
-      // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+      // ──────────────────────────────────────────────────────────────────
       // DRAFT/PUBLISH: o save salva APENAS em draft_config.
       // Os campos ao vivo (layout_config, buttons_config, etc.) e a tabela
-      // ui_components SÃƒâ€œ sÃƒÂ£o atualizados quando o dev clicar em PUBLICAR.
-      // UsuÃƒÂ¡rios finais continuam vendo a ÃƒÂºltima versÃƒÂ£o publicada.
-      // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+      // ui_components SÓ são atualizados quando o dev clicar em PUBLICAR.
+      // Usuários finais continuam vendo a última versão publicada.
+      // ──────────────────────────────────────────────────────────────────
 
       const draftPayload = {
         name: config.name,
@@ -1262,13 +1262,13 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       let viewError: any
 
       if (existingBySlug && (!initialData || existingBySlug.id !== initialData.id)) {
-        toast("JÃƒÂ¡ existe um caso de uso com este slug neste projeto.", 'error')
+        toast("Já existe um caso de uso com este slug neste projeto.", 'error')
         setIsSaving(false)
         return
       }
 
       if (initialData) {
-        // UPDATE: salva apenas no draft_config Ã¢â‚¬â€ nÃƒÂ£o toca nos campos ao vivo
+        // UPDATE: salva apenas no draft_config — não toca nos campos ao vivo
         const { data, error } = await supabase
           .from('ui_views')
           .update({ draft_config: draftPayload })
@@ -1279,18 +1279,18 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         viewError = error
       } else {
         // INSERT: cria o registro com draft_config populado e campos ao vivo vazios
-        // layout_config default '{}' Ã¢â‚¬â€ o runtime nÃƒÂ£o exibe views com layout vazio
+        // layout_config default '{}' — o runtime não exibe views com layout vazio
         const { data, error } = await supabase
           .from('ui_views')
           .insert({
             project_id: projectData?.id,
-            name: config.name,          // obrigatÃƒÂ³rio (NOT NULL)
-            slug: config.slug,          // obrigatÃƒÂ³rio (NOT NULL)
+            name: config.name,          // obrigatório (NOT NULL)
+            slug: config.slug,          // obrigatório (NOT NULL)
             view_type: 'advanced_use_case',
             logic_type: config.logic_type,
             model_id: config.selected_models[0],
             draft_config: draftPayload, // rascunho completo
-            // layout_config fica com o default '{}' atÃƒÂ© o Publicar
+            // layout_config fica com o default '{}' até o Publicar
           })
           .select()
           .single()
@@ -1300,8 +1300,8 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
 
       if (viewError) throw viewError
 
-      // Se o slug mudou no draft, atualiza referÃƒÂªncias de navegaÃƒÂ§ÃƒÂ£o do projeto
-      // (usamos o slug do draft para manter navegaÃƒÂ§ÃƒÂ£o consistente no Studio)
+      // Se o slug mudou no draft, atualiza referências de navegação do projeto
+      // (usamos o slug do draft para manter navegação consistente no Studio)
       const hasSlugChanged = initialData && initialData.slug && initialData.slug !== config.slug
       if (hasSlugChanged && projectData?.navigation && Array.isArray(projectData.navigation)) {
         const updateMenuTarget = (items: any[]): any[] => {
@@ -1320,10 +1320,10 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         await supabase.from('projects').update({ navigation: updatedNavigation }).eq('id', projectData.id)
       }
 
-      // ui_components NÃƒÆ’O ÃƒÂ© atualizado aqui Ã¢â‚¬â€ permanece com a versÃƒÂ£o ao vivo
-      // A reconstruÃƒÂ§ÃƒÂ£o de ui_components acontece no handlePublish
+      // ui_components NÃO é atualizado aqui — permanece com a versão ao vivo
+      // A reconstrução de ui_components acontece no handlePublish
 
-      // (manter variÃƒÂ¡vel componentMap para nÃƒÂ£o quebrar o restante do fluxo)
+      // (manter variável componentMap para não quebrar o restante do fluxo)
       const componentMap: Record<string, any> = {}
 
       const formatLabelText = (text: string) => {
@@ -1375,13 +1375,13 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         }
       }
 
-      // ui_components nÃƒÂ£o ÃƒÂ© mais atualizado aqui (ver handlePublish)
-      // O componentMap acima estÃƒÂ¡ vazio intencionalmente para manter compatibilidade
+      // ui_components não é mais atualizado aqui (ver handlePublish)
+      // O componentMap acima está vazio intencionalmente para manter compatibilidade
 
       flushTextChanges()
       logAction('SAVE', 'Salvou rascunho do caso de uso')
       await flush(view.id)
-      toast('Rascunho salvo! Clique em Publicar para liberar aos usuÃƒÂ¡rios.', 'success')
+      toast('Rascunho salvo! Clique em Publicar para liberar aos usuários.', 'success')
       onSaveSuccess()
     } catch (err: any) {
       console.error(err)
@@ -1437,7 +1437,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
                           setIsDiscardModalOpen(true)
                         }}
                         className="flex items-center gap-2 px-6 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-red-500/5 active:scale-95 border border-red-500/20"
-                        title="Descartar todas as alteraÃƒÂ§ÃƒÂµes nÃƒÂ£o publicadas"
+                        title="Descartar todas as alterações não publicadas"
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Descartar Rascunho
                       </button>
@@ -1446,7 +1446,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
                         disabled={isSaving}
                         className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20 disabled:opacity-50 active:scale-95"
                       >
-                        Ã°Å¸Å¡â‚¬ Publicar
+                        🚀 Publicar
                       </button>
                     </>
                   )}
@@ -1547,7 +1547,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
               isSaving ? (
                 <><Loader2 className="w-3 h-3 animate-spin" /> {initialData ? t('wizard.buttons.updating') : t('wizard.buttons.saving')}</>
               ) : (
-                <>{!canCreate ? "Sem permissÃƒÂ£o" : (initialData ? t('wizard.buttons.update') : t('wizard.buttons.finish'))} <Save className="w-3 h-3 ml-1" /></>
+                <>{!canCreate ? "Sem permissão" : (initialData ? t('wizard.buttons.update') : t('wizard.buttons.finish'))} <Save className="w-3 h-3 ml-1" /></>
               )
             ) : (
               <>{t('wizard.buttons.next')} <ChevronRight className="w-3 h-3" /></>
@@ -1556,7 +1556,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         </div>
       </div>
 
-      {/* Discard Draft Confirmation Ã¢â‚¬â€ rendered inline with high z-index */}
+      {/* Discard Draft Confirmation — rendered inline with high z-index */}
       {isDiscardModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
           {/* Backdrop */}
@@ -1587,7 +1587,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
                     Tem certeza que deseja descartar?
                   </p>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                    Todas as alteraÃƒÂ§ÃƒÂµes nÃƒÂ£o publicadas serÃƒÂ£o permanentemente perdidas e o caso de uso voltarÃƒÂ¡ ao estado da ÃƒÂºltima versÃƒÂ£o publicada. Esta aÃƒÂ§ÃƒÂ£o nÃƒÂ£o pode ser desfeita.
+                    Todas as alterações não publicadas serão permanentemente perdidas e o caso de uso voltará ao estado da última versão publicada. Esta ação não pode ser desfeita.
                   </p>
                 </div>
               </div>
@@ -1615,7 +1615,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         </div>
       )}
 
-      {/* Publish Draft Confirmation Ã¢â‚¬â€ rendered inline with high z-index */}
+      {/* Publish Draft Confirmation — rendered inline with high z-index */}
       {isPublishModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
           {/* Backdrop */}
@@ -1627,7 +1627,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           <div className="relative bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
             <div className="p-8 pb-4">
               <div className="flex justify-between items-start">
-                <h3 className="text-xl font-bold text-neutral-900 dark:text-white">Publicar AlteraÃƒÂ§ÃƒÂµes</h3>
+                <h3 className="text-xl font-bold text-neutral-900 dark:text-white">Publicar Alterações</h3>
                 <button
                   onClick={() => setIsPublishModalOpen(false)}
                   className="p-2 hover:bg-neutral-100 dark:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-neutral-900 dark:hover:text-white ml-auto"
@@ -1646,7 +1646,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
                     Tem certeza que deseja publicar?
                   </p>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                    Todas as alteraÃƒÂ§ÃƒÂµes do rascunho serÃƒÂ£o aplicadas e ficarÃƒÂ£o disponÃƒÂ­veis imediatamente para os usuÃƒÂ¡rios finais em produÃƒÂ§ÃƒÂ£o.
+                    Todas as alterações do rascunho serão aplicadas e ficarão disponíveis imediatamente para os usuários finais em produção.
                   </p>
                 </div>
               </div>
@@ -1689,7 +1689,7 @@ function StepLogic({ config, setConfig }: any) {
       description: t('wizard.logic.categories.dados.desc'),
       icon: Database,
       items: [
-        { id: 'pesquisa_cadastro', title: t('wizard.logic.types.pesquisa_cadastro.title', 'Pesquisa / Cadastro (Canvas)'), desc: t('wizard.logic.types.pesquisa_cadastro.desc', 'Telas completas gerenciadas por layout. Oculte as zonas que nÃƒÂ£o desejar (Ex: "Apenas Cadastro").'), icon: Layout }
+        { id: 'pesquisa_cadastro', title: t('wizard.logic.types.pesquisa_cadastro.title', 'Pesquisa / Cadastro (Canvas)'), desc: t('wizard.logic.types.pesquisa_cadastro.desc', 'Telas completas gerenciadas por layout. Oculte as zonas que não desejar (Ex: "Apenas Cadastro").'), icon: Layout }
       ]
     },
     {
@@ -1699,9 +1699,9 @@ function StepLogic({ config, setConfig }: any) {
       icon: Calendar,
       items: [
         { id: 'kanban', title: t('wizard.logic.types.kanban.title'), desc: t('wizard.logic.types.kanban.desc'), icon: Columns },
-        { id: 'timeline', title: t('wizard.logic.types.timeline.title', 'Linha do Tempo / Feed'), desc: t('wizard.logic.types.timeline.desc', 'Visualize registros em uma linha do tempo cronolÃƒÂ³gica com base em uma data.'), icon: History },
-        { id: 'gantt', title: t('wizard.logic.types.gantt.title', 'GrÃƒÂ¡fico de Gantt'), desc: t('wizard.logic.types.gantt.desc', 'Gerencie cronogramas e projetos com um grÃƒÂ¡fico de Gantt.'), icon: BarChartHorizontal },
-        { id: 'scheduler', title: t('wizard.logic.types.scheduler.title', 'Agenda / CalendÃƒÂ¡rio'), desc: t('wizard.logic.types.scheduler.desc', 'Agendamentos, prazos, compromissos e tarefas em calendÃƒÂ¡rio.'), icon: Calendar },
+        { id: 'timeline', title: t('wizard.logic.types.timeline.title', 'Linha do Tempo / Feed'), desc: t('wizard.logic.types.timeline.desc', 'Visualize registros em uma linha do tempo cronológica com base em uma data.'), icon: History },
+        { id: 'gantt', title: t('wizard.logic.types.gantt.title', 'Gráfico de Gantt'), desc: t('wizard.logic.types.gantt.desc', 'Gerencie cronogramas e projetos com um gráfico de Gantt.'), icon: BarChartHorizontal },
+        { id: 'scheduler', title: t('wizard.logic.types.scheduler.title', 'Agenda / Calendário'), desc: t('wizard.logic.types.scheduler.desc', 'Agendamentos, prazos, compromissos e tarefas em calendário.'), icon: Calendar },
       ]
     },
     {
@@ -1712,7 +1712,7 @@ function StepLogic({ config, setConfig }: any) {
       items: [
         { id: 'blueprint', title: t('wizard.logic.types.blueprint.title', 'Fluxograma (Blueprint)'), desc: t('wizard.logic.types.blueprint.desc', 'Mapeie processos e fluxos de trabalho interligados dinamicamente.'), icon: Activity },
         { id: 'mapa_mental', title: t('wizard.logic.types.mapa_mental.title'), desc: t('wizard.logic.types.mapa_mental.desc'), icon: Share2 },
-        { id: 'map', title: t('wizard.logic.types.map.title', 'VisÃƒÂ£o de Mapa (Geospatial)'), desc: t('wizard.logic.types.map.desc', 'Visualize registros atravÃƒÂ©s de marcadores e coordenadas interativas no mapa.'), icon: Share2 },
+        { id: 'map', title: t('wizard.logic.types.map.title', 'Visão de Mapa (Geospatial)'), desc: t('wizard.logic.types.map.desc', 'Visualize registros através de marcadores e coordenadas interativas no mapa.'), icon: Share2 },
       ]
     },
     {
@@ -1721,14 +1721,14 @@ function StepLogic({ config, setConfig }: any) {
       description: t('wizard.logic.categories.outros.desc'),
       icon: LayoutGrid,
       items: [
-        { id: 'analytics', title: t('wizard.logic.types.analytics.title', 'Dashboard (BI)'), desc: t('wizard.logic.types.analytics.desc', 'Indicadores de desempenho, grÃƒÂ¡ficos e KPIs.'), icon: Layout },
-        { id: 'galeria', title: t('wizard.logic.types.galeria.title', 'Galeria / Assets'), desc: t('wizard.logic.types.galeria.desc', 'Galeria de mÃƒÂ­dias, imagens e documentos com download e redirecionamentos.'), icon: LayoutGrid }
+        { id: 'analytics', title: t('wizard.logic.types.analytics.title', 'Dashboard (BI)'), desc: t('wizard.logic.types.analytics.desc', 'Indicadores de desempenho, gráficos e KPIs.'), icon: Layout },
+        { id: 'galeria', title: t('wizard.logic.types.galeria.title', 'Galeria / Assets'), desc: t('wizard.logic.types.galeria.desc', 'Galeria de mídias, imagens e documentos com download e redirecionamentos.'), icon: LayoutGrid }
       ]
     },
     {
       id: 'avancado',
-      title: t('wizard.logic.categories.avancado.title', 'AvanÃƒÂ§ado e HÃƒÂ­brido'),
-      description: t('wizard.logic.categories.avancado.desc', 'LÃƒÂ³gicas personalizadas unindo mÃƒÂºltiplos componentes e views.'),
+      title: t('wizard.logic.categories.avancado.title', 'Avançado e Híbrido'),
+      description: t('wizard.logic.categories.avancado.desc', 'Lógicas personalizadas unindo múltiplos componentes e views.'),
       icon: Settings,
       items: [
         { id: 'personalizado', title: t('wizard.logic.types.personalizado.title'), desc: t('wizard.logic.types.personalizado.desc'), icon: Settings }
@@ -1831,7 +1831,7 @@ function StepLogic({ config, setConfig }: any) {
                 </div>
               </div>
 
-              {/* Grid de LÃƒÂ³gicas */}
+              {/* Grid de Lógicas */}
               {isExpanded && (
                 <div className="p-4 pt-0 border-t border-neutral-100 dark:border-neutral-800/50 mt-2">
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pt-4">
@@ -1923,10 +1923,10 @@ function StepTables({ config, setConfig, models, relations = [] }: any) {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
       <div className="space-y-2">
         <h2 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
-          Qual ÃƒÂ© a tabela principal deste caso de uso?
+          Qual é a tabela principal deste caso de uso?
         </h2>
         <p className="text-neutral-500 dark:text-neutral-400 text-sm">
-          Selecione <strong>uma tabela</strong> como raiz. Na prÃƒÂ³xima etapa, todos os campos das tabelas relacionadas estarÃƒÂ£o disponÃƒÂ­veis automaticamente.
+          Selecione <strong>uma tabela</strong> como raiz. Na próxima etapa, todos os campos das tabelas relacionadas estarão disponíveis automaticamente.
         </p>
       </div>
 
@@ -1941,12 +1941,12 @@ function StepTables({ config, setConfig, models, relations = [] }: any) {
               Santo Graal ativo
             </p>
             <p className="text-[11px] text-indigo-600 dark:text-indigo-400 leading-relaxed">
-              O sistema detecta automaticamente todas as tabelas relacionadas ÃƒÂ  tabela raiz e disponibiliza seus campos na etapa seguinte. VocÃƒÂª nÃƒÂ£o precisa selecionar manualmente as tabelas de JOIN.
+              O sistema detecta automaticamente todas as tabelas relacionadas à tabela raiz e disponibiliza seus campos na etapa seguinte. Você não precisa selecionar manualmente as tabelas de JOIN.
             </p>
           </div>
 
           <div className="flex items-center gap-3 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900/50 w-fit">
-            <label className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Profundidade MÃƒÂ¡xima (NÃƒÂ­veis)</label>
+            <label className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Profundidade Máxima (Níveis)</label>
             <select
               value={config.layout_config?.max_relation_depth || 2}
               onChange={(e) => {
@@ -1960,10 +1960,10 @@ function StepTables({ config, setConfig, models, relations = [] }: any) {
               }}
               className="text-xs bg-white dark:bg-neutral-900 border border-indigo-200 dark:border-indigo-800 rounded px-2 py-1 outline-none text-indigo-900 dark:text-indigo-300 cursor-pointer"
             >
-              <option value={1}>1 NÃƒÂ­vel (Apenas Relacionamentos Diretos)</option>
-              <option value={2}>2 NÃƒÂ­veis (PadrÃƒÂ£o - Inclui NÃƒÂ­vel 2)</option>
-              <option value={3}>3 NÃƒÂ­veis (Profundo)</option>
-              <option value={4}>4 NÃƒÂ­veis (Extremo - Pode causar lentidÃƒÂ£o)</option>
+              <option value={1}>1 Nível (Apenas Relacionamentos Diretos)</option>
+              <option value={2}>2 Níveis (Padrão - Inclui Nível 2)</option>
+              <option value={3}>3 Níveis (Profundo)</option>
+              <option value={4}>4 Níveis (Extremo - Pode causar lentidão)</option>
             </select>
           </div>
         </div>
@@ -2037,7 +2037,7 @@ function StepTables({ config, setConfig, models, relations = [] }: any) {
             </p>
             {(relationCountByModel[selectedId] || 0) > 0 && (
               <p className="text-[10px] mt-0.5 opacity-80">
-                {relationCountByModel[selectedId]} tabela{relationCountByModel[selectedId] !== 1 ? 's' : ''} relacionada{relationCountByModel[selectedId] !== 1 ? 's' : ''} serÃƒÂ¡{relationCountByModel[selectedId] !== 1 ? 'ÃƒÂ£o' : ''} descoberta{relationCountByModel[selectedId] !== 1 ? 's' : ''} automaticamente na prÃƒÂ³xima etapa.
+                {relationCountByModel[selectedId]} tabela{relationCountByModel[selectedId] !== 1 ? 's' : ''} relacionada{relationCountByModel[selectedId] !== 1 ? 's' : ''} será{relationCountByModel[selectedId] !== 1 ? 'ão' : ''} descoberta{relationCountByModel[selectedId] !== 1 ? 's' : ''} automaticamente na próxima etapa.
               </p>
             )}
           </div>
@@ -2082,7 +2082,7 @@ function MultiLevelPathBuilder({ level, onChange, models, parentModelId }: any) 
 
             <div className="grid grid-cols-1 gap-2">
               <div>
-                <label className="text-[9px] font-black uppercase text-neutral-400">Tabela IntermediÃƒÂ¡ria</label>
+                <label className="text-[9px] font-black uppercase text-neutral-400">Tabela Intermediária</label>
                 <select value={hop.table || ''} onChange={e => updateHop(idx, 'table', e.target.value)} className="w-full text-xs p-2 rounded border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 mt-1">
                   <option value="">Selecione a Tabela...</option>
                   {models.map((m: any) => <option key={m.id} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>)}
@@ -2097,7 +2097,7 @@ function MultiLevelPathBuilder({ level, onChange, models, parentModelId }: any) 
                   </select>
                 </div>
                 <div>
-                  <label className="text-[9px] font-black uppercase text-neutral-400">Chave na IntermediÃƒÂ¡ria</label>
+                  <label className="text-[9px] font-black uppercase text-neutral-400">Chave na Intermediária</label>
                   <select value={hop.to_field || ''} onChange={e => updateHop(idx, 'to_field', e.target.value)} className="w-full text-xs p-2 rounded border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 mt-1">
                     <option value="">Campo...</option>
                     {currentModel?.fields?.map((f: any) => <option key={f.id} value={f.db_column_name}>{f.db_column_name}</option>)}
@@ -2109,13 +2109,13 @@ function MultiLevelPathBuilder({ level, onChange, models, parentModelId }: any) 
         );
       })}
 
-      {/* ÃƒÅ¡ltimo Pulo implÃƒÂ­cito */}
+      {/* Último Pulo implícito */}
       {path.length > 0 && (
         <div className="p-3 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/50 rounded-lg mt-2">
           <div className="text-[9px] font-bold text-emerald-600 uppercase mb-2">Pulo Final para o Destino</div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[9px] font-black uppercase text-neutral-400">Chave na IntermediÃƒÂ¡ria {path[path.length - 1]?.table}</label>
+              <label className="text-[9px] font-black uppercase text-neutral-400">Chave na Intermediária {path[path.length - 1]?.table}</label>
               <select value={path[path.length - 1]?.target_from_field || ''} onChange={e => updateHop(path.length - 1, 'target_from_field', e.target.value)} className="w-full text-xs p-2 rounded border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-neutral-950 mt-1">
                 <option value="">Campo...</option>
                 {models.find((m: any) => m.db_table_name === path[path.length - 1]?.table)?.fields?.map((f: any) => <option key={f.id} value={f.db_column_name}>{f.db_column_name}</option>)}
@@ -2185,10 +2185,10 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
       <div className="space-y-2">
         <h2 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
-          ConfiguraÃƒÂ§ÃƒÂ£o do Orquestrador de Casos de Uso
+          Configuração do Orquestrador de Casos de Uso
         </h2>
         <p className="text-neutral-500 dark:text-neutral-400 text-sm">
-          Defina o Caso de Uso Mestre e as Abas (Detalhes) que comporÃƒÂ£o este painel unificado.
+          Defina o Caso de Uso Mestre e as Abas (Detalhes) que comporão este painel unificado.
         </p>
       </div>
 
@@ -2239,12 +2239,12 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                   Santo Graal ativo
                 </p>
                 <p className="text-[11px] text-indigo-600 dark:text-indigo-400 leading-relaxed">
-                  O sistema detecta automaticamente todas as tabelas relacionadas ÃƒÂ  tabela raiz do caso de uso mestre.
+                  O sistema detecta automaticamente todas as tabelas relacionadas à tabela raiz do caso de uso mestre.
                 </p>
               </div>
 
               <div className="flex items-center gap-3 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900/50 w-fit">
-                <label className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Profundidade MÃƒÂ¡xima (NÃƒÂ­veis)</label>
+                <label className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Profundidade Máxima (Níveis)</label>
                 <select
                   value={config.layout_config?.max_relation_depth || 2}
                   onChange={(e) => {
@@ -2258,10 +2258,10 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                   }}
                   className="text-xs bg-white dark:bg-neutral-900 border border-indigo-200 dark:border-indigo-800 rounded px-2 py-1 outline-none text-indigo-900 dark:text-indigo-300 cursor-pointer"
                 >
-                  <option value={1}>1 NÃƒÂ­vel (Apenas Relacionamentos Diretos)</option>
-                  <option value={2}>2 NÃƒÂ­veis (PadrÃƒÂ£o - Inclui NÃƒÂ­vel 2)</option>
-                  <option value={3}>3 NÃƒÂ­veis (Profundo)</option>
-                  <option value={4}>4 NÃƒÂ­veis (Extremo - Pode causar lentidÃƒÂ£o)</option>
+                  <option value={1}>1 Nível (Apenas Relacionamentos Diretos)</option>
+                  <option value={2}>2 Níveis (Padrão - Inclui Nível 2)</option>
+                  <option value={3}>3 Níveis (Profundo)</option>
+                  <option value={4}>4 Níveis (Extremo - Pode causar lentidão)</option>
                 </select>
               </div>
             </div>
@@ -2269,20 +2269,20 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
         </div>
       </div>
 
-      {/* ZONA: CONFIGURAÃƒâ€¡Ãƒâ€¢ES GERAIS */}
+      {/* ZONA: CONFIGURAÇÕES GERAIS */}
       <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
               <Database className="w-4 h-4" />
             </div>
-            <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">ConfiguraÃƒÂ§ÃƒÂ£o de PadrÃƒÂµes</h4>
+            <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Configuração de Padrões</h4>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-3">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Registros por PÃƒÂ¡gina (LIMIT)</label>
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Registros por Página (LIMIT)</label>
             <input
               type="number"
               min="1"
@@ -2295,7 +2295,7 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
               })}
               className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
             />
-            <p className="text-[10px] text-neutral-400 font-medium italic ml-1">Deixe em branco para usar o padrÃƒÂ£o do sistema.</p>
+            <p className="text-[10px] text-neutral-400 font-medium italic ml-1">Deixe em branco para usar o padrão do sistema.</p>
           </div>
         </div>
       </div>
@@ -2318,7 +2318,7 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                     <div key={slot.id} className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl flex flex-col gap-4">
                       <div className="flex gap-4 items-start w-full">
                         <div className="space-y-2 flex-initial">
-                          <label className="text-[9px] font-black uppercase text-neutral-400">ÃƒÂcone</label>
+                          <label className="text-[9px] font-black uppercase text-neutral-400">Ícone</label>
                           <div className="relative">
                             <button
                               type="button"
@@ -2342,7 +2342,7 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                           </div>
                         </div>
                         <div className="space-y-2 flex-1">
-                          <label className="text-[9px] font-black uppercase text-neutral-400">TÃƒÂ­tulo da Aba</label>
+                          <label className="text-[9px] font-black uppercase text-neutral-400">Título da Aba</label>
                           <input
                             type="text"
                             value={slot.title || ''}
@@ -2388,12 +2388,12 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                             disabled
                             className="w-full bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-bold text-neutral-500 dark:text-neutral-400 outline-none cursor-not-allowed"
                           >
-                            <option value="form">FormulÃƒÂ¡rio</option>
+                            <option value="form">Formulário</option>
                             <option value="grid">Grid de Dados</option>
                             <option value="kanban">Kanban</option>
                             <option value="timeline">Linha do Tempo</option>
-                            <option value="scheduler">Agenda / CalendÃƒÂ¡rio</option>
-                            <option value="gantt">GrÃƒÂ¡fico de Gantt</option>
+                            <option value="scheduler">Agenda / Calendário</option>
+                            <option value="gantt">Gráfico de Gantt</option>
                             <option value="mapa_mental">Mapa Mental</option>
                             <option value="analytics">Dashboard BI</option>
                             <option value="galeria">Galeria Assets</option>
@@ -2407,7 +2407,7 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                             setExpandedCustomSlot(expandedCustomSlot === idx ? null : idx);
                           }}
                           className="mt-6 p-2.5 text-indigo-500 hover:text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 rounded-lg transition-all"
-                          title={expandedCustomSlot === idx ? "Recolher ConfiguraÃƒÂ§ÃƒÂµes" : "Expandir ConfiguraÃƒÂ§ÃƒÂµes"}
+                          title={expandedCustomSlot === idx ? "Recolher Configurações" : "Expandir Configurações"}
                         >
                           {expandedCustomSlot === idx ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
@@ -2420,7 +2420,7 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                                 setTabToDelete(null);
                               }}
                               className="p-2.5 text-white bg-red-500 hover:bg-red-600 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1"
-                              title="Confirmar ExclusÃƒÂ£o"
+                              title="Confirmar Exclusão"
                             >
                               <Check className="w-3.5 h-3.5" /> Sim
                             </button>
@@ -2448,8 +2448,8 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                           {idx > 0 && (
                             <div className="w-full p-4 mt-2 bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl space-y-4">
                               <div className="flex flex-col gap-2">
-                                <h5 className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">PermissÃƒÂµes de AÃƒÂ§ÃƒÂ£o na Aba</h5>
-                                <p className="text-[10px] text-neutral-500">Escolha quais aÃƒÂ§ÃƒÂµes os usuÃƒÂ¡rios poderÃƒÂ£o realizar nos registros desta aba.</p>
+                                <h5 className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">Permissões de Ação na Aba</h5>
+                                <p className="text-[10px] text-neutral-500">Escolha quais ações os usuários poderão realizar nos registros desta aba.</p>
 
                                 <div className="flex flex-wrap gap-6 mt-2">
                                   <label className="flex items-center gap-2 cursor-pointer">
@@ -2499,7 +2499,7 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                                 </div>
                               </div>
 
-                              <h5 className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">Modo de ExibiÃƒÂ§ÃƒÂ£o da Aba</h5>
+                              <h5 className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">Modo de Exibição da Aba</h5>
                               <p className="text-[10px] text-neutral-500">Escolha como esta aba deve ser exibida no sistema.</p>
 
                               <div className="flex gap-4 mt-2">
@@ -2509,7 +2509,7 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                                     newSlots[idx].render_mode = 'tab';
                                     setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
                                   }} />
-                                  <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Aba (PadrÃƒÂ£o)</span>
+                                  <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Aba (Padrão)</span>
                                 </label>
                                 <label className="flex items-center gap-2 cursor-pointer">
                                   <input type="radio" name={`render_mode_${idx}`} value="button" checked={slot.render_mode === 'button'} onChange={() => {
@@ -2517,7 +2517,7 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                                     newSlots[idx].render_mode = 'button';
                                     setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
                                   }} />
-                                  <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">BotÃƒÂ£o (Oculta Aba)</span>
+                                  <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Botão (Oculta Aba)</span>
                                 </label>
                                 <label className="flex items-center gap-2 cursor-pointer">
                                   <input type="radio" name={`render_mode_${idx}`} value="both" checked={slot.render_mode === 'both'} onChange={() => {
@@ -2531,11 +2531,11 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
 
                               {(slot.render_mode === 'button' || slot.render_mode === 'both') && (
                                 <div className="mt-4 p-4 bg-white dark:bg-neutral-950/50 border border-indigo-200 dark:border-indigo-800 rounded-lg space-y-4">
-                                  <h6 className="text-[10px] font-black uppercase text-indigo-500">ConfiguraÃƒÂ§ÃƒÂµes do BotÃƒÂ£o</h6>
+                                  <h6 className="text-[10px] font-black uppercase text-indigo-500">Configurações do Botão</h6>
 
                                   <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                      <label className="text-[9px] font-black uppercase text-neutral-400">LocalizaÃƒÂ§ÃƒÂ£o do BotÃƒÂ£o</label>
+                                      <label className="text-[9px] font-black uppercase text-neutral-400">Localização do Botão</label>
                                       <select
                                         value={slot.button_config?.location || 'master_top'}
                                         onChange={e => {
@@ -2589,10 +2589,10 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                                     </div>
 
                                     <div>
-                                      <label className="text-[9px] font-black uppercase text-neutral-400">Nome EspecÃƒÂ­fico do BotÃƒÂ£o (Opcional)</label>
+                                      <label className="text-[9px] font-black uppercase text-neutral-400">Nome Específico do Botão (Opcional)</label>
                                       <input
                                         type="text"
-                                        placeholder={slot.title || 'Usar tÃƒÂ­tulo da aba'}
+                                        placeholder={slot.title || 'Usar título da aba'}
                                         value={slot.button_config?.label || ''}
                                         onChange={e => {
                                           const newSlots = [...(config.layout_config.custom_slots || [])];
@@ -2604,7 +2604,7 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                                     </div>
 
                                     <div>
-                                      <label className="text-[9px] font-black uppercase text-neutral-400">ÃƒÂcone do BotÃƒÂ£o (Opcional)</label>
+                                      <label className="text-[9px] font-black uppercase text-neutral-400">Ícone do Botão (Opcional)</label>
                                       <button
                                         onClick={() => setEditingSlotIconIndex(idx)}
                                         className="w-full flex items-center gap-3 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 mt-1 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors text-left"
@@ -2624,7 +2624,7 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                                               ?
                                             </div>
                                             <span className="text-sm font-medium text-neutral-400">
-                                              Escolher ÃƒÂ­cone...
+                                              Escolher ícone...
                                             </span>
                                           </>
                                         )}
@@ -2650,12 +2650,12 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                           )}
                           <div className="h-px w-full bg-rose-200 dark:bg-rose-900/50" />
 
-                          {/* RecuperaÃƒÂ§ÃƒÂ£o de Dados */}
+                          {/* Recuperação de Dados */}
                           <div className="space-y-4">
                             <div className="flex items-center justify-between">
                               <div>
-                                <h5 className="text-[10px] font-black uppercase tracking-widest text-neutral-700 dark:text-neutral-300">RecuperaÃƒÂ§ÃƒÂ£o de Dados</h5>
-                                <p className="text-[10px] text-neutral-500 mt-0.5">Defina como os dados serÃƒÂ£o carregados nesta aba.</p>
+                                <h5 className="text-[10px] font-black uppercase tracking-widest text-neutral-700 dark:text-neutral-300">Recuperação de Dados</h5>
+                                <p className="text-[10px] text-neutral-500 mt-0.5">Defina como os dados serão carregados nesta aba.</p>
                               </div>
                               <button
                                 onClick={() => {
@@ -2668,14 +2668,14 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                                   slot.use_master_id !== false ? "bg-indigo-600 text-white shadow-md" : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500"
                                 )}
                               >
-                                Vincular ao Mestre: {slot.use_master_id !== false ? 'SIM' : 'NÃƒÆ’O'}
+                                Vincular ao Mestre: {slot.use_master_id !== false ? 'SIM' : 'NÃO'}
                               </button>
                             </div>
 
-                            {/* Filtros EstÃƒÂ¡ticos */}
+                            {/* Filtros Estáticos */}
                             <div className="space-y-3">
                               <div className="flex items-center justify-between">
-                                <label className="text-[9px] font-black uppercase text-neutral-500 tracking-wider">Filtros EstÃƒÂ¡ticos (Opcional)</label>
+                                <label className="text-[9px] font-black uppercase text-neutral-500 tracking-wider">Filtros Estáticos (Opcional)</label>
                                 <button
                                   onClick={() => {
                                     const newSlots = [...(config.layout_config.custom_slots || [])];
@@ -2780,12 +2780,12 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                               </div>
                             </div>
 
-                            {/* Filtros de Pesquisa (DinÃƒÂ¢micos) */}
+                            {/* Filtros de Pesquisa (Dinâmicos) */}
                             <div className="space-y-3 pt-4 border-t border-rose-200/50 dark:border-rose-900/30">
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <label className="text-[9px] font-black uppercase text-neutral-500 tracking-wider">Filtros de Tela (UsuÃƒÂ¡rio Final)</label>
-                                  <p className="text-[10px] text-neutral-400 mt-0.5">Campos que aparecerÃƒÂ£o como barras de pesquisa acima do Kanban/Grid.</p>
+                                  <label className="text-[9px] font-black uppercase text-neutral-500 tracking-wider">Filtros de Tela (Usuário Final)</label>
+                                  <p className="text-[10px] text-neutral-400 mt-0.5">Campos que aparecerão como barras de pesquisa acima do Kanban/Grid.</p>
                                 </div>
                                 <button
                                   onClick={() => {
@@ -2826,7 +2826,7 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
                                         newSlots[idx].dynamic_filters[fIdx] = { field: fieldVal, label: e.target.value };
                                         setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } });
                                       }}
-                                      placeholder="RÃƒÂ³tulo (opcional)"
+                                      placeholder="Rótulo (opcional)"
                                       className="flex-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs text-neutral-700 dark:text-neutral-200 outline-none focus:border-indigo-500"
                                     />
                                     <button
@@ -2907,8 +2907,8 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
     }
   }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Santo Graal helpers para Personalizado Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  // Retorna todos os models alcanÃƒÂ§ÃƒÂ¡veis a partir de um model_id via BFS do Santo Graal.
+  // ─── Santo Graal helpers para Personalizado ───────────────────────────────────
+  // Retorna todos os models alcançáveis a partir de um model_id via BFS do Santo Graal.
   // Usa max_relation_depth definido na etapa 2 do wizard.
   function getSlotRelatedFieldGroups(slotModelId: string) {
     const slotModel = models.find((m: any) => m.id === slotModelId)
@@ -2917,7 +2917,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
     return getModelsWithRelations([slotModel], relations, models, maxDepth)
   }
 
-  // Retorna a lista de modelos alcanÃƒÂ§ÃƒÂ¡veis a partir da tabela raiz do caso de uso (para o combo TABELA MODEL)
+  // Retorna a lista de modelos alcançáveis a partir da tabela raiz do caso de uso (para o combo TABELA MODEL)
   function getRootRelatedModels() {
     const rootId = config.layout_config?.master_model_id || config.selected_models?.[0]
     const rootModel = models.find((m: any) => m.id === rootId)
@@ -2926,9 +2926,9 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
     return getModelsWithRelations([rootModel], relations, models, maxDepth)
   }
 
-  // Renderiza <optgroup>/<option> agrupados por tabela, compatÃƒÂ­vel com a imagem 3.
-  // noneLabel: texto da opÃƒÂ§ÃƒÂ£o vazia (e.g. "Selecione o campo...")
-  // includeNone: se true, adiciona opÃƒÂ§ÃƒÂ£o vazia no inÃƒÂ­cio
+  // Renderiza <optgroup>/<option> agrupados por tabela, compatível com a imagem 3.
+  // noneLabel: texto da opção vazia (e.g. "Selecione o campo...")
+  // includeNone: se true, adiciona opção vazia no início
   function renderSlotFieldOptions(slotModelId: string, includeNone = true, noneLabel = 'Selecione o campo...') {
     const groups = getSlotRelatedFieldGroups(slotModelId)
     return (
@@ -3055,7 +3055,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
           const model = models.find((m: any) => m.id === id)
           if (!model) return
 
-          // Filtra os campos que possuem permissÃƒÂ£o para entrar na zona correspondente
+          // Filtra os campos que possuem permissão para entrar na zona correspondente
           const allowedFields = model.fields.filter((f: any) => {
             if (targetZone === 'grid_fields' && f.is_visible_in_list === false) return false
             if (targetZone === 'form_fields' && f.is_visible_in_form === false) return false
@@ -3087,7 +3087,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
             })
             toast(`${addedCount} campos permitidos da tabela "${model.display_name || model.db_table_name}" adicionados com sucesso!`, 'success')
           } else {
-            toast('Nenhum novo campo permitido pÃƒÂ´de ser adicionado a esta zona.', 'info')
+            toast('Nenhum novo campo permitido pôde ser adicionado a esta zona.', 'info')
           }
         } else {
           const isVirtualTool = id === 'virtual_calc_tool';
@@ -3103,15 +3103,15 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
 
             if (fieldObj) {
               if (targetZone === 'grid_fields' && fieldObj.is_visible_in_list === false) {
-                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" estÃƒÂ¡ configurado como nÃƒÂ£o visÃƒÂ­vel no grid.`, 'error')
+                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" está configurado como não visível no grid.`, 'error')
                 return
               }
               if (targetZone === 'form_fields' && fieldObj.is_visible_in_form === false) {
-                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" estÃƒÂ¡ configurado como nÃƒÂ£o visÃƒÂ­vel no formulÃƒÂ¡rio.`, 'error')
+                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" está configurado como não visível no formulário.`, 'error')
                 return
               }
               if (targetZone === 'filter_fields' && fieldObj.is_searchable === false) {
-                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" estÃƒÂ¡ configurado como nÃƒÂ£o pesquisÃƒÂ¡vel (nÃƒÂ£o visÃƒÂ­vel no filtro).`, 'error')
+                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" está configurado como não pesquisável (não visível no filtro).`, 'error')
                 return
               }
             }
@@ -3162,7 +3162,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
             })
             toast(t('common.success', 'Campo adicionado com sucesso!'), 'success')
           } else {
-            toast(t('common.info', 'Este campo jÃƒÂ¡ estÃƒÂ¡ nesta zona.'), 'info')
+            toast(t('common.info', 'Este campo já está nesta zona.'), 'info')
           }
         }
       }
@@ -3220,7 +3220,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
   }
 
   // BFS from the root table through the relations graph to discover all reachable tables.
-  // This replaces the old join-config-based tree Ã¢â‚¬â€ the dev only selects the root table now.
+  // This replaces the old join-config-based tree — the dev only selects the root table now.
   const renderFieldOptions = (models: any[], filterFn?: (f: any) => boolean) => {
     return models.map((m: any) => {
       const fields = filterFn ? m.fields.filter(filterFn) : m.fields;
@@ -3330,8 +3330,8 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
         modelName: slotModel.display_name || slotModel.db_table_name
       });
 
-      // NOVO: ExpansÃƒÂ£o via Santo Graal (Relacionamentos)
-      // Se este campo for uma FK (chave estrangeira) formal ou por heurÃƒÂ­stica
+      // NOVO: Expansão via Santo Graal (Relacionamentos)
+      // Se este campo for uma FK (chave estrangeira) formal ou por heurística
       const isFK = (relations || []).find((r: any) => r.foreign_column_id === f.id) ||
         (f.foreign_key_table && models.find((m: any) => m.db_table_name === f.foreign_key_table));
 
@@ -3350,7 +3350,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
           (relatedModel.fields || []).forEach((rf: any) => {
             fields.push({
               id: `${f.id}_${rf.id}`,
-              value: `${f.db_column_name}.${rf.db_column_name}`, // PadrÃƒÂ£o: produto_id.nome
+              value: `${f.db_column_name}.${rf.db_column_name}`, // Padrão: produto_id.nome
               label: `${f.display_name || f.db_column_name} -> ${rf.display_name || rf.db_column_name}`,
               isJoined: true,
               modelName: relatedModel.display_name || relatedModel.db_table_name
@@ -3360,7 +3360,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
       }
     });
 
-    // Joined fields estÃƒÂ¡ticos (se existirem na config)
+    // Joined fields estáticos (se existirem na config)
     const layout = config.layout_config || {};
     const joins = layout.joins || [];
 
@@ -3405,7 +3405,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
 
     const tabsMeta = (config.layout_config as any).fields_metadata?.['form-TABS'] || (config.layout_config as any).fields_metadata?.['TABS']
     const tabStyles = {
-      fontFamily: tabsMeta?.label?.font?.replace(' (PadrÃƒÂ£o)', ''),
+      fontFamily: tabsMeta?.label?.font?.replace(' (Padrão)', ''),
       fontSize: tabsMeta?.label?.size ? (tabsMeta.label.size.includes('px') ? tabsMeta.label.size : `${tabsMeta.label.size}px`) : undefined,
       color: tabsMeta?.label?.color || undefined,
     }
@@ -3471,7 +3471,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
             </div>
 
             <button
-              title={hiddenDetails.has(model.id) ? "Exibir formulÃƒÂ¡rio" : "Ocultar formulÃƒÂ¡rio"}
+              title={hiddenDetails.has(model.id) ? "Exibir formulário" : "Ocultar formulário"}
               onClick={() => {
                 if (!hiddenDetails.has(model.id)) {
                   const fieldsToKeep = config.layout_config.form_fields.filter((fid: string) => !model.fields.some((f: any) => f.id === fid))
@@ -3495,11 +3495,11 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
 
           {!isMaster && !hiddenDetails.has(model.id) && (
             <div className="flex items-center gap-1">
-              {/* Abas/SeÃƒÂ§ÃƒÂµes Toggle */}
+              {/* Abas/Seções Toggle */}
               <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
                 {[
                   { id: 'tabs', label: 'Aba', tooltip: 'Exibe os registros deste detalhe em uma aba superior' },
-                  { id: 'sections', label: 'SeÃƒÂ§ÃƒÂ£o', tooltip: 'Exibe os registros deste detalhe em uma seÃƒÂ§ÃƒÂ£o empilhada na pÃƒÂ¡gina' }
+                  { id: 'sections', label: 'Seção', tooltip: 'Exibe os registros deste detalhe em uma seção empilhada na página' }
                 ].map(opt => {
                   const currentMode = (config.layout_config as any).details_display_mode?.[model.id] || 'sections'
                   const isActive = currentMode === opt.id
@@ -3536,8 +3536,8 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
               {/* Modal/Drawer Toggle */}
               <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800 ml-1">
                 {[
-                  { id: 'modal', label: 'Modal', icon: Maximize2, tooltip: 'Abre o formulÃƒÂ¡rio deste detalhe em uma janela central' },
-                  { id: 'drawer', label: 'Drawer', icon: Layout, tooltip: 'Abre o formulÃƒÂ¡rio deste detalhe em uma gaveta lateral' }
+                  { id: 'modal', label: 'Modal', icon: Maximize2, tooltip: 'Abre o formulário deste detalhe em uma janela central' },
+                  { id: 'drawer', label: 'Drawer', icon: Layout, tooltip: 'Abre o formulário deste detalhe em uma gaveta lateral' }
                 ].map(opt => {
                   const currentType = (config.layout_config as any).details_interface_types?.[model.id] || 'modal'
                   const isActive = currentType === opt.id
@@ -3574,7 +3574,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
 
               <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800 ml-2">
                 <button
-                  title="Lista os registros deste detalhe de forma expandida diretamente na mesma pÃƒÂ¡gina"
+                  title="Lista os registros deste detalhe de forma expandida diretamente na mesma página"
                   onClick={() => {
                     const currentInlines = (config.layout_config as any).details_inline_types || {}
                     const isCurrentlyInline = currentInlines[model.id] !== false // Default true
@@ -3623,9 +3623,9 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                       })
                     }}
                     className="bg-transparent border-none outline-none text-[8px] font-black uppercase tracking-wider text-neutral-600 dark:text-neutral-400 px-2 h-full cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                    title="Campo usado como tÃƒÂ­tulo do item recolhido"
+                    title="Campo usado como título do item recolhido"
                   >
-                    <option value="">TÃƒÂ­tulo AutomÃƒÂ¡tico</option>
+                    <option value="">Título Automático</option>
                     {getAvailableSlotFields(model.id).map((f: any) => (
                       <option key={f.id} value={f.value}>{f.label}</option>
                     ))}
@@ -3644,7 +3644,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
             {fieldsOfThisModel.length === 0 ? (
               <div className="col-span-7 flex flex-col items-center justify-center py-4 space-y-2 opacity-50">
                 <Plus className="w-4 h-4 text-neutral-400" />
-                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Arraste campos de "{model.display_name || model.db_table_name}" para cÃƒÂ¡</p>
+                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Arraste campos de "{model.display_name || model.db_table_name}" para cá</p>
               </div>
             ) : (
               <SortableContext items={fieldsOfThisModel.map((id: string) => `form-${id}`)} strategy={rectSortingStrategy}>
@@ -3731,8 +3731,8 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
   const updateMeta = (section: 'label' | 'content' | 'component' | 'viacep', key: string, value: any) => {
     if (!editingFieldId) return
 
-    // O usuÃƒÂ¡rio solicitou que todas as instÃƒÂ¢ncias do mesmo campo compartilhem as configuraÃƒÂ§ÃƒÂµes.
-    // EntÃƒÂ£o, ao atualizar uma propriedade, atualizamos todas as chaves deste field.
+    // O usuário solicitou que todas as instâncias do mesmo campo compartilhem as configurações.
+    // Então, ao atualizar uma propriedade, atualizamos todas as chaves deste field.
 
     const baseMeta = getFieldMeta(editingFieldId, null) // get current base meta or default
     const newMeta = { ...currentFieldMeta } // current meta being edited
@@ -3740,7 +3740,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
 
     const newFieldsMetadata = { ...config.layout_config.fields_metadata }
 
-    // 1. Atualizar a chave base (para servir de heranÃƒÂ§a quando arrastar para uma nova zona)
+    // 1. Atualizar a chave base (para servir de herança quando arrastar para uma nova zona)
     newFieldsMetadata[editingFieldId] = newMeta
 
     // 2. Atualizar as zonas existentes
@@ -3774,7 +3774,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
 
     const newFieldsMetadata = { ...(config.layout_config.fields_metadata || {}) }
     const stylesToCopyLabel = { ...currentFieldMeta.label }
-    delete stylesToCopyLabel.text // NÃƒÂ£o sobrescrever o texto de exibiÃƒÂ§ÃƒÂ£o
+    delete stylesToCopyLabel.text // Não sobrescrever o texto de exibição
 
     const stylesToCopyContent = { ...currentFieldMeta.content }
 
@@ -3956,7 +3956,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     })
                     .map((m: any) => {
                       const isCollapsed = collapsedTables[m.id] ?? !formTreeIds.has(m.id)
-                      // Se houver busca e a tabela der match via campo, forÃƒÂ§amos a expansÃƒÂ£o para mostrar os campos
+                      // Se houver busca e a tabela der match via campo, forçamos a expansão para mostrar os campos
                       const forceExpand = fieldSearchTerm && m.fields.some((f: any) => (f.display_name || f.db_column_name || '').toLowerCase().includes(fieldSearchTerm.toLowerCase()))
                       const actuallyCollapsed = isCollapsed && !forceExpand
 
@@ -4013,20 +4013,20 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
           </div>
 
           <div className="flex-1 space-y-10 min-w-0">
-            {/* ZONA: CONFIGURAÃƒâ€¡Ãƒâ€¢ES GERAIS */}
+            {/* ZONA: CONFIGURAÇÕES GERAIS */}
             <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
                     <Database className="w-4 h-4" />
                   </div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">ConfiguraÃƒÂ§ÃƒÂ£o de PadrÃƒÂµes</h4>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Configuração de Padrões</h4>
                 </div>
               </div>
 
               <div className={cn("grid grid-cols-1 gap-4", config.logic_type === 'timeline' ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Registros por PÃƒÂ¡gina (LIMIT)</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Registros por Página (LIMIT)</label>
                   <input
                     type="number"
                     min="1"
@@ -4039,7 +4039,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     })}
                     className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                   />
-                  <p className="text-[10px] text-neutral-400 font-medium italic ml-1">Deixe em branco para usar o padrÃƒÂ£o do sistema.</p>
+                  <p className="text-[10px] text-neutral-400 font-medium italic ml-1">Deixe em branco para usar o padrão do sistema.</p>
                 </div>
 
                 {config.logic_type === 'timeline' && (
@@ -4124,13 +4124,13 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
                       <Calendar className="w-4 h-4" />
                     </div>
-                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">ConfiguraÃƒÂ§ÃƒÂ£o do CalendÃƒÂ¡rio</h4>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Configuração do Calendário</h4>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo do TÃƒÂ­tulo</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo do Título</label>
                     <select
                       value={config.layout_config.scheduler_config?.title_field || ''}
                       onChange={e => setConfig({
@@ -4142,13 +4142,13 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione o campo de tÃƒÂ­tulo...</option>
+                      <option value="">Selecione o campo de título...</option>
                       {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Data de InÃƒÂ­cio</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Data de Início</label>
                     <select
                       value={config.layout_config.scheduler_config?.start_date_field || ''}
                       onChange={e => setConfig({
@@ -4160,7 +4160,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione o campo de data de inÃƒÂ­cio...</option>
+                      <option value="">Selecione o campo de data de início...</option>
                       {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp'))}
                     </select>
                   </div>
@@ -4178,7 +4178,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Nenhum (Evento de data ÃƒÂºnica)</option>
+                      <option value="">Nenhum (Evento de data única)</option>
                       {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp'))}
                     </select>
                   </div>
@@ -4196,7 +4196,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Nenhum (Cor padrÃƒÂ£o indigo)</option>
+                      <option value="">Nenhum (Cor padrão indigo)</option>
                       {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
@@ -4213,7 +4213,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
                       <History className="w-4 h-4" />
                     </div>
-                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.timeline.title', 'ConfiguraÃƒÂ§ÃƒÂ£o da Linha do Tempo')}</h4>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.timeline.title', 'Configuração da Linha do Tempo')}</h4>
                   </div>
                 </div>
 
@@ -4226,7 +4226,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.title_field', 'Campo de TÃƒÂ­tulo')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.title_field', 'Campo de Título')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.title_field || ''}
                         onChange={e => setConfig({
@@ -4238,7 +4238,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                         })}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="">Selecione o campo de tÃƒÂ­tulo...</option>
+                        <option value="">Selecione o campo de título...</option>
                         {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
@@ -4262,7 +4262,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.desc_field', 'Campo de DescriÃƒÂ§ÃƒÂ£o (Opcional)')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.desc_field', 'Campo de Descrição (Opcional)')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.desc_field || ''}
                         onChange={e => setConfig({
@@ -4280,7 +4280,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.icon_field', 'Campo de ÃƒÂcone/Status (Opcional)')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.icon_field', 'Campo de Ícone/Status (Opcional)')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.icon_field || ''}
                         onChange={e => setConfig({
@@ -4308,7 +4308,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.direction', 'DireÃƒÂ§ÃƒÂ£o da Linha')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.direction', 'Direção da Linha')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.layout_direction || 'vertical'}
                         onChange={e => setConfig({
@@ -4326,7 +4326,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.mode', 'Modo de ExibiÃƒÂ§ÃƒÂ£o')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.mode', 'Modo de Exibição')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.layout_mode || 'alternating'}
                         onChange={e => setConfig({
@@ -4344,7 +4344,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.animated', 'AnimaÃƒÂ§ÃƒÂ£o de Desenho')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.animated', 'Animação de Desenho')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.animated === false ? 'false' : 'true'}
                         onChange={e => setConfig({
@@ -4356,8 +4356,8 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                         })}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="false">Sem AnimaÃƒÂ§ÃƒÂ£o (EstÃƒÂ¡tico)</option>
-                        <option value="true">Com AnimaÃƒÂ§ÃƒÂ£o (Desenho DinÃƒÂ¢mico)</option>
+                        <option value="false">Sem Animação (Estático)</option>
+                        <option value="true">Com Animação (Desenho Dinâmico)</option>
                       </select>
                     </div>
 
@@ -4374,17 +4374,17 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                         })}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="cards">Cards (PadrÃƒÂ£o)</option>
-                        <option value="infographic">InfogrÃƒÂ¡fico (Minimalista)</option>
+                        <option value="cards">Cards (Padrão)</option>
+                        <option value="infographic">Infográfico (Minimalista)</option>
                       </select>
                     </div>
 
                     <div className="space-y-3 col-span-1 sm:col-span-2 border-t border-neutral-100 dark:border-neutral-800/50 pt-4">
                       <div className="flex justify-between items-center ml-1">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Escala de ExibiÃƒÂ§ÃƒÂ£o (Cards e Textos)</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Escala de Exibição (Cards e Textos)</label>
                         <span className="text-[10px] font-extrabold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
                           {((config.layout_config as any).timeline_config?.card_scale ?? 1.0).toFixed(1)}x
-                          {((config.layout_config as any).timeline_config?.card_scale ?? 1.0) === 1.0 ? ' (PadrÃƒÂ£o)' : ''}
+                          {((config.layout_config as any).timeline_config?.card_scale ?? 1.0) === 1.0 ? ' (Padrão)' : ''}
                         </span>
                       </div>
                       <div className="flex items-center gap-4">
@@ -4406,7 +4406,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                         />
                         <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Ampliado (1.4x)</span>
                       </div>
-                      <p className="text-[9px] text-neutral-400 italic ml-1">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaÃƒÂ§amentos da linha do tempo.</p>
+                      <p className="text-[9px] text-neutral-400 italic ml-1">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaçamentos da linha do tempo.</p>
                     </div>
                   </div>
                 </div>
@@ -4420,12 +4420,12 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                   <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
                     <BarChartHorizontal className="w-4 h-4" />
                   </div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.gantt.title', 'ConfiguraÃƒÂ§ÃƒÂ£o do GrÃƒÂ¡fico de Gantt')}</h4>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.gantt.title', 'Configuração do Gráfico de Gantt')}</h4>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.title_field', 'Campo de TÃƒÂ­tulo (ObrigatÃƒÂ³rio)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.title_field', 'Campo de Título (Obrigatório)')}</label>
                     <select
                       value={(config.layout_config as any).gantt_config?.title_field || ''}
                       onChange={e => setConfig({
@@ -4437,13 +4437,13 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione o campo de tÃƒÂ­tulo...</option>
+                      <option value="">Selecione o campo de título...</option>
                       {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.start_date_field', 'Data Inicial (ObrigatÃƒÂ³rio)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.start_date_field', 'Data Inicial (Obrigatório)')}</label>
                     <select
                       value={(config.layout_config as any).gantt_config?.start_date_field || ''}
                       onChange={e => setConfig({
@@ -4461,7 +4461,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.end_date_field', 'Data Final (ObrigatÃƒÂ³rio)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.end_date_field', 'Data Final (Obrigatório)')}</label>
                     <select
                       value={(config.layout_config as any).gantt_config?.end_date_field || ''}
                       onChange={e => setConfig({
@@ -4491,7 +4491,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Nenhum (Progresso nÃƒÂ£o exibido)</option>
+                      <option value="">Nenhum (Progresso não exibido)</option>
                       {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('int') || f.data_type.includes('float') || f.data_type.includes('numeric'))}
                     </select>
                   </div>
@@ -4513,7 +4513,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
 
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de TÃƒÂ­tulo do NÃƒÂ³ (ObrigatÃƒÂ³rio)</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Título do Nó (Obrigatório)</label>
                       <select
                         value={(config.layout_config as any).blueprint_config?.title_field || ''}
                         onChange={e => setConfig({
@@ -4525,13 +4525,13 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                         })}
                         className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="">Selecione o tÃƒÂ­tulo...</option>
+                        <option value="">Selecione o título...</option>
                         {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo NÃƒÂ³ Anterior / Predecessora (ObrigatÃƒÂ³rio)</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo Nó Anterior / Predecessora (Obrigatório)</label>
                       <select
                         value={(config.layout_config as any).blueprint_config?.predecessor_field || ''}
                         onChange={e => setConfig({
@@ -4543,7 +4543,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                         })}
                         className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="">Selecione o campo de relaÃƒÂ§ÃƒÂ£o...</option>
+                        <option value="">Selecione o campo de relação...</option>
                         {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
@@ -4567,7 +4567,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de DescriÃƒÂ§ÃƒÂ£o (Opcional)</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Descrição (Opcional)</label>
                       <select
                         value={(config.layout_config as any).blueprint_config?.desc_field || ''}
                         onChange={e => setConfig({
@@ -4579,7 +4579,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                         })}
                         className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="">Selecione a descriÃƒÂ§ÃƒÂ£o...</option>
+                        <option value="">Selecione a descrição...</option>
                         {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
@@ -4596,9 +4596,9 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                   </div>
 
                   <div className="grid grid-cols-2 gap-6">
-                    {/* DireÃƒÂ§ÃƒÂ£o da Linha */}
+                    {/* Direção da Linha */}
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">DireÃƒÂ§ÃƒÂ£o da Linha</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Direção da Linha</label>
                       <select
                         value={(config.layout_config as any).blueprint_config?.direction || 'TB'}
                         onChange={e => setConfig({
@@ -4612,9 +4612,9 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                       </select>
                     </div>
 
-                    {/* AnimaÃƒÂ§ÃƒÂ£o */}
+                    {/* Animação */}
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">AnimaÃƒÂ§ÃƒÂ£o de Desenho</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Animação de Desenho</label>
                       <select
                         value={(config.layout_config as any).blueprint_config?.animated_edges !== false ? 'true' : 'false'}
                         onChange={e => setConfig({
@@ -4623,8 +4623,8 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                         })}
                         className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="true">Com AnimaÃƒÂ§ÃƒÂ£o (Desenho DinÃƒÂ¢mico)</option>
-                        <option value="false">Sem AnimaÃƒÂ§ÃƒÂ£o (EstÃƒÂ¡tico)</option>
+                        <option value="true">Com Animação (Desenho Dinâmico)</option>
+                        <option value="false">Sem Animação (Estático)</option>
                       </select>
                     </div>
                   </div>
@@ -4632,7 +4632,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                   {/* Slider de Escala */}
                   <div className="space-y-3 pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
                     <div className="flex justify-between items-center text-xs font-bold text-neutral-500 mb-2 uppercase tracking-wider">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Escala de exibiÃƒÂ§ÃƒÂ£o (Cards e textos)</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Escala de exibição (Cards e textos)</label>
                       <span className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
                         {((config.layout_config as any).blueprint_config?.scale || 1).toFixed(1)}x
                       </span>
@@ -4653,7 +4653,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                       />
                       <span className="text-[10px] font-semibold text-neutral-400 whitespace-nowrap">AMPLIADO (1.4X)</span>
                     </div>
-                    <p className="text-[10px] text-neutral-400 mt-2 italic px-2">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaÃƒÂ§amentos do fluxograma.</p>
+                    <p className="text-[10px] text-neutral-400 mt-2 italic px-2">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaçamentos do fluxograma.</p>
                   </div>
                 </div>
               </div>
@@ -4666,12 +4666,12 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                   <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
                     <Share2 className="w-4 h-4" />
                   </div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.map.title', 'ConfiguraÃƒÂ§ÃƒÂ£o do Mapa (Leaflet)')}</h4>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.map.title', 'Configuração do Mapa (Leaflet)')}</h4>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.title_field', 'Campo de TÃƒÂ­tulo (ObrigatÃƒÂ³rio)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.title_field', 'Campo de Título (Obrigatório)')}</label>
                     <select
                       value={(config.layout_config as any).map_config?.title_field || ''}
                       onChange={e => setConfig({
@@ -4683,13 +4683,13 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione o tÃƒÂ­tulo...</option>
+                      <option value="">Selecione o título...</option>
                       {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.desc_field', 'Campo de DescriÃƒÂ§ÃƒÂ£o (Opcional)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.desc_field', 'Campo de Descrição (Opcional)')}</label>
                     <select
                       value={(config.layout_config as any).map_config?.desc_field || ''}
                       onChange={e => setConfig({
@@ -4701,13 +4701,13 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione a descriÃƒÂ§ÃƒÂ£o...</option>
+                      <option value="">Selecione a descrição...</option>
                       {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lat_field', 'Latitude (Y) - ObrigatÃƒÂ³rio')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lat_field', 'Latitude (Y) - Obrigatório')}</label>
                     <select
                       value={(config.layout_config as any).map_config?.lat_field || ''}
                       onChange={e => setConfig({
@@ -4725,7 +4725,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lng_field', 'Longitude (X) - ObrigatÃƒÂ³rio')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lng_field', 'Longitude (X) - Obrigatório')}</label>
                     <select
                       value={(config.layout_config as any).map_config?.lng_field || ''}
                       onChange={e => setConfig({
@@ -4756,7 +4756,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     </div>
                     <div>
                       <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Painel de Indicadores (BI)</h4>
-                      <p className="text-[10px] text-neutral-400 font-medium mt-1">Configure os widgets e grÃƒÂ¡ficos do seu dashboard.</p>
+                      <p className="text-[10px] text-neutral-400 font-medium mt-1">Configure os widgets e gráficos do seu dashboard.</p>
                     </div>
                   </div>
 
@@ -4774,7 +4774,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                         config.layout_config.analytics_config.allow_runtime_edit ? "bg-indigo-600 text-white shadow-md" : "text-neutral-400 hover:text-neutral-600"
                       )}
                     >
-                      EdiÃƒÂ§ÃƒÂ£o no Runtime: {config.layout_config.analytics_config.allow_runtime_edit ? 'ON' : 'OFF'}
+                      Edição no Runtime: {config.layout_config.analytics_config.allow_runtime_edit ? 'ON' : 'OFF'}
                     </button>
                   </div>
                 </div>
@@ -4820,7 +4820,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     return (
                       <div key={level.id || lIdx} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 space-y-3 relative">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-[10px] font-black uppercase text-neutral-400">NÃƒÂ­vel {lIdx + 1} {isRoot && '(Raiz)'}</span>
+                          <span className="text-[10px] font-black uppercase text-neutral-400">Nível {lIdx + 1} {isRoot && '(Raiz)'}</span>
                           {!isRoot && (
                             <button onClick={() => {
                               setConfig((prev: any) => {
@@ -4861,7 +4861,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                             <div className="space-y-3 col-span-full bg-neutral-50 dark:bg-neutral-800/30 p-3 rounded-lg border border-neutral-100 dark:border-neutral-800">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div>
-                                  <label className="text-[9px] font-black uppercase text-neutral-400">Tipo de RelaÃƒÂ§ÃƒÂ£o com o NÃƒÂ­vel Anterior</label>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Tipo de Relação com o Nível Anterior</label>
                                   <select
                                     value={level.relation_type || 'direct'}
                                     onChange={e => {
@@ -4879,14 +4879,14 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                     className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
                                   >
                                     <option value="direct">Direta (1:N)</option>
-                                    <option value="indirect">Indireta (N:M - Via Tabela IntermediÃƒÂ¡ria)</option>
-                                    <option value="multilevel">AvanÃƒÂ§ada (Multi-NÃƒÂ­veis - MÃƒÂºltiplos Joins)</option>
+                                    <option value="indirect">Indireta (N:M - Via Tabela Intermediária)</option>
+                                    <option value="multilevel">Avançada (Multi-Níveis - Múltiplos Joins)</option>
                                   </select>
                                 </div>
 
                                 {level.relation_type === 'indirect' ? (
                                   <div>
-                                    <label className="text-[9px] font-black uppercase text-neutral-400">Tabela IntermediÃƒÂ¡ria (N:M)</label>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Tabela Intermediária (N:M)</label>
                                     <select
                                       value={level.through_table || ''}
                                       onChange={e => {
@@ -4929,7 +4929,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                   return (
                                     <>
                                       <div>
-                                        <label className="text-[9px] font-black uppercase text-neutral-400">FK para o Pai (Na Tabela IntermediÃƒÂ¡ria)</label>
+                                        <label className="text-[9px] font-black uppercase text-neutral-400">FK para o Pai (Na Tabela Intermediária)</label>
                                         <select
                                           value={level.through_local_fk || ''}
                                           onChange={e => {
@@ -4946,7 +4946,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                         </select>
                                       </div>
                                       <div>
-                                        <label className="text-[9px] font-black uppercase text-neutral-400">FK para o Filho (Na Tabela IntermediÃƒÂ¡ria)</label>
+                                        <label className="text-[9px] font-black uppercase text-neutral-400">FK para o Filho (Na Tabela Intermediária)</label>
                                         <select
                                           value={level.through_target_fk || ''}
                                           onChange={e => {
@@ -4987,7 +4987,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                           )}
 
                           <div>
-                            <label className="text-[9px] font-black uppercase text-neutral-400">Campo de TÃƒÂ­tulo do Card</label>
+                            <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Título do Card</label>
                             <select
                               value={level.title_field || ''}
                               onChange={e => {
@@ -4999,13 +4999,13 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                               }}
                               className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none"
                             >
-                              <option value="">AutomÃƒÂ¡tico</option>
+                              <option value="">Automático</option>
                               {levelModel?.fields?.map((f: any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
                             </select>
                           </div>
 
                           <div>
-                            <label className="text-[9px] font-black uppercase text-neutral-400">Campo de DescriÃƒÂ§ÃƒÂ£o / SubtÃƒÂ­tulo</label>
+                            <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Descrição / Subtítulo</label>
                             <select
                               value={level.desc_field || ''}
                               onChange={e => {
@@ -5028,7 +5028,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
 
                   {(!config.layout_config.mindmap_levels || config.layout_config.mindmap_levels.length === 0) && (
                     <div className="p-4 border-2 border-dashed border-purple-200 dark:border-purple-900/50 rounded-xl text-center bg-white dark:bg-neutral-900">
-                      <p className="text-xs text-neutral-500">Nenhuma hierarquia definida. O mapa agruparÃƒÂ¡ os dados base do modelo atual.</p>
+                      <p className="text-xs text-neutral-500">Nenhuma hierarquia definida. O mapa agrupará os dados base do modelo atual.</p>
                       <button
                         onClick={() => {
                           setConfig((prev: any) => ({
@@ -5051,7 +5051,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                         }}
                         className="mt-3 px-4 py-2 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-[10px] font-black uppercase rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors"
                       >
-                        ComeÃƒÂ§ar Hierarquia Relacional
+                        Começar Hierarquia Relacional
                       </button>
                     </div>
                   )}
@@ -5078,7 +5078,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                       className="w-full py-3 border-2 border-dashed border-neutral-200 dark:border-neutral-800 hover:border-purple-300 dark:hover:border-purple-700/50 rounded-xl text-neutral-500 hover:text-purple-600 dark:hover:text-purple-400 text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2"
                     >
                       <Plus className="w-4 h-4" />
-                      Adicionar NÃƒÂ­vel Abaixo
+                      Adicionar Nível Abaixo
                     </button>
                   )}
                 </div>
@@ -5092,12 +5092,12 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
                       <LayoutGrid className="w-4 h-4" />
                     </div>
-                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">ConfiguraÃƒÂ§ÃƒÂ£o da Galeria</h4>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Configuração da Galeria</h4>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">VisualizaÃƒÂ§ÃƒÂ£o de Imagem</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Visualização de Imagem</label>
                   <div className="flex p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
                     <button
                       type="button"
@@ -5123,11 +5123,11 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                         (config.layout_config.gallery_click_behavior || 'lightbox') === 'thumbnail' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
                       )}
                     >
-                      Ver no prÃƒÂ³prio Thumbnail
+                      Ver no próprio Thumbnail
                     </button>
                   </div>
                   <p className="text-[10px] text-neutral-400 font-medium italic ml-1">
-                    Selecione "Ver no prÃƒÂ³prio Thumbnail" para exibir a imagem inteira (sem cortes) diretamente no card, desabilitando a modal de visualizaÃƒÂ§ÃƒÂ£o ao clicar.
+                    Selecione "Ver no próprio Thumbnail" para exibir a imagem inteira (sem cortes) diretamente no card, desabilitando a modal de visualização ao clicar.
                   </p>
                 </div>
 
@@ -5135,7 +5135,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                 <div className="space-y-3 border-t border-neutral-100 dark:border-neutral-800 pt-4 mt-6">
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campos do Card da Galeria</label>
-                    <p className="text-[10px] text-neutral-500 ml-1 mt-0.5">Selecione quais campos aparecerÃƒÂ£o no corpo do card (opcional). Deixe vazio para usar apenas TÃƒÂ­tulo e Arquivo.</p>
+                    <p className="text-[10px] text-neutral-500 ml-1 mt-0.5">Selecione quais campos aparecerão no corpo do card (opcional). Deixe vazio para usar apenas Título e Arquivo.</p>
                   </div>
                   <div className="flex gap-2 items-center">
                     <select
@@ -5366,7 +5366,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                 <div className="flex items-center justify-between cursor-pointer" onClick={() => toggleZone('zone02')}>
                   <div className="space-y-1">
                     <h4 className={cn("text-[9px] font-black uppercase tracking-[0.3em] transition-all", hiddenZones.has('zone02') ? "text-neutral-400" : "text-emerald-600")}>
-                      {config.logic_type === 'kanban' ? t('wizard.layout.zones.kanban_card', 'Campos do Card') : config.logic_type === 'mapa_mental' ? t('wizard.layout.zones.mindmap_nodes', 'Campos do Mapa (NÃƒÂ­veis)') : `${t('wizard.layout.zones.zone_02')}: ${t('wizard.layout.zones.grid')}`}
+                      {config.logic_type === 'kanban' ? t('wizard.layout.zones.kanban_card', 'Campos do Card') : config.logic_type === 'mapa_mental' ? t('wizard.layout.zones.mindmap_nodes', 'Campos do Mapa (Níveis)') : `${t('wizard.layout.zones.zone_02')}: ${t('wizard.layout.zones.grid')}`}
                     </h4>
                     {config.logic_type !== 'kanban' && config.logic_type !== 'mapa_mental' && config.logic_type !== 'galeria' && (
                       <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg w-fit" onClick={e => e.stopPropagation()}>
@@ -5463,7 +5463,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
               </div>
             )}
 
-            {/* ZONA: FORMULÃƒÂRIO (RECURSIVO) */}
+            {/* ZONA: FORMULÁRIO (RECURSIVO) */}
             {(config.logic_type.includes('cadastro') ||
               config.logic_type === 'master_detail' ||
               config.logic_type === 'kanban' ||
@@ -5553,11 +5553,11 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
       </DndContext>
 
       <div className="space-y-6 mt-8">
-        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">ConfiguraÃƒÂ§ÃƒÂµes do FormulÃƒÂ¡rio</label>
+        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Configurações do Formulário</label>
         <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-4 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">TÃƒÂ­tulo do FormulÃƒÂ¡rio (Opcional)</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Título do Formulário (Opcional)</label>
               <input
                 type="text"
                 placeholder="Ex: Editar Registro"
@@ -5568,11 +5568,11 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                 })}
                 className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all"
               />
-              <p className="text-[9px] text-neutral-400 mt-1 italic">Sobrescreve o tÃƒÂ­tulo padrÃƒÂ£o do formulÃƒÂ¡rio (ex: "Editar", "Novo"). Suporta traduÃƒÂ§ÃƒÂ£o se usar chaves de dicionÃƒÂ¡rio.</p>
+              <p className="text-[9px] text-neutral-400 mt-1 italic">Sobrescreve o título padrão do formulário (ex: "Editar", "Novo"). Suporta tradução se usar chaves de dicionário.</p>
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de SubtÃƒÂ­tulo (Opcional)</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Subtítulo (Opcional)</label>
               <select
                 value={(config.layout_config as any).form_header_subtitle_field || ''}
                 onChange={e => setConfig({
@@ -5581,14 +5581,14 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                 })}
                 className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all"
               >
-                <option value="">PadrÃƒÂ£o (Exibe o ID do registro)</option>
+                <option value="">Padrão (Exibe o ID do registro)</option>
                 {models.filter((m: any) => config.selected_models.includes(m.id)).flatMap((m: any) => m.fields).map((f: any) => (
                   <option key={`opt-sub-${f.id}`} value={f.db_column_name}>
                     {getFieldName(f.id)} ({f.data_type})
                   </option>
                 ))}
               </select>
-              <p className="text-[9px] text-neutral-400 mt-1 italic">Substitui a exibiÃƒÂ§ÃƒÂ£o do ID do registro pelo valor deste campo no formulÃƒÂ¡rio.</p>
+              <p className="text-[9px] text-neutral-400 mt-1 italic">Substitui a exibição do ID do registro pelo valor deste campo no formulário.</p>
             </div>
           </div>
         </div>
@@ -5630,7 +5630,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     drawerActiveTab === 'logica' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
                   )}
                 >
-                  FÃƒâ€œRMULA
+                  FÓRMULA
                   {drawerActiveTab === 'logica' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
                 </button>
               </div>
@@ -5692,7 +5692,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     </div>
                   </div>
 
-                  {/* TEXTO DE EXIBIÃƒâ€¡ÃƒÆ’O PARA TABS FICA SEPARADO MAS NA MESMA ABA ÃƒÅ¡NICA */}
+                  {/* TEXTO DE EXIBIÇÃO PARA TABS FICA SEPARADO MAS NA MESMA ABA ÚNICA */}
                   <div className="space-y-4 pt-6 mt-6 border-t border-neutral-100 dark:border-neutral-800">
                     <div className="flex items-center gap-3">
                       <div className="w-1 h-4 bg-indigo-600 rounded-full"></div>
@@ -5764,14 +5764,14 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                               onChange={e => updateMeta('content', 'filter_operator', e.target.value)}
                               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none cursor-pointer focus:border-indigo-500 transition-colors"
                             >
-                              <option value="ilike">ContÃƒÂ©m (Busca por texto - PadrÃƒÂ£o)</option>
+                              <option value="ilike">Contém (Busca por texto - Padrão)</option>
                               <option value="=">Igual (=)</option>
                               <option value=">">Maior que (&gt;)</option>
                               <option value=">=">Maior ou igual (&gt;=)</option>
                               <option value="<">Menor que (&lt;)</option>
                               <option value="<=">Menor ou igual (&lt;=)</option>
                               <option value="!=">Diferente (!=)</option>
-                              <option value="between">Intervalo (De / AtÃƒÂ©)</option>
+                              <option value="between">Intervalo (De / Até)</option>
                             </select>
                           </div>
 
@@ -5783,14 +5783,14 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                               <div className="space-y-4">
                                 {isDateField && (
                                   <div className="space-y-2">
-                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Tipo de Valor PadrÃƒÂ£o</label>
+                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Tipo de Valor Padrão</label>
                                     <select
                                       value={currentFieldMeta.content?.default_value_type || 'fixed'}
                                       onChange={e => updateMeta('content', 'default_value_type', e.target.value)}
                                       className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
                                     >
                                       <option value="fixed">Fixo (Escolher Data)</option>
-                                      <option value="relative">DinÃƒÂ¢mico (ÃƒÅ¡ltimos...)</option>
+                                      <option value="relative">Dinâmico (Últimos...)</option>
                                     </select>
                                   </div>
                                 )}
@@ -5826,7 +5826,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                 ) : currentFieldMeta.content?.filter_operator === 'between' ? (
                                   <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-2">
-                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor PadrÃƒÂ£o (De)</label>
+                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor Padrão (De)</label>
                                       <input
                                         type={inputType}
                                         placeholder="Ex: 2024-01-01"
@@ -5836,7 +5836,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor PadrÃƒÂ£o (AtÃƒÂ©)</label>
+                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor Padrão (Até)</label>
                                       <input
                                         type={inputType}
                                         placeholder="Ex: 2024-12-31"
@@ -5848,7 +5848,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                   </div>
                                 ) : (
                                   <div className="space-y-2">
-                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor PadrÃƒÂ£o Inicial</label>
+                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor Padrão Inicial</label>
                                     <input
                                       type={inputType}
                                       placeholder="Valor que inicia na busca"
@@ -5919,12 +5919,12 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                                   />
                                   <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none rounded-full peer dark:bg-neutral-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
                                 </label>
-                                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">{t('wizard.layout.drawer.viacep_title', 'Busca AutomÃƒÂ¡tica de EndereÃƒÂ§o (ViaCEP)')}</span>
+                                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">{t('wizard.layout.drawer.viacep_title', 'Busca Automática de Endereço (ViaCEP)')}</span>
                               </div>
 
                               {currentFieldMeta.viacep?.enabled && (
                                 <div className="space-y-3 pt-4 border-t border-indigo-100 dark:border-indigo-900/30">
-                                  <p className="text-[9px] text-neutral-500 font-medium leading-relaxed">{t('wizard.layout.drawer.viacep_desc', 'Mapeie os campos do formulÃƒÂ¡rio que receberÃƒÂ£o os dados do ViaCEP automaticamente:')}</p>
+                                  <p className="text-[9px] text-neutral-500 font-medium leading-relaxed">{t('wizard.layout.drawer.viacep_desc', 'Mapeie os campos do formulário que receberão os dados do ViaCEP automaticamente:')}</p>
 
                                   {['logradouro', 'bairro', 'cidade', 'uf'].map((fieldKey) => (
                                     <div key={fieldKey} className="flex items-center justify-between gap-2">
@@ -5970,7 +5970,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                         </div>
                         <div className="flex flex-col">
                           <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase tracking-widest">{t('wizard.layout.drawer.readonly', 'Somente Leitura')}</span>
-                          <span className="text-[8px] text-neutral-400 font-medium">{t('wizard.layout.drawer.readonly_desc', 'O usuÃƒÂ¡rio nÃƒÂ£o poderÃƒÂ¡ alterar este valor')}</span>
+                          <span className="text-[8px] text-neutral-400 font-medium">{t('wizard.layout.drawer.readonly_desc', 'O usuário não poderá alterar este valor')}</span>
                         </div>
                       </div>
                     </div>
@@ -5979,7 +5979,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                   <div className="space-y-4 pt-6 border-t border-neutral-100 dark:border-neutral-800">
                     <div className="flex items-center gap-3">
                       <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
-                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.component_config', 'ConfiguraÃƒÂ§ÃƒÂ£o do Componente')}</h3>
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.component_config', 'Configuração do Componente')}</h3>
                     </div>
 
                     <div className="space-y-4">
@@ -6050,7 +6050,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
 
                           {(currentFieldMeta.component?.options_type || 'fixed') === 'fixed' ? (
                             <div className="space-y-2">
-                              <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.fixed_options', 'OpÃƒÂ§ÃƒÂµes (Label:Valor, separadas por vÃƒÂ­rgula)')}</label>
+                              <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.fixed_options', 'Opções (Label:Valor, separadas por vírgula)')}</label>
                               <textarea
                                 placeholder="Ex: Ativo:A, Inativo:I"
                                 value={currentFieldMeta.component?.fixed_options || ''}
@@ -6073,7 +6073,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                               </select>
                               {currentFieldMeta.component?.rel_table && (
                                 <p className="text-[9px] text-neutral-500 mt-2 italic px-1">
-                                  {t('wizard.layout.drawer.options_available', '{count} opÃƒÂ§ÃƒÂµes disponÃƒÂ­veis').replace('{count}', String(enumerations.find((e: any) => e.id === currentFieldMeta.component?.rel_table)?.values?.length || 0))}
+                                  {t('wizard.layout.drawer.options_available', '{count} opções disponíveis').replace('{count}', String(enumerations.find((e: any) => e.id === currentFieldMeta.component?.rel_table)?.values?.length || 0))}
                                 </p>
                               )}
                             </div>
@@ -6135,7 +6135,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
                       <h4 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-widest">
-                        CÃƒÂ¡lculos e FÃƒÂ³rmulas
+                        Cálculos e Fórmulas
                       </h4>
                     </div>
                     <FormulaBuilder
@@ -6196,7 +6196,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     className="w-full mb-6 flex items-center justify-center gap-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 py-3 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors text-xs font-bold"
                   >
                     <Copy className="w-4 h-4" />
-                    {t('wizard.layout.drawer.apply_styles_zone', 'Aplicar formataÃƒÂ§ÃƒÂ£o a todos desta zona ({zone})').replace('{zone}', editingFieldZone === 'filter' ? t('wizard.layout.drawer.zone_filter') : editingFieldZone === 'grid' ? t('wizard.layout.drawer.zone_grid') : t('wizard.layout.drawer.zone_form'))}
+                    {t('wizard.layout.drawer.apply_styles_zone', 'Aplicar formatação a todos desta zona ({zone})').replace('{zone}', editingFieldZone === 'filter' ? t('wizard.layout.drawer.zone_filter') : editingFieldZone === 'grid' ? t('wizard.layout.drawer.zone_grid') : t('wizard.layout.drawer.zone_form'))}
                   </button>
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
@@ -6568,7 +6568,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                       (btn.custom_label !== undefined && btn.custom_label !== '') ? "" : "capitalize tracking-wider"
                     )}
                     style={btn.visible ? {
-                      fontFamily: (btn.font_family && btn.font_family !== 'Inter (PadrÃƒÂ£o)') ? btn.font_family : undefined,
+                      fontFamily: (btn.font_family && btn.font_family !== 'Inter (Padrão)') ? btn.font_family : undefined,
                       fontSize: btn.font_size || undefined,
                       color: btn.text_color || undefined,
                       textTransform: (btn.text_transform !== undefined ? (btn.text_transform !== 'none' ? btn.text_transform : undefined) : 'capitalize') as any
@@ -6587,7 +6587,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                       setSelectedButtonConfig({
                         ...btn,
                         custom_label: btn.custom_label !== undefined ? btn.custom_label : (t(btn.labelKey) || btn.label),
-                        font_family: btn.font_family || 'Inter (PadrÃƒÂ£o)',
+                        font_family: btn.font_family || 'Inter (Padrão)',
                         font_size: btn.font_size || '10px',
                         text_color: btn.text_color || '',
                         bg_color: btn.bg_color || '',
@@ -6596,7 +6596,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                       setIsButtonPropertiesOpen(true);
                     }}
                     className="absolute top-3 right-3 p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-400 opacity-0 group-hover/btn:opacity-100 focus:opacity-100 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all cursor-pointer z-10"
-                    title="Propriedades do BotÃƒÂ£o"
+                    title="Propriedades do Botão"
                   >
                     <Settings2 className="w-3.5 h-3.5" />
                   </button>
@@ -6657,7 +6657,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                   <div>
                     <h4 className="font-bold text-sm text-neutral-900 dark:text-white">{action.label}</h4>
                     <p className="text-[10px] text-neutral-400 uppercase tracking-wider">
-                      {action.trigger_type} Ã¢â‚¬Â¢ {(() => {
+                      {action.trigger_type} • {(() => {
                         const activeContexts: string[] = action.contexts
                           ? (Array.isArray(action.contexts) ? action.contexts : [action.contexts])
                           : (action.context ? [action.context] : ['row']);
@@ -6723,7 +6723,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
       </div>
 
       <div className="space-y-6">
-        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.export_data_title', 'ExportaÃƒÂ§ÃƒÂ£o de Dados')}</label>
+        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.export_data_title', 'Exportação de Dados')}</label>
 
         <div className="space-y-4">
           <button
@@ -6752,8 +6752,8 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                 <Download className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-bold text-base text-neutral-900 dark:text-white">{t('wizard.actions.export_data_bg', 'ExportaÃƒÂ§ÃƒÂ£o de Dados (Background)')}</h4>
-                <p className="text-[10px] text-neutral-400 mt-1 leading-relaxed">{t('wizard.actions.export_data_desc', 'Permite que os usuÃƒÂ¡rios exportem os dados desta tela com processamento assÃƒÂ­ncrono.')}</p>
+                <h4 className="font-bold text-base text-neutral-900 dark:text-white">{t('wizard.actions.export_data_bg', 'Exportação de Dados (Background)')}</h4>
+                <p className="text-[10px] text-neutral-400 mt-1 leading-relaxed">{t('wizard.actions.export_data_desc', 'Permite que os usuários exportem os dados desta tela com processamento assíncrono.')}</p>
               </div>
             </div>
             <div className={cn(
@@ -6994,12 +6994,12 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
 
                       {editingAction.target_tab && (
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">OpÃ§Ãµes de RenderizaÃ§Ã£o</label>
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Op��es de Renderiza��o</label>
                           <div className="grid grid-cols-1 gap-1.5 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl">
                             {[
-                              { value: 'global_top', label: 'AÃ§Ã£o Global (Topo)' },
-                              { value: 'global_detail', label: 'AÃ§Ã£o Global (Detalhe)' },
-                              { value: 'field_group', label: 'Agrupado ao Campo (FormulÃ¡rio)' }
+                              { value: 'global_top', label: 'A��o Global (Topo)' },
+                              { value: 'global_detail', label: 'A��o Global (Detalhe)' },
+                              { value: 'field_group', label: 'Agrupado ao Campo (Formul�rio)' }
                             ].map(opt => {
                               const isChecked = (editingAction.contexts || ['global_top']).includes(opt.value);
                               return (
@@ -7019,11 +7019,11 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                         </div>
                       )}
 
-                      {/* If field_group is selected, show Campos Alvo and PosiÃ§Ã£o */}
+                      {/* If field_group is selected, show Campos Alvo and Posi��o */}
                       {editingAction.target_tab && (editingAction.contexts || []).includes('field_group') && (
                         <div className="p-4 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-xl mt-2 space-y-4 animate-in fade-in slide-in-from-top-2">
                           <div className="space-y-2">
-                            <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">PosiÃ§Ã£o (Layout)</label>
+                            <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">Posi��o (Layout)</label>
                             <div className="flex gap-2">
                               <button
                                 type="button"
@@ -7277,7 +7277,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                 {editingAction.trigger_type === 'sql' && (
                   <div className="space-y-2 animate-in fade-in zoom-in-95 duration-300">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.sql_command')}</label>
-                    <p className="text-[9px] text-neutral-500 ml-1 mb-2">{t('wizard.actions.sql_variables_hint', 'VocÃƒÂª pode usar variÃƒÂ¡veis usando chaves duplas: {{id}}')}</p>
+                    <p className="text-[9px] text-neutral-500 ml-1 mb-2">{t('wizard.actions.sql_variables_hint', 'Você pode usar variáveis usando chaves duplas: {{id}}')}</p>
                     <textarea
                       value={editingAction.sql_query}
                       onChange={e => setEditingAction({ ...editingAction, sql_query: e.target.value })}
@@ -7298,7 +7298,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                           className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-500 outline-none transition-all"
                         >
                           <option value="">{t('wizard.actions.select_usecase')}</option>
-                          {isDownloadsActive && <option value="downloads">Ã°Å¸â€œÂ Central de Downloads</option>}
+                          {isDownloadsActive && <option value="downloads">📁 Central de Downloads</option>}
                           {useCases?.filter((uc: any) => uc.slug !== config.slug).map((uc: any) => (
                             <option key={uc.slug} value={uc.slug}>{uc.name} ({uc.slug})</option>
                           ))}
@@ -7312,7 +7312,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                           onChange={e => setEditingAction({ ...editingAction, usecase_open_mode: e.target.value })}
                           className="w-full bg-white dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-500 outline-none transition-all"
                         >
-                          <option value="page">{t('wizard.actions.open_modes.page', 'Mesma Tela (NavegaÃƒÂ§ÃƒÂ£o PadrÃƒÂ£o)')}</option>
+                          <option value="page">{t('wizard.actions.open_modes.page', 'Mesma Tela (Navegação Padrão)')}</option>
                           <option value="modal">{t('wizard.actions.open_modes.modal', 'Modal (Centralizado)')}</option>
                           <option value="drawer">{t('wizard.actions.open_modes.drawer', 'Drawer (Lateral)')}</option>
                         </select>
@@ -7320,7 +7320,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                     </div>
                     <div className="space-y-4 mt-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.fields_as_params', 'Mapeamento de ParÃƒÂ¢metros (De : Para)')}</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.fields_as_params', 'Mapeamento de Parâmetros (De : Para)')}</label>
                         <div className="space-y-2 p-4 bg-white dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl">
 
                           {/* Table Header */}
@@ -7430,7 +7430,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                                   }}
                                   className="mt-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
                                 >
-                                  <Plus className="w-3 h-3" /> Adicionar ParÃƒÂ¢metro
+                                  <Plus className="w-3 h-3" /> Adicionar Parâmetro
                                 </button>
                               </>
                             )
@@ -7439,7 +7439,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.additional_params', 'ParÃƒÂ¢metros Adicionais Fixos (Filtros na URL)')}</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.additional_params', 'Parâmetros Adicionais Fixos (Filtros na URL)')}</label>
                         <p className="text-[9px] text-neutral-500 ml-1 mb-2">{t('wizard.actions.additional_params_hint', 'Ex: status=ativo&tipo=1')}</p>
                         <input
                           type="text"
@@ -7457,7 +7457,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                   <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300 bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
                     <div className="flex gap-4">
                       <div className="space-y-2 w-1/3">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.method', 'MÃƒÂ©todo')}</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.method', 'Método')}</label>
                         <select
                           value={editingAction.rest_method}
                           onChange={e => setEditingAction({ ...editingAction, rest_method: e.target.value })}
@@ -7496,7 +7496,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
               </div>
             )}
 
-            {/* BPM / AutomaÃƒÂ§ÃƒÂ£o Tab */}
+            {/* BPM / Automação Tab */}
             {activeModalTab === 'bpm' && (
               <div className="grid grid-cols-1 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="space-y-4">
@@ -7505,19 +7505,19 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                       <Workflow className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-100 mb-1">{t('wizard.actions.bpm_integration_title', 'IntegraÃƒÂ§ÃƒÂ£o com BPM')}</h4>
+                      <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-100 mb-1">{t('wizard.actions.bpm_integration_title', 'Integração com BPM')}</h4>
                       <p className="text-xs text-emerald-700 dark:text-emerald-300/80 leading-relaxed">
-                        {t('wizard.actions.bpm_integration_desc', 'Selecione quais fluxos automatizados (BPM) serÃƒÂ£o disparados quando o usuÃƒÂ¡rio clicar neste botÃƒÂ£o. VocÃƒÂª tambÃƒÂ©m pode configurar esta ligaÃƒÂ§ÃƒÂ£o diretamente na tela de AutomaÃƒÂ§ÃƒÂµes.')}
+                        {t('wizard.actions.bpm_integration_desc', 'Selecione quais fluxos automatizados (BPM) serão disparados quando o usuário clicar neste botão. Você também pode configurar esta ligação diretamente na tela de Automações.')}
                       </p>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.available_workflows', 'Workflows DisponÃƒÂ­veis')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.available_workflows', 'Workflows Disponíveis')}</label>
                     <div className="grid grid-cols-1 gap-2 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl max-h-[300px] overflow-y-auto custom-scrollbar">
                       {bpmWorkflows.length === 0 ? (
                         <div className="text-center py-6">
-                          <p className="text-xs text-neutral-500">{t('wizard.actions.no_workflows', 'Nenhum fluxo de automaÃƒÂ§ÃƒÂ£o criado neste projeto.')}</p>
+                          <p className="text-xs text-neutral-500">{t('wizard.actions.no_workflows', 'Nenhum fluxo de automação criado neste projeto.')}</p>
                           <Link href={`/admin/${workspace_slug}/${project_slug}/automations`} target="_blank" className="text-xs text-emerald-600 hover:underline font-bold mt-2 inline-block">
                             {t('wizard.actions.create_first_flow', 'Criar Primeiro Fluxo')}
                           </Link>
@@ -7567,7 +7567,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
 
             <div className="flex gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800 mt-6">
               <button type="button" onClick={() => setIsActionModalOpen(false)} className="flex-1 px-4 py-3 bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all">{t('common.cancel', 'Cancelar')}</button>
-              <button type="button" onClick={() => handleSaveAction(editingAction)} className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95">{t('wizard.actions.save_action', 'Salvar AÃƒÂ§ÃƒÂ£o')}</button>
+              <button type="button" onClick={() => handleSaveAction(editingAction)} className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95">{t('wizard.actions.save_action', 'Salvar Ação')}</button>
             </div>
           </div>
         )}
@@ -7577,13 +7577,13 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
       <Modal
         isOpen={isButtonPropertiesOpen}
         onClose={() => setIsButtonPropertiesOpen(false)}
-        title={`Propriedades do BotÃƒÂ£o: ${selectedButtonConfig ? (selectedButtonConfig.id === 'search' ? 'Pesquisar' : selectedButtonConfig.id === 'clear' ? 'Limpar' : selectedButtonConfig.id === 'view' ? 'Visualizar' : selectedButtonConfig.id === 'add' ? 'Novo Registro' : selectedButtonConfig.id === 'edit' ? 'Editar' : selectedButtonConfig.id === 'delete' ? 'Excluir' : selectedButtonConfig.label) : ''}`}
+        title={`Propriedades do Botão: ${selectedButtonConfig ? (selectedButtonConfig.id === 'search' ? 'Pesquisar' : selectedButtonConfig.id === 'clear' ? 'Limpar' : selectedButtonConfig.id === 'view' ? 'Visualizar' : selectedButtonConfig.id === 'add' ? 'Novo Registro' : selectedButtonConfig.id === 'edit' ? 'Editar' : selectedButtonConfig.id === 'delete' ? 'Excluir' : selectedButtonConfig.label) : ''}`}
         size="md"
       >
         {selectedButtonConfig && (
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Texto de ExibiÃƒÂ§ÃƒÂ£o</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Texto de Exibição</label>
               <input
                 type="text"
                 value={selectedButtonConfig.custom_label}
@@ -7601,7 +7601,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                   onChange={e => setSelectedButtonConfig({ ...selectedButtonConfig, font_family: e.target.value })}
                   className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-all"
                 >
-                  <option value="Inter">Inter (PadrÃƒÂ£o)</option>
+                  <option value="Inter">Inter (Padrão)</option>
                   <option value="Roboto">Roboto</option>
                   <option value="Outfit">Outfit</option>
                   <option value="JetBrains Mono">Mono (JetBrains)</option>
@@ -7621,7 +7621,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">TransformaÃƒÂ§ÃƒÂ£o do Texto</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Transformação do Texto</label>
               <div className="grid grid-cols-4 gap-2">
                 {[
                   { value: 'none', label: 'Normal', example: 'Aa' },
@@ -7656,13 +7656,13 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                   className="text-sm font-bold text-neutral-700 dark:text-neutral-300"
                   style={{
                     textTransform: ((selectedButtonConfig.text_transform || 'capitalize') !== 'none' ? selectedButtonConfig.text_transform : undefined) as any,
-                    fontFamily: (selectedButtonConfig.font_family && selectedButtonConfig.font_family !== 'Inter (PadrÃƒÂ£o)') ? selectedButtonConfig.font_family : undefined,
+                    fontFamily: (selectedButtonConfig.font_family && selectedButtonConfig.font_family !== 'Inter (Padrão)') ? selectedButtonConfig.font_family : undefined,
                     fontSize: selectedButtonConfig.font_size || undefined,
                     color: selectedButtonConfig.text_color || undefined,
                     backgroundColor: selectedButtonConfig.bg_color || undefined,
                   }}
                 >
-                  {selectedButtonConfig.custom_label || 'Preview do BotÃƒÂ£o'}
+                  {selectedButtonConfig.custom_label || 'Preview do Botão'}
                 </span>
               </div>
             </div>
@@ -7687,7 +7687,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Cor do BotÃƒÂ£o (Fundo)</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Cor do Botão (Fundo)</label>
               <div className="flex gap-2 items-center">
                 <input
                   type="color"
@@ -7795,7 +7795,7 @@ function DraggableTableHeader({ model, isCollapsed, onToggle }: any) {
       {...attributes}
       {...listeners}
       onClick={(e) => {
-        // Se estiver arrastando, nÃƒÂ£o ativa o toggle
+        // Se estiver arrastando, não ativa o toggle
         if (isDragging) return;
         onToggle();
       }}
@@ -7882,7 +7882,7 @@ function SortableWidgetCard({ widget, onEdit, onDelete, getFieldName }: any) {
         </div>
         <div>
           <h5 className="text-xs font-black uppercase tracking-tight text-neutral-900 dark:text-white">{widget.title}</h5>
-          <p className="text-[9px] text-neutral-400 uppercase font-black tracking-widest">{widget.type} Ã¢â‚¬Â¢ {widget.calc} ({getFieldName(widget.field) || 'Toda Tabela'})</p>
+          <p className="text-[9px] text-neutral-400 uppercase font-black tracking-widest">{widget.type} • {widget.calc} ({getFieldName(widget.field) || 'Toda Tabela'})</p>
         </div>
       </div>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all relative z-10">
