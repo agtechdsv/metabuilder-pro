@@ -904,6 +904,9 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           details_display_mode: sourceData.layout_config?.details_display_mode || {},
           details_interface_types: sourceData.layout_config?.details_interface_types || {},
           details_inline_types: sourceData.layout_config?.details_inline_types || {},
+          details_modal_sizes: sourceData.layout_config?.details_modal_sizes || {},
+          details_modal_widths: sourceData.layout_config?.details_modal_widths || {},
+          details_modal_heights: sourceData.layout_config?.details_modal_heights || {},
           master_tab_title: sourceData.layout_config?.master_tab_title,
           details_tab_titles: sourceData.layout_config?.details_tab_titles || {},
           details_item_titles: sourceData.layout_config?.details_item_titles || {},
@@ -3572,6 +3575,81 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                   )
                 })}
               </div>
+
+              {((config.layout_config as any).details_interface_types?.[model.id] || 'modal') === 'modal' && (
+                <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800 ml-1">
+                  <select
+                    value={(config.layout_config as any).details_modal_sizes?.[model.id] || 'md'}
+                    onChange={(e) => {
+                      const currentSizes = (config.layout_config as any).details_modal_sizes || {}
+                      setConfig({
+                        ...config,
+                        layout_config: {
+                          ...config.layout_config,
+                          details_modal_sizes: {
+                            ...currentSizes,
+                            [model.id]: e.target.value
+                          }
+                        }
+                      })
+                    }}
+                    className="bg-transparent border-none outline-none text-[8px] font-black uppercase tracking-wider text-neutral-600 dark:text-neutral-400 px-2 h-full cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                    title="Tamanho da Modal"
+                  >
+                    <option value="sm" title="Pequeno (max. 384px)">SM</option>
+                    <option value="md" title="Médio (max. 672px) - Padrão">MD</option>
+                    <option value="lg" title="Grande (max. 896px)">LG</option>
+                    <option value="full" title="Tela Cheia (95% da tela)">FULL</option>
+                    <option value="custom" title="Personalizado (em pixels ou %)">CUST</option>
+                  </select>
+
+                  {((config.layout_config as any).details_modal_sizes?.[model.id] === 'custom') && (
+                    <div className="flex items-center gap-1 ml-1 px-1 border-l border-neutral-200 dark:border-neutral-800">
+                      <input
+                        type="text"
+                        placeholder="Largura"
+                        value={(config.layout_config as any).details_modal_widths?.[model.id] || ''}
+                        onChange={(e) => {
+                          const currentWidths = (config.layout_config as any).details_modal_widths || {}
+                          setConfig({
+                            ...config,
+                            layout_config: {
+                              ...config.layout_config,
+                              details_modal_widths: {
+                                ...currentWidths,
+                                [model.id]: e.target.value
+                              }
+                            }
+                          })
+                        }}
+                        className="w-14 bg-transparent border-none outline-none text-[8px] font-bold text-neutral-600 dark:text-neutral-400 placeholder-neutral-400 dark:placeholder-neutral-600"
+                        title="Ex: 800px, 90%"
+                      />
+                      <span className="text-[8px] font-black text-neutral-400">x</span>
+                      <input
+                        type="text"
+                        placeholder="Altura"
+                        value={(config.layout_config as any).details_modal_heights?.[model.id] || ''}
+                        onChange={(e) => {
+                          const currentHeights = (config.layout_config as any).details_modal_heights || {}
+                          setConfig({
+                            ...config,
+                            layout_config: {
+                              ...config.layout_config,
+                              details_modal_heights: {
+                                ...currentHeights,
+                                [model.id]: e.target.value
+                              }
+                            }
+                          })
+                        }}
+                        className="w-14 bg-transparent border-none outline-none text-[8px] font-bold text-neutral-600 dark:text-neutral-400 placeholder-neutral-400 dark:placeholder-neutral-600"
+                        title="Ex: 600px, auto"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800 ml-2">
                 <button
@@ -7328,6 +7406,51 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                         </select>
                       </div>
                     </div>
+
+                    {editingAction.usecase_open_mode === 'modal' && (
+                      <div className="space-y-4 mt-4 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30 rounded-xl">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400 ml-1">Tamanho da Modal</label>
+                          <select
+                            value={editingAction.usecase_modal_size || 'md'}
+                            onChange={e => setEditingAction({ ...editingAction, usecase_modal_size: e.target.value })}
+                            className="w-full bg-white dark:bg-neutral-955 border border-indigo-200 dark:border-indigo-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all"
+                          >
+                            <option value="sm">Pequeno (max. 384px)</option>
+                            <option value="md">Médio (max. 672px) - Padrão</option>
+                            <option value="lg">Grande (max. 896px)</option>
+                            <option value="full">Tela Cheia (95% da tela)</option>
+                            <option value="custom">Personalizado (em pixels ou %)</option>
+                          </select>
+                        </div>
+
+                        {editingAction.usecase_modal_size === 'custom' && (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400 ml-1">Largura</label>
+                              <input
+                                type="text"
+                                value={editingAction.usecase_modal_width || ''}
+                                onChange={e => setEditingAction({ ...editingAction, usecase_modal_width: e.target.value })}
+                                placeholder="ex: 800, 800px, 90vw..."
+                                className="w-full bg-white dark:bg-neutral-955 border border-indigo-200 dark:border-indigo-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400 ml-1">Altura</label>
+                              <input
+                                type="text"
+                                value={editingAction.usecase_modal_height || ''}
+                                onChange={e => setEditingAction({ ...editingAction, usecase_modal_height: e.target.value })}
+                                placeholder="ex: 600, 600px, 80vh..."
+                                className="w-full bg-white dark:bg-neutral-955 border border-indigo-200 dark:border-indigo-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="space-y-4 mt-4">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.fields_as_params', 'Mapeamento de Parâmetros (De : Para)')}</label>

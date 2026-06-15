@@ -68,7 +68,10 @@ interface ViewPageContentProps {
   detailsDisplayMode?: Record<string, 'tabs' | 'sections'>
   actionInterfaceType?: 'drawer' | 'modal' | 'page'
   detailsInterfaceTypes?: Record<string, string>
-  detailsInlineTypes?: Record<string, boolean>
+  detailsInlineTypes?: Record<string, any>
+  detailsModalSizes?: Record<string, string>
+  detailsModalWidths?: Record<string, string>
+  detailsModalHeights?: Record<string, string>
   masterTabTitle?: string
   detailsTabTitles?: Record<string, string>
   detailsItemTitles?: Record<string, string>
@@ -127,6 +130,9 @@ export default function ViewPageContent({
   detailsDisplayMode,
   detailsInterfaceTypes,
   detailsInlineTypes,
+  detailsModalSizes,
+  detailsModalWidths,
+  detailsModalHeights,
   masterTabTitle,
   detailsTabTitles,
   detailsItemTitles,
@@ -2352,6 +2358,9 @@ export default function ViewPageContent({
         joins={joins}
         dictionary={dictionary}
         detailsInlineTypes={detailsInlineTypes}
+        detailsModalSizes={detailsModalSizes}
+        detailsModalWidths={detailsModalWidths}
+        detailsModalHeights={detailsModalHeights}
         initialTab={activeTabForDetail}
         onTabChange={setActiveTabForDetail}
         projectId={project.id}

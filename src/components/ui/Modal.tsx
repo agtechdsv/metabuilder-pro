@@ -10,13 +10,15 @@ interface ModalProps {
   title: string
   description?: string
   children: React.ReactNode
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl'
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl' | '5xl' | 'full' | 'custom'
+  customWidth?: string
+  customHeight?: string
   zIndex?: number
   hideHeader?: boolean
   className?: string
 }
 
-export function Modal({ isOpen, onClose, title, description, children, size = 'md', zIndex = 200, hideHeader = false, className }: ModalProps) {
+export function Modal({ isOpen, onClose, title, description, children, size = 'md', customWidth, customHeight, zIndex = 200, hideHeader = false, className }: ModalProps) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -33,6 +35,22 @@ export function Modal({ isOpen, onClose, title, description, children, size = 'm
 
   if (!mounted || !isOpen) return null
 
+  // Ensure default unit is px if only a number is provided
+  const formatUnit = (val?: string) => {
+    if (!val) return undefined;
+    if (!isNaN(Number(val))) return `${val}px`;
+    return val;
+  }
+
+  const customStyle: React.CSSProperties = {};
+  if (size === 'custom') {
+    if (customWidth) customStyle.maxWidth = formatUnit(customWidth);
+    if (customWidth) customStyle.width = '100%';
+    if (customHeight) customStyle.height = formatUnit(customHeight);
+  } else if (size === 'full') {
+    customStyle.height = '95vh';
+  }
+
   return (
     <div 
       className="fixed inset-0 flex items-center justify-center p-4"
@@ -48,13 +66,18 @@ export function Modal({ isOpen, onClose, title, description, children, size = 'm
       <div className={cn(
         "relative bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 w-full rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-300",
         size === 'sm' && "max-w-sm",
-        size === 'md' && "max-w-md",
-        size === 'lg' && "max-w-lg",
-        size === 'xl' && "max-w-xl",
-        size === '2xl' && "max-w-2xl",
-        size === '4xl' && "max-w-4xl",
+        size === 'md' && "max-w-2xl", // Padrão MD = max-w-2xl para forms
+        size === 'lg' && "max-w-4xl",
+        size === 'xl' && "max-w-5xl",
+        size === '2xl' && "max-w-6xl",
+        size === '4xl' && "max-w-[80vw]",
+        size === '5xl' && "max-w-[90vw]",
+        size === 'full' && "max-w-[95vw] max-h-[95vh]",
+        size === 'custom' && !customWidth && "max-w-2xl", // fallback
         className
-      )}>
+      )}
+      style={customStyle}
+      >
         {!hideHeader && (
           <div className="p-8 pb-4 shrink-0">
             <div className="flex justify-between items-start">

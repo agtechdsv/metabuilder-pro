@@ -37,6 +37,9 @@ interface RecordModalProps {
   refreshTrigger?: number
   customSlots?: any[]
   detailsInterfaceTypes?: Record<string, string>
+  detailsModalSizes?: Record<string, string>
+  detailsModalWidths?: Record<string, string>
+  detailsModalHeights?: Record<string, string>
   formHeaderTitle?: string
   formHeaderSubtitleField?: string
 }
@@ -76,15 +79,36 @@ export default function RecordModal({
   tabsStyleConfig,
   customSlots = [],
   detailsInterfaceTypes,
+  detailsModalSizes,
+  detailsModalWidths,
+  detailsModalHeights,
   formHeaderTitle,
   formHeaderSubtitleField
 }: RecordModalProps) {
+  let calculatedSize: any = logicType === 'master_detail' ? '2xl' : 'xl';
+  let calculatedWidth;
+  let calculatedHeight;
+  
+  if (logicType === 'master_detail' && masterModelName) {
+    const model = project?.models?.find((m: any) => m.db_table_name.toLowerCase() === masterModelName.toLowerCase());
+    if (model) {
+      const cSize = detailsModalSizes?.[model.id];
+      if (cSize) calculatedSize = cSize;
+      const cWidth = detailsModalWidths?.[model.id];
+      if (cWidth) calculatedWidth = cWidth;
+      const cHeight = detailsModalHeights?.[model.id];
+      if (cHeight) calculatedHeight = cHeight;
+    }
+  }
+
   return (
     <Modal 
       isOpen={isOpen} 
       onClose={onClose} 
       title=""
-      size={logicType === 'master_detail' ? '2xl' : 'xl'}
+      size={calculatedSize === 'custom' ? 'custom' : calculatedSize}
+      customWidth={calculatedSize === 'custom' ? calculatedWidth : undefined}
+      customHeight={calculatedSize === 'custom' ? calculatedHeight : undefined}
       zIndex={zIndex}
     >
       {logicType === 'personalizado' ? (

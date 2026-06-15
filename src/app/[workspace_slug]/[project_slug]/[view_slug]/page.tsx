@@ -812,6 +812,9 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
           detailsDisplayMode={view.layout_config?.details_display_mode}
           detailsInterfaceTypes={view.layout_config?.details_interface_types}
           detailsInlineTypes={view.layout_config?.details_inline_types}
+          detailsModalSizes={view.layout_config?.details_modal_sizes}
+          detailsModalWidths={view.layout_config?.details_modal_widths}
+          detailsModalHeights={view.layout_config?.details_modal_heights}
           masterTabTitle={view.layout_config?.master_tab_title}
           detailsTabTitles={view.layout_config?.details_tab_titles}
           detailsItemTitles={view.layout_config?.details_item_titles}

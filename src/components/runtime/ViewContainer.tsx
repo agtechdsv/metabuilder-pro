@@ -175,6 +175,9 @@ export default function ViewContainer({
   const [iframeUrl, setIframeUrl] = useState<string>('')
   const [iframeTitle, setIframeTitle] = useState<string>('')
   const [isIframeModalOpen, setIsIframeModalOpen] = useState(false)
+  const [iframeModalSize, setIframeModalSize] = useState<string>('md')
+  const [iframeModalWidth, setIframeModalWidth] = useState<string>('')
+  const [iframeModalHeight, setIframeModalHeight] = useState<string>('')
   const [isIframeDrawerOpen, setIsIframeDrawerOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
@@ -286,6 +289,9 @@ export default function ViewContainer({
       if (openMode === 'modal') {
         setIframeUrl(url + (allParams ? '&embedded=true' : '?embedded=true'))
         setIframeTitle(action.label || 'Visualizar')
+        setIframeModalSize(action.usecase_modal_size || 'md')
+        setIframeModalWidth(action.usecase_modal_width || '')
+        setIframeModalHeight(action.usecase_modal_height || '')
         setIsIframeModalOpen(true)
       } else if (openMode === 'drawer') {
         setIframeUrl(url + (allParams ? '&embedded=true' : '?embedded=true'))
@@ -2052,11 +2058,16 @@ export default function ViewContainer({
           setRefreshTrigger(prev => prev + 1)
         }} 
         title={iframeTitle}
-        size="4xl"
+        size={iframeModalSize === 'custom' ? 'custom' : (iframeModalSize as any || '4xl')}
+        customWidth={iframeModalSize === 'custom' ? iframeModalWidth : undefined}
+        customHeight={iframeModalSize === 'custom' ? iframeModalHeight : undefined}
         hideHeader={true}
         className="!p-0 bg-transparent shadow-none border-none dark:bg-transparent"
       >
-        <div className="w-full h-[85vh] bg-white dark:bg-neutral-950 rounded-[2.5rem] overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800">
+        <div 
+          className="w-full bg-white dark:bg-neutral-950 rounded-[2.5rem] overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800"
+          style={{ height: iframeModalSize === 'custom' && iframeModalHeight ? (isNaN(Number(iframeModalHeight)) ? iframeModalHeight : `${iframeModalHeight}px`) : '85vh' }}
+        >
           {isIframeModalOpen && <iframe src={iframeUrl} className="w-full h-full border-none" />}
         </div>
       </Modal>
