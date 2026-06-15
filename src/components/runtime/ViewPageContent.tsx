@@ -990,8 +990,7 @@ export default function ViewPageContent({
     setIsDetailModalOpen(false)
     setIsDetailDrawerOpen(false)
 
-    const fields = detailFields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())
-    setDetailFieldsToRender(fields)
+    setDetailFieldsToRender(detailFields)
     setSelectedDetail({})
     setDetailModalMode('create')
     setCurrentDetailTable(tableName)
@@ -1026,8 +1025,7 @@ export default function ViewPageContent({
     setIsProcessing(true)
     const subDetails = await fetchDetails(detail, detail.model_name)
     
-    const fields = detailFields.filter(f => f.model_name?.toLowerCase() === detail.model_name?.toLowerCase())
-    setDetailFieldsToRender(fields)
+    setDetailFieldsToRender(detailFields)
     setSelectedDetail({ ...detail, _details: subDetails })
     setDetailModalMode('edit')
     setCurrentDetailTable(detail.model_name)
@@ -1707,8 +1705,7 @@ export default function ViewPageContent({
 
           const isNewDetail = detail._isNew
           
-          const fields = detailFields.filter(f => f.model_name?.toLowerCase() === detailTableName?.toLowerCase())
-          const pkField = fields.find(f => f.is_primary_key) || { db_column_name: 'id' }
+          const pkField = detailFields.find(f => f.is_primary_key) || { db_column_name: 'id' }
           const detailPkName = pkField.db_column_name.split('.').pop() || 'id'
           const dPkValue = detail[detailPkName] ?? detail[detailPkName.toUpperCase()] ?? detail.id ?? detail.ID
 
@@ -2312,9 +2309,15 @@ export default function ViewPageContent({
           masterTabTitle: masterTabTitle,
           detailsTabTitles: detailsTabTitles,
           detailsItemTitles: detailsItemTitles,
+          detailsDisplayMode: detailsDisplayMode,
+          tabsStyleConfig: tabsStyleConfig,
           joins: joins,
           dictionary: dictionary,
           detailsInlineTypes: detailsInlineTypes,
+          detailsInterfaceTypes: detailsInterfaceTypes,
+          detailsModalSizes: detailsModalSizes,
+          detailsModalWidths: detailsModalWidths,
+          detailsModalHeights: detailsModalHeights,
           initialTab: item.activeTab,
           onSave: async () => {},
           onClose: () => {
@@ -2352,12 +2355,18 @@ export default function ViewPageContent({
         isLoading={isProcessing}
         logicType="master_detail"
         masterModelName={currentDetailTable}
+        masterTabTitle={masterTabTitle}
+        detailsTabTitles={detailsTabTitles}
+        detailsItemTitles={detailsItemTitles}
+        detailsDisplayMode={detailsDisplayMode}
+        tabsStyleConfig={tabsStyleConfig}
         onEditDetail={handleEditDetail}
         onDeleteDetail={handleDeleteDetail}
         onAddDetail={handleOpenAddDetail}
         joins={joins}
         dictionary={dictionary}
         detailsInlineTypes={detailsInlineTypes}
+        detailsInterfaceTypes={detailsInterfaceTypes}
         detailsModalSizes={detailsModalSizes}
         detailsModalWidths={detailsModalWidths}
         detailsModalHeights={detailsModalHeights}
@@ -2370,6 +2379,7 @@ export default function ViewPageContent({
         project={project}
         customActions={customActions}
         onCustomAction={handleCustomAction}
+        projectRelations={projectRelations}
         refreshTrigger={refreshKey}
       />
 
@@ -2385,13 +2395,21 @@ export default function ViewPageContent({
         isLoading={isProcessing}
         logicType="master_detail"
         masterModelName={currentDetailTable}
+        masterTabTitle={masterTabTitle}
+        detailsTabTitles={detailsTabTitles}
+        detailsItemTitles={detailsItemTitles}
+        detailsDisplayMode={detailsDisplayMode}
+        tabsStyleConfig={tabsStyleConfig}
         onEditDetail={handleEditDetail}
         onDeleteDetail={handleDeleteDetail}
         onAddDetail={handleOpenAddDetail}
-        tabsStyleConfig={tabsStyleConfig}
         joins={joins}
         dictionary={dictionary}
         detailsInlineTypes={detailsInlineTypes}
+        detailsInterfaceTypes={detailsInterfaceTypes}
+        detailsModalSizes={detailsModalSizes}
+        detailsModalWidths={detailsModalWidths}
+        detailsModalHeights={detailsModalHeights}
         initialTab={activeTabForDetail}
         onTabChange={setActiveTabForDetail}
         projectId={project.id}
@@ -2401,6 +2419,7 @@ export default function ViewPageContent({
         project={project}
         customActions={customActions}
         onCustomAction={handleCustomAction}
+        projectRelations={projectRelations}
         refreshTrigger={refreshKey}
       />
 

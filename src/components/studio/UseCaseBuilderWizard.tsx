@@ -1,7 +1,7 @@
 'use client'
 // Refined UseCaseBuilderWizard - Metadata Driven Actions Order
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import FormulaBuilder from './FormulaBuilder'
 import {
   ArrowLeft,
@@ -304,6 +304,9 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       details_display_mode: {} as Record<string, string>,
       details_interface_types: {} as Record<string, 'modal' | 'drawer'>,
       details_inline_types: {} as Record<string, boolean>,
+      details_modal_sizes: {} as Record<string, string>,
+      details_modal_widths: {} as Record<string, number>,
+      details_modal_heights: {} as Record<string, number>,
       master_tab_title: '',
       details_tab_titles: {} as Record<string, string>,
       details_item_titles: {} as Record<string, string>,
@@ -786,20 +789,71 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
     loadData()
   }, [supabase, project_slug])
 
+  const orderedModels = useMemo(() => {
+    if (config.logic_type === 'analytics') return models
+
+    const rootId = config.layout_config.master_model_id || config.selected_models[0]
+    const rootModel = models.find((m: any) => m.id === rootId)
+    if (!rootModel) return models.filter((m: any) => config.selected_models.includes(m.id))
+
+    // Build adjacency map from the relations table (bidirectional)
+    const adj: Record<string, string[]> = {}
+    relations.forEach((r: any) => {
+      const a = r.from_model_id
+      const b = r.to_model_id
+      if (!a || !b) return
+      if (!adj[a]) adj[a] = []
+      if (!adj[b]) adj[b] = []
+      if (!adj[a].includes(b)) adj[a].push(b)
+      if (!adj[b].includes(a)) adj[b].push(a)
+    })
+
+    const maxDepth = config.layout_config?.max_relation_depth || 2
+    
+    // BFS from root
+    const visited = new Set<string>([rootId])
+    const queue: { id: string, depth: number }[] = [{ id: rootId, depth: 0 }]
+    const result: any[] = [rootModel]
+
+    while (queue.length > 0) {
+      const { id: current, depth } = queue.shift()!
+      
+      if (depth >= maxDepth) continue
+
+      const neighbours = adj[current] || []
+      for (const neighbourId of neighbours) {
+        if (!visited.has(neighbourId)) {
+          visited.add(neighbourId)
+          queue.push({ id: neighbourId, depth: depth + 1 })
+          const neighbourModel = models.find((m: any) => m.id === neighbourId)
+          if (neighbourModel) result.push(neighbourModel)
+        }
+      }
+    }
+
+    // If no relations at all, fallback to selected models
+    if (result.length <= 1 && config.selected_models.length > 1) {
+      return models.filter((m: any) => config.selected_models.includes(m.id))
+    }
+
+    return result
+  }, [config.logic_type, config.layout_config.master_model_id, config.layout_config.max_relation_depth, config.selected_models, models, relations])
+
   // Brinde UX: Sugestão automática de Joins baseada na tabela 'relations' (vinda do tunnel)
   useEffect(() => {
     // Se estiver em modo edição ou se já houver joins configurados, não sobrescrevemos
     // ou se não houver modelos suficientes selecionados
-    if (config.layout_config.joins.length > 0 || config.selected_models.length <= 1) return
+    if (config.layout_config.joins.length > 0 || orderedModels.length <= 1) return
 
     if (currentStep === 3) {
       const autoJoins: any[] = []
+      const activeModelIds = orderedModels.map((m: any) => m.id)
 
       if (relations.length > 0) {
-        // Filtra relações onde AMBOS os modelos estão selecionados no Wizard
+        // Filtra relações onde AMBOS os modelos estão ativos
         const relevantRelations = relations.filter(rel =>
-          config.selected_models.includes(rel.foreign_table_id) &&
-          config.selected_models.includes(rel.referenced_table_id)
+          activeModelIds.includes(rel.foreign_table_id) &&
+          activeModelIds.includes(rel.referenced_table_id)
         )
 
         relevantRelations.forEach(rel => {
@@ -824,7 +878,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
 
       // NOVO: Fallback (Heurística) para caso não encontre relações via banco de dados
       if (autoJoins.length === 0) {
-        const selectedModelsData = models.filter(m => config.selected_models.includes(m.id))
+        const selectedModelsData = orderedModels
         for (let i = 0; i < selectedModelsData.length; i++) {
           for (let j = 0; j < selectedModelsData.length; j++) {
             if (i === j) continue
@@ -871,7 +925,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
         toast(`Sugerimos ${autoJoins.length} relacionamentos automaticamente!`, 'info')
       }
     }
-  }, [currentStep, relations, config.selected_models, initialData, models])
+  }, [currentStep, relations, orderedModels, initialData, models])
 
   useEffect(() => {
     if (initialData && !isInitialized) {
@@ -1511,7 +1565,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           <StepTables config={config} setConfig={setConfig} models={models} relations={relations} />
         ) : null}
         {currentStep === 3 && (
-          <StepLayout config={config} setConfig={setConfig} models={models} enumerations={enumerations} relations={relations} useCases={useCases} />
+          <StepLayout config={config} setConfig={setConfig} models={models} enumerations={enumerations} relations={relations} useCases={useCases} orderedModels={orderedModels} />
         )}
         {currentStep === 4 && (
           <StepActions config={config} setConfig={setConfig} models={models} useCases={useCases} isDownloadsActive={isDownloadsActive} bpmWorkflows={bpmWorkflows} relations={relations} />
@@ -2872,7 +2926,7 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
 
 
 
-function StepLayout({ config, setConfig, models, enumerations = [], relations = [], useCases = [] }: any) {
+function StepLayout({ config, setConfig, models, enumerations = [], relations = [], useCases = [], orderedModels = [] }: any) {
   const { t } = useI18n()
   const { toast } = useToast()
   const [expandedCustomSlot, setExpandedCustomSlot] = useState<number | null>(null)
@@ -3241,50 +3295,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
     });
   };
 
-  const orderedModels = (() => {
-    if (config.logic_type === 'analytics') return models
 
-    const rootId = config.layout_config.master_model_id || config.selected_models[0]
-    const rootModel = models.find((m: any) => m.id === rootId)
-    if (!rootModel) return models.filter((m: any) => config.selected_models.includes(m.id))
-
-    // Build adjacency map from the relations table (bidirectional)
-    const adj: Record<string, string[]> = {}
-    relations.forEach((r: any) => {
-      const a = r.from_model_id
-      const b = r.to_model_id
-      if (!a || !b) return
-      if (!adj[a]) adj[a] = []
-      if (!adj[b]) adj[b] = []
-      if (!adj[a].includes(b)) adj[a].push(b)
-      if (!adj[b].includes(a)) adj[b].push(a)
-    })
-
-    // BFS from root
-    const visited = new Set<string>([rootId])
-    const queue = [rootId]
-    const result: any[] = [rootModel]
-
-    while (queue.length > 0) {
-      const current = queue.shift()!
-      const neighbours = adj[current] || []
-      for (const neighbourId of neighbours) {
-        if (!visited.has(neighbourId)) {
-          visited.add(neighbourId)
-          queue.push(neighbourId)
-          const neighbourModel = models.find((m: any) => m.id === neighbourId)
-          if (neighbourModel) result.push(neighbourModel)
-        }
-      }
-    }
-
-    // If no relations at all, fallback to selected models
-    if (result.length <= 1 && config.selected_models.length > 1) {
-      return models.filter((m: any) => config.selected_models.includes(m.id))
-    }
-
-    return result
-  })()
 
   const formTree = (() => {
     if (config.logic_type === 'analytics') return models
@@ -3293,8 +3304,10 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
     const rootModel = models.find((m: any) => m.id === rootId)
     if (!rootModel) return models.filter((m: any) => config.selected_models.includes(m.id))
 
+    const maxDepth = config.layout_config?.max_relation_depth || 2
+
     const buildTree = (modelId: string, depth: number, visited: Set<string>): any[] => {
-      if (depth >= 3) return [] // Max depth: Master (0) -> Detail (1) -> SubDetail (2)
+      if (depth >= maxDepth + 1) return [] // depth is 0-indexed. If max_relation_depth is 1, depth 0 is root, depth 1 is detail. So max allowed depth is max_relation_depth.
 
       const childRelations = relations.filter((r: any) => r.to_model_id === modelId && !visited.has(r.from_model_id))
 
