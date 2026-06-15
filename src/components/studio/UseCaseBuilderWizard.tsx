@@ -2935,13 +2935,14 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
       <>
         {includeNone && <option value="">{noneLabel}</option>}
         {groups.map((g: any) => (
-          <optgroup key={`grp-${g.model.id}-${g.prefix}`} label={g.label}>
+          <optgroup key={`grp-${g.model.id}-${g.prefix}`} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
             {(g.model.fields || []).map((f: any) => (
               <option
                 key={`${g.model.id}-${f.id}`}
                 value={g.prefix ? `${g.prefix}${f.db_column_name}` : f.db_column_name}
+                className="text-neutral-800 dark:text-neutral-200 normal-case"
               >
-                {f.display_name || f.db_column_name}
+                {String(f.db_column_name).toLowerCase()}
               </option>
             ))}
           </optgroup>
@@ -3226,10 +3227,10 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
       const fields = filterFn ? m.fields.filter(filterFn) : m.fields;
       if (!fields || fields.length === 0) return null;
       return (
-        <optgroup key={`group-${m.id}`} label={m.display_name || m.db_table_name}>
+        <optgroup key={`group-${m.id}`} label={m.display_name || m.db_table_name} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
           {fields.map((f: any) => (
-            <option key={`opt-${f.id}`} value={f.id}>
-              {f.display_name || f.db_column_name} ({f.data_type})
+            <option key={`opt-${f.id}`} value={f.id} className="text-neutral-800 dark:text-neutral-200 normal-case">
+              {String(f.db_column_name).toLowerCase()}
             </option>
           ))}
         </optgroup>
@@ -3626,8 +3627,17 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                     title="Campo usado como título do item recolhido"
                   >
                     <option value="">Título Automático</option>
-                    {getAvailableSlotFields(model.id).map((f: any) => (
-                      <option key={f.id} value={f.value}>{f.label}</option>
+                    {getModelsWithRelations([model], relations, models, config.layout_config?.max_relation_depth || 2).map((g: any, i: number) => (
+                      <optgroup key={i} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
+                        {g.model.fields?.map((f: any) => {
+                          const val = g.prefix ? `${g.prefix}${f.db_column_name}` : f.db_column_name;
+                          return (
+                            <option key={f.id} value={val} className="text-neutral-800 dark:text-neutral-200 normal-case">
+                              {String(f.db_column_name).toLowerCase()}
+                            </option>
+                          )
+                        })}
+                      </optgroup>
                     ))}
                   </select>
                 </div>
@@ -5156,16 +5166,16 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                           const isMain = m.id === rootId;
                           const tName = m.db_table_name;
                           return (
-                            <optgroup key={`opt-${m.id}`} label={`Tabela: ${tName}`} className="font-bold text-emerald-600 dark:text-emerald-400">
+                            <optgroup key={`opt-${m.id}`} label={`Tabela: ${tName}`} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
                               {m.fields
                                 .filter((f: any) => !(config.layout_config.gallery_config?.card_fields || []).includes(isMain ? f.db_column_name : `${tName}.${f.db_column_name}`))
                                 .map((f: any) => (
                                   <option
                                     key={`${tName}-${f.id}`}
                                     value={isMain ? f.db_column_name : `${tName}.${f.db_column_name}`}
-                                    className="text-neutral-700 dark:text-neutral-300 font-normal"
+                                    className="text-neutral-800 dark:text-neutral-200 font-normal normal-case"
                                   >
-                                    {f.display_name || f.db_column_name}
+                                    {String(f.db_column_name).toLowerCase()}
                                   </option>
                                 ))}
                             </optgroup>
@@ -5519,6 +5529,48 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
                   )}
                 </div>
               )}
+
+              <div className="space-y-6 mt-8">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Configurações do Formulário</label>
+                <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-4 shadow-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Título do Formulário (Opcional)</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Editar Registro"
+                        value={(config.layout_config as any).form_header_title || ''}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: { ...config.layout_config, form_header_title: e.target.value }
+                        })}
+                        className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all"
+                      />
+                      <p className="text-[9px] text-neutral-400 mt-1 italic">Sobrescreve o título padrão do formulário (ex: "Editar", "Novo"). Suporta tradução se usar chaves de dicionário.</p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Subtítulo (Opcional)</label>
+                      <select
+                        value={(config.layout_config as any).form_header_subtitle_field || ''}
+                        onChange={e => setConfig({
+                          ...config,
+                          layout_config: { ...config.layout_config, form_header_subtitle_field: e.target.value }
+                        })}
+                        className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all"
+                      >
+                        <option value="">Padrão (Exibe o ID do registro)</option>
+                        {models.filter((m: any) => config.selected_models.includes(m.id)).flatMap((m: any) => m.fields).map((f: any) => (
+                          <option key={`opt-sub-${f.id}`} value={f.db_column_name}>
+                            {getFieldName(f.id)} ({f.data_type})
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[9px] text-neutral-400 mt-1 italic">Substitui a exibição do ID do registro pelo valor deste campo no formulário.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
           </div>
         </div>
 
@@ -5551,48 +5603,6 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
           ) : null}
         </DragOverlay>
       </DndContext>
-
-      <div className="space-y-6 mt-8">
-        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Configurações do Formulário</label>
-        <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-4 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Título do Formulário (Opcional)</label>
-              <input
-                type="text"
-                placeholder="Ex: Editar Registro"
-                value={(config.layout_config as any).form_header_title || ''}
-                onChange={e => setConfig({
-                  ...config,
-                  layout_config: { ...config.layout_config, form_header_title: e.target.value }
-                })}
-                className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all"
-              />
-              <p className="text-[9px] text-neutral-400 mt-1 italic">Sobrescreve o título padrão do formulário (ex: "Editar", "Novo"). Suporta tradução se usar chaves de dicionário.</p>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Subtítulo (Opcional)</label>
-              <select
-                value={(config.layout_config as any).form_header_subtitle_field || ''}
-                onChange={e => setConfig({
-                  ...config,
-                  layout_config: { ...config.layout_config, form_header_subtitle_field: e.target.value }
-                })}
-                className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all"
-              >
-                <option value="">Padrão (Exibe o ID do registro)</option>
-                {models.filter((m: any) => config.selected_models.includes(m.id)).flatMap((m: any) => m.fields).map((f: any) => (
-                  <option key={`opt-sub-${f.id}`} value={f.db_column_name}>
-                    {getFieldName(f.id)} ({f.data_type})
-                  </option>
-                ))}
-              </select>
-              <p className="text-[9px] text-neutral-400 mt-1 italic">Substitui a exibição do ID do registro pelo valor deste campo no formulário.</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <Drawer
         isOpen={isDrawerOpen}
@@ -7376,10 +7386,10 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                                     >
                                       <option value="">Selecione para inserir...</option>
                                       {sourceGroups.map((g: any, i: number) => (
-                                        <optgroup key={i} label={g.label}>
+                                        <optgroup key={i} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
                                           {g.model.fields?.map((f: any) => (
-                                            <option key={f.id} value={`${g.prefix}${f.db_column_name}`}>
-                                              {g.prefix ? `${g.prefix}${f.db_column_name}` : f.db_column_name}
+                                            <option key={f.id} value={`${g.prefix}${f.db_column_name}`} className="text-neutral-800 dark:text-neutral-200 normal-case">
+                                              {String(f.db_column_name).toLowerCase()}
                                             </option>
                                           ))}
                                         </optgroup>
@@ -7397,10 +7407,10 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                                     >
                                       <option value="">Selecione para inserir...</option>
                                       {destGroups.map((g: any, i: number) => (
-                                        <optgroup key={i} label={g.label}>
+                                        <optgroup key={i} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
                                           {g.model.fields?.map((f: any) => (
-                                            <option key={f.id} value={`${g.prefix}${f.db_column_name}`}>
-                                              {g.prefix ? `${g.prefix}${f.db_column_name}` : f.db_column_name}
+                                            <option key={f.id} value={`${g.prefix}${f.db_column_name}`} className="text-neutral-800 dark:text-neutral-200 normal-case">
+                                              {String(f.db_column_name).toLowerCase()}
                                             </option>
                                           ))}
                                         </optgroup>

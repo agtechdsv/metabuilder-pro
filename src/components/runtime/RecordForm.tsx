@@ -86,9 +86,6 @@ const applyMask = (value: any, mask: string) => {
       numberIndex++
     } else {
       maskedValue += mask[i]
-      if (strVal[numberIndex] === mask[i]) {
-        numberIndex++
-      }
     }
   }
   return maskedValue

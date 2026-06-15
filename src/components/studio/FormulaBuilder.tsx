@@ -225,10 +225,10 @@ export default function FormulaBuilder({ value = [], onChange, availableFields =
               <option value="">Selecione para inserir...</option>
               
               {availableFields.some(f => (f as any).isVirtual) && (
-                <optgroup label="Campos Calculados" className="font-bold text-indigo-600 dark:text-indigo-400">
+                <optgroup label="Campos Calculados" className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
                   {availableFields.filter(f => (f as any).isVirtual).map(f => (
-                    <option key={f.id} value={f.id} className="text-neutral-700 dark:text-neutral-300 font-normal">
-                      {f.modelName} → {f.display_name || f.db_column_name}
+                    <option key={f.id} value={f.id} className="text-neutral-800 dark:text-neutral-200 font-normal normal-case">
+                      {f.modelName.toLowerCase()} → {String(f.db_column_name).toLowerCase()}
                     </option>
                   ))}
                 </optgroup>
@@ -241,10 +241,10 @@ export default function FormulaBuilder({ value = [], onChange, availableFields =
                   return acc;
                 }, {})
               ).map(([modelName, fields]: [string, any]) => (
-                <optgroup key={modelName} label={modelName.startsWith('Tabela:') || modelName.startsWith('Relação:') ? modelName : `Tabela: ${modelName}`} className="font-bold text-emerald-600 dark:text-emerald-400">
+                <optgroup key={modelName} label={modelName.startsWith('Tabela:') || modelName.startsWith('Relação:') ? modelName : `Tabela: ${modelName}`} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
                   {fields.map((f: any) => (
-                    <option key={f.id} value={f.id} className="text-neutral-700 dark:text-neutral-300 font-normal">
-                      {f.display_name || f.db_column_name}
+                    <option key={f.id} value={f.id} className="text-neutral-800 dark:text-neutral-200 font-normal normal-case">
+                      {String(f.db_column_name).toLowerCase()}
                     </option>
                   ))}
                 </optgroup>

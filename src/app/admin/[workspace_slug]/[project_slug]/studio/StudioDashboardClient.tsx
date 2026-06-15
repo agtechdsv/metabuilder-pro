@@ -305,6 +305,26 @@ export function StudioDashboardClient({
 
       if (error) throw error
 
+      // Limpar menus que apontavam para este caso de uso
+      const currentMenu = project.navigation || []
+      const removeTargetFromMenu = (items: any[], targetSlug: string): any[] => {
+        return items
+          .filter(item => !(item.type === 'view' && item.target === targetSlug))
+          .map(item => ({
+            ...item,
+            children: item.children ? removeTargetFromMenu(item.children, targetSlug) : undefined
+          }))
+      }
+      
+      const newMenu = removeTargetFromMenu(currentMenu, viewToDelete.slug)
+      
+      if (JSON.stringify(currentMenu) !== JSON.stringify(newMenu)) {
+        await supabase
+          .from('projects')
+          .update({ navigation: newMenu })
+          .eq('id', project.id)
+      }
+
       toast(t('dashboard.projects.studio.toasts.delete_success'), 'success')
       setIsDeleteModalOpen(false)
       setViewToDelete(null)
