@@ -833,7 +833,38 @@ export default function ViewPageContent({
         console.log(`[MetaBuilder] Fetching details from ${join.to} where ${join.foreignKey} = ${localValue}`)
         
         const queryId = crypto.randomUUID()
-        const rawQuery = `SELECT * FROM "${join.to}" WHERE "${join.foreignKey}" = '${String(localValue).replace(/'/g, "''")}'`
+        
+        // Calcula os joins que partem da tabela de detalhe para suas relações
+        // (ex: itens_pedido -> produtos), para que o BFS traga os dados relacionados
+        const subDetailJoins = (joins || []).filter((j: any) =>
+          j.from?.toLowerCase() === join.to?.toLowerCase()
+        )
+
+        // Se há um título automático configurado referenciando outra tabela (ex: 'produtos.nome'),
+        // garante que o join para essa tabela esteja presente — mesmo que não esteja no layout_config
+        const detailModel = (project as any)?.models?.find((m: any) => m.db_table_name?.toLowerCase() === join.to?.toLowerCase())
+        const detailModelId = detailModel?.id
+        const titleField = detailsItemTitles?.[detailModelId || '']
+        if (titleField && titleField.includes('.')) {
+          const relatedTable = titleField.split('.')[0]
+          const alreadyHasJoin = subDetailJoins.some((j: any) => j.to?.toLowerCase() === relatedTable.toLowerCase())
+          if (!alreadyHasJoin && detailModel) {
+            const linkField = detailModel.fields?.find((f: any) =>
+              f.foreign_key_table === relatedTable ||
+              f.db_column_name === `${relatedTable}_id` ||
+              (relatedTable.endsWith('s') && f.db_column_name === `${relatedTable.slice(0, -1)}_id`) ||
+              (relatedTable.endsWith('es') && f.db_column_name === `${relatedTable.slice(0, -2)}_id`)
+            )
+            if (linkField) {
+              subDetailJoins.push({
+                from: join.to,
+                localKey: linkField.db_column_name,
+                to: relatedTable,
+                foreignKey: linkField.foreign_key_column || 'id'
+              })
+            }
+          }
+        }
         
         let detailData: any[] = []
         try {
@@ -888,12 +919,11 @@ export default function ViewPageContent({
                 queryId,
                 table: join.to,
                 action: 'select',
-                query: rawQuery,
-                sql: rawQuery,
                 token: project?.secret_token || 'test-token',
                 schemaName: project?.models?.find((m: any) => m.db_table_name === join.to)?.db_schema_name || project?.slug || 'public',
                 slug: project?.slug,
-                joins: [],
+                filters: { [join.foreignKey]: String(localValue) },
+                joins: subDetailJoins,
                 limit: 100,
                 offset: 0
               }
@@ -2306,7 +2336,7 @@ export default function ViewPageContent({
           isLoading: false,
           logicType: "master_detail" as const,
           masterModelName: item.tableName,
-          masterTabTitle: masterTabTitle,
+          masterTabTitle: detailsTabTitles?.[model?.id || ''] || dictionary?.[model?.id || ''] || model?.display_name || formFields.find(f => f.model_name?.toLowerCase() === item.tableName?.toLowerCase())?.display_model_name || item.tableName,
           detailsTabTitles: detailsTabTitles,
           detailsItemTitles: detailsItemTitles,
           detailsDisplayMode: detailsDisplayMode,
@@ -2355,7 +2385,7 @@ export default function ViewPageContent({
         isLoading={isProcessing}
         logicType="master_detail"
         masterModelName={currentDetailTable}
-        masterTabTitle={masterTabTitle}
+        masterTabTitle={detailsTabTitles?.[(project as any)?.models?.find((m: any) => m.db_table_name?.toLowerCase() === currentDetailTable?.toLowerCase())?.id || ''] || dictionary?.[(project as any)?.models?.find((m: any) => m.db_table_name?.toLowerCase() === currentDetailTable?.toLowerCase())?.id || ''] || (project as any)?.models?.find((m: any) => m.db_table_name?.toLowerCase() === currentDetailTable?.toLowerCase())?.display_name || formFields.find(f => f.model_name?.toLowerCase() === currentDetailTable?.toLowerCase())?.display_model_name || currentDetailTable}
         detailsTabTitles={detailsTabTitles}
         detailsItemTitles={detailsItemTitles}
         detailsDisplayMode={detailsDisplayMode}
@@ -2395,7 +2425,7 @@ export default function ViewPageContent({
         isLoading={isProcessing}
         logicType="master_detail"
         masterModelName={currentDetailTable}
-        masterTabTitle={masterTabTitle}
+        masterTabTitle={detailsTabTitles?.[(project as any)?.models?.find((m: any) => m.db_table_name?.toLowerCase() === currentDetailTable?.toLowerCase())?.id || ''] || dictionary?.[(project as any)?.models?.find((m: any) => m.db_table_name?.toLowerCase() === currentDetailTable?.toLowerCase())?.id || ''] || (project as any)?.models?.find((m: any) => m.db_table_name?.toLowerCase() === currentDetailTable?.toLowerCase())?.display_name || formFields.find(f => f.model_name?.toLowerCase() === currentDetailTable?.toLowerCase())?.display_model_name || currentDetailTable}
         detailsTabTitles={detailsTabTitles}
         detailsItemTitles={detailsItemTitles}
         detailsDisplayMode={detailsDisplayMode}

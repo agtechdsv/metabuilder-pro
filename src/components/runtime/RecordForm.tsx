@@ -1073,7 +1073,7 @@ export default function RecordForm({
   const renderDetailSection = (tableName: string, parentData: any = formData, titleNode?: any, hideToolbar?: boolean) => {
     const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase())
     const modelId = targetModel?.id || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
-    const displayLabel = detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || tableName
+    const displayLabel = detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || targetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.display_model_name || tableName
 
     return (
       <div className="space-y-2">
@@ -1235,11 +1235,17 @@ export default function RecordForm({
                           }
                           const customField = detailsItemTitles?.[modelId || ''];
                           if (customField) {
-                            const baseField = customField.includes('.') ? customField.split('.')[0] : customField;
-                            let val = detail[baseField];
+                            let val;
+                            
+                            if (customField.includes('.')) {
+                              const parts = customField.split('.');
+                              val = detail[customField] ?? detail[parts[0]]?.[parts[1]] ?? detail[parts[1]];
+                            } else {
+                              val = detail[customField];
+                            }
                             
                             // Tradução Automática: Se o campo for um relacionamento (Combo), troca o ID pelo Label
-                            // Simplificação: encontra qualquer campo do detalhe com aquele nome e checa se há opções baixadas
+                            const baseField = customField.includes('.') ? customField.split('.')[0] : customField;
                             const safeBase = baseField?.toLowerCase()?.trim() || '';
                             const checkMatch = (f: any) => {
                                const fName = f.db_column_name?.toLowerCase()?.trim() || '';
@@ -1247,8 +1253,7 @@ export default function RecordForm({
                             };
                             const titleFieldDef = detailFields.find(checkMatch) || fields.find(checkMatch);
                             
-                            // Removemos os logs verbosos para deixar a tela limpa
-                            if (titleFieldDef) {
+                            if (titleFieldDef && val !== undefined && val !== null) {
                                const opts = relationalOptions[titleFieldDef.id] || [];
                                const matchedOpt = opts.find(o => String(o.value) === String(val));
                                if (matchedOpt && matchedOpt.label) {
@@ -1256,15 +1261,14 @@ export default function RecordForm({
                                }
                             }
 
-                            if (val === undefined && customField.includes('.')) {
-                              const parts = customField.split('.');
-                              val = detail[parts[0]]?.[parts[1]] ?? detail[parts[1]];
-                            }
                             if (val !== undefined && val !== null && val !== '') {
+                              if (typeof val === 'object') {
+                                return String(val.display_name || val.name || val.nome || val.titulo || val.title || val.id || JSON.stringify(val));
+                              }
                               return String(val);
                             }
                           }
-                          return detail.display_name || detail.name || detail.label || `Item #${idx + 1}`;
+                          return detail.display_name || detail.name || detail.nome || detail.titulo || detail.label || `Item #${idx + 1}`;
                         })()}
                       </span>
                     </div>
@@ -1555,11 +1559,31 @@ export default function RecordForm({
                         if (subTables.length > 0) {
                           return (
                             <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800 space-y-6">
-                              {subTables.map(st => (
-                                <div key={st} className="pl-4 border-l-2 border-indigo-100 dark:border-indigo-900/30">
-                                  {renderDetailSection(st, detail)}
-                                </div>
-                              ))}
+                              {subTables.map(st => {
+                                const stTargetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === st?.toLowerCase());
+                                const stModelId = stTargetModel?.id || fields.find(f => f.model_name?.toLowerCase() === st?.toLowerCase())?.model_id;
+                                const stTitle = detailsTabTitles?.[stModelId || ''] || dictionary?.[stModelId || ''] || stTargetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === st?.toLowerCase())?.display_model_name || st;
+                                
+                                return (
+                                  <div key={st} className="pl-4 border-l-2 border-indigo-100 dark:border-indigo-900/30">
+                                    {renderDetailSection(st, detail, (
+                                      <div className="flex items-center gap-2 mb-4">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
+                                        <h3
+                                          style={{
+                                            fontFamily: getFontFamily(tabsStyleConfig?.label?.font),
+                                            fontSize: getFontSize(tabsStyleConfig?.label?.size),
+                                            ...(tabsStyleConfig?.label?.color ? { color: tabsStyleConfig.label.color } : {})
+                                          }}
+                                          className="text-[10px] font-black tracking-[0.2em] text-neutral-800 dark:text-neutral-200 uppercase"
+                                        >
+                                          {stTitle}
+                                        </h3>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              })}
                             </div>
                           );
                         }
@@ -1574,8 +1598,9 @@ export default function RecordForm({
           {(!(parentData?._details || []).some((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase())) && (
             <div className="py-12 text-center border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-3xl">
               <p className="text-xs text-neutral-400 italic">Nenhum registro de {(() => {
-                const modelId = fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
-                return detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || tableName
+                const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase());
+                const modelId = targetModel?.id || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
+                return detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || targetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.display_model_name || tableName
               })()} encontrado.</p>
             </div>
           )}
@@ -1671,8 +1696,9 @@ export default function RecordForm({
                         {masterTabTitle || t('runtime.master_details.main_data', 'Dados Principais')}
                       </button>
                       {tabTables.map(tableName => {
-                        const modelId = getModelIdForTable(tableName);
-                        const title = detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || tableName;
+                        const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase());
+                        const modelId = targetModel?.id || getModelIdForTable(tableName);
+                        const title = detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || targetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.display_model_name || tableName;
                         return (
                           <button
                             key={tableName}
@@ -1820,8 +1846,9 @@ export default function RecordForm({
                   )}
 
                   {!renderOnlyDetail && activeTab === 'master' && sectionTables.length > 0 && sectionTables.map(tableName => {
-                    const sectionModelId = getModelIdForTable(tableName);
-                    const sectionTitle = detailsTabTitles?.[sectionModelId || ''] || dictionary[sectionModelId || ''] || tableName;
+                    const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase());
+                    const sectionModelId = targetModel?.id || getModelIdForTable(tableName);
+                    const sectionTitle = detailsTabTitles?.[sectionModelId || ''] || dictionary[sectionModelId || ''] || targetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.display_model_name || tableName;
                     return (
                       <div key={tableName} className="pt-6">
                         {renderDetailSection(tableName, formData, (
