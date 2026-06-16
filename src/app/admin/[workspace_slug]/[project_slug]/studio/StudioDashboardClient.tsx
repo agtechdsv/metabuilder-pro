@@ -34,7 +34,16 @@ import {
   Server,
   Calendar,
   Share2,
-  Settings
+  Settings,
+  FileSearch,
+  Kanban,
+  Activity,
+  GanttChart,
+  GitMerge,
+  Network,
+  Map as MapIcon,
+  PieChart,
+  Image as ImageIcon
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -235,6 +244,22 @@ export function StudioDashboardClient({
 
   const [scale, setScale] = useState(1.0)
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
+  
+  const QUICK_START_LOGICS = [
+    { id: 'pesquisa_cadastro', title: 'Pesquisa + Cadastro', icon: FileSearch },
+    { id: 'kanban', title: 'Kanban', icon: Kanban },
+    { id: 'timeline', title: 'Linha do Tempo / Feed', icon: Activity },
+    { id: 'gantt', title: 'Gráfico de Gantt', icon: GanttChart },
+    { id: 'scheduler', title: 'Agenda / Calendário', icon: Calendar },
+    { id: 'blueprint', title: 'Fluxograma (Blueprint)', icon: GitMerge },
+    { id: 'mapa_mental', title: 'Mapa Mental', icon: Network },
+    { id: 'map', title: 'Visão de Mapa (Geospatial)', icon: MapIcon },
+    { id: 'analytics', title: 'Dashboard (BI)', icon: PieChart },
+    { id: 'galeria', title: 'Galeria / Assets', icon: ImageIcon },
+    { id: 'personalizado', title: 'Personalizado (Híbrido)', icon: Box }
+  ];
+
+  const [quickStartModal, setQuickStartModal] = useState<{ isOpen: boolean, logicType: string, logicName: string, name: string, slug: string } | null>(null);
 
   const categoryLogicTypes = {
     'sistema': ['system'],
@@ -809,10 +834,34 @@ export function StudioDashboardClient({
         ) : (
           <section className="space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800/50 pb-4">
-              <h3 className="text-xl font-black flex items-center gap-3 text-neutral-900 dark:text-white tracking-tight">
-                <Layers className="w-6 h-6 text-indigo-600 dark:text-indigo-500" />
-                {t('dashboard.projects.studio.use_cases')}
-              </h3>
+              <div className="flex items-center gap-6">
+                <h3 className="text-xl font-black flex items-center gap-3 text-neutral-900 dark:text-white tracking-tight">
+                  <Layers className="w-6 h-6 text-indigo-600 dark:text-indigo-500" />
+                  {t('dashboard.projects.studio.use_cases')}
+                </h3>
+                
+                {/* QUICK START BAR */}
+                <div className="flex items-center gap-1 bg-white dark:bg-neutral-900/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 hidden xl:flex shadow-inner">
+                  <span className="text-[9px] font-black uppercase text-indigo-400/80 dark:text-indigo-500/80 tracking-widest px-3 border-r border-neutral-200 dark:border-neutral-800 mr-1 flex items-center gap-1.5">
+                    <Plus className="w-3 h-3" />
+                    Quick Start
+                  </span>
+                  {QUICK_START_LOGICS.map(logic => {
+                    const Icon = logic.icon;
+                    return (
+                      <button
+                        key={logic.id}
+                        type="button"
+                        onClick={() => setQuickStartModal({ isOpen: true, logicType: logic.id, logicName: logic.title, name: '', slug: '' })}
+                        title={`Novo ${logic.title}`}
+                        className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-95"
+                      >
+                        <Icon className="w-4 h-4" />
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 hidden md:flex">
                   {filterOptions.map(f => {
@@ -1344,6 +1393,79 @@ export function StudioDashboardClient({
               </button>
             </div>
           </div>
+        </Modal>
+
+        {/* Quick Start Modal */}
+        <Modal
+          isOpen={quickStartModal !== null}
+          onClose={() => setQuickStartModal(null)}
+          title={`Quick Start: ${quickStartModal?.logicName || ''}`}
+        >
+          {quickStartModal && (
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">
+                    Nome do Caso de Uso
+                  </label>
+                  <input
+                    type="text"
+                    value={quickStartModal.name}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      const slug = (!quickStartModal.slug || quickStartModal.slug === quickStartModal.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-')) 
+                        ? name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-') 
+                        : quickStartModal.slug;
+                      setQuickStartModal(prev => prev ? { ...prev, name, slug } : null);
+                    }}
+                    placeholder="Ex: Gestão de Projetos"
+                    className="w-full h-12 px-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 text-sm focus:ring-2 focus:ring-indigo-500"
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">
+                    Slug
+                  </label>
+                  <input
+                    type="text"
+                    value={quickStartModal.slug}
+                    onChange={(e) => setQuickStartModal(prev => prev ? { ...prev, slug: e.target.value.toLowerCase().replace(/\s/g, '-') } : null)}
+                    placeholder="ex: gestao-de-projetos"
+                    className="w-full h-12 px-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 text-sm focus:ring-2 focus:ring-indigo-500 font-mono"
+                  />
+                  <p className="text-[10px] text-neutral-400 mt-1">Identificador único na URL. Apenas letras minúsculas, números e hífens.</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 justify-end pt-4 border-t border-neutral-100 dark:border-neutral-800">
+                <button
+                  onClick={() => setQuickStartModal(null)}
+                  className="px-6 h-12 rounded-2xl font-black text-xs uppercase tracking-widest text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  disabled={!quickStartModal.name || !quickStartModal.slug}
+                  onClick={() => {
+                    setViewToEdit({
+                      name: quickStartModal.name,
+                      slug: quickStartModal.slug,
+                      logic_type: quickStartModal.logicType,
+                      is_quick_add: true
+                    });
+                    setViewMode('builder');
+                    setQuickStartModal(null);
+                  }}
+                  className="px-6 h-12 rounded-2xl font-black text-xs uppercase tracking-widest bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-500/20 transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Continuar
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </Modal>
 
       </main>

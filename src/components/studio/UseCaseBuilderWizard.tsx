@@ -125,7 +125,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
   })
 
   // Estados do Wizard
-  const [currentStep, setCurrentStep] = useState(1)
+  const [currentStep, setCurrentStep] = useState(initialData?.is_quick_add ? 2 : 1)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isDiscardModalOpen, setIsDiscardModalOpen] = useState(false)
@@ -313,7 +313,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
       export_formats: ['xlsx', 'csv', 'json'],
       gallery_config: {} as any,
       gallery_click_behavior: 'lightbox',
-      items_per_page: undefined as number | undefined,
+      items_per_page: 50 as number | undefined,
       form_header_title: '',
       form_header_subtitle_field: '',
       scheduler_config: {
@@ -967,7 +967,7 @@ export function UseCaseBuilderWizard({ initialData, onClose, onSaveSuccess, canC
           export_formats: sourceData.layout_config?.export_formats || ['xlsx', 'csv', 'json'],
           gallery_config: sourceData.layout_config?.gallery_config || {},
           gallery_click_behavior: sourceData.layout_config?.gallery_click_behavior || 'lightbox',
-          items_per_page: sourceData.layout_config?.items_per_page || undefined,
+          items_per_page: sourceData.layout_config?.items_per_page || 50,
           form_header_title: sourceData.layout_config?.form_header_title || '',
           form_header_subtitle_field: sourceData.layout_config?.form_header_subtitle_field || '',
           scheduler_config: sourceData.layout_config?.scheduler_config || {
