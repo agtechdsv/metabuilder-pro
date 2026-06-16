@@ -2926,7 +2926,7 @@ function StepPersonalizado({ config, setConfig, models, useCases = [] }: any) {
 
 
 
-function StepLayout({ config, setConfig, models, enumerations = [], relations = [], useCases = [], orderedModels = [] }: any) {
+export function StepLayout({ config, setConfig, models, enumerations = [], relations = [], useCases = [], orderedModels = [] }: any) {
   const { t } = useI18n()
   const { toast } = useToast()
   const [expandedCustomSlot, setExpandedCustomSlot] = useState<number | null>(null)
@@ -6514,7 +6514,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
   )
 }
 
-function StepActions({ config, setConfig, models, useCases, isDownloadsActive, bpmWorkflows, relations = [] }: any) {
+export function StepActions({ config, setConfig, models, useCases, isDownloadsActive, bpmWorkflows, relations = [] }: any) {
   const params = useParams()
   const { workspace_slug, project_slug } = params as { workspace_slug: string, project_slug: string }
   const { t } = useI18n()
