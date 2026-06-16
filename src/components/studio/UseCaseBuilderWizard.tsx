@@ -3016,6 +3016,23 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
   })
   const toggleZone = (zone: string) => setExpandedZones(prev => ({ ...prev, [zone]: !prev[zone] }))
   const [hiddenDetails, setHiddenDetails] = useState<Set<string>>(new Set())
+  const [retractedModels, setRetractedModels] = useState<Set<string>>(new Set())
+  const hasInitializedRetractedRef = useRef(false)
+
+  useEffect(() => {
+    if (models.length > 0 && !hasInitializedRetractedRef.current) {
+      const rootId = config.layout_config?.master_model_id || config.selected_models?.[0]
+      const newRetracted = new Set<string>()
+      models.forEach((m: any) => {
+        if (m.id !== rootId) {
+          newRetracted.add(m.id)
+        }
+      })
+      setRetractedModels(newRetracted)
+      hasInitializedRetractedRef.current = true
+    }
+  }, [models, config.layout_config])
+
   const [hiddenZones, setHiddenZones] = useState<Set<string>>(new Set())
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null)
   const [editingTabId, setEditingTabId] = useState<string | null>(null)
@@ -3431,7 +3448,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
       <div key={`${model.id}-${depth}-${index}`} className={cn("space-y-4", depth > 0 && "ml-8 border-l-2 border-dashed border-amber-200 dark:border-amber-900/30 pl-6 pb-4")}>
         <div className="flex items-center justify-between ml-1 pr-6">
           <div className="flex items-center gap-2">
-            <div className={cn("w-1.5 h-4 rounded-full shadow-sm", isMaster ? "bg-amber-600" : "bg-amber-400")}></div>
+            <div className={cn("w-1.5 h-4 rounded-full shadow-sm transition-colors duration-300", fieldsOfThisModel.length > 0 ? "bg-emerald-500 shadow-emerald-500/30" : (isMaster ? "bg-amber-600" : "bg-amber-400"))}></div>
             <div className="flex items-center gap-2 group relative">
               <span className={cn(
                 "px-2 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-widest",
@@ -3508,6 +3525,24 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
             >
               {hiddenDetails.has(model.id) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             </button>
+
+            {!isMaster && (
+              <button
+                type="button"
+                title={retractedModels.has(model.id) ? "Expandir" : "Retrair"}
+                onClick={() => {
+                  setRetractedModels(prev => {
+                    const next = new Set(prev)
+                    if (next.has(model.id)) next.delete(model.id)
+                    else next.add(model.id)
+                    return next
+                  })
+                }}
+                className="ml-2 p-1.5 text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-500 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm transition-all"
+              >
+                {retractedModels.has(model.id) ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+              </button>
+            )}
           </div>
 
           {!isMaster && !hiddenDetails.has(model.id) && (
@@ -3737,7 +3772,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
           )}
         </div>
 
-        {!hiddenDetails.has(model.id) && (
+        {!hiddenDetails.has(model.id) && !retractedModels.has(model.id) && (
           <DroppableZone
             id={`droppable-form-${model.id}`}
             className="grid grid-cols-7 gap-3 min-h-[100px] p-6 bg-neutral-50 dark:bg-neutral-950/30 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] items-start transition-all hover:bg-neutral-100/50 dark:hover:bg-neutral-900/40"
@@ -3777,7 +3812,7 @@ function StepLayout({ config, setConfig, models, enumerations = [], relations = 
             )}
           </DroppableZone>
         )}
-        {(!hiddenDetails.has(model.id)) && model.children && model.children.length > 0 && (
+        {(!hiddenDetails.has(model.id)) && !retractedModels.has(model.id) && model.children && model.children.length > 0 && (
           <div className="pt-2">
             {model.children.map((child: any, cIdx: number) => renderModelZone(child, depth + 1, cIdx))}
           </div>

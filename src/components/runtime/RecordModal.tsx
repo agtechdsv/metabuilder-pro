@@ -42,6 +42,7 @@ interface RecordModalProps {
   detailsModalHeights?: Record<string, string>
   formHeaderTitle?: string
   formHeaderSubtitleField?: string
+  projectRelations?: any[]
 }
 
 export default function RecordModal({ 
@@ -83,7 +84,8 @@ export default function RecordModal({
   detailsModalWidths,
   detailsModalHeights,
   formHeaderTitle,
-  formHeaderSubtitleField
+  formHeaderSubtitleField,
+  projectRelations
 }: RecordModalProps) {
   let calculatedSize: any = logicType === 'master_detail' ? '2xl' : 'xl';
   let calculatedWidth;
@@ -138,6 +140,7 @@ export default function RecordModal({
           onEditDetail={onEditDetail}
           onDeleteDetail={onDeleteDetail}
           onAddDetail={onAddDetail}
+          projectRelations={projectRelations}
         />
       ) : (
         <RecordForm 
@@ -174,6 +177,7 @@ export default function RecordModal({
           refreshTrigger={refreshTrigger}
           formHeaderTitle={formHeaderTitle}
           formHeaderSubtitleField={formHeaderSubtitleField}
+          projectRelations={projectRelations}
         />
       )}
     </Modal>

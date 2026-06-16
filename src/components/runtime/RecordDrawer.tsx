@@ -39,6 +39,10 @@ interface RecordDrawerProps {
   detailsInterfaceTypes?: Record<string, string>
   formHeaderTitle?: string
   formHeaderSubtitleField?: string
+  projectRelations?: any[]
+  detailsModalSizes?: Record<string, string>
+  detailsModalWidths?: Record<string, string>
+  detailsModalHeights?: Record<string, string>
 }
 
 export default function RecordDrawer({ 
@@ -77,7 +81,11 @@ export default function RecordDrawer({
   customSlots = [],
   detailsInterfaceTypes,
   formHeaderTitle,
-  formHeaderSubtitleField
+  formHeaderSubtitleField,
+  projectRelations,
+  detailsModalSizes,
+  detailsModalWidths,
+  detailsModalHeights
 }: RecordDrawerProps) {
   return (
     <Drawer isOpen={isOpen} onClose={onClose} title="" zIndex={zIndex}>
@@ -108,6 +116,7 @@ export default function RecordDrawer({
           onEditDetail={onEditDetail}
           onDeleteDetail={onDeleteDetail}
           onAddDetail={onAddDetail}
+          projectRelations={projectRelations}
         />
       ) : (
         <RecordForm 
@@ -143,6 +152,7 @@ export default function RecordDrawer({
           refreshTrigger={refreshTrigger}
           formHeaderTitle={formHeaderTitle}
           formHeaderSubtitleField={formHeaderSubtitleField}
+          projectRelations={projectRelations}
         />
       )}
     </Drawer>

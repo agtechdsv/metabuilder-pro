@@ -1102,7 +1102,7 @@ export default function RecordForm({
             })}
 
             {/* Expande/Recolhe Tudo */}
-            {detailsInlineTypes[modelId || ''] !== false && (parentData?._details || []).some((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase()) && (
+            {(parentData?._details || []).some((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase()) && (
               <div className="flex items-center gap-0.5 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
                 <button
                   type="button"
@@ -1160,7 +1160,7 @@ export default function RecordForm({
             <button
               type="button"
               onClick={() => {
-                if (detailsInlineTypes[modelId || ''] !== false) {
+                if (true) {
                   const newTempId = `temp-${Date.now()}`
                   const newRecord = { id: newTempId, model_name: tableName, _isNew: true }
                   setFormData((prev: any) => ({ ...prev, _details: [...(prev._details || []), newRecord] }))
@@ -1174,8 +1174,6 @@ export default function RecordForm({
                       if (firstInput) firstInput.focus()
                     }
                   }, 150)
-                } else {
-                  onAddDetail?.(tableName, parentData.id || parentData.ID)
                 }
               }}
               className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
@@ -1185,7 +1183,7 @@ export default function RecordForm({
             </button>
 
             {/* Abrir Modal/Drawer */}
-            {detailsInlineTypes[modelId || ''] !== false && (
+            {true && (
               <button
                 type="button"
                 onClick={() => onAddDetail?.(tableName, parentData.id || parentData.ID)}
@@ -1235,7 +1233,7 @@ export default function RecordForm({
                           }
                           const customField = detailsItemTitles?.[modelId || ''];
                           if (customField) {
-                            let val;
+                            let val: any;
                             
                             if (customField.includes('.')) {
                               const parts = customField.split('.');
@@ -1274,7 +1272,7 @@ export default function RecordForm({
                     </div>
                     <div className="flex items-center gap-2 transition-all">
                       {/* Botão de Cortina (Na Lista) */}
-                      {detailsInlineTypes[modelId || ''] !== false && (
+                      {true && (
                         <button
                           type="button"
                           onClick={async (e) => {
@@ -1730,7 +1728,7 @@ export default function RecordForm({
                       const activeModelId = getModelIdForTable(activeTab);
                       return (
                         <div className="flex items-center gap-1 pb-2 flex-shrink-0 pl-2">
-                          {detailsInlineTypes[activeModelId || ''] !== false && (formData?._details || []).some((d: any) => d.model_name?.toLowerCase() === activeTab?.toLowerCase()) && (
+                          {(formData?._details || []).some((d: any) => d.model_name?.toLowerCase() === activeTab?.toLowerCase()) && (
                             <div className="flex items-center gap-0.5 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
                               <button
                                 type="button"
@@ -1783,7 +1781,7 @@ export default function RecordForm({
                           <button
                             type="button"
                             onClick={() => {
-                              if (detailsInlineTypes[activeModelId || ''] !== false) {
+                              if (true) {
                                 const newTempId = `temp-${Date.now()}`
                                 setFormData((prev: any) => ({ ...prev, _details: [...(prev._details || []), { id: newTempId, model_name: activeTab, _isNew: true }] }))
                                 setExpandedDetails((prev: any) => ({ ...prev, [`detail-${activeTab}-${newTempId}`]: true }))
@@ -1796,8 +1794,6 @@ export default function RecordForm({
                                     if (firstInput) firstInput.focus()
                                   }
                                 }, 150)
-                              } else {
-                                onAddDetail?.(activeTab, formData.id || formData.ID)
                               }
                             }}
                             className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
@@ -1805,7 +1801,7 @@ export default function RecordForm({
                           >
                             <Plus className="w-4 h-4" />
                           </button>
-                          {detailsInlineTypes[activeModelId || ''] !== false && (
+                          {true && (
                             <button
                               type="button"
                               onClick={() => onAddDetail?.(activeTab, formData.id || formData.ID)}
