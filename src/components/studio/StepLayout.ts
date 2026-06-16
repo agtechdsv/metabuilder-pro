@@ -4,4 +4,4 @@
 //
 // Once the full extraction is done, replace this file with the real implementation
 // and delete it from the monolith.
-export { StepLayout } from './UseCaseBuilderWizard'
+export { StepLayout } from './UseCaseBuilder/steps/StepLayout'

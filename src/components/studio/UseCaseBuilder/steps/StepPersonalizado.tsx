@@ -21,7 +21,7 @@ interface MultiLevelPathBuilderProps {
   parentModelId?: string
 }
 
-function MultiLevelPathBuilder({ level, onChange, models, parentModelId }: MultiLevelPathBuilderProps) {
+export function MultiLevelPathBuilder({ level, onChange, models, parentModelId }: MultiLevelPathBuilderProps) {
   const path: RelationHop[] = level.relation_path || []
 
   const addHop = () => onChange([...path, { table: '', from_field: '', to_field: '', target_from_field: '', target_to_field: '' }])
