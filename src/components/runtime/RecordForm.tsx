@@ -774,6 +774,42 @@ export default function RecordForm({
     view: <Eye className="w-5 h-5 text-indigo-500" />
   }
 
+  const buildActionContext = (masterData: any, parentData?: any, parentTableName?: string, detailData?: any, detailTableName?: string) => {
+    // Base object starts with master data so root fields (e.g. "id") map to the master record.
+    const ctx = { ...masterData };
+    
+    const mainModelName = masterModelName || project?.models?.find((m: any) => m.id === masterModelId)?.db_table_name;
+    
+    // Add explicitly prefixed master fields (e.g. "clientes.id")
+    if (mainModelName && masterData) {
+      Object.keys(masterData).forEach(k => {
+        if (!k.startsWith('_')) {
+          ctx[`${mainModelName}.${k}`] = masterData[k];
+        }
+      });
+    }
+
+    // Add prefixed parent fields (e.g. "projetos.id")
+    if (parentTableName && parentData) {
+      Object.keys(parentData).forEach(k => {
+        if (!k.startsWith('_')) {
+          ctx[`${parentTableName}.${k}`] = parentData[k];
+        }
+      });
+    }
+
+    // Add prefixed detail row fields (e.g. "tarefas.id")
+    if (detailTableName && detailData) {
+      Object.keys(detailData).forEach(k => {
+        if (!k.startsWith('_')) {
+          ctx[`${detailTableName}.${k}`] = detailData[k];
+        }
+      });
+    }
+
+    return ctx;
+  };
+
   const renderField = (field: any) => {
     if (!field) return null;
 
@@ -912,7 +948,7 @@ export default function RecordForm({
                   <button
                     key={action.id}
                     type="button"
-                    onClick={() => onCustomAction?.(action, formData)}
+                    onClick={() => onCustomAction?.(action, buildActionContext(formData))}
                     className={cn(
                       "p-3 rounded-xl border shadow-sm transition-all flex items-center justify-center",
                       colors.text,
@@ -1047,7 +1083,7 @@ export default function RecordForm({
                   <button
                     key={action.id}
                     type="button"
-                    onClick={() => onCustomAction?.(action, formData)}
+                    onClick={() => onCustomAction?.(action, buildActionContext(formData))}
                     className={cn(
                       "p-3 rounded-xl border shadow-sm transition-all flex items-center justify-center",
                       colors.text,
@@ -1085,7 +1121,7 @@ export default function RecordForm({
                 <button
                   key={action.id}
                   type="button"
-                  onClick={() => onCustomAction?.(action, formData)}
+                  onClick={() => onCustomAction?.(action, buildActionContext(formData, parentData !== formData ? parentData : undefined, parentData !== formData ? parentData.model_name : undefined))}
                   className={cn(
                     "p-1.5 rounded-lg border transition-all shadow-sm bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700",
                     colors.text,
@@ -1307,7 +1343,7 @@ export default function RecordForm({
                           <button
                             key={action.id}
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, detail); }}
+                            onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, buildActionContext(formData, parentData !== formData ? parentData : undefined, parentData !== formData ? parentData.model_name : undefined, detail, tableName)); }}
                             className={cn(
                               "p-1.5 rounded-lg border transition-all shadow-sm bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700",
                               colors.text,
@@ -1629,7 +1665,7 @@ export default function RecordForm({
             {customActions.filter(a => getActionContexts(a, 'master').includes('global_top')).map(action => (
               <button
                 key={action.id}
-                onClick={() => onCustomAction?.(action, formData)}
+                onClick={() => onCustomAction?.(action, buildActionContext(formData))}
                 type="button"
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs capitalize tracking-wider transition-all shadow-lg",
