@@ -30,7 +30,11 @@ import {
   ZoomIn,
   Minimize2,
   Maximize2,
-  UploadCloud
+  UploadCloud,
+  Server,
+  Calendar,
+  Share2,
+  Settings
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -230,6 +234,25 @@ export function StudioDashboardClient({
   const [bpmConfig, setBpmConfig] = useState<any>(automationsView?.layout_config || { default_auto_align: false, error_email: '', log_retention: 30, timeout_mins: 5 })
 
   const [scale, setScale] = useState(1.0)
+  const [activeFilter, setActiveFilter] = useState<string | null>(null)
+
+  const categoryLogicTypes = {
+    'sistema': ['system'],
+    'dados': ['pesquisa_cadastro', 'cadastro_simples', 'mestre_detalhe'],
+    'projetos': ['kanban', 'timeline', 'gantt', 'scheduler'],
+    'mapas': ['blueprint', 'mapa_mental', 'map'],
+    'outros': ['analytics', 'galeria'],
+    'avancado': ['personalizado', 'advanced_use_case'],
+  }
+
+  const filterOptions = [
+    { id: 'sistema', title: 'Sistema', icon: Server },
+    { id: 'dados', title: 'Gestão de Dados e Cadastros', icon: Database },
+    { id: 'projetos', title: 'Projetos, Prazos e Cronogramas', icon: Calendar },
+    { id: 'mapas', title: 'Mapeamento, Fluxos e Espacial', icon: Share2 },
+    { id: 'outros', title: 'Inteligência, Mídia e Outros', icon: LayoutGrid },
+    { id: 'avancado', title: 'Avançado e Híbrido', icon: Settings },
+  ]
 
   const scales = [
     { value: 0.8, icon: <Minimize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_small', 'Pequeno') },
@@ -791,6 +814,28 @@ export function StudioDashboardClient({
                 {t('dashboard.projects.studio.use_cases')}
               </h3>
               <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 hidden md:flex">
+                  {filterOptions.map(f => {
+                    const Icon = f.icon
+                    const isActive = activeFilter === f.id
+                    return (
+                      <button
+                        key={f.id}
+                        onClick={() => setActiveFilter(isActive ? null : f.id)}
+                        title={f.title}
+                        className={cn(
+                          "p-1.5 rounded-lg transition-all",
+                          isActive
+                            ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
+                            : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-white/50 dark:hover:bg-neutral-700/50"
+                        )}
+                      >
+                        <Icon className="w-4 h-4" />
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="w-px h-6 bg-neutral-200 dark:bg-neutral-800 hidden md:block"></div>
                 <div className="flex items-center bg-neutral-100 dark:bg-neutral-800/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 hidden md:flex">
                   {scales.map(s => (
                     <button
@@ -823,8 +868,10 @@ export function StudioDashboardClient({
             </div>
 
             <div className={cn("grid gap-4 transition-all duration-500", gridColumns)}>
-              {/* 1. Card Fixo do Portal de Login (Sistema) */}
-              <div className="group relative p-5 bg-gradient-to-br from-indigo-600/5 to-purple-600/5 dark:from-indigo-600/10 dark:to-purple-600/10 border border-indigo-500/20 dark:border-indigo-500/30 rounded-[1.5rem] hover:border-indigo-500 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-1">
+              {(!activeFilter || activeFilter === 'sistema') && (
+                <>
+                  {/* 1. Card Fixo do Portal de Login (Sistema) */}
+                  <div className="group relative p-5 bg-gradient-to-br from-indigo-600/5 to-purple-600/5 dark:from-indigo-600/10 dark:to-purple-600/10 border border-indigo-500/20 dark:border-indigo-500/30 rounded-[1.5rem] hover:border-indigo-500 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-1">
                 <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-indigo-600 text-white text-[9px] font-black rounded-full uppercase tracking-widest shadow-lg shadow-indigo-500/20 z-10 border border-white/10 dark:border-black/10 min-w-[140px] text-center">
                   {t('dashboard.projects.system_label')}
                 </div>
@@ -1016,8 +1063,14 @@ export function StudioDashboardClient({
                   </div>
                 </div>
               </div>
+              </>
+              )}
 
-              {userViews.map((view) => (
+              {userViews.filter(view => {
+                if (!activeFilter) return true;
+                if (activeFilter === 'sistema') return false;
+                return categoryLogicTypes[activeFilter as keyof typeof categoryLogicTypes]?.includes(view.logic_type || '');
+              }).map((view) => (
                 <div
                   key={view.id}
                   className="group relative p-5 bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] hover:border-indigo-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl dark:shadow-none hover:-translate-y-1"
@@ -1090,52 +1143,57 @@ export function StudioDashboardClient({
                       </div>
                     </div>
 
-                    <div className="pt-2 flex gap-3">
+                    <div className="pt-2 flex flex-col gap-2 mt-auto">
                       {canCreate ? (
                         <>
-                          <button
-                            onClick={() => {
-                              setViewToEdit(view)
-                              setViewMode('builder')
-                            }}
-                            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
-                          >
-                            <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure')}
-                          </button>
                           {(view.draft_config || !view.layout_config || Object.keys(view.layout_config).length === 0 || view.status === 'draft') && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  setViewToPublish(view)
-                                  setIsPublishModalOpen(true)
-                                }}
-                                className="w-14 flex items-center justify-center bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 rounded-2xl border border-emerald-200 dark:border-emerald-500/30 transition-all text-emerald-600 dark:text-emerald-500 shadow-sm group/publish-draft"
-                                title="Publicar Alterações"
-                              >
-                                <UploadCloud className="w-5 h-5 group-hover/publish-draft:scale-110 transition-transform" />
-                              </button>
-                              {view.draft_config && (
-                                <Link
-                                  href={`/${workspace_slug}/${project_slug}/${view.slug}?preview=draft`}
-                                  target="_blank"
-                                  className="w-14 flex items-center justify-center bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 rounded-2xl border border-amber-200 dark:border-amber-500/30 transition-all text-amber-600 dark:text-amber-500 shadow-sm group/preview animate-pulse"
-                                  title="Visualizar Rascunho"
-                                >
-                                  <Eye className="w-5 h-5 group-hover/preview:scale-110 transition-transform" />
-                                </Link>
-                              )}
-                            </>
-                          )}
-                          {(view.layout_config && Object.keys(view.layout_config).length > 0) && (
-                            <Link
-                              href={`/${workspace_slug}/${project_slug}/${view.slug}`}
-                              target="_blank"
-                              className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-indigo-600 dark:hover:text-white shadow-sm group/publish"
-                              title="Acessar versão publicada"
+                            <button
+                              onClick={() => {
+                                setViewToPublish(view)
+                                setIsPublishModalOpen(true)
+                              }}
+                              className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 rounded-2xl border border-emerald-200 dark:border-emerald-500/30 transition-all text-emerald-600 dark:text-emerald-500 shadow-sm group/publish-draft"
+                              title="Publicar Alterações"
                             >
-                              <ArrowRight className="w-5 h-5 group-hover/publish:translate-x-0.5 transition-transform" />
-                            </Link>
+                              <UploadCloud className="w-5 h-5 group-hover/publish-draft:scale-110 transition-transform" />
+                              <span className="text-xs font-bold">Publicar</span>
+                            </button>
                           )}
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => {
+                                setViewToEdit(view)
+                                setViewMode('builder')
+                              }}
+                              className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
+                            >
+                              <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure')}
+                            </button>
+                            {(view.draft_config || !view.layout_config || Object.keys(view.layout_config).length === 0 || view.status === 'draft') && (
+                              <>
+                                {view.draft_config && (
+                                  <Link
+                                    href={`/${workspace_slug}/${project_slug}/${view.slug}?preview=draft`}
+                                    target="_blank"
+                                    className="w-14 flex items-center justify-center bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 rounded-2xl border border-amber-200 dark:border-amber-500/30 transition-all text-amber-600 dark:text-amber-500 shadow-sm group/preview animate-pulse"
+                                    title="Visualizar Rascunho"
+                                  >
+                                    <Eye className="w-5 h-5 group-hover/preview:scale-110 transition-transform" />
+                                  </Link>
+                                )}
+                              </>
+                            )}
+                            {(view.layout_config && Object.keys(view.layout_config).length > 0) && (
+                              <Link
+                                href={`/${workspace_slug}/${project_slug}/${view.slug}`}
+                                target="_blank"
+                                className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-indigo-600 dark:hover:text-white shadow-sm group/publish"
+                                title="Acessar versão publicada"
+                              >
+                                <ArrowRight className="w-5 h-5 group-hover/publish:translate-x-0.5 transition-transform" />
+                              </Link>
+                            )}
+                          </div>
                         </>
                       ) : (
                         (view.layout_config && Object.keys(view.layout_config).length > 0) && (
@@ -1153,7 +1211,11 @@ export function StudioDashboardClient({
                 </div>
               ))}
 
-              {userViews.length === 0 && (
+              {(userViews.length === 0 || userViews.filter(view => {
+                if (!activeFilter) return true;
+                if (activeFilter === 'sistema') return false;
+                return categoryLogicTypes[activeFilter as keyof typeof categoryLogicTypes]?.includes(view.logic_type || '');
+              }).length === 0) && (!activeFilter || activeFilter !== 'sistema') && (
                 <div className="col-span-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[3rem] text-neutral-400 gap-4">
                   <div className="p-4 bg-neutral-50 dark:bg-neutral-900 rounded-full">
                     <Layers className="w-10 h-10 opacity-20" />

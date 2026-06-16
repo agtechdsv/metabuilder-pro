@@ -8,6 +8,7 @@ import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { FileUploaderInput } from '@/components/runtime/FileUploaderInput'
+import { getActionContexts, getActionGroupFields } from '@/lib/customActionsHelper'
 
 // Helper para obter valores de forma insensível a maiúsculas/minúsculas e tolerante a prefixos
 const getCaseInsensitiveValue = (data: any, path: string) => {
@@ -776,25 +777,21 @@ export default function RecordForm({
   const renderField = (field: any) => {
     if (!field) return null;
 
+    const fieldLocation = field.model_id === masterModelId ? 'master' : `detail:${field.model_id}`;
     const fieldCustomActions = customActions?.filter((a: any) => {
-      const ctxs = a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context];
+      const ctxs = getActionContexts(a, fieldLocation);
       if (!ctxs.includes('field_group')) return false;
-      const targets = a.group_fields || (a.group_field ? [a.group_field] : []);
-      if (targets.includes(field.db_column_name) && !targets.some((t: string) => t.includes(':'))) return true;
+      const targets = getActionGroupFields(a, fieldLocation);
+      if (targets.includes(field.db_column_name)) return true;
 
-      // Identify zone: compare field.model_id with main usecase's masterModelId
+      // Legacy zone check
       const mainModelName = project?.models?.find((m: any) => m.id === masterModelId)?.db_table_name;
       const isMasterZone = !mainModelName || mainModelName.toLowerCase() === masterModelName?.toLowerCase();
       const zoneStr = isMasterZone ? 'master' : 'detail';
-      
       if (targets.includes(`${zoneStr}:${field.db_column_name}`)) return true;
-
-      // Fallback: se não for mestre-detalhe, aceita tanto master: quanto detail: para o campo,
-      // pois tudo é renderizado no formulário principal de qualquer forma.
       if (logicType !== 'master_detail') {
         return targets.includes(`master:${field.db_column_name}`) || targets.includes(`detail:${field.db_column_name}`);
       }
-
       return false;
     }) || [];
 
@@ -1082,7 +1079,7 @@ export default function RecordForm({
           {titleNode ?? <div />}
           {/* lado direito: todos os controles */}
           <div className="flex items-center gap-1">
-            {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('detail_top')).map(action => {
+            {customActions.filter(a => getActionContexts(a, 'detail:' + modelId).includes('global_top')).map(action => {
               const colors = getActionColorClasses(action.color)
               return (
                 <button
@@ -1304,7 +1301,7 @@ export default function RecordForm({
                           }
                         </button>
                       )}
-                      {customActions.filter(a => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('detail_row')).map(action => {
+                      {customActions.filter(a => getActionContexts(a, 'detail:' + modelId).includes('row')).map(action => {
                         const colors = getActionColorClasses(action.color)
                         return (
                           <button
@@ -1629,7 +1626,7 @@ export default function RecordForm({
           </div>
 
           <div className="flex items-center gap-2">
-            {customActions.filter(a => { const ctxs = a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]; return ctxs.includes('master_top') || ctxs.includes('form_top') }).map(action => (
+            {customActions.filter(a => getActionContexts(a, 'master').includes('global_top')).map(action => (
               <button
                 key={action.id}
                 onClick={() => onCustomAction?.(action, formData)}

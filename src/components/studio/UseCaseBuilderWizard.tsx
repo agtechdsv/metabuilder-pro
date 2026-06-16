@@ -6572,7 +6572,44 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
     return { filterFields, gridFields, masterFields, detailFields }
   }
 
-  const handleSaveAction = (action: any) => {
+  const handleSaveAction = (actionToSave: any) => {
+    // Generate backwards compatibility flat arrays
+    const action = { ...actionToSave };
+    if (action.placements && Array.isArray(action.placements)) {
+      const flatContexts = new Set<string>();
+      const flatGroupFields = new Set<string>();
+      
+      action.placements.forEach((p: any) => {
+        p.contexts?.forEach((c: string) => {
+          if (p.location === 'search') {
+            flatContexts.add(c);
+          } else if (p.location === 'master') {
+            if (c === 'global_top') flatContexts.add('master_top');
+            else if (c === 'field_group') flatContexts.add('field_group');
+            else flatContexts.add(c);
+          } else if (p.location.startsWith('detail:')) {
+            if (c === 'global_top') flatContexts.add('detail_top');
+            else if (c === 'row') flatContexts.add('detail_row');
+            else if (c === 'field_group') flatContexts.add('field_group');
+            else flatContexts.add(c);
+          } else if (p.location.startsWith('slot:')) {
+            flatContexts.add(c);
+          }
+        });
+        
+        p.group_fields?.forEach((f: string) => {
+          if (p.location === 'master') flatGroupFields.add(`master:${f}`);
+          else if (p.location.startsWith('detail:')) flatGroupFields.add(`detail:${f}`);
+          else flatGroupFields.add(f);
+        });
+      });
+      
+      action.contexts = Array.from(flatContexts);
+      action.group_fields = Array.from(flatGroupFields);
+      if (action.contexts.length > 0) action.context = action.contexts[0];
+      if (action.group_fields.length > 0) action.group_field = action.group_fields[0];
+    }
+
     const currentActions = config.layout_config.custom_actions || []
     const isNew = !currentActions.some((a: any) => a.id === action.id)
     const newActions = isNew
@@ -7055,7 +7092,7 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
             {activeModalTab === 'general' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {/* Left: Button properties */}
-                <div className="lg:col-span-6 space-y-5">
+                <div className="lg:col-span-5 space-y-5">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.button_name')}</label>
                     <input
@@ -7108,274 +7145,213 @@ function StepActions({ config, setConfig, models, useCases, isDownloadsActive, b
                 </div>
 
                 {/* Right: Context checkboxes */}
-                <div className="lg:col-span-6 space-y-4">
-                  {config.logic_type === 'personalizado' ? (
-                    <>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Aba Alvo</label>
-                        <select
-                          value={editingAction.target_tab || ''}
-                          onChange={e => setEditingAction({ ...editingAction, target_tab: e.target.value, contexts: ['global_top'], context: 'global_top', group_fields: [], group_field: '' })}
-                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-all"
-                        >
-                          <option value="">Selecione a Aba Alvo...</option>
-                          <option value="master">Mestre ({useCases?.find((uc: any) => uc.slug === config.layout_config.master_use_case_slug)?.name || 'Mestre'})</option>
-                          {(config.layout_config.custom_slots || []).map((slot: any) => (
-                            <option key={slot.id} value={slot.id}>
-                              {slot.title} ({useCases?.find((uc: any) => uc.slug === slot.use_case_slug)?.name || 'Desconhecido'})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                <div className="lg:col-span-7 space-y-4">
+                  {(() => {
+                    const availableLocations = (() => {
+                      const locs = [];
+                      if (config.logic_type === 'pesquisa_cadastro') {
+                        const masterUc = useCases?.find((uc: any) => uc.slug === config.layout_config.master_use_case_slug);
+                        locs.push({ id: 'search', label: 'Tela de Pesquisa (Lista)', modelId: masterUc?.model_id || '', depth: 0 });
+                      }
+                      
+                      if (config.logic_type === 'pesquisa_cadastro' || config.logic_type === 'personalizado') {
+                        const rootId = config.layout_config.master_model_id || config.selected_models?.[0];
+                        const rootModel = models.find((m: any) => m.id === rootId);
+                        const masterLabel = (config.layout_config as any).master_tab_title || rootModel?.display_name || rootModel?.db_table_name || 'Mestre';
+                        locs.push({ id: 'master', label: `Aba Mestre (${masterLabel})`, modelId: rootId || '', depth: 0 });
+                      }
 
-                      {editingAction.target_tab && (
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Opes de Renderizao</label>
-                          <div className="grid grid-cols-1 gap-1.5 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl">
-                            {[
-                              { value: 'global_top', label: 'Ação Global (Topo)' },
-                              { value: 'global_detail', label: 'Ação Global (Detalhe)' },
-                              { value: 'field_group', label: 'Agrupado ao Campo (Formulário)' }
-                            ].map(opt => {
-                              const isChecked = (editingAction.contexts || ['global_top']).includes(opt.value);
-                              return (
-                                <label key={opt.value} className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-                                  <input
-                                    type="radio"
-                                    name="action_render_opt"
-                                    checked={isChecked}
-                                    onChange={() => setEditingAction({ ...editingAction, contexts: [opt.value], context: opt.value })}
-                                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
-                                  />
-                                  <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{opt.label}</span>
-                                </label>
-                              )
-                            })}
-                          </div>
+                      if (config.logic_type === 'pesquisa_cadastro') {
+                        const rootId = config.layout_config.master_model_id || config.selected_models?.[0];
+                        const rootModel = models.find((m: any) => m.id === rootId);
+                        const maxDepth = config.layout_config?.max_relation_depth || 2;
+                        
+                        const buildTree = (modelId: string, depth: number, visited: Set<string>): any[] => {
+                          if (depth >= maxDepth + 1) return [];
+                          const childRelations = relations.filter((r: any) => r.to_model_id === modelId && !visited.has(r.from_model_id));
+                          return childRelations.map((r: any) => {
+                            const childModel = models.find((m: any) => m.id === r.from_model_id);
+                            if (!childModel) return null;
+                            const newVisited = new Set(visited);
+                            newVisited.add(r.from_model_id);
+                            return { ...childModel, children: buildTree(childModel.id, depth + 1, newVisited) };
+                          }).filter(Boolean);
+                        };
+                        
+                        const localFormTree = rootModel ? [{ ...rootModel, children: buildTree(rootId, 1, new Set([rootId])) }] : [];
+                        
+                        const modelHasFields = (node: any, isMaster: boolean = false) => {
+                          const formFields = config.layout_config?.form_fields || [];
+                          const fieldsOfThisModel = formFields.filter((fid: string) => {
+                            if (fid.startsWith('virt_')) {
+                              const meta = (config.layout_config?.fields_metadata || {})[fid] || {};
+                              return meta.virtual_model_id === node.id || (!meta.virtual_model_id && isMaster);
+                            }
+                            return node.fields?.some((f: any) => f.id === fid);
+                          });
+                          return fieldsOfThisModel.length > 0;
+                        };
+
+                        const traverseTree = (nodes: any[], currentDepth: number) => {
+                          nodes.forEach((node: any) => {
+                            if (currentDepth > 0) {
+                              const isUsed = modelHasFields(node, false);
+                              if (isUsed) {
+                                const typeLabel = currentDepth === 1 ? 'Aba Detalhe' : 'Aba Sub-Detalhe';
+                                const customTitle = (config.layout_config as any).details_tab_titles?.[node.id];
+                                const nodeLabel = customTitle || node.display_name || node.db_table_name || node.name;
+                                locs.push({ id: `detail:${node.id}`, label: `${typeLabel} (${nodeLabel})`, modelId: node.id, depth: currentDepth });
+                              }
+                            }
+                            if (node.children && Array.isArray(node.children)) {
+                              traverseTree(node.children, currentDepth + 1);
+                            }
+                          });
+                        };
+                        traverseTree(localFormTree, 0);
+                      }
+
+                      if (config.logic_type === 'personalizado') {
+                        (config.layout_config.custom_slots || []).forEach((slot: any) => {
+                          const slotUc = useCases?.find((uc: any) => uc.slug === slot.use_case_slug);
+                          locs.push({ id: `slot:${slot.id}`, label: `Aba ${slot.title} (${slotUc?.name || 'Desconhecido'})`, modelId: slotUc?.model_id || '', depth: 0 });
+                        });
+                      }
+                      return locs;
+                    })();
+
+                    const placements = editingAction.placements || [];
+
+                    const toggleContext = (locId: string, ctx: string) => {
+                      const currentPlacements = [...placements];
+                      const pIndex = currentPlacements.findIndex(p => p.location === locId);
+                      if (pIndex > -1) {
+                        const p = { ...currentPlacements[pIndex], contexts: [...currentPlacements[pIndex].contexts] };
+                        if (p.contexts.includes(ctx)) {
+                          p.contexts = p.contexts.filter((c: string) => c !== ctx);
+                          if (p.contexts.length === 0) {
+                            currentPlacements.splice(pIndex, 1);
+                          } else {
+                            currentPlacements[pIndex] = p;
+                          }
+                        } else {
+                          p.contexts.push(ctx);
+                          currentPlacements[pIndex] = p;
+                        }
+                      } else {
+                        currentPlacements.push({ location: locId, contexts: [ctx], group_fields: [] });
+                      }
+                      setEditingAction({ ...editingAction, placements: currentPlacements });
+                    };
+
+                    const toggleGroupField = (locId: string, field: string) => {
+                      const currentPlacements = [...placements];
+                      const pIndex = currentPlacements.findIndex(p => p.location === locId);
+                      if (pIndex > -1) {
+                        const p = { ...currentPlacements[pIndex], group_fields: [...(currentPlacements[pIndex].group_fields || [])] };
+                        if (p.group_fields.includes(field)) {
+                          p.group_fields = p.group_fields.filter((f: string) => f !== field);
+                        } else {
+                          p.group_fields.push(field);
+                        }
+                        currentPlacements[pIndex] = p;
+                        setEditingAction({ ...editingAction, placements: currentPlacements });
+                      }
+                    };
+
+                    return (
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">
+                          Locais de Renderização <span className="normal-case font-normal">(Seleção Múltipla)</span>
+                        </label>
+                        <div className="space-y-3 max-h-[55vh] overflow-y-auto custom-scrollbar pr-2 pb-2">
+                          {availableLocations.map(loc => {
+                            const p = placements.find((pl: any) => pl.location === loc.id);
+                            const isActive = !!p && p.contexts.length > 0;
+                            const isSearch = loc.id === 'search';
+                            
+                            const renderOptions = [];
+                            if (isSearch) {
+                              renderOptions.push({ value: 'global_top', label: 'Ação Global (Topo da Pesquisa)' });
+                              renderOptions.push({ value: 'row', label: 'Ação de Linha (Grid)' });
+                              renderOptions.push({ value: 'bulk', label: 'Ação em Massa (Multi-seleção)' });
+                            } else {
+                              renderOptions.push({ value: 'global_top', label: 'Ação Global (Topo)' });
+                              if (loc.id !== 'master') {
+                                renderOptions.push({ value: 'row', label: 'Ação de Linha (Grid/Lista)' });
+                              }
+                              renderOptions.push({ value: 'field_group', label: 'Agrupado ao Campo' });
+                            }
+
+                            return (
+                              <div key={loc.id} style={{ marginLeft: loc.depth ? `${loc.depth * 1.5}rem` : '0' }} className={cn("border rounded-xl transition-all overflow-hidden relative", isActive ? "border-indigo-500 shadow-md ring-1 ring-indigo-500/20" : "border-neutral-200 dark:border-neutral-800")}>
+                                {loc.depth > 0 && (
+                                  <div className={cn("absolute top-0 left-0 bottom-0 w-1", loc.depth === 1 ? "bg-amber-500 dark:bg-amber-700" : "bg-amber-400 dark:bg-amber-600")}></div>
+                                )}
+                                <div className={cn("p-3 flex items-center gap-3 bg-neutral-50 dark:bg-neutral-900")}>
+                                  <div className="flex-1 flex items-center gap-2">
+                                    <div className={cn("w-2 h-2 rounded-full", isActive ? "bg-indigo-500" : "bg-neutral-300 dark:bg-neutral-700")} />
+                                    <span className={cn("text-xs font-bold", isActive ? "text-indigo-700 dark:text-indigo-400" : "text-neutral-600 dark:text-neutral-400")}>{loc.label}</span>
+                                  </div>
+                                </div>
+                                <div className="p-3 bg-white dark:bg-neutral-950 border-t border-neutral-100 dark:border-neutral-800 space-y-3">
+                                  <div className="grid grid-cols-1 gap-1.5">
+                                    {renderOptions.map(opt => {
+                                      const isChecked = p ? p.contexts.includes(opt.value) : false;
+                                      return (
+                                        <label key={opt.value} className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors border border-transparent hover:border-neutral-200 dark:hover:border-neutral-800">
+                                          <div
+                                            onClick={(e) => { e.preventDefault(); toggleContext(loc.id, opt.value); }}
+                                            className={cn(`w-4 h-4 rounded border-2 flex items-center justify-center transition-all cursor-pointer flex-shrink-0`, isChecked ? 'bg-indigo-600 border-indigo-600' : 'border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900')}
+                                          >
+                                            {isChecked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                          </div>
+                                          <span className={cn("text-xs font-semibold", isChecked ? "text-neutral-900 dark:text-white" : "text-neutral-600 dark:text-neutral-400")}>{opt.label}</span>
+                                        </label>
+                                      );
+                                    })}
+                                  </div>
+
+                                  {p?.contexts.includes('field_group') && (
+                                    <div className="p-3 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-xl space-y-3 mt-2 animate-in fade-in slide-in-from-top-2">
+                                      <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">Campos Alvo</label>
+                                        <div className="max-h-40 overflow-y-auto custom-scrollbar border border-indigo-100 dark:border-indigo-900/30 rounded-lg bg-white dark:bg-neutral-950 p-2 space-y-1">
+                                          {(() => {
+                                            const targetModel = models.find((m: any) => m.id === loc.modelId);
+                                            if (!targetModel || !targetModel.fields || targetModel.fields.length === 0) {
+                                              return <p className="text-[10px] text-neutral-400 italic p-2">Nenhum campo encontrado no model.</p>;
+                                            }
+                                            return targetModel.fields.map((f: any) => {
+                                              const val = f.db_column_name;
+                                              const isChecked = p.group_fields?.includes(val) || false;
+                                              return (
+                                                <label key={f.id} className="flex items-center gap-2 cursor-pointer group p-1.5 hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-md">
+                                                  <input type="checkbox" checked={isChecked} onChange={() => toggleGroupField(loc.id, val)} className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900" />
+                                                  <span className="text-xs text-neutral-700 dark:text-neutral-300 group-hover:text-indigo-600 transition-colors truncate">{f.display_name || f.db_column_name}</span>
+                                                </label>
+                                              );
+                                            });
+                                          })()}
+                                        </div>
+                                      </div>
+                                      <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">Posição no Input</label>
+                                        <div className="flex gap-2">
+                                          <button type="button" onClick={() => setEditingAction({ ...editingAction, group_position: 'left' })} className={cn("flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-md transition-all border", (editingAction.group_position || 'right') === 'left' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50')}>Esquerda</button>
+                                          <button type="button" onClick={() => setEditingAction({ ...editingAction, group_position: 'right' })} className={cn("flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-md transition-all border", (editingAction.group_position || 'right') === 'right' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50')}>Direita</button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      )}
-
-                      {/* If field_group is selected, show Campos Alvo and Posição */}
-                      {editingAction.target_tab && (editingAction.contexts || []).includes('field_group') && (
-                        <div className="p-4 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-xl mt-2 space-y-4 animate-in fade-in slide-in-from-top-2">
-                          <div className="space-y-2">
-                            <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">Posição (Layout)</label>
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setEditingAction({ ...editingAction, group_position: 'left' })}
-                                className={cn("flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-md transition-all border", (editingAction.group_position || 'right') === 'left' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50')}
-                              >
-                                {t('wizard.actions.left', 'Esquerda')}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setEditingAction({ ...editingAction, group_position: 'right' })}
-                                className={cn("flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-md transition-all border", (editingAction.group_position || 'right') === 'right' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50')}
-                              >
-                                {t('wizard.actions.right', 'Direita')}
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">Campos Alvo</label>
-                            <div className="max-h-48 overflow-y-auto custom-scrollbar border border-indigo-100 dark:border-indigo-900/30 rounded-lg bg-white dark:bg-neutral-950 p-3 space-y-1.5">
-                              {(() => {
-                                // Find model_id based on target_tab
-                                let targetModelId = '';
-                                if (editingAction.target_tab === 'master') {
-                                  const masterUc = useCases?.find((uc: any) => uc.slug === config.layout_config.master_use_case_slug);
-                                  targetModelId = masterUc?.model_id || '';
-                                } else {
-                                  const slot = config.layout_config.custom_slots?.find((s: any) => s.id === editingAction.target_tab);
-                                  const slotUc = useCases?.find((uc: any) => uc.slug === slot?.use_case_slug);
-                                  targetModelId = slotUc?.model_id || '';
-                                }
-
-                                const targetModel = models.find((m: any) => m.id === targetModelId);
-                                if (!targetModel || !targetModel.fields) {
-                                  return <p className="text-[10px] text-neutral-400 italic">Nenhum campo encontrado.</p>;
-                                }
-
-                                return targetModel.fields.map((f: any) => {
-                                  const val = f.db_column_name;
-                                  const current = editingAction.group_fields || [];
-                                  const isChecked = current.includes(val);
-                                  return (
-                                    <label key={`flt-${f.id}`} className="flex items-center gap-2 cursor-pointer group">
-                                      <input type="checkbox" checked={isChecked} onChange={(e) => {
-                                        const next = e.target.checked ? [...current, val] : current.filter((c: string) => c !== val);
-                                        setEditingAction({ ...editingAction, group_fields: next, group_field: next[0] || '' });
-                                      }} className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900" />
-                                      <span className="text-xs text-neutral-700 dark:text-neutral-300 group-hover:text-indigo-600 transition-colors">{f.display_name || f.db_column_name}</span>
-                                    </label>
-                                  );
-                                });
-                              })()}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.context')} <span className="normal-case font-normal">({t('wizard.actions.multiple_selection')})</span></label>
-                      <div className="grid grid-cols-1 gap-1.5 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl">
-                        {[
-                          { value: 'row', label: t('wizard.actions.contexts.row') },
-                          { value: 'bulk', label: t('wizard.actions.contexts.bulk') },
-                          { value: 'master_top', label: t('wizard.actions.contexts.master_top') },
-                          { value: 'detail_top', label: t('wizard.actions.contexts.detail_top') },
-                          { value: 'detail_row', label: t('wizard.actions.contexts.detail_row') },
-                          { value: 'field_group', label: t('wizard.actions.contexts.field_group') },
-                        ].map(opt => {
-                          const activeContexts: string[] = editingAction.contexts
-                            ? (Array.isArray(editingAction.contexts) ? editingAction.contexts : [editingAction.contexts])
-                            : (editingAction.context ? [editingAction.context] : ['row'])
-                          const isChecked = activeContexts.includes(opt.value)
-                          return (
-                            <label key={opt.value} className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-                              <div
-                                onClick={() => {
-                                  const current: string[] = editingAction.contexts
-                                    ? (Array.isArray(editingAction.contexts) ? editingAction.contexts : [editingAction.contexts])
-                                    : (editingAction.context ? [editingAction.context] : ['row'])
-                                  const next = isChecked
-                                    ? current.filter(c => c !== opt.value)
-                                    : [...current, opt.value]
-                                  const safeNext = next.length === 0 ? [opt.value] : next
-                                  setEditingAction({ ...editingAction, contexts: safeNext, context: safeNext[0] })
-                                }}
-                                className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all cursor-pointer flex-shrink-0 ${isChecked ? 'bg-indigo-600 border-indigo-600' : 'border-neutral-300 dark:border-neutral-700'}`}
-                              >
-                                {isChecked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                              </div>
-                              <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{opt.label}</span>
-                            </label>
-                          )
-                        })}
                       </div>
-
-                      {(() => {
-                        const activeContexts: string[] = editingAction.contexts
-                          ? (Array.isArray(editingAction.contexts) ? editingAction.contexts : [editingAction.contexts])
-                          : (editingAction.context ? [editingAction.context] : ['row'])
-                        return activeContexts.includes('field_group') ? (
-                          <div className="p-3 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-xl mt-2 space-y-3 animate-in fade-in slide-in-from-top-2">
-                            <div className="space-y-2">
-                              <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">{t('wizard.actions.target_fields')}</label>
-                              <div className="max-h-48 overflow-y-auto custom-scrollbar border border-indigo-100 dark:border-indigo-900/30 rounded-lg bg-white dark:bg-neutral-950 p-3 space-y-4">
-                                {/* Filtros */}
-                                {groupedFields.filterFields.length > 0 && (
-                                  <div className="space-y-1.5">
-                                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{t('wizard.actions.filters_args')}</span>
-                                    {groupedFields.filterFields.map((f: any) => {
-                                      const val = `filter:${f.db_column_name}`;
-                                      const legacyVal = f.db_column_name;
-                                      const current = editingAction.group_fields || (editingAction.group_field ? [editingAction.group_field] : []);
-                                      const isChecked = current.includes(val) || (current.includes(legacyVal) && !current.some((c: string) => c.includes(':')));
-                                      return (
-                                        <label key={`flt-${f.id}`} className="flex items-center gap-2 cursor-pointer group">
-                                          <input type="checkbox" checked={isChecked} onChange={(e) => {
-                                            const next = e.target.checked ? [...current.filter((c: string) => c !== legacyVal), val] : current.filter((c: string) => c !== val && c !== legacyVal);
-                                            setEditingAction({ ...editingAction, group_fields: next, group_field: next[0]?.split(':').pop() || '' });
-                                          }} className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900" />
-                                          <span className="text-xs text-neutral-700 dark:text-neutral-300 group-hover:text-indigo-600 transition-colors">{getFieldName(f.id)} ({f.db_column_name})</span>
-                                        </label>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                                {/* Grid */}
-                                {groupedFields.gridFields.length > 0 && (
-                                  <div className="space-y-1.5">
-                                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{t('wizard.actions.grid_listing')}</span>
-                                    {groupedFields.gridFields.map((f: any) => {
-                                      const val = `grid:${f.db_column_name}`;
-                                      const legacyVal = f.db_column_name;
-                                      const current = editingAction.group_fields || (editingAction.group_field ? [editingAction.group_field] : []);
-                                      const isChecked = current.includes(val) || (current.includes(legacyVal) && !current.some((c: string) => c.includes(':')));
-                                      return (
-                                        <label key={`grd-${f.id}`} className="flex items-center gap-2 cursor-pointer group">
-                                          <input type="checkbox" checked={isChecked} onChange={(e) => {
-                                            const next = e.target.checked ? [...current.filter((c: string) => c !== legacyVal), val] : current.filter((c: string) => c !== val && c !== legacyVal);
-                                            setEditingAction({ ...editingAction, group_fields: next, group_field: next[0]?.split(':').pop() || '' });
-                                          }} className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900" />
-                                          <span className="text-xs text-neutral-700 dark:text-neutral-300 group-hover:text-indigo-600 transition-colors">{getFieldName(f.id)} ({f.db_column_name})</span>
-                                        </label>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                                {/* Master */}
-                                {groupedFields.masterFields.length > 0 && (
-                                  <div className="space-y-1.5">
-                                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{t('wizard.actions.master_form')}</span>
-                                    {groupedFields.masterFields.map((f: any) => {
-                                      const val = `master:${f.db_column_name}`;
-                                      const legacyVal = f.db_column_name;
-                                      const current = editingAction.group_fields || (editingAction.group_field ? [editingAction.group_field] : []);
-                                      const isChecked = current.includes(val) || (current.includes(legacyVal) && !current.some((c: string) => c.includes(':')));
-                                      return (
-                                        <label key={`mst-${f.id}`} className="flex items-center gap-2 cursor-pointer group">
-                                          <input type="checkbox" checked={isChecked} onChange={(e) => {
-                                            const next = e.target.checked ? [...current.filter((c: string) => c !== legacyVal), val] : current.filter((c: string) => c !== val && c !== legacyVal);
-                                            setEditingAction({ ...editingAction, group_fields: next, group_field: next[0]?.split(':').pop() || '' });
-                                          }} className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900" />
-                                          <span className="text-xs text-neutral-700 dark:text-neutral-300 group-hover:text-indigo-600 transition-colors">{getFieldName(f.id)} ({f.db_column_name})</span>
-                                        </label>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                                {/* Detail */}
-                                {groupedFields.detailFields.length > 0 && (
-                                  <div className="space-y-1.5">
-                                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{t('wizard.actions.details_form')}</span>
-                                    {groupedFields.detailFields.map((f: any) => {
-                                      const val = `detail:${f.db_column_name}`;
-                                      const legacyVal = f.db_column_name;
-                                      const current = editingAction.group_fields || (editingAction.group_field ? [editingAction.group_field] : []);
-                                      const isChecked = current.includes(val) || (current.includes(legacyVal) && !current.some((c: string) => c.includes(':')));
-                                      return (
-                                        <label key={`dtl-${f.id}`} className="flex items-center gap-2 cursor-pointer group">
-                                          <input type="checkbox" checked={isChecked} onChange={(e) => {
-                                            const next = e.target.checked ? [...current.filter((c: string) => c !== legacyVal), val] : current.filter((c: string) => c !== val && c !== legacyVal);
-                                            setEditingAction({ ...editingAction, group_fields: next, group_field: next[0]?.split(':').pop() || '' });
-                                          }} className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900" />
-                                          <span className="text-xs text-neutral-700 dark:text-neutral-300 group-hover:text-indigo-600 transition-colors">{getFieldName(f.id)} ({f.db_column_name})</span>
-                                        </label>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">{t('wizard.actions.position')}</label>
-                              <div className="flex gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingAction({ ...editingAction, group_position: 'left' })}
-                                  className={cn("flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-md transition-all border", (editingAction.group_position || 'right') === 'left' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50')}
-                                >
-                                  {t('wizard.actions.left')}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingAction({ ...editingAction, group_position: 'right' })}
-                                  className={cn("flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-md transition-all border", (editingAction.group_position || 'right') === 'right' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50')}
-                                >
-                                  {t('wizard.actions.right')}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ) : null
-                      })()}
-                    </>
-                  )}
+                    );
+                  })()}
                 </div>
               </div>
             )}

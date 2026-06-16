@@ -433,9 +433,13 @@ export default function ViewPageContent({
       const fieldsParams = selectedFields
         .map((f: any) => {
           if (typeof f === 'string') {
-            return `${f}=${rowData?.[f] !== undefined ? encodeURIComponent(rowData[f]) : ''}`
+            const sourceKey = f.includes('.') ? f.split('.')[1] : f
+            const val = rowData?.[f] !== undefined ? rowData[f] : rowData?.[sourceKey]
+            return `${f}=${val !== undefined ? encodeURIComponent(val) : ''}`
           } else if (f && typeof f === 'object' && f.source && f.target) {
-            return `${f.target}=${rowData?.[f.source] !== undefined ? encodeURIComponent(rowData[f.source]) : ''}`
+            const sourceKey = f.source.includes('.') ? f.source.split('.')[1] : f.source
+            const val = rowData?.[f.source] !== undefined ? rowData[f.source] : rowData?.[sourceKey]
+            return `${f.target}=${val !== undefined ? encodeURIComponent(val) : ''}`
           }
           return ''
         })
