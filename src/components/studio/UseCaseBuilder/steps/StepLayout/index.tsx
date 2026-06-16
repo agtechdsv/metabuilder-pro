@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+﻿import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import FormulaBuilder from '../../../FormulaBuilder'
 import {
   Settings2, Database, Layout, MousePointer2, Plus, Trash2,
@@ -29,6 +29,7 @@ import { motion, useDragControls } from 'framer-motion'
 import { createDefaultFieldMeta } from '../../utils'
 import { DroppableZone, SortableFieldChip, DraggableItem, SortableWidgetCard, DraggableFieldCard, DraggableTableHeader } from './dnd'
 import { MultiLevelPathBuilder } from '../StepPersonalizado'
+import { FieldDrawer } from './FieldDrawer'
 
 export function StepLayout({ config, setConfig, models, enumerations = [], relations = [], useCases = [], orderedModels = [] }: any) {
   const { t } = useI18n()
@@ -68,8 +69,8 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
     }
   }
 
-  // â”€â”€â”€ Santo Graal helpers para Personalizado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // Retorna todos os models alcanÃ§Ã¡veis a partir de um model_id via BFS do Santo Graal.
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Santo Graal helpers para Personalizado Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // Retorna todos os models alcanÃƒÂ§ÃƒÂ¡veis a partir de um model_id via BFS do Santo Graal.
   // Usa max_relation_depth definido na etapa 2 do wizard.
   function getSlotRelatedFieldGroups(slotModelId: string) {
     const slotModel = models.find((m: any) => m.id === slotModelId)
@@ -78,7 +79,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
     return getModelsWithRelations([slotModel], relations, models, maxDepth)
   }
 
-  // Retorna a lista de modelos alcanÃ§Ã¡veis a partir da tabela raiz do caso de uso (para o combo TABELA MODEL)
+  // Retorna a lista de modelos alcanÃƒÂ§ÃƒÂ¡veis a partir da tabela raiz do caso de uso (para o combo TABELA MODEL)
   function getRootRelatedModels() {
     const rootId = config.layout_config?.master_model_id || config.selected_models?.[0]
     const rootModel = models.find((m: any) => m.id === rootId)
@@ -87,9 +88,9 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
     return getModelsWithRelations([rootModel], relations, models, maxDepth)
   }
 
-  // Renderiza <optgroup>/<option> agrupados por tabela, compatÃ­vel com a imagem 3.
-  // noneLabel: texto da opÃ§Ã£o vazia (e.g. "Selecione o campo...")
-  // includeNone: se true, adiciona opÃ§Ã£o vazia no inÃ­cio
+  // Renderiza <optgroup>/<option> agrupados por tabela, compatÃƒÂ­vel com a imagem 3.
+  // noneLabel: texto da opÃƒÂ§ÃƒÂ£o vazia (e.g. "Selecione o campo...")
+  // includeNone: se true, adiciona opÃƒÂ§ÃƒÂ£o vazia no inÃƒÂ­cio
   function renderSlotFieldOptions(slotModelId: string, includeNone = true, noneLabel = 'Selecione o campo...') {
     const groups = getSlotRelatedFieldGroups(slotModelId)
     return (
@@ -234,7 +235,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
           const model = models.find((m: any) => m.id === id)
           if (!model) return
 
-          // Filtra os campos que possuem permissÃ£o para entrar na zona correspondente
+          // Filtra os campos que possuem permissÃƒÂ£o para entrar na zona correspondente
           const allowedFields = model.fields.filter((f: any) => {
             if (targetZone === 'grid_fields' && f.is_visible_in_list === false) return false
             if (targetZone === 'form_fields' && f.is_visible_in_form === false) return false
@@ -266,7 +267,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
             })
             toast(`${addedCount} campos permitidos da tabela "${model.display_name || model.db_table_name}" adicionados com sucesso!`, 'success')
           } else {
-            toast('Nenhum novo campo permitido pÃ´de ser adicionado a esta zona.', 'info')
+            toast('Nenhum novo campo permitido pÃƒÂ´de ser adicionado a esta zona.', 'info')
           }
         } else {
           const isVirtualTool = id === 'virtual_calc_tool';
@@ -282,15 +283,15 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
 
             if (fieldObj) {
               if (targetZone === 'grid_fields' && fieldObj.is_visible_in_list === false) {
-                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" estÃ¡ configurado como nÃ£o visÃ­vel no grid.`, 'error')
+                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" estÃƒÂ¡ configurado como nÃƒÂ£o visÃƒÂ­vel no grid.`, 'error')
                 return
               }
               if (targetZone === 'form_fields' && fieldObj.is_visible_in_form === false) {
-                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" estÃ¡ configurado como nÃ£o visÃ­vel no formulÃ¡rio.`, 'error')
+                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" estÃƒÂ¡ configurado como nÃƒÂ£o visÃƒÂ­vel no formulÃƒÂ¡rio.`, 'error')
                 return
               }
               if (targetZone === 'filter_fields' && fieldObj.is_searchable === false) {
-                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" estÃ¡ configurado como nÃ£o pesquisÃ¡vel (nÃ£o visÃ­vel no filtro).`, 'error')
+                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" estÃƒÂ¡ configurado como nÃƒÂ£o pesquisÃƒÂ¡vel (nÃƒÂ£o visÃƒÂ­vel no filtro).`, 'error')
                 return
               }
             }
@@ -341,7 +342,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
             })
             toast(t('common.success', 'Campo adicionado com sucesso!'), 'success')
           } else {
-            toast(t('common.info', 'Este campo jÃ¡ estÃ¡ nesta zona.'), 'info')
+            toast(t('common.info', 'Este campo jÃƒÂ¡ estÃƒÂ¡ nesta zona.'), 'info')
           }
         }
       }
@@ -399,7 +400,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
   }
 
   // BFS from the root table through the relations graph to discover all reachable tables.
-  // This replaces the old join-config-based tree â€” the dev only selects the root table now.
+  // This replaces the old join-config-based tree Ã¢â‚¬â€ the dev only selects the root table now.
   const renderFieldOptions = (models: any[], filterFn?: (f: any) => boolean) => {
     return models.map((m: any) => {
       const fields = filterFn ? m.fields.filter(filterFn) : m.fields;
@@ -468,8 +469,8 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
         modelName: slotModel.display_name || slotModel.db_table_name
       });
 
-      // NOVO: ExpansÃ£o via Santo Graal (Relacionamentos)
-      // Se este campo for uma FK (chave estrangeira) formal ou por heurÃ­stica
+      // NOVO: ExpansÃƒÂ£o via Santo Graal (Relacionamentos)
+      // Se este campo for uma FK (chave estrangeira) formal ou por heurÃƒÂ­stica
       const isFK = (relations || []).find((r: any) => r.foreign_column_id === f.id) ||
         (f.foreign_key_table && models.find((m: any) => m.db_table_name === f.foreign_key_table));
 
@@ -488,7 +489,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
           (relatedModel.fields || []).forEach((rf: any) => {
             fields.push({
               id: `${f.id}_${rf.id}`,
-              value: `${f.db_column_name}.${rf.db_column_name}`, // PadrÃ£o: produto_id.nome
+              value: `${f.db_column_name}.${rf.db_column_name}`, // PadrÃƒÂ£o: produto_id.nome
               label: `${f.display_name || f.db_column_name} -> ${rf.display_name || rf.db_column_name}`,
               isJoined: true,
               modelName: relatedModel.display_name || relatedModel.db_table_name
@@ -498,7 +499,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
       }
     });
 
-    // Joined fields estÃ¡ticos (se existirem na config)
+    // Joined fields estÃƒÂ¡ticos (se existirem na config)
     const layout = config.layout_config || {};
     const joins = layout.joins || [];
 
@@ -543,7 +544,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
 
     const tabsMeta = (config.layout_config as any).fields_metadata?.['form-TABS'] || (config.layout_config as any).fields_metadata?.['TABS']
     const tabStyles = {
-      fontFamily: tabsMeta?.label?.font?.replace(' (PadrÃ£o)', ''),
+      fontFamily: tabsMeta?.label?.font?.replace(' (PadrÃƒÂ£o)', ''),
       fontSize: tabsMeta?.label?.size ? (tabsMeta.label.size.includes('px') ? tabsMeta.label.size : `${tabsMeta.label.size}px`) : undefined,
       color: tabsMeta?.label?.color || undefined,
     }
@@ -609,7 +610,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
             </div>
 
             <button
-              title={hiddenDetails.has(model.id) ? "Exibir formulÃ¡rio" : "Ocultar formulÃ¡rio"}
+              title={hiddenDetails.has(model.id) ? "Exibir formulÃƒÂ¡rio" : "Ocultar formulÃƒÂ¡rio"}
               onClick={() => {
                 if (!hiddenDetails.has(model.id)) {
                   const fieldsToKeep = config.layout_config.form_fields.filter((fid: string) => !model.fields.some((f: any) => f.id === fid))
@@ -651,11 +652,11 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
 
           {!isMaster && !hiddenDetails.has(model.id) && (
             <div className="flex items-center gap-1">
-              {/* Abas/SeÃ§Ãµes Toggle */}
+              {/* Abas/SeÃƒÂ§ÃƒÂµes Toggle */}
               <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
                 {[
                   { id: 'tabs', label: 'Aba', tooltip: 'Exibe os registros deste detalhe em uma aba superior' },
-                  { id: 'sections', label: 'SeÃ§Ã£o', tooltip: 'Exibe os registros deste detalhe em uma seÃ§Ã£o empilhada na pÃ¡gina' }
+                  { id: 'sections', label: 'SeÃƒÂ§ÃƒÂ£o', tooltip: 'Exibe os registros deste detalhe em uma seÃƒÂ§ÃƒÂ£o empilhada na pÃƒÂ¡gina' }
                 ].map(opt => {
                   const currentMode = (config.layout_config as any).details_display_mode?.[model.id] || 'sections'
                   const isActive = currentMode === opt.id
@@ -692,8 +693,8 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
               {/* Modal/Drawer Toggle */}
               <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800 ml-1">
                 {[
-                  { id: 'modal', label: 'Modal', icon: Maximize2, tooltip: 'Abre o formulÃ¡rio deste detalhe em uma janela central' },
-                  { id: 'drawer', label: 'Drawer', icon: Layout, tooltip: 'Abre o formulÃ¡rio deste detalhe em uma gaveta lateral' }
+                  { id: 'modal', label: 'Modal', icon: Maximize2, tooltip: 'Abre o formulÃƒÂ¡rio deste detalhe em uma janela central' },
+                  { id: 'drawer', label: 'Drawer', icon: Layout, tooltip: 'Abre o formulÃƒÂ¡rio deste detalhe em uma gaveta lateral' }
                 ].map(opt => {
                   const currentType = (config.layout_config as any).details_interface_types?.[model.id] || 'modal'
                   const isActive = currentType === opt.id
@@ -749,7 +750,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                     title="Tamanho da Modal"
                   >
                     <option value="sm" title="Pequeno (max. 384px)">SM</option>
-                    <option value="md" title="MÃ©dio (max. 672px) - PadrÃ£o">MD</option>
+                    <option value="md" title="MÃƒÂ©dio (max. 672px) - PadrÃƒÂ£o">MD</option>
                     <option value="lg" title="Grande (max. 896px)">LG</option>
                     <option value="full" title="Tela Cheia (95% da tela)">FULL</option>
                     <option value="custom" title="Personalizado (em pixels ou %)">CUST</option>
@@ -805,7 +806,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
 
               <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800 ml-2">
                 <button
-                  title="Lista os registros deste detalhe de forma expandida diretamente na mesma pÃ¡gina"
+                  title="Lista os registros deste detalhe de forma expandida diretamente na mesma pÃƒÂ¡gina"
                   onClick={() => {
                     const currentInlines = (config.layout_config as any).details_inline_types || {}
                     const isCurrentlyInline = currentInlines[model.id] !== false // Default true
@@ -854,9 +855,9 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                       })
                     }}
                     className="bg-transparent border-none outline-none text-[8px] font-black uppercase tracking-wider text-neutral-600 dark:text-neutral-400 px-2 h-full cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                    title="Campo usado como tÃ­tulo do item recolhido"
+                    title="Campo usado como tÃƒÂ­tulo do item recolhido"
                   >
-                    <option value="">TÃ­tulo AutomÃ¡tico</option>
+                    <option value="">TÃƒÂ­tulo AutomÃƒÂ¡tico</option>
                     {getModelsWithRelations([model], relations, models, config.layout_config?.max_relation_depth || 2).map((g: any, i: number) => (
                       <optgroup key={i} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
                         {g.model.fields?.map((f: any) => {
@@ -884,7 +885,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
             {fieldsOfThisModel.length === 0 ? (
               <div className="col-span-7 flex flex-col items-center justify-center py-4 space-y-2 opacity-50">
                 <Plus className="w-4 h-4 text-neutral-400" />
-                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Arraste campos de "{model.display_name || model.db_table_name}" para cÃ¡</p>
+                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Arraste campos de "{model.display_name || model.db_table_name}" para cÃƒÂ¡</p>
               </div>
             ) : (
               <SortableContext items={fieldsOfThisModel.map((id: string) => `form-${id}`)} strategy={rectSortingStrategy}>
@@ -971,8 +972,8 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
   const updateMeta = (section: 'label' | 'content' | 'component' | 'viacep', key: string, value: any) => {
     if (!editingFieldId) return
 
-    // O usuÃ¡rio solicitou que todas as instÃ¢ncias do mesmo campo compartilhem as configuraÃ§Ãµes.
-    // EntÃ£o, ao atualizar uma propriedade, atualizamos todas as chaves deste field.
+    // O usuÃƒÂ¡rio solicitou que todas as instÃƒÂ¢ncias do mesmo campo compartilhem as configuraÃƒÂ§ÃƒÂµes.
+    // EntÃƒÂ£o, ao atualizar uma propriedade, atualizamos todas as chaves deste field.
 
     const baseMeta = getFieldMeta(editingFieldId, null) // get current base meta or default
     const newMeta = { ...currentFieldMeta } // current meta being edited
@@ -980,7 +981,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
 
     const newFieldsMetadata = { ...config.layout_config.fields_metadata }
 
-    // 1. Atualizar a chave base (para servir de heranÃ§a quando arrastar para uma nova zona)
+    // 1. Atualizar a chave base (para servir de heranÃƒÂ§a quando arrastar para uma nova zona)
     newFieldsMetadata[editingFieldId] = newMeta
 
     // 2. Atualizar as zonas existentes
@@ -1014,7 +1015,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
 
     const newFieldsMetadata = { ...(config.layout_config.fields_metadata || {}) }
     const stylesToCopyLabel = { ...currentFieldMeta.label }
-    delete stylesToCopyLabel.text // NÃ£o sobrescrever o texto de exibiÃ§Ã£o
+    delete stylesToCopyLabel.text // NÃƒÂ£o sobrescrever o texto de exibiÃƒÂ§ÃƒÂ£o
 
     const stylesToCopyContent = { ...currentFieldMeta.content }
 
@@ -1196,7 +1197,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                     })
                     .map((m: any) => {
                       const isCollapsed = collapsedTables[m.id] ?? !formTreeIds.has(m.id)
-                      // Se houver busca e a tabela der match via campo, forÃ§amos a expansÃ£o para mostrar os campos
+                      // Se houver busca e a tabela der match via campo, forÃƒÂ§amos a expansÃƒÂ£o para mostrar os campos
                       const forceExpand = fieldSearchTerm && m.fields.some((f: any) => (f.display_name || f.db_column_name || '').toLowerCase().includes(fieldSearchTerm.toLowerCase()))
                       const actuallyCollapsed = isCollapsed && !forceExpand
 
@@ -1253,20 +1254,20 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
           </div>
 
           <div className="flex-1 space-y-10 min-w-0">
-            {/* ZONA: CONFIGURAÃ‡Ã•ES GERAIS */}
+            {/* ZONA: CONFIGURAÃƒâ€¡Ãƒâ€¢ES GERAIS */}
             <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
                     <Database className="w-4 h-4" />
                   </div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">ConfiguraÃ§Ã£o de PadrÃµes</h4>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">ConfiguraÃƒÂ§ÃƒÂ£o de PadrÃƒÂµes</h4>
                 </div>
               </div>
 
               <div className={cn("grid grid-cols-1 gap-4", config.logic_type === 'timeline' ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Registros por PÃ¡gina (LIMIT)</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Registros por PÃƒÂ¡gina (LIMIT)</label>
                   <input
                     type="number"
                     min="1"
@@ -1279,7 +1280,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                     })}
                     className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                   />
-                  <p className="text-[10px] text-neutral-400 font-medium italic ml-1">Deixe em branco para usar o padrÃ£o do sistema.</p>
+                  <p className="text-[10px] text-neutral-400 font-medium italic ml-1">Deixe em branco para usar o padrÃƒÂ£o do sistema.</p>
                 </div>
 
                 {config.logic_type === 'timeline' && (
@@ -1364,13 +1365,13 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                     <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
                       <Calendar className="w-4 h-4" />
                     </div>
-                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">ConfiguraÃ§Ã£o do CalendÃ¡rio</h4>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">ConfiguraÃƒÂ§ÃƒÂ£o do CalendÃƒÂ¡rio</h4>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo do TÃ­tulo</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo do TÃƒÂ­tulo</label>
                     <select
                       value={config.layout_config.scheduler_config?.title_field || ''}
                       onChange={e => setConfig({
@@ -1382,13 +1383,13 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione o campo de tÃ­tulo...</option>
+                      <option value="">Selecione o campo de tÃƒÂ­tulo...</option>
                       {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Data de InÃ­cio</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Data de InÃƒÂ­cio</label>
                     <select
                       value={config.layout_config.scheduler_config?.start_date_field || ''}
                       onChange={e => setConfig({
@@ -1400,7 +1401,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione o campo de data de inÃ­cio...</option>
+                      <option value="">Selecione o campo de data de inÃƒÂ­cio...</option>
                       {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp'))}
                     </select>
                   </div>
@@ -1418,7 +1419,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Nenhum (Evento de data Ãºnica)</option>
+                      <option value="">Nenhum (Evento de data ÃƒÂºnica)</option>
                       {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp'))}
                     </select>
                   </div>
@@ -1436,7 +1437,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Nenhum (Cor padrÃ£o indigo)</option>
+                      <option value="">Nenhum (Cor padrÃƒÂ£o indigo)</option>
                       {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
@@ -1453,7 +1454,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                     <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
                       <History className="w-4 h-4" />
                     </div>
-                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.timeline.title', 'ConfiguraÃ§Ã£o da Linha do Tempo')}</h4>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.timeline.title', 'ConfiguraÃƒÂ§ÃƒÂ£o da Linha do Tempo')}</h4>
                   </div>
                 </div>
 
@@ -1466,7 +1467,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.title_field', 'Campo de TÃ­tulo')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.title_field', 'Campo de TÃƒÂ­tulo')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.title_field || ''}
                         onChange={e => setConfig({
@@ -1478,7 +1479,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                         })}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="">Selecione o campo de tÃ­tulo...</option>
+                        <option value="">Selecione o campo de tÃƒÂ­tulo...</option>
                         {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
@@ -1502,7 +1503,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.desc_field', 'Campo de DescriÃ§Ã£o (Opcional)')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.desc_field', 'Campo de DescriÃƒÂ§ÃƒÂ£o (Opcional)')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.desc_field || ''}
                         onChange={e => setConfig({
@@ -1520,7 +1521,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.icon_field', 'Campo de Ãcone/Status (Opcional)')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.icon_field', 'Campo de ÃƒÂcone/Status (Opcional)')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.icon_field || ''}
                         onChange={e => setConfig({
@@ -1548,7 +1549,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.direction', 'DireÃ§Ã£o da Linha')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.direction', 'DireÃƒÂ§ÃƒÂ£o da Linha')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.layout_direction || 'vertical'}
                         onChange={e => setConfig({
@@ -1566,7 +1567,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.mode', 'Modo de ExibiÃ§Ã£o')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.mode', 'Modo de ExibiÃƒÂ§ÃƒÂ£o')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.layout_mode || 'alternating'}
                         onChange={e => setConfig({
@@ -1584,7 +1585,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.animated', 'AnimaÃ§Ã£o de Desenho')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.animated', 'AnimaÃƒÂ§ÃƒÂ£o de Desenho')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.animated === false ? 'false' : 'true'}
                         onChange={e => setConfig({
@@ -1596,8 +1597,8 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                         })}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="false">Sem AnimaÃ§Ã£o (EstÃ¡tico)</option>
-                        <option value="true">Com AnimaÃ§Ã£o (Desenho DinÃ¢mico)</option>
+                        <option value="false">Sem AnimaÃƒÂ§ÃƒÂ£o (EstÃƒÂ¡tico)</option>
+                        <option value="true">Com AnimaÃƒÂ§ÃƒÂ£o (Desenho DinÃƒÂ¢mico)</option>
                       </select>
                     </div>
 
@@ -1614,17 +1615,17 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                         })}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="cards">Cards (PadrÃ£o)</option>
-                        <option value="infographic">InfogrÃ¡fico (Minimalista)</option>
+                        <option value="cards">Cards (PadrÃƒÂ£o)</option>
+                        <option value="infographic">InfogrÃƒÂ¡fico (Minimalista)</option>
                       </select>
                     </div>
 
                     <div className="space-y-3 col-span-1 sm:col-span-2 border-t border-neutral-100 dark:border-neutral-800/50 pt-4">
                       <div className="flex justify-between items-center ml-1">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Escala de ExibiÃ§Ã£o (Cards e Textos)</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Escala de ExibiÃƒÂ§ÃƒÂ£o (Cards e Textos)</label>
                         <span className="text-[10px] font-extrabold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
                           {((config.layout_config as any).timeline_config?.card_scale ?? 1.0).toFixed(1)}x
-                          {((config.layout_config as any).timeline_config?.card_scale ?? 1.0) === 1.0 ? ' (PadrÃ£o)' : ''}
+                          {((config.layout_config as any).timeline_config?.card_scale ?? 1.0) === 1.0 ? ' (PadrÃƒÂ£o)' : ''}
                         </span>
                       </div>
                       <div className="flex items-center gap-4">
@@ -1646,7 +1647,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                         />
                         <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Ampliado (1.4x)</span>
                       </div>
-                      <p className="text-[9px] text-neutral-400 italic ml-1">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaÃ§amentos da linha do tempo.</p>
+                      <p className="text-[9px] text-neutral-400 italic ml-1">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaÃƒÂ§amentos da linha do tempo.</p>
                     </div>
                   </div>
                 </div>
@@ -1660,12 +1661,12 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                   <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
                     <BarChartHorizontal className="w-4 h-4" />
                   </div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.gantt.title', 'ConfiguraÃ§Ã£o do GrÃ¡fico de Gantt')}</h4>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.gantt.title', 'ConfiguraÃƒÂ§ÃƒÂ£o do GrÃƒÂ¡fico de Gantt')}</h4>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.title_field', 'Campo de TÃ­tulo (ObrigatÃ³rio)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.title_field', 'Campo de TÃƒÂ­tulo (ObrigatÃƒÂ³rio)')}</label>
                     <select
                       value={(config.layout_config as any).gantt_config?.title_field || ''}
                       onChange={e => setConfig({
@@ -1677,13 +1678,13 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione o campo de tÃ­tulo...</option>
+                      <option value="">Selecione o campo de tÃƒÂ­tulo...</option>
                       {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.start_date_field', 'Data Inicial (ObrigatÃ³rio)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.start_date_field', 'Data Inicial (ObrigatÃƒÂ³rio)')}</label>
                     <select
                       value={(config.layout_config as any).gantt_config?.start_date_field || ''}
                       onChange={e => setConfig({
@@ -1701,7 +1702,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.end_date_field', 'Data Final (ObrigatÃ³rio)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.end_date_field', 'Data Final (ObrigatÃƒÂ³rio)')}</label>
                     <select
                       value={(config.layout_config as any).gantt_config?.end_date_field || ''}
                       onChange={e => setConfig({
@@ -1731,7 +1732,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Nenhum (Progresso nÃ£o exibido)</option>
+                      <option value="">Nenhum (Progresso nÃƒÂ£o exibido)</option>
                       {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('int') || f.data_type.includes('float') || f.data_type.includes('numeric'))}
                     </select>
                   </div>
@@ -1753,7 +1754,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
 
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de TÃ­tulo do NÃ³ (ObrigatÃ³rio)</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de TÃƒÂ­tulo do NÃƒÂ³ (ObrigatÃƒÂ³rio)</label>
                       <select
                         value={(config.layout_config as any).blueprint_config?.title_field || ''}
                         onChange={e => setConfig({
@@ -1765,13 +1766,13 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                         })}
                         className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="">Selecione o tÃ­tulo...</option>
+                        <option value="">Selecione o tÃƒÂ­tulo...</option>
                         {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo NÃ³ Anterior / Predecessora (ObrigatÃ³rio)</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo NÃƒÂ³ Anterior / Predecessora (ObrigatÃƒÂ³rio)</label>
                       <select
                         value={(config.layout_config as any).blueprint_config?.predecessor_field || ''}
                         onChange={e => setConfig({
@@ -1783,7 +1784,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                         })}
                         className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="">Selecione o campo de relaÃ§Ã£o...</option>
+                        <option value="">Selecione o campo de relaÃƒÂ§ÃƒÂ£o...</option>
                         {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
@@ -1807,7 +1808,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de DescriÃ§Ã£o (Opcional)</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de DescriÃƒÂ§ÃƒÂ£o (Opcional)</label>
                       <select
                         value={(config.layout_config as any).blueprint_config?.desc_field || ''}
                         onChange={e => setConfig({
@@ -1819,7 +1820,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                         })}
                         className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="">Selecione a descriÃ§Ã£o...</option>
+                        <option value="">Selecione a descriÃƒÂ§ÃƒÂ£o...</option>
                         {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
@@ -1836,9 +1837,9 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                   </div>
 
                   <div className="grid grid-cols-2 gap-6">
-                    {/* DireÃ§Ã£o da Linha */}
+                    {/* DireÃƒÂ§ÃƒÂ£o da Linha */}
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">DireÃ§Ã£o da Linha</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">DireÃƒÂ§ÃƒÂ£o da Linha</label>
                       <select
                         value={(config.layout_config as any).blueprint_config?.direction || 'TB'}
                         onChange={e => setConfig({
@@ -1852,9 +1853,9 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                       </select>
                     </div>
 
-                    {/* AnimaÃ§Ã£o */}
+                    {/* AnimaÃƒÂ§ÃƒÂ£o */}
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">AnimaÃ§Ã£o de Desenho</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">AnimaÃƒÂ§ÃƒÂ£o de Desenho</label>
                       <select
                         value={(config.layout_config as any).blueprint_config?.animated_edges !== false ? 'true' : 'false'}
                         onChange={e => setConfig({
@@ -1863,8 +1864,8 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                         })}
                         className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="true">Com AnimaÃ§Ã£o (Desenho DinÃ¢mico)</option>
-                        <option value="false">Sem AnimaÃ§Ã£o (EstÃ¡tico)</option>
+                        <option value="true">Com AnimaÃƒÂ§ÃƒÂ£o (Desenho DinÃƒÂ¢mico)</option>
+                        <option value="false">Sem AnimaÃƒÂ§ÃƒÂ£o (EstÃƒÂ¡tico)</option>
                       </select>
                     </div>
                   </div>
@@ -1872,7 +1873,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                   {/* Slider de Escala */}
                   <div className="space-y-3 pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
                     <div className="flex justify-between items-center text-xs font-bold text-neutral-500 mb-2 uppercase tracking-wider">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Escala de exibiÃ§Ã£o (Cards e textos)</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Escala de exibiÃƒÂ§ÃƒÂ£o (Cards e textos)</label>
                       <span className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
                         {((config.layout_config as any).blueprint_config?.scale || 1).toFixed(1)}x
                       </span>
@@ -1893,7 +1894,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                       />
                       <span className="text-[10px] font-semibold text-neutral-400 whitespace-nowrap">AMPLIADO (1.4X)</span>
                     </div>
-                    <p className="text-[10px] text-neutral-400 mt-2 italic px-2">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaÃ§amentos do fluxograma.</p>
+                    <p className="text-[10px] text-neutral-400 mt-2 italic px-2">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaÃƒÂ§amentos do fluxograma.</p>
                   </div>
                 </div>
               </div>
@@ -1906,12 +1907,12 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                   <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
                     <Share2 className="w-4 h-4" />
                   </div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.map.title', 'ConfiguraÃ§Ã£o do Mapa (Leaflet)')}</h4>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.map.title', 'ConfiguraÃƒÂ§ÃƒÂ£o do Mapa (Leaflet)')}</h4>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.title_field', 'Campo de TÃ­tulo (ObrigatÃ³rio)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.title_field', 'Campo de TÃƒÂ­tulo (ObrigatÃƒÂ³rio)')}</label>
                     <select
                       value={(config.layout_config as any).map_config?.title_field || ''}
                       onChange={e => setConfig({
@@ -1923,13 +1924,13 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione o tÃ­tulo...</option>
+                      <option value="">Selecione o tÃƒÂ­tulo...</option>
                       {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.desc_field', 'Campo de DescriÃ§Ã£o (Opcional)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.desc_field', 'Campo de DescriÃƒÂ§ÃƒÂ£o (Opcional)')}</label>
                     <select
                       value={(config.layout_config as any).map_config?.desc_field || ''}
                       onChange={e => setConfig({
@@ -1941,13 +1942,13 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione a descriÃ§Ã£o...</option>
+                      <option value="">Selecione a descriÃƒÂ§ÃƒÂ£o...</option>
                       {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lat_field', 'Latitude (Y) - ObrigatÃ³rio')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lat_field', 'Latitude (Y) - ObrigatÃƒÂ³rio')}</label>
                     <select
                       value={(config.layout_config as any).map_config?.lat_field || ''}
                       onChange={e => setConfig({
@@ -1965,7 +1966,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lng_field', 'Longitude (X) - ObrigatÃ³rio')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lng_field', 'Longitude (X) - ObrigatÃƒÂ³rio')}</label>
                     <select
                       value={(config.layout_config as any).map_config?.lng_field || ''}
                       onChange={e => setConfig({
@@ -1996,7 +1997,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                     </div>
                     <div>
                       <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Painel de Indicadores (BI)</h4>
-                      <p className="text-[10px] text-neutral-400 font-medium mt-1">Configure os widgets e grÃ¡ficos do seu dashboard.</p>
+                      <p className="text-[10px] text-neutral-400 font-medium mt-1">Configure os widgets e grÃƒÂ¡ficos do seu dashboard.</p>
                     </div>
                   </div>
 
@@ -2014,7 +2015,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                         config.layout_config.analytics_config.allow_runtime_edit ? "bg-indigo-600 text-white shadow-md" : "text-neutral-400 hover:text-neutral-600"
                       )}
                     >
-                      EdiÃ§Ã£o no Runtime: {config.layout_config.analytics_config.allow_runtime_edit ? 'ON' : 'OFF'}
+                      EdiÃƒÂ§ÃƒÂ£o no Runtime: {config.layout_config.analytics_config.allow_runtime_edit ? 'ON' : 'OFF'}
                     </button>
                   </div>
                 </div>
@@ -2060,7 +2061,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                     return (
                       <div key={level.id || lIdx} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 space-y-3 relative">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-[10px] font-black uppercase text-neutral-400">NÃ­vel {lIdx + 1} {isRoot && '(Raiz)'}</span>
+                          <span className="text-[10px] font-black uppercase text-neutral-400">NÃƒÂ­vel {lIdx + 1} {isRoot && '(Raiz)'}</span>
                           {!isRoot && (
                             <button onClick={() => {
                               setConfig((prev: any) => {
@@ -2101,7 +2102,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                             <div className="space-y-3 col-span-full bg-neutral-50 dark:bg-neutral-800/30 p-3 rounded-lg border border-neutral-100 dark:border-neutral-800">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div>
-                                  <label className="text-[9px] font-black uppercase text-neutral-400">Tipo de RelaÃ§Ã£o com o NÃ­vel Anterior</label>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Tipo de RelaÃƒÂ§ÃƒÂ£o com o NÃƒÂ­vel Anterior</label>
                                   <select
                                     value={level.relation_type || 'direct'}
                                     onChange={e => {
@@ -2119,14 +2120,14 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                                     className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
                                   >
                                     <option value="direct">Direta (1:N)</option>
-                                    <option value="indirect">Indireta (N:M - Via Tabela IntermediÃ¡ria)</option>
-                                    <option value="multilevel">AvanÃ§ada (Multi-NÃ­veis - MÃºltiplos Joins)</option>
+                                    <option value="indirect">Indireta (N:M - Via Tabela IntermediÃƒÂ¡ria)</option>
+                                    <option value="multilevel">AvanÃƒÂ§ada (Multi-NÃƒÂ­veis - MÃƒÂºltiplos Joins)</option>
                                   </select>
                                 </div>
 
                                 {level.relation_type === 'indirect' ? (
                                   <div>
-                                    <label className="text-[9px] font-black uppercase text-neutral-400">Tabela IntermediÃ¡ria (N:M)</label>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Tabela IntermediÃƒÂ¡ria (N:M)</label>
                                     <select
                                       value={level.through_table || ''}
                                       onChange={e => {
@@ -2169,7 +2170,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                                   return (
                                     <>
                                       <div>
-                                        <label className="text-[9px] font-black uppercase text-neutral-400">FK para o Pai (Na Tabela IntermediÃ¡ria)</label>
+                                        <label className="text-[9px] font-black uppercase text-neutral-400">FK para o Pai (Na Tabela IntermediÃƒÂ¡ria)</label>
                                         <select
                                           value={level.through_local_fk || ''}
                                           onChange={e => {
@@ -2186,7 +2187,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                                         </select>
                                       </div>
                                       <div>
-                                        <label className="text-[9px] font-black uppercase text-neutral-400">FK para o Filho (Na Tabela IntermediÃ¡ria)</label>
+                                        <label className="text-[9px] font-black uppercase text-neutral-400">FK para o Filho (Na Tabela IntermediÃƒÂ¡ria)</label>
                                         <select
                                           value={level.through_target_fk || ''}
                                           onChange={e => {
@@ -2227,7 +2228,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                           )}
 
                           <div>
-                            <label className="text-[9px] font-black uppercase text-neutral-400">Campo de TÃ­tulo do Card</label>
+                            <label className="text-[9px] font-black uppercase text-neutral-400">Campo de TÃƒÂ­tulo do Card</label>
                             <select
                               value={level.title_field || ''}
                               onChange={e => {
@@ -2239,13 +2240,13 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                               }}
                               className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none"
                             >
-                              <option value="">AutomÃ¡tico</option>
+                              <option value="">AutomÃƒÂ¡tico</option>
                               {levelModel?.fields?.map((f: any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
                             </select>
                           </div>
 
                           <div>
-                            <label className="text-[9px] font-black uppercase text-neutral-400">Campo de DescriÃ§Ã£o / SubtÃ­tulo</label>
+                            <label className="text-[9px] font-black uppercase text-neutral-400">Campo de DescriÃƒÂ§ÃƒÂ£o / SubtÃƒÂ­tulo</label>
                             <select
                               value={level.desc_field || ''}
                               onChange={e => {
@@ -2268,7 +2269,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
 
                   {(!config.layout_config.mindmap_levels || config.layout_config.mindmap_levels.length === 0) && (
                     <div className="p-4 border-2 border-dashed border-purple-200 dark:border-purple-900/50 rounded-xl text-center bg-white dark:bg-neutral-900">
-                      <p className="text-xs text-neutral-500">Nenhuma hierarquia definida. O mapa agruparÃ¡ os dados base do modelo atual.</p>
+                      <p className="text-xs text-neutral-500">Nenhuma hierarquia definida. O mapa agruparÃƒÂ¡ os dados base do modelo atual.</p>
                       <button
                         onClick={() => {
                           setConfig((prev: any) => ({
@@ -2291,7 +2292,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                         }}
                         className="mt-3 px-4 py-2 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-[10px] font-black uppercase rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors"
                       >
-                        ComeÃ§ar Hierarquia Relacional
+                        ComeÃƒÂ§ar Hierarquia Relacional
                       </button>
                     </div>
                   )}
@@ -2318,7 +2319,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                       className="w-full py-3 border-2 border-dashed border-neutral-200 dark:border-neutral-800 hover:border-purple-300 dark:hover:border-purple-700/50 rounded-xl text-neutral-500 hover:text-purple-600 dark:hover:text-purple-400 text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2"
                     >
                       <Plus className="w-4 h-4" />
-                      Adicionar NÃ­vel Abaixo
+                      Adicionar NÃƒÂ­vel Abaixo
                     </button>
                   )}
                 </div>
@@ -2332,12 +2333,12 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                     <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
                       <LayoutGrid className="w-4 h-4" />
                     </div>
-                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">ConfiguraÃ§Ã£o da Galeria</h4>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">ConfiguraÃƒÂ§ÃƒÂ£o da Galeria</h4>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">VisualizaÃ§Ã£o de Imagem</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">VisualizaÃƒÂ§ÃƒÂ£o de Imagem</label>
                   <div className="flex p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
                     <button
                       type="button"
@@ -2363,11 +2364,11 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                         (config.layout_config.gallery_click_behavior || 'lightbox') === 'thumbnail' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
                       )}
                     >
-                      Ver no prÃ³prio Thumbnail
+                      Ver no prÃƒÂ³prio Thumbnail
                     </button>
                   </div>
                   <p className="text-[10px] text-neutral-400 font-medium italic ml-1">
-                    Selecione "Ver no prÃ³prio Thumbnail" para exibir a imagem inteira (sem cortes) diretamente no card, desabilitando a modal de visualizaÃ§Ã£o ao clicar.
+                    Selecione "Ver no prÃƒÂ³prio Thumbnail" para exibir a imagem inteira (sem cortes) diretamente no card, desabilitando a modal de visualizaÃƒÂ§ÃƒÂ£o ao clicar.
                   </p>
                 </div>
 
@@ -2375,7 +2376,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                 <div className="space-y-3 border-t border-neutral-100 dark:border-neutral-800 pt-4 mt-6">
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campos do Card da Galeria</label>
-                    <p className="text-[10px] text-neutral-500 ml-1 mt-0.5">Selecione quais campos aparecerÃ£o no corpo do card (opcional). Deixe vazio para usar apenas TÃ­tulo e Arquivo.</p>
+                    <p className="text-[10px] text-neutral-500 ml-1 mt-0.5">Selecione quais campos aparecerÃƒÂ£o no corpo do card (opcional). Deixe vazio para usar apenas TÃƒÂ­tulo e Arquivo.</p>
                   </div>
                   <div className="flex gap-2 items-center">
                     <select
@@ -2606,7 +2607,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                 <div className="flex items-center justify-between cursor-pointer" onClick={() => toggleZone('zone02')}>
                   <div className="space-y-1">
                     <h4 className={cn("text-[9px] font-black uppercase tracking-[0.3em] transition-all", hiddenZones.has('zone02') ? "text-neutral-400" : "text-emerald-600")}>
-                      {config.logic_type === 'kanban' ? t('wizard.layout.zones.kanban_card', 'Campos do Card') : config.logic_type === 'mapa_mental' ? t('wizard.layout.zones.mindmap_nodes', 'Campos do Mapa (NÃ­veis)') : `${t('wizard.layout.zones.zone_02')}: ${t('wizard.layout.zones.grid')}`}
+                      {config.logic_type === 'kanban' ? t('wizard.layout.zones.kanban_card', 'Campos do Card') : config.logic_type === 'mapa_mental' ? t('wizard.layout.zones.mindmap_nodes', 'Campos do Mapa (NÃƒÂ­veis)') : `${t('wizard.layout.zones.zone_02')}: ${t('wizard.layout.zones.grid')}`}
                     </h4>
                     {config.logic_type !== 'kanban' && config.logic_type !== 'mapa_mental' && config.logic_type !== 'galeria' && (
                       <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg w-fit" onClick={e => e.stopPropagation()}>
@@ -2703,7 +2704,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
               </div>
             )}
 
-            {/* ZONA: FORMULÃRIO (RECURSIVO) */}
+            {/* ZONA: FORMULÃƒÂRIO (RECURSIVO) */}
             {(config.logic_type.includes('cadastro') ||
               config.logic_type === 'master_detail' ||
               config.logic_type === 'kanban' ||
@@ -2761,11 +2762,11 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
               )}
 
             <div className="space-y-6 mt-8">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">ConfiguraÃ§Ãµes do FormulÃ¡rio</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">ConfiguraÃƒÂ§ÃƒÂµes do FormulÃƒÂ¡rio</label>
               <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-4 shadow-sm">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">TÃ­tulo do FormulÃ¡rio (Opcional)</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">TÃƒÂ­tulo do FormulÃƒÂ¡rio (Opcional)</label>
                     <input
                       type="text"
                       placeholder="Ex: Editar Registro"
@@ -2776,11 +2777,11 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                       })}
                       className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all"
                     />
-                    <p className="text-[9px] text-neutral-400 mt-1 italic">Sobrescreve o tÃ­tulo padrÃ£o do formulÃ¡rio (ex: "Editar", "Novo"). Suporta traduÃ§Ã£o se usar chaves de dicionÃ¡rio.</p>
+                    <p className="text-[9px] text-neutral-400 mt-1 italic">Sobrescreve o tÃƒÂ­tulo padrÃƒÂ£o do formulÃƒÂ¡rio (ex: "Editar", "Novo"). Suporta traduÃƒÂ§ÃƒÂ£o se usar chaves de dicionÃƒÂ¡rio.</p>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de SubtÃ­tulo (Opcional)</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de SubtÃƒÂ­tulo (Opcional)</label>
                     <select
                       value={(config.layout_config as any).form_header_subtitle_field || ''}
                       onChange={e => setConfig({
@@ -2789,14 +2790,14 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                       })}
                       className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all"
                     >
-                      <option value="">PadrÃ£o (Exibe o ID do registro)</option>
+                      <option value="">PadrÃƒÂ£o (Exibe o ID do registro)</option>
                       {models.filter((m: any) => config.selected_models.includes(m.id)).flatMap((m: any) => m.fields).map((f: any) => (
                         <option key={`opt-sub-${f.id}`} value={f.db_column_name}>
                           {getFieldName(f.id)} ({f.data_type})
                         </option>
                       ))}
                     </select>
-                    <p className="text-[9px] text-neutral-400 mt-1 italic">Substitui a exibiÃ§Ã£o do ID do registro pelo valor deste campo no formulÃ¡rio.</p>
+                    <p className="text-[9px] text-neutral-400 mt-1 italic">Substitui a exibiÃƒÂ§ÃƒÂ£o do ID do registro pelo valor deste campo no formulÃƒÂ¡rio.</p>
                   </div>
                 </div>
               </div>
@@ -2834,719 +2835,25 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
         </DragOverlay>
       </DndContext>
 
-      <Drawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        title={`${t('wizard.layout.drawer.title')}: ${editingFieldId ? getFieldName(editingFieldId) : ''}`}
-      >
-        {currentFieldMeta && (
-          <div className="flex flex-col h-full">
-            {editingFieldId !== 'TABS' && (
-              <div className="flex border-b border-neutral-100 dark:border-neutral-800 mb-6">
-                <button
-                  onClick={() => setDrawerActiveTab('geral')}
-                  className={cn(
-                    "flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
-                    drawerActiveTab === 'geral' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
-                  )}
-                >
-                  GERAL
-                  {drawerActiveTab === 'geral' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
-                </button>
-                <button
-                  onClick={() => setDrawerActiveTab('estilos')}
-                  className={cn(
-                    "flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
-                    drawerActiveTab === 'estilos' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
-                  )}
-                >
-                  ESTILOS
-                  {drawerActiveTab === 'estilos' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
-                </button>
-                <button
-                  onClick={() => setDrawerActiveTab('logica')}
-                  className={cn(
-                    "flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
-                    drawerActiveTab === 'logica' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
-                  )}
-                >
-                  FÃ“RMULA
-                  {drawerActiveTab === 'logica' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
-                </button>
-              </div>
-            )}
-
-            <div className="space-y-8 pb-20">
-              {editingFieldId === 'TABS' && (
-                <>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-1 h-4 bg-indigo-600 rounded-full"></div>
-                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.label_config')}</h3>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.font')}</label>
-                        <select
-                          value={currentFieldMeta.label.font}
-                          onChange={e => updateMeta('label', 'font', e.target.value)}
-                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
-                        >
-                          <option value="Inter">{t('wizard.layout.drawer.font_default')}</option>
-                          <option value="Roboto">Roboto</option>
-                          <option value="Outfit">Outfit</option>
-                          <option value="JetBrains Mono">Mono</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.size')}</label>
-                        <input
-                          type="text"
-                          placeholder="Ex: 12px"
-                          value={currentFieldMeta.label.size}
-                          onChange={e => updateMeta('label', 'size', e.target.value)}
-                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.text_color')}</label>
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="color"
-                          value={currentFieldMeta.label.color || '#6366f1'}
-                          onChange={e => updateMeta('label', 'color', e.target.value)}
-                          className="w-8 h-8 rounded-lg cursor-pointer overflow-hidden border-none p-0"
-                        />
-                        <input
-                          type="text"
-                          value={currentFieldMeta.label.color}
-                          onChange={e => updateMeta('label', 'color', e.target.value)}
-                          placeholder={t('wizard.layout.drawer.text_color')}
-                          className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-mono font-bold outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* TEXTO DE EXIBIÃ‡ÃƒO PARA TABS FICA SEPARADO MAS NA MESMA ABA ÃšNICA */}
-                  <div className="space-y-4 pt-6 mt-6 border-t border-neutral-100 dark:border-neutral-800">
-                    <div className="flex items-center gap-3">
-                      <div className="w-1 h-4 bg-indigo-600 rounded-full"></div>
-                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.label_config')}</h3>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.display_text')}</label>
-                      <input
-                        type="text"
-                        value={
-                          editingTabId === 'master'
-                            ? ((config.layout_config as any).master_tab_title || `${t('wizard.layout.master')}: ${models.find((m: any) => m.id === (config.layout_config as any).master_model_id)?.display_name || ''}`)
-                            : ((config.layout_config as any).details_tab_titles?.[editingTabId || ''] || `Detalhe`)
-                        }
-                        onChange={e => {
-                          if (editingTabId === 'master') {
-                            setConfig({
-                              ...config,
-                              layout_config: { ...config.layout_config, master_tab_title: e.target.value }
-                            })
-                          } else if (editingTabId) {
-                            const currentTitles = (config.layout_config as any).details_tab_titles || {}
-                            setConfig({
-                              ...config,
-                              layout_config: {
-                                ...config.layout_config,
-                                details_tab_titles: { ...currentTitles, [editingTabId]: e.target.value }
-                              }
-                            })
-                          }
-                        }}
-                        className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold focus:border-indigo-500 outline-none transition-all"
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {editingFieldId !== 'TABS' && drawerActiveTab === 'geral' && (
-                <>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-1 h-4 bg-indigo-600 rounded-full"></div>
-                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.label_config')}</h3>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.display_text')}</label>
-                      <input
-                        type="text"
-                        value={currentFieldMeta.label.text}
-                        onChange={e => updateMeta('label', 'text', e.target.value)}
-                        className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold focus:border-indigo-500 outline-none transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 pt-6 border-t border-neutral-100 dark:border-neutral-800">
-                    <div className="flex items-center gap-3">
-                      <div className="w-1 h-4 bg-emerald-600 rounded-full"></div>
-                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.content_config')}</h3>
-                    </div>
-                    <div className="space-y-4">
-                      {editingFieldZone === 'filter' && (
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Operador de Filtro (Busca)</label>
-                            <select
-                              value={currentFieldMeta.content?.filter_operator || 'ilike'}
-                              onChange={e => updateMeta('content', 'filter_operator', e.target.value)}
-                              className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none cursor-pointer focus:border-indigo-500 transition-colors"
-                            >
-                              <option value="ilike">ContÃ©m (Busca por texto - PadrÃ£o)</option>
-                              <option value="=">Igual (=)</option>
-                              <option value=">">Maior que (&gt;)</option>
-                              <option value=">=">Maior ou igual (&gt;=)</option>
-                              <option value="<">Menor que (&lt;)</option>
-                              <option value="<=">Menor ou igual (&lt;=)</option>
-                              <option value="!=">Diferente (!=)</option>
-                              <option value="between">Intervalo (De / AtÃ©)</option>
-                            </select>
-                          </div>
-
-                          {(() => {
-                            const isDateField = models.some((m: any) => m.fields?.some((f: any) => (f.id === editingFieldId || f.db_column_name === editingFieldId) && (f.data_type?.includes('date') || f.data_type?.includes('timestamp'))));
-                            const inputType = isDateField ? 'date' : 'text';
-
-                            return (
-                              <div className="space-y-4">
-                                {isDateField && (
-                                  <div className="space-y-2">
-                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Tipo de Valor PadrÃ£o</label>
-                                    <select
-                                      value={currentFieldMeta.content?.default_value_type || 'fixed'}
-                                      onChange={e => updateMeta('content', 'default_value_type', e.target.value)}
-                                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
-                                    >
-                                      <option value="fixed">Fixo (Escolher Data)</option>
-                                      <option value="relative">DinÃ¢mico (Ãšltimos...)</option>
-                                    </select>
-                                  </div>
-                                )}
-
-                                {currentFieldMeta.content?.default_value_type === 'relative' && isDateField ? (
-                                  <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-2">
-                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Quantidade</label>
-                                      <input
-                                        type="number"
-                                        min="1"
-                                        placeholder="Ex: 30"
-                                        value={currentFieldMeta.content?.default_value_relative_number || ''}
-                                        onChange={e => updateMeta('content', 'default_value_relative_number', e.target.value)}
-                                        className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Unidade</label>
-                                      <select
-                                        value={currentFieldMeta.content?.default_value_relative_unit || 'days'}
-                                        onChange={e => updateMeta('content', 'default_value_relative_unit', e.target.value)}
-                                        className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
-                                      >
-                                        <option value="hours">Hora(s)</option>
-                                        <option value="days">Dia(s)</option>
-                                        <option value="weeks">Semana(s)</option>
-                                        <option value="months">Meses</option>
-                                        <option value="years">Ano(s)</option>
-                                      </select>
-                                    </div>
-                                  </div>
-                                ) : currentFieldMeta.content?.filter_operator === 'between' ? (
-                                  <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-2">
-                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor PadrÃ£o (De)</label>
-                                      <input
-                                        type={inputType}
-                                        placeholder="Ex: 2024-01-01"
-                                        value={currentFieldMeta.content?.default_value_start || ''}
-                                        onChange={e => updateMeta('content', 'default_value_start', e.target.value)}
-                                        className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor PadrÃ£o (AtÃ©)</label>
-                                      <input
-                                        type={inputType}
-                                        placeholder="Ex: 2024-12-31"
-                                        value={currentFieldMeta.content?.default_value_end || ''}
-                                        onChange={e => updateMeta('content', 'default_value_end', e.target.value)}
-                                        className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
-                                      />
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="space-y-2">
-                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor PadrÃ£o Inicial</label>
-                                    <input
-                                      type={inputType}
-                                      placeholder="Valor que inicia na busca"
-                                      value={currentFieldMeta.content?.default_value || ''}
-                                      onChange={e => updateMeta('content', 'default_value', e.target.value)}
-                                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })()}
-                        </div>
-                      )}
-
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.mask')}</label>
-                        <div className="flex flex-col gap-2">
-                          <select
-                            value={
-                              ['', '000.000.000-00', '00.000.000/0000-00', '00000-000', '(00) 00000-0000', '00/00/0000', '0.000', '0.000,00'].includes(currentFieldMeta.content.mask || '')
-                                ? currentFieldMeta.content.mask || ''
-                                : 'custom'
-                            }
-                            onChange={e => {
-                              const val = e.target.value
-                              if (val !== 'custom') {
-                                updateMeta('content', 'mask', val)
-                              } else {
-                                const isKnown = ['', '000.000.000-00', '00.000.000/0000-00', '00000-000', '(00) 00000-0000', '00/00/0000', '0.000', '0.000,00'].includes(currentFieldMeta.content.mask || '')
-                                if (isKnown) {
-                                  updateMeta('content', 'mask', ' ')
-                                }
-                              }
-                            }}
-                            className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none cursor-pointer"
-                          >
-                            <option value="">{t('wizard.layout.drawer.masks.none', 'Nenhuma')}</option>
-                            <option value="000.000.000-00">{t('wizard.layout.drawer.masks.cpf', 'CPF (000.000.000-00)')}</option>
-                            <option value="00.000.000/0000-00">{t('wizard.layout.drawer.masks.cnpj', 'CNPJ (00.000.000/0000-00)')}</option>
-                            <option value="00000-000">{t('wizard.layout.drawer.masks.cep', 'CEP (00000-000)')}</option>
-                            <option value="(00) 00000-0000">{t('wizard.layout.drawer.masks.phone', 'Telefone/Celular ((00) 00000-0000)')}</option>
-                            <option value="00/00/0000">{t('wizard.layout.drawer.masks.date', 'Data (00/00/0000)')}</option>
-                            <option value="0.000">{t('wizard.layout.drawer.masks.integer', 'Inteiro com Milhar (0.000)')}</option>
-                            <option value="0.000,00">{t('wizard.layout.drawer.masks.decimal', 'Decimal com Milhar (0.000,00)')}</option>
-                            <option value="custom">{t('wizard.layout.drawer.masks.custom', 'Personalizado (Custom)...')}</option>
-                          </select>
-
-                          {!['', '000.000.000-00', '00.000.000/0000-00', '00000-000', '(00) 00000-0000', '00/00/0000', '0.000', '0.000,00'].includes(currentFieldMeta.content.mask || '') && (
-                            <input
-                              type="text"
-                              placeholder="Ex: 000.000.000-00"
-                              value={(currentFieldMeta.content.mask || '').trim()}
-                              onChange={e => updateMeta('content', 'mask', e.target.value)}
-                              className="w-full bg-neutral-50 dark:bg-neutral-900 border border-indigo-500/50 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
-                            />
-                          )}
-
-                          {currentFieldMeta.content.mask === '00000-000' && (
-                            <div className="space-y-4 p-4 mt-2 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 animate-in fade-in slide-in-from-top-2">
-                              <div className="flex items-center gap-3">
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    className="sr-only peer"
-                                    checked={currentFieldMeta.viacep?.enabled || false}
-                                    onChange={(e) => updateMeta('viacep', 'enabled', e.target.checked)}
-                                  />
-                                  <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none rounded-full peer dark:bg-neutral-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-                                </label>
-                                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">{t('wizard.layout.drawer.viacep_title', 'Busca AutomÃ¡tica de EndereÃ§o (ViaCEP)')}</span>
-                              </div>
-
-                              {currentFieldMeta.viacep?.enabled && (
-                                <div className="space-y-3 pt-4 border-t border-indigo-100 dark:border-indigo-900/30">
-                                  <p className="text-[9px] text-neutral-500 font-medium leading-relaxed">{t('wizard.layout.drawer.viacep_desc', 'Mapeie os campos do formulÃ¡rio que receberÃ£o os dados do ViaCEP automaticamente:')}</p>
-
-                                  {['logradouro', 'bairro', 'cidade', 'uf'].map((fieldKey) => (
-                                    <div key={fieldKey} className="flex items-center justify-between gap-2">
-                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider w-20">{fieldKey}</label>
-                                      <select
-                                        value={currentFieldMeta.viacep?.[fieldKey] || ''}
-                                        onChange={e => updateMeta('viacep', fieldKey, e.target.value)}
-                                        className="flex-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1.5 text-[9px] font-bold outline-none"
-                                      >
-                                        <option value="">{t('wizard.layout.kanban.group_placeholder', 'Selecione o campo...')}</option>
-                                        {config.layout_config.form_fields.map((ffId: string) => (
-                                          <option key={ffId} value={ffId}>{getFieldName(ffId)}</option>
-                                        ))}
-                                      </select>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-4 p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-2xl border border-neutral-100 dark:border-neutral-800 cursor-pointer group" onClick={() => updateMeta('content', 'required', !currentFieldMeta.content?.required)}>
-                        <div className={cn(
-                          "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
-                          currentFieldMeta.content?.required ? 'bg-red-500 border-red-500 text-white' : 'border-neutral-300 dark:border-neutral-700'
-                        )}>
-                          {currentFieldMeta.content?.required && <Plus className="w-3 h-3 rotate-45" />}
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase tracking-widest">{t('wizard.layout.drawer.required')}</span>
-                          <span className="text-[8px] text-neutral-400 font-medium">{t('wizard.layout.drawer.required_desc')}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-4 p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-2xl border border-neutral-100 dark:border-neutral-800 cursor-pointer group" onClick={() => updateMeta('content', 'readonly', !currentFieldMeta.content?.readonly)}>
-                        <div className={cn(
-                          "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
-                          currentFieldMeta.content?.readonly ? 'bg-amber-500 border-amber-500 text-white' : 'border-neutral-300 dark:border-neutral-700'
-                        )}>
-                          {currentFieldMeta.content?.readonly && <Plus className="w-3 h-3 rotate-45" />}
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase tracking-widest">{t('wizard.layout.drawer.readonly', 'Somente Leitura')}</span>
-                          <span className="text-[8px] text-neutral-400 font-medium">{t('wizard.layout.drawer.readonly_desc', 'O usuÃ¡rio nÃ£o poderÃ¡ alterar este valor')}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 pt-6 border-t border-neutral-100 dark:border-neutral-800">
-                    <div className="flex items-center gap-3">
-                      <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
-                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.component_config', 'ConfiguraÃ§Ã£o do Componente')}</h3>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.component_type', 'Tipo de Componente')}</label>
-                        <select
-                          value={currentFieldMeta.component?.type || 'text'}
-                          onChange={e => updateMeta('component', 'type', e.target.value)}
-                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
-                        >
-                          <option value="text">{t('wizard.layout.drawer.component_types.text')}</option>
-                          <option value="textarea">{t('wizard.layout.drawer.component_types.textarea')}</option>
-                          <option value="number">{t('wizard.layout.drawer.component_types.number')}</option>
-                          <option value="select">{t('wizard.layout.drawer.component_types.select')}</option>
-                          <option value="radio">{t('wizard.layout.drawer.component_types.radio')}</option>
-                          <option value="checkbox">{t('wizard.layout.drawer.component_types.checkbox')}</option>
-                          <option value="switch">{t('wizard.layout.drawer.component_types.switch')}</option>
-                          <option value="date">{t('wizard.layout.drawer.component_types.date')}</option>
-                          <option value="image_uploader">{t('wizard.layout.drawer.component_types.image_uploader')}</option>
-                          <option value="document_uploader">{t('wizard.layout.drawer.component_types.document_uploader')}</option>
-                          <option value="file_uploader">{t('wizard.layout.drawer.component_types.file_uploader')}</option>
-                        </select>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.width', 'Largura')}</label>
-                          <input
-                            type="text"
-                            placeholder="Ex: 100% ou 200px"
-                            value={currentFieldMeta.component?.width || '100%'}
-                            onChange={e => updateMeta('component', 'width', e.target.value)}
-                            className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
-                          />
-                        </div>
-                        {currentFieldMeta.component?.type === 'textarea' && (
-                          <div className="space-y-2">
-                            <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.rows', 'Linhas')}</label>
-                            <input
-                              type="number"
-                              value={currentFieldMeta.component?.rows || 3}
-                              onChange={e => updateMeta('component', 'rows', parseInt(e.target.value))}
-                              className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {(['select', 'radio', 'checkbox'].includes(currentFieldMeta.component?.type)) && (
-                        <div className="space-y-4 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/50">
-                          <div className="space-y-2">
-                            <label className="text-[9px] font-bold text-indigo-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.options_source', 'Origem dos Dados')}</label>
-                            <div className="flex gap-2">
-                              {['relational', 'enumeration', 'fixed'].map(opt => (
-                                <button
-                                  key={opt}
-                                  onClick={() => updateMeta('component', 'options_type', opt)}
-                                  className={cn(
-                                    "flex-1 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all",
-                                    (currentFieldMeta.component?.options_type || 'fixed') === opt ? 'bg-indigo-600 text-white shadow-md' : 'bg-white dark:bg-neutral-900 text-neutral-400'
-                                  )}
-                                >
-                                  {opt === 'fixed' ? t('wizard.layout.drawer.source_fixed') : opt === 'enumeration' ? t('wizard.layout.drawer.source_enum') : t('wizard.layout.drawer.source_relational')}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {(currentFieldMeta.component?.options_type || 'fixed') === 'fixed' ? (
-                            <div className="space-y-2">
-                              <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.fixed_options', 'OpÃ§Ãµes (Label:Valor, separadas por vÃ­rgula)')}</label>
-                              <textarea
-                                placeholder="Ex: Ativo:A, Inativo:I"
-                                value={currentFieldMeta.component?.fixed_options || ''}
-                                onChange={e => updateMeta('component', 'fixed_options', e.target.value)}
-                                className="w-full h-20 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none resize-none"
-                              />
-                            </div>
-                          ) : currentFieldMeta.component?.options_type === 'enumeration' ? (
-                            <div className="space-y-2">
-                              <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.select_enumeration')}</label>
-                              <select
-                                value={currentFieldMeta.component?.rel_table || ''}
-                                onChange={e => updateMeta('component', 'rel_table', e.target.value)}
-                                className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
-                              >
-                                <option value="">{t('wizard.layout.drawer.options_select_placeholder')}</option>
-                                {enumerations.map((e: any) => (
-                                  <option key={e.id} value={e.id}>{e.name}</option>
-                                ))}
-                              </select>
-                              {currentFieldMeta.component?.rel_table && (
-                                <p className="text-[9px] text-neutral-500 mt-2 italic px-1">
-                                  {t('wizard.layout.drawer.options_available', '{count} opÃ§Ãµes disponÃ­veis').replace('{count}', String(enumerations.find((e: any) => e.id === currentFieldMeta.component?.rel_table)?.values?.length || 0))}
-                                </p>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="space-y-3">
-                              <div className="space-y-2">
-                                <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.rel_table', 'Tabela Relacionada')}</label>
-                                <select
-                                  value={currentFieldMeta.component?.rel_table || ''}
-                                  onChange={e => updateMeta('component', 'rel_table', e.target.value)}
-                                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
-                                >
-                                  <option value="">{t('wizard.layout.drawer.options_select_placeholder')}</option>
-                                  {models.map((m: any) => (
-                                    <option key={m.id} value={m.db_table_name}>{m.display_name || m.db_table_name}</option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-2">
-                                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.rel_label')}</label>
-                                  <select
-                                    value={currentFieldMeta.component?.rel_label || ''}
-                                    onChange={e => updateMeta('component', 'rel_label', e.target.value)}
-                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
-                                  >
-                                    <option value="">{t('wizard.layout.drawer.options_select_placeholder')}</option>
-                                    {models.find((m: any) => m.db_table_name === currentFieldMeta.component?.rel_table)?.fields.map((f: any) => (
-                                      <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div className="space-y-2">
-                                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.rel_value')}</label>
-                                  <select
-                                    value={currentFieldMeta.component?.rel_value || ''}
-                                    onChange={e => updateMeta('component', 'rel_value', e.target.value)}
-                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
-                                  >
-                                    <option value="">{t('wizard.layout.drawer.options_select_placeholder')}</option>
-                                    {models.find((m: any) => m.db_table_name === currentFieldMeta.component?.rel_table)?.fields.map((f: any) => (
-                                      <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {editingFieldId !== 'TABS' && drawerActiveTab === 'logica' && (
-                <div className="space-y-6">
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
-                      <h4 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-widest">
-                        CÃ¡lculos e FÃ³rmulas
-                      </h4>
-                    </div>
-                    <FormulaBuilder
-                      value={currentFieldMeta.content?.formula_tokens || []}
-                      onChange={(tokens) => {
-                        updateMeta('content', 'formula_tokens', tokens);
-                      }}
-                      availableFields={[
-                        ...getModelsWithRelations(
-                          models?.filter((m: any) => config.selected_models?.includes(m.id)) || [],
-                          relations,
-                          models,
-                          config.layout_config?.max_relation_depth || 2
-                        ).flatMap((g: any) =>
-                          (g.model.fields || []).map((f: any) => ({
-                            id: f.id,
-                            modelName: g.label,
-                            db_column_name: g.prefix ? `${g.prefix}${f.db_column_name}` : f.db_column_name,
-                            display_name: f.display_name
-                          }))
-                        ),
-                        ...(config.layout_config?.form_fields || [])
-                          .filter((fid: string) => fid.startsWith('virt_') && fid !== editingFieldId)
-                          .map((fid: string) => {
-                            const meta = config.layout_config?.fields_metadata?.[fid] || {};
-                            const virtModelId = meta.virtual_model_id;
-                            let vModelName = 'Virtual';
-                            let vDbTable = '';
-                            if (virtModelId) {
-                              const foundModel = models?.find((m: any) => m.id === virtModelId);
-                              if (foundModel) {
-                                vModelName = foundModel.display_name || foundModel.name;
-                                vDbTable = foundModel.db_table_name;
-                              }
-                            }
-
-                            const isMaster = !virtModelId || virtModelId === (config.layout_config?.master_model_id || config.selected_models?.[0]);
-                            const dbColName = isMaster ? fid : `${vDbTable}.${fid}`;
-
-                            return {
-                              id: fid,
-                              modelName: vModelName,
-                              db_column_name: dbColName,
-                              display_name: meta.label?.text || 'Campo Calculado',
-                              isVirtual: true
-                            };
-                          })
-                      ]}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {editingFieldId !== 'TABS' && drawerActiveTab === 'estilos' && (
-                <>
-                  <button
-                    onClick={handleApplyStylesToZone}
-                    className="w-full mb-6 flex items-center justify-center gap-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 py-3 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors text-xs font-bold"
-                  >
-                    <Copy className="w-4 h-4" />
-                    {t('wizard.layout.drawer.apply_styles_zone', 'Aplicar formataÃ§Ã£o a todos desta zona ({zone})').replace('{zone}', editingFieldZone === 'filter' ? t('wizard.layout.drawer.zone_filter') : editingFieldZone === 'grid' ? t('wizard.layout.drawer.zone_grid') : t('wizard.layout.drawer.zone_form'))}
-                  </button>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-1 h-4 bg-indigo-600 rounded-full"></div>
-                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.label_config')}</h3>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.font')}</label>
-                        <select
-                          value={currentFieldMeta.label.font}
-                          onChange={e => updateMeta('label', 'font', e.target.value)}
-                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
-                        >
-                          <option value="Inter">{t('wizard.layout.drawer.font_default')}</option>
-                          <option value="Roboto">Roboto</option>
-                          <option value="Outfit">Outfit</option>
-                          <option value="JetBrains Mono">Mono</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.size')}</label>
-                        <input
-                          type="text"
-                          placeholder="Ex: 12px"
-                          value={currentFieldMeta.label.size}
-                          onChange={e => updateMeta('label', 'size', e.target.value)}
-                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.text_color')}</label>
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="color"
-                          value={currentFieldMeta.label.color || '#6366f1'}
-                          onChange={e => updateMeta('label', 'color', e.target.value)}
-                          className="w-8 h-8 rounded-lg cursor-pointer overflow-hidden border-none p-0"
-                        />
-                        <input
-                          type="text"
-                          value={currentFieldMeta.label.color}
-                          onChange={e => updateMeta('label', 'color', e.target.value)}
-                          placeholder={t('wizard.layout.drawer.text_color')}
-                          className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-mono font-bold outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 pt-6 border-t border-neutral-100 dark:border-neutral-800">
-                    <div className="flex items-center gap-3">
-                      <div className="w-1 h-4 bg-emerald-600 rounded-full"></div>
-                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.content_config')}</h3>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.font')}</label>
-                        <select
-                          value={currentFieldMeta.content.font}
-                          onChange={e => updateMeta('content', 'font', e.target.value)}
-                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
-                        >
-                          <option value="Inter">{t('wizard.layout.drawer.font_default')}</option>
-                          <option value="Roboto">Roboto</option>
-                          <option value="Outfit">Outfit</option>
-                          <option value="JetBrains Mono">Mono</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.size')}</label>
-                        <input
-                          type="text"
-                          placeholder="Ex: 14px"
-                          value={currentFieldMeta.content.size}
-                          onChange={e => updateMeta('content', 'size', e.target.value)}
-                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.content_color')}</label>
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="color"
-                          value={currentFieldMeta.content.color || '#000000'}
-                          onChange={e => updateMeta('content', 'color', e.target.value)}
-                          className="w-8 h-8 rounded-lg cursor-pointer overflow-hidden border-none p-0"
-                        />
-                        <input
-                          type="text"
-                          value={currentFieldMeta.content.color}
-                          onChange={e => updateMeta('content', 'color', e.target.value)}
-                          placeholder={t('wizard.layout.drawer.content_color')}
-                          className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-mono font-bold outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-      </Drawer>
+      <FieldDrawer
+        isDrawerOpen={isDrawerOpen}
+        setIsDrawerOpen={setIsDrawerOpen}
+        editingFieldId={editingFieldId}
+        getFieldName={getFieldName}
+        currentFieldMeta={currentFieldMeta}
+        drawerActiveTab={drawerActiveTab}
+        setDrawerActiveTab={setDrawerActiveTab}
+        updateMeta={updateMeta}
+        config={config}
+        setConfig={setConfig}
+        models={models}
+        relations={relations}
+        enumerations={enumerations}
+        editingTabId={editingTabId}
+        editingFieldZone={editingFieldZone}
+        handleApplyStylesToZone={handleApplyStylesToZone}
+        t={t}
+      />
 
       {/* Widget Editor Modal */}
       <Modal
@@ -3617,6 +2924,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
     </div>
   )
 }
+
 
 
 
