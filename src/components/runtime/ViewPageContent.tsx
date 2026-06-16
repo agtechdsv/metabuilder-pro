@@ -2701,6 +2701,7 @@ export default function ViewPageContent({
         title={iframeTitle}
         size="4xl"
         hideHeader={true}
+        zIndex={9999}
         className="!p-0 bg-transparent shadow-none border-none dark:bg-transparent"
       >
         <div className="w-full h-[85vh] bg-white dark:bg-neutral-950 rounded-[2.5rem] overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800">
@@ -2718,6 +2719,7 @@ export default function ViewPageContent({
         }}
         title={iframeTitle}
         hideHeader={true}
+        zIndex={9999}
       >
         <div className="w-full h-full bg-white dark:bg-neutral-950">
           {isIframeDrawerOpen && <iframe src={iframeUrl} className="w-full h-full border-none" />}

@@ -1761,6 +1761,25 @@ export default function RecordForm({
                       const activeModelId = getModelIdForTable(activeTab);
                       return (
                         <div className="flex items-center gap-1 pb-2 flex-shrink-0 pl-2">
+                          {customActions.filter(a => getActionContexts(a, 'detail:' + activeModelId).includes('global_top')).map(action => {
+                            const colors = getActionColorClasses(action.color)
+                            return (
+                              <button
+                                key={action.id}
+                                type="button"
+                                onClick={() => onCustomAction?.(action, buildActionContext(formData))}
+                                className={cn(
+                                  "p-1.5 rounded-lg border transition-all shadow-sm bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700",
+                                  colors.text,
+                                  colors.hover
+                                )}
+                                title={action.label}
+                              >
+                                {getActionIcon(action.icon, "w-4 h-4")}
+                              </button>
+                            )
+                          })}
+
                           {(formData?._details || []).some((d: any) => d.model_name?.toLowerCase() === activeTab?.toLowerCase()) && (
                             <div className="flex items-center gap-0.5 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
                               <button
