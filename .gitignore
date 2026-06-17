@@ -70,3 +70,4 @@ node_modules
 /cli/dist
 
 /local_scripts/
+scripts/refactor/
