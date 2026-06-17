@@ -1,10 +1,10 @@
-import { cn } from '@/lib/utils'
+﻿import { cn } from '@/lib/utils'
 import { Eye, EyeOff, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import { DroppableZone, SortableFieldChip } from './dnd'
-import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'\nimport { StepLayoutModelZone } from './StepLayoutModelZone'
+import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 
 export function FieldZones({
-  config, setConfig, models, toggleZone, hiddenZones, setHiddenZones, expandedZones, t, toggleField, setEditingFieldId, setEditingFieldZone, setIsDrawerOpen, getFieldMeta, getFieldName, formTree, relations, hiddenDetails, setHiddenDetails, retractedModels, setRetractedModels, setEditingTabId, setDrawerActiveTab
+  config, setConfig, models, toggleZone, hiddenZones, setHiddenZones, expandedZones, t, toggleField, setEditingFieldId, setEditingFieldZone, setIsDrawerOpen, getFieldMeta, getFieldName, formTree, renderModelZone
 }: any) {
   return (
     <>
@@ -251,7 +251,7 @@ export function FieldZones({
 
                   {expandedZones.zone03 && !hiddenZones.has('zone03') && (
                     <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                      {formTree.map((node: any, nIdx: number) => <StepLayoutModelZone key={node.id || nIdx} model={node} depth={0} index={nIdx} config={config} setConfig={setConfig} models={models} relations={relations} hiddenDetails={hiddenDetails} setHiddenDetails={setHiddenDetails} retractedModels={retractedModels} setRetractedModels={setRetractedModels} setEditingFieldId={setEditingFieldId} setEditingTabId={setEditingTabId} setEditingFieldZone={setEditingFieldZone} setDrawerActiveTab={setDrawerActiveTab} setIsDrawerOpen={setIsDrawerOpen} toggleField={toggleField} getFieldMeta={getFieldMeta} getFieldName={getFieldName} t={t} />)}
+                      {formTree.map((node: any, nIdx: number) => renderModelZone(node, 0, nIdx))}
                     </div>
                   )}
                 </div>
