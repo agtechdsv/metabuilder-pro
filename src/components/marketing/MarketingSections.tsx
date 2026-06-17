@@ -559,12 +559,32 @@ export function MarketingSections() {
           </p>
         </div>
 
-        <div className="p-12 rounded-[2.5rem] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 space-y-6">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-600 flex items-center justify-center text-white shadow-xl">
-            <Globe className="w-7 h-7" />
+        <div className="group relative p-12 rounded-[2.5rem] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 space-y-6 overflow-hidden hover:border-indigo-500/50 transition-all duration-500 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1">
+          {/* Subtle animated background gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+          
+          <div className="relative z-10 flex items-start justify-between">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-xl shadow-indigo-500/30 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
+              <Globe className="w-7 h-7" />
+            </div>
+            <span className="px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[9px] font-black uppercase tracking-widest rounded-full shadow-sm animate-pulse">
+              Novo Recurso Premium
+            </span>
           </div>
-          <h3 className="text-3xl font-black dark:text-white tracking-tight">{t('marketing_v2.home.whitelabel_title')}</h3>
-          <p className="text-neutral-500 dark:text-neutral-400 leading-relaxed">
+          
+          <div className="relative z-10 space-y-4">
+            <h3 className="text-3xl font-black dark:text-white tracking-tight">{t('marketing_v2.home.whitelabel_title')}</h3>
+            
+            {/* Mockup URL Bar */}
+            <div className="inline-flex items-center gap-2 px-3 py-2 bg-neutral-100 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-mono text-neutral-500 dark:text-neutral-400 shadow-inner group-hover:border-indigo-500/30 transition-colors">
+              <Globe className="w-3.5 h-3.5 text-neutral-400" />
+              <span>https://app.</span>
+              <span className="text-indigo-600 dark:text-indigo-400 font-bold -mx-1">suaempresa</span>
+              <span>.com</span>
+            </div>
+          </div>
+
+          <p className="relative z-10 text-neutral-500 dark:text-neutral-400 leading-relaxed pt-2">
             {t('marketing_v2.home.whitelabel_desc')}
           </p>
         </div>

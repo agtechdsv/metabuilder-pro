@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Palette, ImageIcon, Type, Layout, ArrowLeft, MousePointer2 } from 'lucide-react'
+import { Palette, ImageIcon, Type, Layout, ArrowLeft, MousePointer2, Globe } from 'lucide-react'
 import Link from 'next/link'
 import { BottomCta } from '@/components/landing/BottomCta'
 import { useI18n } from '@/i18n/I18nContext'
@@ -67,6 +67,47 @@ export default function BrandingFeaturePage() {
                    Customize Now
                 </div>
              </div>
+          </div>
+        </div>
+      </section>
+
+      {/* --- NOVO DESTAQUE: DOMÍNIO CUSTOMIZADO --- */}
+      <section className="relative rounded-[3rem] bg-indigo-600 overflow-hidden text-white my-20">
+        <div className="absolute right-0 top-0 w-1/2 h-full bg-gradient-to-l from-indigo-500 to-transparent"></div>
+        
+        <div className="relative p-12 md:p-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-xs font-bold uppercase tracking-widest text-indigo-100 backdrop-blur-md border border-white/10">
+              <Globe className="w-4 h-4" />
+              Novo Recurso Premium
+            </div>
+            <h2 className="text-4xl md:text-5xl font-black tracking-tighter leading-tight">
+              Domínio Próprio <br/>
+              <span className="text-indigo-200">100% White-Label</span>
+            </h2>
+            <p className="text-lg text-indigo-100/80 leading-relaxed max-w-lg">
+              Ofereça o sistema para seus clientes usando a URL da sua própria empresa (ex: <strong>app.suaempresa.com</strong>). O MetaBuilder PRO roda de forma transparente com roteamento dinâmico e geração automática de certificados SSL gratuitos.
+            </p>
+          </div>
+          
+          <div className="relative flex items-center justify-center lg:justify-end">
+            <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-3xl w-full max-w-sm shadow-2xl transform lg:-rotate-2 hover:rotate-0 transition-transform duration-500">
+               <div className="flex items-center gap-3 bg-black/20 rounded-xl p-3 mb-6">
+                 <Globe className="w-5 h-5 text-indigo-200" />
+                 <span className="font-mono text-sm font-medium text-white truncate">app.suaempresa.com</span>
+               </div>
+               <div className="space-y-4">
+                 <div className="flex items-center gap-3 mb-4">
+                   <div className="w-8 h-8 rounded-full bg-indigo-400"></div>
+                   <div className="h-3 w-24 bg-white/20 rounded-full"></div>
+                 </div>
+                 <div className="h-10 w-full bg-white/10 rounded-xl"></div>
+                 <div className="h-10 w-full bg-white/10 rounded-xl"></div>
+                 <div className="h-12 w-full bg-indigo-500 rounded-xl mt-4 flex items-center justify-center text-[10px] font-black uppercase tracking-widest text-white">
+                   Acessar Sistema
+                 </div>
+               </div>
+            </div>
           </div>
         </div>
       </section>

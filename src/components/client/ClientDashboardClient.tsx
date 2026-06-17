@@ -6,6 +6,7 @@ import { ClientProductivityView } from './ClientProductivityView'
 import { ClientIClubView } from './ClientIClubView'
 import { ClientSubscriptionView } from './ClientSubscriptionView'
 import { ClientCancelView } from './ClientCancelView'
+import { ClientWhiteLabelView } from './ClientWhiteLabelView'
 import { motion, AnimatePresence } from 'framer-motion'
 import { StatusBadge } from './ClientSharedComponents'
 import {
@@ -39,6 +40,7 @@ import {
   Copy,
   Lightbulb,
   RefreshCw,
+  Globe,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
@@ -131,6 +133,7 @@ const TABS = [
   { id: 'dashboard', label: 'Dashboard BI', icon: BarChart3 },
   { id: 'productivity', label: 'Produtividade', icon: Activity },
   { id: 'downloads', label: 'Central de Downloads', icon: Download },
+  { id: 'whitelabel', label: 'White-Label', icon: Globe },
   { id: 'community', label: 'MetaBuilders', icon: Users },
   { id: 'metavoice', label: 'MetaVoice', icon: Lightbulb },
   { id: 'iclub', label: 'iClub', icon: Zap },
@@ -419,6 +422,11 @@ export default function ClientDashboardClient({
           {/* ── TAB: Central de Downloads ─────────────────────────────────────── */}
           {activeTab === 'downloads' && (
             <CliFilesClientView projects={projects} />
+          )}
+
+          {/* ── TAB: White Label ─────────────────────────────────────── */}
+          {activeTab === 'whitelabel' && (
+            <ClientWhiteLabelView projects={projects} />
           )}
 
           {/* ── TAB: Dashboard BI ─────────────────────────────────────── */}
