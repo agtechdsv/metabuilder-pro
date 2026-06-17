@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import FormulaBuilder from '../../../FormulaBuilder'
 import {
   Settings2, Database, Layout, MousePointer2, Plus, Trash2,
@@ -27,7 +27,7 @@ import {
 } from '@dnd-kit/sortable'
 import { motion, useDragControls } from 'framer-motion'
 import { createDefaultFieldMeta } from '../../utils'
-import { DroppableZone, SortableFieldChip, DraggableItem, SortableWidgetCard, DraggableFieldCard, DraggableTableHeader } from './dnd'
+import { DroppableZone, SortableFieldChip, DraggableItem, SortableWidgetCard, DraggableFieldCard, DraggableTableHeader } from './dnd'\nimport { StepLayoutModelZone } from './StepLayoutModelZone'
 import { MultiLevelPathBuilder } from '../StepPersonalizado'
 import { FieldDrawer } from './FieldDrawer'
 import { AnalyticsSection } from './AnalyticsSection'
@@ -536,8 +536,6 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
     return fields;
   };
 
-  const renderModelZone = (model: any, depth: number = 0, index: number = 0) => {
-    const isMaster = depth === 0 && index === 0
     const fieldsOfThisModel = config.layout_config.form_fields.filter((fid: string) => {
       if (fid.startsWith('virt_')) {
         const meta = (config.layout_config.fields_metadata || {})[fid] || {};
@@ -1169,7 +1167,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
               getFieldMeta={getFieldMeta}
               getFieldName={getFieldName}
               formTree={formTree}
-              renderModelZone={renderModelZone}
+              relations={relations}\n              hiddenDetails={hiddenDetails}\n              setHiddenDetails={setHiddenDetails}\n              retractedModels={retractedModels}\n              setRetractedModels={setRetractedModels}\n              setEditingTabId={setEditingTabId}\n              setDrawerActiveTab={setDrawerActiveTab}
             />
           </div>
         </div>
