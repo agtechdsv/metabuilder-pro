@@ -1,0 +1,27 @@
+{
+  "connections": [
+    {
+      "projectId": "",
+      "secretToken": "",
+		  "connectionsString": [
+			{
+			  "name": "",
+			  "type": "",
+			  "connectionString": ""
+			}
+		  ]
+    }
+  ],
+  "supabaseUrl": "https://chmstvtepzmjhpyxjjam.supabase.co",
+  "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNobXN0dnRlcHptamhweXhqamFtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODAyOTU4OCwiZXhwIjoyMDkzNjA1NTg4fQ.B-s9eb_TgABJWBuBxgIQIqNjtw2Q3e7UXcdhXsx-Ijc",
+  "apiUrl": "http://metabuilderpro.com/api/metadata/sync",
+  "ldap": {
+    "enabled": false,
+    "url": "",
+    "baseDn": "",
+    "bindDn": "",
+    "bindPassword": "",
+    "searchFilter": ""
+  },
+  "downloadPath": "C:\\AgTech\\DownloadsMetaBuilder"
+}

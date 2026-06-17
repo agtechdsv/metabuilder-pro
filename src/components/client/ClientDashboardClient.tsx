@@ -85,6 +85,7 @@ interface Project {
   name: string
   workspace_id: string
   created_at: string
+  secret_token?: string
 }
 
 interface UseCase {
@@ -417,7 +418,7 @@ export default function ClientDashboardClient({
 
           {/* ── TAB: Central de Downloads ─────────────────────────────────────── */}
           {activeTab === 'downloads' && (
-            <CliFilesClientView />
+            <CliFilesClientView projects={projects} />
           )}
 
           {/* ── TAB: Dashboard BI ─────────────────────────────────────── */}
