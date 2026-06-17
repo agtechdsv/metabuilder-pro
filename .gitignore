@@ -68,3 +68,5 @@ node_modules
 /simulate_fields.js
 
 /cli/dist
+
+/local_scripts/
