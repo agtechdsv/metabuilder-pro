@@ -74,8 +74,12 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
   }
 
   const navigation = project.navigation || []
+  const headersList = await import('next/headers').then(m => m.headers())
+  const isCustomDomain = headersList.get('x-custom-domain') === 'true'
+  const baseNavUrl = isCustomDomain ? '' : `/${workspace_slug}/${project_slug}`
+
   const baseUrl = `/${workspace_slug}/${project_slug}`
-  const breadcrumbs = findBreadcrumbPath(navigation, view_slug, [], baseUrl) || [{ label: view_slug, href: '#' }]
+  const breadcrumbs = findBreadcrumbPath(navigation, view_slug, [], baseNavUrl || baseUrl) || [{ label: view_slug, href: '#' }]
   const navItem = findNavigationItem(navigation, view_slug)
   const navDescription = navItem?.description
   const navIcon = navItem?.icon

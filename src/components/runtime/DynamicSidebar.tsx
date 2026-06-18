@@ -33,14 +33,16 @@ interface DynamicSidebarProps {
   navigation: MenuItem[]
   isCollapsed: boolean
   setIsCollapsed: (val: boolean) => void
+  baseNavUrl?: string
 }
 
 
 
-export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation = [], isCollapsed, setIsCollapsed }: DynamicSidebarProps) {
+export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation = [], isCollapsed, setIsCollapsed, baseNavUrl }: DynamicSidebarProps) {
   const { t } = useI18n()
   const projectIcon = project.icon || 'Box'
   const pathname = usePathname()
+  const finalBaseNavUrl = baseNavUrl ?? `/${workspaceSlug}/${projectSlug}`
   const router = useRouter()
   const [expandedFolders, setExpandedFolders] = useState<string[]>([])
   const [clientUser, setClientUser] = useState<any>(null)
@@ -63,7 +65,7 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
   const handleLogout = () => {
     const sessionCookieName = `client_session_${project.id}`
     document.cookie = `${sessionCookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
-    window.location.href = `/${workspaceSlug}/${projectSlug}/login`
+    window.location.href = `${finalBaseNavUrl}/login`
   }
 
   const displayName = clientUser?.nome || clientUser?.name || clientUser?.email || 'Usuário Cliente'
@@ -78,13 +80,13 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
   }
 
   const navigateToFolder = (id: string) => {
-    router.push(`/${workspaceSlug}/${projectSlug}/dashboard/${id}`)
+    router.push(`${finalBaseNavUrl}/dashboard/${id}`)
   }
 
   const renderMenuItem = (item: MenuItem, isChild = false) => {
     const isActive = item.type === 'view' 
-        ? pathname === `/${workspaceSlug}/${projectSlug}/${item.target}` || pathname.startsWith(`/${workspaceSlug}/${projectSlug}/${item.target}/`)
-        : pathname === `/${workspaceSlug}/${projectSlug}/dashboard/${item.id}` || pathname.startsWith(`/${workspaceSlug}/${projectSlug}/dashboard/${item.id}/`)
+        ? pathname === `${finalBaseNavUrl}/${item.target}` || pathname.startsWith(`${finalBaseNavUrl}/${item.target}/`)
+        : pathname === `${finalBaseNavUrl}/dashboard/${item.id}` || pathname.startsWith(`${finalBaseNavUrl}/dashboard/${item.id}/`)
     
     const isFolder = item.type === 'folder'
     const isExpanded = expandedFolders.includes(item.id)
@@ -154,7 +156,7 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
     }
 
     const href = item.type === 'view' 
-      ? `/${workspaceSlug}/${projectSlug}/${item.target}` 
+      ? `${finalBaseNavUrl}/${item.target}` 
       : item.target
 
     return (
@@ -215,7 +217,7 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
       {/* Sidebar Header - Aligned with Global Header */}
       <div className="h-16 flex items-center px-6 border-b border-neutral-200/50 dark:border-white/5 shrink-0">
         <Link 
-          href={`/${workspaceSlug}/${projectSlug}/dashboard`}
+          href={`${finalBaseNavUrl}/dashboard`}
           className="flex items-center gap-3 group relative"
         >
           <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0 group-hover:scale-110 transition-transform">

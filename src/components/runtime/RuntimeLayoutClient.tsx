@@ -180,6 +180,7 @@ export function RuntimeLayoutClient({
         navigation={activeNavigation}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
+        baseNavUrl={baseNavUrl}
       />
 
       <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden relative">
@@ -190,6 +191,7 @@ export function RuntimeLayoutClient({
           navigation={activeNavigation}
           workspaceSlug={workspaceSlug}
           projectSlug={projectSlug}
+          baseNavUrl={baseNavUrl}
         />
         
         <main className="flex-1">

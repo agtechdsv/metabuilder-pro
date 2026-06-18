@@ -31,12 +31,14 @@ interface DynamicDashboardProps {
   subtitle?: string
   icon?: string
   breadcrumbs?: { label: string; href: string }[]
+  baseNavUrl?: string
 }
 
 
 
-export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, subtitle, icon }: DynamicDashboardProps) {
+export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, subtitle, icon, baseNavUrl }: DynamicDashboardProps) {
   const { t } = useI18n()
+  const finalBaseNavUrl = baseNavUrl ?? `/${workspaceSlug}/${projectSlug}`
   return (
     <div className="space-y-6">
       <RuntimeHeader 
@@ -52,9 +54,9 @@ export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, sub
         {items.map((item) => {
           const isFolder = item.type === 'folder'
           const href = isFolder 
-            ? `/${workspaceSlug}/${projectSlug}/dashboard/${item.id}`
+            ? `${finalBaseNavUrl}/dashboard/${item.id}`
             : item.type === 'view' 
-              ? `/${workspaceSlug}/${projectSlug}/${item.target}`
+              ? `${finalBaseNavUrl}/${item.target}`
               : item.target
 
           return (

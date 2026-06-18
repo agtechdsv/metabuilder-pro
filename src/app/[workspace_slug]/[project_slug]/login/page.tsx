@@ -4,6 +4,7 @@ import { getLocale } from '@/i18n/get-locale'
 import { getTranslations } from '@/i18n/get-translations'
 import { LoginPortalClient } from '@/components/auth/LoginPortalClient'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 
 export default async function LoginPage({ params }: any) {
   const { workspace_slug, project_slug } = await params
@@ -65,8 +66,15 @@ export default async function LoginPage({ params }: any) {
   }
   const allowSignup = visual.allow_signup || false
   
+  const headersList = await headers()
+  const isCustomDomain = headersList.get('x-custom-domain') === 'true'
+  
   if (auth.auth_type === 'none') {
-    redirect(`/${workspace_slug}/${project_slug}`)
+    if (isCustomDomain) {
+      redirect('/')
+    } else {
+      redirect(`/${workspace_slug}/${project_slug}`)
+    }
   }
   
   // 3. Verificar se o projeto está inativo

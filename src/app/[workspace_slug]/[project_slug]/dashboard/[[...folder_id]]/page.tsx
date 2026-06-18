@@ -203,9 +203,11 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
     icon = project.icon || 'Box'
   }
 
-  const baseUrl = `/${workspace_slug}/${project_slug}`
+  const headersList = await import('next/headers').then(m => m.headers())
+  const isCustomDomain = headersList.get('x-custom-domain') === 'true'
+  const baseNavUrl = isCustomDomain ? '' : `/${workspace_slug}/${project_slug}`
   const breadcrumbs = activeFolderId 
-    ? findBreadcrumbPath(navigation, activeFolderId, [], baseUrl) || []
+    ? findBreadcrumbPath(navigation, activeFolderId, [], baseNavUrl || `/${workspace_slug}/${project_slug}`) || []
     : []
 
   return (
@@ -218,6 +220,7 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
         subtitle={subtitle}
         icon={icon}
         breadcrumbs={breadcrumbs}
+        baseNavUrl={baseNavUrl}
       />
     </div>
   )

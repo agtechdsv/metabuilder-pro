@@ -16,6 +16,7 @@ interface RuntimeGlobalHeaderProps {
   navigation: any[]
   workspaceSlug: string
   projectSlug: string
+  baseNavUrl?: string
 }
 
 import { motion, AnimatePresence } from 'framer-motion'
@@ -26,7 +27,8 @@ export function RuntimeGlobalHeader({
   setIsCollapsed, 
   navigation,
   workspaceSlug,
-  projectSlug 
+  projectSlug,
+  baseNavUrl
 }: RuntimeGlobalHeaderProps) {
   const { t } = useI18n()
   const params = useParams()
@@ -36,7 +38,8 @@ export function RuntimeGlobalHeader({
   const folderId = params?.folder_id?.[0] as string
   const targetId = viewSlug || folderId
   
-  const baseUrl = `/${workspaceSlug}/${projectSlug}`
+  const defaultBaseUrl = `/${workspaceSlug}/${projectSlug}`
+  const baseUrl = baseNavUrl ?? defaultBaseUrl
   const breadcrumbs = findBreadcrumbPath(navigation, targetId, [], baseUrl) || []
   const dashboardHomeUrl = `${baseUrl}/dashboard`
 
