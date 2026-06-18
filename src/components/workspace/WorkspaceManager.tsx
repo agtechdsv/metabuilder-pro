@@ -19,7 +19,8 @@ import {
   Loader2,
   Power,
   PowerOff,
-  RefreshCw
+  RefreshCw,
+  ArrowUpRight
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -38,6 +39,7 @@ interface Workspace {
   projects?: { count: number }[]
   can_edit?: boolean
   can_delete?: boolean
+  theme_config?: any
 }
 
 interface Guest {
