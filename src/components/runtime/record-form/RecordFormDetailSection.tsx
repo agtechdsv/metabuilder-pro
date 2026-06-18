@@ -255,20 +255,23 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                const matchedOpt = opts.find(o => String(o.value) === String(val));
                                if (matchedOpt && matchedOpt.label) {
                                   val = matchedOpt.label;
-                               } else {
-                                  const tType = titleFieldDef.config?.form_config?.component?.type || titleFieldDef.config?.component?.type;
-                                  if ((tType === 'date' || tType === 'datetime-local' || tType === 'datetime') && typeof val === 'string') {
-                                    try {
-                                      const d = new Date(val);
-                                      if (!isNaN(d.getTime())) {
-                                        if (tType === 'date') {
-                                          val = new Intl.DateTimeFormat(navigator.language || 'pt-BR', { timeZone: 'UTC' }).format(d);
-                                        } else {
-                                          val = new Intl.DateTimeFormat(navigator.language || 'pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(d);
-                                        }
-                                      }
-                                    } catch (e) {}
+                               }
+                            }
+                            
+                            // Tentar inferir se a string parece uma ISO date de qualquer forma (fallback robusto)
+                            if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val)) {
+                               try {
+                                  const d = new Date(val);
+                                  if (!isNaN(d.getTime())) {
+                                     const tType = titleFieldDef?.config?.form_config?.component?.type || titleFieldDef?.config?.component?.type;
+                                     if (tType === 'date' || val.endsWith('T00:00:00.000Z')) {
+                                       val = new Intl.DateTimeFormat(navigator.language || 'pt-BR', { timeZone: 'UTC' }).format(d);
+                                     } else {
+                                       val = new Intl.DateTimeFormat(navigator.language || 'pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(d);
+                                     }
                                   }
+                               } catch (e) {
+                                  console.error('Date formatting error:', e);
                                }
                             }
 
