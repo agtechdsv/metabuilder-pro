@@ -108,7 +108,6 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: vercelData.error?.message || 'Failed to add domain to Vercel' }, { status: 400 })
         }
       }
-    }
 
     // 4. Update Supabase with the new assignment
     let updateError = null;
