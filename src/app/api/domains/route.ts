@@ -11,22 +11,35 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { domain, projectId } = body
+    const { domain, targetId, targetType } = body
 
-    if (!domain || !projectId) {
-      return NextResponse.json({ error: 'Missing domain or projectId' }, { status: 400 })
+    if (!domain || !targetId || !targetType) {
+      return NextResponse.json({ error: 'Missing domain, targetId or targetType' }, { status: 400 })
     }
 
-    // 1. Check if the user is authorized to manage this project
-    // (Assuming projects table RLS allows the owner to read/update their project)
-    const { data: project, error: projectError } = await supabase
-      .from('projects')
-      .select('id, custom_domain')
-      .eq('id', projectId)
-      .single()
-
-    if (projectError || !project) {
-      return NextResponse.json({ error: 'Project not found or access denied' }, { status: 403 })
+    // 1. Check if the user is authorized to manage this resource
+    let targetRecord = null;
+    
+    if (targetType === 'workspace') {
+      const { data: workspace, error: wsError } = await supabase
+        .from('workspaces')
+        .select('id, custom_domain')
+        .eq('id', targetId)
+        .single()
+      
+      if (wsError || !workspace) return NextResponse.json({ error: 'Workspace not found or access denied' }, { status: 403 })
+      targetRecord = workspace
+    } else if (targetType === 'project') {
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .select('id, custom_domain')
+        .eq('id', targetId)
+        .single()
+      
+      if (projectError || !project) return NextResponse.json({ error: 'Project not found or access denied' }, { status: 403 })
+      targetRecord = project
+    } else {
+      return NextResponse.json({ error: 'Invalid targetType' }, { status: 400 })
     }
 
     // 2. Vercel API integration
@@ -59,10 +72,15 @@ export async function POST(req: Request) {
     }
 
     // 3. Update Supabase
-    const { error: updateError } = await supabase
-      .from('projects')
-      .update({ custom_domain: domain })
-      .eq('id', projectId)
+    let updateError = null;
+    
+    if (targetType === 'workspace') {
+      const { error } = await supabase.from('workspaces').update({ custom_domain: domain }).eq('id', targetId)
+      updateError = error
+    } else {
+      const { error } = await supabase.from('projects').update({ custom_domain: domain }).eq('id', targetId)
+      updateError = error
+    }
 
     if (updateError) {
       return NextResponse.json({ error: 'Failed to update database' }, { status: 500 })
@@ -87,21 +105,32 @@ export async function DELETE(req: Request) {
 
     const { searchParams } = new URL(req.url)
     const domain = searchParams.get('domain')
-    const projectId = searchParams.get('projectId')
+    const targetId = searchParams.get('targetId')
+    const targetType = searchParams.get('targetType')
 
-    if (!domain || !projectId) {
-      return NextResponse.json({ error: 'Missing domain or projectId' }, { status: 400 })
+    if (!domain || !targetId || !targetType) {
+      return NextResponse.json({ error: 'Missing domain, targetId or targetType' }, { status: 400 })
     }
 
     // 1. Verify access
-    const { data: project, error: projectError } = await supabase
-      .from('projects')
-      .select('id, custom_domain')
-      .eq('id', projectId)
-      .single()
-
-    if (projectError || !project) {
-      return NextResponse.json({ error: 'Project not found or access denied' }, { status: 403 })
+    if (targetType === 'workspace') {
+      const { data: workspace, error: wsError } = await supabase
+        .from('workspaces')
+        .select('id, custom_domain')
+        .eq('id', targetId)
+        .single()
+      
+      if (wsError || !workspace) return NextResponse.json({ error: 'Workspace not found or access denied' }, { status: 403 })
+    } else if (targetType === 'project') {
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .select('id, custom_domain')
+        .eq('id', targetId)
+        .single()
+      
+      if (projectError || !project) return NextResponse.json({ error: 'Project not found or access denied' }, { status: 403 })
+    } else {
+      return NextResponse.json({ error: 'Invalid targetType' }, { status: 400 })
     }
 
     // 2. Remove domain from Vercel
@@ -121,10 +150,15 @@ export async function DELETE(req: Request) {
     }
 
     // 3. Update Supabase
-    const { error: updateError } = await supabase
-      .from('projects')
-      .update({ custom_domain: null })
-      .eq('id', projectId)
+    let updateError = null;
+    
+    if (targetType === 'workspace') {
+      const { error } = await supabase.from('workspaces').update({ custom_domain: null }).eq('id', targetId)
+      updateError = error
+    } else {
+      const { error } = await supabase.from('projects').update({ custom_domain: null }).eq('id', targetId)
+      updateError = error
+    }
 
     if (updateError) {
       return NextResponse.json({ error: 'Failed to update database' }, { status: 500 })

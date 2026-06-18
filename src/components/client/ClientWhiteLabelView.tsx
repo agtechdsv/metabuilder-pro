@@ -5,16 +5,21 @@ import { Globe, Loader2, Link as LinkIcon, AlertCircle, CheckCircle2, Trash2 } f
 import { useToast } from '@/components/ui/Toast'
 
 interface ClientWhiteLabelViewProps {
+  workspaces: any[]
   projects: any[]
 }
 
-export function ClientWhiteLabelView({ projects }: ClientWhiteLabelViewProps) {
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('')
+export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelViewProps) {
+  const [selectedTargetId, setSelectedTargetId] = useState<string>('')
   const [domain, setDomain] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
-  const selectedProject = projects.find(p => p.id === selectedProjectId)
+  // Find selected target in workspaces or projects
+  const selectedWorkspace = workspaces?.find(w => w.id === selectedTargetId)
+  const selectedProject = projects?.find(p => p.id === selectedTargetId)
+  const selectedTarget = selectedWorkspace || selectedProject
+  const targetType = selectedWorkspace ? 'workspace' : selectedProject ? 'project' : null
 
   const handleAddDomain = async () => {
     if (!domain) {
@@ -34,7 +39,7 @@ export function ClientWhiteLabelView({ projects }: ClientWhiteLabelViewProps) {
       const response = await fetch('/api/domains', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: domain.toLowerCase(), projectId: selectedProjectId })
+        body: JSON.stringify({ domain: domain.toLowerCase(), targetId: selectedTargetId, targetType })
       })
       const data = await response.json()
 
@@ -44,7 +49,7 @@ export function ClientWhiteLabelView({ projects }: ClientWhiteLabelViewProps) {
 
       toast('Domínio vinculado com sucesso! Siga as instruções de DNS.', 'success')
       // Update local state temporarily (it will refresh on next dashboard load)
-      if (selectedProject) selectedProject.custom_domain = domain.toLowerCase()
+      if (selectedTarget) selectedTarget.custom_domain = domain.toLowerCase()
       setDomain('')
     } catch (error: any) {
       toast(error.message, 'error')
@@ -53,15 +58,15 @@ export function ClientWhiteLabelView({ projects }: ClientWhiteLabelViewProps) {
   }
 
   const handleRemoveDomain = async () => {
-    if (!selectedProject || !selectedProject.custom_domain) return
+    if (!selectedTarget || !selectedTarget.custom_domain) return
 
-    if (!window.confirm('Tem certeza que deseja remover este domínio? O seu projeto parará de responder por ele.')) {
+    if (!window.confirm(`Tem certeza que deseja remover este domínio? O seu ${targetType === 'workspace' ? 'Portal de Aplicações' : 'projeto'} parará de responder por ele.`)) {
       return
     }
 
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/domains?domain=${selectedProject.custom_domain}&projectId=${selectedProject.id}`, {
+      const response = await fetch(`/api/domains?domain=${selectedTarget.custom_domain}&targetId=${selectedTarget.id}&targetType=${targetType}`, {
         method: 'DELETE'
       })
       const data = await response.json()
@@ -71,7 +76,7 @@ export function ClientWhiteLabelView({ projects }: ClientWhiteLabelViewProps) {
       }
 
       toast('Domínio removido com sucesso!', 'success')
-      selectedProject.custom_domain = null
+      selectedTarget.custom_domain = null
     } catch (error: any) {
       toast(error.message, 'error')
     }
@@ -95,22 +100,33 @@ export function ClientWhiteLabelView({ projects }: ClientWhiteLabelViewProps) {
 
         <div className="max-w-2xl space-y-6">
           <div className="space-y-3">
-            <label className="text-xs font-bold uppercase tracking-widest text-neutral-500">Selecione o Projeto</label>
+            <label className="text-xs font-bold uppercase tracking-widest text-neutral-500">Selecione o Destino</label>
             <select
-              value={selectedProjectId}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+              value={selectedTargetId}
+              onChange={(e) => setSelectedTargetId(e.target.value)}
               className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl px-4 py-3 text-sm font-medium text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
             >
-              <option value="">Selecione um projeto para configurar...</option>
-              {projects.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
+              <option value="">Selecione um Workspace ou Projeto para configurar...</option>
+              {workspaces?.length > 0 && (
+                <optgroup label="Portais de Aplicação (Workspaces)">
+                  {workspaces.map(w => (
+                    <option key={w.id} value={w.id}>Portal: {w.name}</option>
+                  ))}
+                </optgroup>
+              )}
+              {projects?.length > 0 && (
+                <optgroup label="Projetos Específicos">
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>Projeto: {p.name}</option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </div>
 
-          {selectedProject && (
+          {selectedTarget && (
             <div className="bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl p-6 border border-neutral-100 dark:border-neutral-800">
-              {selectedProject.custom_domain ? (
+              {selectedTarget.custom_domain ? (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -119,7 +135,7 @@ export function ClientWhiteLabelView({ projects }: ClientWhiteLabelViewProps) {
                         <h4 className="font-bold text-neutral-900 dark:text-white">Domínio Ativo</h4>
                       </div>
                       <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
-                        {selectedProject.custom_domain}
+                        {selectedTarget.custom_domain}
                       </p>
                     </div>
                     <button
@@ -146,7 +162,7 @@ export function ClientWhiteLabelView({ projects }: ClientWhiteLabelViewProps) {
                         </div>
                         <div className="col-span-1">
                           <span className="text-neutral-400 block mb-1">NOME</span>
-                          <strong>{selectedProject.custom_domain.startsWith('www.') ? 'www' : '@'}</strong>
+                          <strong>{selectedTarget.custom_domain.startsWith('www.') ? 'www' : '@'}</strong>
                         </div>
                         <div className="col-span-1">
                           <span className="text-neutral-400 block mb-1">VALOR/DESTINO</span>
@@ -157,8 +173,11 @@ export function ClientWhiteLabelView({ projects }: ClientWhiteLabelViewProps) {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="space-y-3">
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="font-bold text-neutral-900 dark:text-white mb-2">
+                      Vincular Domínio ao {targetType === 'workspace' ? 'Portal' : 'Projeto'}
+                    </h4>
                     <label className="text-xs font-bold uppercase tracking-widest text-neutral-500">Novo Domínio (ex: www.suaempresa.com)</label>
                     <div className="flex gap-3">
                       <div className="relative flex-1">

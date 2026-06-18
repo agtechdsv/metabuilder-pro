@@ -426,7 +426,7 @@ export default function ClientDashboardClient({
 
           {/* ── TAB: White Label ─────────────────────────────────────── */}
           {activeTab === 'whitelabel' && (
-            <ClientWhiteLabelView projects={projects} />
+            <ClientWhiteLabelView workspaces={workspaces} projects={projects} />
           )}
 
           {/* ── TAB: Dashboard BI ─────────────────────────────────────── */}
