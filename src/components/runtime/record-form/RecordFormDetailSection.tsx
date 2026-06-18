@@ -255,6 +255,20 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                const matchedOpt = opts.find(o => String(o.value) === String(val));
                                if (matchedOpt && matchedOpt.label) {
                                   val = matchedOpt.label;
+                               } else {
+                                  const tType = titleFieldDef.config?.form_config?.component?.type || titleFieldDef.config?.component?.type;
+                                  if ((tType === 'date' || tType === 'datetime-local' || tType === 'datetime') && typeof val === 'string') {
+                                    try {
+                                      const d = new Date(val);
+                                      if (!isNaN(d.getTime())) {
+                                        if (tType === 'date') {
+                                          val = new Intl.DateTimeFormat(navigator.language || 'pt-BR', { timeZone: 'UTC' }).format(d);
+                                        } else {
+                                          val = new Intl.DateTimeFormat(navigator.language || 'pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(d);
+                                        }
+                                      }
+                                    } catch (e) {}
+                                  }
                                }
                             }
 
