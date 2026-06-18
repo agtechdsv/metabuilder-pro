@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronRight, Database, ArrowRight } from 'lucide-react'
@@ -13,7 +13,12 @@ interface PortalPageProps {
 
 export default async function PortalPage({ params }: PortalPageProps) {
   const { workspace_slug } = await params
-  const supabase = await createClient()
+  
+  // Create an admin client to bypass RLS for the public portal
+  const supabase = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
   // 1. Resolve Workspace
   const { data: workspace, error: workspaceError } = await supabase
