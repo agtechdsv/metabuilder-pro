@@ -9,9 +9,11 @@ export async function proxy(request: NextRequest) {
   const url = request.nextUrl
   const hostHeader = request.headers.get('host') || ''
   // Remove port if exists (e.g., localhost:3000 -> localhost)
-  const hostname = hostHeader.split(':')[0]
-
-  // Define our core application domains (without ports)
+  let hostname = hostHeader.split(':')[0]
+  
+  // Normalize hostname for DB lookup (try both with and without www)
+  const hostnameWithoutWww = hostname.replace(/^www\./, '')
+  const hostnameWithWww = `www.${hostnameWithoutWww}`
   const appDomains = [
     'localhost', 
     process.env.NEXT_PUBLIC_APP_URL?.replace('https://', '').replace('http://', '').split(':')[0],
@@ -42,7 +44,8 @@ export async function proxy(request: NextRequest) {
   const { data: workspace, error: wsError } = await supabase
     .from('workspaces')
     .select('slug')
-    .eq('custom_domain', hostname)
+    .in('custom_domain', [hostnameWithoutWww, hostnameWithWww])
+    .limit(1)
     .single()
 
   if (workspace && !wsError) {
@@ -73,7 +76,8 @@ export async function proxy(request: NextRequest) {
   const { data: project, error } = await supabase
     .from('projects')
     .select('slug, workspaces(slug)')
-    .eq('custom_domain', hostname)
+    .in('custom_domain', [hostnameWithoutWww, hostnameWithWww])
+    .limit(1)
     .single()
 
   if (error || !project || !project.workspaces) {
