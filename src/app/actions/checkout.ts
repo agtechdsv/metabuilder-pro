@@ -48,7 +48,7 @@ export async function getOrCreateDefaultWorkspace(workspaceSlug?: string) {
         .from('workspaces')
         .select('*')
         .order('created_at', { ascending: false })
-      
+
       return { success: true, workspace: (workspaces && workspaces.length > 0) ? workspaces[0] : null }
     }
 
@@ -82,7 +82,7 @@ export async function getOrCreateDefaultWorkspace(workspaceSlug?: string) {
     const userPrefix = user.email ? user.email.split('@')[0] : 'user'
     const sanitizedPrefix = userPrefix.toLowerCase().replace(/[^a-z0-9]/g, '-')
     const wsSlug = sanitizedPrefix
-    const wsName = `Workspace de ${userPrefix.charAt(0).toUpperCase() + userPrefix.slice(1)}`
+    const wsName = `${userPrefix.charAt(0).toUpperCase() + userPrefix.slice(1)}`
 
     const { data: newWs, error: insertError } = await supabase
       .from('workspaces')
