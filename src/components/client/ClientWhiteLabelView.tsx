@@ -68,8 +68,17 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
       }
 
       toast('Domínio vinculado com sucesso! Siga as instruções de DNS.', 'success')
-      // Update local state temporarily (it will refresh on next dashboard load)
-      if (selectedTarget) selectedTarget.custom_domain = domain.toLowerCase()
+      
+      // Update local state temporarily to reflect the DB change without a page reload
+      const newDomain = domain.toLowerCase()
+      workspaces.forEach(w => {
+        if (w.custom_domain === newDomain) w.custom_domain = null
+      })
+      projects.forEach(p => {
+        if (p.custom_domain === newDomain) p.custom_domain = null
+      })
+      
+      if (selectedTarget) selectedTarget.custom_domain = newDomain
       setDomain('')
     } catch (error: any) {
       toast(error.message, 'error')
