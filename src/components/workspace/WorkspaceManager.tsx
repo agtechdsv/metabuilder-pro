@@ -322,9 +322,20 @@ export function WorkspaceManager({
                       </div>
                     </Link>
 
-                    {/* Exibe para quem tem permissão de editar ou excluir */}
-                    {!isNavigating && (workspace.can_edit || workspace.can_delete) && (
+                    {/* Exibe para quem tem permissão de editar ou excluir, ou se portal estiver habilitado */}
+                    {!isNavigating && (workspace.can_edit || workspace.can_delete || workspace.theme_config?.portal_enabled) && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {workspace.theme_config?.portal_enabled && (
+                          <Link
+                            href={`/${workspace.slug}`}
+                            target="_blank"
+                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
+                            title="Acessar Portal"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ArrowUpRight className="w-4 h-4" />
+                          </Link>
+                        )}
                         {workspace.can_edit && (
                           <button
                             onClick={() => openDrawer(workspace)}

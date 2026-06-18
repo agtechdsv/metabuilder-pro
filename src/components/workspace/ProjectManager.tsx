@@ -14,7 +14,8 @@ import {
   PowerOff,
   Settings,
   RefreshCw,
-  Loader2
+  Loader2,
+  ArrowUpRight
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -458,6 +459,15 @@ export function ProjectManager({
 
                       {!isNavigating && (project.can_edit || project.can_deactivate || project.can_delete) && (
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Link
+                            href={`/${workspaceSlug}/${project.slug}`}
+                            target="_blank"
+                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
+                            title="Acessar versão publicada"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ArrowUpRight className="w-4 h-4" />
+                          </Link>
                           {portalEnabled && (
                             <button
                               onClick={(e) => { e.preventDefault(); toggleProjectPortal(project); }}
