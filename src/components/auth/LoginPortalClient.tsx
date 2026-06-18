@@ -49,9 +49,9 @@ export function LoginPortalClient({
   const buttonText = visualConfig.button_text || 'Entrar no Sistema'
   const buttonColor = visualConfig.button_color || '#4F46E5'
   const allowSignup = visualConfig.allow_signup || false
-  const loginLogoUrl = project.theme_config?.login_logo_url || ''
-  const loginBannerUrl = project.theme_config?.login_banner_url || ''
-  
+  const workspaceTheme = Array.isArray(project.workspaces) ? project.workspaces[0]?.theme_config : (project.workspaces as any)?.theme_config;
+  const loginLogoUrl = project.theme_config?.login_logo_url || workspaceTheme?.portal_logo_url || ''
+  const loginBannerUrl = project.theme_config?.login_banner_url || workspaceTheme?.portal_banner_url || ''
   const hasBanner = !!loginBannerUrl
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,7 +139,12 @@ export function LoginPortalClient({
   return (
     <TranslationProvider locale={locale}>
       <LoginPortalThemeWrapper theme={theme}>
-        <div className={`min-h-screen flex transition-colors duration-500 bg-neutral-50 dark:bg-[#050505] ${hasBanner ? 'flex-row' : 'flex-col'}`}>
+        <div className={`min-h-screen flex transition-colors duration-500 bg-neutral-50 dark:bg-[#050505] relative ${hasBanner ? 'flex-row' : 'flex-col'}`}>
+          {/* Header Actions - Always visible, absolute positioned */}
+          <div className="absolute top-6 right-6 z-[100]">
+            <HeaderActions hideUser hideTheme={theme !== 'auto'} />
+          </div>
+
           {/* Left side (Form) */}
           <div className={`flex flex-col flex-1 relative ${hasBanner ? 'max-w-[600px] xl:max-w-[700px]' : ''}`}>
             <header className="p-6 flex justify-between items-center relative z-10">
@@ -161,8 +166,6 @@ export function LoginPortalClient({
                   </>
                 )}
               </div>
-
-              {!hasBanner && <HeaderActions hideUser hideTheme={theme !== 'auto'} />}
             </header>
 
             <main className="flex-1 flex flex-col items-center justify-center p-6 lg:p-12 relative w-full">

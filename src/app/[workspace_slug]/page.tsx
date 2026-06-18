@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronRight, Database, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { HeaderActions } from '@/components/layout/HeaderActions'
 
 interface PortalPageProps {
   params: Promise<{
@@ -47,6 +48,11 @@ export default async function PortalPage({ params }: PortalPageProps) {
       {/* Background Gradients */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-indigo-600/20 blur-[120px] rounded-full pointer-events-none opacity-50" />
       <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none opacity-30" />
+
+      {/* Top Right Actions */}
+      <div className="absolute top-6 right-6 z-50">
+        <HeaderActions hideUser={true} />
+      </div>
 
       {/* Header */}
       <header className="relative z-10 w-full max-w-6xl mx-auto px-6 py-12 md:py-20 flex flex-col items-center text-center">
