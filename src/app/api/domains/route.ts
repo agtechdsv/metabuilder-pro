@@ -28,41 +28,54 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid targetType' }, { status: 400 })
     }
 
-    // 2. Check if domain is already mapped in our DB (and belongs to this user, since RLS applies)
-    let existingMapping: { id: string, name: string, type: 'workspace' | 'project' } | null = null;
+    // 2. Find ALL mappings in the DB to detect conflicts
+    const { data: workspacesWithDomain } = await supabase.from('workspaces').select('id, name').eq('custom_domain', domain)
+    const { data: projectsWithDomain } = await supabase.from('projects').select('id, name').eq('custom_domain', domain)
+
+    let conflicts: { id: string, name: string, type: 'workspace' | 'project' }[] = [];
     
-    const { data: existingWorkspaces } = await supabase.from('workspaces').select('id, name').eq('custom_domain', domain).limit(1)
-    if (existingWorkspaces && existingWorkspaces.length > 0) {
-      existingMapping = { id: existingWorkspaces[0].id, name: existingWorkspaces[0].name, type: 'workspace' };
-    } else {
-      const { data: existingProjects } = await supabase.from('projects').select('id, name').eq('custom_domain', domain).limit(1)
-      if (existingProjects && existingProjects.length > 0) {
-        existingMapping = { id: existingProjects[0].id, name: existingProjects[0].name, type: 'project' };
+    if (workspacesWithDomain) {
+      for (const w of workspacesWithDomain) {
+        if (!(targetType === 'workspace' && w.id === targetId)) {
+          conflicts.push({ id: w.id, name: w.name, type: 'workspace' });
+        }
+      }
+    }
+    
+    if (projectsWithDomain) {
+      for (const p of projectsWithDomain) {
+        if (!(targetType === 'project' && p.id === targetId)) {
+          conflicts.push({ id: p.id, name: p.name, type: 'project' });
+        }
       }
     }
 
     // 3. Handle Transfer Logic
-    if (existingMapping) {
-      // It's the same target! Just ignore.
-      if (existingMapping.id === targetId && existingMapping.type === targetType) {
-        return NextResponse.json({ success: true, message: 'Domain already assigned to this target' })
-      }
-
+    if (conflicts.length > 0) {
       if (!forceTransfer) {
         return NextResponse.json({ 
           error: 'Domain already in use', 
           requiresTransfer: true, 
-          existingTargetName: existingMapping.name,
-          existingTargetType: existingMapping.type
+          existingTargetName: conflicts[0].name,
+          existingTargetType: conflicts[0].type
         }, { status: 409 })
       }
 
-      // User confirmed transfer. Remove from all other targets to fix any bad state.
-      await supabase.from('workspaces').update({ custom_domain: null }).eq('custom_domain', domain)
-      await supabase.from('projects').update({ custom_domain: null }).eq('custom_domain', domain)
-      
-      // We DO NOT call Vercel API because Vercel already has it registered.
-    } else {
+      // User confirmed transfer. Remove from all conflicting targets.
+      // We use .in() to only affect the conflicts, just to be precise.
+      const workspaceConflictIds = conflicts.filter(c => c.type === 'workspace').map(c => c.id)
+      const projectConflictIds = conflicts.filter(c => c.type === 'project').map(c => c.id)
+
+      if (workspaceConflictIds.length > 0) {
+        await supabase.from('workspaces').update({ custom_domain: null }).in('id', workspaceConflictIds)
+      }
+      if (projectConflictIds.length > 0) {
+        await supabase.from('projects').update({ custom_domain: null }).in('id', projectConflictIds)
+      }
+    }
+
+    // Whether there were conflicts or not, we now register in Vercel and assign to the target.
+    // Domain not in our DB (or owned by another user where RLS hid it). We must call Vercel.
       // Domain not in our DB (or owned by another user where RLS hid it). We must call Vercel.
       const vercelToken = process.env.VERCEL_API_TOKEN
       const vercelProjectId = process.env.VERCEL_PROJECT_ID
