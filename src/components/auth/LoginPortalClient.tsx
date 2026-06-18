@@ -152,7 +152,7 @@ export function LoginPortalClient({
         <div className={`min-h-screen flex transition-colors duration-500 bg-neutral-50 dark:bg-[#050505] relative ${hasBanner ? 'flex-row' : 'flex-col'}`}>
           {/* Header Actions - Always visible, absolute positioned */}
           <div className="absolute top-6 right-6 z-[100]">
-            <HeaderActions hideUser hideTheme={theme !== 'auto'} />
+            <HeaderActions hideUser />
           </div>
 
           {/* Left side (Form) */}

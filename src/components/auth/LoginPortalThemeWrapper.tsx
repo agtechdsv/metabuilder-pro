@@ -16,7 +16,6 @@ export function LoginPortalThemeWrapper({
     <CustomThemeProvider 
       attribute="class" 
       defaultTheme={isFixed ? (theme as Theme) : 'dark'}
-      forcedTheme={isFixed ? (theme as Theme) : undefined}
     >
       {children}
     </CustomThemeProvider>
