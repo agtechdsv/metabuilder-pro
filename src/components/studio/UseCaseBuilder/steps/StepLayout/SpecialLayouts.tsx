@@ -6,7 +6,7 @@ export function SpecialLayouts({
 }: any) {
   return (
     <>
-            {/* ZONA: CONFIGURAÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã¢â‚¬Â¢ES GERAIS */}
+            {/* ZONA: CONFIGURAÃƒÆ’ââ‚¬Â¡ÃƒÆ’ââ‚¬Â¢ES GERAIS */}
             <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">

@@ -51,7 +51,7 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
 
     const tabsMeta = (config.layout_config as any).fields_metadata?.['form-TABS'] || (config.layout_config as any).fields_metadata?.['TABS']
     const tabStyles = {
-      fontFamily: tabsMeta?.label?.font?.replace(' (PadrÃƒÂ£o)', ''),
+      fontFamily: tabsMeta?.label?.font?.replace(' (Padrão)', ''),
       fontSize: tabsMeta?.label?.size ? (tabsMeta.label.size.includes('px') ? tabsMeta.label.size : `${tabsMeta.label.size}px`) : undefined,
       color: tabsMeta?.label?.color || undefined,
     }
@@ -117,7 +117,7 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
             </div>
 
             <button
-              title={hiddenDetails.has(model.id) ? "Exibir formulÃƒÂ¡rio" : "Ocultar formulÃƒÂ¡rio"}
+              title={hiddenDetails.has(model.id) ? "Exibir formulário" : "Ocultar formulário"}
               onClick={() => {
                 if (!hiddenDetails.has(model.id)) {
                   const fieldsToKeep = config.layout_config.form_fields.filter((fid: string) => !model.fields.some((f: any) => f.id === fid))
@@ -159,11 +159,11 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
 
           {!isMaster && !hiddenDetails.has(model.id) && (
             <div className="flex items-center gap-1">
-              {/* Abas/SeÃƒÂ§ÃƒÂµes Toggle */}
+              {/* Abas/Seções Toggle */}
               <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
                 {[
                   { id: 'tabs', label: 'Aba', tooltip: 'Exibe os registros deste detalhe em uma aba superior' },
-                  { id: 'sections', label: 'SeÃƒÂ§ÃƒÂ£o', tooltip: 'Exibe os registros deste detalhe em uma seÃƒÂ§ÃƒÂ£o empilhada na pÃƒÂ¡gina' }
+                  { id: 'sections', label: 'Seção', tooltip: 'Exibe os registros deste detalhe em uma seção empilhada na página' }
                 ].map(opt => {
                   const currentMode = (config.layout_config as any).details_display_mode?.[model.id] || 'sections'
                   const isActive = currentMode === opt.id
@@ -200,8 +200,8 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
               {/* Modal/Drawer Toggle */}
               <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800 ml-1">
                 {[
-                  { id: 'modal', label: 'Modal', icon: Maximize2, tooltip: 'Abre o formulÃƒÂ¡rio deste detalhe em uma janela central' },
-                  { id: 'drawer', label: 'Drawer', icon: Layout, tooltip: 'Abre o formulÃƒÂ¡rio deste detalhe em uma gaveta lateral' }
+                  { id: 'modal', label: 'Modal', icon: Maximize2, tooltip: 'Abre o formulário deste detalhe em uma janela central' },
+                  { id: 'drawer', label: 'Drawer', icon: Layout, tooltip: 'Abre o formulário deste detalhe em uma gaveta lateral' }
                 ].map(opt => {
                   const currentType = (config.layout_config as any).details_interface_types?.[model.id] || 'modal'
                   const isActive = currentType === opt.id
@@ -257,7 +257,7 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
                     title="Tamanho da Modal"
                   >
                     <option value="sm" title="Pequeno (max. 384px)">SM</option>
-                    <option value="md" title="MÃƒÂ©dio (max. 672px) - PadrÃƒÂ£o">MD</option>
+                    <option value="md" title="Médio (max. 672px) - Padrão">MD</option>
                     <option value="lg" title="Grande (max. 896px)">LG</option>
                     <option value="full" title="Tela Cheia (95% da tela)">FULL</option>
                     <option value="custom" title="Personalizado (em pixels ou %)">CUST</option>
@@ -313,7 +313,7 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
 
               <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800 ml-2">
                 <button
-                  title="Lista os registros deste detalhe de forma expandida diretamente na mesma pÃƒÂ¡gina"
+                  title="Lista os registros deste detalhe de forma expandida diretamente na mesma página"
                   onClick={() => {
                     const currentInlines = (config.layout_config as any).details_inline_types || {}
                     const isCurrentlyInline = currentInlines[model.id] !== false // Default true
@@ -362,9 +362,9 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
                       })
                     }}
                     className="bg-transparent border-none outline-none text-[8px] font-black uppercase tracking-wider text-neutral-600 dark:text-neutral-400 px-2 h-full cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                    title="Campo usado como tÃƒÂ­tulo do item recolhido"
+                    title="Campo usado como título do item recolhido"
                   >
-                    <option value="">TÃƒÂ­tulo AutomÃƒÂ¡tico</option>
+                    <option value="">Título Automático</option>
                     {getModelsWithRelations([model], relations, models, config.layout_config?.max_relation_depth || 2).map((g: any, i: number) => (
                       <optgroup key={i} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
                         {g.model.fields?.map((f: any) => {
@@ -392,7 +392,7 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
             {fieldsOfThisModel.length === 0 ? (
               <div className="col-span-7 flex flex-col items-center justify-center py-4 space-y-2 opacity-50">
                 <Plus className="w-4 h-4 text-neutral-400" />
-                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Arraste campos de "{model.display_name || model.db_table_name}" para cÃƒÂ¡</p>
+                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Arraste campos de "{model.display_name || model.db_table_name}" para cá</p>
               </div>
             ) : (
               <SortableContext items={fieldsOfThisModel.map((id: string) => `form-${id}`)} strategy={rectSortingStrategy}>

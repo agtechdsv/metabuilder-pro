@@ -104,7 +104,7 @@ export function FieldZones({
                 <div className="flex items-center justify-between cursor-pointer" onClick={() => toggleZone('zone02')}>
                   <div className="space-y-1">
                     <h4 className={cn("text-[9px] font-black uppercase tracking-[0.3em] transition-all", hiddenZones.has('zone02') ? "text-neutral-400" : "text-emerald-600")}>
-                      {config.logic_type === 'kanban' ? t('wizard.layout.zones.kanban_card', 'Campos do Card') : config.logic_type === 'mapa_mental' ? t('wizard.layout.zones.mindmap_nodes', 'Campos do Mapa (NÃƒÂ­veis)') : `${t('wizard.layout.zones.zone_02')}: ${t('wizard.layout.zones.grid')}`}
+                      {config.logic_type === 'kanban' ? t('wizard.layout.zones.kanban_card', 'Campos do Card') : config.logic_type === 'mapa_mental' ? t('wizard.layout.zones.mindmap_nodes', 'Campos do Mapa (Níveis)') : `${t('wizard.layout.zones.zone_02')}: ${t('wizard.layout.zones.grid')}`}
                     </h4>
                     {config.logic_type !== 'kanban' && config.logic_type !== 'mapa_mental' && config.logic_type !== 'galeria' && (
                       <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg w-fit" onClick={e => e.stopPropagation()}>
@@ -259,11 +259,11 @@ export function FieldZones({
               )}
 
             <div className="space-y-6 mt-8">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">ConfiguraÃƒÂ§ÃƒÂµes do FormulÃƒÂ¡rio</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Configurações do Formulário</label>
               <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-4 shadow-sm">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">TÃƒÂ­tulo do FormulÃƒÂ¡rio (Opcional)</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Título do Formulário (Opcional)</label>
                     <input
                       type="text"
                       placeholder="Ex: Editar Registro"
@@ -274,11 +274,11 @@ export function FieldZones({
                       })}
                       className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all"
                     />
-                    <p className="text-[9px] text-neutral-400 mt-1 italic">Sobrescreve o tÃƒÂ­tulo padrÃƒÂ£o do formulÃƒÂ¡rio (ex: "Editar", "Novo"). Suporta traduÃƒÂ§ÃƒÂ£o se usar chaves de dicionÃƒÂ¡rio.</p>
+                    <p className="text-[9px] text-neutral-400 mt-1 italic">Sobrescreve o título padrão do formulário (ex: "Editar", "Novo"). Suporta tradução se usar chaves de dicionário.</p>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de SubtÃƒÂ­tulo (Opcional)</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Subtítulo (Opcional)</label>
                     <select
                       value={(config.layout_config as any).form_header_subtitle_field || ''}
                       onChange={e => setConfig({
@@ -287,14 +287,14 @@ export function FieldZones({
                       })}
                       className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all"
                     >
-                      <option value="">PadrÃƒÂ£o (Exibe o ID do registro)</option>
+                      <option value="">Padrão (Exibe o ID do registro)</option>
                       {models.filter((m: any) => config.selected_models.includes(m.id)).flatMap((m: any) => m.fields).map((f: any) => (
                         <option key={`opt-sub-${f.id}`} value={f.db_column_name}>
                           {getFieldName(f.id)} ({f.data_type})
                         </option>
                       ))}
                     </select>
-                    <p className="text-[9px] text-neutral-400 mt-1 italic">Substitui a exibiÃƒÂ§ÃƒÂ£o do ID do registro pelo valor deste campo no formulÃƒÂ¡rio.</p>
+                    <p className="text-[9px] text-neutral-400 mt-1 italic">Substitui a exibição do ID do registro pelo valor deste campo no formulário.</p>
                   </div>
                 </div>
               </div>

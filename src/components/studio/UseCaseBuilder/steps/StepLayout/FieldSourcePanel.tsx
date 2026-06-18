@@ -88,7 +88,7 @@ export function FieldSourcePanel({
                     })
                     .map((m: any) => {
                       const isCollapsed = collapsedTables[m.id] ?? !formTreeIds.has(m.id)
-                      // Se houver busca e a tabela der match via campo, forÃƒÂ§amos a expansÃƒÂ£o para mostrar os campos
+                      // Se houver busca e a tabela der match via campo, forçamos a expansão para mostrar os campos
                       const forceExpand = fieldSearchTerm && m.fields.some((f: any) => (f.display_name || f.db_column_name || '').toLowerCase().includes(fieldSearchTerm.toLowerCase()))
                       const actuallyCollapsed = isCollapsed && !forceExpand
 

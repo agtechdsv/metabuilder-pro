@@ -123,7 +123,7 @@ export function StepActions({ config, setConfig, models, useCases, isDownloadsAc
       </div>
 
       <div className="space-y-6">
-        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.export_data_title', 'ExportaÃ§Ã£o de Dados')}</label>
+        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.export_data_title', 'Exportação de Dados')}</label>
 
         <div className="space-y-4">
           <button
@@ -152,8 +152,8 @@ export function StepActions({ config, setConfig, models, useCases, isDownloadsAc
                 <Download className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-bold text-base text-neutral-900 dark:text-white">{t('wizard.actions.export_data_bg', 'ExportaÃ§Ã£o de Dados (Background)')}</h4>
-                <p className="text-[10px] text-neutral-400 mt-1 leading-relaxed">{t('wizard.actions.export_data_desc', 'Permite que os usuÃ¡rios exportem os dados desta tela com processamento assÃ­ncrono.')}</p>
+                <h4 className="font-bold text-base text-neutral-900 dark:text-white">{t('wizard.actions.export_data_bg', 'Exportação de Dados (Background)')}</h4>
+                <p className="text-[10px] text-neutral-400 mt-1 leading-relaxed">{t('wizard.actions.export_data_desc', 'Permite que os usuários exportem os dados desta tela com processamento assíncrono.')}</p>
               </div>
             </div>
             <div className={cn(
@@ -221,13 +221,13 @@ export function StepActions({ config, setConfig, models, useCases, isDownloadsAc
       <Modal
         isOpen={isButtonPropertiesOpen}
         onClose={() => setIsButtonPropertiesOpen(false)}
-        title={`Propriedades do BotÃ£o: ${selectedButtonConfig ? (selectedButtonConfig.id === 'search' ? 'Pesquisar' : selectedButtonConfig.id === 'clear' ? 'Limpar' : selectedButtonConfig.id === 'view' ? 'Visualizar' : selectedButtonConfig.id === 'add' ? 'Novo Registro' : selectedButtonConfig.id === 'edit' ? 'Editar' : selectedButtonConfig.id === 'delete' ? 'Excluir' : selectedButtonConfig.label) : ''}`}
+        title={`Propriedades do Botão: ${selectedButtonConfig ? (selectedButtonConfig.id === 'search' ? 'Pesquisar' : selectedButtonConfig.id === 'clear' ? 'Limpar' : selectedButtonConfig.id === 'view' ? 'Visualizar' : selectedButtonConfig.id === 'add' ? 'Novo Registro' : selectedButtonConfig.id === 'edit' ? 'Editar' : selectedButtonConfig.id === 'delete' ? 'Excluir' : selectedButtonConfig.label) : ''}`}
         size="md"
       >
         {selectedButtonConfig && (
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Texto de ExibiÃ§Ã£o</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Texto de Exibição</label>
               <input
                 type="text"
                 value={selectedButtonConfig.custom_label}
@@ -245,7 +245,7 @@ export function StepActions({ config, setConfig, models, useCases, isDownloadsAc
                   onChange={e => setSelectedButtonConfig({ ...selectedButtonConfig, font_family: e.target.value })}
                   className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-all"
                 >
-                  <option value="Inter">Inter (PadrÃ£o)</option>
+                  <option value="Inter">Inter (Padrão)</option>
                   <option value="Roboto">Roboto</option>
                   <option value="Outfit">Outfit</option>
                   <option value="JetBrains Mono">Mono (JetBrains)</option>
@@ -265,7 +265,7 @@ export function StepActions({ config, setConfig, models, useCases, isDownloadsAc
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">TransformaÃ§Ã£o do Texto</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Transformação do Texto</label>
               <div className="grid grid-cols-4 gap-2">
                 {[
                   { value: 'none', label: 'Normal', example: 'Aa' },
@@ -300,13 +300,13 @@ export function StepActions({ config, setConfig, models, useCases, isDownloadsAc
                   className="text-sm font-bold text-neutral-700 dark:text-neutral-300"
                   style={{
                     textTransform: ((selectedButtonConfig.text_transform || 'capitalize') !== 'none' ? selectedButtonConfig.text_transform : undefined) as any,
-                    fontFamily: (selectedButtonConfig.font_family && selectedButtonConfig.font_family !== 'Inter (PadrÃ£o)') ? selectedButtonConfig.font_family : undefined,
+                    fontFamily: (selectedButtonConfig.font_family && selectedButtonConfig.font_family !== 'Inter (Padrão)') ? selectedButtonConfig.font_family : undefined,
                     fontSize: selectedButtonConfig.font_size || undefined,
                     color: selectedButtonConfig.text_color || undefined,
                     backgroundColor: selectedButtonConfig.bg_color || undefined,
                   }}
                 >
-                  {selectedButtonConfig.custom_label || 'Preview do BotÃ£o'}
+                  {selectedButtonConfig.custom_label || 'Preview do Botão'}
                 </span>
               </div>
             </div>
@@ -331,7 +331,7 @@ export function StepActions({ config, setConfig, models, useCases, isDownloadsAc
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Cor do BotÃ£o (Fundo)</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Cor do Botão (Fundo)</label>
               <div className="flex gap-2 items-center">
                 <input
                   type="color"
@@ -439,7 +439,7 @@ function DraggableTableHeader({ model, isCollapsed, onToggle }: any) {
       {...attributes}
       {...listeners}
       onClick={(e) => {
-        // Se estiver arrastando, nÃ£o ativa o toggle
+        // Se estiver arrastando, não ativa o toggle
         if (isDragging) return;
         onToggle();
       }}

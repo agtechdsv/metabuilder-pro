@@ -74,8 +74,8 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
     }
   }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Santo Graal helpers para Personalizado Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  // Retorna todos os models alcanÃƒÂ§ÃƒÂ¡veis a partir de um model_id via BFS do Santo Graal.
+  // ââ€â‚¬ââ€â‚¬ââ€â‚¬ Santo Graal helpers para Personalizado ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬
+  // Retorna todos os models alcançáveis a partir de um model_id via BFS do Santo Graal.
   // Usa max_relation_depth definido na etapa 2 do wizard.
   function getSlotRelatedFieldGroups(slotModelId: string) {
     const slotModel = models.find((m: any) => m.id === slotModelId)
@@ -84,7 +84,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
     return getModelsWithRelations([slotModel], relations, models, maxDepth)
   }
 
-  // Retorna a lista de modelos alcanÃƒÂ§ÃƒÂ¡veis a partir da tabela raiz do caso de uso (para o combo TABELA MODEL)
+  // Retorna a lista de modelos alcançáveis a partir da tabela raiz do caso de uso (para o combo TABELA MODEL)
   function getRootRelatedModels() {
     const rootId = config.layout_config?.master_model_id || config.selected_models?.[0]
     const rootModel = models.find((m: any) => m.id === rootId)
@@ -93,9 +93,9 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
     return getModelsWithRelations([rootModel], relations, models, maxDepth)
   }
 
-  // Renderiza <optgroup>/<option> agrupados por tabela, compatÃƒÂ­vel com a imagem 3.
-  // noneLabel: texto da opÃƒÂ§ÃƒÂ£o vazia (e.g. "Selecione o campo...")
-  // includeNone: se true, adiciona opÃƒÂ§ÃƒÂ£o vazia no inÃƒÂ­cio
+  // Renderiza <optgroup>/<option> agrupados por tabela, compatível com a imagem 3.
+  // noneLabel: texto da opção vazia (e.g. "Selecione o campo...")
+  // includeNone: se true, adiciona opção vazia no início
   function renderSlotFieldOptions(slotModelId: string, includeNone = true, noneLabel = 'Selecione o campo...') {
     const groups = getSlotRelatedFieldGroups(slotModelId)
     return (
@@ -240,7 +240,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
           const model = models.find((m: any) => m.id === id)
           if (!model) return
 
-          // Filtra os campos que possuem permissÃƒÂ£o para entrar na zona correspondente
+          // Filtra os campos que possuem permissão para entrar na zona correspondente
           const allowedFields = model.fields.filter((f: any) => {
             if (targetZone === 'grid_fields' && f.is_visible_in_list === false) return false
             if (targetZone === 'form_fields' && f.is_visible_in_form === false) return false
@@ -272,7 +272,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
             })
             toast(`${addedCount} campos permitidos da tabela "${model.display_name || model.db_table_name}" adicionados com sucesso!`, 'success')
           } else {
-            toast('Nenhum novo campo permitido pÃƒÂ´de ser adicionado a esta zona.', 'info')
+            toast('Nenhum novo campo permitido pôde ser adicionado a esta zona.', 'info')
           }
         } else {
           const isVirtualTool = id === 'virtual_calc_tool';
@@ -288,15 +288,15 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
 
             if (fieldObj) {
               if (targetZone === 'grid_fields' && fieldObj.is_visible_in_list === false) {
-                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" estÃƒÂ¡ configurado como nÃƒÂ£o visÃƒÂ­vel no grid.`, 'error')
+                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" está configurado como não visível no grid.`, 'error')
                 return
               }
               if (targetZone === 'form_fields' && fieldObj.is_visible_in_form === false) {
-                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" estÃƒÂ¡ configurado como nÃƒÂ£o visÃƒÂ­vel no formulÃƒÂ¡rio.`, 'error')
+                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" está configurado como não visível no formulário.`, 'error')
                 return
               }
               if (targetZone === 'filter_fields' && fieldObj.is_searchable === false) {
-                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" estÃƒÂ¡ configurado como nÃƒÂ£o pesquisÃƒÂ¡vel (nÃƒÂ£o visÃƒÂ­vel no filtro).`, 'error')
+                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" está configurado como não pesquisável (não visível no filtro).`, 'error')
                 return
               }
             }
@@ -347,7 +347,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
             })
             toast(t('common.success', 'Campo adicionado com sucesso!'), 'success')
           } else {
-            toast(t('common.info', 'Este campo jÃƒÂ¡ estÃƒÂ¡ nesta zona.'), 'info')
+            toast(t('common.info', 'Este campo já está nesta zona.'), 'info')
           }
         }
       }
@@ -405,7 +405,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
   }
 
   // BFS from the root table through the relations graph to discover all reachable tables.
-  // This replaces the old join-config-based tree Ã¢â‚¬â€ the dev only selects the root table now.
+  // This replaces the old join-config-based tree ââ‚¬â€ the dev only selects the root table now.
   const renderFieldOptions = (models: any[], filterFn?: (f: any) => boolean) => {
     return models.map((m: any) => {
       const fields = filterFn ? m.fields.filter(filterFn) : m.fields;
@@ -474,8 +474,8 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
         modelName: slotModel.display_name || slotModel.db_table_name
       });
 
-      // NOVO: ExpansÃƒÂ£o via Santo Graal (Relacionamentos)
-      // Se este campo for uma FK (chave estrangeira) formal ou por heurÃƒÂ­stica
+      // NOVO: Expansão via Santo Graal (Relacionamentos)
+      // Se este campo for uma FK (chave estrangeira) formal ou por heurística
       const isFK = (relations || []).find((r: any) => r.foreign_column_id === f.id) ||
         (f.foreign_key_table && models.find((m: any) => m.db_table_name === f.foreign_key_table));
 
@@ -494,7 +494,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
           (relatedModel.fields || []).forEach((rf: any) => {
             fields.push({
               id: `${f.id}_${rf.id}`,
-              value: `${f.db_column_name}.${rf.db_column_name}`, // PadrÃƒÂ£o: produto_id.nome
+              value: `${f.db_column_name}.${rf.db_column_name}`, // Padrão: produto_id.nome
               label: `${f.display_name || f.db_column_name} -> ${rf.display_name || rf.db_column_name}`,
               isJoined: true,
               modelName: relatedModel.display_name || relatedModel.db_table_name
@@ -504,7 +504,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
       }
     });
 
-    // Joined fields estÃƒÂ¡ticos (se existirem na config)
+    // Joined fields estáticos (se existirem na config)
     const layout = config.layout_config || {};
     const joins = layout.joins || [];
 
@@ -584,8 +584,8 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
   const updateMeta = (section: 'label' | 'content' | 'component' | 'viacep', key: string, value: any) => {
     if (!editingFieldId) return
 
-    // O usuÃƒÂ¡rio solicitou que todas as instÃƒÂ¢ncias do mesmo campo compartilhem as configuraÃƒÂ§ÃƒÂµes.
-    // EntÃƒÂ£o, ao atualizar uma propriedade, atualizamos todas as chaves deste field.
+    // O usuário solicitou que todas as instâncias do mesmo campo compartilhem as configurações.
+    // Então, ao atualizar uma propriedade, atualizamos todas as chaves deste field.
 
     const baseMeta = getFieldMeta(editingFieldId, null) // get current base meta or default
     const newMeta = { ...currentFieldMeta } // current meta being edited
@@ -593,7 +593,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
 
     const newFieldsMetadata = { ...config.layout_config.fields_metadata }
 
-    // 1. Atualizar a chave base (para servir de heranÃƒÂ§a quando arrastar para uma nova zona)
+    // 1. Atualizar a chave base (para servir de herança quando arrastar para uma nova zona)
     newFieldsMetadata[editingFieldId] = newMeta
 
     // 2. Atualizar as zonas existentes
@@ -627,7 +627,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
 
     const newFieldsMetadata = { ...(config.layout_config.fields_metadata || {}) }
     const stylesToCopyLabel = { ...currentFieldMeta.label }
-    delete stylesToCopyLabel.text // NÃƒÂ£o sobrescrever o texto de exibiÃƒÂ§ÃƒÂ£o
+    delete stylesToCopyLabel.text // Não sobrescrever o texto de exibição
 
     const stylesToCopyContent = { ...currentFieldMeta.content }
 

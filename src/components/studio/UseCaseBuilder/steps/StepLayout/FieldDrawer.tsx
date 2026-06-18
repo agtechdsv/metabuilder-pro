@@ -182,14 +182,14 @@ export function FieldDrawer({
                               onChange={e => updateMeta('content', 'filter_operator', e.target.value)}
                               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none cursor-pointer focus:border-indigo-500 transition-colors"
                             >
-                              <option value="ilike">ContÃƒÂ©m (Busca por texto - PadrÃƒÂ£o)</option>
+                              <option value="ilike">Contém (Busca por texto - Padrão)</option>
                               <option value="=">Igual (=)</option>
                               <option value=">">Maior que (&gt;)</option>
                               <option value=">=">Maior ou igual (&gt;=)</option>
                               <option value="<">Menor que (&lt;)</option>
                               <option value="<=">Menor ou igual (&lt;=)</option>
                               <option value="!=">Diferente (!=)</option>
-                              <option value="between">Intervalo (De / AtÃƒÂ©)</option>
+                              <option value="between">Intervalo (De / Até)</option>
                             </select>
                           </div>
 
@@ -201,14 +201,14 @@ export function FieldDrawer({
                               <div className="space-y-4">
                                 {isDateField && (
                                   <div className="space-y-2">
-                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Tipo de Valor PadrÃƒÂ£o</label>
+                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Tipo de Valor Padrão</label>
                                     <select
                                       value={currentFieldMeta.content?.default_value_type || 'fixed'}
                                       onChange={e => updateMeta('content', 'default_value_type', e.target.value)}
                                       className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
                                     >
                                       <option value="fixed">Fixo (Escolher Data)</option>
-                                      <option value="relative">DinÃƒÂ¢mico (ÃƒÅ¡ltimos...)</option>
+                                      <option value="relative">Dinâmico (ÃƒÅ¡ltimos...)</option>
                                     </select>
                                   </div>
                                 )}
@@ -244,7 +244,7 @@ export function FieldDrawer({
                                 ) : currentFieldMeta.content?.filter_operator === 'between' ? (
                                   <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-2">
-                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor PadrÃƒÂ£o (De)</label>
+                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor Padrão (De)</label>
                                       <input
                                         type={inputType}
                                         placeholder="Ex: 2024-01-01"
@@ -254,7 +254,7 @@ export function FieldDrawer({
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor PadrÃƒÂ£o (AtÃƒÂ©)</label>
+                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor Padrão (Até)</label>
                                       <input
                                         type={inputType}
                                         placeholder="Ex: 2024-12-31"
@@ -266,7 +266,7 @@ export function FieldDrawer({
                                   </div>
                                 ) : (
                                   <div className="space-y-2">
-                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor PadrÃƒÂ£o Inicial</label>
+                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor Padrão Inicial</label>
                                     <input
                                       type={inputType}
                                       placeholder="Valor que inicia na busca"
@@ -337,12 +337,12 @@ export function FieldDrawer({
                                   />
                                   <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none rounded-full peer dark:bg-neutral-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
                                 </label>
-                                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">{t('wizard.layout.drawer.viacep_title', 'Busca AutomÃƒÂ¡tica de EndereÃƒÂ§o (ViaCEP)')}</span>
+                                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">{t('wizard.layout.drawer.viacep_title', 'Busca Automática de Endereço (ViaCEP)')}</span>
                               </div>
 
                               {currentFieldMeta.viacep?.enabled && (
                                 <div className="space-y-3 pt-4 border-t border-indigo-100 dark:border-indigo-900/30">
-                                  <p className="text-[9px] text-neutral-500 font-medium leading-relaxed">{t('wizard.layout.drawer.viacep_desc', 'Mapeie os campos do formulÃƒÂ¡rio que receberÃƒÂ£o os dados do ViaCEP automaticamente:')}</p>
+                                  <p className="text-[9px] text-neutral-500 font-medium leading-relaxed">{t('wizard.layout.drawer.viacep_desc', 'Mapeie os campos do formulário que receberão os dados do ViaCEP automaticamente:')}</p>
 
                                   {['logradouro', 'bairro', 'cidade', 'uf'].map((fieldKey) => (
                                     <div key={fieldKey} className="flex items-center justify-between gap-2">
@@ -388,7 +388,7 @@ export function FieldDrawer({
                         </div>
                         <div className="flex flex-col">
                           <span className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase tracking-widest">{t('wizard.layout.drawer.readonly', 'Somente Leitura')}</span>
-                          <span className="text-[8px] text-neutral-400 font-medium">{t('wizard.layout.drawer.readonly_desc', 'O usuÃƒÂ¡rio nÃƒÂ£o poderÃƒÂ¡ alterar este valor')}</span>
+                          <span className="text-[8px] text-neutral-400 font-medium">{t('wizard.layout.drawer.readonly_desc', 'O usuário não poderá alterar este valor')}</span>
                         </div>
                       </div>
                     </div>
@@ -397,7 +397,7 @@ export function FieldDrawer({
                   <div className="space-y-4 pt-6 border-t border-neutral-100 dark:border-neutral-800">
                     <div className="flex items-center gap-3">
                       <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
-                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.component_config', 'ConfiguraÃƒÂ§ÃƒÂ£o do Componente')}</h3>
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.layout.drawer.component_config', 'Configuração do Componente')}</h3>
                     </div>
 
                     <div className="space-y-4">
@@ -468,7 +468,7 @@ export function FieldDrawer({
 
                           {(currentFieldMeta.component?.options_type || 'fixed') === 'fixed' ? (
                             <div className="space-y-2">
-                              <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.fixed_options', 'OpÃƒÂ§ÃƒÂµes (Label:Valor, separadas por vÃƒÂ­rgula)')}</label>
+                              <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.fixed_options', 'Opções (Label:Valor, separadas por vírgula)')}</label>
                               <textarea
                                 placeholder="Ex: Ativo:A, Inativo:I"
                                 value={currentFieldMeta.component?.fixed_options || ''}
@@ -491,7 +491,7 @@ export function FieldDrawer({
                               </select>
                               {currentFieldMeta.component?.rel_table && (
                                 <p className="text-[9px] text-neutral-500 mt-2 italic px-1">
-                                  {t('wizard.layout.drawer.options_available', '{count} opÃƒÂ§ÃƒÂµes disponÃƒÂ­veis').replace('{count}', String(enumerations.find((e: any) => e.id === currentFieldMeta.component?.rel_table)?.values?.length || 0))}
+                                  {t('wizard.layout.drawer.options_available', '{count} opções disponíveis').replace('{count}', String(enumerations.find((e: any) => e.id === currentFieldMeta.component?.rel_table)?.values?.length || 0))}
                                 </p>
                               )}
                             </div>
@@ -553,7 +553,7 @@ export function FieldDrawer({
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
                       <h4 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-widest">
-                        CÃƒÂ¡lculos e FÃƒÂ³rmulas
+                        Cálculos e Fórmulas
                       </h4>
                     </div>
                     <FormulaBuilder
@@ -614,7 +614,7 @@ export function FieldDrawer({
                     className="w-full mb-6 flex items-center justify-center gap-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 py-3 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors text-xs font-bold"
                   >
                     <Copy className="w-4 h-4" />
-                    {t('wizard.layout.drawer.apply_styles_zone', 'Aplicar formataÃƒÂ§ÃƒÂ£o a todos desta zona ({zone})').replace('{zone}', editingFieldZone === 'filter' ? t('wizard.layout.drawer.zone_filter') : editingFieldZone === 'grid' ? t('wizard.layout.drawer.zone_grid') : t('wizard.layout.drawer.zone_form'))}
+                    {t('wizard.layout.drawer.apply_styles_zone', 'Aplicar formatação a todos desta zona ({zone})').replace('{zone}', editingFieldZone === 'filter' ? t('wizard.layout.drawer.zone_filter') : editingFieldZone === 'grid' ? t('wizard.layout.drawer.zone_grid') : t('wizard.layout.drawer.zone_form'))}
                   </button>
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">

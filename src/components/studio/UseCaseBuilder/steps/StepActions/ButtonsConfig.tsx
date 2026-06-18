@@ -85,7 +85,7 @@ export function ButtonsConfig({
                         (btn.custom_label !== undefined && btn.custom_label !== '') ? "" : "capitalize tracking-wider"
                       )}
                       style={btn.visible ? {
-                        fontFamily: (btn.font_family && btn.font_family !== 'Inter (PadrÃ£o)') ? btn.font_family : undefined,
+                        fontFamily: (btn.font_family && btn.font_family !== 'Inter (Padrão)') ? btn.font_family : undefined,
                         fontSize: btn.font_size || undefined,
                         color: btn.text_color || undefined,
                         textTransform: (btn.text_transform !== undefined ? (btn.text_transform !== 'none' ? btn.text_transform : undefined) : 'capitalize') as any
@@ -104,7 +104,7 @@ export function ButtonsConfig({
                         setSelectedButtonConfig({
                           ...btn,
                           custom_label: btn.custom_label !== undefined ? btn.custom_label : (t(btn.labelKey) || btn.label),
-                          font_family: btn.font_family || 'Inter (PadrÃ£o)',
+                          font_family: btn.font_family || 'Inter (Padrão)',
                           font_size: btn.font_size || '10px',
                           text_color: btn.text_color || '',
                           bg_color: btn.bg_color || '',
@@ -113,7 +113,7 @@ export function ButtonsConfig({
                         setIsButtonPropertiesOpen(true);
                       }}
                       className="absolute top-3 right-3 p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-400 opacity-0 group-hover/btn:opacity-100 focus:opacity-100 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all cursor-pointer z-10"
-                      title="Propriedades do BotÃ£o"
+                      title="Propriedades do Botão"
                     >
                       <Settings2 className="w-3.5 h-3.5" />
                     </button>

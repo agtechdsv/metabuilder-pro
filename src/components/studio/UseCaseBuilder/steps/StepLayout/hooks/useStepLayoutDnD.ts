@@ -29,7 +29,7 @@ export function useStepLayoutDnD(config: any, setConfig: any, models: any[]) {
     const activeIdStr = String(active.id)
     const overIdStr = String(over.id)
 
-    // Arrastando da Ã¡rvore (FieldSourcePanel) para as zonas
+    // Arrastando da árvore (FieldSourcePanel) para as zonas
     if (activeIdStr.startsWith('source-') || activeIdStr.startsWith('table-source-')) {
       const isTable = activeIdStr.startsWith('table-source-')
       const id = activeIdStr.replace(isTable ? 'table-source-' : 'source-', '')
@@ -44,7 +44,7 @@ export function useStepLayoutDnD(config: any, setConfig: any, models: any[]) {
           const model = models.find((m: any) => m.id === id)
           if (!model) return
 
-          // Filtra os campos que possuem permissÃ£o para entrar na zona correspondente
+          // Filtra os campos que possuem permissão para entrar na zona correspondente
           const allowedFields = model.fields.filter((f: any) => {
             if (targetZone === 'grid_fields' && f.is_visible_in_list === false) return false
             if (targetZone === 'form_fields' && f.is_visible_in_form === false) return false
@@ -76,7 +76,7 @@ export function useStepLayoutDnD(config: any, setConfig: any, models: any[]) {
             })
             toast(`${addedCount} campos permitidos da tabela "${model.display_name || model.db_table_name}" adicionados com sucesso!`, 'success')
           } else {
-            toast('Nenhum novo campo permitido pÃ´de ser adicionado a esta zona.', 'info')
+            toast('Nenhum novo campo permitido pôde ser adicionado a esta zona.', 'info')
           }
         } else {
           const isVirtualTool = id === 'virtual_calc_tool'
@@ -92,15 +92,15 @@ export function useStepLayoutDnD(config: any, setConfig: any, models: any[]) {
 
             if (fieldObj) {
               if (targetZone === 'grid_fields' && fieldObj.is_visible_in_list === false) {
-                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" estÃ¡ configurado como nÃ£o visÃ­vel no grid.`, 'error')
+                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" está configurado como não visível no grid.`, 'error')
                 return
               }
               if (targetZone === 'form_fields' && fieldObj.is_visible_in_form === false) {
-                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" estÃ¡ configurado como nÃ£o visÃ­vel no formulÃ¡rio.`, 'error')
+                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" está configurado como não visível no formulário.`, 'error')
                 return
               }
               if (targetZone === 'filter_fields' && fieldObj.is_searchable === false) {
-                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" estÃ¡ configurado como nÃ£o pesquisÃ¡vel (nÃ£o visÃ­vel no filtro).`, 'error')
+                toast(`O campo "${fieldObj.display_name || fieldObj.db_column_name}" está configurado como não pesquisável (não visível no filtro).`, 'error')
                 return
               }
             }
@@ -151,7 +151,7 @@ export function useStepLayoutDnD(config: any, setConfig: any, models: any[]) {
             })
             toast(t('common.success', 'Campo adicionado com sucesso!'), 'success')
           } else {
-            toast(t('common.info', 'Este campo jÃ¡ estÃ¡ nesta zona.'), 'info')
+            toast(t('common.info', 'Este campo já está nesta zona.'), 'info')
           }
         }
       }
