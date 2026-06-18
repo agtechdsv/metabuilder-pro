@@ -304,10 +304,10 @@ export function WorkspaceManager({
                     <Link
                       href={`/admin/${workspace.slug}`}
                       onClick={() => setNavigatingSlug(workspace.slug)}
-                      className="space-y-3 flex-1"
+                      className="flex flex-col gap-4 flex-1 min-w-0"
                     >
                       <div className={cn(
-                        "w-12 h-12 rounded-xl flex items-center justify-center border transition-all",
+                        "w-12 h-12 rounded-xl flex items-center justify-center border transition-all shrink-0",
                         isNavigating
                           ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-500"
                           : "bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20"
@@ -318,9 +318,9 @@ export function WorkspaceManager({
                           <Building2 className="w-6 h-6 text-neutral-400 group-hover:text-indigo-400" />
                         )}
                       </div>
-                      <div className="space-y-0.5">
-                        <h4 className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-white transition-colors">{workspace.name}</h4>
-                        <p className="text-xs text-neutral-500 font-mono">/{workspace.slug}</p>
+                      <div className="flex flex-col gap-0.5 w-full min-w-0">
+                        <h4 className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-white transition-colors truncate">{workspace.name}</h4>
+                        <p className="text-xs text-neutral-500 font-mono truncate">/{workspace.slug}</p>
                       </div>
                     </Link>
 

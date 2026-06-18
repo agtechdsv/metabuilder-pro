@@ -419,10 +419,10 @@ export function ProjectManager({
                     <Link
                       href={`/admin/${workspaceSlug}/${project.slug}/studio`}
                       onClick={() => setNavigatingSlug(project.slug)}
-                      className="space-y-3 flex-1"
+                      className="flex flex-col gap-4 flex-1 min-w-0"
                     >
                       <div className={cn(
-                        "p-3 rounded-2xl w-fit transition-colors flex items-center justify-center min-w-[48px] min-h-[48px] border",
+                        "p-3 rounded-2xl w-fit transition-colors flex items-center justify-center min-w-[48px] min-h-[48px] border shrink-0",
                         isNavigating
                           ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-500"
                           : "bg-neutral-100 dark:bg-neutral-800 border-transparent group-hover:bg-indigo-500/10"
@@ -438,11 +438,11 @@ export function ProjectManager({
                           )}
                         </div>
                       </div>
-                      <div>
-                        <h4 className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-white transition-colors">{project.name}</h4>
-                        <p className="text-xs text-neutral-500 font-mono mt-0.5">/{project.slug}</p>
+                      <div className="flex flex-col gap-0.5 w-full min-w-0">
+                        <h4 className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-white transition-colors truncate">{project.name}</h4>
+                        <p className="text-xs text-neutral-500 font-mono mt-0.5 truncate">/{project.slug}</p>
                         {project.description && (
-                          <p className="text-xs text-neutral-500 dark:text-neutral-600 mt-2 line-clamp-2 leading-relaxed">
+                          <p className="text-xs text-neutral-500 dark:text-neutral-600 mt-2 line-clamp-2 leading-relaxed min-w-0">
                             {project.description}
                           </p>
                         )}
