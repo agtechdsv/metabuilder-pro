@@ -90,7 +90,6 @@ export function ProjectManager({
   
   const [isWorkspaceSettingsModalOpen, setIsWorkspaceSettingsModalOpen] = useState(false)
   const [workspaceFormData, setWorkspaceFormData] = useState({
-    custom_domain: workspaceCustomDomain || '',
     portal_logo_url: workspaceThemeConfig?.portal_logo_url || '',
     portal_banner_url: workspaceThemeConfig?.portal_banner_url || ''
   })
@@ -270,15 +269,11 @@ export function ProjectManager({
       const { error } = await supabase
         .from('workspaces')
         .update({ 
-          theme_config: newThemeConfig,
-          custom_domain: workspaceFormData.custom_domain || null // Convert empty string to null
+          theme_config: newThemeConfig
         })
         .eq('id', workspaceId)
 
-      if (error) {
-        if (error.code === '23505') throw new Error('Este domínio já está em uso por outro Workspace ou Projeto.')
-        throw error
-      }
+      if (error) throw error
       
       toast('Configurações do Workspace salvas com sucesso', 'success')
       setIsWorkspaceSettingsModalOpen(false)
@@ -750,22 +745,10 @@ export function ProjectManager({
           <div className="space-y-4">
             
             <div className="p-4 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-2xl mb-4">
-              <h4 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mb-1">Domínio Customizado e Portal</h4>
+              <h4 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mb-1">Aparência do Portal</h4>
               <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                Se você apontar um domínio para a MetaBuilder, configure-o aqui para que ele mostre o Portal de Aplicações e reflita essas identidades em seus projetos.
+                Personalize as imagens que serão exibidas na tela de login global do Portal de Aplicações.
               </p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Domínio Customizado</label>
-              <input
-                type="text"
-                value={workspaceFormData.custom_domain}
-                onChange={e => setWorkspaceFormData({ ...workspaceFormData, custom_domain: e.target.value.toLowerCase() })}
-                placeholder="ex: app.sua-empresa.com"
-                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white"
-              />
-              <p className="text-[10px] text-neutral-500 mt-1">Configure o CNAME do seu DNS para apontar para a MetaBuilder.</p>
             </div>
 
             <div className="space-y-2">
