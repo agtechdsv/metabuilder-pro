@@ -44,7 +44,7 @@ export function AnalyticsSection({
                     </div>
                     <div>
                       <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Painel de Indicadores (BI)</h4>
-                      <p className="text-[10px] text-neutral-400 font-medium mt-1">Configure os widgets e grÃƒÆ’Ã‚Â¡ficos do seu dashboard.</p>
+                      <p className="text-[10px] text-neutral-400 font-medium mt-1">Configure os widgets e gráficos do seu dashboard.</p>
                     </div>
                   </div>
 
@@ -62,7 +62,7 @@ export function AnalyticsSection({
                         config.layout_config.analytics_config.allow_runtime_edit ? "bg-indigo-600 text-white shadow-md" : "text-neutral-400 hover:text-neutral-600"
                       )}
                     >
-                      EdiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o no Runtime: {config.layout_config.analytics_config.allow_runtime_edit ? 'ON' : 'OFF'}
+                      Edição no Runtime: {config.layout_config.analytics_config.allow_runtime_edit ? 'ON' : 'OFF'}
                     </button>
                   </div>
                 </div>
@@ -108,7 +108,7 @@ export function AnalyticsSection({
                     return (
                       <div key={level.id || lIdx} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 space-y-3 relative">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-[10px] font-black uppercase text-neutral-400">NÃƒÆ’Ã‚Â­vel {lIdx + 1} {isRoot && '(Raiz)'}</span>
+                          <span className="text-[10px] font-black uppercase text-neutral-400">Nível {lIdx + 1} {isRoot && '(Raiz)'}</span>
                           {!isRoot && (
                             <button onClick={() => {
                               setConfig((prev: any) => {
@@ -149,7 +149,7 @@ export function AnalyticsSection({
                             <div className="space-y-3 col-span-full bg-neutral-50 dark:bg-neutral-800/30 p-3 rounded-lg border border-neutral-100 dark:border-neutral-800">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div>
-                                  <label className="text-[9px] font-black uppercase text-neutral-400">Tipo de RelaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o com o NÃƒÆ’Ã‚Â­vel Anterior</label>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Tipo de Relação com o Nível Anterior</label>
                                   <select
                                     value={level.relation_type || 'direct'}
                                     onChange={e => {
@@ -167,14 +167,14 @@ export function AnalyticsSection({
                                     className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
                                   >
                                     <option value="direct">Direta (1:N)</option>
-                                    <option value="indirect">Indireta (N:M - Via Tabela IntermediÃƒÆ’Ã‚Â¡ria)</option>
-                                    <option value="multilevel">AvanÃƒÆ’Ã‚Â§ada (Multi-NÃƒÆ’Ã‚Â­veis - MÃƒÆ’Ã‚Âºltiplos Joins)</option>
+                                    <option value="indirect">Indireta (N:M - Via Tabela Intermediária)</option>
+                                    <option value="multilevel">Avançada (Multi-Níveis - Múltiplos Joins)</option>
                                   </select>
                                 </div>
 
                                 {level.relation_type === 'indirect' ? (
                                   <div>
-                                    <label className="text-[9px] font-black uppercase text-neutral-400">Tabela IntermediÃƒÆ’Ã‚Â¡ria (N:M)</label>
+                                    <label className="text-[9px] font-black uppercase text-neutral-400">Tabela Intermediária (N:M)</label>
                                     <select
                                       value={level.through_table || ''}
                                       onChange={e => {
@@ -217,7 +217,7 @@ export function AnalyticsSection({
                                   return (
                                     <>
                                       <div>
-                                        <label className="text-[9px] font-black uppercase text-neutral-400">FK para o Pai (Na Tabela IntermediÃƒÆ’Ã‚Â¡ria)</label>
+                                        <label className="text-[9px] font-black uppercase text-neutral-400">FK para o Pai (Na Tabela Intermediária)</label>
                                         <select
                                           value={level.through_local_fk || ''}
                                           onChange={e => {
@@ -234,7 +234,7 @@ export function AnalyticsSection({
                                         </select>
                                       </div>
                                       <div>
-                                        <label className="text-[9px] font-black uppercase text-neutral-400">FK para o Filho (Na Tabela IntermediÃƒÆ’Ã‚Â¡ria)</label>
+                                        <label className="text-[9px] font-black uppercase text-neutral-400">FK para o Filho (Na Tabela Intermediária)</label>
                                         <select
                                           value={level.through_target_fk || ''}
                                           onChange={e => {
@@ -275,7 +275,7 @@ export function AnalyticsSection({
                           )}
 
                           <div>
-                            <label className="text-[9px] font-black uppercase text-neutral-400">Campo de TÃƒÆ’Ã‚Â­tulo do Card</label>
+                            <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Título do Card</label>
                             <select
                               value={level.title_field || ''}
                               onChange={e => {
@@ -287,13 +287,13 @@ export function AnalyticsSection({
                               }}
                               className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none"
                             >
-                              <option value="">AutomÃƒÆ’Ã‚Â¡tico</option>
+                              <option value="">Automático</option>
                               {levelModel?.fields?.map((f: any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
                             </select>
                           </div>
 
                           <div>
-                            <label className="text-[9px] font-black uppercase text-neutral-400">Campo de DescriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o / SubtÃƒÆ’Ã‚Â­tulo</label>
+                            <label className="text-[9px] font-black uppercase text-neutral-400">Campo de Descrição / Subtítulo</label>
                             <select
                               value={level.desc_field || ''}
                               onChange={e => {
@@ -316,7 +316,7 @@ export function AnalyticsSection({
 
                   {(!config.layout_config.mindmap_levels || config.layout_config.mindmap_levels.length === 0) && (
                     <div className="p-4 border-2 border-dashed border-purple-200 dark:border-purple-900/50 rounded-xl text-center bg-white dark:bg-neutral-900">
-                      <p className="text-xs text-neutral-500">Nenhuma hierarquia definida. O mapa agruparÃƒÆ’Ã‚Â¡ os dados base do modelo atual.</p>
+                      <p className="text-xs text-neutral-500">Nenhuma hierarquia definida. O mapa agrupará os dados base do modelo atual.</p>
                       <button
                         onClick={() => {
                           setConfig((prev: any) => ({
@@ -339,7 +339,7 @@ export function AnalyticsSection({
                         }}
                         className="mt-3 px-4 py-2 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-[10px] font-black uppercase rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors"
                       >
-                        ComeÃƒÆ’Ã‚Â§ar Hierarquia Relacional
+                        Começar Hierarquia Relacional
                       </button>
                     </div>
                   )}
@@ -366,7 +366,7 @@ export function AnalyticsSection({
                       className="w-full py-3 border-2 border-dashed border-neutral-200 dark:border-neutral-800 hover:border-purple-300 dark:hover:border-purple-700/50 rounded-xl text-neutral-500 hover:text-purple-600 dark:hover:text-purple-400 text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2"
                     >
                       <Plus className="w-4 h-4" />
-                      Adicionar NÃƒÆ’Ã‚Â­vel Abaixo
+                      Adicionar Nível Abaixo
                     </button>
                   )}
                 </div>
@@ -380,12 +380,12 @@ export function AnalyticsSection({
                     <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
                       <LayoutGrid className="w-4 h-4" />
                     </div>
-                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">ConfiguraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o da Galeria</h4>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Configuração da Galeria</h4>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">VisualizaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de Imagem</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Visualização de Imagem</label>
                   <div className="flex p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
                     <button
                       type="button"
@@ -411,11 +411,11 @@ export function AnalyticsSection({
                         (config.layout_config.gallery_click_behavior || 'lightbox') === 'thumbnail' ? 'bg-indigo-600 text-white shadow-lg' : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200'
                       )}
                     >
-                      Ver no prÃƒÆ’Ã‚Â³prio Thumbnail
+                      Ver no próprio Thumbnail
                     </button>
                   </div>
                   <p className="text-[10px] text-neutral-400 font-medium italic ml-1">
-                    Selecione "Ver no prÃƒÆ’Ã‚Â³prio Thumbnail" para exibir a imagem inteira (sem cortes) diretamente no card, desabilitando a modal de visualizaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o ao clicar.
+                    Selecione "Ver no próprio Thumbnail" para exibir a imagem inteira (sem cortes) diretamente no card, desabilitando a modal de visualização ao clicar.
                   </p>
                 </div>
 
@@ -423,7 +423,7 @@ export function AnalyticsSection({
                 <div className="space-y-3 border-t border-neutral-100 dark:border-neutral-800 pt-4 mt-6">
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campos do Card da Galeria</label>
-                    <p className="text-[10px] text-neutral-500 ml-1 mt-0.5">Selecione quais campos aparecerÃƒÆ’Ã‚Â£o no corpo do card (opcional). Deixe vazio para usar apenas TÃƒÆ’Ã‚Â­tulo e Arquivo.</p>
+                    <p className="text-[10px] text-neutral-500 ml-1 mt-0.5">Selecione quais campos aparecerão no corpo do card (opcional). Deixe vazio para usar apenas Título e Arquivo.</p>
                   </div>
                   <div className="flex gap-2 items-center">
                     <select

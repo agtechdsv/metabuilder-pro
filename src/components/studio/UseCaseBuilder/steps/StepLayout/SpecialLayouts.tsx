@@ -6,20 +6,20 @@ export function SpecialLayouts({
 }: any) {
   return (
     <>
-            {/* ZONA: CONFIGURAÃƒÆ’ââ‚¬Â¡ÃƒÆ’ââ‚¬Â¢ES GERAIS */}
+            {/* ZONA: CONFIGURAÇÕES GERAIS */}
             <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
                     <Database className="w-4 h-4" />
                   </div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">ConfiguraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de PadrÃƒÆ’Ã‚Âµes</h4>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Configuração de Padrões</h4>
                 </div>
               </div>
 
               <div className={cn("grid grid-cols-1 gap-4", config.logic_type === 'timeline' ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Registros por PÃƒÆ’Ã‚Â¡gina (LIMIT)</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Registros por Página (LIMIT)</label>
                   <input
                     type="number"
                     min="1"
@@ -32,7 +32,7 @@ export function SpecialLayouts({
                     })}
                     className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                   />
-                  <p className="text-[10px] text-neutral-400 font-medium italic ml-1">Deixe em branco para usar o padrÃƒÆ’Ã‚Â£o do sistema.</p>
+                  <p className="text-[10px] text-neutral-400 font-medium italic ml-1">Deixe em branco para usar o padrão do sistema.</p>
                 </div>
 
                 {config.logic_type === 'timeline' && (
@@ -117,13 +117,13 @@ export function SpecialLayouts({
                     <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
                       <Calendar className="w-4 h-4" />
                     </div>
-                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">ConfiguraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do CalendÃƒÆ’Ã‚Â¡rio</h4>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Configuração do Calendário</h4>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo do TÃƒÆ’Ã‚Â­tulo</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo do Título</label>
                     <select
                       value={config.layout_config.scheduler_config?.title_field || ''}
                       onChange={e => setConfig({
@@ -135,13 +135,13 @@ export function SpecialLayouts({
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione o campo de tÃƒÆ’Ã‚Â­tulo...</option>
+                      <option value="">Selecione o campo de título...</option>
                       {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Data de InÃƒÆ’Ã‚Â­cio</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Data de Início</label>
                     <select
                       value={config.layout_config.scheduler_config?.start_date_field || ''}
                       onChange={e => setConfig({
@@ -153,7 +153,7 @@ export function SpecialLayouts({
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione o campo de data de inÃƒÆ’Ã‚Â­cio...</option>
+                      <option value="">Selecione o campo de data de início...</option>
                       {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp'))}
                     </select>
                   </div>
@@ -171,7 +171,7 @@ export function SpecialLayouts({
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Nenhum (Evento de data ÃƒÆ’Ã‚Âºnica)</option>
+                      <option value="">Nenhum (Evento de data única)</option>
                       {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp'))}
                     </select>
                   </div>
@@ -189,7 +189,7 @@ export function SpecialLayouts({
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Nenhum (Cor padrÃƒÆ’Ã‚Â£o indigo)</option>
+                      <option value="">Nenhum (Cor padrão indigo)</option>
                       {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
@@ -206,7 +206,7 @@ export function SpecialLayouts({
                     <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
                       <History className="w-4 h-4" />
                     </div>
-                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.timeline.title', 'ConfiguraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o da Linha do Tempo')}</h4>
+                    <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.timeline.title', 'Configuração da Linha do Tempo')}</h4>
                   </div>
                 </div>
 
@@ -219,7 +219,7 @@ export function SpecialLayouts({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.title_field', 'Campo de TÃƒÆ’Ã‚Â­tulo')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.title_field', 'Campo de Título')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.title_field || ''}
                         onChange={e => setConfig({
@@ -231,7 +231,7 @@ export function SpecialLayouts({
                         })}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="">Selecione o campo de tÃƒÆ’Ã‚Â­tulo...</option>
+                        <option value="">Selecione o campo de título...</option>
                         {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
@@ -255,7 +255,7 @@ export function SpecialLayouts({
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.desc_field', 'Campo de DescriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o (Opcional)')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.desc_field', 'Campo de Descrição (Opcional)')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.desc_field || ''}
                         onChange={e => setConfig({
@@ -273,7 +273,7 @@ export function SpecialLayouts({
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.icon_field', 'Campo de ÃƒÆ’Ã‚Âcone/Status (Opcional)')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.icon_field', 'Campo de Ícone/Status (Opcional)')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.icon_field || ''}
                         onChange={e => setConfig({
@@ -301,7 +301,7 @@ export function SpecialLayouts({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.direction', 'DireÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o da Linha')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.direction', 'Direção da Linha')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.layout_direction || 'vertical'}
                         onChange={e => setConfig({
@@ -319,7 +319,7 @@ export function SpecialLayouts({
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.mode', 'Modo de ExibiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.mode', 'Modo de Exibição')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.layout_mode || 'alternating'}
                         onChange={e => setConfig({
@@ -337,7 +337,7 @@ export function SpecialLayouts({
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.animated', 'AnimaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de Desenho')}</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.animated', 'Animação de Desenho')}</label>
                       <select
                         value={(config.layout_config as any).timeline_config?.animated === false ? 'false' : 'true'}
                         onChange={e => setConfig({
@@ -349,8 +349,8 @@ export function SpecialLayouts({
                         })}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="false">Sem AnimaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o (EstÃƒÆ’Ã‚Â¡tico)</option>
-                        <option value="true">Com AnimaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o (Desenho DinÃƒÆ’Ã‚Â¢mico)</option>
+                        <option value="false">Sem Animação (Estático)</option>
+                        <option value="true">Com Animação (Desenho Dinâmico)</option>
                       </select>
                     </div>
 
@@ -367,17 +367,17 @@ export function SpecialLayouts({
                         })}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="cards">Cards (PadrÃƒÆ’Ã‚Â£o)</option>
-                        <option value="infographic">InfogrÃƒÆ’Ã‚Â¡fico (Minimalista)</option>
+                        <option value="cards">Cards (Padrão)</option>
+                        <option value="infographic">Infográfico (Minimalista)</option>
                       </select>
                     </div>
 
                     <div className="space-y-3 col-span-1 sm:col-span-2 border-t border-neutral-100 dark:border-neutral-800/50 pt-4">
                       <div className="flex justify-between items-center ml-1">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Escala de ExibiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o (Cards e Textos)</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">Escala de Exibição (Cards e Textos)</label>
                         <span className="text-[10px] font-extrabold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
                           {((config.layout_config as any).timeline_config?.card_scale ?? 1.0).toFixed(1)}x
-                          {((config.layout_config as any).timeline_config?.card_scale ?? 1.0) === 1.0 ? ' (PadrÃƒÆ’Ã‚Â£o)' : ''}
+                          {((config.layout_config as any).timeline_config?.card_scale ?? 1.0) === 1.0 ? ' (Padrão)' : ''}
                         </span>
                       </div>
                       <div className="flex items-center gap-4">
@@ -399,7 +399,7 @@ export function SpecialLayouts({
                         />
                         <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Ampliado (1.4x)</span>
                       </div>
-                      <p className="text-[9px] text-neutral-400 italic ml-1">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaÃƒÆ’Ã‚Â§amentos da linha do tempo.</p>
+                      <p className="text-[9px] text-neutral-400 italic ml-1">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaçamentos da linha do tempo.</p>
                     </div>
                   </div>
                 </div>
@@ -413,12 +413,12 @@ export function SpecialLayouts({
                   <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
                     <BarChartHorizontal className="w-4 h-4" />
                   </div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.gantt.title', 'ConfiguraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do GrÃƒÆ’Ã‚Â¡fico de Gantt')}</h4>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.gantt.title', 'Configuração do Gráfico de Gantt')}</h4>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.title_field', 'Campo de TÃƒÆ’Ã‚Â­tulo (ObrigatÃƒÆ’Ã‚Â³rio)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.title_field', 'Campo de Título (Obrigatório)')}</label>
                     <select
                       value={(config.layout_config as any).gantt_config?.title_field || ''}
                       onChange={e => setConfig({
@@ -430,13 +430,13 @@ export function SpecialLayouts({
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione o campo de tÃƒÆ’Ã‚Â­tulo...</option>
+                      <option value="">Selecione o campo de título...</option>
                       {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.start_date_field', 'Data Inicial (ObrigatÃƒÆ’Ã‚Â³rio)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.start_date_field', 'Data Inicial (Obrigatório)')}</label>
                     <select
                       value={(config.layout_config as any).gantt_config?.start_date_field || ''}
                       onChange={e => setConfig({
@@ -454,7 +454,7 @@ export function SpecialLayouts({
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.end_date_field', 'Data Final (ObrigatÃƒÆ’Ã‚Â³rio)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.end_date_field', 'Data Final (Obrigatório)')}</label>
                     <select
                       value={(config.layout_config as any).gantt_config?.end_date_field || ''}
                       onChange={e => setConfig({
@@ -484,7 +484,7 @@ export function SpecialLayouts({
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Nenhum (Progresso nÃƒÆ’Ã‚Â£o exibido)</option>
+                      <option value="">Nenhum (Progresso não exibido)</option>
                       {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('int') || f.data_type.includes('float') || f.data_type.includes('numeric'))}
                     </select>
                   </div>
@@ -506,7 +506,7 @@ export function SpecialLayouts({
 
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de TÃƒÆ’Ã‚Â­tulo do NÃƒÆ’Ã‚Â³ (ObrigatÃƒÆ’Ã‚Â³rio)</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Título do Nó (Obrigatório)</label>
                       <select
                         value={(config.layout_config as any).blueprint_config?.title_field || ''}
                         onChange={e => setConfig({
@@ -518,13 +518,13 @@ export function SpecialLayouts({
                         })}
                         className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="">Selecione o tÃƒÆ’Ã‚Â­tulo...</option>
+                        <option value="">Selecione o título...</option>
                         {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo NÃƒÆ’Ã‚Â³ Anterior / Predecessora (ObrigatÃƒÆ’Ã‚Â³rio)</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo Nó Anterior / Predecessora (Obrigatório)</label>
                       <select
                         value={(config.layout_config as any).blueprint_config?.predecessor_field || ''}
                         onChange={e => setConfig({
@@ -536,7 +536,7 @@ export function SpecialLayouts({
                         })}
                         className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="">Selecione o campo de relaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o...</option>
+                        <option value="">Selecione o campo de relação...</option>
                         {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
@@ -560,7 +560,7 @@ export function SpecialLayouts({
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de DescriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o (Opcional)</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Descrição (Opcional)</label>
                       <select
                         value={(config.layout_config as any).blueprint_config?.desc_field || ''}
                         onChange={e => setConfig({
@@ -572,7 +572,7 @@ export function SpecialLayouts({
                         })}
                         className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="">Selecione a descriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o...</option>
+                        <option value="">Selecione a descrição...</option>
                         {renderFieldOptions(orderedModels)}
                       </select>
                     </div>
@@ -589,9 +589,9 @@ export function SpecialLayouts({
                   </div>
 
                   <div className="grid grid-cols-2 gap-6">
-                    {/* DireÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o da Linha */}
+                    {/* Direção da Linha */}
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">DireÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o da Linha</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Direção da Linha</label>
                       <select
                         value={(config.layout_config as any).blueprint_config?.direction || 'TB'}
                         onChange={e => setConfig({
@@ -605,9 +605,9 @@ export function SpecialLayouts({
                       </select>
                     </div>
 
-                    {/* AnimaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o */}
+                    {/* Animação */}
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">AnimaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de Desenho</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Animação de Desenho</label>
                       <select
                         value={(config.layout_config as any).blueprint_config?.animated_edges !== false ? 'true' : 'false'}
                         onChange={e => setConfig({
@@ -616,8 +616,8 @@ export function SpecialLayouts({
                         })}
                         className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
-                        <option value="true">Com AnimaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o (Desenho DinÃƒÆ’Ã‚Â¢mico)</option>
-                        <option value="false">Sem AnimaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o (EstÃƒÆ’Ã‚Â¡tico)</option>
+                        <option value="true">Com Animação (Desenho Dinâmico)</option>
+                        <option value="false">Sem Animação (Estático)</option>
                       </select>
                     </div>
                   </div>
@@ -625,7 +625,7 @@ export function SpecialLayouts({
                   {/* Slider de Escala */}
                   <div className="space-y-3 pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
                     <div className="flex justify-between items-center text-xs font-bold text-neutral-500 mb-2 uppercase tracking-wider">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Escala de exibiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o (Cards e textos)</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Escala de exibição (Cards e textos)</label>
                       <span className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
                         {((config.layout_config as any).blueprint_config?.scale || 1).toFixed(1)}x
                       </span>
@@ -646,7 +646,7 @@ export function SpecialLayouts({
                       />
                       <span className="text-[10px] font-semibold text-neutral-400 whitespace-nowrap">AMPLIADO (1.4X)</span>
                     </div>
-                    <p className="text-[10px] text-neutral-400 mt-2 italic px-2">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaÃƒÆ’Ã‚Â§amentos do fluxograma.</p>
+                    <p className="text-[10px] text-neutral-400 mt-2 italic px-2">Arraste para ajustar proporcionalmente o tamanho dos cards, fontes e espaçamentos do fluxograma.</p>
                   </div>
                 </div>
               </div>
@@ -659,12 +659,12 @@ export function SpecialLayouts({
                   <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
                     <Share2 className="w-4 h-4" />
                   </div>
-                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.map.title', 'ConfiguraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do Mapa (Leaflet)')}</h4>
+                  <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.map.title', 'Configuração do Mapa (Leaflet)')}</h4>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.title_field', 'Campo de TÃƒÆ’Ã‚Â­tulo (ObrigatÃƒÆ’Ã‚Â³rio)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.title_field', 'Campo de Título (Obrigatório)')}</label>
                     <select
                       value={(config.layout_config as any).map_config?.title_field || ''}
                       onChange={e => setConfig({
@@ -676,13 +676,13 @@ export function SpecialLayouts({
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione o tÃƒÆ’Ã‚Â­tulo...</option>
+                      <option value="">Selecione o título...</option>
                       {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.desc_field', 'Campo de DescriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o (Opcional)')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.desc_field', 'Campo de Descrição (Opcional)')}</label>
                     <select
                       value={(config.layout_config as any).map_config?.desc_field || ''}
                       onChange={e => setConfig({
@@ -694,13 +694,13 @@ export function SpecialLayouts({
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione a descriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o...</option>
+                      <option value="">Selecione a descrição...</option>
                       {renderFieldOptions(orderedModels)}
                     </select>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lat_field', 'Latitude (Y) - ObrigatÃƒÆ’Ã‚Â³rio')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lat_field', 'Latitude (Y) - Obrigatório')}</label>
                     <select
                       value={(config.layout_config as any).map_config?.lat_field || ''}
                       onChange={e => setConfig({
@@ -718,7 +718,7 @@ export function SpecialLayouts({
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lng_field', 'Longitude (X) - ObrigatÃƒÆ’Ã‚Â³rio')}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.map.lng_field', 'Longitude (X) - Obrigatório')}</label>
                     <select
                       value={(config.layout_config as any).map_config?.lng_field || ''}
                       onChange={e => setConfig({

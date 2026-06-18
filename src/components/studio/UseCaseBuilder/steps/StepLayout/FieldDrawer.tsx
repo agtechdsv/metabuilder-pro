@@ -48,7 +48,7 @@ export function FieldDrawer({
                     drawerActiveTab === 'logica' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
                   )}
                 >
-                  FÃƒâ€œRMULA
+                  FÓRMULA
                   {drawerActiveTab === 'logica' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
                 </button>
               </div>
@@ -110,7 +110,7 @@ export function FieldDrawer({
                     </div>
                   </div>
 
-                  {/* TEXTO DE EXIBIÃƒâ€¡ÃƒÆ’O PARA TABS FICA SEPARADO MAS NA MESMA ABA ÃƒÅ¡NICA */}
+                  {/* TEXTO DE EXIBIÇÃO PARA TABS FICA SEPARADO MAS NA MESMA ABA ÚNICA */}
                   <div className="space-y-4 pt-6 mt-6 border-t border-neutral-100 dark:border-neutral-800">
                     <div className="flex items-center gap-3">
                       <div className="w-1 h-4 bg-indigo-600 rounded-full"></div>
@@ -208,7 +208,7 @@ export function FieldDrawer({
                                       className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
                                     >
                                       <option value="fixed">Fixo (Escolher Data)</option>
-                                      <option value="relative">Dinâmico (ÃƒÅ¡ltimos...)</option>
+                                      <option value="relative">Dinâmico (Últimos...)</option>
                                     </select>
                                   </div>
                                 )}
