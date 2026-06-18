@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { getActionContexts } from '@/lib/customActionsHelper';
 import { getActionIcon, getActionColorClasses, getFontFamily, getFontSize, applyMask, parseMaskedNumber, parseFixedOptions } from './RecordFormUtils';
 import { RecordFormField } from './RecordFormField';
+import { useI18n } from '@/i18n/I18nContext';
 
 interface RecordFormDetailSectionProps {
   tableName: string;
@@ -38,6 +39,9 @@ interface RecordFormDetailSectionProps {
 }
 
 export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
+  const { language } = useI18n();
+  const dateLocale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR';
+
   const {
     tableName,
     parentData = props.formData,
@@ -265,9 +269,9 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                   if (!isNaN(d.getTime())) {
                                      const tType = titleFieldDef?.config?.form_config?.component?.type || titleFieldDef?.config?.component?.type;
                                      if (tType === 'date' || val.endsWith('T00:00:00.000Z')) {
-                                       val = new Intl.DateTimeFormat(navigator.language || 'pt-BR', { timeZone: 'UTC' }).format(d);
+                                       val = new Intl.DateTimeFormat(dateLocale, { timeZone: 'UTC' }).format(d);
                                      } else {
-                                       val = new Intl.DateTimeFormat(navigator.language || 'pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(d);
+                                       val = new Intl.DateTimeFormat(dateLocale, { dateStyle: 'short', timeStyle: 'short' }).format(d);
                                      }
                                   }
                                } catch (e) {
