@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { LayoutDashboard, Plus, LogIn } from 'lucide-react'
+import { LayoutDashboard, Plus, LogIn, ChevronDown, Terminal, Briefcase, Server } from 'lucide-react'
 import { signOut } from '@/app/auth/actions'
 import { LoginForm } from '@/components/auth/LoginForm'
 import { AuthModal } from '@/components/auth/AuthModal'
@@ -69,19 +69,56 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
             </Link>
 
             {(pathname === '/' || pathname?.startsWith('/features') || pathname?.startsWith('/bpm')) && (
-              <nav className="hidden lg:flex items-center gap-6">
-                <Link href="/bpm" className="text-xs font-black tracking-widest text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors uppercase">{t('marketing_v2.navbar.bpm')}</Link>
-                <Link href="/features/sync-resolution" className="text-xs font-black tracking-widest text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 transition-colors uppercase">{t('marketing_v2.navbar.sync_resolution')}</Link>
-                <Link href="/features/speed" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.speed')}</Link>
-                <Link href="/features/integration" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.integration')}</Link>
-                <Link href="/features/branding" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.branding')}</Link>
-                <Link href="/features/security" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.security')}</Link>
-                <Link href="/features/use-cases" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.use_cases')}</Link>
-                <Link href="/#pricing" className="text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors">{t('marketing_v2.navbar.pricing')}</Link>
-                <div className="flex items-center gap-4 border-l border-neutral-200 dark:border-neutral-800 pl-6">
-                  <Link href="/features/zero-trust" className="text-xs font-black tracking-widest text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 transition-colors uppercase">{t('marketing_v2.navbar.zero_trust')}</Link>
-                  <Link href="/features/control-center" className="text-xs font-black tracking-widest text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors uppercase">{t('marketing_v2.navbar.control_center')}</Link>
+              <nav className="hidden md:flex items-center gap-4 xl:gap-6">
+                
+                {/* Dropdown Developers */}
+                <div className="relative group cursor-pointer" title="Developers">
+                  <div className="flex items-center gap-1 text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors py-4 uppercase">
+                    <Terminal className="w-5 h-5 xl:hidden" />
+                    <span className="hidden xl:flex items-center gap-1">Developers <ChevronDown className="w-3 h-3 group-hover:rotate-180 transition-transform" /></span>
+                  </div>
+                  <div className="absolute top-full left-0 w-56 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 flex flex-col p-2">
+                    <Link href="/bpm" className="px-4 py-2 rounded-xl text-xs font-bold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+                      <span className="bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">{t('marketing_v2.navbar.bpm')}</span>
+                    </Link>
+                    <Link href="/features/sync-resolution" className="px-4 py-2 rounded-xl text-xs font-bold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+                      <span className="bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">{t('marketing_v2.navbar.sync_resolution')}</span>
+                    </Link>
+                    <Link href="/features/speed" className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">{t('marketing_v2.navbar.speed')}</Link>
+                    <Link href="/features/integration" className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">{t('marketing_v2.navbar.integration')}</Link>
+                    <Link href="/features/use-cases" className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">{t('marketing_v2.navbar.use_cases')}</Link>
+                  </div>
                 </div>
+
+                {/* Dropdown Owners */}
+                <div className="relative group cursor-pointer" title="Owners">
+                  <div className="flex items-center gap-1 text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors py-4 uppercase">
+                    <Briefcase className="w-5 h-5 xl:hidden" />
+                    <span className="hidden xl:flex items-center gap-1">Owners <ChevronDown className="w-3 h-3 group-hover:rotate-180 transition-transform" /></span>
+                  </div>
+                  <div className="absolute top-full left-0 w-56 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 flex flex-col p-2">
+                    <Link href="/features/control-center" className="px-4 py-2 rounded-xl text-xs font-bold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+                      <span className="bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">{t('marketing_v2.navbar.control_center')}</span>
+                    </Link>
+                    <Link href="/features/branding" className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">{t('marketing_v2.navbar.branding')}</Link>
+                    <Link href="/#pricing" className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">{t('marketing_v2.navbar.pricing')}</Link>
+                  </div>
+                </div>
+
+                {/* Dropdown Infra / Sec */}
+                <div className="relative group cursor-pointer" title="Infraestrutura">
+                  <div className="flex items-center gap-1 text-xs font-black tracking-widest text-neutral-500 hover:text-indigo-600 transition-colors py-4 uppercase">
+                    <Server className="w-5 h-5 xl:hidden" />
+                    <span className="hidden xl:flex items-center gap-1">Infraestrutura <ChevronDown className="w-3 h-3 group-hover:rotate-180 transition-transform" /></span>
+                  </div>
+                  <div className="absolute top-full left-0 w-56 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 flex flex-col p-2">
+                    <Link href="/features/zero-trust" className="px-4 py-2 rounded-xl text-xs font-bold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+                      <span className="bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">{t('marketing_v2.navbar.zero_trust')}</span>
+                    </Link>
+                    <Link href="/features/security" className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">{t('marketing_v2.navbar.security')}</Link>
+                  </div>
+                </div>
+
               </nav>
             )}
           </div>
