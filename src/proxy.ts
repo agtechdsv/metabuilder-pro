@@ -38,6 +38,38 @@ export async function proxy(request: NextRequest) {
     auth: { persistSession: false }
   })
 
+  // 1. Try to find a workspace with this custom domain
+  const { data: workspace, error: wsError } = await supabase
+    .from('workspaces')
+    .select('slug')
+    .eq('custom_domain', hostname)
+    .single()
+
+  if (workspace && !wsError) {
+    const workspaceSlug = workspace.slug
+    const targetPrefix = `/${workspaceSlug}`
+    let rewritePath = url.pathname
+    
+    if (!rewritePath.startsWith(targetPrefix)) {
+      rewritePath = `${targetPrefix}${rewritePath === '/' ? '' : rewritePath}`
+    }
+
+    const rewriteUrl = new URL(`${rewritePath}${url.search}`, request.url)
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set('x-custom-domain', 'true')
+    requestHeaders.set('x-custom-domain-type', 'workspace')
+
+    const rewriteResponse = NextResponse.rewrite(rewriteUrl, {
+      request: { headers: requestHeaders },
+    })
+    
+    response.headers.forEach((value, key) => {
+      if(key.toLowerCase() === 'set-cookie') rewriteResponse.headers.append(key, value)
+    })
+    return rewriteResponse
+  }
+
+  // 2. Try to find a project with this custom domain
   const { data: project, error } = await supabase
     .from('projects')
     .select('slug, workspaces(slug)')
@@ -45,7 +77,7 @@ export async function proxy(request: NextRequest) {
     .single()
 
   if (error || !project || !project.workspaces) {
-    console.error(`Custom domain not found or error: ${hostname}`, error)
+    console.error(`Custom domain not found or error: ${hostname}`)
     return response
   }
 

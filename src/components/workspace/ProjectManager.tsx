@@ -54,6 +54,7 @@ interface ProjectManagerProps {
   /** Exibe o botão "Equipe & Configurações". Falso para convidados com Acesso Granular. */
   showTeamSettings?: boolean
   workspaceThemeConfig?: any
+  workspaceCustomDomain?: string
 }
 
 export function ProjectManager({ 
@@ -64,7 +65,8 @@ export function ProjectManager({
   canCreate = true,
   canDelete = true,
   showTeamSettings = true,
-  workspaceThemeConfig = {}
+  workspaceThemeConfig = {},
+  workspaceCustomDomain = ''
 }: ProjectManagerProps) {
   const [projects, setProjects] = useState<Project[]>(initialProjects)
   
@@ -85,6 +87,14 @@ export function ProjectManager({
   
   const [portalEnabled, setPortalEnabled] = useState(workspaceThemeConfig?.portal_enabled || false)
   const [isTogglingPortal, setIsTogglingPortal] = useState(false)
+  
+  const [isWorkspaceSettingsModalOpen, setIsWorkspaceSettingsModalOpen] = useState(false)
+  const [workspaceFormData, setWorkspaceFormData] = useState({
+    custom_domain: workspaceCustomDomain || '',
+    portal_logo_url: workspaceThemeConfig?.portal_logo_url || '',
+    portal_banner_url: workspaceThemeConfig?.portal_banner_url || ''
+  })
+  const [isSavingWorkspaceSettings, setIsSavingWorkspaceSettings] = useState(false)
 
   const supabase = createClient()
   const router = useRouter()
@@ -245,6 +255,42 @@ export function ProjectManager({
     }
   }
 
+  const saveWorkspaceSettings = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSavingWorkspaceSettings(true)
+    
+    // Create new theme config combining old config with new portal settings
+    const newThemeConfig = { 
+      ...(workspaceThemeConfig || {}), 
+      portal_logo_url: workspaceFormData.portal_logo_url, 
+      portal_banner_url: workspaceFormData.portal_banner_url 
+    }
+
+    try {
+      const { error } = await supabase
+        .from('workspaces')
+        .update({ 
+          theme_config: newThemeConfig,
+          custom_domain: workspaceFormData.custom_domain || null // Convert empty string to null
+        })
+        .eq('id', workspaceId)
+
+      if (error) {
+        if (error.code === '23505') throw new Error('Este domínio já está em uso por outro Workspace ou Projeto.')
+        throw error
+      }
+      
+      toast('Configurações do Workspace salvas com sucesso', 'success')
+      setIsWorkspaceSettingsModalOpen(false)
+      router.refresh()
+    } catch (err: any) {
+      console.error(err)
+      toast(err.message || 'Erro ao salvar configurações', 'error')
+    } finally {
+      setIsSavingWorkspaceSettings(false)
+    }
+  }
+
   const toggleProjectPortal = async (project: Project) => {
     const newStatus = !(project.theme_config?.show_in_portal)
     const newThemeConfig = { ...(project.theme_config || {}), show_in_portal: newStatus }
@@ -326,15 +372,22 @@ export function ProjectManager({
           </h3>
           <div className="flex items-center gap-4">
             {canCreate && (
-              <div className="flex items-center gap-3 mr-4 border-r dark:border-neutral-800 pr-4">
-                <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest hidden sm:block">Portal de Aplicações</span>
+              <div className="flex items-center gap-2 mr-4 border-r dark:border-neutral-800 pr-4">
+                <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest hidden sm:block mr-2">Portal de Aplicações</span>
                 <button
                   onClick={toggleWorkspacePortal}
                   disabled={isTogglingPortal}
-                  className={`w-12 h-6 rounded-full transition-all relative ${portalEnabled ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-800'} ${isTogglingPortal ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`w-10 h-5 rounded-full transition-all relative ${portalEnabled ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-800'} ${isTogglingPortal ? 'opacity-50 cursor-not-allowed' : ''}`}
                   title={portalEnabled ? 'Desativar Portal' : 'Ativar Portal'}
                 >
-                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${portalEnabled ? 'right-1' : 'left-1'}`} />
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${portalEnabled ? 'right-0.5' : 'left-0.5'}`} />
+                </button>
+                <button
+                  onClick={() => setIsWorkspaceSettingsModalOpen(true)}
+                  className="p-1.5 ml-1 text-neutral-400 hover:text-indigo-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition-colors"
+                  title="Configurações do Portal e Domínio"
+                >
+                  <Settings className="w-4 h-4" />
                 </button>
               </div>
             )}
@@ -685,6 +738,76 @@ export function ProjectManager({
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* Modal de Configurações do Workspace (Portal e Domínio) */}
+      <Modal
+        isOpen={isWorkspaceSettingsModalOpen}
+        onClose={() => setIsWorkspaceSettingsModalOpen(false)}
+        title="Configurações do Workspace"
+      >
+        <form onSubmit={saveWorkspaceSettings} className="space-y-6">
+          <div className="space-y-4">
+            
+            <div className="p-4 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-2xl mb-4">
+              <h4 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mb-1">Domínio Customizado e Portal</h4>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                Se você apontar um domínio para a MetaBuilder, configure-o aqui para que ele mostre o Portal de Aplicações e reflita essas identidades em seus projetos.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Domínio Customizado</label>
+              <input
+                type="text"
+                value={workspaceFormData.custom_domain}
+                onChange={e => setWorkspaceFormData({ ...workspaceFormData, custom_domain: e.target.value.toLowerCase() })}
+                placeholder="ex: app.sua-empresa.com"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white"
+              />
+              <p className="text-[10px] text-neutral-500 mt-1">Configure o CNAME do seu DNS para apontar para a MetaBuilder.</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Logo do Portal (Opcional)</label>
+              <input
+                type="url"
+                value={workspaceFormData.portal_logo_url}
+                onChange={e => setWorkspaceFormData({ ...workspaceFormData, portal_logo_url: e.target.value })}
+                placeholder="https://sua-empresa.com/logo.png"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Banner do Portal (Opcional)</label>
+              <input
+                type="url"
+                value={workspaceFormData.portal_banner_url}
+                onChange={e => setWorkspaceFormData({ ...workspaceFormData, portal_banner_url: e.target.value })}
+                placeholder="https://sua-empresa.com/banner.jpg"
+                className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-neutral-200 dark:border-neutral-800">
+            <button
+              type="submit"
+              disabled={isSavingWorkspaceSettings}
+              className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-800 text-white rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)]"
+            >
+              {isSavingWorkspaceSettings ? t('common.loading') : t('common.save')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsWorkspaceSettingsModalOpen(false)}
+              className="w-full py-3.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-xl font-bold transition-all"
+            >
+              {t('common.cancel')}
+            </button>
+          </div>
+        </form>
       </Modal>
 
     </div>

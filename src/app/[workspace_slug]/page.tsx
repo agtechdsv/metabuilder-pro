@@ -44,10 +44,10 @@ export default async function PortalPage({ params }: PortalPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-neutral-50 dark:bg-[#050505] text-neutral-900 dark:text-white flex flex-col relative overflow-hidden transition-colors duration-500">
       {/* Background Gradients */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-indigo-600/20 blur-[120px] rounded-full pointer-events-none opacity-50" />
-      <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none opacity-30" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-indigo-600/10 dark:bg-indigo-600/20 blur-[120px] rounded-full pointer-events-none opacity-50" />
+      <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-purple-600/5 dark:bg-purple-600/10 blur-[120px] rounded-full pointer-events-none opacity-30" />
 
       {/* Top Right Actions */}
       <div className="absolute top-6 right-6 z-50">
@@ -56,13 +56,13 @@ export default async function PortalPage({ params }: PortalPageProps) {
 
       {/* Header */}
       <header className="relative z-10 w-full max-w-6xl mx-auto px-6 py-12 md:py-20 flex flex-col items-center text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-6">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400 mb-6 shadow-sm">
           Portal de Aplicações
         </div>
-        <h1 className="text-4xl md:text-6xl font-black tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-white to-white/60">
+        <h1 className="text-4xl md:text-6xl font-black tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-neutral-900 to-neutral-500 dark:from-white dark:to-white/60">
           {workspace.name}
         </h1>
-        <p className="text-neutral-400 max-w-xl text-lg">
+        <p className="text-neutral-500 dark:text-neutral-400 max-w-xl text-lg">
           Selecione uma aplicação abaixo para acessar.
         </p>
       </header>
@@ -75,32 +75,32 @@ export default async function PortalPage({ params }: PortalPageProps) {
               <Link
                 key={project.id}
                 href={`/${workspace.slug}/${project.slug}/login`}
-                className="group relative bg-white/[0.02] border border-white/10 hover:border-indigo-500/50 rounded-3xl p-6 transition-all duration-500 hover:bg-white/[0.04] overflow-hidden flex flex-col"
+                className="group relative bg-white dark:bg-white/[0.02] border border-neutral-200 dark:border-white/10 hover:border-indigo-500/50 rounded-3xl p-6 transition-all duration-500 hover:bg-neutral-50 dark:hover:bg-white/[0.04] overflow-hidden flex flex-col shadow-sm hover:shadow-md dark:shadow-none"
               >
                 {/* Glow on hover */}
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-indigo-500/0 group-hover:from-indigo-500/10 transition-colors duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-indigo-500/0 group-hover:from-indigo-500/5 dark:group-hover:from-indigo-500/10 transition-colors duration-500" />
                 
                 {/* Project Banner or Icon Area */}
-                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 group-hover:bg-indigo-500/20 group-hover:border-indigo-500/30">
+                <div className="w-14 h-14 rounded-2xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 group-hover:bg-indigo-500/10 dark:group-hover:bg-indigo-500/20 group-hover:border-indigo-500/20 dark:group-hover:border-indigo-500/30">
                   {project.theme_config?.login_logo_url ? (
                     <img src={project.theme_config.login_logo_url} alt={project.name} className="w-8 h-8 object-contain" />
                   ) : (
-                    <Database className="w-7 h-7 text-neutral-400 group-hover:text-indigo-400 transition-colors" />
+                    <Database className="w-7 h-7 text-neutral-400 dark:text-neutral-400 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors" />
                   )}
                 </div>
 
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-indigo-300 transition-colors">
+                  <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
                     {project.name}
                   </h3>
                   {project.description && (
-                    <p className="text-sm text-neutral-400 line-clamp-2">
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-2">
                       {project.description}
                     </p>
                   )}
                 </div>
 
-                <div className="mt-8 flex items-center text-xs font-bold uppercase tracking-widest text-indigo-400 group-hover:text-indigo-300">
+                <div className="mt-8 flex items-center text-xs font-bold uppercase tracking-widest text-indigo-500 dark:text-indigo-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-300">
                   Acessar
                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-2 transition-transform duration-500" />
                 </div>
@@ -109,10 +109,10 @@ export default async function PortalPage({ params }: PortalPageProps) {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
-              <Database className="w-8 h-8 text-neutral-600" />
+            <div className="w-16 h-16 bg-neutral-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
+              <Database className="w-8 h-8 text-neutral-400 dark:text-neutral-600" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Nenhum projeto disponível</h3>
+            <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">Nenhum projeto disponível</h3>
             <p className="text-neutral-500 max-w-md">
               Não há projetos configurados para aparecer neste portal no momento.
             </p>
@@ -121,7 +121,7 @@ export default async function PortalPage({ params }: PortalPageProps) {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 py-8 border-t border-white/5 text-center text-xs font-medium text-neutral-600 uppercase tracking-widest">
+      <footer className="relative z-10 py-8 border-t border-neutral-200 dark:border-white/5 text-center text-xs font-medium text-neutral-400 dark:text-neutral-600 uppercase tracking-widest">
         Powered by MetaBuilder
       </footer>
     </div>
