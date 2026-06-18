@@ -21,7 +21,7 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
   const selectedTarget = selectedWorkspace || selectedProject
   const targetType = selectedWorkspace ? 'workspace' : selectedProject ? 'project' : null
 
-  const handleAddDomain = async () => {
+  const handleAddDomain = async (forceTransfer = false) => {
     if (!domain) {
       toast('Por favor, informe um domínio válido.', 'error')
       return
@@ -39,11 +39,22 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
       const response = await fetch('/api/domains', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: domain.toLowerCase(), targetId: selectedTargetId, targetType })
+        body: JSON.stringify({ domain: domain.toLowerCase(), targetId: selectedTargetId, targetType, forceTransfer })
       })
       const data = await response.json()
 
       if (!response.ok) {
+        if (response.status === 409 && data.requiresTransfer) {
+          setIsLoading(false)
+          const isWorkspace = data.existingTargetType === 'workspace'
+          const confirmTransfer = window.confirm(`O domínio '${domain}' já está associado ao ${isWorkspace ? 'Portal' : 'Projeto'}: ${data.existingTargetName}.\n\nA nova associação irá remover a associação anterior. Tem certeza que deseja continuar e transferir?`)
+          
+          if (confirmTransfer) {
+            return handleAddDomain(true) // Retry with forceTransfer
+          } else {
+            return // User cancelled
+          }
+        }
         throw new Error(data.error || 'Erro ao vincular domínio')
       }
 
@@ -191,7 +202,7 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
                         />
                       </div>
                       <button
-                        onClick={handleAddDomain}
+                        onClick={() => handleAddDomain(false)}
                         disabled={isLoading || !domain}
                         className="px-6 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-bold transition-colors flex items-center gap-2"
                       >
