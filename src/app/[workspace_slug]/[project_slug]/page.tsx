@@ -17,6 +17,8 @@ export default async function ProjectRootPage({ params }: ProjectPageProps) {
 
   if (isCustomDomain && customDomainType !== 'workspace') {
     redirect('/dashboard')
+  } else if (isCustomDomain && customDomainType === 'workspace') {
+    redirect(`/${project_slug}/dashboard`)
   } else {
     redirect(`/${workspace_slug}/${project_slug}/dashboard`)
   }

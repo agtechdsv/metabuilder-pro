@@ -73,6 +73,8 @@ export default async function LoginPage({ params }: any) {
   if (auth.auth_type === 'none') {
     if (isCustomDomain && customDomainType !== 'workspace') {
       redirect('/')
+    } else if (isCustomDomain && customDomainType === 'workspace') {
+      redirect(`/${project_slug}`)
     } else {
       redirect(`/${workspace_slug}/${project_slug}`)
     }
