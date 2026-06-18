@@ -39,7 +39,7 @@ export default async function ClientDashboardPage() {
   // Fetch user's workspaces (owner only)
   const { data: workspaces } = await supabase
     .from('workspaces')
-    .select('id, name, slug, created_at')
+    .select('id, name, slug, created_at, custom_domain')
     .eq('owner_id', user.id)
     .order('created_at', { ascending: false })
 
