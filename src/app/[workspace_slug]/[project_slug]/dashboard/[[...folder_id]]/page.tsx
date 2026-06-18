@@ -205,7 +205,10 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
 
   const headersList = await import('next/headers').then(m => m.headers())
   const isCustomDomain = headersList.get('x-custom-domain') === 'true'
-  const baseNavUrl = isCustomDomain ? '' : `/${workspace_slug}/${project_slug}`
+  const customDomainType = headersList.get('x-custom-domain-type')
+  const baseNavUrl = isCustomDomain 
+    ? (customDomainType === 'workspace' ? `/${project_slug}` : '') 
+    : `/${workspace_slug}/${project_slug}`
   const breadcrumbs = activeFolderId 
     ? findBreadcrumbPath(navigation, activeFolderId, [], baseNavUrl || `/${workspace_slug}/${project_slug}`) || []
     : []

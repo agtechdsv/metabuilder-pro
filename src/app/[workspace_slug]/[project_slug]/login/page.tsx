@@ -68,9 +68,10 @@ export default async function LoginPage({ params }: any) {
   
   const headersList = await headers()
   const isCustomDomain = headersList.get('x-custom-domain') === 'true'
+  const customDomainType = headersList.get('x-custom-domain-type')
   
   if (auth.auth_type === 'none') {
-    if (isCustomDomain) {
+    if (isCustomDomain && customDomainType !== 'workspace') {
       redirect('/')
     } else {
       redirect(`/${workspace_slug}/${project_slug}`)

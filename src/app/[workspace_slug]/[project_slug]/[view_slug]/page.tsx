@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { notFound, redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { Table, LayoutGrid, Plus, Search, Filter, AlertCircle } from 'lucide-react'
 import DynamicGrid from '@/components/DynamicGrid'
 import ViewPageContent from '@/components/runtime/ViewPageContent'
@@ -74,9 +74,12 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
   }
 
   const navigation = project.navigation || []
-  const headersList = await import('next/headers').then(m => m.headers())
+  const headersList = await headers()
   const isCustomDomain = headersList.get('x-custom-domain') === 'true'
-  const baseNavUrl = isCustomDomain ? '' : `/${workspace_slug}/${project_slug}`
+  const customDomainType = headersList.get('x-custom-domain-type')
+  const baseNavUrl = isCustomDomain 
+    ? (customDomainType === 'workspace' ? `/${project_slug}` : '') 
+    : `/${workspace_slug}/${project_slug}`
 
   const baseUrl = `/${workspace_slug}/${project_slug}`
   const breadcrumbs = findBreadcrumbPath(navigation, view_slug, [], baseNavUrl || baseUrl) || [{ label: view_slug, href: '#' }]

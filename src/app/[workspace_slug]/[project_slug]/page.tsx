@@ -13,8 +13,9 @@ export default async function ProjectRootPage({ params }: ProjectPageProps) {
   
   const headersList = await headers()
   const isCustomDomain = headersList.get('x-custom-domain') === 'true'
+  const customDomainType = headersList.get('x-custom-domain-type')
 
-  if (isCustomDomain) {
+  if (isCustomDomain && customDomainType !== 'workspace') {
     redirect('/dashboard')
   } else {
     redirect(`/${workspace_slug}/${project_slug}/dashboard`)

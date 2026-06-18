@@ -274,7 +274,10 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
 
   const headersList = await headers()
   const isCustomDomain = headersList.get('x-custom-domain') === 'true'
-  const baseNavUrl = isCustomDomain ? '' : `/${workspace_slug}/${project_slug}`
+  const customDomainType = headersList.get('x-custom-domain-type')
+  const baseNavUrl = isCustomDomain 
+    ? (customDomainType === 'workspace' ? `/${project_slug}` : '') 
+    : `/${workspace_slug}/${project_slug}`
 
   return (
     <I18nProvider initialLocale={locale as any}>
