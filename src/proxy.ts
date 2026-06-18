@@ -7,13 +7,14 @@ export async function proxy(request: NextRequest) {
   let response = await updateSession(request)
 
   const url = request.nextUrl
-  const hostname = request.headers.get('host')
+  const hostHeader = request.headers.get('host') || ''
+  // Remove port if exists (e.g., localhost:3000 -> localhost)
+  const hostname = hostHeader.split(':')[0]
 
-  // Define our core application domains
+  // Define our core application domains (without ports)
   const appDomains = [
-    'localhost:3000', 
-    'localhost:3001',
-    process.env.NEXT_PUBLIC_APP_URL?.replace('https://', '').replace('http://', ''),
+    'localhost', 
+    process.env.NEXT_PUBLIC_APP_URL?.replace('https://', '').replace('http://', '').split(':')[0],
     'metabuilderpro.com', 
     'www.metabuilderpro.com',
     'metabuilder-pro.vercel.app'
@@ -55,9 +56,27 @@ export async function proxy(request: NextRequest) {
   const projectSlug = project.slug
 
   if (workspaceSlug && projectSlug) {
+    // Check if the URL already has the workspace and project in the path (e.g., from a redirect)
+    const targetPrefix = `/${workspaceSlug}/${projectSlug}`
+    let rewritePath = url.pathname
+    
+    // Only prepend the prefix if it's not already there
+    if (!rewritePath.startsWith(targetPrefix)) {
+      rewritePath = `${targetPrefix}${rewritePath === '/' ? '' : rewritePath}`
+    }
+
     // Rewrite URL for the custom domain
-    const rewriteUrl = new URL(`/${workspaceSlug}/${projectSlug}${url.pathname}${url.search}`, request.url)
-    const rewriteResponse = NextResponse.rewrite(rewriteUrl)
+    const rewriteUrl = new URL(`${rewritePath}${url.search}`, request.url)
+    
+    // Pass a header to let Server Components know this is a custom domain
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set('x-custom-domain', 'true')
+
+    const rewriteResponse = NextResponse.rewrite(rewriteUrl, {
+      request: {
+        headers: requestHeaders,
+      },
+    })
     
     // Copy cookies from the session update response to the rewrite response
     response.headers.forEach((value, key) => {
@@ -74,6 +93,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|js|css|ico|woff|woff2|ttf|eot)$).*)',
   ],
 }

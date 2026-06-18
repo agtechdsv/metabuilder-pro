@@ -22,8 +22,8 @@ export function ClientWhiteLabelView({ projects }: ClientWhiteLabelViewProps) {
       return
     }
 
-    // Basic domain validation
-    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/
+    // Basic domain validation (allows subdomains like www.)
+    const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/
     if (!domainRegex.test(domain)) {
       toast('Formato de domínio inválido. Use algo como www.suaempresa.com', 'error')
       return

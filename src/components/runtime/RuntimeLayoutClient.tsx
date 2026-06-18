@@ -104,15 +104,18 @@ export function RuntimeLayoutClient({
     const sessionCookieName = `client_session_${project.id}`
     const hasSession = document.cookie.split('; ').some(row => row.trim().startsWith(`${sessionCookieName}=`))
 
+    const isCustomDomain = !window.location.pathname.startsWith(`/${workspaceSlug}`)
+    const baseNavUrl = isCustomDomain ? '' : `/${workspaceSlug}/${projectSlug}`
+
     if (isLoginPage) {
       if (hasSession || isNoAuth) {
-        window.location.href = `/${workspaceSlug}/${projectSlug}`
+        window.location.href = `${baseNavUrl}/`
       } else {
         setIsCheckingAuth(false)
       }
     } else {
       if (!hasSession && !isNoAuth) {
-        window.location.href = `/${workspaceSlug}/${projectSlug}/login`
+        window.location.href = `${baseNavUrl}/login`
       } else {
         setIsCheckingAuth(false)
       }

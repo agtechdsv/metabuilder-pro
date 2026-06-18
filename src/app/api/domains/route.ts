@@ -51,7 +51,11 @@ export async function POST(req: Request) {
 
     if (!vercelResponse.ok) {
       // Sometimes it returns error if domain is already attached to another Vercel project
-      return NextResponse.json({ error: vercelData.error?.message || 'Failed to add domain to Vercel' }, { status: 400 })
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Vercel API failed but proceeding anyway in development mode:', vercelData.error?.message)
+      } else {
+        return NextResponse.json({ error: vercelData.error?.message || 'Failed to add domain to Vercel' }, { status: 400 })
+      }
     }
 
     // 3. Update Supabase
