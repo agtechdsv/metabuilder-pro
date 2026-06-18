@@ -49,7 +49,7 @@ export default async function ClientDashboardPage() {
     const workspaceIds = workspaces.map(w => w.id)
     const { data: projects } = await supabase
       .from('projects')
-      .select('id, name, workspace_id, created_at, secret_token')
+      .select('id, name, workspace_id, created_at, secret_token, custom_domain')
       .in('workspace_id', workspaceIds)
       .order('created_at', { ascending: false })
     projectsData = projects || []
