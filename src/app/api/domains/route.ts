@@ -31,13 +31,13 @@ export async function POST(req: Request) {
     // 2. Check if domain is already mapped in our DB (and belongs to this user, since RLS applies)
     let existingMapping: { id: string, name: string, type: 'workspace' | 'project' } | null = null;
     
-    const { data: existingWorkspace } = await supabase.from('workspaces').select('id, name').eq('custom_domain', domain).single()
-    if (existingWorkspace) {
-      existingMapping = { id: existingWorkspace.id, name: existingWorkspace.name, type: 'workspace' };
+    const { data: existingWorkspaces } = await supabase.from('workspaces').select('id, name').eq('custom_domain', domain).limit(1)
+    if (existingWorkspaces && existingWorkspaces.length > 0) {
+      existingMapping = { id: existingWorkspaces[0].id, name: existingWorkspaces[0].name, type: 'workspace' };
     } else {
-      const { data: existingProject } = await supabase.from('projects').select('id, name').eq('custom_domain', domain).single()
-      if (existingProject) {
-        existingMapping = { id: existingProject.id, name: existingProject.name, type: 'project' };
+      const { data: existingProjects } = await supabase.from('projects').select('id, name').eq('custom_domain', domain).limit(1)
+      if (existingProjects && existingProjects.length > 0) {
+        existingMapping = { id: existingProjects[0].id, name: existingProjects[0].name, type: 'project' };
       }
     }
 
@@ -57,12 +57,9 @@ export async function POST(req: Request) {
         }, { status: 409 })
       }
 
-      // User confirmed transfer. Remove from old target.
-      if (existingMapping.type === 'workspace') {
-        await supabase.from('workspaces').update({ custom_domain: null }).eq('id', existingMapping.id)
-      } else {
-        await supabase.from('projects').update({ custom_domain: null }).eq('id', existingMapping.id)
-      }
+      // User confirmed transfer. Remove from all other targets to fix any bad state.
+      await supabase.from('workspaces').update({ custom_domain: null }).eq('custom_domain', domain)
+      await supabase.from('projects').update({ custom_domain: null }).eq('custom_domain', domain)
       
       // We DO NOT call Vercel API because Vercel already has it registered.
     } else {

@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Globe, Loader2, Link as LinkIcon, AlertCircle, CheckCircle2, Trash2 } from 'lucide-react'
+import { Globe, Loader2, Link as LinkIcon, AlertCircle, CheckCircle2, Trash2, AlertTriangle } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
+import { Modal } from '@/components/ui/Modal'
 
 interface ClientWhiteLabelViewProps {
   workspaces: any[]
@@ -14,6 +15,15 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
   const [domain, setDomain] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
+
+  const [transferModal, setTransferModal] = useState({
+    isOpen: false,
+    domain: '',
+    isWorkspace: false,
+    targetName: ''
+  })
+  
+  const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false)
 
   // Find selected target in workspaces or projects
   const selectedWorkspace = workspaces?.find(w => w.id === selectedTargetId)
@@ -46,14 +56,13 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
       if (!response.ok) {
         if (response.status === 409 && data.requiresTransfer) {
           setIsLoading(false)
-          const isWorkspace = data.existingTargetType === 'workspace'
-          const confirmTransfer = window.confirm(`O domínio '${domain}' já está associado ao ${isWorkspace ? 'Portal' : 'Projeto'}: ${data.existingTargetName}.\n\nA nova associação irá remover a associação anterior. Tem certeza que deseja continuar e transferir?`)
-          
-          if (confirmTransfer) {
-            return handleAddDomain(true) // Retry with forceTransfer
-          } else {
-            return // User cancelled
-          }
+          setTransferModal({
+            isOpen: true,
+            domain: domain,
+            isWorkspace: data.existingTargetType === 'workspace',
+            targetName: data.existingTargetName
+          })
+          return
         }
         throw new Error(data.error || 'Erro ao vincular domínio')
       }
@@ -68,14 +77,15 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
     setIsLoading(false)
   }
 
-  const handleRemoveDomain = async () => {
+  const handleRemoveDomainClick = () => {
+    if (!selectedTarget || !selectedTarget.custom_domain) return
+    setIsRemoveModalOpen(true)
+  }
+
+  const handleConfirmRemoveDomain = async () => {
     if (!selectedTarget || !selectedTarget.custom_domain) return
 
-    if (!window.confirm(`Tem certeza que deseja remover este domínio? O seu ${targetType === 'workspace' ? 'Portal de Aplicações' : 'projeto'} parará de responder por ele.`)) {
-      return
-    }
-
-    setIsLoading(true)
+    setIsRemoveModalOpen(false)
     try {
       const response = await fetch(`/api/domains?domain=${selectedTarget.custom_domain}&targetId=${selectedTarget.id}&targetType=${targetType}`, {
         method: 'DELETE'
@@ -150,7 +160,7 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
                       </p>
                     </div>
                     <button
-                      onClick={handleRemoveDomain}
+                      onClick={handleRemoveDomainClick}
                       disabled={isLoading}
                       className="px-4 py-2 bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 rounded-lg text-sm font-bold transition-colors flex items-center gap-2"
                     >
@@ -217,6 +227,79 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
           )}
         </div>
       </div>
+
+      <Modal
+        isOpen={transferModal.isOpen}
+        onClose={() => setTransferModal({ ...transferModal, isOpen: false })}
+        title="Transferência de Domínio"
+      >
+        <div className="space-y-6">
+          <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex gap-4">
+            <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0" />
+            <div>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                O domínio <strong>{transferModal.domain}</strong> já está associado ao {transferModal.isWorkspace ? 'Portal' : 'Projeto'}: <strong>{transferModal.targetName}</strong>.
+              </p>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-2">
+                A nova associação irá remover a associação anterior. Tem certeza que deseja continuar e transferir?
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => setTransferModal({ ...transferModal, isOpen: false })}
+              className="flex-1 px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-800 font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => {
+                setTransferModal({ ...transferModal, isOpen: false })
+                handleAddDomain(true)
+              }}
+              className="flex-1 px-4 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors"
+            >
+              Sim, Transferir
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isRemoveModalOpen}
+        onClose={() => setIsRemoveModalOpen(false)}
+        title="Remover Domínio"
+      >
+        <div className="space-y-6">
+          <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex gap-4">
+            <AlertCircle className="w-6 h-6 text-rose-500 shrink-0" />
+            <div>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                Tem certeza que deseja remover este domínio?
+              </p>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-2">
+                O seu {targetType === 'workspace' ? 'Portal de Aplicações' : 'projeto'} parará de responder por ele imediatamente.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => setIsRemoveModalOpen(false)}
+              className="flex-1 px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-800 font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleConfirmRemoveDomain}
+              className="flex-1 px-4 py-3 rounded-xl bg-rose-600 text-white font-bold hover:bg-rose-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Sim, Remover
+            </button>
+          </div>
+        </div>
+      </Modal>
+
     </div>
   )
 }
