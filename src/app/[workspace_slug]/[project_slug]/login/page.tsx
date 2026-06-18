@@ -113,6 +113,8 @@ export default async function LoginPage({ params }: any) {
       workspaceSlug={workspace_slug}
       projectSlug={project_slug}
       schemaName={schemaName}
+      isCustomDomain={isCustomDomain}
+      customDomainType={customDomainType || undefined}
     />
   )
 }

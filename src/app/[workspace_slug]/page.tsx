@@ -1,5 +1,6 @@
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { notFound, redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import Link from 'next/link'
 import { ChevronRight, Database, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -13,6 +14,9 @@ interface PortalPageProps {
 
 export default async function PortalPage({ params }: PortalPageProps) {
   const { workspace_slug } = await params
+  
+  const headersList = await headers()
+  const isCustomDomain = headersList.get('x-custom-domain') === 'true'
   
   // Create an admin client to bypass RLS for the public portal
   const supabase = createAdminClient(
@@ -79,7 +83,7 @@ export default async function PortalPage({ params }: PortalPageProps) {
             {portalProjects.map((project) => (
               <Link
                 key={project.id}
-                href={`/${workspace.slug}/${project.slug}/login`}
+                href={isCustomDomain ? `/${project.slug}/login` : `/${workspace.slug}/${project.slug}/login`}
                 className="group relative bg-white dark:bg-white/[0.02] border border-neutral-200 dark:border-white/10 hover:border-indigo-500/50 rounded-3xl p-6 transition-all duration-500 hover:bg-neutral-50 dark:hover:bg-white/[0.04] overflow-hidden flex flex-col shadow-sm hover:shadow-md dark:shadow-none"
               >
                 {/* Glow on hover */}

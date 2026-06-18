@@ -17,6 +17,8 @@ interface LoginPortalClientProps {
   workspaceSlug: string
   projectSlug: string
   schemaName?: string
+  isCustomDomain?: boolean
+  customDomainType?: string
 }
 
 export function LoginPortalClient({
@@ -26,7 +28,9 @@ export function LoginPortalClient({
   locale,
   workspaceSlug,
   projectSlug,
-  schemaName
+  schemaName,
+  isCustomDomain,
+  customDomainType
 }: LoginPortalClientProps) {
   const router = useRouter()
   const supabase = createClient()
@@ -88,7 +92,13 @@ export function LoginPortalClient({
           document.cookie = `${cookieName}=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=86400; SameSite=Lax`
           
           // Redireciona para o portal principal
-          window.location.href = `/${workspaceSlug}/${projectSlug}`
+          if (isCustomDomain && customDomainType === 'workspace') {
+            window.location.href = `/${projectSlug}`
+          } else if (isCustomDomain) {
+            window.location.href = `/`
+          } else {
+            window.location.href = `/${workspaceSlug}/${projectSlug}`
+          }
         } else {
           setErrorMsg(error || 'Credenciais inválidas.')
           setIsLoading(false)
