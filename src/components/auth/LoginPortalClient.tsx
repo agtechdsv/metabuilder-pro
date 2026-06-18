@@ -49,6 +49,10 @@ export function LoginPortalClient({
   const buttonText = visualConfig.button_text || 'Entrar no Sistema'
   const buttonColor = visualConfig.button_color || '#4F46E5'
   const allowSignup = visualConfig.allow_signup || false
+  const loginLogoUrl = project.theme_config?.login_logo_url || ''
+  const loginBannerUrl = project.theme_config?.login_banner_url || ''
+  
+  const hasBanner = !!loginBannerUrl
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -131,54 +135,73 @@ export function LoginPortalClient({
     }
   }
 
+  
   return (
     <TranslationProvider locale={locale}>
       <LoginPortalThemeWrapper theme={theme}>
-        <div className="min-h-screen flex flex-col transition-colors duration-500 bg-neutral-50 dark:bg-[#050505]">
-          <header className="p-6 flex justify-between items-center relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center border transition-colors overflow-hidden bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
-                {visualConfig.brand_icon || visualConfig.icon_svg ? (
-                  <div dangerouslySetInnerHTML={{ __html: visualConfig.brand_icon || visualConfig.icon_svg }} className="w-6 h-6 flex items-center justify-center" />
+        <div className={`min-h-screen flex transition-colors duration-500 bg-neutral-50 dark:bg-[#050505] ${hasBanner ? 'flex-row' : 'flex-col'}`}>
+          {/* Left side (Form) */}
+          <div className={`flex flex-col flex-1 relative ${hasBanner ? 'max-w-[600px] xl:max-w-[700px]' : ''}`}>
+            <header className="p-6 flex justify-between items-center relative z-10">
+              <div className="flex items-center gap-3">
+                {loginLogoUrl ? (
+                  <img src={loginLogoUrl} alt={project.name} className="h-8 w-auto object-contain" />
                 ) : (
-                  <LayoutTemplate className="w-6 h-6 text-neutral-400 dark:text-neutral-500" />
+                  <>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center border transition-colors overflow-hidden bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
+                      {visualConfig.brand_icon || visualConfig.icon_svg ? (
+                        <div dangerouslySetInnerHTML={{ __html: visualConfig.brand_icon || visualConfig.icon_svg }} className="w-6 h-6 flex items-center justify-center" />
+                      ) : (
+                        <LayoutTemplate className="w-6 h-6 text-neutral-400 dark:text-neutral-500" />
+                      )}
+                    </div>
+                    <span className="text-sm font-bold tracking-tight text-neutral-900 dark:text-white">
+                      {project.name}
+                    </span>
+                  </>
                 )}
               </div>
-              <span className="text-sm font-bold tracking-tight text-neutral-900 dark:text-white">
-                {project.name}
-              </span>
-            </div>
 
-            <HeaderActions hideUser hideTheme={theme !== 'auto'} />
-          </header>
+              {!hasBanner && <HeaderActions hideUser hideTheme={theme !== 'auto'} />}
+            </header>
 
-          <main className="flex-1 flex flex-col items-center justify-center p-6 relative">
-            {/* Background effects - Visible only in dark mode via CSS */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-0 dark:opacity-100 transition-opacity duration-1000">
-              <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 blur-[120px] rounded-full" />
-              <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 blur-[120px] rounded-full" />
-            </div>
-
-            <div className="w-full max-w-sm rounded-[2.5rem] p-10 md:p-12 shadow-2xl transition-all duration-500 border relative z-10 bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800">
-              {/* Icon inside the card */}
-              <div className="mb-8 flex justify-center">
-                <div className="w-16 h-16 rounded-2xl bg-indigo-500/5 dark:bg-indigo-500/10 flex items-center justify-center border border-indigo-500/10 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
-                  {visualConfig.brand_icon || visualConfig.icon_svg ? (
-                    <div dangerouslySetInnerHTML={{ __html: visualConfig.brand_icon || visualConfig.icon_svg }} className="w-10 h-10 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full" />
-                  ) : (
-                    <LayoutTemplate className="w-8 h-8" />
-                  )}
+            <main className="flex-1 flex flex-col items-center justify-center p-6 lg:p-12 relative w-full">
+              {!hasBanner && (
+                <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-0 dark:opacity-100 transition-opacity duration-1000">
+                  <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 blur-[120px] rounded-full" />
+                  <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 blur-[120px] rounded-full" />
                 </div>
-              </div>
+              )}
 
-              <div className="mb-10 text-center">
-                <h2 className="text-3xl font-bold mb-3 tracking-tight transition-colors text-neutral-900 dark:text-white">
-                  {title}
-                </h2>
-                <p className="text-sm leading-relaxed transition-colors text-neutral-600 dark:text-neutral-500">
-                  {subtitle}
-                </p>
-              </div>
+              <div className={`w-full max-w-sm ${!hasBanner ? 'rounded-[2.5rem] p-10 md:p-12 shadow-2xl border bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800' : ''} transition-all duration-500 relative z-10`}>
+                
+                {/* Custom Icon when no Logo URL */}
+                {!loginLogoUrl && !hasBanner && (
+                  <div className="mb-8 flex justify-center">
+                    <div className="w-16 h-16 rounded-2xl bg-indigo-500/5 dark:bg-indigo-500/10 flex items-center justify-center border border-indigo-500/10 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+                      {visualConfig.brand_icon || visualConfig.icon_svg ? (
+                        <div dangerouslySetInnerHTML={{ __html: visualConfig.brand_icon || visualConfig.icon_svg }} className="w-10 h-10 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full" />
+                      ) : (
+                        <LayoutTemplate className="w-8 h-8" />
+                      )}
+                    </div>
+                  </div>
+                )}
+                {hasBanner && loginLogoUrl && (
+                  <div className="mb-8 hidden lg:flex justify-start">
+                    <img src={loginLogoUrl} alt={project.name} className="h-10 w-auto object-contain" />
+                  </div>
+                )}
+
+                <div className={`mb-10 ${hasBanner ? 'text-left' : 'text-center'}`}>
+                  <h2 className="text-3xl font-bold mb-3 tracking-tight transition-colors text-neutral-900 dark:text-white">
+                    {title}
+                  </h2>
+                  <p className="text-sm leading-relaxed transition-colors text-neutral-600 dark:text-neutral-500">
+                    {subtitle}
+                  </p>
+                </div>
+
 
               {errorMsg && (
                 <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
@@ -257,6 +280,7 @@ export function LoginPortalClient({
                 </div>
               )}
 
+              
               <div className="mt-10 flex flex-col items-center gap-4">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-px bg-neutral-100 dark:bg-neutral-800" />
@@ -269,13 +293,32 @@ export function LoginPortalClient({
             </div>
           </main>
 
-          <footer className="p-8 text-center">
-            <p className="text-[10px] font-medium text-neutral-400 dark:text-neutral-600">
-              © 2026 AGTech Innovation Lab. All rights reserved.
-            </p>
+          <footer className="p-8 text-center text-[10px] font-medium text-neutral-400 dark:text-neutral-600">
+             © {new Date().getFullYear()} AGTech Innovation Lab. All rights reserved.
           </footer>
+          </div>
+
+          {/* Right side (Banner) */}
+          {hasBanner && (
+            <div className="hidden lg:flex flex-1 relative bg-neutral-900 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10" />
+              <img 
+                src={loginBannerUrl} 
+                alt="Banner" 
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-[10s] hover:scale-105"
+              />
+              <div className="absolute top-6 right-6 z-20">
+                <HeaderActions hideUser hideTheme={theme !== 'auto'} />
+              </div>
+              <div className="absolute bottom-12 left-12 right-12 z-20 text-white">
+                 <h3 className="text-4xl font-bold mb-4 text-white shadow-black drop-shadow-xl">{project.name}</h3>
+                 <p className="text-lg text-white/90 max-w-xl shadow-black drop-shadow-md">{project.description || 'Acesse o sistema e gerencie suas informações com segurança.'}</p>
+              </div>
+            </div>
+          )}
         </div>
       </LoginPortalThemeWrapper>
     </TranslationProvider>
   )
 }
+

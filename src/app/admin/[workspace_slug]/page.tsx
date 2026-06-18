@@ -112,6 +112,7 @@ export default async function WorkspaceDashboard({ params }: WorkspaceDashboardP
           workspaceId={workspace.id}
           workspaceSlug={workspace.slug}
           workspaceName={workspace.name}
+          workspaceThemeConfig={workspace.theme_config || {}}
           canCreate={canCreateProjects}
           canDelete={canDeleteProjects}
           showTeamSettings={showTeamSettings}

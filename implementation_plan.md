@@ -7,18 +7,29 @@ Este plano detalha as melhorias propostas para a tela de login do usuário final
 > [!WARNING]
 > A reestruturação da tela de login do usuário final (`/login` e `/[workspace]/[project]/login`) impactará o visual imediatamente para todos os projetos atuais. Por favor, valide se a direção artística proposta (layout half-screen) atende à sua visão.
 > 
-> Além disso, o **Portal de Aplicações** requer uma nova rota pública ou autenticada, como `/[workspace]/portal`. A URL principal da Workspace (`/[workspace]`) pode ser redirecionada para cá, mas precisaremos garantir que o usuário saiba que ali ele apenas visualiza os "cards" das aplicações e não tem funções de administração (Studio).
+## Respostas e Definições (Alinhado)
 
-## Open Questions
-
-> [!IMPORTANT]
-> **1. Rota do Portal:** Onde você prefere que o portal fique? Em `/[workspace_slug]` diretamente (para que o root do domínio do cliente mostre os cards dos projetos) ou em uma rota específica como `/[workspace_slug]/portal`?
-> 
-> **2. Autenticação no Portal:** O portal deve ser público (mostra os projetos, o usuário clica e vai para o login do projeto) ou o usuário precisa fazer um "Login Global da Workspace" antes de ver os projetos? (Recomendo público, para que a barreira de entrada seja no nível do projeto).
-> 
-> **3. Configuração de Banner/Logo:** As imagens do logo e do banner devem ser salvas no próprio registro de banco de dados do projeto (tabela `projects` via supabase) ou preferimos apenas colocar URLs (links externos) no `schema.json` via Studio?
+1. **Rota do Portal:** Usaremos a rota dedicada `/[workspace_slug]/portal` para manter a separação clara entre a raiz (que pode ser administrativa) e a visão do usuário final.
+2. **Autenticação:** O portal será 100% público. Qualquer usuário com o link poderá ver os cards dos projetos liberados, mas precisará logar individualmente no projeto escolhido.
+3. **Configuração de Logo/Banner e Portal:**
+   - Vamos estender a coluna `theme_config` (JSONB) já existente na tabela `projects` para armazenar: `login_logo_url`, `login_banner_url` e `show_in_portal`.
+   - Na tela atual de listagem de projetos (imagem que você enviou), adicionaremos:
+     - Um botão/switch global na Workspace: **"Portal de Aplicações: Ativo/Inativo"** (salvo nas configurações da Workspace).
+     - No Drawer de Edição de cada Projeto: um checkbox **"Exibir no Portal de Aplicações"** (só aparece se o Portal estiver ativo na Workspace). E também os campos para URL da Logo e URL do Banner.
+     - No próprio Card do Projeto (na listagem): um ícone de atalho "Adicionar/Remover do Portal", visível apenas quando o Portal estiver ativado na Workspace.
 
 ## Proposed Changes
+
+---
+
+### Módulo: Configurações do Portal e Branding no Studio
+
+#### [MODIFY] [ProjectManager.tsx](file:///c:/AgTech/Apps/metabuilder-pro/src/components/workspace/ProjectManager.tsx)
+- Adicionar no Drawer de Criação/Edição de Projetos a aba/seção de "Branding & Portal", contendo:
+  - Checkbox: "Exibir no Portal de Aplicações" (salvo em `theme_config.show_in_portal`).
+  - Input: URL da Logo (`theme_config.login_logo_url`).
+  - Input: URL do Banner (`theme_config.login_banner_url`).
+- (Opcional) Switch global de "Habilitar Portal" na área superior (header da workspace), atualizando a tabela `workspaces` no banco.
 
 ---
 
