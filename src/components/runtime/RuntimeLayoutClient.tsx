@@ -15,6 +15,7 @@ interface RuntimeLayoutClientProps {
   unpublishedViewIds?: string[]
   unpublishedViewSlugs?: string[]
   isNoAuth?: boolean
+  baseNavUrl?: string
 }
 
 export function RuntimeLayoutClient({ 
@@ -25,7 +26,8 @@ export function RuntimeLayoutClient({
   navigation,
   unpublishedViewIds = [],
   unpublishedViewSlugs = [],
-  isNoAuth = false
+  isNoAuth = false,
+  baseNavUrl
 }: RuntimeLayoutClientProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -104,23 +106,22 @@ export function RuntimeLayoutClient({
     const sessionCookieName = `client_session_${project.id}`
     const hasSession = document.cookie.split('; ').some(row => row.trim().startsWith(`${sessionCookieName}=`))
 
-    const isCustomDomain = !window.location.pathname.startsWith(`/${workspaceSlug}`)
-    const baseNavUrl = isCustomDomain ? '' : `/${workspaceSlug}/${projectSlug}`
+    const finalBaseNavUrl = baseNavUrl ?? `/${workspaceSlug}/${projectSlug}`
 
     if (isLoginPage) {
       if (hasSession || isNoAuth) {
-        window.location.href = `${baseNavUrl}/`
+        window.location.href = `${finalBaseNavUrl}/`
       } else {
         setIsCheckingAuth(false)
       }
     } else {
       if (!hasSession && !isNoAuth) {
-        window.location.href = `${baseNavUrl}/login`
+        window.location.href = `${finalBaseNavUrl}/login`
       } else {
         setIsCheckingAuth(false)
       }
     }
-  }, [isLoginPage, project.id, workspaceSlug, projectSlug, isNoAuth])
+  }, [isLoginPage, project.id, workspaceSlug, projectSlug, isNoAuth, baseNavUrl])
 
   if (isCheckingAuth) {
     return (

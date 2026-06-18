@@ -60,7 +60,7 @@ export async function generateMetadata({ params }: { params: Promise<{ project_s
 
   return metadata
 }
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 
 const getAllViewIds = (items: any[], slugToIdMap: Map<string, string>): string[] => {
   const ids: string[] = []
@@ -272,6 +272,10 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
 
   const navigation = filterNavigation(rawNavigation)
 
+  const headersList = await headers()
+  const isCustomDomain = headersList.get('x-custom-domain') === 'true'
+  const baseNavUrl = isCustomDomain ? '' : `/${workspace_slug}/${project_slug}`
+
   return (
     <I18nProvider initialLocale={locale as any}>
       <RuntimeLayoutClient
@@ -282,6 +286,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
         unpublishedViewIds={unpublishedViewIds}
         unpublishedViewSlugs={unpublishedViewSlugs}
         isNoAuth={isNoAuth}
+        baseNavUrl={baseNavUrl}
       >
         {children}
       </RuntimeLayoutClient>
