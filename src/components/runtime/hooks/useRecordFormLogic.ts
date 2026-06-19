@@ -320,17 +320,15 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
           }
         } else if (isRelationalComp && comp.options_type === 'enumeration' && comp.rel_table) {
           try {
-            const { data } = await supabase
-              .from('project_enumerations')
-              .select('values')
-              .eq('id', comp.rel_table)
-              .single()
-
-            if (data && data.values) {
-              newOptions[field.id] = data.values.map((v: any) => ({
-                label: v.description || v.value,
-                value: v.value
-              }))
+            const res = await fetch(`/api/enumerations?id=${comp.rel_table}`)
+            if (res.ok) {
+              const result = await res.json()
+              if (result.data && result.data.values) {
+                newOptions[field.id] = result.data.values.map((v: any) => ({
+                  label: v.description || v.value,
+                  value: v.value
+                }))
+              }
             }
           } catch (err) {
             console.error(`Error fetching enumeration options for field ${field.id}:`, err)
