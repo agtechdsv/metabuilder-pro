@@ -21,7 +21,8 @@ export function TriggerPropertiesPanel(props: any) {
                           { id: 'insert', label: t('bpm.nodes.on_insert') },
                           { id: 'update', label: t('bpm.nodes.on_update') },
                           { id: 'delete', label: t('bpm.nodes.on_delete') },
-                          { id: 'scheduled', label: t('bpm.canvas.scheduled_cron') }
+                          { id: 'scheduled', label: t('bpm.canvas.scheduled_cron') },
+                          { id: 'webhook', label: t('bpm.canvas.webhook_inbound', 'Webhook Inbound') }
                         ].map(evt => {
                           const isChecked = triggerTypes.includes(evt.id);
                           return (
@@ -386,6 +387,54 @@ export function TriggerPropertiesPanel(props: any) {
                       </div>
                       )
                     })()}
+
+                    {triggerTypes.includes('webhook') && (
+                      <div className="space-y-4 pt-4 border-t border-emerald-500/20 mt-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{t('bpm.canvas.webhook_config', 'Configuração Webhook')}</h5>
+                        </div>
+                        
+                        <div className="bg-neutral-50 dark:bg-neutral-900/50 rounded-lg p-3 border border-neutral-100 dark:border-neutral-800">
+                          <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.webhook_url', 'URL do Webhook')}</label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              readOnly
+                              value={`https://api.metabuilderpro.com/v1/webhook/${currentWorkflowId || 'novo-fluxo'}`}
+                              className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] text-neutral-500 font-mono"
+                            />
+                            <button 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                navigator.clipboard.writeText(`https://api.metabuilderpro.com/v1/webhook/${currentWorkflowId || 'novo-fluxo'}`);
+                                toast(t('bpm.canvas.copied', 'Copiado para a área de transferência!'), 'success');
+                              }}
+                              className="px-2 py-1 bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded text-[10px] font-bold hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors"
+                            >
+                              Copy
+                            </button>
+                          </div>
+                          
+                          <p className="text-[9px] text-neutral-500 mt-2 leading-relaxed">
+                            {t('bpm.canvas.webhook_hint', 'Envie uma requisição HTTP para esta URL para iniciar o fluxo. O JSON enviado no corpo (body) da requisição estará disponível nas variáveis do fluxo.')}
+                          </p>
+                        </div>
+                        
+                        <div>
+                           <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.http_method', 'Método HTTP Permitido')}</label>
+                           <select 
+                             value={(selectedNode.data?.triggerWebhookMethod as string) || 'POST'} 
+                             onChange={(e) => updateNodeData(selectedNode.id, { triggerWebhookMethod: e.target.value })}
+                             className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500 font-mono"
+                           >
+                             <option value="POST">POST</option>
+                             <option value="GET">GET</option>
+                             <option value="PUT">PUT</option>
+                             <option value="PATCH">PATCH</option>
+                           </select>
+                        </div>
+                      </div>
+                    )}
                   </div>
     </>
   );

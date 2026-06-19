@@ -40,6 +40,7 @@ export const TriggerNode = memo(({ id, data, selected }: NodeProps) => {
     else if (type === 'delete') { title = t('bpm.nodes.on_delete'); desc = t('bpm.nodes.db_trigger'); Icon = Trash2; }
     else if (type === 'manual') { title = t('bpm.nodes.manual_action'); desc = t('bpm.nodes.by_button'); Icon = MousePointer2; }
     else if (type === 'scheduled') { title = t('bpm.nodes.scheduled'); desc = t('bpm.nodes.cron_job'); Icon = Clock; }
+    else if (type === 'webhook') { title = t('bpm.nodes.webhook_inbound', 'Webhook Inbound'); desc = t('bpm.nodes.external_api', 'Chamada API Externa'); Icon = Webhook; }
   } else if (types.length > 1) {
     title = t('bpm.nodes.multiple_triggers');
     desc = t('bpm.nodes.events_configured').replace('{count}', String(types.length));
