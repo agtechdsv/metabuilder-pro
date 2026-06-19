@@ -13,6 +13,11 @@ export default async function ClientDashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const { verifyMfaPolicy } = await import('@/app/auth/actions')
+  const mfaRes = await verifyMfaPolicy()
+  if (mfaRes.mfaSetupRequired) redirect('/login/mfa/setup')
+  if (mfaRes.mfaChallengeRequired) redirect(`/login/mfa?factorId=${mfaRes.factorId}`)
+
   // Fetch full profile
   const { data: profile } = await supabase
     .from('profiles')

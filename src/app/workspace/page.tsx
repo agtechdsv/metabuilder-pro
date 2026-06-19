@@ -28,6 +28,11 @@ export default async function GlobalDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const { verifyMfaPolicy } = await import('@/app/auth/actions')
+  const mfaRes = await verifyMfaPolicy()
+  if (mfaRes.mfaSetupRequired) redirect('/login/mfa/setup')
+  if (mfaRes.mfaChallengeRequired) redirect(`/login/mfa?factorId=${mfaRes.factorId}`)
+
   // Enforce password setup if required
   if (user.user_metadata?.need_password_setup === true) {
     const { data: memberWs } = await supabase
