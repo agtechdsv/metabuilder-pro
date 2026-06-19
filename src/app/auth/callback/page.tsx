@@ -75,20 +75,36 @@ function CallbackHandler() {
       }
     })
 
-    // Caso a sessão já tenha sido trocada antes do listener ativar
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        setErrorMessage(error.message)
+    const code = searchParams.get('code')
+    if (code) {
+      // Troca explícita do código para pegar erros caso a troca automática falhe
+      supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+        if (error) {
+          setErrorMessage(error.message)
+          setStatus('error')
+        } else if (data.session) {
+          notifyAndClose(data.session)
+        }
+      }).catch(err => {
+        setErrorMessage(err.message)
         setStatus('error')
-      } else if (session) {
-        notifyAndClose(session)
-      }
-    })
+      })
+    } else {
+      // Caso a sessão já tenha sido trocada antes do listener ativar ou implicit flow
+      supabase.auth.getSession().then(({ data: { session }, error }) => {
+        if (error) {
+          setErrorMessage(error.message)
+          setStatus('error')
+        } else if (session) {
+          notifyAndClose(session)
+        }
+      })
+    }
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [errorDesc, next])
+  }, [errorDesc, next, searchParams])
 
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center justify-center p-6 text-center font-sans">
