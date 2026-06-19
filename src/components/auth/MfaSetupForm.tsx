@@ -3,11 +3,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
-import { ShieldAlert, QrCode, ArrowRight, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { ShieldAlert, ArrowRight, Loader2, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { QRCodeSVG } from 'qrcode.react'
 
 export function MfaSetupForm() {
-  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null)
+  const [totpUri, setTotpUri] = useState<string | null>(null)
   const [secretStr, setSecretStr] = useState<string | null>(null)
   const [factorId, setFactorId] = useState<string | null>(null)
   const [verifyCode, setVerifyCode] = useState('')
@@ -37,7 +38,7 @@ export function MfaSetupForm() {
         if (error) throw error
 
         setFactorId(data.id)
-        setQrCodeUrl(data.totp.qr_code)
+        setTotpUri(data.totp.uri)
         setSecretStr(data.totp.secret)
         setIsLoading(false)
       } catch (err: any) {
@@ -119,13 +120,12 @@ export function MfaSetupForm() {
         </div>
       )}
 
-      {qrCodeUrl && (
+      {totpUri && (
         <div className="space-y-6">
           <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-4 rounded-3xl flex flex-col items-center justify-center shadow-inner">
-            <div 
-              className="w-48 h-48 rounded-xl overflow-hidden flex items-center justify-center bg-white [&>svg]:w-full [&>svg]:h-full"
-              dangerouslySetInnerHTML={{ __html: qrCodeUrl.replace('data:image/svg+xml;utf-8,', '') }}
-            />
+            <div className="w-48 h-48 rounded-xl overflow-hidden flex items-center justify-center bg-white p-2">
+              <QRCodeSVG value={totpUri} size={180} level="M" />
+            </div>
           </div>
           
           <div className="text-center space-y-1">
