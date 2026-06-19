@@ -30,6 +30,8 @@ export function MfaSetupForm() {
 
         const { data, error } = await supabase.auth.mfa.enroll({
           factorType: 'totp',
+          issuer: 'MetaBuilderPRO',
+          friendlyName: user.email || 'Conta Corporativa',
         })
 
         if (error) throw error
@@ -120,10 +122,9 @@ export function MfaSetupForm() {
       {qrCodeUrl && (
         <div className="space-y-6">
           <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-4 rounded-3xl flex flex-col items-center justify-center shadow-inner">
-            {/* O Supabase devolve o QR Code em formato SVG string no totp.qr_code */}
             <div 
-              className="w-48 h-48 rounded-xl overflow-hidden [&>svg]:w-full [&>svg]:h-full"
-              dangerouslySetInnerHTML={{ __html: qrCodeUrl }}
+              className="w-48 h-48 rounded-xl overflow-hidden flex items-center justify-center bg-white [&>svg]:w-full [&>svg]:h-full"
+              dangerouslySetInnerHTML={{ __html: qrCodeUrl.replace('data:image/svg+xml;utf-8,', '') }}
             />
           </div>
           
