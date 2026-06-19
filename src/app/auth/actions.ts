@@ -22,6 +22,52 @@ export async function login(formData: FormData) {
     return { error: friendlyMessage }
   }
 
+  // -- MFA Verification --
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) {
+    const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors()
+    const totpFactor = factors?.totp?.find(f => f.status === 'verified')
+
+    if (totpFactor) {
+      // O usuário já configurou o MFA, redirecionar para a tela de desafio
+      return { mfaChallengeRequired: true, factorId: totpFactor.id }
+    } else {
+      // Verifica se a política exige MFA
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      
+      if (profile?.enforce_mfa === true) {
+        return { mfaSetupRequired: true }
+      }
+
+      // Se for convidado, checa a política do Owner
+      const { data: guestRecord } = await supabase.from('owner_guests').select('owner_id').eq('user_id', user.id).limit(1).maybeSingle()
+      if (guestRecord?.owner_id) {
+        const { data: ownerProfile } = await supabase.from('profiles').select('*').eq('id', guestRecord.owner_id).single()
+        if (ownerProfile?.enforce_mfa === true) {
+          return { mfaSetupRequired: true }
+        }
+      }
+    }
+  }
+
+  return { success: true }
+}
+
+export async function updateEnforceMfa(enforceMfa: boolean) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autorizado' }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ enforce_mfa: enforceMfa, updated_at: new Date().toISOString() })
+    .eq('id', user.id)
+
+  if (error) {
+    console.error('Erro ao atualizar enforce_mfa:', error)
+    return { error: error.message }
+  }
+
   return { success: true }
 }
 

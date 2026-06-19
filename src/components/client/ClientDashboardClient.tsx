@@ -24,6 +24,7 @@ import {
   Clock,
   AlertTriangle,
   ExternalLink,
+  ShieldCheck,
   ShieldAlert,
   Shield,
   ChevronRight,
@@ -73,6 +74,7 @@ interface Profile {
   is_super_admin?: boolean | null
   card_brand?: string | null
   card_last_digits?: string | null
+  enforce_mfa?: boolean | null
 }
 
 interface Workspace {
@@ -137,6 +139,7 @@ const TABS = [
   { id: 'community', label: 'MetaBuilders', icon: Users },
   { id: 'metavoice', label: 'MetaVoice', icon: Lightbulb },
   { id: 'iclub', label: 'iClub', icon: Zap },
+  { id: 'security', label: 'Segurança', icon: ShieldCheck },
   { id: 'subscription', label: 'Assinatura', icon: CreditCard },
   { id: 'cancel', label: 'Cancelamento', icon: XCircle },
 ] as const
@@ -355,6 +358,7 @@ export default function ClientDashboardClient({
                   tab.id === 'dashboard' && "text-indigo-500 dark:text-indigo-400",
                   tab.id === 'productivity' && "text-purple-500 dark:text-purple-400",
                   tab.id === 'downloads' && "text-cyan-500 dark:text-cyan-400",
+                  tab.id === 'security' && "text-indigo-500 dark:text-indigo-400",
                   tab.id === 'subscription' && "text-emerald-500 dark:text-emerald-400",
                   tab.id === 'cancel' && "text-rose-500 dark:text-rose-400"
                 )} />
@@ -484,6 +488,85 @@ export default function ClientDashboardClient({
               toast={toast}
             />
           )}
+          {/* ── TAB: Segurança (Security) ───────────────────────────────────────── */}
+          {activeTab === 'security' && (
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-500">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-neutral-900 dark:text-white">Segurança da Equipe</h3>
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400">Configure as políticas de acesso e segurança para sua empresa.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-950 rounded-xl border border-neutral-200 dark:border-neutral-800">
+                  <div>
+                    <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Exigir Autenticação em 2 Fatores (MFA)</h4>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                      Ao habilitar, todos os desenvolvedores convidados serão obrigados a configurar o Google Authenticator ou Authy no próximo login.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={localProfile?.enforce_mfa === true}
+                      onChange={async (e) => {
+                        const isChecked = e.target.checked
+                        // Atualização otimista
+                        setLocalProfile(prev => prev ? { ...prev, enforce_mfa: isChecked } : prev)
+                        try {
+                          const { updateEnforceMfa } = await import('@/app/auth/actions')
+                          const res = await updateEnforceMfa(isChecked)
+                          if (res.success) {
+                            toast(`Política de MFA ${isChecked ? 'ativada' : 'desativada'} com sucesso!`, 'success')
+                          } else {
+                            throw new Error(res.error)
+                          }
+                        } catch (err: any) {
+                          // Reverte atualização otimista
+                          setLocalProfile(prev => prev ? { ...prev, enforce_mfa: !isChecked } : prev)
+                          toast('Erro ao atualizar política de segurança: ' + err.message, 'error')
+                        }
+                      }}
+                    />
+                    <div className="w-11 h-6 bg-neutral-300 peer-focus:outline-none rounded-full peer dark:bg-neutral-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-neutral-600 peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+              </div>
+
+              {/* MFA Setup for Owner */}
+              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-500">
+                    <Shield className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-neutral-900 dark:text-white">Meu Autenticador (2FA)</h3>
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400">Proteja a sua conta Owner contra acessos indevidos.</p>
+                  </div>
+                </div>
+                
+                <div className="p-4 bg-neutral-50 dark:bg-neutral-950 rounded-xl border border-neutral-200 dark:border-neutral-800">
+                  <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-4">
+                    Para configurar o Autenticador na sua conta, vá para a tela de Login em uma nova janela ou sessão anônima.
+                    <br/><br/>
+                    *(Nota: O Setup de MFA será renderizado diretamente se você ativar a política e deslogar, ou pode ser acessado na rota `/login/mfa/setup`).*
+                  </p>
+                  <button 
+                    onClick={() => router.push('/login/mfa/setup')}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-colors"
+                  >
+                    Configurar Meu 2FA Agora
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ── TAB: Assinatura ───────────────────────────────────────── */}
           {activeTab === 'subscription' && (
             <ClientSubscriptionView

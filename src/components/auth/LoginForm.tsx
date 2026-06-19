@@ -294,6 +294,12 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
         if (res && 'error' in res && res.error) {
           setClientError(res.error)
           setIsLoading(false)
+        } else if (res && 'mfaSetupRequired' in res && res.mfaSetupRequired) {
+          // O Owner exige MFA e o usuário não tem.
+          window.location.href = '/login/mfa/setup'
+        } else if (res && 'mfaChallengeRequired' in res && res.mfaChallengeRequired) {
+          // O usuário tem MFA. Ir para desafio.
+          window.location.href = `/login/mfa?factorId=${res.factorId}`
         } else {
           let redirectTo = ''
           if (typeof window !== 'undefined') {
