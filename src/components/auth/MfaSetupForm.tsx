@@ -29,6 +29,14 @@ export function MfaSetupForm() {
           return
         }
 
+        const { data: existingFactors } = await supabase.auth.mfa.listFactors()
+        if (existingFactors && existingFactors.totp) {
+          const unverifiedFactors = existingFactors.totp.filter(f => f.status === 'unverified')
+          for (const f of unverifiedFactors) {
+            await supabase.auth.mfa.unenroll({ factorId: f.id })
+          }
+        }
+
         const { data, error } = await supabase.auth.mfa.enroll({
           factorType: 'totp',
           issuer: 'MetaBuilderPRO',
