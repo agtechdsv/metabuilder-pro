@@ -87,6 +87,19 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
           redirectTo = '/workspace'
         }
       }
+      
+      try {
+        const { verifyMfaPolicy } = await import('@/app/auth/actions')
+        const mfaRes = await verifyMfaPolicy()
+        if (mfaRes.mfaSetupRequired) {
+          window.location.href = '/login/mfa/setup'
+          return
+        } else if (mfaRes.mfaChallengeRequired) {
+          window.location.href = `/login/mfa?factorId=${mfaRes.factorId}`
+          return
+        }
+      } catch (e) {}
+
       // Usar window.location.href em vez de router.push garante um "hard reload"
       // Isso força o navegador a enviar os cookies (recém-criados pelo Supabase)
       // para o servidor. Se usarmos router.push, o Next.js pode fazer um soft-navigation
@@ -203,6 +216,18 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
       setIsLoading(true);
       const { error } = await supabase.auth.setSession({ access_token, refresh_token });
       if (!error) {
+        try {
+          const { verifyMfaPolicy } = await import('@/app/auth/actions')
+          const mfaRes = await verifyMfaPolicy()
+          if (mfaRes.mfaSetupRequired) {
+            window.location.href = '/login/mfa/setup'
+            return
+          } else if (mfaRes.mfaChallengeRequired) {
+            window.location.href = `/login/mfa?factorId=${mfaRes.factorId}`
+            return
+          }
+        } catch (e) {}
+
         let redirectTo = next
         if (!redirectTo || redirectTo === '/workspace') {
           const { data: { user } } = await supabase.auth.getUser()
