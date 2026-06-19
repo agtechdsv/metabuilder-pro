@@ -318,18 +318,48 @@ export default function ClientDashboardClient({
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-4 mt-4 md:mt-0">
+            <div className="flex flex-wrap items-center gap-3 mt-4 md:mt-0">
               {localProfile?.subscription_status && (
                 <StatusBadge status={localProfile.subscription_status} />
               )}
               {!isGuest && (
-                <button 
-                  onClick={() => setIsTeamDrawerOpen(true)}
-                  className="flex items-center justify-center gap-2 h-11 px-6 rounded-xl text-sm font-bold transition-all duration-200 whitespace-nowrap bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700 shadow-sm"
-                >
-                  <Users className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
-                  <span>Gerenciar Equipe</span>
-                </button>
+                <>
+                  <div className="flex items-center p-1 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl h-11">
+                    <button 
+                      onClick={() => setActiveTab('subscription')}
+                      className={cn(
+                        "flex items-center justify-center gap-2 px-3 h-full rounded-lg text-sm font-bold transition-all duration-200",
+                        activeTab === 'subscription' 
+                          ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm"
+                          : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                      )}
+                    >
+                      <CreditCard className={cn("w-4 h-4", activeTab === 'subscription' ? "text-emerald-500 dark:text-emerald-400" : "")} />
+                      <span className="hidden lg:inline">Assinatura</span>
+                    </button>
+                    <div className="w-px h-4 bg-neutral-300 dark:bg-neutral-700 mx-1"></div>
+                    <button 
+                      onClick={() => setActiveTab('cancel')}
+                      title="Cancelamento"
+                      className={cn(
+                        "flex items-center justify-center gap-2 px-3 h-full rounded-lg text-sm font-bold transition-all duration-200",
+                        activeTab === 'cancel' 
+                          ? "bg-white dark:bg-neutral-800 text-rose-600 dark:text-rose-500 shadow-sm"
+                          : "text-neutral-500 hover:text-rose-500 dark:hover:text-rose-400"
+                      )}
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <button 
+                    onClick={() => setIsTeamDrawerOpen(true)}
+                    className="flex items-center justify-center gap-2 h-11 px-4 rounded-xl text-sm font-bold transition-all duration-200 whitespace-nowrap bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700 shadow-sm"
+                  >
+                    <Users className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+                    <span className="hidden sm:inline">Equipe</span>
+                  </button>
+                </>
               )}
             </div>
           </>
@@ -341,7 +371,7 @@ export default function ClientDashboardClient({
         {/* Left Tabs Group */}
         {!isGuest && (
           <div className="flex sm:grid sm:grid-cols-5 gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-full xl:w-fit overflow-x-auto no-scrollbar">
-            {TABS.filter(tab => tab.id !== 'iclub' && tab.id !== 'metavoice' && tab.id !== 'community').map(tab => (
+            {TABS.filter(tab => !['iclub', 'metavoice', 'community', 'subscription', 'cancel'].includes(tab.id)).map(tab => (
               <button
                 key={tab.id}
                 id={`client-tab-${tab.id}`}
