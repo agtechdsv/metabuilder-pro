@@ -38,6 +38,11 @@ export async function verifyMfaPolicy() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Usuário não encontrado' }
 
+  const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+  if (aalData?.currentLevel === 'aal2') {
+    return { success: true }
+  }
+
   const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors()
   const totpFactor = factors?.totp?.find(f => f.status === 'verified')
 
