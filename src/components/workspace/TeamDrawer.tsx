@@ -17,8 +17,9 @@ import {
   Lock, 
   Plus, 
   Pencil, 
-  Power, 
-  Trash2 
+  Power,
+  Trash2,
+  ShieldAlert
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getStudioTeamData } from '@/app/actions/workspace'
@@ -62,6 +63,8 @@ export function TeamDrawer({ isOpen, onClose, onRequestSubscriptionUpdate }: Tea
   const [guestToDelete, setGuestToDelete] = useState<string | null>(null)
   const [isDeletingGuest, setIsDeletingGuest] = useState(false)
   const [resendingGuestId, setResendingGuestId] = useState<string | null>(null)
+  const [guestToResetMfa, setGuestToResetMfa] = useState<string | null>(null)
+  const [isResettingMfa, setIsResettingMfa] = useState(false)
 
   const { toast } = useToast()
   const router = useRouter()
@@ -143,6 +146,25 @@ export function TeamDrawer({ isOpen, onClose, onRequestSubscriptionUpdate }: Tea
       toast(err.message || 'Erro ao remover convidado.', 'error')
     } finally {
       setIsDeletingGuest(false)
+    }
+  }
+
+  const handleConfirmResetMfa = async () => {
+    if (!guestToResetMfa) return
+    setIsResettingMfa(true)
+    try {
+      const { resetMemberMfa } = await import('@/app/auth/actions')
+      const res = await resetMemberMfa(guestToResetMfa)
+      if (res.success) {
+        toast('MFA do usuário resetado com sucesso!', 'success')
+        setGuestToResetMfa(null)
+      } else {
+        toast(res.error || 'Erro ao resetar MFA.', 'error')
+      }
+    } catch (err: any) {
+      toast(err.message || 'Erro inesperado.', 'error')
+    } finally {
+      setIsResettingMfa(false)
     }
   }
 
@@ -353,13 +375,22 @@ export function TeamDrawer({ isOpen, onClose, onRequestSubscriptionUpdate }: Tea
                           </div>
                         </div>
 
-                        <button
-                          onClick={() => handleRemoveGuest(guest.user_id)}
-                          className="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 text-neutral-400 hover:text-red-500 rounded-lg transition-colors shrink-0"
-                          title="Remover Convidado"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                        <div className="flex gap-1 shrink-0">
+                          <button
+                            onClick={() => setGuestToResetMfa(guest.user_id)}
+                            className="p-2 hover:bg-amber-50 dark:hover:bg-amber-500/10 text-neutral-400 hover:text-amber-500 rounded-lg transition-colors"
+                            title="Resetar MFA"
+                          >
+                            <ShieldAlert className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleRemoveGuest(guest.user_id)}
+                            className="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 text-neutral-400 hover:text-red-500 rounded-lg transition-colors"
+                            title="Remover Convidado"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800/50">
@@ -737,6 +768,31 @@ export function TeamDrawer({ isOpen, onClose, onRequestSubscriptionUpdate }: Tea
               Cancelar
             </button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={!!guestToResetMfa}
+        onClose={() => setGuestToResetMfa(null)}
+        title="Resetar MFA do Usuário"
+        description="Tem certeza que deseja desvincular o Authenticator deste usuário? Ele precisará configurar novamente no próximo login caso a política de MFA esteja ativa no Workspace."
+        size="sm"
+      >
+        <div className="flex items-center gap-4 mt-6">
+          <button
+            onClick={() => setGuestToResetMfa(null)}
+            disabled={isResettingMfa}
+            className="flex-1 h-11 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold rounded-xl text-sm transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirmResetMfa}
+            disabled={isResettingMfa}
+            className="flex-1 h-11 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-amber-500/20 active:scale-95 disabled:opacity-50"
+          >
+            {isResettingMfa ? 'Resetando...' : 'Sim, Resetar MFA'}
+          </button>
         </div>
       </Modal>
     </>
