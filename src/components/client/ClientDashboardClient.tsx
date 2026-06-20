@@ -525,33 +525,6 @@ export default function ClientDashboardClient({
               {localProfile && (
                 <SecuritySettings profile={localProfile} isOwner={true} />
               )}
-
-              {/* MFA Setup for Owner */}
-              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-500">
-                    <Shield className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-neutral-900 dark:text-white">Meu Autenticador (2FA)</h3>
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400">Proteja a sua conta Owner contra acessos indevidos.</p>
-                  </div>
-                </div>
-                
-                <div className="p-4 bg-neutral-50 dark:bg-neutral-950 rounded-xl border border-neutral-200 dark:border-neutral-800">
-                  <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-4">
-                    Para configurar o Autenticador na sua conta, vá para a tela de Login em uma nova janela ou sessão anônima.
-                    <br/><br/>
-                    *(Nota: O Setup de MFA será renderizado diretamente se você ativar a política e deslogar, ou pode ser acessado na rota `/login/mfa/setup`).*
-                  </p>
-                  <button 
-                    onClick={() => router.push('/login/mfa/setup')}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-colors"
-                  >
-                    Configurar Meu 2FA Agora
-                  </button>
-                </div>
-              </div>
             </div>
           )}
 

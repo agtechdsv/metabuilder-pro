@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, UserPlus, Shield, X, Mail, RefreshCw, FolderLock, CreditCard, Lock } from 'lucide-react'
+import { Users, UserPlus, Shield, X, Mail, RefreshCw, FolderLock, CreditCard, Lock, ShieldAlert } from 'lucide-react'
 import { inviteWorkspaceMember, removeWorkspaceMember, toggleMemberProject } from '@/app/actions/workspace'
+import { resetMemberMfa } from '@/app/auth/actions'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { useRouter } from 'next/navigation'
@@ -88,6 +89,8 @@ export function SettingsClient({
   
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null)
   const [memberToManageProjects, setMemberToManageProjects] = useState<string | null>(null)
+  const [memberToResetMfa, setMemberToResetMfa] = useState<string | null>(null)
+  const [isResettingMfa, setIsResettingMfa] = useState(false)
   const [isTogglingProject, setIsTogglingProject] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   
@@ -144,6 +147,21 @@ export function SettingsClient({
       toast(res.error || 'Erro ao atualizar permissão', 'error')
     }
     setIsTogglingProject(false)
+  }
+
+  const handleConfirmResetMfa = async () => {
+    if (!memberToResetMfa) return
+    setIsResettingMfa(true)
+
+    const res = await resetMemberMfa(memberToResetMfa)
+    setIsResettingMfa(false)
+    
+    if (res.error) {
+      toast(res.error, 'error')
+    } else {
+      toast('MFA do usuário resetado com sucesso!', 'success')
+      setMemberToResetMfa(null)
+    }
   }
 
   const canManageTeam = currentUserRole === 'owner' || currentUserRole === 'admin'
@@ -240,6 +258,13 @@ export function SettingsClient({
                               <FolderLock className="w-4 h-4" />
                             </button>
                           )}
+                          <button 
+                            onClick={() => setMemberToResetMfa(member.user_id)}
+                            className="w-8 h-8 flex items-center justify-center rounded-xl text-neutral-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-all"
+                            title="Resetar MFA"
+                          >
+                            <ShieldAlert className="w-4 h-4" />
+                          </button>
                           <button 
                             onClick={() => handleRemoveClick(member.user_id)}
                             className="w-8 h-8 flex items-center justify-center rounded-xl text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
@@ -349,15 +374,41 @@ export function SettingsClient({
         <div className="flex items-center gap-4 mt-6">
           <button
             onClick={() => setMemberToRemove(null)}
-            className="flex-1 px-4 py-3 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white font-bold rounded-xl transition-colors"
+            className="flex-1 h-11 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold rounded-xl text-sm transition-colors"
           >
-            {t('common.cancel')}
+            {t('settings.cancel')}
           </button>
           <button
             onClick={confirmRemove}
-            className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-red-500/20"
+            className="flex-1 h-11 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-red-500/20 active:scale-95"
           >
-            {t('settings.yes_remove')}
+            {t('settings.confirm_remove')}
+          </button>
+        </div>
+      </Modal>
+
+      {/* Modal de Reset de MFA */}
+      <Modal
+        isOpen={!!memberToResetMfa}
+        onClose={() => setMemberToResetMfa(null)}
+        title="Resetar MFA do Usuário"
+        description="Tem certeza que deseja desvincular o Authenticator deste usuário? Ele precisará configurar novamente no próximo login caso a política de MFA esteja ativa no Workspace."
+        size="sm"
+      >
+        <div className="flex items-center gap-4 mt-6">
+          <button
+            onClick={() => setMemberToResetMfa(null)}
+            disabled={isResettingMfa}
+            className="flex-1 h-11 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold rounded-xl text-sm transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirmResetMfa}
+            disabled={isResettingMfa}
+            className="flex-1 h-11 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-amber-500/20 active:scale-95 disabled:opacity-50"
+          >
+            {isResettingMfa ? 'Resetando...' : 'Sim, Resetar MFA'}
           </button>
         </div>
       </Modal>

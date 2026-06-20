@@ -135,6 +135,54 @@ export async function unenrollPersonalMfa() {
   return { success: true }
 }
 
+export async function resetMemberMfa(targetUserId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autorizado' }
+
+  // Apenas donos de workspace onde o targetUserId é membro podem resetar.
+  // Para simplificar, o frontend só exibe esse botão se o usuário logado
+  // for owner no painel de membros. Para segurança adicional, garantimos 
+  // que há uma relação onde o user logado é owner_id e targetUserId é user_id na tabela owner_guests.
+  const { data: guestRecord } = await supabase
+    .from('owner_guests')
+    .select('id')
+    .eq('owner_id', user.id)
+    .eq('user_id', targetUserId)
+    .single()
+
+  if (!guestRecord) {
+    return { error: 'Você não tem permissão para resetar o MFA deste usuário.' }
+  }
+
+  const { createClient: createSupabaseClient } = await import('@supabase/supabase-js')
+  const supabaseAdmin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { data: factorsData, error: listError } = await supabaseAdmin.auth.admin.mfa.listFactors({
+    userId: targetUserId
+  })
+
+  if (listError) return { error: listError.message }
+
+  const totpFactors = factorsData?.factors?.filter(f => f.factor_type === 'totp') || []
+
+  for (const factor of totpFactors) {
+    const { error: unenrollError } = await supabaseAdmin.auth.admin.mfa.deleteFactor({ 
+      id: factor.id, 
+      userId: targetUserId 
+    })
+    if (unenrollError) {
+      console.error('Erro ao desvincular MFA via Admin API:', unenrollError)
+      return { error: unenrollError.message }
+    }
+  }
+
+  return { success: true }
+}
+
 export async function signup(formData: FormData) {
   const supabase = await createClient()
 
