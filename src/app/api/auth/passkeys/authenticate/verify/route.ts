@@ -97,6 +97,9 @@ export async function POST(request: Request) {
       
       // Limpar cookie de challenge
       cookieStore.delete('webauthn_auth_challenge')
+      
+      // Set a cookie indicating the user logged in via passkey to bypass TOTP MFA
+      cookieStore.set('passkey_authenticated', 'true', { path: '/', maxAge: 60 * 5, httpOnly: true })
 
       return NextResponse.json({ verified: true, loginUrl: linkData.properties.action_link })
     }

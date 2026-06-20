@@ -117,7 +117,7 @@ export function MfaSetupForm() {
           Segurança Obrigatória
         </h2>
         <p className="text-neutral-500 dark:text-neutral-400 text-xs font-medium px-4 leading-relaxed">
-          A política da empresa exige a configuração do Autenticador em 2 Fatores (Google Authenticator ou Authy).
+          A política da empresa exige a configuração do Autenticador em 2 Fatores (Microsoft Authenticator, Google Authenticator ou Authy).
         </p>
       </div>
 
@@ -135,7 +135,7 @@ export function MfaSetupForm() {
               <QRCodeSVG value={totpUri} size={180} level="M" />
             </div>
           </div>
-          
+
           <div className="text-center space-y-1">
             <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Ou digite o código manualmente:</p>
             <p className="font-mono text-sm font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 py-2 rounded-lg break-all px-2">{secretStr}</p>

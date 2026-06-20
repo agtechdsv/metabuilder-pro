@@ -16,16 +16,25 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
   const { toast } = useToast()
   const router = useRouter()
   const supabase = createClient()
-  
+
   const [mfaRequired, setMfaRequired] = useState(profile?.enforce_mfa || false)
   const [passkeyEnabled, setPasskeyEnabled] = useState(profile?.passkey_enabled || false)
   const [isSaving, setIsSaving] = useState(false)
   const [isRegistering, setIsRegistering] = useState(false)
+  const [hasMfaSetup, setHasMfaSetup] = useState(false)
+  const [isRemovingMfa, setIsRemovingMfa] = useState(false)
+  const [isConfirmingRemoval, setIsConfirmingRemoval] = useState(false)
 
   useEffect(() => {
     setMfaRequired(profile?.enforce_mfa || false)
     setPasskeyEnabled(profile?.passkey_enabled || false)
-  }, [profile?.enforce_mfa, profile?.passkey_enabled])
+
+    // Check if the user personally has an MFA setup
+    supabase.auth.mfa.listFactors().then(({ data }) => {
+      const totpFactors = data?.totp || []
+      setHasMfaSetup(totpFactors.some(f => f.status === 'verified'))
+    })
+  }, [profile?.enforce_mfa, profile?.passkey_enabled, supabase.auth.mfa])
 
   const handleRegisterDevice = async () => {
     setIsRegistering(true)
@@ -46,7 +55,7 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
       })
 
       if (!verificationResp.ok) throw new Error('Falha na verificação')
-      
+
       const verificationJSON = await verificationResp.json()
       if (verificationJSON.verified) {
         toast('Aparelho registrado com sucesso!', 'success')
@@ -80,6 +89,28 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
       toast('Erro ao atualizar: ' + err.message, 'error')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleRemovePersonalMfa = async () => {
+    if (!isConfirmingRemoval) {
+      setIsConfirmingRemoval(true)
+      return
+    }
+
+    setIsRemovingMfa(true)
+    try {
+      const { unenrollPersonalMfa } = await import('@/app/auth/actions')
+      const res = await unenrollPersonalMfa()
+      if (res.error) throw new Error(res.error)
+
+      toast('Google Authenticator removido com sucesso!', 'success')
+      setHasMfaSetup(false)
+      setIsConfirmingRemoval(false)
+    } catch (err: any) {
+      toast(err.message || 'Erro ao remover MFA.', 'error')
+    } finally {
+      setIsRemovingMfa(false)
     }
   }
 
@@ -117,14 +148,12 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
             <button
               disabled={!isOwner || isSaving}
               onClick={() => setPasskeyEnabled(!passkeyEnabled)}
-              className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${
-                passkeyEnabled ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-700'
-              }`}
+              className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${passkeyEnabled ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-700'
+                }`}
             >
               <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${
-                  passkeyEnabled ? 'translate-x-8' : 'translate-x-1'
-                }`}
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${passkeyEnabled ? 'translate-x-8' : 'translate-x-1'
+                  }`}
               />
             </button>
           </div>
@@ -163,17 +192,44 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
           <button
             disabled={!isOwner || isSaving}
             onClick={() => setMfaRequired(!mfaRequired)}
-            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${
-              mfaRequired ? 'bg-red-600' : 'bg-neutral-300 dark:bg-neutral-700'
-            }`}
+            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${mfaRequired ? 'bg-red-600' : 'bg-neutral-300 dark:bg-neutral-700'
+              }`}
           >
             <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${
-                mfaRequired ? 'translate-x-8' : 'translate-x-1'
-              }`}
+              className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${mfaRequired ? 'translate-x-8' : 'translate-x-1'
+                }`}
             />
           </button>
         </div>
+
+        {hasMfaSetup && (
+          <div className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-500/5 rounded-2xl border border-red-200 dark:border-red-900/50">
+            <div>
+              <h4 className="text-sm font-bold text-red-900 dark:text-red-400">Remover Meu Authenticator</h4>
+              <p className="text-xs text-red-700/80 dark:text-red-400/80 mt-1 max-w-lg">
+                Se você perdeu acesso ao seu Authenticator ou quer cadastrá-lo novamente em outro celular, clique aqui para desvinculá-lo da sua conta.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {isConfirmingRemoval && (
+                <button
+                  onClick={() => setIsConfirmingRemoval(false)}
+                  disabled={isRemovingMfa}
+                  className="px-4 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+              )}
+              <button
+                onClick={handleRemovePersonalMfa}
+                disabled={isRemovingMfa}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {isRemovingMfa ? 'Removendo...' : isConfirmingRemoval ? 'Sim, quero remover' : 'Remover Agora'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {!isOwner && (
           <div className="flex items-center gap-2 p-4 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-xl text-xs font-bold">

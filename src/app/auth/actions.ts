@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 export async function login(formData: FormData) {
@@ -34,6 +35,11 @@ export async function login(formData: FormData) {
 }
 
 export async function verifyMfaPolicy() {
+  const cookieStore = await cookies()
+  if (cookieStore.get('passkey_authenticated')?.value === 'true') {
+    return { success: true }
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Usuário não encontrado' }
@@ -80,6 +86,27 @@ export async function updateEnforceMfa(enforceMfa: boolean) {
   if (error) {
     console.error('Erro ao atualizar enforce_mfa:', error)
     return { error: error.message }
+  }
+
+  return { success: true }
+}
+
+export async function unenrollPersonalMfa() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autorizado' }
+
+  const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors()
+  if (factorsError) return { error: factorsError.message }
+
+  const totpFactors = factors?.totp || []
+  
+  for (const factor of totpFactors) {
+    const { error: unenrollError } = await supabase.auth.mfa.unenroll({ factorId: factor.id })
+    if (unenrollError) {
+      console.error('Erro ao desvincular MFA:', unenrollError)
+      return { error: unenrollError.message }
+    }
   }
 
   return { success: true }
