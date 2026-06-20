@@ -686,6 +686,40 @@ export function StudioDashboardClient({
             {canCreate && (
               <div className="flex items-center gap-4">
                 <button
+                  onClick={async () => {
+                    toast('Iniciando orquestração da arquitetura do código...', 'info')
+                    try {
+                      const res = await fetch('/api/export-source', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ projectId: project.id })
+                      })
+                      if (!res.ok) {
+                        const err = await res.json()
+                        throw new Error(err.error || 'Erro ao gerar código')
+                      }
+                      
+                      // Trigger download
+                      const blob = await res.blob()
+                      const url = window.URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `${project.slug || 'app'}-source-code.zip`
+                      document.body.appendChild(a)
+                      a.click()
+                      a.remove()
+                      window.URL.revokeObjectURL(url)
+                      
+                      toast('Código Fonte exportado com sucesso!', 'success')
+                    } catch (error: any) {
+                      toast('Falha na exportação: ' + error.message, 'error')
+                    }
+                  }}
+                  className="flex items-center gap-2 px-6 py-3 bg-neutral-900 dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-neutral-900 rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-neutral-900/20 active:scale-95"
+                >
+                  <Download className="w-4 h-4" /> Exportar Código Fonte
+                </button>
+                <button
                   onClick={() => {
                     setViewToEdit(null)
                     setViewMode('builder')

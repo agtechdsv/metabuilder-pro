@@ -174,6 +174,17 @@ export function MfaSetupForm() {
           </form>
         </div>
       )}
+
+      <div className="mt-8 text-center">
+        <button onClick={() => {
+          const supabase = createClient()
+          supabase.auth.signOut().then(() => {
+            window.location.href = '/login'
+          })
+        }} className="text-[10px] font-bold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 uppercase tracking-widest">
+          Fazer login com outra conta
+        </button>
+      </div>
     </div>
   )
 }
