@@ -7,39 +7,29 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 
 interface SecuritySettingsProps {
-  workspace: any
+  profile: any
   isOwner: boolean
 }
 
-export default function SecuritySettings({ workspace, isOwner }: SecuritySettingsProps) {
+export default function SecuritySettings({ profile, isOwner }: SecuritySettingsProps) {
   const { toast } = useToast()
   const router = useRouter()
   const supabase = createClient()
   
-  const initialSecurity = workspace.theme_config?.security || {
-    mfa_required: false,
-    passkey_enabled: false
-  }
-
-  const [mfaRequired, setMfaRequired] = useState(initialSecurity.mfa_required)
-  const [passkeyEnabled, setPasskeyEnabled] = useState(initialSecurity.passkey_enabled)
+  const [mfaRequired, setMfaRequired] = useState(profile?.enforce_mfa || false)
+  const [passkeyEnabled, setPasskeyEnabled] = useState(profile?.passkey_enabled || false)
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      const newConfig = {
-        ...(workspace.theme_config || {}),
-        security: {
-          mfa_required: mfaRequired,
-          passkey_enabled: passkeyEnabled
-        }
-      }
-
       const { error } = await supabase
-        .from('workspaces')
-        .update({ theme_config: newConfig })
-        .eq('id', workspace.id)
+        .from('profiles')
+        .update({
+          enforce_mfa: mfaRequired,
+          passkey_enabled: passkeyEnabled
+        })
+        .eq('id', profile.id)
 
       if (error) throw error
 

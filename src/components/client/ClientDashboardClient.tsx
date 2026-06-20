@@ -522,8 +522,8 @@ export default function ClientDashboardClient({
           {/* ── TAB: Segurança (Security) ───────────────────────────────────────── */}
           {activeTab === 'security' && (
             <div className="space-y-6">
-              {workspaces && workspaces.length > 0 && (
-                <SecuritySettings workspace={workspaces[0]} isOwner={true} />
+              {localProfile && (
+                <SecuritySettings profile={localProfile} isOwner={true} />
               )}
 
               {/* MFA Setup for Owner */}

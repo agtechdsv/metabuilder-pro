@@ -333,7 +333,7 @@ export function SettingsClient({
 
       {activeTab === 'security' && (
         <SecuritySettings 
-          workspace={workspace}
+          profile={profile}
           isOwner={currentUserRole === 'owner'}
         />
       )}
