@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Shield, Smartphone, KeyRound, AlertCircle } from 'lucide-react'
+import { Shield, Smartphone, KeyRound, AlertCircle, Fingerprint } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
+import { startRegistration } from '@simplewebauthn/browser'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -19,6 +20,41 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
   const [mfaRequired, setMfaRequired] = useState(profile?.enforce_mfa || false)
   const [passkeyEnabled, setPasskeyEnabled] = useState(profile?.passkey_enabled || false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isRegistering, setIsRegistering] = useState(false)
+
+  const handleRegisterDevice = async () => {
+    setIsRegistering(true)
+    try {
+      // 1. Pega opções do backend
+      const resp = await fetch('/api/auth/passkeys/register/generate-options', { method: 'POST' })
+      if (!resp.ok) throw new Error('Falha ao gerar desafio')
+      const options = await resp.json()
+
+      // 2. Chama a API do browser
+      const attResp = await startRegistration(options)
+
+      // 3. Envia o resultado para o backend validar e salvar
+      const verificationResp = await fetch('/api/auth/passkeys/register/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(attResp),
+      })
+
+      if (!verificationResp.ok) throw new Error('Falha na verificação')
+      
+      const verificationJSON = await verificationResp.json()
+      if (verificationJSON.verified) {
+        toast('Aparelho registrado com sucesso!', 'success')
+      } else {
+        throw new Error('Falha ao registrar')
+      }
+    } catch (error: any) {
+      console.error(error)
+      toast(error.message || 'Erro ao registrar biometria no aparelho.', 'error')
+    } finally {
+      setIsRegistering(false)
+    }
+  }
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -60,31 +96,50 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
 
       <div className="space-y-6">
         {/* Passkey Toggle */}
-        <div className="flex items-center justify-between p-6 bg-neutral-50 dark:bg-neutral-950 rounded-2xl border border-neutral-200 dark:border-neutral-800">
-          <div className="flex gap-4 items-start">
-            <div className="p-3 bg-indigo-100 dark:bg-indigo-500/10 rounded-xl text-indigo-600">
-              <KeyRound className="w-5 h-5" />
+        <div className="flex flex-col gap-4 p-6 bg-neutral-50 dark:bg-neutral-950 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-4 items-start">
+              <div className="p-3 bg-indigo-100 dark:bg-indigo-500/10 rounded-xl text-indigo-600">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Autenticação Biométrica (Passkey)</h4>
+                <p className="text-xs text-neutral-500 mt-1 max-w-lg">
+                  Permite que você e os DEVs do time façam login no painel do MetaBuilderPRO utilizando biometria (FaceID / TouchID).
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Autenticação Biométrica (Passkey)</h4>
-              <p className="text-xs text-neutral-500 mt-1 max-w-lg">
-                Permite que você e os DEVs do time façam login no painel do MetaBuilderPRO utilizando biometria (FaceID / TouchID).
-              </p>
-            </div>
-          </div>
-          <button
-            disabled={!isOwner || isSaving}
-            onClick={() => setPasskeyEnabled(!passkeyEnabled)}
-            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${
-              passkeyEnabled ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-700'
-            }`}
-          >
-            <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${
-                passkeyEnabled ? 'translate-x-8' : 'translate-x-1'
+            <button
+              disabled={!isOwner || isSaving}
+              onClick={() => setPasskeyEnabled(!passkeyEnabled)}
+              className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${
+                passkeyEnabled ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-700'
               }`}
-            />
-          </button>
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${
+                  passkeyEnabled ? 'translate-x-8' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          {passkeyEnabled && (
+            <div className="mt-2 pt-4 border-t border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
+              <div>
+                <p className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Meu Dispositivo</p>
+                <p className="text-[10px] text-neutral-500 mt-0.5">Para acessar usando biometria, cadastre este aparelho.</p>
+              </div>
+              <button
+                onClick={handleRegisterDevice}
+                disabled={isRegistering}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
+              >
+                <Fingerprint className="w-4 h-4" />
+                {isRegistering ? 'Aguardando FaceID...' : 'Registrar Este Aparelho'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* MFA Toggle */}

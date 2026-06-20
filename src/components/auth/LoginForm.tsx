@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { SetPasswordForm } from '@/components/auth/SetPasswordForm'
 import { useI18n } from '@/i18n/I18nContext'
+import { startAuthentication } from '@simplewebauthn/browser'
 
 interface LoginFormProps {
   error?: string
@@ -29,6 +30,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
   const [showSetPasswordModal, setShowSetPasswordModal] = useState(false)
   const [showExpiredModal, setShowExpiredModal] = useState(false)
   const [expiredModalDesc, setExpiredModalDesc] = useState('')
+  const [isPasskeyLoading, setIsPasskeyLoading] = useState(false)
 
   const emailInputRef = useRef<HTMLInputElement>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
@@ -56,6 +58,42 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
       window.location.hash = ''
       window.location.search = ''
       window.location.href = '/'
+    }
+  }
+
+  const handlePasskeyLogin = async () => {
+    setClientError(null)
+    setIsPasskeyLoading(true)
+    try {
+      // 1. Gera opções do servidor
+      const resp = await fetch('/api/auth/passkeys/authenticate/generate-options', { method: 'POST' })
+      if (!resp.ok) throw new Error('Falha ao inicializar biometria.')
+      const options = await resp.json()
+
+      // 2. Chama a biometria nativa do SO
+      const asseResp = await startAuthentication(options)
+
+      // 3. Envia o resultado para verificar
+      const verificationResp = await fetch('/api/auth/passkeys/authenticate/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(asseResp),
+      })
+
+      const verificationJSON = await verificationResp.json()
+
+      if (verificationJSON.verified && verificationJSON.loginUrl) {
+        setSuccessMessage('Biometria verificada! Entrando...')
+        // Redireciona para o magic link gerado para consolidar a sessão
+        window.location.href = verificationJSON.loginUrl
+      } else {
+        throw new Error(verificationJSON.error || 'Falha na verificação da biometria')
+      }
+    } catch (error: any) {
+      console.error(error)
+      setClientError(error.message || 'Erro ao processar login biométrico.')
+    } finally {
+      setIsPasskeyLoading(false)
     }
   }
 
@@ -497,6 +535,29 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
         </div>
         {mode === 'login' ? t('auth.login.google_signin', 'Entrar com Google') : t('auth.login.google_signup', 'Cadastrar com Google')}
       </button>
+
+      {/* Passkey Login - Premium Style */}
+      {mode === 'login' && (
+        <button
+          type="button"
+          onClick={handlePasskeyLogin}
+          disabled={isPasskeyLoading}
+          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-4 transition-all active:scale-[0.98] shadow-lg shadow-indigo-600/20 mb-8 group disabled:opacity-70"
+        >
+          {isPasskeyLoading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <div className="p-1.5 bg-white/20 rounded-lg shadow-sm group-hover:scale-110 transition-transform">
+              <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a10 10 0 0 0-10 10c0 5.52 4.48 10 10 10s10-4.48 10-10A10 10 0 0 0 12 2z"></path>
+                <path d="M12 6a6 6 0 1 0 6 6"></path>
+                <path d="M12 10a2 2 0 1 0 2 2"></path>
+              </svg>
+            </div>
+          )}
+          {isPasskeyLoading ? 'Verificando...' : 'Entrar com Biometria'}
+        </button>
+      )}
 
       <div className="relative flex items-center py-2 mb-8">
         <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800/50"></div>
