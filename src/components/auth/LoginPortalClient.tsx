@@ -58,6 +58,10 @@ export function LoginPortalClient({
   const loginBannerUrl = project.theme_config?.login_banner_url || workspaceTheme?.portal_banner_url || ''
   const hasBanner = !!loginBannerUrl
 
+  const security = project.theme_config?.security || {}
+  const traditionalLogin = security.traditional_login !== false
+  const googleLogin = security.google_login === true
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !password) return
@@ -225,65 +229,104 @@ export function LoginPortalClient({
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">
-                    {userLabel}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={userPlaceholder}
-                    className="w-full h-12 px-5 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 outline-none focus:border-indigo-500 dark:focus:border-indigo-500 transition-all text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center px-1">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
-                      {passLabel}
+              {traditionalLogin && (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">
+                      {userLabel}
                     </label>
-                    <a href="#" className="text-[9px] font-bold text-indigo-600 hover:text-indigo-500 uppercase tracking-tighter">
-                      {t('runtime.login_forgot_password')}
-                    </a>
-                  </div>
-                  <div className="relative group">
                     <input
-                      type={showPassword ? 'text' : 'password'}
+                      type="text"
                       required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder={passPlaceholder}
-                      className="w-full h-12 pl-5 pr-12 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 outline-none focus:border-indigo-500 dark:focus:border-indigo-500 transition-all text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder={userPlaceholder}
+                      className="w-full h-12 px-5 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 outline-none focus:border-indigo-500 dark:focus:border-indigo-500 transition-all text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-indigo-500 transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
                   </div>
-                </div>
 
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center px-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                        {passLabel}
+                      </label>
+                      <a href="#" className="text-[9px] font-bold text-indigo-600 hover:text-indigo-500 uppercase tracking-tighter">
+                        {t('runtime.login_forgot_password')}
+                      </a>
+                    </div>
+                    <div className="relative group">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder={passPlaceholder}
+                        className="w-full h-12 pl-5 pr-12 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 outline-none focus:border-indigo-500 dark:focus:border-indigo-500 transition-all text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-indigo-500 transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full h-14 rounded-2xl text-white text-xs font-bold uppercase tracking-widest transition-all hover:brightness-110 active:scale-[0.98] shadow-xl flex items-center justify-center gap-2"
+                    style={{
+                      backgroundColor: buttonColor,
+                      boxShadow: `0 10px 30px -10px ${buttonColor}66`
+                    }}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      buttonText
+                    )}
+                  </button>
+                </form>
+              )}
+
+              {traditionalLogin && googleLogin && (
+                <div className="relative flex items-center py-6">
+                  <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                  <span className="flex-shrink-0 mx-4 text-[10px] text-neutral-400 font-black uppercase tracking-widest">
+                    ou
+                  </span>
+                  <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800"></div>
+                </div>
+              )}
+
+              {googleLogin && (
                 <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full h-14 rounded-2xl text-white text-xs font-bold uppercase tracking-widest transition-all hover:brightness-110 active:scale-[0.98] shadow-xl flex items-center justify-center gap-2"
-                  style={{
-                    backgroundColor: buttonColor,
-                    boxShadow: `0 10px 30px -10px ${buttonColor}66`
+                  type="button"
+                  onClick={() => {
+                    // This handles google login for studio
+                    const redirectUrl = new URL(`${window.location.origin}/auth/callback`)
+                    redirectUrl.searchParams.set('next', `/${workspaceSlug}/${projectSlug}`)
+                    
+                    supabase.auth.signInWithOAuth({
+                      provider: 'google',
+                      options: {
+                        redirectTo: redirectUrl.toString()
+                      }
+                    })
                   }}
+                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white h-14 rounded-2xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-sm group"
                 >
-                  {isLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    buttonText
-                  )}
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.3-4.74 3.3-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                  </svg>
+                  {t('auth.login.google_signin', 'Entrar com Google')}
                 </button>
-              </form>
+              )}
 
               {allowSignup && (
                 <div className="mt-8 text-center">
