@@ -212,10 +212,10 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
           )}
 
           {hasPasskeySetup && (
-            <div className="mt-2 pt-4 border-t border-indigo-100 dark:border-indigo-900/30 flex justify-between items-center">
+            <div className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-500/5 rounded-2xl border border-red-200 dark:border-red-900/50 mt-2">
               <div>
-                <p className="text-xs font-bold text-indigo-900 dark:text-indigo-400">Remover Chave Passkey</p>
-                <p className="text-[10px] text-indigo-700/80 dark:text-indigo-400/80 mt-0.5">
+                <h4 className="text-sm font-bold text-red-900 dark:text-red-400">Remover Chave Passkey</h4>
+                <p className="text-xs text-red-700/80 dark:text-red-400/80 mt-1 max-w-lg">
                   Desvincula o seu aparelho atual, permitindo cadastrar um novo ou limpar o acesso.
                 </p>
               </div>
@@ -224,7 +224,7 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
                   <button
                     onClick={() => setIsConfirmingPasskeyRemoval(false)}
                     disabled={isRemovingPasskey}
-                    className="px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold rounded-lg transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
                   >
                     Cancelar
                   </button>
@@ -232,69 +232,71 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
                 <button
                   onClick={handleRemovePasskey}
                   disabled={isRemovingPasskey}
-                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
                 >
-                  {isRemovingPasskey ? 'Removendo...' : isConfirmingPasskeyRemoval ? 'Confirmar' : 'Remover Chave'}
+                  {isRemovingPasskey ? 'Removendo...' : isConfirmingPasskeyRemoval ? 'Sim, quero remover' : 'Remover Chave'}
                 </button>
               </div>
             </div>
           )}
         </div>
 
-        {/* MFA Toggle */}
-        <div className="flex items-center justify-between p-6 bg-neutral-50 dark:bg-neutral-950 rounded-2xl border border-neutral-200 dark:border-neutral-800">
-          <div className="flex gap-4 items-start">
-            <div className="p-3 bg-red-100 dark:bg-red-500/10 rounded-xl text-red-600">
-              <Smartphone className="w-5 h-5" />
+        {/* MFA Group */}
+        <div className="flex flex-col gap-4 p-6 bg-neutral-50 dark:bg-neutral-950 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-4 items-start">
+              <div className="p-3 bg-red-100 dark:bg-red-500/10 rounded-xl text-red-600">
+                <Smartphone className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Autenticação Multi-Fator (MFA) Obrigatória</h4>
+                <p className="text-xs text-neutral-500 mt-1 max-w-lg">
+                  Força todos os DEVs convidados a configurarem um aplicativo Authenticator (Microsoft/Google) antes de acessarem o Workspace.
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Autenticação Multi-Fator (MFA) Obrigatória</h4>
-              <p className="text-xs text-neutral-500 mt-1 max-w-lg">
-                Força todos os DEVs convidados a configurarem um aplicativo Authenticator (Microsoft/Google) antes de acessarem o Workspace.
-              </p>
-            </div>
-          </div>
-          <button
-            disabled={!isOwner || isSaving}
-            onClick={() => setMfaRequired(!mfaRequired)}
-            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${mfaRequired ? 'bg-red-600' : 'bg-neutral-300 dark:bg-neutral-700'
-              }`}
-          >
-            <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${mfaRequired ? 'translate-x-8' : 'translate-x-1'
+            <button
+              disabled={!isOwner || isSaving}
+              onClick={() => setMfaRequired(!mfaRequired)}
+              className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${mfaRequired ? 'bg-red-600' : 'bg-neutral-300 dark:bg-neutral-700'
                 }`}
-            />
-          </button>
-        </div>
-
-        {hasMfaSetup && (
-          <div className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-500/5 rounded-2xl border border-red-200 dark:border-red-900/50">
-            <div>
-              <h4 className="text-sm font-bold text-red-900 dark:text-red-400">Remover Meu Authenticator</h4>
-              <p className="text-xs text-red-700/80 dark:text-red-400/80 mt-1 max-w-lg">
-                Se você perdeu acesso ao seu Authenticator ou quer cadastrá-lo novamente em outro celular, clique aqui para desvinculá-lo da sua conta.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {isConfirmingRemoval && (
-                <button
-                  onClick={() => setIsConfirmingRemoval(false)}
-                  disabled={isRemovingMfa}
-                  className="px-4 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
-                >
-                  Cancelar
-                </button>
-              )}
-              <button
-                onClick={handleRemovePersonalMfa}
-                disabled={isRemovingMfa}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
-              >
-                {isRemovingMfa ? 'Removendo...' : isConfirmingRemoval ? 'Sim, quero remover' : 'Remover Agora'}
-              </button>
-            </div>
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${mfaRequired ? 'translate-x-8' : 'translate-x-1'
+                  }`}
+              />
+            </button>
           </div>
-        )}
+
+          {hasMfaSetup && (
+            <div className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-500/5 rounded-2xl border border-red-200 dark:border-red-900/50 mt-2">
+              <div>
+                <h4 className="text-sm font-bold text-red-900 dark:text-red-400">Remover Meu Authenticator</h4>
+                <p className="text-xs text-red-700/80 dark:text-red-400/80 mt-1 max-w-lg">
+                  Se você perdeu acesso ao seu Authenticator ou quer cadastrá-lo novamente em outro celular, clique aqui para desvinculá-lo da sua conta.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {isConfirmingRemoval && (
+                  <button
+                    onClick={() => setIsConfirmingRemoval(false)}
+                    disabled={isRemovingMfa}
+                    className="px-4 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                )}
+                <button
+                  onClick={handleRemovePersonalMfa}
+                  disabled={isRemovingMfa}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+                >
+                  {isRemovingMfa ? 'Removendo...' : isConfirmingRemoval ? 'Sim, quero remover' : 'Remover Agora'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {!isOwner && (
           <div className="flex items-center gap-2 p-4 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-xl text-xs font-bold">
