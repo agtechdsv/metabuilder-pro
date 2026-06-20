@@ -44,33 +44,42 @@ export async function verifyMfaPolicy() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Usuário não encontrado' }
 
+  // 1. Descobre se MFA é obrigatório (Master Switch do Workspace)
+  let isMfaEnforced = false
+  const { data: profile } = await supabase.from('profiles').select('enforce_mfa').eq('id', user.id).single()
+  
+  if (profile?.enforce_mfa === true) {
+    isMfaEnforced = true
+  } else {
+    const { data: guestRecord } = await supabase.from('owner_guests').select('owner_id').eq('user_id', user.id).limit(1).maybeSingle()
+    if (guestRecord?.owner_id) {
+      const { data: ownerProfile } = await supabase.from('profiles').select('enforce_mfa').eq('id', guestRecord.owner_id).single()
+      if (ownerProfile?.enforce_mfa === true) {
+        isMfaEnforced = true
+      }
+    }
+  }
+
+  // Se a chavinha global de MFA estiver desligada, ignora completamente (mesmo que tenha Authenticator)
+  if (!isMfaEnforced) {
+    return { success: true }
+  }
+
+  // 2. Se for obrigatório, verificar se já está autenticado com AAL2 (MFA feito)
   const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
   if (aalData?.currentLevel === 'aal2') {
     return { success: true }
   }
 
+  // 3. Se não está AAL2, verificar se já tem o app configurado
   const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors()
   const totpFactor = factors?.totp?.find(f => f.status === 'verified')
 
   if (totpFactor) {
     return { mfaChallengeRequired: true, factorId: totpFactor.id }
   } else {
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-    
-    if (profile?.enforce_mfa === true) {
-      return { mfaSetupRequired: true }
-    }
-
-    const { data: guestRecord } = await supabase.from('owner_guests').select('owner_id').eq('user_id', user.id).limit(1).maybeSingle()
-    if (guestRecord?.owner_id) {
-      const { data: ownerProfile } = await supabase.from('profiles').select('*').eq('id', guestRecord.owner_id).single()
-      if (ownerProfile?.enforce_mfa === true) {
-        return { mfaSetupRequired: true }
-      }
-    }
+    return { mfaSetupRequired: true }
   }
-
-  return { success: true }
 }
 
 export async function updateEnforceMfa(enforceMfa: boolean) {
