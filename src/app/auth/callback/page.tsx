@@ -75,7 +75,30 @@ function CallbackHandler() {
       }
     }
 
-    // Ouve o evento de SIGNED_IN que acontece após a troca do code (PKCE) no client side
+    // Extrai tokens manualmente do hash caso o Supabase não tenha feito o parse automático (comum em navegações client-side)
+    const hash = window.location.hash
+    if (hash && hash.includes('access_token=')) {
+      const hashParams = new URLSearchParams(hash.substring(1))
+      const access_token = hashParams.get('access_token')
+      const refresh_token = hashParams.get('refresh_token')
+      
+      if (access_token && refresh_token) {
+        // Limpa o hash da URL por segurança
+        window.history.replaceState(null, '', window.location.pathname + window.location.search)
+        
+        supabase.auth.setSession({ access_token, refresh_token }).then(({ data, error }) => {
+          if (error) {
+            setErrorMessage(error.message)
+            setStatus('error')
+          } else if (data.session) {
+            notifyAndClose(data.session)
+          }
+        })
+        return
+      }
+    }
+
+    // Ouve o evento de SIGNED_IN que acontece após a troca do code (PKCE) no client side ou parse automático
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
         notifyAndClose(session)
