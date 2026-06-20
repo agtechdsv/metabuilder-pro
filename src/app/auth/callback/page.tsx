@@ -54,23 +54,30 @@ function CallbackHandler() {
       } catch (_) {}
 
       // 2. Envia via window.opener
+      let isPopup = false
       if (typeof window !== 'undefined' && window.opener && !window.opener.closed && window.opener !== window) {
+        isPopup = true
         try {
           window.opener.postMessage(payload, window.location.origin)
         } catch (_) {}
       }
 
-      // Força o fechamento do popup
-      setTimeout(() => {
-        try {
-          window.close()
-        } catch (_) {}
-      }, 500)
+      if (isPopup) {
+        // Força o fechamento do popup
+        setTimeout(() => {
+          try {
+            window.close()
+          } catch (_) {}
+        }, 500)
+      } else {
+        // Se não for popup, simplesmente redireciona
+        window.location.replace(next)
+      }
     }
 
     // Ouve o evento de SIGNED_IN que acontece após a troca do code (PKCE) no client side
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
         notifyAndClose(session)
       }
     })
