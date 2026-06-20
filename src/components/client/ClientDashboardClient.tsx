@@ -76,6 +76,8 @@ interface Profile {
   card_brand?: string | null
   card_last_digits?: string | null
   enforce_mfa?: boolean | null
+  traditional_login_enabled?: boolean | null
+  google_login_enabled?: boolean | null
 }
 
 interface Workspace {

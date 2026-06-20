@@ -21,7 +21,7 @@ export default async function ClientDashboardPage() {
   // Fetch full profile
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, email, subscription_licenses, subscription_status, subscription_cycle, subscription_expires_at, asaas_customer_id, asaas_subscription_id, is_super_admin, card_brand, card_last_digits, enforce_mfa, passkey_enabled')
+    .select('id, full_name, email, subscription_licenses, subscription_status, subscription_cycle, subscription_expires_at, asaas_customer_id, asaas_subscription_id, is_super_admin, card_brand, card_last_digits, enforce_mfa, passkey_enabled, traditional_login_enabled, google_login_enabled')
     .eq('id', user.id)
     .single()
 
