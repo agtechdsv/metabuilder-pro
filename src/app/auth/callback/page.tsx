@@ -123,26 +123,26 @@ function CallbackHandler() {
   }, [errorDesc, next])
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center justify-center p-6 text-center font-sans">
-      <div className="max-w-md w-full bg-neutral-900/50 border border-neutral-800 p-8 rounded-3xl shadow-2xl">
+    <div className="min-h-screen bg-neutral-50 dark:bg-[#050505] text-neutral-900 dark:text-white flex flex-col items-center justify-center p-6 text-center font-sans">
+      <div className="max-w-md w-full bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 p-8 rounded-3xl shadow-2xl">
         {status === 'loading' && (
           <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500">
-            <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-6" />
-            <h2 className="text-xl font-bold mb-2">{t('auth.callback.authenticating', 'Autenticando...')}</h2>
-            <p className="text-neutral-400 text-sm">{t('auth.callback.connecting_securely', 'Conectando de forma segura à sua conta.')}</p>
+            <Loader2 className="w-12 h-12 text-indigo-600 dark:text-indigo-500 animate-spin mb-6" />
+            <h2 className="text-xl font-bold mb-2 text-neutral-900 dark:text-white">{t('auth.callback.authenticating', 'Autenticando...')}</h2>
+            <p className="text-neutral-500 dark:text-neutral-400 text-sm">{t('auth.callback.connecting_securely', 'Conectando de forma segura à sua conta.')}</p>
           </div>
         )}
 
         {status === 'success' && (
           <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500">
-            <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6">
-              <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+            <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-500/10 rounded-full flex items-center justify-center mb-6">
+              <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-500" />
             </div>
-            <h2 className="text-xl font-bold mb-2">{t('auth.callback.success', 'Sucesso!')}</h2>
-            <p className="text-neutral-400 text-sm mb-6">{t('auth.callback.success_desc', 'Você já pode fechar esta janela caso ela não feche automaticamente.')}</p>
+            <h2 className="text-xl font-bold mb-2 text-neutral-900 dark:text-white">{t('auth.callback.success', 'Sucesso!')}</h2>
+            <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-6">{t('auth.callback.success_desc', 'Você já pode fechar esta janela caso ela não feche automaticamente.')}</p>
             <button 
               onClick={() => window.close()}
-              className="px-6 py-3 bg-neutral-800 hover:bg-neutral-700 rounded-xl text-sm font-bold transition-colors"
+              className="px-6 py-3 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-white rounded-xl text-sm font-bold transition-colors"
             >
               {t('auth.callback.close_window', 'Fechar Janela')}
             </button>
@@ -151,22 +151,22 @@ function CallbackHandler() {
 
         {status === ('redirecting' as any) && (
           <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500">
-            <Loader2 className="w-12 h-12 text-emerald-500 animate-spin mb-6" />
-            <h2 className="text-xl font-bold mb-2">Redirecionando...</h2>
-            <p className="text-neutral-400 text-sm">Preparando seu ambiente de trabalho.</p>
+            <Loader2 className="w-12 h-12 text-emerald-600 dark:text-emerald-500 animate-spin mb-6" />
+            <h2 className="text-xl font-bold mb-2 text-neutral-900 dark:text-white">Redirecionando...</h2>
+            <p className="text-neutral-500 dark:text-neutral-400 text-sm">Preparando seu ambiente de trabalho.</p>
           </div>
         )}
 
         {status === 'error' && (
           <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500">
-            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6">
-              <AlertCircle className="w-8 h-8 text-red-500" />
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-500/10 rounded-full flex items-center justify-center mb-6">
+              <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-500" />
             </div>
-            <h2 className="text-xl font-bold mb-2">{t('auth.callback.auth_error_title', 'Erro na Autenticação')}</h2>
-            <p className="text-neutral-400 text-sm mb-6">{errorMessage || t('auth.callback.auth_error_desc', 'Não foi possível concluir o login.')}</p>
+            <h2 className="text-xl font-bold mb-2 text-neutral-900 dark:text-white">{t('auth.callback.auth_error_title', 'Erro na Autenticação')}</h2>
+            <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-6">{errorMessage || t('auth.callback.auth_error_desc', 'Não foi possível concluir o login.')}</p>
             <button 
               onClick={() => window.close()}
-              className="px-6 py-3 bg-neutral-800 hover:bg-neutral-700 rounded-xl text-sm font-bold transition-colors"
+              className="px-6 py-3 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-white rounded-xl text-sm font-bold transition-colors"
             >
               {t('auth.callback.close_try_again', 'Fechar e Tentar Novamente')}
             </button>
