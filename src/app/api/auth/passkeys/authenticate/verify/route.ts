@@ -5,7 +5,10 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
+    const supabaseAdmin = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
     const body = await request.json()
 
     // Retrieve expected challenge from cookie
@@ -17,8 +20,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Nenhum desafio encontrado para verificação de login' }, { status: 400 })
     }
 
-    // Find the credential in DB
-    const { data: credentialData, error: credError } = await supabase
+    // Find the credential in DB using Admin client because user is not logged in yet (RLS blocks read)
+    const { data: credentialData, error: credError } = await supabaseAdmin
       .from('passkey_credentials')
       .select('*')
       .eq('credential_id', body.id)
@@ -50,8 +53,8 @@ export async function POST(request: Request) {
     const { verified, authenticationInfo } = verification
 
     if (verified && authenticationInfo) {
-      // Update counter
-      await supabase
+      // Update counter using Admin client
+      await supabaseAdmin
         .from('passkey_credentials')
         .update({
           counter: authenticationInfo.newCounter,
@@ -71,18 +74,18 @@ export async function POST(request: Request) {
       ).auth.admin;
 
       // Buscar email do profile usando o user_id
-      const { data: profile } = await supabase
+      const { data: profile } = await supabaseAdmin
         .from('profiles')
         .select('email')
         .eq('id', credentialData.user_id)
         .single()
 
       if (!profile?.email) {
-        throw new Error('E-mail não encontrado para o usuário desta biometria.')
+        return NextResponse.json({ error: 'E-mail do usuário não encontrado' }, { status: 400 })
       }
 
       // Generate a magic link
-      const { data: linkData, error: linkError } = await adminAuth.generateLink({
+      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
         email: profile.email,
       })
