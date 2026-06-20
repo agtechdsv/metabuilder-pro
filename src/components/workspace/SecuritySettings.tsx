@@ -10,9 +10,10 @@ import { useRouter } from 'next/navigation'
 interface SecuritySettingsProps {
   profile: any
   isOwner: boolean
+  isPersonalOnly?: boolean
 }
 
-export default function SecuritySettings({ profile, isOwner }: SecuritySettingsProps) {
+export default function SecuritySettings({ profile, isOwner, isPersonalOnly = false }: SecuritySettingsProps) {
   const { toast } = useToast()
   const router = useRouter()
   const supabase = createClient()
@@ -151,50 +152,54 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
   }
 
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-sm">
-      <div className="flex items-center gap-3 mb-8 border-b border-neutral-100 dark:border-neutral-800 pb-6">
-        <div className="w-12 h-12 bg-red-50 dark:bg-red-500/10 rounded-xl flex items-center justify-center text-red-600">
-          <Shield className="w-6 h-6" />
+    <div className={isPersonalOnly ? "" : "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-sm"}>
+      {!isPersonalOnly && (
+        <div className="flex items-center gap-3 mb-8 border-b border-neutral-100 dark:border-neutral-800 pb-6">
+          <div className="w-12 h-12 bg-red-50 dark:bg-red-500/10 rounded-xl flex items-center justify-center text-red-600">
+            <Shield className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-lg font-black text-neutral-900 dark:text-white uppercase tracking-wider">
+              Segurança Global
+            </h3>
+            <p className="text-xs text-neutral-500 mt-1 font-medium">
+              Regras de autenticação para os DEVs convidados neste Workspace.
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-lg font-black text-neutral-900 dark:text-white uppercase tracking-wider">
-            Segurança Global
-          </h3>
-          <p className="text-xs text-neutral-500 mt-1 font-medium">
-            Regras de autenticação para os DEVs convidados neste Workspace.
-          </p>
-        </div>
-      </div>
+      )}
 
       <div className="space-y-6">
         {/* Passkey Toggle */}
         <div className="flex flex-col gap-4 p-6 bg-neutral-50 dark:bg-neutral-950 rounded-2xl border border-neutral-200 dark:border-neutral-800">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-4 items-start">
-              <div className="p-3 bg-indigo-100 dark:bg-indigo-500/10 rounded-xl text-indigo-600">
-                <KeyRound className="w-5 h-5" />
+          {!isPersonalOnly && (
+            <div className="flex items-center justify-between">
+              <div className="flex gap-4 items-start">
+                <div className="p-3 bg-indigo-100 dark:bg-indigo-500/10 rounded-xl text-indigo-600">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Autenticação Biométrica (Passkey)</h4>
+                  <p className="text-xs text-neutral-500 mt-1 max-w-lg">
+                    Permite que você e os DEVs do time façam login no painel do MetaBuilderPRO utilizando biometria (FaceID / TouchID).
+                  </p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Autenticação Biométrica (Passkey)</h4>
-                <p className="text-xs text-neutral-500 mt-1 max-w-lg">
-                  Permite que você e os DEVs do time façam login no painel do MetaBuilderPRO utilizando biometria (FaceID / TouchID).
-                </p>
-              </div>
-            </div>
-            <button
-              disabled={!isOwner || isSaving}
-              onClick={() => setPasskeyEnabled(!passkeyEnabled)}
-              className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${passkeyEnabled ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-700'
-                }`}
-            >
-              <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${passkeyEnabled ? 'translate-x-8' : 'translate-x-1'
+              <button
+                disabled={!isOwner || isSaving}
+                onClick={() => setPasskeyEnabled(!passkeyEnabled)}
+                className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${passkeyEnabled ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-700'
                   }`}
-              />
-            </button>
-          </div>
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${passkeyEnabled ? 'translate-x-8' : 'translate-x-1'
+                    }`}
+                />
+              </button>
+            </div>
+          )}
 
-          {passkeyEnabled && (
+          {(isPersonalOnly || passkeyEnabled) && (
             <div className="mt-2 pt-4 border-t border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
               <div>
                 <p className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Meu Dispositivo</p>
@@ -243,30 +248,32 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
 
         {/* MFA Group */}
         <div className="flex flex-col gap-4 p-6 bg-neutral-50 dark:bg-neutral-950 rounded-2xl border border-neutral-200 dark:border-neutral-800">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-4 items-start">
-              <div className="p-3 bg-red-100 dark:bg-red-500/10 rounded-xl text-red-600">
-                <Smartphone className="w-5 h-5" />
+          {!isPersonalOnly && (
+            <div className="flex items-center justify-between">
+              <div className="flex gap-4 items-start">
+                <div className="p-3 bg-red-100 dark:bg-red-500/10 rounded-xl text-red-600">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Autenticação Multi-Fator (MFA) Obrigatória</h4>
+                  <p className="text-xs text-neutral-500 mt-1 max-w-lg">
+                    Força todos os DEVs convidados a configurarem um aplicativo Authenticator (Microsoft/Google) antes de acessarem o Workspace.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Autenticação Multi-Fator (MFA) Obrigatória</h4>
-                <p className="text-xs text-neutral-500 mt-1 max-w-lg">
-                  Força todos os DEVs convidados a configurarem um aplicativo Authenticator (Microsoft/Google) antes de acessarem o Workspace.
-                </p>
-              </div>
-            </div>
-            <button
-              disabled={!isOwner || isSaving}
-              onClick={() => setMfaRequired(!mfaRequired)}
-              className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${mfaRequired ? 'bg-red-600' : 'bg-neutral-300 dark:bg-neutral-700'
-                }`}
-            >
-              <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${mfaRequired ? 'translate-x-8' : 'translate-x-1'
+              <button
+                disabled={!isOwner || isSaving}
+                onClick={() => setMfaRequired(!mfaRequired)}
+                className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${mfaRequired ? 'bg-red-600' : 'bg-neutral-300 dark:bg-neutral-700'
                   }`}
-              />
-            </button>
-          </div>
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${mfaRequired ? 'translate-x-8' : 'translate-x-1'
+                    }`}
+                />
+              </button>
+            </div>
+          )}
 
           {hasMfaSetup && (
             <div className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-500/5 rounded-2xl border border-red-200 dark:border-red-900/50 mt-2">
@@ -305,17 +312,17 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
           </div>
         )}
 
-        {isOwner && (
-          <div className="flex justify-end pt-4">
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="px-8 py-3 bg-neutral-900 dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-neutral-900 text-xs font-black tracking-widest uppercase rounded-xl transition-all shadow-lg active:scale-95"
-            >
-              {isSaving ? 'Salvando...' : 'Salvar Configurações'}
-            </button>
-          </div>
-        )}
+          {!isPersonalOnly && isOwner && (
+            <div className="flex justify-end pt-4">
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-6 py-2.5 bg-neutral-900 dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black text-xs font-bold rounded-xl transition-all shadow-xl active:scale-95 disabled:opacity-50"
+              >
+                {isSaving ? 'Salvando...' : 'Salvar Políticas de Segurança'}
+              </button>
+            </div>
+          )}
       </div>
     </div>
   )

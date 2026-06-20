@@ -1,13 +1,14 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, User, Building2, Save, Mail, Phone, Hash, MapPin, Loader2, CheckCircle2, Camera, RefreshCcw } from 'lucide-react'
+import { X, User, Building2, Save, Mail, Phone, Hash, MapPin, Loader2, CheckCircle2, Camera, RefreshCcw, Shield } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { updateProfile, updateAvatar, resetAvatar } from '@/app/auth/actions'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
+import SecuritySettings from '@/components/workspace/SecuritySettings'
 
 interface ProfileDrawerProps {
   isOpen: boolean
@@ -17,7 +18,7 @@ interface ProfileDrawerProps {
   onUpdate: (updatedData: any) => void
 }
 
-type Tab = 'basic' | 'company'
+type Tab = 'basic' | 'company' | 'security'
 
 const BR_STATES = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 
@@ -207,12 +208,13 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
             <div className="flex p-2 bg-neutral-50 dark:bg-neutral-900/30 border-b border-neutral-100 dark:border-neutral-800/50">
               <button type="button" onClick={() => setActiveTab('basic')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all", activeTab === 'basic' ? "bg-blue-500/10 text-blue-600 dark:text-blue-500 border border-blue-500/20 shadow-sm" : "text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5")}><User className="w-4 h-4" />{t('profile.tab_basic')}</button>
               <button type="button" onClick={() => setActiveTab('company')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all", activeTab === 'company' ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 border border-indigo-500/20 shadow-sm" : "text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5")}><Building2 className="w-4 h-4" />{t('profile.tab_company')}</button>
+              <button type="button" onClick={() => setActiveTab('security')} className={cn("flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all", activeTab === 'security' ? "bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 shadow-sm" : "text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5")}><Shield className="w-4 h-4" />{t('profile.tab_security') || 'Segurança'}</button>
             </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 flex flex-col gap-8 custom-scrollbar">
               <AnimatePresence mode="wait">
-                {activeTab === 'basic' ? (
+                {activeTab === 'basic' && (
                   <motion.div key="basic" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
                     
                     <div className="space-y-2">
@@ -268,7 +270,8 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
                       </div>
                     </div>
                   </motion.div>
-                ) : (
+                )}
+                {activeTab === 'company' && (
                   <motion.div key="company" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2 col-span-2">
@@ -335,17 +338,30 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
                     </div>
                   </motion.div>
                 )}
+                {activeTab === 'security' && (
+                  <motion.div key="security" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+                    {profile && (
+                      <SecuritySettings 
+                        profile={profile} 
+                        isOwner={false} 
+                        isPersonalOnly={true} 
+                      />
+                    )}
+                  </motion.div>
+                )}
               </AnimatePresence>
             </form>
 
-            <div className="p-8 border-t border-neutral-100 dark:border-neutral-800/50 bg-neutral-50/50 dark:bg-neutral-900/20 flex gap-4">
-              <button type="button" onClick={onClose} className="flex-1 py-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5 transition-all font-bold text-sm">
-                {t('profile.cancel')}
-              </button>
-              <button type="submit" onClick={handleSubmit} disabled={isLoading} className={cn("flex-[2] py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2", isSuccess ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20")}>
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : isSuccess ? <><CheckCircle2 className="w-5 h-5" /> {t('common.success')}</> : <><Save className="w-5 h-5" /> {t('profile.save')}</>}
-              </button>
-            </div>
+            {activeTab !== 'security' && (
+              <div className="p-8 border-t border-neutral-100 dark:border-neutral-800/50 bg-neutral-50/50 dark:bg-neutral-900/20 flex gap-4">
+                <button type="button" onClick={onClose} className="flex-1 py-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5 transition-all font-bold text-sm">
+                  {t('profile.cancel')}
+                </button>
+                <button type="submit" onClick={handleSubmit} disabled={isLoading} className={cn("flex-[2] py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2", isSuccess ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20")}>
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : isSuccess ? <><CheckCircle2 className="w-5 h-5" /> {t('common.success')}</> : <><Save className="w-5 h-5" /> {t('profile.save')}</>}
+                </button>
+              </div>
+            )}
           </motion.div>
         </>
       )}
