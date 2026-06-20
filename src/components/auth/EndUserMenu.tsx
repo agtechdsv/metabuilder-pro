@@ -27,7 +27,7 @@ export function EndUserMenu({ user, projectId }: EndUserMenuProps) {
       return localPart.charAt(0).toUpperCase() + localPart.slice(1)
     }
 
-    return 'Usuário'
+    return t('common.user', 'Usuário')
   }
 
   const fullName = getDisplayName()
@@ -91,7 +91,7 @@ export function EndUserMenu({ user, projectId }: EndUserMenuProps) {
                   className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-neutral-600 dark:text-neutral-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl transition-colors"
                 >
                   <ShieldCheck className="w-4 h-4" />
-                  Segurança da Conta
+                  {t('security.title')}
                 </button>
               </div>
 
@@ -101,7 +101,7 @@ export function EndUserMenu({ user, projectId }: EndUserMenuProps) {
                   className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
-                  Sair
+                  {t('common.logout')}
                 </button>
               </div>
             </motion.div>

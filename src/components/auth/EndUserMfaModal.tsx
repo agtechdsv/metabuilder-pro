@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShieldAlert, Loader2, QrCode, ArrowRight, ShieldCheck, CheckCircle2, Fingerprint } from 'lucide-react'
 import { startRegistration } from '@simplewebauthn/browser'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface EndUserMfaModalProps {
   isOpen: boolean
@@ -25,6 +26,7 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
 
   const userEmail = user?.email || user?.Email || user?.mail || ''
   const externalUserId = user?.id || user?.ID || user?.Id || userEmail // Fallback to email if no ID
+  const { t } = useI18n()
 
   useEffect(() => {
     if (isOpen && user) {
@@ -149,7 +151,7 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
 
       onSuccess()
     } catch (err: any) {
-      setError(err.message || 'Erro ao registrar biometria.')
+      setError(err.message || t('security.error_register_biometrics', 'Erro ao registrar biometria.'))
       setIsLoading(false)
     }
   }
@@ -170,11 +172,11 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
           </div>
           
           <h2 className="text-2xl font-bold text-neutral-900 dark:text-white mb-2">
-            Verificação de Segurança
+            {t('security.verification', 'Verificação de Segurança')}
           </h2>
           {mfaRequired && step !== 'passkey_setup' && (
             <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-8">
-              Este aplicativo exige Autenticação de Dois Fatores (MFA).
+              {t('security.mfa_required', 'Este aplicativo exige Autenticação de Dois Fatores (MFA).')}
             </p>
           )}
 
@@ -182,7 +184,7 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
             {step === 'loading' && (
               <motion.div key="loading" className="flex flex-col items-center justify-center py-12" exit={{ opacity: 0 }}>
                 <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-4" />
-                <p className="text-sm text-neutral-500">Preparando ambiente seguro...</p>
+                <p className="text-sm text-neutral-500">{t('security.preparing_env', 'Preparando ambiente seguro...')}</p>
               </motion.div>
             )}
 
@@ -192,9 +194,9 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
                   <div className="w-10 h-10 bg-white dark:bg-neutral-900 rounded-xl flex items-center justify-center shadow-sm border border-neutral-200 dark:border-neutral-800 mb-4">
                     <QrCode className="w-5 h-5 text-neutral-900 dark:text-white" />
                   </div>
-                  <h3 className="text-sm font-bold text-neutral-900 dark:text-white mb-2">Configure seu Authenticator</h3>
+                  <h3 className="text-sm font-bold text-neutral-900 dark:text-white mb-2">{t('security.configure_authenticator', 'Configure seu Authenticator')}</h3>
                   <p className="text-xs text-neutral-500 mb-6">
-                    Escaneie o QR Code abaixo usando o Google Authenticator ou Authy.
+                    {t('security.scan_qr', 'Escaneie o QR Code abaixo usando o Google Authenticator ou Authy.')}
                   </p>
                   
                   {qrCodeUrl ? (
@@ -208,7 +210,7 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
 
                 <div className="space-y-3">
                   <label className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider ml-1">
-                    Código de 6 dígitos
+                    {t('security.six_digit_code', 'Código de 6 dígitos')}
                   </label>
                   <input
                     type="text"
@@ -228,14 +230,14 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
 
                 <div className="flex gap-3 pt-2">
                   <button onClick={onCancel} className="flex-1 h-12 rounded-xl text-xs font-bold text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-                    Cancelar
+                    {t('common.cancel', 'Cancelar')}
                   </button>
                   <button
                     onClick={handleVerify}
                     disabled={isLoading || code.length < 6}
                     className="flex-[2] h-12 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verificar e Entrar'}
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t('security.verify_and_enter', 'Verificar e Entrar')}
                   </button>
                 </div>
               </motion.div>
@@ -245,7 +247,7 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
               <motion.div key="verify" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
                 <div className="space-y-3">
                   <label className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider ml-1">
-                    Código do Authenticator
+                    {t('security.authenticator_code', 'Código do Authenticator')}
                   </label>
                   <input
                     type="text"
@@ -266,14 +268,14 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
 
                 <div className="flex gap-3 pt-2">
                   <button onClick={onCancel} className="flex-1 h-12 rounded-xl text-xs font-bold text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-                    Voltar
+                    {t('common.back', 'Voltar')}
                   </button>
                   <button
                     onClick={handleVerify}
                     disabled={isLoading || code.length < 6}
                     className="flex-[2] h-12 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Acessar'}
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : t('common.access', 'Acessar')}
                   </button>
                 </div>
               </motion.div>
@@ -285,9 +287,9 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
                   <Fingerprint className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 
-                <h3 className="text-xl font-bold text-neutral-900 dark:text-white">Deseja habilitar Login por Biometria?</h3>
+                <h3 className="text-xl font-bold text-neutral-900 dark:text-white">{t('security.enable_biometrics_prompt', 'Deseja habilitar Login por Biometria?')}</h3>
                 <p className="text-sm text-neutral-500">
-                  Na próxima vez que você fizer login neste aparelho, poderá usar FaceID, TouchID ou a biometria do seu sistema em vez de digitar sua senha.
+                  {t('security.biometrics_prompt_desc', 'Na próxima vez que você fizer login neste aparelho, poderá usar FaceID, TouchID ou a biometria do seu sistema em vez de digitar sua senha.')}
                 </p>
 
                 {error && (
@@ -302,14 +304,14 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
                     disabled={isLoading}
                     className="w-full h-14 rounded-2xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Fingerprint className="w-5 h-5" /> Registrar Biometria (Recomendado)</>}
+                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Fingerprint className="w-5 h-5" /> {t('security.register_biometrics', 'Registrar Biometria (Recomendado)')}</>}
                   </button>
                   <button 
                     onClick={onSuccess} 
                     disabled={isLoading}
                     className="w-full h-12 rounded-xl text-sm font-bold text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                   >
-                    Pular por agora
+                    {t('security.skip_for_now', 'Pular por agora')}
                   </button>
                 </div>
               </motion.div>

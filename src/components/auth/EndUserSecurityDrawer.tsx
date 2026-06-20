@@ -6,6 +6,7 @@ import { ShieldAlert, Loader2, QrCode, ShieldCheck, X, Trash2, KeyRound, Fingerp
 import { createClient } from '@/utils/supabase/client'
 import { startRegistration } from '@simplewebauthn/browser'
 import { EndUserMfaModal } from '@/components/auth/EndUserMfaModal'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface EndUserSecurityDrawerProps {
   isOpen: boolean
@@ -20,6 +21,7 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
   const [showMfaModal, setShowMfaModal] = useState(false)
   
   const supabase = createClient()
+  const { t } = useI18n()
   const userEmail = user?.email || user?.Email || user?.mail || ''
   const externalUserId = user?.id || user?.ID || user?.Id || userEmail
 
@@ -86,13 +88,13 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
       fetchSecurityData()
     } catch (err: any) {
       console.error(err)
-      alert(err.message || 'Erro ao registrar biometria.')
+      alert(err.message || t('security.error_register_biometrics', 'Erro ao registrar biometria.'))
       setIsLoading(false)
     }
   }
 
   const handleDeletePasskey = async (credentialID: string) => {
-    if (!confirm('Tem certeza que deseja remover esta biometria?')) return
+    if (!confirm(t('security.confirm_remove_biometrics', 'Tem certeza que deseja remover esta biometria?'))) return
 
     try {
       setIsLoading(true)
@@ -112,7 +114,7 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
   }
 
   const handleRemoveMfa = async () => {
-    if (!confirm('Atenção: Remover o MFA deixará sua conta menos segura. Continuar?')) return
+    if (!confirm(t('security.confirm_remove_mfa', 'Atenção: Remover o MFA deixará sua conta menos segura. Continuar?'))) return
 
     try {
       setIsLoading(true)
@@ -153,9 +155,9 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
             <div>
               <h2 className="text-xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-indigo-600" />
-                Segurança
+                {t('security.title')}
               </h2>
-              <p className="text-sm text-neutral-500">Gerencie sua proteção</p>
+              <p className="text-sm text-neutral-500">{t('security.subtitle')}</p>
             </div>
             <button 
               onClick={onClose}
@@ -178,9 +180,9 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
                     <div>
                       <h3 className="font-bold text-neutral-900 dark:text-white flex items-center gap-2">
                         <Fingerprint className="w-4 h-4 text-emerald-500" />
-                        Login por Biometria
+                        {t('security.biometrics')}
                       </h3>
-                      <p className="text-xs text-neutral-500 mt-1">Use FaceID ou TouchID para entrar sem senha.</p>
+                      <p className="text-xs text-neutral-500 mt-1">{t('security.biometrics_desc')}</p>
                     </div>
                   </div>
 
@@ -192,7 +194,7 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
                             <KeyRound className="w-4 h-4" />
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-neutral-900 dark:text-white">Dispositivo Registrado</p>
+                            <p className="text-sm font-bold text-neutral-900 dark:text-white">{t('security.device_registered')}</p>
                             <p className="text-[10px] text-neutral-500">
                               {new Date(pk.registered_at || Date.now()).toLocaleDateString()}
                             </p>
@@ -201,7 +203,7 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
                         <button 
                           onClick={() => handleDeletePasskey(pk.credentialID)}
                           className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
-                          title="Remover"
+                          title={t('security.remove')}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -213,7 +215,7 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
                       className="w-full flex items-center justify-center gap-2 p-3 border border-dashed border-neutral-300 dark:border-neutral-700 rounded-xl text-sm font-bold text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
                     >
                       <Plus className="w-4 h-4" />
-                      Registrar Novo Aparelho
+                      {t('security.register_device')}
                     </button>
                   </div>
                 </div>
@@ -226,9 +228,9 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
                     <div>
                       <h3 className="font-bold text-neutral-900 dark:text-white flex items-center gap-2">
                         <ShieldAlert className="w-4 h-4 text-indigo-500" />
-                        Autenticador 2FA
+                        {t('security.authenticator_2fa')}
                       </h3>
-                      <p className="text-xs text-neutral-500 mt-1">Código de 6 dígitos via aplicativo.</p>
+                      <p className="text-xs text-neutral-500 mt-1">{t('security.authenticator_desc')}</p>
                     </div>
                   </div>
 
@@ -239,15 +241,15 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
                           <ShieldCheck className="w-4 h-4" />
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">Ativo</p>
-                          <p className="text-[10px] text-emerald-600 dark:text-emerald-500">Conta protegida por MFA</p>
+                          <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{t('security.active')}</p>
+                          <p className="text-[10px] text-emerald-600 dark:text-emerald-500">{t('security.protected_account')}</p>
                         </div>
                       </div>
                       <button 
                         onClick={handleRemoveMfa}
                         className="text-xs font-bold text-red-600 hover:underline px-2 py-1"
                       >
-                        Desativar
+                        {t('security.disable')}
                       </button>
                     </div>
                   ) : (
@@ -256,7 +258,7 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
                       className="w-full flex items-center justify-center gap-2 p-3 border border-dashed border-neutral-300 dark:border-neutral-700 rounded-xl text-sm font-bold text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
                     >
                       <QrCode className="w-4 h-4" />
-                      Configurar Authenticator
+                      {t('security.configure_authenticator')}
                     </button>
                   )}
                 </div>

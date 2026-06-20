@@ -42,6 +42,7 @@ export function LoginPortalClient({
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingBio, setIsLoadingBio] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [showMfaModal, setShowMfaModal] = useState(false)
   const [pendingMfaUser, setPendingMfaUser] = useState<any>(null)
@@ -102,7 +103,7 @@ export function LoginPortalClient({
 
           finalizeLogin(user)
         } else {
-          setErrorMsg(error || 'Credenciais inválidas.')
+          setErrorMsg(error || t('runtime.invalid_credentials', 'Credenciais inválidas.'))
           setIsLoading(false)
         }
       })
@@ -135,21 +136,21 @@ export function LoginPortalClient({
       timeoutId = setTimeout(() => {
         if (!isFinished) {
           cleanup()
-          setErrorMsg('O túnel seguro com o banco local está offline. Por favor, inicie o CLI do MetaBuilder PRO.')
+          setErrorMsg(t('runtime.tunnel_offline', 'O túnel seguro com o banco local está offline. Por favor, inicie o CLI do MetaBuilder PRO.'))
           setIsLoading(false)
         }
       }, 9000)
 
     } catch (err: any) {
       cleanup()
-      setErrorMsg(err.message || 'Erro inesperado ao realizar autenticação.')
+      setErrorMsg(t('runtime.auth_unexpected_error', 'Erro inesperado ao realizar autenticação.'))
       setIsLoading(false)
     }
   }
 
   const handlePasskeyLogin = async () => {
     try {
-      setIsLoading(true)
+      setIsLoadingBio(true)
       setErrorMsg(null)
 
       const optionsRes = await fetch('/api/auth/end-user/passkeys/authenticate/generate-options', {
@@ -164,7 +165,7 @@ export function LoginPortalClient({
         attResp = await startAuthentication(options)
       } catch (e: any) {
         if (e.name === 'NotAllowedError') {
-          setIsLoading(false)
+          setIsLoadingBio(false)
           return // User cancelled
         }
         throw e
@@ -181,18 +182,13 @@ export function LoginPortalClient({
 
       const verification = await verifyRes.json()
       if (verification.error) throw new Error(verification.error)
-
-      // Se autenticou com sucesso, precisamos pegar os dados do usuário.
-      // O endpoint retorna o externalUserId. O problema é que o túnel não tem endpoint para buscar usuário por ID diretamente,
-      // mas podemos usar o tunnel com action: 'get_users' + filter ou action: 'select'.
-      // Vamos emular o fetch via tunnel.
       
       const queryId = crypto.randomUUID()
       const channelName = `tunnel:${project.id}`
       const channel = supabase.channel(channelName)
 
       channel.on('broadcast', { event: `query_result_${queryId}` }, (payload: any) => {
-        const { success, data, error } = payload.payload
+        const { success, data } = payload.payload
         supabase.removeChannel(channel)
         if (success && data && data.length > 0) {
           const user = data[0]
@@ -201,14 +197,14 @@ export function LoginPortalClient({
           if (securityConfig.mfa_enabled || securityConfig.passkey_enabled) {
             setPendingMfaUser(user)
             setShowMfaModal(true)
-            setIsLoading(false)
+            setIsLoadingBio(false)
             return
           }
           
           finalizeLogin(user)
         } else {
-          setErrorMsg(error || 'Usuário não encontrado após biometria.')
-          setIsLoading(false)
+          setErrorMsg(t('runtime.biometric_user_not_found', 'Usuário não encontrado após biometria.'))
+          setIsLoadingBio(false)
         }
       })
 
@@ -224,7 +220,7 @@ export function LoginPortalClient({
               table: authConfig.db_table_name,
               schemaName: schemaName || 'public',
               filters: {
-                id: verification.externalUserId // Fallback assumption
+                id: verification.externalUserId
               }
             }
           })
@@ -232,8 +228,8 @@ export function LoginPortalClient({
       })
 
     } catch (err: any) {
-      setErrorMsg(err.message || 'Erro na autenticação biométrica.')
-      setIsLoading(false)
+      setErrorMsg(t('runtime.biometric_auth_error', 'Erro na autenticação biométrica.'))
+      setIsLoadingBio(false)
     }
   }
 
@@ -336,11 +332,10 @@ export function LoginPortalClient({
                   <button
                     type="button"
                     onClick={handlePasskeyLogin}
-                    disabled={isLoading}
+                    disabled={isLoadingBio}
                     className="w-full h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-xs transition-all hover:bg-indigo-100 dark:hover:bg-indigo-500/20 active:scale-95 border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-center gap-2 mb-6 shadow-sm"
                   >
-                    <Fingerprint className="w-5 h-5" />
-                    Entrar com Biometria
+                    {isLoadingBio ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Fingerprint className="w-5 h-5" /> {t('runtime.login_with_biometrics', 'Entrar com Biometria')}</>}
                   </button>
                 )}
 
