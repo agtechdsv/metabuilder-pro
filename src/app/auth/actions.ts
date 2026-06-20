@@ -385,3 +385,26 @@ export async function getPostLoginRedirectPath(userId: string): Promise<string> 
   return '/checkout'
 }
 
+export async function removePasskeys() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autorizado' }
+
+  const { createClient: createSupabaseClient } = await import('@supabase/supabase-js')
+  const supabaseAdmin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { error } = await supabaseAdmin
+    .from('passkey_credentials')
+    .delete()
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('Erro ao remover passkeys:', error)
+    return { error: error.message }
+  }
+
+  return { success: true }
+}

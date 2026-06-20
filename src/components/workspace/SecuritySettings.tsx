@@ -21,9 +21,14 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
   const [passkeyEnabled, setPasskeyEnabled] = useState(profile?.passkey_enabled || false)
   const [isSaving, setIsSaving] = useState(false)
   const [isRegistering, setIsRegistering] = useState(false)
+  
   const [hasMfaSetup, setHasMfaSetup] = useState(false)
   const [isRemovingMfa, setIsRemovingMfa] = useState(false)
   const [isConfirmingRemoval, setIsConfirmingRemoval] = useState(false)
+
+  const [hasPasskeySetup, setHasPasskeySetup] = useState(false)
+  const [isRemovingPasskey, setIsRemovingPasskey] = useState(false)
+  const [isConfirmingPasskeyRemoval, setIsConfirmingPasskeyRemoval] = useState(false)
 
   useEffect(() => {
     setMfaRequired(profile?.enforce_mfa || false)
@@ -34,7 +39,12 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
       const totpFactors = data?.totp || []
       setHasMfaSetup(totpFactors.some(f => f.status === 'verified'))
     })
-  }, [profile?.enforce_mfa, profile?.passkey_enabled, supabase.auth.mfa])
+
+    // Check if the user has a Passkey setup
+    supabase.from('passkey_credentials').select('credential_id').eq('user_id', profile.id).limit(1).then(({ data }) => {
+      setHasPasskeySetup(Boolean(data && data.length > 0))
+    })
+  }, [profile?.enforce_mfa, profile?.passkey_enabled, profile.id, supabase])
 
   const handleRegisterDevice = async () => {
     setIsRegistering(true)
@@ -118,6 +128,28 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
     }
   }
 
+  const handleRemovePasskey = async () => {
+    if (!isConfirmingPasskeyRemoval) {
+      setIsConfirmingPasskeyRemoval(true)
+      return
+    }
+
+    setIsRemovingPasskey(true)
+    try {
+      const { removePasskeys } = await import('@/app/auth/actions')
+      const res = await removePasskeys()
+      if (res.error) throw new Error(res.error)
+
+      toast('Biometria removida com sucesso!', 'success')
+      setHasPasskeySetup(false)
+      setIsConfirmingPasskeyRemoval(false)
+    } catch (err: any) {
+      toast(err.message || 'Erro ao remover biometria.', 'error')
+    } finally {
+      setIsRemovingPasskey(false)
+    }
+  }
+
   return (
     <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-sm">
       <div className="flex items-center gap-3 mb-8 border-b border-neutral-100 dark:border-neutral-800 pb-6">
@@ -176,6 +208,35 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
                 <Fingerprint className="w-4 h-4" />
                 {isRegistering ? 'Aguardando FaceID...' : 'Registrar Este Aparelho'}
               </button>
+            </div>
+          )}
+
+          {hasPasskeySetup && (
+            <div className="mt-2 pt-4 border-t border-indigo-100 dark:border-indigo-900/30 flex justify-between items-center">
+              <div>
+                <p className="text-xs font-bold text-indigo-900 dark:text-indigo-400">Remover Chave Passkey</p>
+                <p className="text-[10px] text-indigo-700/80 dark:text-indigo-400/80 mt-0.5">
+                  Desvincula o seu aparelho atual, permitindo cadastrar um novo ou limpar o acesso.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {isConfirmingPasskeyRemoval && (
+                  <button
+                    onClick={() => setIsConfirmingPasskeyRemoval(false)}
+                    disabled={isRemovingPasskey}
+                    className="px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                )}
+                <button
+                  onClick={handleRemovePasskey}
+                  disabled={isRemovingPasskey}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+                >
+                  {isRemovingPasskey ? 'Removendo...' : isConfirmingPasskeyRemoval ? 'Confirmar' : 'Remover Chave'}
+                </button>
+              </div>
             </div>
           )}
         </div>
