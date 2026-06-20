@@ -101,11 +101,25 @@ export async function unenrollPersonalMfa() {
 
   const totpFactors = factors?.totp || []
   
-  for (const factor of totpFactors) {
-    const { error: unenrollError } = await supabase.auth.mfa.unenroll({ factorId: factor.id })
-    if (unenrollError) {
-      console.error('Erro ao desvincular MFA:', unenrollError)
-      return { error: unenrollError.message }
+  if (totpFactors.length > 0) {
+    // Para remover o MFA (que exige AAL2 por padrão se usar o client normal), 
+    // precisamos usar o Service Role Key, pois o usuário pode estar logado
+    // via Passkey (que garante apenas AAL1).
+    const { createClient: createSupabaseClient } = await import('@supabase/supabase-js')
+    const supabaseAdmin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    for (const factor of totpFactors) {
+      const { error: unenrollError } = await supabaseAdmin.auth.admin.mfa.deleteFactor({ 
+        id: factor.id, 
+        userId: user.id 
+      })
+      if (unenrollError) {
+        console.error('Erro ao desvincular MFA via Admin API:', unenrollError)
+        return { error: unenrollError.message }
+      }
     }
   }
 

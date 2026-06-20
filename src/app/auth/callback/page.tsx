@@ -38,11 +38,25 @@ function CallbackHandler() {
         }
       }
 
+      // 0. Determina o redirect_to dinâmico se a URL não forneceu um explícito
+      let finalRedirect = next
+      if (typeof window !== 'undefined') {
+        const searchParams = new URLSearchParams(window.location.search)
+        if (!searchParams.get('next') && session?.user?.id) {
+          try {
+            const { getPostLoginRedirectPath } = await import('@/app/auth/actions')
+            finalRedirect = await getPostLoginRedirectPath(session.user.id)
+          } catch (e) {
+            console.error('Erro ao determinar redirecionamento dinâmico:', e)
+          }
+        }
+      }
+
       const payload = { 
         type: 'SUPABASE_AUTH_SUCCESS', 
         access_token: session.access_token,
         refresh_token: session.refresh_token,
-        next 
+        next: finalRedirect 
       }
 
       // 1. Envia via BroadcastChannel
@@ -73,7 +87,7 @@ function CallbackHandler() {
         // Se não for popup, não mostra a tela de sucesso com botão de fechar. 
         // Mantém visual de carregamento ou muda para redirecionando.
         setStatus('redirecting' as any) // Gambiarra segura pro tipo local
-        window.location.replace(next)
+        window.location.replace(finalRedirect)
       }
     }
 
