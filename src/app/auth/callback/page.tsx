@@ -27,7 +27,6 @@ function CallbackHandler() {
     const notifyAndClose = async (session: any) => {
       if (done) return
       done = true
-      setStatus('success')
 
       // Registrar indicação se aplicável
       if (session?.user?.email) {
@@ -63,6 +62,7 @@ function CallbackHandler() {
       }
 
       if (isPopup) {
+        setStatus('success')
         // Força o fechamento do popup
         setTimeout(() => {
           try {
@@ -70,7 +70,9 @@ function CallbackHandler() {
           } catch (_) {}
         }, 500)
       } else {
-        // Se não for popup, simplesmente redireciona
+        // Se não for popup, não mostra a tela de sucesso com botão de fechar. 
+        // Mantém visual de carregamento ou muda para redirecionando.
+        setStatus('redirecting' as any) // Gambiarra segura pro tipo local
         window.location.replace(next)
       }
     }
@@ -144,6 +146,14 @@ function CallbackHandler() {
             >
               {t('auth.callback.close_window', 'Fechar Janela')}
             </button>
+          </div>
+        )}
+
+        {status === ('redirecting' as any) && (
+          <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500">
+            <Loader2 className="w-12 h-12 text-emerald-500 animate-spin mb-6" />
+            <h2 className="text-xl font-bold mb-2">Redirecionando...</h2>
+            <p className="text-neutral-400 text-sm">Preparando seu ambiente de trabalho.</p>
           </div>
         )}
 
