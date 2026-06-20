@@ -31,6 +31,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Credencial não encontrada' }, { status: 404 })
     }
 
+    const userId = credentialData.user_id
+
+    // --- ENFORCE PASSKEY POLICY ---
+    // Verifica se a biometria está habilitada para o usuário ou para o Owner do Workspace dele
+    const { data: profile } = await supabaseAdmin.from('profiles').select('passkey_enabled').eq('id', userId).single()
+    let isPasskeyAllowed = profile?.passkey_enabled
+
+    if (!isPasskeyAllowed) {
+      // Se não for o owner, verifica a regra do owner do workspace onde ele é convidado
+      const { data: guestRecord } = await supabaseAdmin.from('owner_guests').select('owner_id').eq('user_id', userId).limit(1).maybeSingle()
+      if (guestRecord?.owner_id) {
+        const { data: ownerProfile } = await supabaseAdmin.from('profiles').select('passkey_enabled').eq('id', guestRecord.owner_id).single()
+        if (ownerProfile?.passkey_enabled) {
+          isPasskeyAllowed = true
+        }
+      }
+    }
+
+    if (!isPasskeyAllowed) {
+      return NextResponse.json({ 
+        error: 'A Autenticação Biométrica está desativada pelas políticas de segurança do seu Workspace.' 
+      }, { status: 403 })
+    }
+    // --- FIM DA VALIDAÇÃO DE POLÍTICA ---
+
     const host = request.headers.get('host') || 'localhost'
     const rpID = host.split(':')[0]
     
