@@ -64,7 +64,11 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
       }
     } catch (error: any) {
       console.error(error)
-      toast(error.message || 'Erro ao registrar biometria no aparelho.', 'error')
+      if (error.name === 'NotAllowedError' || error.message?.includes('timed out or was not allowed')) {
+        toast('Operação cancelada ou aparelho incompatível.', 'error')
+      } else {
+        toast(error.message || 'Erro ao registrar biometria no aparelho.', 'error')
+      }
     } finally {
       setIsRegistering(false)
     }

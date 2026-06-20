@@ -91,7 +91,11 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
       }
     } catch (error: any) {
       console.error(error)
-      setClientError(error.message || 'Erro ao processar login biométrico.')
+      if (error.name === 'NotAllowedError' || error.message?.includes('timed out or was not allowed')) {
+        setClientError('Operação cancelada ou nenhuma biometria encontrada neste aparelho.')
+      } else {
+        setClientError(error.message || 'Erro ao processar login biométrico.')
+      }
     } finally {
       setIsPasskeyLoading(false)
     }
