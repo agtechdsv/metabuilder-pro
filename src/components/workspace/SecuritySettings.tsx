@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/Toast'
 import { startRegistration } from '@simplewebauthn/browser'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface SecuritySettingsProps {
   profile: any
@@ -17,6 +18,7 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
   const { toast } = useToast()
   const router = useRouter()
   const supabase = createClient()
+  const { t } = useI18n()
 
   const [mfaRequired, setMfaRequired] = useState(profile?.enforce_mfa || false)
   const [passkeyEnabled, setPasskeyEnabled] = useState(profile?.passkey_enabled || false)
@@ -160,10 +162,10 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
           </div>
           <div>
             <h3 className="text-lg font-black text-neutral-900 dark:text-white uppercase tracking-wider">
-              Segurança Global
+              {t('security.global_security', 'Segurança Global')}
             </h3>
             <p className="text-xs text-neutral-500 mt-1 font-medium">
-              Regras de autenticação para os DEVs convidados neste Workspace.
+              {t('security.global_security_desc', 'Regras de autenticação para os DEVs convidados neste Workspace.')}
             </p>
           </div>
         </div>
@@ -179,9 +181,9 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
                   <KeyRound className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Autenticação Biométrica (Passkey)</h4>
+                  <h4 className="text-sm font-bold text-neutral-900 dark:text-white">{t('security.passkey_auth', 'Autenticação Biométrica (Passkey)')}</h4>
                   <p className="text-xs text-neutral-500 mt-1 max-w-lg">
-                    Permite que você e os DEVs do time façam login no painel do MetaBuilderPRO utilizando biometria (FaceID / TouchID).
+                    {t('security.passkey_auth_desc', 'Permite que você e os DEVs do time façam login no painel do MetaBuilderPRO utilizando biometria (FaceID / TouchID).')}
                   </p>
                 </div>
               </div>
@@ -202,8 +204,8 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
           {(isPersonalOnly || passkeyEnabled) && (
             <div className="mt-2 pt-4 border-t border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
               <div>
-                <p className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Meu Dispositivo</p>
-                <p className="text-[10px] text-neutral-500 mt-0.5">Para acessar usando biometria, cadastre este aparelho.</p>
+                <p className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{t('security.my_device', 'Meu Dispositivo')}</p>
+                <p className="text-[10px] text-neutral-500 mt-0.5">{t('security.my_device_desc', 'Para acessar usando biometria, cadastre este aparelho.')}</p>
               </div>
               <button
                 onClick={handleRegisterDevice}
@@ -211,7 +213,7 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
               >
                 <Fingerprint className="w-4 h-4" />
-                {isRegistering ? 'Aguardando FaceID...' : 'Registrar Este Aparelho'}
+                {isRegistering ? t('security.waiting_faceid', 'Aguardando FaceID...') : t('security.register_this_device', 'Registrar Este Aparelho')}
               </button>
             </div>
           )}
@@ -219,9 +221,9 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
           {hasPasskeySetup && (
             <div className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-500/5 rounded-2xl border border-red-200 dark:border-red-900/50 mt-2">
               <div>
-                <h4 className="text-sm font-bold text-red-900 dark:text-red-400">Remover Chave Passkey</h4>
+                <h4 className="text-sm font-bold text-red-900 dark:text-red-400">{t('security.remove_passkey', 'Remover Chave Passkey')}</h4>
                 <p className="text-xs text-red-700/80 dark:text-red-400/80 mt-1 max-w-lg">
-                  Desvincula o seu aparelho atual, permitindo cadastrar um novo ou limpar o acesso.
+                  {t('security.remove_passkey_desc', 'Desvincula o seu aparelho atual, permitindo cadastrar um novo ou limpar o acesso.')}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -231,7 +233,7 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
                     disabled={isRemovingPasskey}
                     className="px-4 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
                   >
-                    Cancelar
+                    {t('common.cancel', 'Cancelar')}
                   </button>
                 )}
                 <button
@@ -239,7 +241,7 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
                   disabled={isRemovingPasskey}
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
                 >
-                  {isRemovingPasskey ? 'Removendo...' : isConfirmingPasskeyRemoval ? 'Sim, quero remover' : 'Remover Chave'}
+                  {isRemovingPasskey ? t('security.removing', 'Removendo...') : isConfirmingPasskeyRemoval ? t('security.yes_remove', 'Sim, quero remover') : t('security.remove_key', 'Remover Chave')}
                 </button>
               </div>
             </div>
@@ -255,9 +257,9 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
                   <Smartphone className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Autenticação Multi-Fator (MFA) Obrigatória</h4>
+                  <h4 className="text-sm font-bold text-neutral-900 dark:text-white">{t('security.mfa_mandatory', 'Autenticação Multi-Fator (MFA) Obrigatória')}</h4>
                   <p className="text-xs text-neutral-500 mt-1 max-w-lg">
-                    Força todos os DEVs convidados a configurarem um aplicativo Authenticator (Microsoft/Google) antes de acessarem o Workspace.
+                    {t('security.mfa_mandatory_desc', 'Força todos os DEVs convidados a configurarem um aplicativo Authenticator (Microsoft/Google) antes de acessarem o Workspace.')}
                   </p>
                 </div>
               </div>
@@ -278,9 +280,9 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
           {hasMfaSetup && (
             <div className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-500/5 rounded-2xl border border-red-200 dark:border-red-900/50 mt-2">
               <div>
-                <h4 className="text-sm font-bold text-red-900 dark:text-red-400">Remover Meu Authenticator</h4>
+                <h4 className="text-sm font-bold text-red-900 dark:text-red-400">{t('security.remove_my_authenticator', 'Remover Meu Authenticator')}</h4>
                 <p className="text-xs text-red-700/80 dark:text-red-400/80 mt-1 max-w-lg">
-                  Se você perdeu acesso ao seu Authenticator ou quer cadastrá-lo novamente em outro celular, clique aqui para desvinculá-lo da sua conta.
+                  {t('security.remove_my_authenticator_desc', 'Se você perdeu acesso ao seu Authenticator ou quer cadastrá-lo novamente em outro celular, clique aqui para desvinculá-lo da sua conta.')}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -290,7 +292,7 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
                     disabled={isRemovingMfa}
                     className="px-4 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
                   >
-                    Cancelar
+                    {t('common.cancel', 'Cancelar')}
                   </button>
                 )}
                 <button
@@ -298,7 +300,7 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
                   disabled={isRemovingMfa}
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
                 >
-                  {isRemovingMfa ? 'Removendo...' : isConfirmingRemoval ? 'Sim, quero remover' : 'Remover Agora'}
+                  {isRemovingMfa ? t('security.removing', 'Removendo...') : isConfirmingRemoval ? t('security.yes_remove', 'Sim, quero remover') : t('security.remove_now', 'Remover Agora')}
                 </button>
               </div>
             </div>
@@ -308,7 +310,7 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
         {!isOwner && (
           <div className="flex items-center gap-2 p-4 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-xl text-xs font-bold">
             <AlertCircle className="w-4 h-4" />
-            Apenas o Owner do Workspace pode alterar as configurações de segurança globais.
+            {t('security.owner_only_security', 'Apenas o Owner do Workspace pode alterar as configurações de segurança globais.')}
           </div>
         )}
 
@@ -319,7 +321,7 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
                 disabled={isSaving}
                 className="px-6 py-2.5 bg-neutral-900 dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black text-xs font-bold rounded-xl transition-all shadow-xl active:scale-95 disabled:opacity-50"
               >
-                {isSaving ? 'Salvando...' : 'Salvar Políticas de Segurança'}
+                {isSaving ? t('common.saving', 'Salvando...') : t('security.save_security_policies', 'Salvar Políticas de Segurança')}
               </button>
             </div>
           )}
