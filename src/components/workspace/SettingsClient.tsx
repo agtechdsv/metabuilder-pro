@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, UserPlus, Shield, X, Mail, RefreshCw, FolderLock, CreditCard } from 'lucide-react'
+import { Users, UserPlus, Shield, X, Mail, RefreshCw, FolderLock, CreditCard, Lock } from 'lucide-react'
 import { inviteWorkspaceMember, removeWorkspaceMember, toggleMemberProject } from '@/app/actions/workspace'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { useRouter } from 'next/navigation'
 import BillingSettings from './BillingSettings'
+import SecuritySettings from './SecuritySettings'
 import { useI18n } from '@/i18n/I18nContext'
 
 interface Member {
@@ -70,7 +71,7 @@ export function SettingsClient({
   rules
 }: SettingsClientProps) {
   const { t } = useI18n()
-  const [activeTab, setActiveTab] = useState<'team' | 'billing'>('team')
+  const [activeTab, setActiveTab] = useState<'team' | 'billing' | 'security'>('team')
   const [members, setMembers] = useState<Member[]>(initialMembers)
   const [memberProjects, setMemberProjects] = useState(initialMemberProjects || [])
 
@@ -165,6 +166,13 @@ export function SettingsClient({
         >
           <CreditCard className="w-4 h-4" />
           {t('settings.billing_tab')}
+        </button>
+        <button 
+          onClick={() => setActiveTab('security')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'security' ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
+        >
+          <Lock className="w-4 h-4" />
+          Segurança
         </button>
       </div>
 
@@ -320,6 +328,13 @@ export function SettingsClient({
           isOwner={currentUserRole === 'owner'}
           payments={payments}
           rules={rules}
+        />
+      )}
+
+      {activeTab === 'security' && (
+        <SecuritySettings 
+          workspace={workspace}
+          isOwner={currentUserRole === 'owner'}
         />
       )}
 
