@@ -85,11 +85,12 @@ export async function POST(request: Request) {
       }
 
       // Generate a magic link
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || 'https://metabuilderpro.com'
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
         email: profile.email,
         options: {
-          redirectTo: `${expectedOrigin}/auth/callback`
+          redirectTo: `${appUrl}/auth/callback`
         }
       })
 
