@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Shield, Smartphone, KeyRound, AlertCircle, Fingerprint } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { startRegistration } from '@simplewebauthn/browser'
@@ -21,6 +21,11 @@ export default function SecuritySettings({ profile, isOwner }: SecuritySettingsP
   const [passkeyEnabled, setPasskeyEnabled] = useState(profile?.passkey_enabled || false)
   const [isSaving, setIsSaving] = useState(false)
   const [isRegistering, setIsRegistering] = useState(false)
+
+  useEffect(() => {
+    setMfaRequired(profile?.enforce_mfa || false)
+    setPasskeyEnabled(profile?.passkey_enabled || false)
+  }, [profile?.enforce_mfa, profile?.passkey_enabled])
 
   const handleRegisterDevice = async () => {
     setIsRegistering(true)

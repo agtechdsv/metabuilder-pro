@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     // Find the credential in DB
     const { data: credentialData, error: credError } = await supabase
       .from('passkey_credentials')
-      .select('*, profiles(email)')
+      .select('*')
       .eq('credential_id', body.id)
       .single()
 
@@ -70,10 +70,21 @@ export async function POST(request: Request) {
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       ).auth.admin;
 
+      // Buscar email do profile usando o user_id
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', credentialData.user_id)
+        .single()
+
+      if (!profile?.email) {
+        throw new Error('E-mail não encontrado para o usuário desta biometria.')
+      }
+
       // Generate a magic link
       const { data: linkData, error: linkError } = await adminAuth.generateLink({
         type: 'magiclink',
-        email: credentialData.profiles.email,
+        email: profile.email,
       })
 
       if (linkError || !linkData?.properties?.action_link) {
