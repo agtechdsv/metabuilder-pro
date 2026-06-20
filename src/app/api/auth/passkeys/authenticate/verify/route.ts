@@ -9,7 +9,8 @@ export async function POST(request: Request) {
     const body = await request.json()
 
     // Retrieve expected challenge from cookie
-    const cookieStore = require('next/headers').cookies()
+    const { cookies } = require('next/headers')
+    const cookieStore = await cookies()
     const expectedChallenge = cookieStore.get('webauthn_auth_challenge')?.value
 
     if (!expectedChallenge) {

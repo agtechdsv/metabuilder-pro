@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { verifyRegistrationResponse } from '@simplewebauthn/server'
 import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
 
 export async function POST(request: Request) {
   try {
@@ -14,8 +15,8 @@ export async function POST(request: Request) {
     const body = await request.json()
 
     // Retrieve expected challenge
-    const { data: profileData } = await supabase.from('profiles').select('theme_config').eq('id', user.id).single()
-    const expectedChallenge = profileData?.theme_config?.current_challenge
+    const cookieStore = await cookies()
+    const expectedChallenge = cookieStore.get('webauthn_challenge')?.value
 
     if (!expectedChallenge) {
       return NextResponse.json({ error: 'Nenhum desafio encontrado para verificação' }, { status: 400 })
@@ -58,9 +59,8 @@ export async function POST(request: Request) {
       }
 
       // Clear the challenge
-      const newConfig = { ...profileData.theme_config }
-      delete newConfig.current_challenge
-      await supabase.from('profiles').update({ theme_config: newConfig }).eq('id', user.id)
+      const cookieStoreToClear = await cookies()
+      cookieStoreToClear.delete('webauthn_challenge')
 
       return NextResponse.json({ verified: true })
     }

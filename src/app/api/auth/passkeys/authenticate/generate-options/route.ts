@@ -15,7 +15,8 @@ export async function POST(request: Request) {
     })
 
     // Salvar challenge em um cookie HTTPOnly já que o usuário ainda não está logado
-    const cookieStore = require('next/headers').cookies()
+    const { cookies } = require('next/headers')
+    const cookieStore = await cookies()
     cookieStore.set('webauthn_auth_challenge', options.challenge, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

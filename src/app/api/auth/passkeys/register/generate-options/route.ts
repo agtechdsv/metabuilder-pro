@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { generateRegistrationOptions } from '@simplewebauthn/server'
 import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
 
 export async function POST(request: Request) {
   try {
@@ -43,15 +44,13 @@ export async function POST(request: Request) {
       },
     })
 
-    // Guarda o 'challenge' na sessão (profiles ou tabela separada)
-    // Para simplificar, vou gravar na tabela de perfils em uma coluna temporária
-    // Ou numa tabela dedicada. Como não pedimos `current_challenge`, podemos atualizar o `profiles.theme_config`
-    const { data: profileData } = await supabase.from('profiles').select('theme_config').eq('id', user.id).single()
-    const newConfig = {
-      ...(profileData?.theme_config || {}),
-      current_challenge: options.challenge
-    }
-    await supabase.from('profiles').update({ theme_config: newConfig }).eq('id', user.id)
+    const cookieStore = await cookies()
+    cookieStore.set('webauthn_challenge', options.challenge, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 300 // 5 minutos
+    })
 
     return NextResponse.json(options)
   } catch (error: any) {
