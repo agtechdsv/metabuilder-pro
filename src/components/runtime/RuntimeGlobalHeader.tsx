@@ -3,7 +3,7 @@
 import { useParams, usePathname } from 'next/navigation'
 import { PanelLeftClose, PanelLeftOpen, Box, Home, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { HeaderActions } from '@/components/layout/HeaderActions'
+import { RuntimeHeaderActions } from '@/components/runtime/RuntimeHeaderActions'
 import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
 import { findBreadcrumbPath } from '@/lib/navigation-utils'
@@ -93,7 +93,7 @@ export function RuntimeGlobalHeader({
 
       {/* Right Actions */}
       <div className="flex items-center gap-4">
-        <HeaderActions />
+        <RuntimeHeaderActions projectId={project.id} />
       </div>
     </header>
   )

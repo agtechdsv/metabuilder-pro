@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
-import { LayoutTemplate, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react'
+import { LayoutTemplate, AlertCircle, Loader2, Eye, EyeOff, Fingerprint } from 'lucide-react'
 import { HeaderActions } from '@/components/layout/HeaderActions'
 import { LoginPortalThemeWrapper } from '@/components/auth/LoginPortalThemeWrapper'
 import { TranslationProvider } from '@/i18n/TranslationProvider'
 import { useI18n } from '@/i18n/I18nContext'
+import { EndUserMfaModal } from '@/components/auth/EndUserMfaModal'
+import { startAuthentication } from '@simplewebauthn/browser'
 
 interface LoginPortalClientProps {
   project: any
@@ -41,6 +43,8 @@ export function LoginPortalClient({
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [showMfaModal, setShowMfaModal] = useState(false)
+  const [pendingMfaUser, setPendingMfaUser] = useState<any>(null)
 
   // Pre-load theme styles
   const theme = visualConfig.theme || 'dark'
@@ -87,18 +91,16 @@ export function LoginPortalClient({
         const { success, data, error } = payload.payload
         if (success && data && data.length > 0) {
           const user = data[0]
-          // Salva o cookie de sessão para o projeto
-          const cookieName = `client_session_${project.id}`
-          document.cookie = `${cookieName}=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=86400; SameSite=Lax`
           
-          // Redireciona para o portal principal
-          if (isCustomDomain && customDomainType === 'workspace') {
-            window.location.href = `/${projectSlug}`
-          } else if (isCustomDomain) {
-            window.location.href = `/`
-          } else {
-            window.location.href = `/${workspaceSlug}/${projectSlug}`
+          const securityConfig = project.theme_config?.security || {}
+          if (securityConfig.mfa_enabled || securityConfig.passkey_enabled) {
+            setPendingMfaUser(user)
+            setShowMfaModal(true)
+            setIsLoading(false)
+            return
           }
+
+          finalizeLogin(user)
         } else {
           setErrorMsg(error || 'Credenciais inválidas.')
           setIsLoading(false)
@@ -145,6 +147,110 @@ export function LoginPortalClient({
     }
   }
 
+  const handlePasskeyLogin = async () => {
+    try {
+      setIsLoading(true)
+      setErrorMsg(null)
+
+      const optionsRes = await fetch('/api/auth/end-user/passkeys/authenticate/generate-options', {
+        method: 'POST',
+      })
+      const options = await optionsRes.json()
+
+      if (options.error) throw new Error(options.error)
+
+      let attResp;
+      try {
+        attResp = await startAuthentication(options)
+      } catch (e: any) {
+        if (e.name === 'NotAllowedError') {
+          setIsLoading(false)
+          return // User cancelled
+        }
+        throw e
+      }
+
+      const verifyRes = await fetch('/api/auth/end-user/passkeys/authenticate/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...attResp,
+          projectId: project.id
+        })
+      })
+
+      const verification = await verifyRes.json()
+      if (verification.error) throw new Error(verification.error)
+
+      // Se autenticou com sucesso, precisamos pegar os dados do usuário.
+      // O endpoint retorna o externalUserId. O problema é que o túnel não tem endpoint para buscar usuário por ID diretamente,
+      // mas podemos usar o tunnel com action: 'get_users' + filter ou action: 'select'.
+      // Vamos emular o fetch via tunnel.
+      
+      const queryId = crypto.randomUUID()
+      const channelName = `tunnel:${project.id}`
+      const channel = supabase.channel(channelName)
+
+      channel.on('broadcast', { event: `query_result_${queryId}` }, (payload: any) => {
+        const { success, data, error } = payload.payload
+        supabase.removeChannel(channel)
+        if (success && data && data.length > 0) {
+          const user = data[0]
+          
+          const securityConfig = project.theme_config?.security || {}
+          if (securityConfig.mfa_enabled || securityConfig.passkey_enabled) {
+            setPendingMfaUser(user)
+            setShowMfaModal(true)
+            setIsLoading(false)
+            return
+          }
+          
+          finalizeLogin(user)
+        } else {
+          setErrorMsg(error || 'Usuário não encontrado após biometria.')
+          setIsLoading(false)
+        }
+      })
+
+      channel.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.send({
+            type: 'broadcast',
+            event: 'sql_query',
+            payload: {
+              queryId,
+              token: project.secret_token,
+              action: 'select',
+              table: authConfig.db_table_name,
+              schemaName: schemaName || 'public',
+              filters: {
+                id: verification.externalUserId // Fallback assumption
+              }
+            }
+          })
+        }
+      })
+
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro na autenticação biométrica.')
+      setIsLoading(false)
+    }
+  }
+
+  const finalizeLogin = (user: any) => {
+    // Salva o cookie de sessão para o projeto
+    const cookieName = `client_session_${project.id}`
+    document.cookie = `${cookieName}=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=86400; SameSite=Lax`
+    
+    // Redireciona para o portal principal
+    if (isCustomDomain && customDomainType === 'workspace') {
+      window.location.href = `/${projectSlug}`
+    } else if (isCustomDomain) {
+      window.location.href = `/`
+    } else {
+      window.location.href = `/${workspaceSlug}/${projectSlug}`
+    }
+  }
   
   return (
     <TranslationProvider locale={locale}>
@@ -226,6 +332,18 @@ export function LoginPortalClient({
               )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
+                {project.theme_config?.security?.passkey_enabled && (
+                  <button
+                    type="button"
+                    onClick={handlePasskeyLogin}
+                    disabled={isLoading}
+                    className="w-full h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-xs transition-all hover:bg-indigo-100 dark:hover:bg-indigo-500/20 active:scale-95 border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-center gap-2 mb-6 shadow-sm"
+                  >
+                    <Fingerprint className="w-5 h-5" />
+                    Entrar com Biometria
+                  </button>
+                )}
+
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">
                     {userLabel}
@@ -330,6 +448,16 @@ export function LoginPortalClient({
             </div>
           )}
         </div>
+
+        <EndUserMfaModal 
+          isOpen={showMfaModal}
+          user={pendingMfaUser}
+          projectId={project.id}
+          mfaRequired={project.theme_config?.security?.mfa_enabled}
+          passkeyEnabled={project.theme_config?.security?.passkey_enabled}
+          onSuccess={() => finalizeLogin(pendingMfaUser)}
+          onCancel={() => setShowMfaModal(false)}
+        />
       </LoginPortalThemeWrapper>
     </TranslationProvider>
   )

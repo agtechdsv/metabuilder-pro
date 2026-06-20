@@ -1,0 +1,44 @@
+'use client'
+
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
+import { LanguageSelector } from '@/components/layout/LanguageSelector'
+import { EndUserMenu } from '@/components/auth/EndUserMenu'
+import { useEffect, useState } from 'react'
+
+interface RuntimeHeaderActionsProps {
+  projectId: string
+}
+
+export function RuntimeHeaderActions({ projectId }: RuntimeHeaderActionsProps) {
+  const [user, setUser] = useState<any>(null)
+
+  useEffect(() => {
+    // Busca o usuário do cookie
+    const cookieName = `client_session_${projectId}`
+    const cookies = document.cookie.split(';')
+    const sessionCookie = cookies.find(c => c.trim().startsWith(`${cookieName}=`))
+    
+    if (sessionCookie) {
+      try {
+        const value = sessionCookie.split('=')[1]
+        const decoded = JSON.parse(decodeURIComponent(value))
+        setUser(decoded)
+      } catch (e) {
+        console.error('Failed to parse client session', e)
+      }
+    }
+  }, [projectId])
+
+  return (
+    <div className="flex items-center gap-3 md:gap-4">
+      <div className="flex items-center gap-2 pr-2 border-r border-neutral-200 dark:border-neutral-800">
+        <ThemeToggle />
+        <LanguageSelector />
+      </div>
+
+      {user && (
+        <EndUserMenu user={user} projectId={projectId} />
+      )}
+    </div>
+  )
+}
