@@ -58,6 +58,7 @@ import { useClientActivity } from './hooks/useClientActivity'
 import { getIClubDashboardData, IClubRule, IClubReferral, IClubReward } from '@/app/actions/iclub'
 import { CliFilesClientView } from './CliFilesClientView'
 import { TeamDrawer } from '@/components/workspace/TeamDrawer'
+import SecuritySettings from '@/components/workspace/SecuritySettings'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -521,52 +522,9 @@ export default function ClientDashboardClient({
           {/* ── TAB: Segurança (Security) ───────────────────────────────────────── */}
           {activeTab === 'security' && (
             <div className="space-y-6">
-              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-500">
-                    <ShieldCheck className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-neutral-900 dark:text-white">Segurança da Equipe</h3>
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400">Configure as políticas de acesso e segurança para sua empresa.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-950 rounded-xl border border-neutral-200 dark:border-neutral-800">
-                  <div>
-                    <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Exigir Autenticação em 2 Fatores (MFA)</h4>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                      Ao habilitar, todos os desenvolvedores convidados serão obrigados a configurar o Google Authenticator ou Authy no próximo login.
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer" 
-                      checked={localProfile?.enforce_mfa === true}
-                      onChange={async (e) => {
-                        const isChecked = e.target.checked
-                        // Atualização otimista
-                        setLocalProfile(prev => prev ? { ...prev, enforce_mfa: isChecked } : prev)
-                        try {
-                          const { updateEnforceMfa } = await import('@/app/auth/actions')
-                          const res = await updateEnforceMfa(isChecked)
-                          if (res.success) {
-                            toast(`Política de MFA ${isChecked ? 'ativada' : 'desativada'} com sucesso!`, 'success')
-                          } else {
-                            throw new Error(res.error)
-                          }
-                        } catch (err: any) {
-                          // Reverte atualização otimista
-                          setLocalProfile(prev => prev ? { ...prev, enforce_mfa: !isChecked } : prev)
-                          toast('Erro ao atualizar política de segurança: ' + err.message, 'error')
-                        }
-                      }}
-                    />
-                    <div className="w-11 h-6 bg-neutral-300 peer-focus:outline-none rounded-full peer dark:bg-neutral-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-neutral-600 peer-checked:bg-indigo-600"></div>
-                  </label>
-                </div>
-              </div>
+              {workspaces && workspaces.length > 0 && (
+                <SecuritySettings workspace={workspaces[0]} isOwner={true} />
+              )}
 
               {/* MFA Setup for Owner */}
               <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm">

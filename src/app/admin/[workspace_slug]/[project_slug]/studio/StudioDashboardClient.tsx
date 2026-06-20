@@ -875,6 +875,13 @@ export function StudioDashboardClient({
               models={models}
             />
           </div>
+        ) : viewMode === 'security' ? (
+          <div className="">
+            <ProjectSecuritySettings 
+              project={project}
+              canEdit={canCreate}
+            />
+          </div>
         ) : (
           <section className="space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800/50 pb-4">
