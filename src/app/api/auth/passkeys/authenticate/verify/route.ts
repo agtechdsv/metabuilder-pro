@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     const rpID = host.split(':')[0]
     
     const protocol = request.headers.get('x-forwarded-proto') || 'http'
-    const expectedOrigin = `${protocol}://${host}`
+    const expectedOrigin = request.headers.get('origin') || `${protocol}://${host}`
 
     const verification = await verifyAuthenticationResponse({
       response: body,

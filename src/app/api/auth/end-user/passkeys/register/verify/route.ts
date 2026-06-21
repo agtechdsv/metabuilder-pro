@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
     const host = request.headers.get('host') || 'localhost'
     const rpID = host.split(':')[0]
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || `https://${host}`
+    const origin = request.headers.get('origin') || (process.env.NEXT_PUBLIC_SITE_URL || `https://${host}`)
 
     const verification = await verifyRegistrationResponse({
       response: body,

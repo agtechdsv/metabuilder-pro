@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     // In production, you might want to specify exactly the expected origin (e.g. https://domain.com)
     // For local dev, http://localhost:3000
     const protocol = request.headers.get('x-forwarded-proto') || 'http'
-    const expectedOrigin = `${protocol}://${host}`
+    const expectedOrigin = request.headers.get('origin') || `${protocol}://${host}`
 
     const verification = await verifyRegistrationResponse({
       response: body,

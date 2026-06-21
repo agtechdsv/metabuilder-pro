@@ -8,6 +8,7 @@ import { createPortal } from 'react-dom'
 import { startRegistration } from '@simplewebauthn/browser'
 import { EndUserMfaModal } from '@/components/auth/EndUserMfaModal'
 import { useI18n } from '@/i18n/I18nContext'
+import { useToast } from '@/components/ui/Toast'
 
 interface EndUserSecurityDrawerProps {
   isOpen: boolean
@@ -21,8 +22,12 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
   const [securityData, setSecurityData] = useState<any>(null)
   const [showMfaModal, setShowMfaModal] = useState(false)
   
+  const [confirmingMfaRemoval, setConfirmingMfaRemoval] = useState(false)
+  const [confirmingPasskeyRemoval, setConfirmingPasskeyRemoval] = useState<string | null>(null)
+  
   const supabase = createClient()
   const { t } = useI18n()
+  const { toast } = useToast()
   const userEmail = user?.email || user?.Email || user?.mail || ''
   const externalUserId = user?.id || user?.ID || user?.Id || userEmail
 
@@ -87,15 +92,20 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
       if (verification.error) throw new Error(verification.error)
 
       fetchSecurityData()
+      toast(t('security.success', 'Operação realizada com sucesso!'), 'success')
     } catch (err: any) {
       console.error(err)
-      alert(err.message || t('security.error_register_biometrics', 'Erro ao registrar biometria.'))
+      toast(err.message || t('security.error_register_biometrics', 'Erro ao registrar biometria.'), 'error')
       setIsLoading(false)
     }
   }
 
   const handleDeletePasskey = async (credentialID: string) => {
-    if (!confirm(t('security.confirm_remove_biometrics', 'Tem certeza que deseja remover esta biometria?'))) return
+    if (confirmingPasskeyRemoval !== credentialID) {
+      setConfirmingPasskeyRemoval(credentialID)
+      setTimeout(() => setConfirmingPasskeyRemoval(null), 3000)
+      return
+    }
 
     try {
       setIsLoading(true)
@@ -108,14 +118,21 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
 
       if (error) throw error
       fetchSecurityData()
-    } catch (err) {
+      setConfirmingPasskeyRemoval(null)
+      toast(t('security.success', 'Operação realizada com sucesso!'), 'success')
+    } catch (err: any) {
       console.error(err)
+      toast(err.message || 'Erro ao remover biometria', 'error')
       setIsLoading(false)
     }
   }
 
   const handleRemoveMfa = async () => {
-    if (!confirm(t('security.confirm_remove_mfa', 'Atenção: Remover o MFA deixará sua conta menos segura. Continuar?'))) return
+    if (!confirmingMfaRemoval) {
+      setConfirmingMfaRemoval(true)
+      setTimeout(() => setConfirmingMfaRemoval(false), 3000)
+      return
+    }
 
     try {
       setIsLoading(true)
@@ -126,8 +143,11 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
 
       if (error) throw error
       fetchSecurityData()
-    } catch (err) {
+      setConfirmingMfaRemoval(false)
+      toast(t('security.success', 'Operação realizada com sucesso!'), 'success')
+    } catch (err: any) {
       console.error(err)
+      toast(err.message || 'Erro ao remover MFA', 'error')
       setIsLoading(false)
     }
   }
@@ -203,10 +223,14 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
                         </div>
                         <button 
                           onClick={() => handleDeletePasskey(pk.credentialID)}
-                          className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                          className={`p-2 rounded-lg transition-colors text-xs font-bold ${
+                            confirmingPasskeyRemoval === pk.credentialID 
+                              ? 'bg-red-500 text-white hover:bg-red-600' 
+                              : 'text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10'
+                          }`}
                           title={t('security.remove')}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {confirmingPasskeyRemoval === pk.credentialID ? t('common.confirm', 'Confirmar') : <Trash2 className="w-4 h-4" />}
                         </button>
                       </div>
                     ))}
@@ -248,9 +272,13 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
                       </div>
                       <button 
                         onClick={handleRemoveMfa}
-                        className="text-xs font-bold text-red-600 hover:underline px-2 py-1"
+                        className={`text-xs font-bold px-2 py-1 rounded-md transition-colors ${
+                          confirmingMfaRemoval 
+                            ? 'bg-red-500 text-white hover:bg-red-600' 
+                            : 'text-red-600 hover:underline'
+                        }`}
                       >
-                        {t('security.disable')}
+                        {confirmingMfaRemoval ? t('common.confirm', 'Confirmar') : t('security.remove', 'Remover')}
                       </button>
                     </div>
                   ) : (
