@@ -55,7 +55,8 @@ export async function POST(request: Request) {
       credentialPublicKey: Buffer.from(credential.publicKey).toString('base64'),
       counter: credential.counter,
       transports: body.response.transports || [],
-      registered_at: new Date().toISOString()
+      registered_at: new Date().toISOString(),
+      rpID: rpID
     }
 
     let passkeys: any[] = []

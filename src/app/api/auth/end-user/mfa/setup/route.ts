@@ -57,11 +57,15 @@ export async function POST(req: NextRequest) {
     })
     const qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl)
 
+    const host = req.headers.get('host') || 'localhost'
+    const rpID = host.split(':')[0]
+    const validPasskeys = existing?.passkeys?.filter((pk: any) => !pk.rpID || pk.rpID === rpID) || []
+
     return NextResponse.json({
       secret,
       qrCodeDataUrl,
       mfaEnabled: existing?.mfa_enabled || false,
-      hasPasskeys: (existing?.passkeys?.length || 0) > 0
+      hasPasskeys: validPasskeys.length > 0
     })
 
   } catch (error: any) {
