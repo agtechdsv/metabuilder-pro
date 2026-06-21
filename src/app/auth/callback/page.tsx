@@ -84,8 +84,22 @@ function CallbackHandler() {
           } catch (_) {}
         }, 500)
       } else {
-        // Se não for popup, não mostra a tela de sucesso com botão de fechar. 
-        // Mantém visual de carregamento ou muda para redirecionando.
+        // Se não for popup, precisamos verificar o MFA antes do redirect
+        try {
+          const { verifyMfaPolicy } = await import('@/app/auth/actions')
+          const mfaRes = await verifyMfaPolicy()
+          if (mfaRes.mfaSetupRequired) {
+            window.location.replace('/login/mfa/setup')
+            return
+          } else if (mfaRes.mfaChallengeRequired) {
+            window.location.replace(`/login/mfa?factorId=${mfaRes.factorId}`)
+            return
+          }
+        } catch (e) {
+          console.error('MFA Policy check failed in callback:', e)
+        }
+
+        // Se passou pela verificação, continua o redirecionamento
         setStatus('redirecting' as any) // Gambiarra segura pro tipo local
         window.location.replace(finalRedirect)
       }
