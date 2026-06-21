@@ -201,7 +201,7 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
             </div>
           )}
 
-          {(isPersonalOnly || passkeyEnabled) && (
+          {isPersonalOnly && (
             <div className="mt-2 pt-4 border-t border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
               <div>
                 <p className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{t('security.my_device', 'Meu Dispositivo')}</p>
@@ -218,7 +218,7 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
             </div>
           )}
 
-          {hasPasskeySetup && (
+          {isPersonalOnly && hasPasskeySetup && (
             <div className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-500/5 rounded-2xl border border-red-200 dark:border-red-900/50 mt-2">
               <div>
                 <h4 className="text-sm font-bold text-red-900 dark:text-red-400">{t('security.remove_passkey', 'Remover Chave Passkey')}</h4>
@@ -277,7 +277,7 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
             </div>
           )}
 
-          {hasMfaSetup && (
+          {isPersonalOnly && hasMfaSetup && (
             <div className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-500/5 rounded-2xl border border-red-200 dark:border-red-900/50 mt-2">
               <div>
                 <h4 className="text-sm font-bold text-red-900 dark:text-red-400">{t('security.remove_my_authenticator', 'Remover Meu Authenticator')}</h4>
