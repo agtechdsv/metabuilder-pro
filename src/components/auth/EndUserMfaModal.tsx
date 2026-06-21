@@ -217,6 +217,11 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
                     maxLength={6}
                     value={code}
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && code.length === 6 && !isLoading) {
+                        handleVerify()
+                      }
+                    }}
                     placeholder="000000"
                     className="w-full h-14 text-center text-2xl tracking-[0.5em] font-bold rounded-2xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 focus:border-indigo-500 outline-none transition-all dark:text-white"
                   />
@@ -254,6 +259,11 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
                     maxLength={6}
                     value={code}
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && code.length === 6 && !isLoading) {
+                        handleVerify()
+                      }
+                    }}
                     placeholder="000000"
                     autoFocus
                     className="w-full h-14 text-center text-2xl tracking-[0.5em] font-bold rounded-2xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 focus:border-indigo-500 outline-none transition-all dark:text-white"

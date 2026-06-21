@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShieldAlert, Loader2, QrCode, ShieldCheck, X, Trash2, KeyRound, Fingerprint, Plus } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
+import { createPortal } from 'react-dom'
 import { startRegistration } from '@simplewebauthn/browser'
 import { EndUserMfaModal } from '@/components/auth/EndUserMfaModal'
 import { useI18n } from '@/i18n/I18nContext'
@@ -131,9 +132,9 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
     }
   }
 
-  if (!isOpen) return null
+  if (!isOpen || typeof document === 'undefined') return null
 
-  return (
+  return createPortal(
     <>
       <div className="fixed inset-0 z-[100] flex justify-end">
         <motion.div 
@@ -280,6 +281,7 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
         }}
         onCancel={() => setShowMfaModal(false)}
       />
-    </>
+    </>,
+    document.body
   )
 }
