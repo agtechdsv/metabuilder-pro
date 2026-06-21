@@ -33,19 +33,17 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
 
   const fetchSecurityData = async () => {
     setIsLoading(true)
-    const { data, error } = await supabase
-      .from('project_users_security')
-      .select('*')
-      .eq('project_id', projectId)
-      .eq('external_user_id', externalUserId)
-      .single()
-      
-    if (data) {
-      setSecurityData(data)
-    } else {
-      setSecurityData({ mfa_enabled: false, passkeys: [] })
+    try {
+      const res = await fetch(`/api/auth/end-user/security?projectId=${projectId}&externalUserId=${encodeURIComponent(externalUserId)}`)
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error)
+      setSecurityData(result.data || null)
+    } catch (err) {
+      console.error(err)
+      setSecurityData(null)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   useEffect(() => {
@@ -109,14 +107,13 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
 
     try {
       setIsLoading(true)
-      const updatedPasskeys = securityData.passkeys.filter((pk: any) => pk.credentialID !== credentialID)
       
-      const { error } = await supabase
-        .from('project_users_security')
-        .update({ passkeys: updatedPasskeys })
-        .eq('id', securityData.id)
+      const res = await fetch(`/api/auth/end-user/security/passkeys?projectId=${projectId}&externalUserId=${encodeURIComponent(externalUserId)}&credentialID=${encodeURIComponent(credentialID)}`, {
+        method: 'DELETE'
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error)
 
-      if (error) throw error
       fetchSecurityData()
       setConfirmingPasskeyRemoval(null)
       toast(t('security.success', 'Operação realizada com sucesso!'), 'success')
@@ -136,12 +133,13 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
 
     try {
       setIsLoading(true)
-      const { error } = await supabase
-        .from('project_users_security')
-        .update({ mfa_enabled: false, totp_secret: null })
-        .eq('id', securityData.id)
+      
+      const res = await fetch(`/api/auth/end-user/security/mfa?projectId=${projectId}&externalUserId=${encodeURIComponent(externalUserId)}`, {
+        method: 'DELETE'
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error)
 
-      if (error) throw error
       fetchSecurityData()
       setConfirmingMfaRemoval(false)
       toast(t('security.success', 'Operação realizada com sucesso!'), 'success')

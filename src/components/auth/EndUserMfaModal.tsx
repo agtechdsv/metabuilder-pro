@@ -23,6 +23,7 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
   const [code, setCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [userHasPasskeys, setUserHasPasskeys] = useState(false)
 
   const userEmail = user?.email || user?.Email || user?.mail || ''
   const externalUserId = user?.id || user?.ID || user?.Id || userEmail // Fallback to email if no ID
@@ -64,6 +65,7 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
 
       setSecret(data.secret)
       setQrCodeUrl(data.qrCodeDataUrl)
+      setUserHasPasskeys(data.hasPasskeys || false)
 
       // Se data.alreadyEnabled for true, vai direto pro verify
       if (data.mfaEnabled) {
@@ -99,7 +101,7 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
       if (!res.ok) throw new Error(data.error)
 
       // Sucesso no MFA! Verifica se precisa de Passkey
-      if (passkeyEnabled) {
+      if (passkeyEnabled && !userHasPasskeys) {
         setStep('passkey_setup')
       } else {
         onSuccess()

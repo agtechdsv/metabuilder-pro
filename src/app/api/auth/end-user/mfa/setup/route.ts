@@ -60,7 +60,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       secret,
       qrCodeDataUrl,
-      mfaEnabled: existing?.mfa_enabled || false
+      mfaEnabled: existing?.mfa_enabled || false,
+      hasPasskeys: (existing?.passkeys?.length || 0) > 0
     })
 
   } catch (error: any) {
