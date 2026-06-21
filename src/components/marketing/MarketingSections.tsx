@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy } from 'lucide-react'
+import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy, Fingerprint, FileCode2 } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -209,6 +209,39 @@ export function MarketingSections() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* New MFA/Passkey and Source Code Cards */}
+          <div className="col-span-1 md:col-span-2 lg:col-span-5 grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
+             <Link href="/features/security" className="group p-8 rounded-[2.5rem] bg-neutral-100/50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 hover:border-indigo-500/50 transition-all duration-500 flex flex-col md:flex-row items-start gap-6">
+                <div className="w-14 h-14 rounded-2xl bg-white dark:bg-neutral-950 flex items-center justify-center shrink-0 shadow-inner border border-neutral-200 dark:border-neutral-800 group-hover:scale-110 transition-transform duration-500">
+                   <Fingerprint className="w-7 h-7 text-indigo-500" />
+                </div>
+                <div>
+                   <h3 className="text-xl font-bold dark:text-white mb-2">{t('marketing_v2.navbar.security')}</h3>
+                   <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed mb-4">
+                      {t('marketing_v2.features.security.next_gen_desc')}
+                   </p>
+                   <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {t('marketing_v2.home.learn_more')} <ArrowRight className="w-3 h-3" />
+                   </div>
+                </div>
+             </Link>
+             
+             <Link href="/features/source-code" className="group p-8 rounded-[2.5rem] bg-neutral-100/50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 hover:border-blue-500/50 transition-all duration-500 flex flex-col md:flex-row items-start gap-6">
+                <div className="w-14 h-14 rounded-2xl bg-white dark:bg-neutral-950 flex items-center justify-center shrink-0 shadow-inner border border-neutral-200 dark:border-neutral-800 group-hover:scale-110 transition-transform duration-500">
+                   <FileCode2 className="w-7 h-7 text-blue-500" />
+                </div>
+                <div>
+                   <h3 className="text-xl font-bold dark:text-white mb-2">{t('marketing_v2.navbar.source_code')}</h3>
+                   <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed mb-4">
+                      {t('marketing_v2.features.source_code.hero_desc')}
+                   </p>
+                   <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {t('marketing_v2.home.learn_more')} <ArrowRight className="w-3 h-3" />
+                   </div>
+                </div>
+             </Link>
           </div>
         </div>
       </section>
