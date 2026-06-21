@@ -1,4 +1,4 @@
-﻿import { Drawer } from '@/components/ui/Drawer'
+import { Drawer } from '@/components/ui/Drawer'
 import { cn } from '@/lib/utils'
 import { Plus, Copy } from 'lucide-react'
 import FormulaBuilder from '../../../FormulaBuilder'
@@ -424,27 +424,69 @@ export function FieldDrawer({
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.width', 'Largura')}</label>
+                          <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.grid_span', 'Ocupar Colunas')}</label>
+                          <select
+                            value={currentFieldMeta.component?.gridSpan || '1'}
+                            onChange={e => updateMeta('component', 'gridSpan', e.target.value)}
+                            className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
+                          >
+                            <option value="1">1 Coluna</option>
+                            <option value="2">2 Colunas</option>
+                            <option value="3">3 Colunas</option>
+                            <option value="4">4 Colunas</option>
+                            <option value="5">5 Colunas</option>
+                            <option value="6">6 Colunas (Metade)</option>
+                            <option value="7">7 Colunas</option>
+                            <option value="8">8 Colunas</option>
+                            <option value="9">9 Colunas</option>
+                            <option value="10">10 Colunas</option>
+                            <option value="11">11 Colunas</option>
+                            <option value="12">12 Colunas (Inteira)</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          {(() => {
+                            const widthStr = currentFieldMeta.component?.width || '100%';
+                            const widthMatch = widthStr.match(/^(\d+(?:\.\d+)?)(.*)$/);
+                            const wValue = widthMatch ? widthMatch[1] : '100';
+                            const wUnit = widthMatch ? widthMatch[2] : '%';
+                            return (
+                              <>
+                                <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.visual_width', 'Largura Visual')}</label>
+                                <div className="flex gap-2">
+                                  <input
+                                    type="number"
+                                    value={wValue}
+                                    onChange={e => updateMeta('component', 'width', `${e.target.value}${wUnit}`)}
+                                    className="flex-1 w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
+                                  />
+                                  <select
+                                    value={wUnit}
+                                    onChange={e => updateMeta('component', 'width', `${wValue}${e.target.value}`)}
+                                    className="w-16 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-1 py-2.5 text-xs font-bold outline-none"
+                                  >
+                                    <option value="%">%</option>
+                                    <option value="px">px</option>
+                                    <option value="ch">ch</option>
+                                    <option value="rem">rem</option>
+                                  </select>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                      {currentFieldMeta.component?.type === 'textarea' && (
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.rows', 'Linhas')}</label>
                           <input
-                            type="text"
-                            placeholder="Ex: 100% ou 200px"
-                            value={currentFieldMeta.component?.width || '100%'}
-                            onChange={e => updateMeta('component', 'width', e.target.value)}
+                            type="number"
+                            value={currentFieldMeta.component?.rows || 3}
+                            onChange={e => updateMeta('component', 'rows', parseInt(e.target.value))}
                             className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
                           />
                         </div>
-                        {currentFieldMeta.component?.type === 'textarea' && (
-                          <div className="space-y-2">
-                            <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.rows', 'Linhas')}</label>
-                            <input
-                              type="number"
-                              value={currentFieldMeta.component?.rows || 3}
-                              onChange={e => updateMeta('component', 'rows', parseInt(e.target.value))}
-                              className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none"
-                            />
-                          </div>
-                        )}
-                      </div>
+                      )}
 
                       {(['select', 'radio', 'checkbox'].includes(currentFieldMeta.component?.type)) && (
                         <div className="space-y-4 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/50">

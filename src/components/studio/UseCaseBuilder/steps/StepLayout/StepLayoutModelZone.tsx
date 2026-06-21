@@ -157,10 +157,42 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
             )}
           </div>
 
-          {!isMaster && !hiddenDetails.has(model.id) && (
+          {!hiddenDetails.has(model.id) && (
             <div className="flex items-center gap-1">
-              {/* Abas/Seções Toggle */}
-              <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
+              <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800 ml-1">
+                <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400 px-1" title={t('wizard.layout.drawer.grid_base_columns', 'Colunas do Layout Base')}>Grid:</span>
+                <select
+                  value={(config.layout_config as any).zone_grid_columns?.[model.id] || '12'}
+                  onChange={(e) => {
+                    const currentCols = (config.layout_config as any).zone_grid_columns || {}
+                    setConfig({
+                      ...config,
+                      layout_config: {
+                        ...config.layout_config,
+                        zone_grid_columns: {
+                          ...currentCols,
+                          [model.id]: e.target.value
+                        }
+                      }
+                    })
+                  }}
+                  className="bg-transparent border-none outline-none text-[8px] font-black uppercase tracking-wider text-neutral-600 dark:text-neutral-400 px-1 h-full cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                  title={t('wizard.layout.drawer.grid_render_columns', 'Quantidade de Colunas na renderização final')}
+                >
+                  <option value="auto">{t('wizard.layout.drawer.grid_cols_auto', 'Auto (Flex)')}</option>
+                  <option value="1">1 {t('wizard.layout.drawer.grid_col', 'Col')}</option>
+                  <option value="2">2 {t('wizard.layout.drawer.grid_cols', 'Cols')}</option>
+                  <option value="3">3 {t('wizard.layout.drawer.grid_cols', 'Cols')}</option>
+                  <option value="4">4 {t('wizard.layout.drawer.grid_cols', 'Cols')}</option>
+                  <option value="6">6 {t('wizard.layout.drawer.grid_cols', 'Cols')}</option>
+                  <option value="12">12 {t('wizard.layout.drawer.grid_cols_default', 'Cols (Padrão)')}</option>
+                </select>
+              </div>
+
+              {!isMaster && (
+                <>
+                  {/* Abas/Seções Toggle */}
+                  <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800 ml-1">
                 {[
                   { id: 'tabs', label: 'Aba', tooltip: 'Exibe os registros deste detalhe em uma aba superior' },
                   { id: 'sections', label: 'Seção', tooltip: 'Exibe os registros deste detalhe em uma seção empilhada na página' }
@@ -379,6 +411,8 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
                     ))}
                   </select>
                 </div>
+              )}
+                </>
               )}
             </div>
           )}
