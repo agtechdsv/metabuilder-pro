@@ -789,7 +789,8 @@
       "control_center": "Control Center",
       "zero_trust": "Zero-Trust",
       "bpm": "BPM & Automation",
-      "sync_resolution": "Auto Sync"
+      "sync_resolution": "Auto Sync",
+      "source_code": "Source Code (Export)"
     },
     "hero": {
       "badge": "The Software Engine of the Future",
@@ -970,7 +971,17 @@
         "item2_desc": "Integrated tools for managing cookies, terms of use and privacy policies.",
         "footer_title": "Ready to protect your data?",
         "footer_desc": "Implement bank-level security in your systems in just a few clicks.",
-        "footer_cta": "Activate Enterprise Security"
+        "footer_cta": "Activate Enterprise Security",
+        "next_gen_title": "Next-Generation",
+        "next_gen_title_highlight": "Authentication",
+        "next_gen_desc": "Protect your data and your developers' environment with advanced access policies. We implemented native support for biometrics and Multi-Factor Authentication (MFA).",
+        "passkey_title": "Biometric Login (Passkey)",
+        "passkey_desc": "Say goodbye to passwords. Let your users log into the system using FaceID, TouchID, or Windows Hello. A premium, ultra-fast, and phishing-proof experience.",
+        "mfa_title": "Multi-Factor Authentication (MFA)",
+        "mfa_desc": "Enterprise-grade security. As a Workspace Owner, you can enforce mandatory MFA for all developers. Guaranteed protection via Google Authenticator or Authy.",
+        "app_sec_tag": "For Your Clients",
+        "app_sec_title": "App Security Policies",
+        "app_sec_desc": "The same engineering that protects your Workspace is available for the applications you generate for your end users. In MetaBuilder Studio, you can enable Passkey or MFA for your end users with just 1 click."
       },
       "use_cases": {
         "desc": "Generate CRUD screens, Kanban, Mind Maps, and Calendars dynamically based on SQL relations."
@@ -994,6 +1005,21 @@
         "step3_title": "Map and Apply",
         "step3_desc": "Access the Studio Web panel, make the matches through the visual selector, and see your entire panel update in real-time in the blink of an eye.",
         "footer_title": "Ready to speed up your productivity?"
+      },
+      "source_code": {
+        "hero_title": "Full Export.",
+        "hero_title_highlight": "Your Source Code.",
+        "hero_desc": "Don't believe in black-box \"No-Code\". In MetaBuilderPRO, the source code of the app you build belongs to you. Download a clean, documented, and production-ready boilerplate at any time.",
+        "tech_title": "Native Next.js Code",
+        "tech_desc": "Exported using App Router, TailwindCSS, and strict TypeScript. No proprietary libraries that lock you into the ecosystem.",
+        "tag_clean_code": "Clean Code",
+        "tag_hexagonal": "Hexagonal Architecture",
+        "block1_title": "Engineering Quality",
+        "block1_desc": "Our generator doesn't just create \"code that works\". It creates code following the standards demanded by big tech companies (like DRY, SOLID, and configured automated tests). The Boilerplate you download serves as a foundation for high-level teams.",
+        "block2_title": "Evolve Without Limits",
+        "block2_desc": "Started building screens via the MetaBuilder visual interface, but complexity increased? No problem. Export the entire source code and continue development in VSCode with your team. Zero lock-in.",
+        "footer_title": "Total Sovereignty.",
+        "footer_desc": "Unlike traditional no-code platforms, you have unrestricted access to every line of generated code. Create your app's infrastructure and intelligence here, and take the code anywhere."
       }
     },
     "use_cases_page": {
