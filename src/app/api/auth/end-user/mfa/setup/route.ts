@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     const host = req.headers.get('host') || 'localhost'
     const rpID = host.split(':')[0]
-    const validPasskeys = existing?.passkeys?.filter((pk: any) => !pk.rpID || pk.rpID === rpID) || []
+    const validPasskeys = existing?.passkeys?.filter((pk: any) => pk.rpID === rpID) || []
 
     return NextResponse.json({
       secret,

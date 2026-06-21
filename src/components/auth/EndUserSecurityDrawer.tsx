@@ -206,7 +206,7 @@ export function EndUserSecurityDrawer({ isOpen, onClose, user, projectId }: EndU
                   </div>
 
                   <div className="space-y-3">
-                    {securityData?.passkeys?.filter((pk: any) => !pk.rpID || pk.rpID === window.location.hostname).map((pk: any) => (
+                    {securityData?.passkeys?.filter((pk: any) => pk.rpID === window.location.hostname).map((pk: any) => (
                       <div key={pk.credentialID} className="flex items-center justify-between p-3 border border-neutral-200 dark:border-neutral-800 rounded-xl bg-neutral-50 dark:bg-neutral-900/50">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600">
