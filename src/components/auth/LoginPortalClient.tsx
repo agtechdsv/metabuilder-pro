@@ -193,14 +193,8 @@ export function LoginPortalClient({
         if (success && data && data.length > 0) {
           const user = data[0]
           
-          const securityConfig = project.theme_config?.security || {}
-          if (securityConfig.mfa_enabled || securityConfig.passkey_enabled) {
-            setPendingMfaUser(user)
-            setShowMfaModal(true)
-            setIsLoadingBio(false)
-            return
-          }
-          
+          // Como o usuário já autenticou via Passkey (que é 2FA forte),
+          // pulamos a verificação de MFA e o prompt de registro de Passkey.
           finalizeLogin(user)
         } else {
           setErrorMsg(t('runtime.biometric_user_not_found', 'Usuário não encontrado após biometria.'))
