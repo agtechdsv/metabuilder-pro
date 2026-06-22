@@ -189,19 +189,17 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
                 </p>
               </div>
             </div>
-            {!isPersonalOnly && (
-              <button
-                disabled={!isOwner || isSaving}
-                onClick={() => setPasskeyEnabled(!passkeyEnabled)}
-                className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${passkeyEnabled ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-700'
+            <button
+              disabled={(!isOwner && !isPersonalOnly) || isSaving}
+              onClick={() => setPasskeyEnabled(!passkeyEnabled)}
+              className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${passkeyEnabled ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-700'
+                }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${passkeyEnabled ? 'translate-x-8' : 'translate-x-1'
                   }`}
-              >
-                <span
-                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${passkeyEnabled ? 'translate-x-8' : 'translate-x-1'
-                    }`}
-                />
-              </button>
-            )}
+              />
+            </button>
           </div>
 
           {isPersonalOnly && (
@@ -273,19 +271,17 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
                 </p>
               </div>
             </div>
-            {!isPersonalOnly && (
-              <button
-                disabled={!isOwner || isSaving}
-                onClick={() => setMfaRequired(!mfaRequired)}
-                className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${mfaRequired ? 'bg-red-600' : 'bg-neutral-300 dark:bg-neutral-700'
+            <button
+              disabled={(!isOwner && !isPersonalOnly) || isSaving}
+              onClick={() => setMfaRequired(!mfaRequired)}
+              className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${mfaRequired ? 'bg-red-600' : 'bg-neutral-300 dark:bg-neutral-700'
+                }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${mfaRequired ? 'translate-x-8' : 'translate-x-1'
                   }`}
-              >
-                <span
-                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${mfaRequired ? 'translate-x-8' : 'translate-x-1'
-                    }`}
-                />
-              </button>
-            )}
+              />
+            </button>
           </div>
 
           {isPersonalOnly && hasMfaSetup && (
@@ -334,24 +330,24 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
           )}
         </div>
 
-        {!isOwner && (
+        {!isOwner && !isPersonalOnly && (
           <div className="flex items-center gap-2 p-4 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-xl text-xs font-bold">
             <AlertCircle className="w-4 h-4" />
             {t('security.owner_only_security', 'Apenas o Owner do Workspace pode alterar as configurações de segurança globais.')}
           </div>
         )}
 
-          {!isPersonalOnly && isOwner && (
-            <div className="flex justify-end pt-4">
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="px-6 py-2.5 bg-neutral-900 dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black text-xs font-bold rounded-xl transition-all shadow-xl active:scale-95 disabled:opacity-50"
-              >
-                {isSaving ? t('common.saving', 'Salvando...') : t('security.save_security_policies', 'Salvar Políticas de Segurança')}
-              </button>
-            </div>
-          )}
+        {(isOwner || isPersonalOnly) && (
+          <div className="flex justify-end pt-4 border-t border-neutral-200 dark:border-neutral-800">
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="px-6 py-2.5 bg-neutral-900 dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black text-xs font-bold rounded-xl transition-all shadow-xl active:scale-95 disabled:opacity-50"
+            >
+              {isSaving ? t('common.saving', 'Salvando...') : (!isPersonalOnly ? t('security.save_security_policies', 'Salvar Políticas de Segurança') : t('security.save_security_personal', 'Salvar Configurações'))}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
