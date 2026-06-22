@@ -1,6 +1,6 @@
 'use client'
 
-import { login, signup, verifyMfaPolicy } from '@/app/auth/actions'
+import { login, signup, verifyMfaPolicy, signOut } from '@/app/auth/actions'
 import { Mail, Lock, Layers, Eye, EyeOff, User, ArrowRight, CheckCircle2, Circle, AlertCircle, Loader2 } from 'lucide-react'
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
@@ -39,8 +39,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
   const handleCloseModal = async () => {
     setShowSetPasswordModal(false)
     try {
-      const supabase = createClient()
-      await supabase.auth.signOut()
+      await signOut()
     } catch (err) {
       console.error('Erro ao deslogar no fechamento do modal:', err)
     } finally {

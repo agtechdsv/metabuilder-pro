@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { ShieldAlert, ArrowRight, Loader2, AlertCircle } from 'lucide-react'
+import { signOut } from '@/app/auth/actions'
 import { cn } from '@/lib/utils'
 import { QRCodeSVG } from 'qrcode.react'
 
@@ -177,8 +178,7 @@ export function MfaSetupForm() {
 
       <div className="mt-8 text-center">
         <button onClick={() => {
-          const supabase = createClient()
-          supabase.auth.signOut().then(() => {
+          signOut().then(() => {
             window.location.href = '/login'
           })
         }} className="text-[10px] font-bold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 uppercase tracking-widest">

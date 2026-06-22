@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/Toast'
 import { KeyRound, Eye, EyeOff, Loader2, LogOut, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { setPasswordAction } from '@/app/auth/set-password/actions'
+import { signOut } from '@/app/auth/actions'
 
 interface SetPasswordFormProps {
   workspaceSlug?: string
@@ -64,10 +65,10 @@ export function SetPasswordForm({ workspaceSlug }: SetPasswordFormProps) {
   const handleCancel = async () => {
     setIsLoggingOut(true)
     try {
-      await supabase.auth.signOut()
+      await signOut()
+      window.location.href = '/'
     } catch (err) {
       console.error('Erro ao deslogar no cancelamento:', err)
-    } finally {
       setIsLoggingOut(false)
       window.location.href = '/'
     }

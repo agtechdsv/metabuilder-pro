@@ -374,7 +374,9 @@ export async function updateProfile(formData: FormData) {
 export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()
-  redirect('/')
+  const cookieStore = await cookies()
+  cookieStore.delete('passkey_authenticated')
+  return { success: true }
 }
 
 export async function getPostLoginRedirectPath(userId: string): Promise<string> {

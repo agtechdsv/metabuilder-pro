@@ -107,8 +107,7 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
 
   const handleSignOut = async () => {
     try {
-      const supabase = createClient()
-      await supabase.auth.signOut()
+      await signOut()
       window.location.href = '/'
     } catch (error) {
       console.error('Erro ao sair:', error)

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, Suspense } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ShieldCheck, ArrowRight, Loader2, AlertCircle } from 'lucide-react'
+import { signOut } from '@/app/auth/actions'
 import { cn } from '@/lib/utils'
 
 function ChallengeFormInner() {
@@ -126,8 +127,7 @@ function ChallengeFormInner() {
       
       <div className="mt-8 text-center">
         <button onClick={() => {
-          const supabase = createClient()
-          supabase.auth.signOut().then(() => {
+          signOut().then(() => {
             window.location.href = '/login'
           })
         }} className="text-[10px] font-bold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 uppercase tracking-widest">
