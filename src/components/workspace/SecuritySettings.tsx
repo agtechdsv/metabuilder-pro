@@ -174,19 +174,22 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
       <div className="space-y-6">
         {/* Passkey Toggle */}
         <div className="flex flex-col gap-4 p-6 bg-neutral-50 dark:bg-neutral-950 rounded-2xl border border-neutral-200 dark:border-neutral-800">
-          {!isPersonalOnly && (
-            <div className="flex items-center justify-between">
-              <div className="flex gap-4 items-start">
-                <div className="p-3 bg-indigo-100 dark:bg-indigo-500/10 rounded-xl text-indigo-600">
-                  <KeyRound className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-neutral-900 dark:text-white">{t('security.passkey_auth', 'Autenticação Biométrica (Passkey)')}</h4>
-                  <p className="text-xs text-neutral-500 mt-1 max-w-lg">
-                    {t('security.passkey_auth_desc', 'Permite que você e os DEVs do time façam login no painel do MetaBuilderPRO utilizando biometria (FaceID / TouchID).')}
-                  </p>
-                </div>
+          <div className="flex items-center justify-between">
+            <div className="flex gap-4 items-start">
+              <div className="p-3 bg-indigo-100 dark:bg-indigo-500/10 rounded-xl text-indigo-600">
+                <KeyRound className="w-5 h-5" />
               </div>
+              <div>
+                <h4 className="text-sm font-bold text-neutral-900 dark:text-white">{t('security.passkey_auth', 'Autenticação Biométrica (Passkey)')}</h4>
+                <p className="text-xs text-neutral-500 mt-1 max-w-lg">
+                  {!isPersonalOnly 
+                    ? t('security.passkey_auth_desc', 'Permite que você e os DEVs do time façam login no painel do MetaBuilderPRO utilizando biometria (FaceID / TouchID).')
+                    : t('security.passkey_personal_desc', 'Permite que você faça login no painel utilizando a biometria (FaceID / TouchID) deste aparelho.')
+                  }
+                </p>
+              </div>
+            </div>
+            {!isPersonalOnly && (
               <button
                 disabled={!isOwner || isSaving}
                 onClick={() => setPasskeyEnabled(!passkeyEnabled)}
@@ -198,8 +201,8 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
                     }`}
                 />
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
           {isPersonalOnly && (
             <div className="mt-2 pt-4 border-t border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
@@ -250,19 +253,27 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
 
         {/* MFA Group */}
         <div className="flex flex-col gap-4 p-6 bg-neutral-50 dark:bg-neutral-950 rounded-2xl border border-neutral-200 dark:border-neutral-800">
-          {!isPersonalOnly && (
-            <div className="flex items-center justify-between">
-              <div className="flex gap-4 items-start">
-                <div className="p-3 bg-red-100 dark:bg-red-500/10 rounded-xl text-red-600">
-                  <Smartphone className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-neutral-900 dark:text-white">{t('security.mfa_mandatory', 'Autenticação Multi-Fator (MFA) Obrigatória')}</h4>
-                  <p className="text-xs text-neutral-500 mt-1 max-w-lg">
-                    {t('security.mfa_mandatory_desc', 'Força todos os DEVs convidados a configurarem um aplicativo Authenticator (Microsoft/Google) antes de acessarem o Workspace.')}
-                  </p>
-                </div>
+          <div className="flex items-center justify-between">
+            <div className="flex gap-4 items-start">
+              <div className="p-3 bg-red-100 dark:bg-red-500/10 rounded-xl text-red-600">
+                <Smartphone className="w-5 h-5" />
               </div>
+              <div>
+                <h4 className="text-sm font-bold text-neutral-900 dark:text-white">
+                  {!isPersonalOnly 
+                    ? t('security.mfa_mandatory', 'Autenticação Multi-Fator (MFA) Obrigatória')
+                    : t('security.mfa_auth', 'Autenticação Multi-Fator (MFA)')
+                  }
+                </h4>
+                <p className="text-xs text-neutral-500 mt-1 max-w-lg">
+                  {!isPersonalOnly
+                    ? t('security.mfa_mandatory_desc', 'Força todos os DEVs convidados a configurarem um aplicativo Authenticator (Microsoft/Google) antes de acessarem o Workspace.')
+                    : t('security.mfa_personal_desc', 'Proteja sua conta configurando um aplicativo Authenticator (Microsoft/Google ou Authy).')
+                  }
+                </p>
+              </div>
+            </div>
+            {!isPersonalOnly && (
               <button
                 disabled={!isOwner || isSaving}
                 onClick={() => setMfaRequired(!mfaRequired)}
@@ -274,8 +285,8 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
                     }`}
                 />
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
           {isPersonalOnly && hasMfaSetup && (
             <div className="flex items-center justify-between p-6 bg-red-50 dark:bg-red-500/5 rounded-2xl border border-red-200 dark:border-red-900/50 mt-2">
@@ -303,6 +314,22 @@ export default function SecuritySettings({ profile, isOwner, isPersonalOnly = fa
                   {isRemovingMfa ? t('security.removing', 'Removendo...') : isConfirmingRemoval ? t('security.yes_remove', 'Sim, quero remover') : t('security.remove_now', 'Remover Agora')}
                 </button>
               </div>
+            </div>
+          )}
+
+          {isPersonalOnly && !hasMfaSetup && (
+            <div className="mt-2 pt-4 border-t border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
+              <div>
+                <p className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{t('security.my_authenticator', 'Meu Authenticator')}</p>
+                <p className="text-[10px] text-neutral-500 mt-0.5">{t('security.my_authenticator_setup_desc', 'Nenhum Authenticator configurado na sua conta.')}</p>
+              </div>
+              <button
+                onClick={() => window.location.href = '/login/mfa/setup'}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors"
+              >
+                <Smartphone className="w-4 h-4" />
+                {t('security.configure_authenticator', 'Configurar Authenticator')}
+              </button>
             </div>
           )}
         </div>
