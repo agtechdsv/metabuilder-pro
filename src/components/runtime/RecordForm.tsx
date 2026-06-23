@@ -504,6 +504,7 @@ export default function RecordForm({
     tabsStyleConfig={tabsStyleConfig}
     t={t}
     mode={mode}
+    isPageMode={isPageMode}
   />
                       </div>
                     );
@@ -539,6 +540,7 @@ export default function RecordForm({
     tabsStyleConfig={tabsStyleConfig}
     t={t}
     mode={mode}
+    isPageMode={isPageMode}
   />
                   )}
 
