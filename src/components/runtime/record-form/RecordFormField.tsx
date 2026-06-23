@@ -27,6 +27,7 @@ interface RecordFormFieldProps {
   masterModelId?: string;
   masterModelName?: string;
   logicType?: string;
+  isPageMode?: boolean;
   t: (key: string, defaultText?: string) => string;
 }
 
@@ -44,6 +45,7 @@ export function RecordFormField(props: RecordFormFieldProps) {
     masterModelId,
     masterModelName,
     logicType,
+    isPageMode = true,
     t
   } = props;
 
@@ -77,7 +79,7 @@ export function RecordFormField(props: RecordFormFieldProps) {
     const zoneConfig = field.config?.form_config || field.config || {}
     const comp = zoneConfig.component || { type: 'text' }
     const fieldType = comp.type || 'text'
-    const width = comp.width || '100%'
+    const width = isPageMode ? (comp.width || '100%') : (comp.modalWidth || comp.width || '100%')
 
     const maskStr = zoneConfig.content?.mask || field.config?.content?.mask
     const isDateType = fieldType === 'date' || fieldType === 'datetime-local' || fieldType === 'datetime' || fieldType === 'time'

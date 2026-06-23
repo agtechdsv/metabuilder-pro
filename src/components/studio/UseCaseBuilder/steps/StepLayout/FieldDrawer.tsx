@@ -422,58 +422,121 @@ export function FieldDrawer({
                         </select>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.grid_span', 'Ocupar Colunas')}</label>
-                          <select
-                            value={currentFieldMeta.component?.gridSpan || '1'}
-                            onChange={e => updateMeta('component', 'gridSpan', e.target.value)}
-                            className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
-                          >
-                            <option value="1">1 Coluna</option>
-                            <option value="2">2 Colunas</option>
-                            <option value="3">3 Colunas</option>
-                            <option value="4">4 Colunas</option>
-                            <option value="5">5 Colunas</option>
-                            <option value="6">6 Colunas (Metade)</option>
-                            <option value="7">7 Colunas</option>
-                            <option value="8">8 Colunas</option>
-                            <option value="9">9 Colunas</option>
-                            <option value="10">10 Colunas</option>
-                            <option value="11">11 Colunas</option>
-                            <option value="12">12 Colunas (Inteira)</option>
-                          </select>
+                      <div className="space-y-4">
+                        <div className="p-3 bg-neutral-50 dark:bg-neutral-900/30 border border-neutral-100 dark:border-neutral-800 rounded-xl space-y-3">
+                          <h4 className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Layout Padrão (Página)</h4>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.grid_span', 'Ocupar Colunas')}</label>
+                              <select
+                                value={currentFieldMeta.component?.gridSpan || '12'}
+                                onChange={e => updateMeta('component', 'gridSpan', e.target.value)}
+                                className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs font-bold outline-none"
+                              >
+                                <option value="1">1 Coluna</option>
+                                <option value="2">2 Colunas</option>
+                                <option value="3">3 Colunas</option>
+                                <option value="4">4 Colunas</option>
+                                <option value="5">5 Colunas</option>
+                                <option value="6">6 Colunas (Metade)</option>
+                                <option value="7">7 Colunas</option>
+                                <option value="8">8 Colunas</option>
+                                <option value="9">9 Colunas</option>
+                                <option value="10">10 Colunas</option>
+                                <option value="11">11 Colunas</option>
+                                <option value="12">12 Colunas (Inteira)</option>
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              {(() => {
+                                const widthStr = currentFieldMeta.component?.width || '100%';
+                                const widthMatch = widthStr.match(/^(\d+(?:\.\d+)?)(.*)$/);
+                                const wValue = widthMatch ? widthMatch[1] : '100';
+                                const wUnit = widthMatch ? widthMatch[2] : '%';
+                                return (
+                                  <>
+                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.visual_width', 'Largura Visual')}</label>
+                                    <div className="flex gap-2">
+                                      <input
+                                        type="number"
+                                        value={wValue}
+                                        onChange={e => updateMeta('component', 'width', `${e.target.value}${wUnit}`)}
+                                        className="flex-1 w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs font-bold outline-none"
+                                      />
+                                      <select
+                                        value={wUnit}
+                                        onChange={e => updateMeta('component', 'width', `${wValue}${e.target.value}`)}
+                                        className="w-16 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-1 py-2 text-xs font-bold outline-none"
+                                      >
+                                        <option value="%">%</option>
+                                        <option value="px">px</option>
+                                        <option value="ch">ch</option>
+                                        <option value="rem">rem</option>
+                                      </select>
+                                    </div>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          {(() => {
-                            const widthStr = currentFieldMeta.component?.width || '100%';
-                            const widthMatch = widthStr.match(/^(\d+(?:\.\d+)?)(.*)$/);
-                            const wValue = widthMatch ? widthMatch[1] : '100';
-                            const wUnit = widthMatch ? widthMatch[2] : '%';
-                            return (
-                              <>
-                                <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.visual_width', 'Largura Visual')}</label>
-                                <div className="flex gap-2">
-                                  <input
-                                    type="number"
-                                    value={wValue}
-                                    onChange={e => updateMeta('component', 'width', `${e.target.value}${wUnit}`)}
-                                    className="flex-1 w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
-                                  />
-                                  <select
-                                    value={wUnit}
-                                    onChange={e => updateMeta('component', 'width', `${wValue}${e.target.value}`)}
-                                    className="w-16 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-1 py-2.5 text-xs font-bold outline-none"
-                                  >
-                                    <option value="%">%</option>
-                                    <option value="px">px</option>
-                                    <option value="ch">ch</option>
-                                    <option value="rem">rem</option>
-                                  </select>
-                                </div>
-                              </>
-                            );
-                          })()}
+
+                        <div className="p-3 bg-neutral-50 dark:bg-neutral-900/30 border border-neutral-100 dark:border-neutral-800 rounded-xl space-y-3">
+                          <h4 className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Layout Modal / Drawer</h4>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.grid_span', 'Ocupar Colunas')}</label>
+                              <select
+                                value={currentFieldMeta.component?.modalGridSpan || currentFieldMeta.component?.gridSpan || '12'}
+                                onChange={e => updateMeta('component', 'modalGridSpan', e.target.value)}
+                                className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs font-bold outline-none"
+                              >
+                                <option value="1">1 Coluna</option>
+                                <option value="2">2 Colunas</option>
+                                <option value="3">3 Colunas</option>
+                                <option value="4">4 Colunas</option>
+                                <option value="5">5 Colunas</option>
+                                <option value="6">6 Colunas (Metade)</option>
+                                <option value="7">7 Colunas</option>
+                                <option value="8">8 Colunas</option>
+                                <option value="9">9 Colunas</option>
+                                <option value="10">10 Colunas</option>
+                                <option value="11">11 Colunas</option>
+                                <option value="12">12 Colunas (Inteira)</option>
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              {(() => {
+                                const widthStr = currentFieldMeta.component?.modalWidth || currentFieldMeta.component?.width || '100%';
+                                const widthMatch = widthStr.match(/^(\d+(?:\.\d+)?)(.*)$/);
+                                const wValue = widthMatch ? widthMatch[1] : '100';
+                                const wUnit = widthMatch ? widthMatch[2] : '%';
+                                return (
+                                  <>
+                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.visual_width', 'Largura Visual')}</label>
+                                    <div className="flex gap-2">
+                                      <input
+                                        type="number"
+                                        value={wValue}
+                                        onChange={e => updateMeta('component', 'modalWidth', `${e.target.value}${wUnit}`)}
+                                        className="flex-1 w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs font-bold outline-none"
+                                      />
+                                      <select
+                                        value={wUnit}
+                                        onChange={e => updateMeta('component', 'modalWidth', `${wValue}${e.target.value}`)}
+                                        className="w-16 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-1 py-2 text-xs font-bold outline-none"
+                                      >
+                                        <option value="%">%</option>
+                                        <option value="px">px</option>
+                                        <option value="ch">ch</option>
+                                        <option value="rem">rem</option>
+                                      </select>
+                                    </div>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          </div>
                         </div>
                       </div>
                       {currentFieldMeta.component?.type === 'textarea' && (

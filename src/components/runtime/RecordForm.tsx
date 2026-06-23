@@ -426,7 +426,7 @@ export default function RecordForm({
                             seenFields.add(field.id);
                             
                             const zoneConfig = field.config?.form_config || field.config || {};
-                            const gridSpan = parseInt(zoneConfig.component?.gridSpan) || 12;
+                            const gridSpan = parseInt(isPageMode ? (zoneConfig.component?.gridSpan || 12) : (zoneConfig.component?.modalGridSpan || zoneConfig.component?.gridSpan || 12)) || 12;
                             const colSpanClass = {
                               1: 'md:col-span-1', 2: 'md:col-span-2', 3: 'md:col-span-3', 4: 'md:col-span-4',
                               5: 'md:col-span-5', 6: 'md:col-span-6', 7: 'md:col-span-7', 8: 'md:col-span-8',
@@ -446,6 +446,7 @@ export default function RecordForm({
   masterModelId={masterModelId}
   masterModelName={masterModelName}
   logicType={logicType}
+  isPageMode={isPageMode}
   t={t}
 /></div>;
                           });
@@ -569,6 +570,7 @@ export default function RecordForm({
     tabsStyleConfig={tabsStyleConfig}
     t={t}
     mode={mode}
+    isPageMode={isPageMode}
   />}
                 </div>
               </>
