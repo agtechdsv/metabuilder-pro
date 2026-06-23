@@ -113,14 +113,13 @@ export function useClientSubscription({
   }
 
   const handleCancelSubscription = async () => {
-    if (!workspaces[0]) return
     setIsCanceling(true)
     try {
       const supabase = createClient()
 
       const { error: dbError } = await supabase.from('cancellation_feedbacks').insert({
         user_id: localProfile?.id || null,
-        workspace_id: workspaces[0].id,
+        workspace_id: workspaces?.[0]?.id || null,
         reasons: selectedReasons.map(r => {
           const found = CANCELLATION_REASONS.find(cr => cr.id === r)
           return found ? found.label : r
@@ -134,7 +133,7 @@ export function useClientSubscription({
       }
 
       const { data, error } = await supabase.functions.invoke('asaas-cancel', {
-        body: { workspaceId: workspaces[0].id },
+        body: { workspaceId: workspaces?.[0]?.id || null },
       })
       if (error) throw error
       if (data?.success) {

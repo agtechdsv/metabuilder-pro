@@ -42,32 +42,27 @@ serve(async (req) => {
     const body = await req.json();
     const { workspaceId } = body;
 
-    if (!workspaceId) {
-      return new Response(
-        JSON.stringify({ error: "Parâmetro workspaceId é obrigatório" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    if (workspaceId) {
+      // 2. Fetch the workspace and verify if the user is the owner
+      const { data: workspace, error: wsError } = await supabaseClient
+        .from("workspaces")
+        .select("id, owner_id")
+        .eq("id", workspaceId)
+        .single();
 
-    // 2. Fetch the workspace and verify if the user is the owner
-    const { data: workspace, error: wsError } = await supabaseClient
-      .from("workspaces")
-      .select("id, owner_id")
-      .eq("id", workspaceId)
-      .single();
+      if (wsError || !workspace) {
+        return new Response(
+          JSON.stringify({ error: "Workspace não encontrado" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-    if (wsError || !workspace) {
-      return new Response(
-        JSON.stringify({ error: "Workspace não encontrado" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (workspace.owner_id !== user.id) {
-      return new Response(
-        JSON.stringify({ error: "Apenas o proprietário do workspace pode cancelar a assinatura" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (workspace.owner_id !== user.id) {
+        return new Response(
+          JSON.stringify({ error: "Apenas o proprietário do workspace pode cancelar a assinatura" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Get the subscription ID from the profile
