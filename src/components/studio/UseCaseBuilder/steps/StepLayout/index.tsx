@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import FormulaBuilder from '../../../FormulaBuilder'
 import {
   Settings2, Database, Layout, MousePointer2, Plus, Trash2,
@@ -584,26 +584,44 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
   const updateMeta = (section: 'label' | 'content' | 'component' | 'viacep', key: string, value: any) => {
     if (!editingFieldId) return
 
-    // O usuário solicitou que todas as instâncias do mesmo campo compartilhem as configurações.
-    // Então, ao atualizar uma propriedade, atualizamos todas as chaves deste field.
-
     const baseMeta = getFieldMeta(editingFieldId, null) // get current base meta or default
-    const newMeta = { ...currentFieldMeta } // current meta being edited
-    newMeta[section] = { ...newMeta[section], [key]: value }
+    const currentMetaInZone = getFieldMeta(editingFieldId, editingFieldZone)
+
+    const newMetaForZone = { ...currentMetaInZone }
+    newMetaForZone[section] = { ...newMetaForZone[section], [key]: value }
 
     const newFieldsMetadata = { ...config.layout_config.fields_metadata }
 
-    // 1. Atualizar a chave base (para servir de herança quando arrastar para uma nova zona)
-    newFieldsMetadata[editingFieldId] = newMeta
+    const isLayoutProp = section === 'component' && ['gridSpan', 'modalGridSpan', 'width', 'modalWidth'].includes(key)
 
-    // 2. Atualizar as zonas existentes
-    const zones = ['form', 'grid', 'filter']
-    zones.forEach(z => {
-      const zKey = `${z}-${editingFieldId}`
-      if (newFieldsMetadata[zKey] !== undefined || editingFieldZone === z) {
-        newFieldsMetadata[zKey] = newMeta
+    if (isLayoutProp) {
+      if (editingFieldZone) {
+        newFieldsMetadata[`${editingFieldZone}-${editingFieldId}`] = newMetaForZone
+      } else {
+        newFieldsMetadata[editingFieldId] = newMetaForZone
       }
-    })
+    } else {
+      const newMeta = { ...currentFieldMeta } // current meta being edited
+      newMeta[section] = { ...newMeta[section], [key]: value }
+
+      // 1. Atualizar a chave base (para servir de herança quando arrastar para uma nova zona)
+      newFieldsMetadata[editingFieldId] = newMeta
+
+      // 2. Atualizar as zonas existentes
+      const zones = ['form', 'grid', 'filter']
+      zones.forEach(z => {
+        const zKey = `${z}-${editingFieldId}`
+        if (newFieldsMetadata[zKey] !== undefined || editingFieldZone === z) {
+          newFieldsMetadata[zKey] = {
+            ...(newFieldsMetadata[zKey] || newMeta),
+            [section]: {
+              ...(newFieldsMetadata[zKey]?.[section] || {}),
+              [key]: value
+            }
+          }
+        }
+      })
+    }
 
     setConfig({
       ...config,

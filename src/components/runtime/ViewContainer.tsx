@@ -72,6 +72,8 @@ interface ViewContainerProps {
   projectRelations?: any[]
   detailsDisplayMode?: Record<string, string>
   initialItemsPerPage?: number
+  filterGridColumns?: string
+  exportFormats?: string[]
 }
 
 const getBulkActionClasses = (color: string) => {
@@ -156,7 +158,8 @@ export default function ViewContainer({
   externalRefreshTrigger = 0,
   onCustomAction,
   projectRelations = [],
-  initialItemsPerPage
+  initialItemsPerPage,
+  filterGridColumns = '12'
 }: ViewContainerProps) {
   const { toast } = useToast()
   const router = useRouter()
@@ -446,6 +449,7 @@ export default function ViewContainer({
         btnSearch={btnSearch} btnClear={btnClear} canSearch={canSearch} canClear={canClear}
         handleSearchClick={handleSearchClick} handleClear={handleClear} fetchData={fetchData}
         t={t} getButtonStyles={getButtonStyles} getFontFamily={getFontFamily} getFontSize={getFontSize}
+        filterGridColumns={filterGridColumns}
       />}
       {/* Data Display */}
       {isLoading ? (

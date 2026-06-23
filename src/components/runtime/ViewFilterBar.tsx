@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 export function ViewFilterBar({
   filterFields, filterValues, setFilterValues, relationalOptions, parseFixedOptions,
   btnSearch, btnClear, canSearch, canClear, handleSearchClick, handleClear, fetchData,
-  t, getButtonStyles, getFontFamily, getFontSize
+  t, getButtonStyles, getFontFamily, getFontSize, filterGridColumns
 }: any) {
   const labelSearch = btnSearch?.custom_label !== undefined && btnSearch.custom_label !== '' ? btnSearch.custom_label : t('runtime.search');
   const labelClear = btnClear?.custom_label !== undefined && btnClear.custom_label !== '' ? btnClear.custom_label : t('runtime.clear');
@@ -15,11 +15,23 @@ export function ViewFilterBar({
       {filterFields.length > 0 && (
         <div className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
           <div className="flex flex-col lg:flex-row items-end gap-6">
-            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full">
+            <div className={`flex-1 grid grid-cols-${filterGridColumns || '12'} gap-4 w-full`}>
               {filterFields.map((field: any, idx: any) => {
                 const zoneConfig = field.config?.filter_config || field.config || {}
+                let gridSpan = parseInt(zoneConfig.component?.gridSpan || '3') || 3;
+                let width = zoneConfig.component?.width || '100%';
+
+                if (typeof width === 'string' && width.endsWith('col')) {
+                  const colWidth = parseFloat(width.replace('col', ''));
+                  if (!isNaN(colWidth) && gridSpan > 0) {
+                    width = `${(colWidth / gridSpan) * 100}%`;
+                  } else {
+                    width = '100%';
+                  }
+                }
+                
                 return (
-                  <div key={field.id || field.db_column_name || `filter-${idx}`} className="flex flex-col gap-1.5">
+                  <div key={field.id || field.db_column_name || `filter-${idx}`} className={`flex flex-col gap-1.5 col-span-${gridSpan}`} style={{ width: width }}>
                     <label
                       style={{ fontFamily: zoneConfig.label?.font, fontSize: getFontSize(zoneConfig.label?.size), color: zoneConfig.label?.color }}
                       className={cn("text-[10px] font-black tracking-widest ml-1", !zoneConfig.label?.color && "text-neutral-400")}

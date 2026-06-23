@@ -385,13 +385,13 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                           const detailFieldsForThisModel = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase());
                           return detailFieldsForThisModel.map(field => {
                             const fieldConfig = field.config?.form_config || field.config || {};
-                            const gridSpan = parseInt(isPageMode ? (fieldConfig.component?.gridSpan || 12) : (fieldConfig.component?.modalGridSpan || fieldConfig.component?.gridSpan || 12)) || 12;
+                            const gridSpan = parseInt(fieldConfig.component?.gridSpan || 12) || 12;
                             const colSpanClass = {
                               1: 'md:col-span-1', 2: 'md:col-span-2', 3: 'md:col-span-3', 4: 'md:col-span-4',
                               5: 'md:col-span-5', 6: 'md:col-span-6', 7: 'md:col-span-7', 8: 'md:col-span-8',
                               9: 'md:col-span-9', 10: 'md:col-span-10', 11: 'md:col-span-11', 12: 'md:col-span-12'
                             }[gridSpan] || 'md:col-span-12';
-                            let width = isPageMode ? (fieldConfig.component?.width || '100%') : (fieldConfig.component?.modalWidth || fieldConfig.component?.width || '100%');
+                            let width = fieldConfig.component?.width || '100%';
                             
                             if (typeof width === 'string' && width.endsWith('col')) {
                               const colWidth = parseFloat(width.replace('col', ''));

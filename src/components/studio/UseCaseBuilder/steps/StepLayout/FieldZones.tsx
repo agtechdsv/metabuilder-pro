@@ -1,4 +1,4 @@
-﻿import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { Eye, EyeOff, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import { DroppableZone, SortableFieldChip } from './dnd'
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
@@ -31,6 +31,27 @@ export function FieldZones({
                       <span className="px-3 py-1 bg-indigo-500/10 text-indigo-600 rounded-full text-[9px] font-black tracking-widest">{config.layout_config.filter_fields.length} {t('dashboard.projects.studio.fields_count')}</span>
                     </div>
                     <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 bg-indigo-50/50 dark:bg-indigo-900/20 px-2 py-1 rounded-lg border border-indigo-100 dark:border-indigo-900/50" onClick={e => e.stopPropagation()}>
+                        <span className="text-[8px] font-bold text-indigo-500 uppercase tracking-widest">{t('wizard.layout.zones.grid_cols', 'GRID')}</span>
+                        <select
+                          value={config.layout_config.filter_grid_columns || '12'}
+                          onChange={e => setConfig({ ...config, layout_config: { ...config.layout_config, filter_grid_columns: e.target.value }})}
+                          className="bg-transparent text-[9px] font-black text-indigo-600 outline-none cursor-pointer"
+                        >
+                          <option value="1">1 COL</option>
+                          <option value="2">2 COLS</option>
+                          <option value="3">3 COLS</option>
+                          <option value="4">4 COLS</option>
+                          <option value="5">5 COLS</option>
+                          <option value="6">6 COLS</option>
+                          <option value="7">7 COLS</option>
+                          <option value="8">8 COLS</option>
+                          <option value="9">9 COLS</option>
+                          <option value="10">10 COLS</option>
+                          <option value="11">11 COLS</option>
+                          <option value="12">12 COLS (PADRÃO)</option>
+                        </select>
+                      </div>
                       {config.layout_config.filter_fields.length > 0 && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setConfig({ ...config, layout_config: { ...config.layout_config, filter_fields: [] } }) }}

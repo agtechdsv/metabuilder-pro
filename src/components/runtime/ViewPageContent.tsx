@@ -94,6 +94,7 @@ interface ViewPageContentProps {
   formHeaderSubtitleField?: string
   projectRelations?: any[]
   initialItemsPerPage?: number
+  filterGridColumns?: string
 }
 
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
@@ -157,7 +158,8 @@ export default function ViewPageContent({
   formHeaderTitle,
   formHeaderSubtitleField,
   projectRelations = [],
-  initialItemsPerPage
+  initialItemsPerPage,
+  filterGridColumns
 }: ViewPageContentProps) {
   const router = useRouter()
   const { t } = useI18n()
