@@ -79,7 +79,18 @@ export function RecordFormField(props: RecordFormFieldProps) {
     const zoneConfig = field.config?.form_config || field.config || {}
     const comp = zoneConfig.component || { type: 'text' }
     const fieldType = comp.type || 'text'
-    const width = isPageMode ? (comp.width || '100%') : (comp.modalWidth || comp.width || '100%')
+    let width = isPageMode ? (comp.width || '100%') : (comp.modalWidth || comp.width || '100%')
+
+    if (typeof width === 'string' && width.endsWith('col')) {
+      const colWidth = parseFloat(width.replace('col', ''));
+      const gridSpanStr = isPageMode ? (comp.gridSpan || '12') : (comp.modalGridSpan || comp.gridSpan || '12');
+      const gridSpan = parseInt(gridSpanStr) || 12;
+      if (!isNaN(colWidth) && gridSpan > 0) {
+        width = `${(colWidth / gridSpan) * 100}%`;
+      } else {
+        width = '100%';
+      }
+    }
 
     const maskStr = zoneConfig.content?.mask || field.config?.content?.mask
     const isDateType = fieldType === 'date' || fieldType === 'datetime-local' || fieldType === 'datetime' || fieldType === 'time'

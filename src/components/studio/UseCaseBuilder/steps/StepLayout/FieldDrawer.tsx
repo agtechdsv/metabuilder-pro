@@ -470,6 +470,7 @@ export function FieldDrawer({
                                       >
                                         <option value="%">%</option>
                                         <option value="px">px</option>
+                                        <option value="col">Colunas</option>
                                         <option value="ch">ch</option>
                                         <option value="rem">rem</option>
                                       </select>
@@ -528,6 +529,7 @@ export function FieldDrawer({
                                       >
                                         <option value="%">%</option>
                                         <option value="px">px</option>
+                                        <option value="col">Colunas</option>
                                         <option value="ch">ch</option>
                                         <option value="rem">rem</option>
                                       </select>

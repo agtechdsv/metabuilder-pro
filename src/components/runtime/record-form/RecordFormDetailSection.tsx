@@ -391,7 +391,16 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                               5: 'md:col-span-5', 6: 'md:col-span-6', 7: 'md:col-span-7', 8: 'md:col-span-8',
                               9: 'md:col-span-9', 10: 'md:col-span-10', 11: 'md:col-span-11', 12: 'md:col-span-12'
                             }[gridSpan] || 'md:col-span-12';
-                            const width = isPageMode ? (fieldConfig.component?.width || '100%') : (fieldConfig.component?.modalWidth || fieldConfig.component?.width || '100%');
+                            let width = isPageMode ? (fieldConfig.component?.width || '100%') : (fieldConfig.component?.modalWidth || fieldConfig.component?.width || '100%');
+                            
+                            if (typeof width === 'string' && width.endsWith('col')) {
+                              const colWidth = parseFloat(width.replace('col', ''));
+                              if (!isNaN(colWidth) && gridSpan > 0) {
+                                width = `${(colWidth / gridSpan) * 100}%`;
+                              } else {
+                                width = '100%';
+                              }
+                            }
 
                             return (
                             <div key={field.id} className={cn("space-y-1.5 col-span-1", colSpanClass)} style={{ width: width }}>
