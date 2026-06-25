@@ -15,7 +15,14 @@ export function ViewFilterBar({
       {filterFields.length > 0 && (
         <div className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
           <div className="flex flex-col lg:flex-row items-end gap-6">
-            <div className={`flex-1 grid grid-cols-${filterGridColumns || '12'} gap-4 w-full`}>
+            <div className={cn(
+              "flex-1 grid gap-4 w-full",
+              ({
+                1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-4',
+                5: 'grid-cols-5', 6: 'grid-cols-6', 7: 'grid-cols-7', 8: 'grid-cols-8',
+                9: 'grid-cols-9', 10: 'grid-cols-10', 11: 'grid-cols-11', 12: 'grid-cols-12'
+              } as any)[filterGridColumns || 12] || 'grid-cols-12'
+            )}>
               {filterFields.map((field: any, idx: any) => {
                 const zoneConfig = field.config?.filter_config || field.config || {}
                 let gridSpan = parseInt(zoneConfig.component?.gridSpan || '3') || 3;
@@ -30,8 +37,14 @@ export function ViewFilterBar({
                   }
                 }
                 
+                const colSpanClass = ({
+                  1: 'col-span-1', 2: 'col-span-2', 3: 'col-span-3', 4: 'col-span-4',
+                  5: 'col-span-5', 6: 'col-span-6', 7: 'col-span-7', 8: 'col-span-8',
+                  9: 'col-span-9', 10: 'col-span-10', 11: 'col-span-11', 12: 'col-span-12'
+                } as any)[gridSpan] || 'col-span-3';
+
                 return (
-                  <div key={field.id || field.db_column_name || `filter-${idx}`} className={`flex flex-col gap-1.5 col-span-${gridSpan}`} style={{ width: width }}>
+                  <div key={field.id || field.db_column_name || `filter-${idx}`} className={cn("flex flex-col gap-1.5", colSpanClass)} style={{ width: width }}>
                     <label
                       style={{ fontFamily: zoneConfig.label?.font, fontSize: getFontSize(zoneConfig.label?.size), color: zoneConfig.label?.color }}
                       className={cn("text-[10px] font-black tracking-widest ml-1", !zoneConfig.label?.color && "text-neutral-400")}
