@@ -682,6 +682,7 @@ class BpmEngine {
          console.error(chalk.red(`[BPM] Falha na execução customizada do fluxo ${flow.name}:`), e);
       }
     }
+  }
   async runNodeActionSync(node, triggerTable, triggerData) {
     const data = node.data || {};
     
