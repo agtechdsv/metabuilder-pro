@@ -278,7 +278,7 @@ export function UseCaseBuilderWizard({
     if (!initialData?.id) return
     setIsSaving(true)
     try {
-      const { data: currentView, error: readError } = await supabase.from('ui_views').select('draft_config').eq('id', initialData.id).single()
+      const { data: currentView, error: readError } = await supabase.from('ui_views').select('status, draft_config').eq('id', initialData.id).single()
       if (readError) throw readError
 
       const draft = currentView?.draft_config
@@ -325,6 +325,23 @@ export function UseCaseBuilderWizard({
       if (toInsert.length > 0) {
         const { error: compError } = await supabase.from('ui_components').insert(toInsert)
         if (compError) throw compError
+      }
+
+      if (currentView?.status !== 'delivered') {
+        const { data: projectData } = await supabase.from('projects').select('id, navigation').eq('slug', project_slug).single()
+        if (projectData) {
+          const newMenuItem = {
+            id: 'menu_' + Math.random().toString(36).substr(2, 9),
+            label: draft.name,
+            description: '',
+            icon: 'Layout',
+            type: 'view',
+            target: draft.slug,
+            show_dashboard: true
+          }
+          const updatedNavigation = [...(projectData.navigation || []), newMenuItem]
+          await supabase.from('projects').update({ navigation: updatedNavigation }).eq('id', projectData.id)
+        }
       }
 
       setCurrentStatus('delivered')

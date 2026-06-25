@@ -1,12 +1,30 @@
-import React from "react";
-import { Check, Info, Loader2, X, Edit2 } from "lucide-react";
+import React, { useState } from "react";
+import { Check, Info, Loader2, X, Edit2, MessageSquare, Settings2 } from "lucide-react";
 import RichTextEditor from "../RichTextEditor";
 
 export function ActionPropertiesPanel(props: any) {
   const { selectedNode, updateNodeData, dbModels, dbFields, setCursorPos, roles, openGroupUsersModal, setEditingEmailNode, setTempEmailData, setIsPreviewEmailOpen, renderActionFilters, t, enums, cursorPos } = props;
+  const [activeTab, setActiveTab] = useState<'geral' | 'mensagem'>('geral');
+
   return (
-    <>
-                  <div className="space-y-4 p-4 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl">
+    <div className="space-y-4">
+      <div className="flex bg-neutral-100 dark:bg-neutral-800 p-1 rounded-lg">
+        <button
+          onClick={() => setActiveTab('geral')}
+          className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors flex justify-center items-center gap-1 ${activeTab === 'geral' ? 'bg-white dark:bg-neutral-700 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+        >
+          <Settings2 size={12} /> {t('bpm.canvas.general') || 'Geral'}
+        </button>
+        <button
+          onClick={() => setActiveTab('mensagem')}
+          className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors flex justify-center items-center gap-1 ${activeTab === 'mensagem' ? 'bg-white dark:bg-neutral-700 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+        >
+          <MessageSquare size={12} /> {t('bpm.canvas.message') || 'Mensagem'}
+        </button>
+      </div>
+
+      {activeTab === 'geral' && (
+        <div className="space-y-4 p-4 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl">
                     <h4 className="text-xs font-black text-indigo-600 dark:text-indigo-500 uppercase tracking-widest flex items-center gap-2">
                       {t('bpm.canvas.action_config')}
                     </h4>
@@ -439,6 +457,109 @@ export function ActionPropertiesPanel(props: any) {
                       </div>
                     )}
                   </div>
-    </>
+      )}
+
+      {activeTab === 'mensagem' && (
+        <div className="space-y-4 p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl">
+          <div className="text-[10px] text-neutral-500 italic">
+            {t('bpm.canvas.message_tab_desc') || 'Defina uma mensagem para ser exibida após a execução desta ação, caso queira.'}
+          </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-2">{t('bpm.canvas.visual_template') || 'Template Visual'}</label>
+            <select 
+              value={(selectedNode.data?.successMessageTemplate as string) || 'alert'}
+              onChange={(e) => updateNodeData(selectedNode.id, { successMessageTemplate: e.target.value })}
+              className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value="alert">{t('bpm.canvas.template_alert') || 'Alerta Padrão'}</option>
+              <option value="modern">{t('bpm.canvas.template_modern') || 'Moderno'}</option>
+              <option value="classic">{t('bpm.canvas.template_classic') || 'Clássico'}</option>
+              <option value="free">{t('bpm.canvas.template_free') || 'Texto Livre'}</option>
+            </select>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block">{t('bpm.canvas.subject') || 'Assunto'}</label>
+              <select 
+                value=""
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (!val) return;
+                  const currentText = (selectedNode.data?.successMessageSubject as string) || '';
+                  const newText = currentText ? currentText + ` {{${val}}}` : `{{${val}}}`;
+                  updateNodeData(selectedNode.id, { successMessageSubject: newText });
+                  e.target.value = '';
+                }}
+                className="bg-transparent border-none text-[9px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-28 text-right p-0"
+              >
+                <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">{t('bpm.canvas.plus_variable') || '+ Variável'}</option>
+                {[...dbModels].sort((a, b) => (a.display_name || a.db_table_name || a.name).localeCompare(b.display_name || b.db_table_name || b.name)).map((m: any) => {
+                  const tableName = m.display_name || m.db_table_name || m.name;
+                  const fields = dbFields.filter((f: any) => f.model_id === m.id);
+                  if (fields.length === 0) return null;
+                  return (
+                    <optgroup key={m.id} label={tableName} className="text-left text-indigo-600 dark:text-indigo-400 normal-case tracking-normal text-sm font-bold bg-neutral-50 dark:bg-neutral-900">
+                      {[...fields].sort((a, b) => (a.display_name || a.db_column_name || a.name).localeCompare(b.display_name || b.db_column_name || b.name)).map((f: any) => (
+                        <option key={f.id} value={`${m.db_table_name || m.name}.${f.db_column_name || f.name}`} className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">
+                          {f.display_name || f.db_column_name || f.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
+              </select>
+            </div>
+            <input 
+              type="text" 
+              placeholder={t('bpm.canvas.subject_placeholder') || 'Ex: Operação realizada com sucesso!'}
+              value={(selectedNode.data?.successMessageSubject as string) || ''} 
+              onChange={(e) => updateNodeData(selectedNode.id, { successMessageSubject: e.target.value })}
+              className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.body_html_text') || 'Corpo (HTML/Texto)'}</label>
+              <select 
+                value=""
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (!val) return;
+                  const currentText = (selectedNode.data?.successMessageBody as string) || '';
+                  const newText = currentText ? currentText + ` {{${val}}}` : `{{${val}}}`;
+                  updateNodeData(selectedNode.id, { successMessageBody: newText });
+                  e.target.value = '';
+                }}
+                className="bg-transparent border-none text-[9px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-28 text-right p-0"
+              >
+                <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">{t('bpm.canvas.plus_variable') || '+ Variável'}</option>
+                {[...dbModels].sort((a, b) => (a.display_name || a.db_table_name || a.name).localeCompare(b.display_name || b.db_table_name || b.name)).map((m: any) => {
+                  const tableName = m.display_name || m.db_table_name || m.name;
+                  const fields = dbFields.filter((f: any) => f.model_id === m.id);
+                  if (fields.length === 0) return null;
+                  return (
+                    <optgroup key={m.id} label={tableName} className="text-left text-indigo-600 dark:text-indigo-400 normal-case tracking-normal text-sm font-bold bg-neutral-50 dark:bg-neutral-900">
+                      {[...fields].sort((a, b) => (a.display_name || a.db_column_name || a.name).localeCompare(b.display_name || b.db_column_name || b.name)).map((f: any) => (
+                        <option key={f.id} value={`${m.db_table_name || m.name}.${f.db_column_name || f.name}`} className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">
+                          {f.display_name || f.db_column_name || f.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
+              </select>
+            </div>
+            <RichTextEditor 
+              value={(selectedNode.data?.successMessageBody as string) || ''}
+              onChange={(val: any) => updateNodeData(selectedNode.id, { successMessageBody: val })}
+              placeholder={t('bpm.canvas.body_placeholder') || 'Digite a mensagem de sucesso aqui...'}
+            />
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
