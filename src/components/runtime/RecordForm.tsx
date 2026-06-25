@@ -407,7 +407,7 @@ export default function RecordForm({
                   </div>
                 )}
 
-                <div className={cn("flex-1 space-y-12", isPageMode ? "" : "overflow-y-auto custom-scrollbar pr-2")}>
+                <div className={cn("flex-1 space-y-12 pb-24", isPageMode ? "" : "overflow-y-auto custom-scrollbar pr-2")}>
                   {!renderOnlyDetail && activeTab === 'master' && (
                     <div className="space-y-6">
                       {sectionTables.length > 0 && tabTables.length > 0 && (
