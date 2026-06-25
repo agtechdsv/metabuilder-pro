@@ -103,8 +103,7 @@ export function FieldZones({
                                     color: getFieldMeta(id, 'filter').label?.color || undefined
                                   }}
                                   className={cn(
-                                    "text-[10px] font-black tracking-wider",
-                                    !getFieldMeta(id, 'filter').label?.font && "uppercase"
+                                    "text-[10px] font-black tracking-wider"
                                   )}
                                 >
                                   {getFieldMeta(id, 'filter').label?.text || getFieldName(id)}
@@ -206,8 +205,7 @@ export function FieldZones({
                                   color: getFieldMeta(id, 'grid').label?.color || undefined
                                 }}
                                 className={cn(
-                                  "text-[10px] font-black tracking-wider",
-                                  !getFieldMeta(id, 'grid').label?.font && "uppercase"
+                                  "text-[10px] font-black tracking-wider"
                                 )}
                               >
                                 {getFieldMeta(id, 'grid').label?.text || getFieldName(id)}

@@ -446,8 +446,7 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
                         color: getFieldMeta(id, 'form').label?.color || undefined
                       }}
                       className={cn(
-                        "text-[10px] font-black tracking-wider",
-                        !getFieldMeta(id, 'form').label?.font && "uppercase"
+                        "text-[10px] font-black tracking-wider"
                       )}
                     >
                       {getFieldMeta(id, 'form').label?.text || getFieldName(id)}
