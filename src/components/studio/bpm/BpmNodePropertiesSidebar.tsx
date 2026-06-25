@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { TriggerPropertiesPanel } from "./panels/TriggerPropertiesPanel";
 import { ActionPropertiesPanel } from "./panels/ActionPropertiesPanel";
 import { ConditionPropertiesPanel } from "./panels/ConditionPropertiesPanel";
+import { ResponsePropertiesPanel } from "./panels/ResponsePropertiesPanel";
 
 export function BpmNodePropertiesSidebar(props: any) {
   const {
@@ -93,6 +94,14 @@ export function BpmNodePropertiesSidebar(props: any) {
                 renderActionFilters={renderActionFilters}
                 t={t}
                 enums={enums}
+              />
+            )}
+
+            {selectedNode.type === 'response' && (
+              <ResponsePropertiesPanel
+                selectedNode={selectedNode}
+                updateNodeData={updateNodeData}
+                t={t}
               />
             )}
           </>

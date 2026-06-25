@@ -39,40 +39,45 @@ export function ActionPropertiesPanel(props: any) {
                         <option value="">{t('bpm.canvas.select_action')}</option>
                         <option value="insert">{t('bpm.nodes.insert_record')}</option>
                         <option value="update">{t('bpm.nodes.update_record')}</option>
+                        <option value="mutate">{t('bpm.nodes.mutate_record', 'Atualizar Dados do Formulário')}</option>
                         <option value="delete">{t('bpm.nodes.delete_record')}</option>
                         <option value="email">{t('bpm.nodes.send_email')}</option>
                         <option value="webhook">{t('bpm.canvas.webhook_api_call')}</option>
                       </select>
                     </div>
 
-                    {['insert', 'update', 'delete'].includes(selectedNode.data?.actionType as string) && (() => {
+                    {['insert', 'update', 'delete', 'mutate'].includes(selectedNode.data?.actionType as string) && (() => {
                       const actionFields = (selectedNode.data?.actionFields as any[]) || [];
                       const actionFilters = (selectedNode.data?.actionFilters as any[]) || [];
 
                       return (
                       <div className="space-y-4 pt-4 border-t border-indigo-500/20">
-                        <div>
-                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.target_table')}</label>
-                          <select 
-                            value={(selectedNode.data?.actionModelId as string) || ''} 
-                            onChange={(e: any) => updateNodeData(selectedNode.id, { actionModelId: e.target.value, actionFields: [], actionFilters: [] })}
-                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
-                          >
-                            <option value="">{t('bpm.canvas.select_table_option')}</option>
-                            {dbModels.map((m: any) => (
-                              <option key={m.id} value={m.id}>{m.display_name || m.db_table_name || m.name}</option>
-                            ))}
-                          </select>
-                        </div>
+                        {['insert', 'update', 'delete', 'mutate'].includes(selectedNode.data?.actionType as string) && (
+                          <div>
+                            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.target_table')}</label>
+                            <select 
+                              value={(selectedNode.data?.actionModelId as string) || ''} 
+                              onChange={(e: any) => updateNodeData(selectedNode.id, { actionModelId: e.target.value, actionFields: [], actionFilters: [] })}
+                              className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
+                            >
+                              <option value="">{t('bpm.canvas.select_table_option')}</option>
+                              {dbModels.map((m: any) => (
+                                <option key={m.id} value={m.id}>{m.display_name || m.db_table_name || m.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
 
-                        {/* Múltiplos Campos para Insert / Update */}
-                        {['insert', 'update'].includes(selectedNode.data?.actionType as string) && !!selectedNode.data?.actionModelId && (
+                        {/* Múltiplos Campos para Insert / Update / Mutate */}
+                        {((['insert', 'update'].includes(selectedNode.data?.actionType as string) && !!selectedNode.data?.actionModelId) || selectedNode.data?.actionType === 'mutate') && (
                           <div className="bg-white dark:bg-neutral-900 border border-indigo-200 dark:border-indigo-900 rounded-xl p-3 shadow-sm mt-4">
                             <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-100 dark:border-neutral-800">
                               <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest">
                                 {selectedNode.data?.actionType === 'insert' 
                                   ? t('bpm.canvas.fields_to_insert') 
-                                  : t('bpm.canvas.fields_to_update')}
+                                  : selectedNode.data?.actionType === 'mutate'
+                                    ? t('bpm.canvas.fields_to_mutate', 'Campos para Atualizar')
+                                    : t('bpm.canvas.fields_to_update')}
                               </span>
                               <button
                                 onClick={() => {

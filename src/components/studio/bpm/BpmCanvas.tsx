@@ -28,7 +28,7 @@ import { useBpmEmailActions } from './hooks/useBpmEmailActions';
 
 
 import { FlowSidebar } from './FlowSidebar';
-import { TriggerNode, ActionNode, ConditionNode } from './nodes/CustomNodes';
+import { TriggerNode, ActionNode, ConditionNode, ResponseNode } from './nodes/CustomNodes';
 import RichTextEditor from './RichTextEditor';
 import { Save, Play, Wand2, X, ArrowLeft, Loader2, Plus, Trash2, Check, Edit2, Box, Minimize2, Maximize2, ZoomIn, LayoutGrid } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -46,6 +46,7 @@ const nodeTypes = {
   trigger: TriggerNode,
   action: ActionNode,
   condition: ConditionNode,
+  response: ResponseNode,
 };
 
 const edgeTypes = {

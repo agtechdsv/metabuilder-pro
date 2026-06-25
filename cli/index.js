@@ -996,6 +996,24 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           
           result = { rows: [] };
           console.log(chalk.green(`[ OK ] BPM TRIGGER ACTION executada para fluxos customizados.`));
+        } else if (action === 'trigger_bpm_sync') {
+          const { tableName, eventType, rowData } = payload.payload;
+          const safeTable = (tableName || table || '').replace(/[^a-zA-Z0-9_]/g, '');
+          
+          if (!bpmEngine) {
+            result = { rows: [rowData] }; // Fallback
+          } else {
+            const syncResult = await bpmEngine.processSyncEvent(safeTable, eventType, rowData);
+            if (!syncResult.success) {
+              // Bloqueio
+              throw new Error(syncResult.error || 'Ação bloqueada pelo fluxo BPM.');
+            }
+            result = { rows: [syncResult.data] };
+            if (syncResult.message) {
+               result.rows[0]._bpmMessage = syncResult.message;
+            }
+          }
+          console.log(chalk.green(`[ OK ] BPM SYNC ACTION processada para evento ${eventType} em ${safeTable}.`));
         } else if (action === 'sync_bpm') {
           if (bpmEngine) {
              console.log(chalk.yellow(`[BPM] Sincronização forçada dos fluxos recebida.`));

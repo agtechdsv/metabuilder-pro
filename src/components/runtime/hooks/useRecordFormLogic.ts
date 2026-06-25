@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { evaluateFormula } from '@/lib/formulaEvaluator'
 import { createClient } from '@/utils/supabase/client'
+import { useToast } from '@/components/ui/Toast'
 
 export interface UseRecordFormLogicProps {
   mode: 'create' | 'edit' | 'view';
@@ -30,6 +31,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
   } = props;
   const [formData, setFormData] = useState<any>(initialData || {})
   const [activeTab, setActiveTab] = useState<'master' | string>(initialTab)
+  const { toast } = useToast()
 
   const formRef = useRef<HTMLFormElement>(null)
   
@@ -376,10 +378,90 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       .map((f: any) => f.model_name || 'Details')
   ))
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    const payloadToSave = { ...formData }
+    let payloadToSave = { ...formData }
+    
+    // ======== BPM SYNC EVENT ========
+    // Se o túnel estiver pronto e tivermos os dados necessários, disparamos o fluxo síncrono.
+    if (projectId && tunnelChannel && isTunnelReady && masterModelName) {
+      const eventType = mode === 'create' ? 'BEFORE_INSERT' : 'BEFORE_UPDATE';
+      const queryId = crypto.randomUUID();
+      
+      try {
+        const syncData = await new Promise<any>((resolve, reject) => {
+          let resolved = false;
+          
+          const handleResult = (payload: any) => {
+             if (payload.payload?.queryId === queryId) {
+                resolved = true;
+                cleanup();
+                if (payload.payload.success) {
+                   resolve(payload.payload.data ? payload.payload.data[0] : null);
+                } else {
+                   reject(new Error(payload.payload.error || 'Ação bloqueada pelo fluxo BPM.'));
+                }
+             }
+          };
+
+          const cleanup = () => {
+             try {
+                const bindings = tunnelChannel.bindings?.broadcast;
+                if (Array.isArray(bindings)) {
+                   const cleanBindings = bindings.filter((b: any) => {
+                      const match = b.callback === handleResult;
+                      if (match && tunnelChannel.channelAdapter) {
+                         tunnelChannel.channelAdapter.off('broadcast', b.ref);
+                      }
+                      return !match;
+                   });
+                   tunnelChannel.bindings.broadcast = cleanBindings;
+                }
+             } catch(err) {}
+          };
+
+          tunnelChannel.on('broadcast', { event: `query_result_${queryId}` }, handleResult);
+          tunnelChannel.on('broadcast', { event: 'sql_result' }, handleResult);
+          
+          tunnelChannel.send({
+             type: 'broadcast',
+             event: 'sql_query',
+             payload: {
+                queryId,
+                action: 'trigger_bpm_sync',
+                tableName: masterModelName,
+                eventType,
+                rowData: payloadToSave,
+                token: secretToken
+             }
+          });
+          
+          setTimeout(() => {
+             if (!resolved) {
+                resolved = true;
+                cleanup();
+                console.warn(`[BPM] Timeout esperando validação síncrona do BPM (queryId: ${queryId}). Prosseguindo...`);
+                resolve(payloadToSave); // Continua se der timeout
+             }
+          }, 8000); // 8 segundos de limite
+        });
+        
+        if (syncData) {
+           payloadToSave = syncData;
+           if (payloadToSave._bpmMessage) {
+              toast(payloadToSave._bpmMessage, 'info');
+              delete payloadToSave._bpmMessage;
+           }
+        }
+      } catch (err: any) {
+        // Bloqueio! Ação abortada pelo BPM.
+        toast(err.message, 'error');
+        return; // ABORT SAVE
+      }
+    }
+    // ======== END BPM SYNC EVENT ========
+
     Object.keys(payloadToSave).forEach(key => {
       if (key.startsWith('virt_') || fields.find((f: any) => f.db_column_name === key)?.is_virtual) {
         delete payloadToSave[key]

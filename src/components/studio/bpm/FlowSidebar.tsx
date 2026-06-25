@@ -53,6 +53,15 @@ export function FlowSidebar() {
             <Play className="w-4 h-4 text-indigo-500" />
             <span className="text-sm font-bold">{t('bpm.sidebar.generic_action')}</span>
           </div>
+
+          <div
+            className="p-3 border border-neutral-200 dark:border-neutral-800 rounded-xl cursor-grab hover:border-rose-500 transition-colors flex items-center gap-3 bg-neutral-50 dark:bg-neutral-950"
+            onDragStart={(event) => onDragStart(event, 'response', 'Resposta / Bloqueio')}
+            draggable
+          >
+            <GitMerge className="w-4 h-4 text-rose-500" />
+            <span className="text-sm font-bold">{t('bpm.sidebar.response_node', 'Resposta / Bloqueio')}</span>
+          </div>
         </div>
       </div>
       

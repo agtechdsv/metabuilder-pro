@@ -2,7 +2,7 @@
 
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
-import { ArrowRight, Workflow, Activity, Database, CheckCircle2, MonitorPlay, Zap } from 'lucide-react'
+import { ArrowRight, Workflow, Activity, Database, CheckCircle2, MonitorPlay, Zap, ShieldAlert, Cpu } from 'lucide-react'
 import Link from 'next/link'
 import { useI18n } from '@/i18n/I18nContext'
 
@@ -34,6 +34,16 @@ export function BpmLandingClient({ user, profile }: BpmLandingClientProps) {
       icon: <Database className="w-6 h-6 text-blue-400" />,
       title: t('bpm_page.features.zero_trust_title'),
       desc: t('bpm_page.features.zero_trust_desc')
+    },
+    {
+      icon: <ShieldAlert className="w-6 h-6 text-rose-400" />,
+      title: t('bpm_page.features.form_intercept_title'),
+      desc: t('bpm_page.features.form_intercept_desc')
+    },
+    {
+      icon: <Cpu className="w-6 h-6 text-cyan-400" />,
+      title: t('bpm_page.features.data_mutation_title'),
+      desc: t('bpm_page.features.data_mutation_desc')
     }
   ]
 
@@ -120,7 +130,7 @@ export function BpmLandingClient({ user, profile }: BpmLandingClientProps) {
 
         {/* Features Bento */}
         <section className="max-w-7xl mx-auto w-full px-6 py-24">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, i) => (
               <div key={i} className="p-8 rounded-[2.5rem] bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 hover:border-emerald-500/50 transition-all duration-300">
                 <div className="w-12 h-12 rounded-2xl bg-white dark:bg-neutral-950 flex items-center justify-center mb-6 shadow-inner border border-neutral-200 dark:border-neutral-800">

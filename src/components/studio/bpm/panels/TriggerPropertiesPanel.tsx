@@ -4,8 +4,8 @@ import { Check, Box, X } from "lucide-react";
 export function TriggerPropertiesPanel(props: any) {
   const { selectedNode, updateNodeData, dbModels, dbFields, localViews, setLocalViews, currentWorkflowId, supabase, toast, t } = props;
   const triggerTypes = (selectedNode.data?.triggerType as string[]) || (selectedNode.data?.triggerType ? [selectedNode.data?.triggerType as string] : []);
-                  const requiresModel = triggerTypes.some(t => ['insert', 'update', 'delete'].includes(t));
-  const hasUpdate = triggerTypes.includes('update');
+                  const requiresModel = triggerTypes.some(t => ['insert', 'before_insert', 'update', 'before_update', 'delete', 'before_delete', 'on_load'].includes(t));
+  const hasUpdate = triggerTypes.includes('update') || triggerTypes.includes('before_update');
 
   return (
     <>
@@ -19,8 +19,12 @@ export function TriggerPropertiesPanel(props: any) {
                       <div className="space-y-2">
                         {[
                           { id: 'insert', label: t('bpm.nodes.on_insert') },
+                          { id: 'before_insert', label: t('bpm.nodes.before_insert', 'Antes de Salvar (Novo)') },
                           { id: 'update', label: t('bpm.nodes.on_update') },
+                          { id: 'before_update', label: t('bpm.nodes.before_update', 'Antes de Salvar (Edição)') },
                           { id: 'delete', label: t('bpm.nodes.on_delete') },
+                          { id: 'before_delete', label: t('bpm.nodes.before_delete', 'Antes de Excluir') },
+                          { id: 'on_load', label: t('bpm.nodes.on_load', 'Ao Carregar Formulário') },
                           { id: 'scheduled', label: t('bpm.canvas.scheduled_cron') },
                           { id: 'webhook', label: t('bpm.canvas.webhook_inbound', 'Webhook Inbound') }
                         ].map(evt => {

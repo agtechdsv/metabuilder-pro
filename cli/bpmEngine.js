@@ -682,6 +682,138 @@ class BpmEngine {
          console.error(chalk.red(`[BPM] Falha na execução customizada do fluxo ${flow.name}:`), e);
       }
     }
+  async runNodeActionSync(node, triggerTable, triggerData) {
+    const data = node.data || {};
+    
+    if (data.actionType === 'mutate') {
+       const fieldsToUpdate = data.actionFields || [];
+       if (fieldsToUpdate.length === 0) return { mutatedData: triggerData };
+
+       let newData = { ...triggerData };
+       for (const f of fieldsToUpdate) {
+         if (!f.field) continue;
+         const val = await this.replaceVariables(f.value, triggerTable, triggerData);
+         // Converte tipos básicos se necessário
+         newData[f.field] = val;
+       }
+       console.log(chalk.blue(`[BPM] Dados em memória atualizados (Mutate)`));
+       return { mutatedData: newData };
+    } else {
+       // Executa a ação padrão no banco (ex: INSERT em outra tabela, Email, Webhook)
+       await this.runNodeAction(node, triggerTable, triggerData);
+       return null;
+    }
+  }
+
+  async traverseGraphSync(flowData, startNode, triggerTable, triggerData) {
+    const queue = [startNode];
+    let maxSteps = 100;
+    
+    let currentData = { ...triggerData };
+    let finalSuccess = true;
+    let finalError = null;
+    let finalMessage = null;
+
+    while (queue.length > 0 && maxSteps > 0) {
+      maxSteps--;
+      const currentNode = queue.shift();
+
+      if (currentNode.type === 'condition') {
+        const isTrue = this.evaluateCondition(currentNode, triggerTable, currentData);
+        const edges = flowData.edges.filter(e => e.source === currentNode.id && e.sourceHandle === String(isTrue));
+        
+        for (const edge of edges) {
+           const targetNode = flowData.nodes.find(n => n.id === edge.target);
+           if (targetNode) queue.push(targetNode);
+        }
+      } 
+      else if (currentNode.type === 'response') {
+         const data = currentNode.data || {};
+         const allowAction = data.responseAllowAction !== false;
+         const msg = await this.replaceVariables(data.responseMessage, triggerTable, currentData);
+         
+         if (!allowAction) {
+            finalSuccess = false;
+            finalError = msg || 'Ação bloqueada pelo fluxo BPM.';
+            // Se bloqueou, aborta imediatamente
+            return { success: finalSuccess, data: currentData, error: finalError, message: msg };
+         } else {
+            if (msg) finalMessage = msg;
+         }
+         
+         const edges = flowData.edges.filter(e => e.source === currentNode.id);
+         for (const edge of edges) {
+            const targetNode = flowData.nodes.find(n => n.id === edge.target);
+            if (targetNode) queue.push(targetNode);
+         }
+      }
+      else if (currentNode.type === 'action') {
+        const actionResult = await this.runNodeActionSync(currentNode, triggerTable, currentData);
+        if (actionResult && actionResult.mutatedData) {
+           currentData = actionResult.mutatedData;
+        }
+
+        const edges = flowData.edges.filter(e => e.source === currentNode.id);
+        for (const edge of edges) {
+           const targetNode = flowData.nodes.find(n => n.id === edge.target);
+           if (targetNode) queue.push(targetNode);
+        }
+      }
+      else {
+         const edges = flowData.edges.filter(e => e.source === currentNode.id);
+         for (const edge of edges) {
+            const targetNode = flowData.nodes.find(n => n.id === edge.target);
+            if (targetNode) queue.push(targetNode);
+         }
+      }
+    }
+    
+    return { success: finalSuccess, data: currentData, error: finalError, message: finalMessage };
+  }
+
+  async processSyncEvent(tableName, actionType, rowData) {
+    console.log(chalk.gray(`[BPM-DEBUG] processSyncEvent chamado: tableName=${tableName}, actionType=${actionType}`));
+    
+    let currentData = { ...rowData };
+    let success = true;
+    let message = null;
+    let error = null;
+
+    if (!this.workflows || this.workflows.length === 0) {
+      return { success, data: currentData, message, error };
+    }
+
+    for (const flow of this.workflows) {
+      const flowData = flow.flow_data;
+      if (!flowData || !flowData.nodes) continue;
+
+      const triggerNodes = flowData.nodes.filter(n => n.type === 'trigger');
+      for (const triggerNode of triggerNodes) {
+        let rawTypes = triggerNode.data?.triggerType || [];
+        if (typeof rawTypes === 'string') rawTypes = [rawTypes];
+        
+        const triggerTypes = rawTypes.map(t => String(t).toUpperCase());
+        const triggerTable = await this.getModelTable(triggerNode.data?.triggerModelId);
+
+        if (triggerTable === tableName && triggerTypes.includes(actionType.toUpperCase())) {
+          console.log(chalk.cyan(`[BPM] Disparando fluxo SÍNCRONO "${flow.name}" para a tabela ${tableName}...`));
+          try {
+             const result = await this.traverseGraphSync(flowData, triggerNode, tableName, currentData);
+             currentData = result.data;
+             if (result.message) message = result.message; // Last message wins
+             if (!result.success) {
+               console.log(chalk.red(`[BPM] Fluxo SÍNCRONO bloqueou a ação!`));
+               return { success: false, data: currentData, error: result.error || 'Ação bloqueada pelo fluxo.', message };
+             }
+          } catch(e) {
+             console.error(chalk.red(`[BPM] Falha na execução do fluxo SÍNCRONO ${flow.name}:`), e);
+             return { success: false, data: currentData, error: 'Erro interno na execução da automação.', message };
+          }
+        }
+      }
+    }
+
+    return { success, data: currentData, message, error };
   }
 }
 

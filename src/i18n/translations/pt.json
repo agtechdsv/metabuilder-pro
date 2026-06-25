@@ -1847,7 +1847,11 @@
       "batch_actions_title": "Disparo de Ações em Lote",
       "batch_actions_desc": "Um botão na interface pode executar dezenas de gatilhos complexos. O motor de automação cuida do trabalho pesado no backend sem travar a interface.",
       "zero_trust_title": "Integração Nativa Zero-Trust",
-      "zero_trust_desc": "O motor BPM opera enviando e recebendo instruções e queries diretas para o seu próprio banco de dados isolado via Tunnel CLI Seguro."
+      "zero_trust_desc": "O motor BPM opera enviando e recebendo instruções e queries diretas para o seu próprio banco de dados isolado via Tunnel CLI Seguro.",
+      "form_intercept_title": "Interceptação de Formulário",
+      "form_intercept_desc": "O BPM avalia suas regras de negócio em tempo real (Síncrono) antes do salvamento e pode bloquear dados inválidos retornando mensagens personalizadas na UI.",
+      "data_mutation_title": "Mutação de Dados em Memória",
+      "data_mutation_desc": "Altere dados no meio do caminho. Calcule taxas ou injete valores diretamente no payload do formulário antes da persistência no banco."
     },
     "deep_dive": {
       "title_part1": "Do Botão ao Processo.",

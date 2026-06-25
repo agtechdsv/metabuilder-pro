@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
-import { Zap, Play, CheckCircle2, GitMerge, Trash2, Mail, Edit, PlusCircle, Clock, MousePointer2, Webhook } from 'lucide-react';
+import { Zap, Play, CheckCircle2, GitMerge, Trash2, Mail, Edit, PlusCircle, Clock, MousePointer2, Webhook, ShieldAlert } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nContext';
 
 // Common style for node wrappers
@@ -177,6 +177,35 @@ export const ConditionNode = memo(({ id, data, selected }: NodeProps) => {
           {t('bpm.nodes.no')}
         </div>
       </Handle>
+    </div>
+  );
+});
+
+export const ResponseNode = memo(({ id, data, selected }: NodeProps) => {
+  const { t } = useI18n();
+  const allowAction = data.responseAllowAction !== false; // default is true
+  let Icon = allowAction ? CheckCircle2 : ShieldAlert;
+  
+  let title = data.label as string || (allowAction ? t('bpm.nodes.response_allow', 'Permitir e Continuar') : t('bpm.nodes.response_block', 'Bloquear Ação'));
+  let desc = data.responseMessage ? t('bpm.nodes.with_message', 'Com Mensagem') : t('bpm.nodes.silent', 'Silencioso');
+
+  return (
+    <div className={`${nodeStyle} ${selected ? 'border-rose-500 shadow-rose-500/20 ring-2 ring-rose-500/20' : 'border-rose-500/50 shadow-rose-500/10'}`}>
+      <DeleteButton id={id} selected={!!selected} />
+      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-rose-500" />
+      <div className="flex items-center gap-3">
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${allowAction ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'}`}>
+          <Icon className="w-4 h-4" />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
+            {title}
+          </h3>
+          <p className="text-[10px] text-neutral-500 uppercase tracking-widest">
+            {desc}
+          </p>
+        </div>
+      </div>
     </div>
   );
 });

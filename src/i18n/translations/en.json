@@ -1844,7 +1844,11 @@
       "batch_actions_title": "Batch Action Triggering",
       "batch_actions_desc": "A single button on the interface can execute dozens of complex triggers. The automation engine handles the heavy lifting in the backend without locking the UI.",
       "zero_trust_title": "Zero-Trust Native Integration",
-      "zero_trust_desc": "The BPM engine operates by sending and receiving instructions and direct queries to your own isolated database via a Secure Tunnel CLI."
+      "zero_trust_desc": "The BPM engine operates by sending and receiving instructions and direct queries to your own isolated database via a Secure Tunnel CLI.",
+      "form_intercept_title": "Form Interception (Sync)",
+      "form_intercept_desc": "The BPM evaluates your business rules in real-time (Synchronous) before saving, and can block invalid data by returning custom messages to the UI.",
+      "data_mutation_title": "In-Memory Data Mutation",
+      "data_mutation_desc": "Alter data mid-flight. Calculate fees or inject values directly into the form's payload in-memory before persisting it to the database."
     },
     "deep_dive": {
       "title_part1": "From Button to Process.",
