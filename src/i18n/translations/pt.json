@@ -1906,7 +1906,12 @@
       "configure_logic": "Configure a lógica If/Else",
       "rules_groups_count": "{rules} Regras em {groups} Grupo(s)",
       "yes": "Sim",
-      "no": "Não"
+      "no": "Não",
+      "mutate_record": "Atualizar Dados do Formulário",
+      "before_insert": "Antes de Salvar (Novo)",
+      "before_update": "Antes de Salvar (Edição)",
+      "before_delete": "Antes de Excluir",
+      "on_load": "Ao Carregar Formulário"
     },
     "canvas": {
       "automations_title": "Automações",
