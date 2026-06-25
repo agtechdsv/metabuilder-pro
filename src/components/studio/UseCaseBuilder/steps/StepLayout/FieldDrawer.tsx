@@ -401,27 +401,6 @@ export function FieldDrawer({
                     </div>
 
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.component_type', 'Tipo de Componente')}</label>
-                        <select
-                          value={currentFieldMeta.component?.type || 'text'}
-                          onChange={e => updateMeta('component', 'type', e.target.value)}
-                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
-                        >
-                          <option value="text">{t('wizard.layout.drawer.component_types.text')}</option>
-                          <option value="textarea">{t('wizard.layout.drawer.component_types.textarea')}</option>
-                          <option value="number">{t('wizard.layout.drawer.component_types.number')}</option>
-                          <option value="select">{t('wizard.layout.drawer.component_types.select')}</option>
-                          <option value="radio">{t('wizard.layout.drawer.component_types.radio')}</option>
-                          <option value="checkbox">{t('wizard.layout.drawer.component_types.checkbox')}</option>
-                          <option value="switch">{t('wizard.layout.drawer.component_types.switch')}</option>
-                          <option value="date">{t('wizard.layout.drawer.component_types.date')}</option>
-                          <option value="image_uploader">{t('wizard.layout.drawer.component_types.image_uploader')}</option>
-                          <option value="document_uploader">{t('wizard.layout.drawer.component_types.document_uploader')}</option>
-                          <option value="file_uploader">{t('wizard.layout.drawer.component_types.file_uploader')}</option>
-                        </select>
-                      </div>
-
                       <div className="space-y-4">
                         <div className="p-3 bg-neutral-50 dark:bg-neutral-900/30 border border-neutral-100 dark:border-neutral-800 rounded-xl space-y-3">
                           <h4 className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Layout Padrão (Página)</h4>
@@ -541,6 +520,28 @@ export function FieldDrawer({
                           </div>
                         </div>
                       </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.component_type', 'Tipo de Componente')}</label>
+                        <select
+                          value={currentFieldMeta.component?.type || 'text'}
+                          onChange={e => updateMeta('component', 'type', e.target.value)}
+                          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
+                        >
+                          <option value="text">{t('wizard.layout.drawer.component_types.text')}</option>
+                          <option value="textarea">{t('wizard.layout.drawer.component_types.textarea')}</option>
+                          <option value="number">{t('wizard.layout.drawer.component_types.number')}</option>
+                          <option value="select">{t('wizard.layout.drawer.component_types.select')}</option>
+                          <option value="radio">{t('wizard.layout.drawer.component_types.radio')}</option>
+                          <option value="checkbox">{t('wizard.layout.drawer.component_types.checkbox')}</option>
+                          <option value="switch">{t('wizard.layout.drawer.component_types.switch')}</option>
+                          <option value="date">{t('wizard.layout.drawer.component_types.date')}</option>
+                          <option value="image_uploader">{t('wizard.layout.drawer.component_types.image_uploader')}</option>
+                          <option value="document_uploader">{t('wizard.layout.drawer.component_types.document_uploader')}</option>
+                          <option value="file_uploader">{t('wizard.layout.drawer.component_types.file_uploader')}</option>
+                        </select>
+                      </div>
+
                       {currentFieldMeta.component?.type === 'textarea' && (
                         <div className="space-y-2">
                           <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.rows', 'Linhas')}</label>
