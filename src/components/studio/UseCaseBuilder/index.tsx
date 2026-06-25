@@ -210,7 +210,7 @@ export function UseCaseBuilderWizard({
         custom_query: config.custom_query,
         layout_config: { ...cleanLayoutConfig, fields_metadata: populatedFieldsMeta, is_active: true },
         buttons_config: config.buttons_config,
-        model_id: config.selected_models[0],
+        model_id: config.selected_models[0] || null,
         project_id: projectData?.id,
         view_type: 'advanced_use_case'
       }
@@ -231,7 +231,7 @@ export function UseCaseBuilderWizard({
       let view: any
       let viewError: any
 
-      if (initialData) {
+      if (initialData?.id) {
         const { data, error } = await supabase.from('ui_views').update({ draft_config: draftPayload }).eq('id', initialData.id).select().single()
         view = data; viewError = error
       } else {
@@ -241,7 +241,7 @@ export function UseCaseBuilderWizard({
           slug: config.slug,
           view_type: 'advanced_use_case',
           logic_type: config.logic_type,
-          model_id: config.selected_models[0],
+          model_id: config.selected_models[0] || null,
           draft_config: draftPayload
         }).select().single()
         view = data; viewError = error
