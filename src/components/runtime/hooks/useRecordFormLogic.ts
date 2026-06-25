@@ -432,66 +432,75 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
   useEffect(() => {
     if (!fields) return;
 
-    let hasChanges = false;
-    const newFormData = { ...formData };
+    const mainModelName = masterModelName || project?.models?.find((m: any) => m.id === masterModelId)?.db_table_name;
 
-    // Agrupa os detalhes pela tabela (model_name) para alimentar as funções de agregação (SOMA, etc)
-    const detailsData: Record<string, any[]> = {};
-    (formData._details || []).forEach((d: any) => {
-      const tableName = d.model_name || d.model;
-      if (tableName) {
-        if (!detailsData[tableName]) detailsData[tableName] = [];
-        detailsData[tableName].push(d);
-      }
-    });
+    const evaluateRowFormulas = (rowData: any, parentData: any, isMaster: boolean): { row: any, hasChanges: boolean } => {
+      let currentRow = { ...rowData };
+      let hasChanges = false;
 
-    // Avalia todos os campos que possuem uma fórmula configurada
-    fields.forEach(field => {
-      const tokens = field.config?.content?.formula_tokens || [];
-      if (tokens.length === 0) return;
-
-      const mainModelName = masterModelName || project?.models?.find((m: any) => m.id === masterModelId)?.db_table_name;
-      const isMasterZone = !field.model_name || !mainModelName || field.model_name.toLowerCase() === mainModelName.toLowerCase();
-
-      if (isMasterZone) {
-        const computedValue = evaluateFormula(tokens, formData, detailsData, formData, mainModelName);
-        // Evita loop infinito atualizando apenas se o valor realmente mudou
-        if (computedValue !== null && computedValue !== undefined && String(computedValue) !== String(formData[field.db_column_name])) {
-          newFormData[field.db_column_name] = computedValue;
+      // 1. Evaluate children first (bottom-up)
+      if (currentRow._details && Array.isArray(currentRow._details)) {
+        let subHasChanges = false;
+        const newDetails = currentRow._details.map((subRow: any) => {
+          const result = evaluateRowFormulas(subRow, currentRow, false);
+          if (result.hasChanges) subHasChanges = true;
+          return result.row;
+        });
+        
+        if (subHasChanges) {
+          currentRow._details = newDetails;
           hasChanges = true;
         }
-      } else {
-        const detailTableName = field.model_name;
-        if (newFormData._details) {
-          newFormData._details = newFormData._details.map((row: any) => {
-            if (row.model_name?.toLowerCase() !== detailTableName?.toLowerCase() && row.model?.toLowerCase() !== detailTableName?.toLowerCase()) return row;
+      }
 
-            const mappedRow = { ...formData, ...row };
-            Object.keys(row).forEach(k => {
-               mappedRow[`${detailTableName}.${k}`] = row[k];
-            });
+      // 2. Build local detailsData for this row
+      const rowDetailsData: Record<string, any[]> = {};
+      (currentRow._details || []).forEach((d: any) => {
+        const tName = d.model_name || d.model;
+        if (tName) {
+          if (!rowDetailsData[tName]) rowDetailsData[tName] = [];
+          rowDetailsData[tName].push(d);
+        }
+      });
 
-            const computedValue = evaluateFormula(tokens, mappedRow, detailsData, row, detailTableName);
-            if (computedValue !== null && computedValue !== undefined && String(computedValue) !== String(row[field.db_column_name])) {
-              hasChanges = true;
-              return { ...row, [field.db_column_name]: computedValue };
-            }
-            return row;
+      // 3. Evaluate formulas for THIS row
+      const currentRowName = isMaster ? mainModelName : (currentRow.model_name || currentRow.model);
+      
+      fields.forEach(field => {
+        const tokens = field.config?.content?.formula_tokens || [];
+        if (tokens.length === 0) return;
+
+        const isMasterZone = !field.model_name || !mainModelName || field.model_name.toLowerCase() === mainModelName.toLowerCase();
+
+        // Check if this field belongs to this row
+        if (isMaster) {
+          if (!isMasterZone) return;
+        } else {
+          const detailTableName = field.model_name;
+          if (currentRowName?.toLowerCase() !== detailTableName?.toLowerCase()) return;
+        }
+
+        const mappedRow = { ...parentData, ...currentRow };
+        if (currentRowName) {
+          Object.keys(currentRow).forEach(k => {
+            mappedRow[`${currentRowName}.${k}`] = currentRow[k];
           });
         }
-      }
-    });
 
-    if (hasChanges) {
-      setFormData((prev: any) => {
-        const next = { ...prev };
-        Object.keys(newFormData).forEach(k => {
-          if (newFormData[k] !== formData[k]) {
-            next[k] = newFormData[k];
-          }
-        });
-        return next;
+        const computedValue = evaluateFormula(tokens, mappedRow, rowDetailsData, currentRow, currentRowName);
+        if (computedValue !== null && computedValue !== undefined && String(computedValue) !== String(currentRow[field.db_column_name])) {
+          currentRow[field.db_column_name] = computedValue;
+          hasChanges = true;
+        }
       });
+
+      return { row: currentRow, hasChanges };
+    };
+
+    const result = evaluateRowFormulas(formData, formData, true);
+    
+    if (result.hasChanges) {
+      setFormData(result.row);
     }
   }, [formData, fields]);
   return {
