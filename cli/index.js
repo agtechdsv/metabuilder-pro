@@ -920,7 +920,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
         }
         else if (action === 'delete') {
           const { idColumn, idValue } = payload.payload;
-          const safeIdCol = idColumn.replace(/[^a-zA-Z0-9_]/g, '');
+          const safeIdCol = (idColumn || 'id').replace(/[^a-zA-Z0-9_]/g, '');
           
           let deletedRowData = { [safeIdCol]: idValue };
 

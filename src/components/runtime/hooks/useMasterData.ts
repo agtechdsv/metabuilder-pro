@@ -513,7 +513,9 @@ export function useMasterData({
               sql: rawQuery,
               token: project?.secret_token || 'test-token',
               schemaName: project?.models?.find((m: any) => m.db_table_name === modelName)?.db_schema_name || project?.slug || 'public',
-              slug: project?.slug
+              slug: project?.slug,
+              idColumn: cleanPk,
+              idValue: pkValue
             }
           })
         }

@@ -412,7 +412,9 @@ export function useDetailData({
               sql: rawQuery,
               token: project?.secret_token || 'test-token',
               schemaName: project?.models?.find((m: any) => m.db_table_name === tableName)?.db_schema_name || project?.slug || 'public',
-              slug: project?.slug
+              slug: project?.slug,
+              idColumn: pkName,
+              idValue: pkValue
             }
           })
         }
