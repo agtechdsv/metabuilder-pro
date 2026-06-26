@@ -327,9 +327,18 @@ export function UseCaseBuilderWizard({
         if (compError) throw compError
       }
 
-      if (currentView?.status !== 'delivered') {
-        const { data: projectData } = await supabase.from('projects').select('id, navigation').eq('slug', project_slug).single()
-        if (projectData) {
+      // Ensure the view is present in the project navigation. If not, add it.
+      const { data: projectData } = await supabase.from('projects').select('id, navigation').eq('slug', project_slug).single()
+      if (projectData) {
+        const navigationArray = Array.isArray(projectData.navigation) ? projectData.navigation : []
+        const hasMenuItem = (items: any[]): boolean => {
+          return items.some(item => 
+            (item.type === 'view' && item.target === draft.slug) || 
+            (item.children && hasMenuItem(item.children))
+          )
+        }
+        
+        if (!hasMenuItem(navigationArray)) {
           const newMenuItem = {
             id: 'menu_' + Math.random().toString(36).substr(2, 9),
             label: draft.name,
@@ -339,9 +348,7 @@ export function UseCaseBuilderWizard({
             target: draft.slug,
             show_dashboard: true
           }
-          // Remove any existing menu items that point to the same slug to avoid duplicates
-          const cleanedNav = (projectData.navigation || []).filter((item: any) => !(item.type === 'view' && item.target === newMenuItem.target))
-          const updatedNavigation = [...cleanedNav, newMenuItem]
+          const updatedNavigation = [...navigationArray, newMenuItem]
           await supabase.from('projects').update({ navigation: updatedNavigation }).eq('id', projectData.id)
         }
       }
