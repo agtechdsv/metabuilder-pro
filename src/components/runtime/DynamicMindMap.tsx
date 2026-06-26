@@ -19,6 +19,7 @@ import { useI18n } from '@/i18n/I18nContext'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/utils/supabase/client'
 import { formatFieldValue } from '@/lib/formatters'
+import DynamicIcon from './DynamicIcon'
 
 interface DynamicMindMapProps {
   data: any[]
@@ -592,17 +593,17 @@ export default function DynamicMindMap({
                     <div className="absolute top-2 right-2 flex gap-0.5 opacity-0 group-hover/node:opacity-100 transition-opacity bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-lg border border-neutral-200 dark:border-white/10 shadow-sm z-50">
                       {onView && (
                         <Tooltip text={t('actions.view', 'Visualizar')}>
-                          <button onClick={(e) => { e.stopPropagation(); onView(child.rawData) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Eye className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); onView({ ...child.rawData, __model_name: child.field?.model_name || child.rawData?.__model_name }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Eye className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
                         </Tooltip>
                       )}
                       {onEdit && (
                         <Tooltip text={t('actions.edit', 'Editar')}>
-                          <button onClick={(e) => { e.stopPropagation(); onEdit(child.rawData) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Edit className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); onEdit({ ...child.rawData, __model_name: child.field?.model_name || child.rawData?.__model_name }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Edit className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
                         </Tooltip>
                       )}
                       {onDelete && (
                         <Tooltip text={t('actions.delete', 'Excluir')}>
-                          <button onClick={(e) => { e.stopPropagation(); onDelete(child.rawData) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Trash2 className="w-3 h-3 text-neutral-500 hover:text-red-500" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); onDelete({ ...child.rawData, __model_name: child.field?.model_name || child.rawData?.__model_name }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Trash2 className="w-3 h-3 text-neutral-500 hover:text-red-500" /></button>
                         </Tooltip>
                       )}
                       {customActions?.filter((action: any) => {
@@ -611,7 +612,9 @@ export default function DynamicMindMap({
                         return action.placements?.some((p: any) => p.location === `mindmap:level:${levelStr}`);
                       }).map((action: any, i: number) => (
                         <Tooltip key={i} text={action.label || 'Ação Customizada'}>
-                           <button onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, { ...child.rawData, __mindmap_level__: child.level + 1 }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Zap className="w-3 h-3 text-neutral-500 hover:text-amber-500" /></button>
+                           <button onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, { ...child.rawData, __mindmap_level__: child.level + 1 }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors">
+                             <DynamicIcon icon={action.icon || 'Zap'} className="w-3 h-3 text-neutral-500 hover:text-amber-500" />
+                           </button>
                         </Tooltip>
                       ))}
                     </div>

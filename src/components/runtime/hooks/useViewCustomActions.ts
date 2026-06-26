@@ -113,9 +113,15 @@ export function useViewCustomActions({
       const params = interpolate(action.usecase_params) || ''
 
       const level = rowData?.__mindmap_level__
-      const selectedFields = (level && action.mindmap_params_by_level?.[String(level)])
-        ? action.mindmap_params_by_level[String(level)]
-        : (action.usecase_selected_fields || [])
+      let selectedFields = action.usecase_selected_fields || []
+      
+      if (level) {
+        let parsedMindmapParams = action.mindmap_params_by_level
+        if (typeof parsedMindmapParams === 'string') {
+          try { parsedMindmapParams = JSON.parse(parsedMindmapParams) } catch (e) {}
+        }
+        selectedFields = parsedMindmapParams?.[String(level)] || []
+      }
       const fieldsParams = selectedFields
         .map((f: any) => {
           if (typeof f === 'string') {

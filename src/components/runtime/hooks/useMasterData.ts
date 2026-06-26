@@ -469,7 +469,8 @@ export function useMasterData({
 
     try {
       const queryId = crypto.randomUUID()
-      const rawQuery = `DELETE FROM ${modelName} WHERE ${cleanPk} = '${String(pkValue).replace(/'/g, "''")}'`
+      const actualModelName = selectedRow.__model_name || modelName
+      const rawQuery = `DELETE FROM ${actualModelName} WHERE ${cleanPk} = '${String(pkValue).replace(/'/g, "''")}'`
 
       const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
         const isTemp = !tunnelChannel || !isTunnelReady
@@ -507,12 +508,12 @@ export function useMasterData({
             event: 'sql_query',
             payload: {
               queryId,
-              table: modelName,
+              table: actualModelName,
               action: 'delete',
               query: rawQuery,
               sql: rawQuery,
               token: project?.secret_token || 'test-token',
-              schemaName: project?.models?.find((m: any) => m.db_table_name === modelName)?.db_schema_name || project?.slug || 'public',
+              schemaName: project?.models?.find((m: any) => m.db_table_name === actualModelName)?.db_schema_name || project?.slug || 'public',
               slug: project?.slug,
               idColumn: cleanPk,
               idValue: pkValue
