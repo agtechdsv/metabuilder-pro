@@ -55,6 +55,8 @@ export function useMasterData({
 
   const handleSave = async (formData: any) => {
     setIsProcessing(true)
+    console.time('handleSave_total')
+    console.time('handleSave_master')
     const queryId = crypto.randomUUID()
     const isTemporary = !tunnelChannel || !isTunnelReady
     const channel = isTemporary ? wrapChannelWithChunking(supabase.channel(`tunnel:${project.id}`)) : tunnelChannel
@@ -227,12 +229,15 @@ export function useMasterData({
       }
 
       const saveResult = await sendWithRetry()
+      console.timeEnd('handleSave_master')
 
       if (!saveResult.success) {
         setIsProcessing(false)
+        console.timeEnd('handleSave_total')
         return
       }
 
+      console.time('handleSave_details')
       // ----------------------------------------------------
       // SALVAR DETALHES INLINE (N níveis via recursão)
       // ----------------------------------------------------
@@ -432,11 +437,12 @@ export function useMasterData({
           : t('runtime.update_success', 'Registro atualizado com sucesso!'),
         'success'
       )
-
+      console.timeEnd('handleSave_total')
     } catch (error: any) {
       console.error('Error saving:', error)
       toast(error.message || 'Erro ao salvar o registro.', 'error')
       setIsProcessing(false)
+      console.timeEnd('handleSave_total')
     }
   }
 

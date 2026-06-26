@@ -56,7 +56,7 @@ export function Drawer({ isOpen, onClose, title, children, zIndex = 100, hideHea
           )}
 
           {/* Content */}
-          <div className={`flex-1 overflow-y-auto ${!hideHeader ? 'p-6' : ''}`}>
+          <div className={`flex-1 overflow-y-auto pb-24 ${!hideHeader ? 'p-6' : ''}`}>
             {children}
           </div>
         </div>

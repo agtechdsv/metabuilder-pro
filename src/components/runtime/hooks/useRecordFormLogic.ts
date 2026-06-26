@@ -441,10 +441,10 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
              if (!resolved) {
                 resolved = true;
                 cleanup();
-                console.warn(`[BPM] Timeout esperando validação síncrona do BPM (queryId: ${queryId}). Prosseguindo...`);
+                console.warn(`[BPM] Timeout esperando validação síncrona do BPM (queryId: ${queryId}). Prosseguindo para não travar a tela...`);
                 resolve(payloadToSave); // Continua se der timeout
              }
-          }, 8000); // 8 segundos de limite
+          }, 1000); // Reduzido de 8000 para 1000ms para evitar travamento da UI
         });
         
         if (syncData) {
