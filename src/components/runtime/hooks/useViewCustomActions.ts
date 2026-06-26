@@ -125,9 +125,15 @@ export function useViewCustomActions({
       const fieldsParams = selectedFields
         .map((f: any) => {
           if (typeof f === 'string') {
-            return `${f}=${rowData?.[f] !== undefined ? encodeURIComponent(rowData[f]) : ''}`
+            const cleanKey = f.includes('.') ? f.split('.').pop() : f;
+            const val = rowData?.[f] !== undefined ? rowData[f] : rowData?.[cleanKey as string];
+            if (val === undefined || val === null || val === '') return '';
+            return `${f}=${encodeURIComponent(val)}`
           } else if (f && typeof f === 'object' && f.source && f.target) {
-            return `${f.target}=${rowData?.[f.source] !== undefined ? encodeURIComponent(rowData[f.source]) : ''}`
+            const cleanSource = f.source.includes('.') ? f.source.split('.').pop() : f.source;
+            const val = rowData?.[f.source] !== undefined ? rowData[f.source] : rowData?.[cleanSource as string];
+            if (val === undefined || val === null || val === '') return '';
+            return `${f.target}=${encodeURIComponent(val)}`
           }
           return ''
         })
