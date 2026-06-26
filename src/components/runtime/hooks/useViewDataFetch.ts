@@ -519,6 +519,16 @@ export function useViewDataFetch({
       const dynamicAdvancedFilters: any[] = []
       const cleanFilters = { ...(currentFilters || {}) }
 
+      Object.keys(cleanFilters).forEach(key => {
+        if (key.startsWith(`${modelName}.`)) {
+          const newKey = key.split('.')[1];
+          if (cleanFilters[newKey] === undefined) {
+            cleanFilters[newKey] = cleanFilters[key];
+          }
+          delete cleanFilters[key];
+        }
+      });
+
       if (filterFields) {
         filterFields.forEach((f: any) => {
           const zoneConfig = f.config?.filter_config || f.config || {}
@@ -546,6 +556,13 @@ export function useViewDataFetch({
           }
         })
       }
+
+      Object.keys(cleanFilters).forEach(key => {
+        if (key.includes('.')) {
+          dynamicAdvancedFilters.push({ field: key, operator: '=', value: cleanFilters[key], logic: 'AND' })
+          delete cleanFilters[key]
+        }
+      })
 
       const allAdvancedFilters = [...(advancedStaticFilters || []), ...dynamicAdvancedFilters]
       if (Object.keys(cleanFilters).length > 0) payload.filters = cleanFilters

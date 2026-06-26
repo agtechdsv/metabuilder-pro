@@ -128,7 +128,7 @@ export function useViewCustomActions({
             const cleanKey = f.includes('.') ? f.split('.').pop() : f;
             const val = rowData?.[f] !== undefined ? rowData[f] : rowData?.[cleanKey as string];
             if (val === undefined || val === null || val === '') return '';
-            return `${f}=${encodeURIComponent(val)}`
+            return `${cleanKey}=${encodeURIComponent(val)}`
           } else if (f && typeof f === 'object' && f.source && f.target) {
             const cleanSource = f.source.includes('.') ? f.source.split('.').pop() : f.source;
             const val = rowData?.[f.source] !== undefined ? rowData[f.source] : rowData?.[cleanSource as string];
