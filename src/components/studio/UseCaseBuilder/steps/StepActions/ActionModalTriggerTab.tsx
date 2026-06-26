@@ -144,123 +144,261 @@ export function ActionModalTriggerTab({
 
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.fields_as_params', 'Mapeamento de Parâmetros (De : Para)')}</label>
-              <div className="space-y-2 p-4 bg-white dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">
+                {t('wizard.actions.fields_as_params', 'Mapeamento de Parâmetros (De : Para)')}
+              </label>
 
-                {/* Table Header */}
-                <div className="flex gap-4 px-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
-                  <div className="flex-1 text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                    Origem {(() => {
-                      const sourceModels = models?.filter((m: any) => config.selected_models?.includes(m.id)) || []
-                      return sourceModels[0] ? `(Tabela: ${sourceModels[0].db_table_name})` : ''
-                    })()}
-                  </div>
-                  <div className="flex-1 text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400">
-                    Destino {(() => {
-                      const destUsecase = useCases?.find((uc: any) => uc.slug === editingAction.usecase_slug)
-                      const destConfig = destUsecase?.draft_config || destUsecase?.config || {}
-                      const destModelIds = destUsecase?.model_id ? [destUsecase.model_id] : (destConfig.selected_models || [])
-                      const destModels = models?.filter((m: any) => destModelIds.includes(m.id)) || []
-                      return destModels[0] ? `(Tabela: ${destModels[0].db_table_name})` : ''
-                    })()}
-                  </div>
-                  <div className="w-8"></div>
-                </div>
+              {(() => {
+                const placements = editingAction.placements || [];
+                const isMindMap = config.logic_type === 'mapa_mental';
+                const mindmapPlacements = isMindMap
+                  ? placements.filter((p: any) => p.location?.startsWith('mindmap:level:'))
+                  : [];
 
-                {/* Rows */}
-                {(() => {
-                  const rawMappings = editingAction.usecase_selected_fields || []
-                  const normalizedMappings = rawMappings.map((f: any) => {
-                    if (typeof f === 'string') return { source: f, target: f }
-                    return f
-                  })
-
-                  const sourceModels = models?.filter((m: any) => config.selected_models?.includes(m.id)) || []
-                  const destUsecase = useCases?.find((uc: any) => uc.slug === editingAction.usecase_slug)
-                  const destConfig = destUsecase?.draft_config || destUsecase?.config || {}
-                  const destModelIds = destUsecase?.model_id ? [destUsecase.model_id] : (destConfig.selected_models || [])
-                  const destModels = models?.filter((m: any) => destModelIds.includes(m.id)) || []
-
-                  const maxRelDepth = config.layout_config?.max_relation_depth || 2;
-                  const sourceGroups = getModelsWithRelations(sourceModels, relations, models, maxRelDepth);
-                  const destGroups = getModelsWithRelations(destModels, relations, models, maxRelDepth);
+                if (isMindMap) {
+                  if (mindmapPlacements.length === 0) {
+                    return (
+                      <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-955/10 border border-amber-200 dark:border-amber-900/30 p-3 rounded-xl">
+                        Configure os <strong>Locais de Renderização</strong> (Exibir Botão no Nó) na aba <strong>Geral</strong> primeiro para definir quais níveis do Mapa Mental exibirão esta ação e mapear seus parâmetros.
+                      </p>
+                    );
+                  }
 
                   return (
-                    <>
-                      {normalizedMappings.map((mapping: any, index: number) => (
-                        <div key={index} className="flex gap-4 items-center animate-in fade-in slide-in-from-top-2">
-                          <select
-                            value={mapping.source || ''}
-                            onChange={(e) => {
-                              const next = [...normalizedMappings]
-                              next[index] = { ...next[index], source: e.target.value }
-                              setEditingAction({ ...editingAction, usecase_selected_fields: next })
-                            }}
-                            className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
-                          >
-                            <option value="">Selecione para inserir...</option>
-                            {sourceGroups.map((g: any, i: number) => (
-                              <optgroup key={i} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
-                                {g.model.fields?.map((f: any) => (
-                                  <option key={f.id} value={`${g.prefix}${f.db_column_name}`} className="text-neutral-800 dark:text-neutral-200 normal-case">
-                                    {String(f.db_column_name).toLowerCase()}
-                                  </option>
-                                ))}
-                              </optgroup>
+                    <div className="space-y-4">
+                      {mindmapPlacements.map((p: any) => {
+                        const levelStr = p.location.replace('mindmap:level:', '');
+                        const levelIndex = parseInt(levelStr, 10);
+                        const levelConfig = config.layout_config.mindmap_levels?.[levelIndex - 1];
+                        const levelModel = models.find((m: any) => m.id === levelConfig?.model_id);
+                        
+                        const rawMappings = editingAction.mindmap_params_by_level?.[levelStr] || [];
+                        const normalizedMappings = rawMappings.map((f: any) => {
+                          if (typeof f === 'string') return { source: f, target: f }
+                          return f
+                        });
+
+                        const levelSourceModels = models?.filter((m: any) => m.id === levelConfig?.model_id) || [];
+                        const destUsecase = useCases?.find((uc: any) => uc.slug === editingAction.usecase_slug);
+                        const destConfig = destUsecase?.draft_config || destUsecase?.config || {};
+                        const destModelIds = destUsecase?.model_id ? [destUsecase.model_id] : (destConfig.selected_models || [])
+                        const destModels = models?.filter((m: any) => destModelIds.includes(m.id)) || [];
+
+                        const maxRelDepth = config.layout_config?.max_relation_depth || 2;
+                        const levelSourceGroups = getModelsWithRelations(levelSourceModels, relations, models, maxRelDepth);
+                        const destGroups = getModelsWithRelations(destModels, relations, models, maxRelDepth);
+
+                        return (
+                          <div key={p.location} className="space-y-2 p-4 bg-white dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+                            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2 mb-2">
+                              <span className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400">
+                                Nível {levelStr}: {levelModel?.display_name || levelModel?.db_table_name || 'Desconhecido'}
+                              </span>
+                            </div>
+
+                            {/* Table Header */}
+                            <div className="flex gap-4 px-2 pb-2">
+                              <div className="flex-1 text-[10px] font-black uppercase tracking-wider text-neutral-400">
+                                Origem {levelModel ? `(Tabela: ${levelModel.db_table_name})` : ''}
+                              </div>
+                              <div className="flex-1 text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                                Destino {destModels[0] ? `(Tabela: ${destModels[0].db_table_name})` : ''}
+                              </div>
+                              <div className="w-8"></div>
+                            </div>
+
+                            {/* Rows */}
+                            {normalizedMappings.map((mapping: any, index: number) => (
+                              <div key={index} className="flex gap-4 items-center animate-in fade-in slide-in-from-top-2">
+                                <select
+                                  value={mapping.source || ''}
+                                  onChange={(e) => {
+                                    const next = [...normalizedMappings]
+                                    next[index] = { ...next[index], source: e.target.value }
+                                    const newParams = {
+                                      ...(editingAction.mindmap_params_by_level || {}),
+                                      [levelStr]: next
+                                    }
+                                    setEditingAction({ ...editingAction, mindmap_params_by_level: newParams })
+                                  }}
+                                  className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                                >
+                                  <option value="">Selecione para inserir...</option>
+                                  {levelSourceGroups.map((g: any, i: number) => (
+                                    <optgroup key={i} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
+                                      {g.model.fields?.map((f: any) => (
+                                        <option key={f.id} value={`${g.prefix}${f.db_column_name}`} className="text-neutral-800 dark:text-neutral-200 normal-case">
+                                          {String(f.db_column_name).toLowerCase()}
+                                        </option>
+                                      ))}
+                                    </optgroup>
+                                  ))}
+                                </select>
+
+                                <select
+                                  value={mapping.target || ''}
+                                  onChange={(e) => {
+                                    const next = [...normalizedMappings]
+                                    next[index] = { ...next[index], target: e.target.value }
+                                    const newParams = {
+                                      ...(editingAction.mindmap_params_by_level || {}),
+                                      [levelStr]: next
+                                    }
+                                    setEditingAction({ ...editingAction, mindmap_params_by_level: newParams })
+                                  }}
+                                  className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-rose-500"
+                                >
+                                  <option value="">Selecione para inserir...</option>
+                                  {destGroups.map((g: any, i: number) => (
+                                    <optgroup key={i} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
+                                      {g.model.fields?.map((f: any) => (
+                                        <option key={f.id} value={`${g.prefix}${f.db_column_name}`} className="text-neutral-800 dark:text-neutral-200 normal-case">
+                                          {String(f.db_column_name).toLowerCase()}
+                                        </option>
+                                      ))}
+                                    </optgroup>
+                                  ))}
+                                </select>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const next = normalizedMappings.filter((_: any, i: number) => i !== index)
+                                    const newParams = {
+                                      ...(editingAction.mindmap_params_by_level || {}),
+                                      [levelStr]: next
+                                    }
+                                    setEditingAction({ ...editingAction, mindmap_params_by_level: newParams })
+                                  }}
+                                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 text-neutral-400 transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             ))}
-                          </select>
 
-                          <select
-                            value={mapping.target || ''}
-                            onChange={(e) => {
-                              const next = [...normalizedMappings]
-                              next[index] = { ...next[index], target: e.target.value }
-                              setEditingAction({ ...editingAction, usecase_selected_fields: next })
-                            }}
-                            className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-rose-500"
-                          >
-                            <option value="">Selecione para inserir...</option>
-                            {destGroups.map((g: any, i: number) => (
-                              <optgroup key={i} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
-                                {g.model.fields?.map((f: any) => (
-                                  <option key={f.id} value={`${g.prefix}${f.db_column_name}`} className="text-neutral-800 dark:text-neutral-200 normal-case">
-                                    {String(f.db_column_name).toLowerCase()}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            ))}
-                          </select>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newParams = {
+                                  ...(editingAction.mindmap_params_by_level || {}),
+                                  [levelStr]: [...normalizedMappings, { source: '', target: '' }]
+                                }
+                                setEditingAction({ ...editingAction, mindmap_params_by_level: newParams })
+                              }}
+                              className="mt-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                            >
+                              <Plus className="w-3 h-3" /> Adicionar Parâmetro
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                }
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const next = normalizedMappings.filter((_: any, i: number) => i !== index)
-                              setEditingAction({ ...editingAction, usecase_selected_fields: next })
-                            }}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 text-neutral-400 transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
+                const rawMappings = editingAction.usecase_selected_fields || []
+                const normalizedMappings = rawMappings.map((f: any) => {
+                  if (typeof f === 'string') return { source: f, target: f }
+                  return f
+                })
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingAction({
-                            ...editingAction,
-                            usecase_selected_fields: [...normalizedMappings, { source: '', target: '' }]
-                          })
-                        }}
-                        className="mt-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
-                      >
-                        <Plus className="w-3 h-3" /> Adicionar Parâmetro
-                      </button>
-                    </>
-                  )
-                })()}
+                const sourceModels = models?.filter((m: any) => config.selected_models?.includes(m.id)) || []
+                const destUsecase = useCases?.find((uc: any) => uc.slug === editingAction.usecase_slug)
+                const destConfig = destUsecase?.draft_config || destUsecase?.config || {}
+                const destModelIds = destUsecase?.model_id ? [destUsecase.model_id] : (destConfig.selected_models || [])
+                const destModels = models?.filter((m: any) => destModelIds.includes(m.id)) || []
 
-              </div>
+                const maxRelDepth = config.layout_config?.max_relation_depth || 2;
+                const sourceGroups = getModelsWithRelations(sourceModels, relations, models, maxRelDepth);
+                const destGroups = getModelsWithRelations(destModels, relations, models, maxRelDepth);
+
+                return (
+                  <div className="space-y-2 p-4 bg-white dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+                    {/* Table Header */}
+                    <div className="flex gap-4 px-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
+                      <div className="flex-1 text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                        Origem {sourceModels[0] ? `(Tabela: ${sourceModels[0].db_table_name})` : ''}
+                      </div>
+                      <div className="flex-1 text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                        Destino {destModels[0] ? `(Tabela: ${destModels[0].db_table_name})` : ''}
+                      </div>
+                      <div className="w-8"></div>
+                    </div>
+
+                    {/* Rows */}
+                    {normalizedMappings.map((mapping: any, index: number) => (
+                      <div key={index} className="flex gap-4 items-center animate-in fade-in slide-in-from-top-2">
+                        <select
+                          value={mapping.source || ''}
+                          onChange={(e) => {
+                            const next = [...normalizedMappings]
+                            next[index] = { ...next[index], source: e.target.value }
+                            setEditingAction({ ...editingAction, usecase_selected_fields: next })
+                          }}
+                          className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                        >
+                          <option value="">Selecione para inserir...</option>
+                          {sourceGroups.map((g: any, i: number) => (
+                            <optgroup key={i} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
+                              {g.model.fields?.map((f: any) => (
+                                <option key={f.id} value={`${g.prefix}${f.db_column_name}`} className="text-neutral-800 dark:text-neutral-200 normal-case">
+                                  {String(f.db_column_name).toLowerCase()}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+
+                        <select
+                          value={mapping.target || ''}
+                          onChange={(e) => {
+                            const next = [...normalizedMappings]
+                            next[index] = { ...next[index], target: e.target.value }
+                            setEditingAction({ ...editingAction, usecase_selected_fields: next })
+                          }}
+                          className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-rose-500"
+                        >
+                          <option value="">Selecione para inserir...</option>
+                          {destGroups.map((g: any, i: number) => (
+                            <optgroup key={i} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
+                              {g.model.fields?.map((f: any) => (
+                                <option key={f.id} value={`${g.prefix}${f.db_column_name}`} className="text-neutral-800 dark:text-neutral-200 normal-case">
+                                  {String(f.db_column_name).toLowerCase()}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = normalizedMappings.filter((_: any, i: number) => i !== index)
+                            setEditingAction({ ...editingAction, usecase_selected_fields: next })
+                          }}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 text-neutral-400 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingAction({
+                          ...editingAction,
+                          usecase_selected_fields: [...normalizedMappings, { source: '', target: '' }]
+                        })
+                      }}
+                      className="mt-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" /> Adicionar Parâmetro
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.additional_params', 'Parâmetros Adicionais Fixos (Filtros na URL)')}</label>

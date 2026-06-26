@@ -40,6 +40,19 @@ export function ActionModalGeneralTab({
       locs.push({ id: 'master', label: `Aba Mestre (${masterLabel})`, modelId: rootId || '', depth: 0 });
     }
 
+    if (config.logic_type === 'mapa_mental') {
+      const levels = config.layout_config?.mindmap_levels || [];
+      levels.forEach((level: any, index: number) => {
+        const model = models.find((m: any) => m.id === level.model_id);
+        locs.push({
+          id: `mindmap:level:${index + 1}`,
+          label: `Nível ${index + 1} (${model?.display_name || model?.db_table_name || 'Desconhecido'})`,
+          modelId: level.model_id || '',
+          depth: index
+        });
+      });
+    }
+
     if (config.logic_type === 'pesquisa_cadastro') {
       const rootId = config.layout_config.master_model_id || config.selected_models?.[0];
       const rootModel = models.find((m: any) => m.id === rootId);
@@ -210,6 +223,8 @@ export function ActionModalGeneralTab({
                 renderOptions.push({ value: 'global_top', label: 'Ação Global (Topo da Pesquisa)' });
                 renderOptions.push({ value: 'row', label: 'Ação de Linha (Grid)' });
                 renderOptions.push({ value: 'bulk', label: 'Ação em Massa (Multi-seleção)' });
+              } else if (loc.id.startsWith('mindmap:level:')) {
+                renderOptions.push({ value: 'row', label: 'Exibir Botão no Nó' });
               } else {
                 renderOptions.push({ value: 'global_top', label: 'Ação Global (Topo)' });
                 if (loc.id !== 'master') {

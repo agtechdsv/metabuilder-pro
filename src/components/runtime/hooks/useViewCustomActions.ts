@@ -112,7 +112,10 @@ export function useViewCustomActions({
       const slug = interpolate(action.usecase_slug)
       const params = interpolate(action.usecase_params) || ''
 
-      const selectedFields = action.usecase_selected_fields || []
+      const level = rowData?.__mindmap_level__
+      const selectedFields = (level && action.mindmap_params_by_level?.[String(level)])
+        ? action.mindmap_params_by_level[String(level)]
+        : (action.usecase_selected_fields || [])
       const fieldsParams = selectedFields
         .map((f: any) => {
           if (typeof f === 'string') {

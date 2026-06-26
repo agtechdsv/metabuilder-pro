@@ -605,9 +605,13 @@ export default function DynamicMindMap({
                           <button onClick={(e) => { e.stopPropagation(); onDelete(child.rawData) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Trash2 className="w-3 h-3 text-neutral-500 hover:text-red-500" /></button>
                         </Tooltip>
                       )}
-                      {customActions?.map((action: any, i: number) => (
+                      {customActions?.filter((action: any) => {
+                        if (!isRelational) return true;
+                        const levelStr = String(child.level + 1);
+                        return action.placements?.some((p: any) => p.location === `mindmap:level:${levelStr}`);
+                      }).map((action: any, i: number) => (
                         <Tooltip key={i} text={action.label || 'Ação Customizada'}>
-                           <button onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, child.rawData) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Zap className="w-3 h-3 text-neutral-500 hover:text-amber-500" /></button>
+                           <button onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, { ...child.rawData, __mindmap_level__: child.level + 1 }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Zap className="w-3 h-3 text-neutral-500 hover:text-amber-500" /></button>
                         </Tooltip>
                       ))}
                     </div>
