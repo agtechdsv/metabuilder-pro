@@ -447,12 +447,12 @@ export function useMasterData({
   }
 
   const getFkErrorMessage = (errorMsg: string, fallbackMsg: string) => {
-    const match = errorMsg.match(/table "([^"]+)"/)
-    if (match && match[1]) {
-      const referencedTable = match[1]
+    const matches = [...errorMsg.matchAll(/table "([^"]+)"/g)]
+    if (matches.length > 0) {
+      const referencedTable = matches[matches.length - 1][1]
       let friendlyName = referencedTable
       if (project.models) {
-        const tModel = project.models.find((m: any) => m.db_table_name === referencedTable)
+        const tModel = project.models.find((m: any) => m.db_table_name?.toLowerCase() === referencedTable?.toLowerCase())
         if (tModel?.name) friendlyName = tModel.name
       }
       return t('runtime.delete_fk_error_with_table', 'Não é possível excluir. Este registro está sendo usado em: {table}').replace('{table}', friendlyName)
