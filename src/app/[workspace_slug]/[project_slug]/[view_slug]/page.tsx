@@ -423,7 +423,9 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
 
     // Inject Virtual Fields into Grid
     gridFieldsOrder.filter((id: string) => id.startsWith('virt_')).forEach((id: string) => {
-      const meta = view.layout_config?.fields_metadata?.[id] || {}
+      const gridMeta = view.layout_config?.fields_metadata?.[`grid-${id}`] || {}
+      const baseMeta = view.layout_config?.fields_metadata?.[id] || {}
+      const meta = { ...baseMeta, ...gridMeta }
       displayFields.push({
         id: id,
         model_id: null,
@@ -490,7 +492,9 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
 
     // Inject Virtual Fields into Form
     formFieldsOrder.filter((id: string) => id.startsWith('virt_')).forEach((id: string) => {
-      const meta = view.layout_config?.fields_metadata?.[id] || {}
+      const formMeta = view.layout_config?.fields_metadata?.[`form-${id}`] || {}
+      const baseMeta = view.layout_config?.fields_metadata?.[id] || {}
+      const meta = { ...baseMeta, ...formMeta }
       
       const virtualModelId = meta.virtual_model_id || null;
       let virtualModelName = '';
