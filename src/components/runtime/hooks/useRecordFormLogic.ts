@@ -21,13 +21,14 @@ export interface UseRecordFormLogicProps {
   isTunnelReady?: boolean;
   project?: any;
   refreshTrigger?: number;
+  isPageMode?: boolean;
 }
 
 export function useRecordFormLogic(props: UseRecordFormLogicProps) {
   const {
     mode, fields, initialData, onSave, onCancel, logicType, masterModelId, masterModelName,
     joins = [], initialTab = 'master', detailsItemTitles, projectId, secretToken,
-    tunnelChannel, isTunnelReady, project, refreshTrigger
+    tunnelChannel, isTunnelReady, project, refreshTrigger, isPageMode = false
   } = props;
   const [formData, setFormData] = useState<any>(initialData || {})
   const [activeTab, setActiveTab] = useState<'master' | string>(initialTab)
@@ -54,7 +55,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
 
   const isEmbedded = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embedded') === 'true'
   const handleCancel = () => {
-    if (isEmbedded) {
+    if (isEmbedded && isPageMode) {
       window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*')
     } else {
       onCancel()

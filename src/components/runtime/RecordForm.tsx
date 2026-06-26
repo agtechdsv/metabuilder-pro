@@ -125,7 +125,7 @@ export default function RecordForm({
   } = useRecordFormLogic({
     mode, fields, initialData, onSave, onCancel, logicType, masterModelId, masterModelName,
     joins, initialTab, detailsItemTitles, projectId, secretToken,
-    tunnelChannel, isTunnelReady, project, refreshTrigger
+    tunnelChannel, isTunnelReady, project, refreshTrigger, isPageMode
   });
 
   const titles = {
