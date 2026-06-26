@@ -66,6 +66,17 @@ export function useViewFilters({
         }
       })
     }
+
+    // Preenche com os parâmetros vindos da URL (query string)
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search)
+      searchParams.forEach((value, key) => {
+        if (!['embedded', 'preview', 'return_to', 'edit_id'].includes(key)) {
+          defaults[key] = value
+        }
+      })
+    }
+
     return defaults
   })
 
