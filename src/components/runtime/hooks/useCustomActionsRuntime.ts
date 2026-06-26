@@ -165,39 +165,58 @@ export function useCustomActionsRuntime({
       const slug = interpolate(action.usecase_slug)
       const params = interpolate(action.usecase_params) || ''
 
-      // Suporte a ações por nível no mapa mental
+      // Suporte a ações por nível no mapa mental com params acumulados dos ancestrais
       const level = rowData?.__mindmap_level__
-      let selectedFields = action.usecase_selected_fields || []
-      if (level !== undefined && level !== null) {
-        let parsedMindmapParams = action.mindmap_params_by_level
-        if (typeof parsedMindmapParams === 'string') {
-          try { parsedMindmapParams = JSON.parse(parsedMindmapParams) } catch (e) {}
+      const ancestors: { level: number; rawData: any }[] = rowData?.__mindmap_ancestors__ || []
+
+      // Parseia mindmap_params_by_level uma única vez
+      let parsedMindmapParams: any = action.mindmap_params_by_level
+      if (typeof parsedMindmapParams === 'string') {
+        try { parsedMindmapParams = JSON.parse(parsedMindmapParams) } catch (e) {}
+      }
+
+      // Helper para extrair o valor de um campo do rowData
+      const extractParam = (f: any, data: any): string => {
+        if (typeof f === 'string') {
+          const cleanKey = f.includes('.') ? f.split('.').pop() : f;
+          const val = data?.[f] !== undefined ? data[f] : data?.[cleanKey as string]
+          if (val === undefined || val === null || val === '') return ''
+          return `${f}=${encodeURIComponent(val)}`
+        } else if (f && typeof f === 'object' && f.source && f.target) {
+          const cleanSource = f.source.includes('.') ? f.source.split('.').pop() : f.source
+          const val = data?.[f.source] !== undefined ? data[f.source] : data?.[cleanSource as string]
+          if (val === undefined || val === null || val === '') return ''
+          return `${f.target}=${encodeURIComponent(val)}`
         }
+        return ''
+      }
+
+      // Campos do nível atual
+      let selectedFields = action.usecase_selected_fields || []
+      if (level !== undefined && level !== null && parsedMindmapParams) {
         const levelFields = parsedMindmapParams?.[String(level)]
-        if (levelFields && levelFields.length > 0) {
-          selectedFields = levelFields
+        if (levelFields && levelFields.length > 0) selectedFields = levelFields
+      }
+      const currentLevelParams = selectedFields
+        .map((f: any) => extractParam(f, rowData))
+        .filter(Boolean)
+
+      // Campos dos ancestrais (params acumulados dos níveis superiores)
+      const ancestorParams: string[] = []
+      if (parsedMindmapParams) {
+        for (const ancestor of ancestors) {
+          const ancestorFields = parsedMindmapParams?.[String(ancestor.level)]
+          if (ancestorFields && ancestorFields.length > 0) {
+            ancestorFields.forEach((f: any) => {
+              const p = extractParam(f, ancestor.rawData)
+              if (p) ancestorParams.push(p)
+            })
+          }
         }
       }
 
-      const fieldsParams = selectedFields
-        .map((f: any) => {
-          if (typeof f === 'string') {
-            const cleanKey = f.includes('.') ? f.split('.').pop() : f;
-            const val = rowData?.[f] !== undefined ? rowData[f] : rowData?.[cleanKey as string]
-            if (val === undefined || val === null || val === '') return ''
-            return `${f}=${encodeURIComponent(val)}`
-          } else if (f && typeof f === 'object' && f.source && f.target) {
-            const cleanSource = f.source.includes('.') ? f.source.split('.').pop() : f.source
-            const val = rowData?.[f.source] !== undefined ? rowData[f.source] : rowData?.[cleanSource as string]
-            if (val === undefined || val === null || val === '') return ''
-            return `${f.target}=${encodeURIComponent(val)}`
-          }
-          return ''
-        })
-        .filter(Boolean)
-        .join('&')
-        
-      const allParams = [fieldsParams, params].filter(Boolean).join('&')
+      const allParamParts = [...currentLevelParams, ...ancestorParams, params].filter(Boolean)
+      const allParams = allParamParts.join('&')
       const pathParts = window.location.pathname.split('/').filter(Boolean)
       const isAdminPath = pathParts[0] === 'admin'
       const currentWorkspaceSlug = isAdminPath ? pathParts[1] : pathParts[0]

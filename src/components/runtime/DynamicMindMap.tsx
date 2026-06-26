@@ -610,13 +610,34 @@ export default function DynamicMindMap({
                         if (!isRelational) return true;
                         const levelStr = String(child.level + 1);
                         return action.placements?.some((p: any) => p.location === `mindmap:level:${levelStr}`);
-                      }).map((action: any, i: number) => (
-                        <Tooltip key={i} text={action.label || 'Ação Customizada'}>
-                           <button onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, { ...child.rawData, __mindmap_level__: child.level + 1 }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors">
-                             <DynamicIcon icon={action.icon || 'Zap'} className="w-3 h-3 text-neutral-500 hover:text-amber-500" />
-                           </button>
-                        </Tooltip>
-                      ))}
+                      }).map((action: any, i: number) => {
+                        const handleClick = (e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          // Constrói a lista de nós ancestrais a partir do currentPath + relationalTree
+                          const ancestors: { level: number; rawData: any }[] = [];
+                          if (isRelational && currentPath.length > 0) {
+                            let cursor: any = { children: relationalTree };
+                            for (let pi = 0; pi < currentPath.length; pi++) {
+                              cursor = cursor.children?.[currentPath[pi]];
+                              if (cursor && cursor.rawData) {
+                                ancestors.push({ level: cursor.level + 1, rawData: cursor.rawData });
+                              }
+                            }
+                          }
+                          onCustomAction?.(action, {
+                            ...child.rawData,
+                            __mindmap_level__: child.level + 1,
+                            __mindmap_ancestors__: ancestors
+                          });
+                        };
+                        return (
+                          <Tooltip key={i} text={action.label || 'Ação Customizada'}>
+                             <button onClick={handleClick} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors">
+                               <DynamicIcon icon={action.icon || 'Zap'} className="w-3 h-3 text-neutral-500 hover:text-amber-500" />
+                             </button>
+                          </Tooltip>
+                        );
+                      })}
                     </div>
                   )}
                   {hasChildren && (
