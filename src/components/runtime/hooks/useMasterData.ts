@@ -328,7 +328,14 @@ export function useMasterData({
               fkCol = parentTable.endsWith('s') ? `${parentTable.slice(0, -1)}_id` : `${parentTable}_id`
             }
 
-            if (fkCol) sanitized[fkCol] = String(parentPkVal)
+            if (fkCol) {
+              if (isNew) {
+                sanitized[fkCol] = String(parentPkVal)
+              } else if (Object.keys(sanitized).length > 0) {
+                // For updates, only add fk if we are already updating other fields
+                sanitized[fkCol] = String(parentPkVal)
+              }
+            }
           }
 
           let sql = ''
