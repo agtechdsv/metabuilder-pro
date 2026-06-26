@@ -164,17 +164,33 @@ export function useCustomActionsRuntime({
       }
       const slug = interpolate(action.usecase_slug)
       const params = interpolate(action.usecase_params) || ''
-      const selectedFields = action.usecase_selected_fields || []
+
+      // Suporte a ações por nível no mapa mental
+      const level = rowData?.__mindmap_level__
+      let selectedFields = action.usecase_selected_fields || []
+      if (level !== undefined && level !== null) {
+        let parsedMindmapParams = action.mindmap_params_by_level
+        if (typeof parsedMindmapParams === 'string') {
+          try { parsedMindmapParams = JSON.parse(parsedMindmapParams) } catch (e) {}
+        }
+        const levelFields = parsedMindmapParams?.[String(level)]
+        if (levelFields && levelFields.length > 0) {
+          selectedFields = levelFields
+        }
+      }
+
       const fieldsParams = selectedFields
         .map((f: any) => {
           if (typeof f === 'string') {
-            const sourceKey = f.includes('.') ? f.split('.')[1] : f
-            const val = rowData?.[f] !== undefined ? rowData[f] : rowData?.[sourceKey]
-            return `${f}=${val !== undefined ? encodeURIComponent(val) : ''}`
+            const cleanKey = f.includes('.') ? f.split('.').pop() : f;
+            const val = rowData?.[f] !== undefined ? rowData[f] : rowData?.[cleanKey as string]
+            if (val === undefined || val === null || val === '') return ''
+            return `${f}=${encodeURIComponent(val)}`
           } else if (f && typeof f === 'object' && f.source && f.target) {
-            const sourceKey = f.source.includes('.') ? f.source.split('.')[1] : f.source
-            const val = rowData?.[f.source] !== undefined ? rowData[f.source] : rowData?.[sourceKey]
-            return `${f.target}=${val !== undefined ? encodeURIComponent(val) : ''}`
+            const cleanSource = f.source.includes('.') ? f.source.split('.').pop() : f.source
+            const val = rowData?.[f.source] !== undefined ? rowData[f.source] : rowData?.[cleanSource as string]
+            if (val === undefined || val === null || val === '') return ''
+            return `${f.target}=${encodeURIComponent(val)}`
           }
           return ''
         })

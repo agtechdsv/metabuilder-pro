@@ -114,22 +114,16 @@ export function useViewCustomActions({
 
       const level = rowData?.__mindmap_level__
       let selectedFields = action.usecase_selected_fields || []
-      
-      // DEBUG: Log para diagnosticar params por nível
-      console.error('[CustomAction DEBUG]', {
-        level,
-        mindmap_params_by_level: action.mindmap_params_by_level,
-        usecase_selected_fields: action.usecase_selected_fields,
-        rowData_keys: rowData ? Object.keys(rowData) : [],
-      })
 
       if (level !== undefined && level !== null) {
         let parsedMindmapParams = action.mindmap_params_by_level
         if (typeof parsedMindmapParams === 'string') {
           try { parsedMindmapParams = JSON.parse(parsedMindmapParams) } catch (e) {}
         }
-        selectedFields = parsedMindmapParams?.[String(level)] || []
-        console.error('[CustomAction DEBUG] level selectedFields:', String(level), selectedFields)
+        const levelFields = parsedMindmapParams?.[String(level)]
+        if (levelFields && levelFields.length > 0) {
+          selectedFields = levelFields
+        }
       }
       const fieldsParams = selectedFields
         .map((f: any) => {
