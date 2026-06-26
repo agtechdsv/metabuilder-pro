@@ -339,7 +339,9 @@ export function UseCaseBuilderWizard({
             target: draft.slug,
             show_dashboard: true
           }
-          const updatedNavigation = [...(projectData.navigation || []), newMenuItem]
+          // Remove any existing menu items that point to the same slug to avoid duplicates
+          const cleanedNav = (projectData.navigation || []).filter((item: any) => !(item.type === 'view' && item.target === newMenuItem.target))
+          const updatedNavigation = [...cleanedNav, newMenuItem]
           await supabase.from('projects').update({ navigation: updatedNavigation }).eq('id', projectData.id)
         }
       }
