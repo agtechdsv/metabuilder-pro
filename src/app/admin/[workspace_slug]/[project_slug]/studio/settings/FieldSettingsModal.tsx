@@ -502,9 +502,9 @@ export function FieldSettingsModal({
                               className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
                             >
                               <option value="">{t('wizard.layout.drawer.options_select_placeholder')}</option>
-                              {getModelsWithRelations([models.find((m: any) => m.id === field.model_id)].filter(Boolean), relations, models, 2).map((g: any, i: number) => (
-                                <option key={i} value={g.prefix ? `${g.prefix}${g.model.id}` : g.model.id}>
-                                  {g.label}
+                              {models.map((m: any) => (
+                                <option key={m.id} value={m.db_table_name}>
+                                  {m.display_name || m.db_table_name}
                                 </option>
                               ))}
                             </select>
@@ -520,14 +520,9 @@ export function FieldSettingsModal({
                                   className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
                                 >
                                   <option value="">{t('wizard.layout.drawer.options_select_placeholder')}</option>
-                                  {(() => {
-                                    const pathParts = currentFieldMeta.component.rel_table.split('.')
-                                    const modelId = pathParts[pathParts.length - 1]
-                                    const targetModel = models.find((m: any) => m.id === modelId)
-                                    return targetModel?.fields?.map((f: any) => (
-                                      <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                                    ))
-                                  })()}
+                                  {models.find((m: any) => m.db_table_name === currentFieldMeta.component?.rel_table)?.fields?.map((f: any) => (
+                                    <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                                  ))}
                                 </select>
                               </div>
                               <div className="space-y-2">
@@ -538,14 +533,9 @@ export function FieldSettingsModal({
                                   className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
                                 >
                                   <option value="">{t('wizard.layout.drawer.options_select_placeholder')}</option>
-                                  {(() => {
-                                    const pathParts = currentFieldMeta.component.rel_table.split('.')
-                                    const modelId = pathParts[pathParts.length - 1]
-                                    const targetModel = models.find((m: any) => m.id === modelId)
-                                    return targetModel?.fields?.map((f: any) => (
-                                      <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                                    ))
-                                  })()}
+                                  {models.find((m: any) => m.db_table_name === currentFieldMeta.component?.rel_table)?.fields?.map((f: any) => (
+                                    <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                                  ))}
                                 </select>
                               </div>
                             </div>
