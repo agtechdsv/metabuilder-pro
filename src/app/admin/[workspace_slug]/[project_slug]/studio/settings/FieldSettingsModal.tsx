@@ -95,7 +95,7 @@ export function FieldSettingsModal({
       onClose={onClose} 
       title={`Defaults: ${field.display_name || field.db_column_name}`}
       hideHeader
-      size="4xl"
+      size="2xl"
     >
       <div className="flex flex-col h-[85vh] bg-[#f8f9fc] dark:bg-[#030303] overflow-hidden rounded-[2rem]">
         {/* Header (Custom) */}
@@ -501,11 +501,9 @@ export function FieldSettingsModal({
                             >
                               <option value="">{t('wizard.layout.drawer.options_select_placeholder')}</option>
                               {getModelsWithRelations([models.find((m: any) => m.id === field.model_id)].filter(Boolean), relations, models, 2).map((g: any, i: number) => (
-                                <optgroup key={i} label={g.label}>
-                                  {g.options.map((opt: any) => (
-                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                  ))}
-                                </optgroup>
+                                <option key={i} value={g.prefix ? `${g.prefix}${g.model.id}` : g.model.id}>
+                                  {g.label}
+                                </option>
                               ))}
                             </select>
                           </div>
