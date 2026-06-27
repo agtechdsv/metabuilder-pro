@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { createClient } from '@/utils/supabase/client'
+import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/Toast'
 import { RefreshCw, CheckSquare, Square, LayoutTemplate, X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -18,6 +19,7 @@ interface UpdateUseCasesModalProps {
 
 export function UpdateUseCasesModal({ isOpen, onClose, field, models, project }: UpdateUseCasesModalProps) {
   const { toast } = useToast()
+  const router = useRouter()
   const supabase = createClient()
   
   const [isLoading, setIsLoading] = useState(true)
@@ -145,6 +147,7 @@ export function UpdateUseCasesModal({ isOpen, onClose, field, models, project }:
       }
 
       toast(`${selectedUCs.length} Caso(s) de Uso atualizado(s) com sucesso!`, 'success')
+      router.refresh()
       onClose()
     } catch (error) {
       console.error('Error updating use cases:', error)
