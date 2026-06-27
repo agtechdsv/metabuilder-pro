@@ -7,7 +7,7 @@ import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
-import { FieldSettingsDrawer } from './FieldSettingsDrawer'
+import { FieldSettingsModal } from './FieldSettingsModal'
 
 interface SettingsDashboardClientProps {
   workspace: any
@@ -274,7 +274,7 @@ export function SettingsDashboardClient({
       </main>
 
       {selectedField && (
-        <FieldSettingsDrawer
+        <FieldSettingsModal
           isOpen={isDrawerOpen}
           onClose={handleCloseDrawer}
           workspace={workspace}

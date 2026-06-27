@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Save, Plus } from 'lucide-react'
-import { Drawer } from '@/components/ui/Drawer'
+import { Modal } from '@/components/ui/Modal'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
@@ -12,7 +12,7 @@ import FormulaBuilder from '@/components/studio/FormulaBuilder'
 import { formatLabelText, createDefaultFieldMeta } from '@/components/studio/UseCaseBuilder/utils'
 import { getModelsWithRelations } from '@/lib/relationPathFinder'
 
-interface FieldSettingsClientProps {
+interface FieldSettingsModalProps {
   workspace: any
   project: any
   field: any
@@ -25,7 +25,7 @@ interface FieldSettingsClientProps {
   onClose: () => void
 }
 
-export function FieldSettingsDrawer({
+export function FieldSettingsModal({
   workspace,
   project,
   field,
@@ -36,7 +36,7 @@ export function FieldSettingsDrawer({
   project_slug,
   isOpen,
   onClose
-}: FieldSettingsClientProps) {
+}: FieldSettingsModalProps) {
   const { t } = useI18n()
   const { toast } = useToast()
   const supabase = createClient()
@@ -90,15 +90,16 @@ export function FieldSettingsDrawer({
   }
 
   return (
-    <Drawer 
+    <Modal 
       isOpen={isOpen} 
       onClose={onClose} 
       title={`Defaults: ${field.display_name || field.db_column_name}`}
       hideHeader
+      size="5xl"
     >
-      <div className="flex flex-col h-full bg-[#f8f9fc] dark:bg-[#030303]">
+      <div className="flex flex-col h-[85vh] bg-[#f8f9fc] dark:bg-[#030303] overflow-hidden rounded-b-[2rem]">
         {/* Header (Custom) */}
-        <div className="sticky top-0 z-30 bg-white/80 dark:bg-[#080808]/80 backdrop-blur-xl px-10 py-4 border-b border-neutral-200 dark:border-neutral-800 space-y-4">
+        <div className="sticky top-0 z-30 bg-white/80 dark:bg-[#080808]/80 backdrop-blur-xl px-10 py-4 border-b border-neutral-200 dark:border-neutral-800 space-y-4 rounded-t-[2rem]">
           <section className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div>
@@ -689,6 +690,6 @@ export function FieldSettingsDrawer({
           </div>
         </div>
       </div>
-    </Drawer>
+    </Modal>
   )
 }
