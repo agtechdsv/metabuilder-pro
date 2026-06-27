@@ -87,7 +87,25 @@ export function UpdateUseCasesModal({ isOpen, onClose, field, models, project }:
     setIsSaving(true)
     try {
       const selectedUCs = useCases.filter(uc => selectedIds.has(uc.id))
-      const newFieldMeta = createDefaultFieldMeta(field.id, models)
+      
+      // Fetch latest field state directly from DB to avoid using stale 'models' prop
+      const { data: latestField } = await supabase
+        .from('fields')
+        .select('widget_options')
+        .eq('id', field.id)
+        .single()
+
+      // Clone models and patch the field with the latest widget_options
+      const updatedModels = models.map(m => ({
+        ...m,
+        fields: (m.fields || []).map((f: any) => 
+          f.id === field.id 
+            ? { ...f, widget_options: latestField?.widget_options || f.widget_options }
+            : f
+        )
+      }))
+
+      const newFieldMeta = createDefaultFieldMeta(field.id, updatedModels)
 
       for (const uc of selectedUCs) {
         const currentDraft = uc.draft_config || {
