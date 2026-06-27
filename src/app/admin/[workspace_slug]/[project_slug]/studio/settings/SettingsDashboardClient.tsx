@@ -5,11 +5,16 @@ import { useRouter } from 'next/navigation'
 import { Settings2, Database, Table, Columns, Search, ArrowRight, Type, Hash, Calendar, List, Link as LinkIcon, ToggleLeft, ArrowLeft } from 'lucide-react'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { useI18n } from '@/i18n/I18nContext'
+import { createClient } from '@/utils/supabase/client'
+import { useToast } from '@/components/ui/Toast'
+import { FieldSettingsDrawer } from './FieldSettingsDrawer'
 
 interface SettingsDashboardClientProps {
   workspace: any
   project: any
   models: any[]
+  relations: any[]
+  enumerations: any[]
   workspace_slug: string
   project_slug: string
 }
@@ -18,15 +23,34 @@ export function SettingsDashboardClient({
   workspace,
   project,
   models,
+  relations,
+  enumerations,
   workspace_slug,
   project_slug
 }: SettingsDashboardClientProps) {
   const { t } = useI18n()
   const router = useRouter()
+  const { toast } = useToast()
+  const supabase = createClient()
   
   const [activeTab, setActiveTab] = useState<'fields' | 'global'>('fields')
   const [selectedModelId, setSelectedModelId] = useState<string | null>(models.length > 0 ? models[0].id : null)
   const [searchQuery, setSearchQuery] = useState('')
+  
+  // States for Drawer
+  const [selectedField, setSelectedField] = useState<any>(null)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+
+  // Handlers for Drawer
+  const handleOpenDrawer = (field: any) => {
+    setSelectedField(field)
+    setIsDrawerOpen(true)
+  }
+
+  const handleCloseDrawer = () => {
+    setIsDrawerOpen(false)
+    setTimeout(() => setSelectedField(null), 300) // Wait for animation
+  }
 
   const selectedModel = models.find(m => m.id === selectedModelId)
   
@@ -185,8 +209,8 @@ export function SettingsDashboardClient({
                         return (
                           <div 
                             key={field.id}
-                            className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex flex-col gap-3 group hover:border-indigo-500 hover:shadow-md transition-all cursor-pointer relative overflow-hidden"
-                            onClick={() => router.push(`/admin/${workspace_slug}/${project_slug}/studio/settings/fields/${field.id}`)}
+                            className="group relative bg-white dark:bg-neutral-900/40 p-5 rounded-2xl border border-neutral-100 dark:border-neutral-800 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/10 cursor-pointer transition-all hover:-translate-y-1 overflow-hidden"
+                            onClick={() => handleOpenDrawer(field)}
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex items-center gap-2">
@@ -247,6 +271,21 @@ export function SettingsDashboardClient({
           </div>
         )}
       </main>
+
+      {selectedField && (
+        <FieldSettingsDrawer
+          isOpen={isDrawerOpen}
+          onClose={handleCloseDrawer}
+          workspace={workspace}
+          project={project}
+          field={selectedField}
+          models={models}
+          relations={relations}
+          enumerations={enumerations}
+          workspace_slug={workspace_slug}
+          project_slug={project_slug}
+        />
+      )}
     </>
   )
 }

@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Save, ArrowLeft, Plus } from 'lucide-react'
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
+import { Save, Plus } from 'lucide-react'
+import { Drawer } from '@/components/ui/Drawer'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
@@ -21,9 +21,11 @@ interface FieldSettingsClientProps {
   enumerations: any[]
   workspace_slug: string
   project_slug: string
+  isOpen: boolean
+  onClose: () => void
 }
 
-export function FieldSettingsClient({
+export function FieldSettingsDrawer({
   workspace,
   project,
   field,
@@ -31,10 +33,11 @@ export function FieldSettingsClient({
   relations,
   enumerations,
   workspace_slug,
-  project_slug
+  project_slug,
+  isOpen,
+  onClose
 }: FieldSettingsClientProps) {
   const { t } = useI18n()
-  const router = useRouter()
   const { toast } = useToast()
   const supabase = createClient()
   
@@ -77,7 +80,7 @@ export function FieldSettingsClient({
       if (error) throw error
 
       toast('Propriedades salvas com sucesso!', 'success')
-      router.push(`/admin/${workspace_slug}/${project_slug}/studio/settings`)
+      onClose()
     } catch (err: any) {
       console.error(err)
       toast('Erro ao salvar as propriedades.', 'error')
@@ -87,26 +90,17 @@ export function FieldSettingsClient({
   }
 
   return (
-    <>
-      <Breadcrumbs 
-        workspaceName={workspace?.name}
-        projectName={project?.name}
-        projectSlug={project_slug}
-        viewName="Defaults de Campo"
-      />
-
-      <main className="w-full px-10 pt-4 pb-4 space-y-6 flex-grow">
-        
-        {/* Header */}
-        <div className="sticky top-16 z-30 bg-white/80 dark:bg-[#080808]/80 backdrop-blur-xl -mx-10 px-10 py-4 border-b border-neutral-200 dark:border-neutral-800 space-y-4">
+    <Drawer 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title={`Defaults: ${field.display_name || field.db_column_name}`}
+      hideHeader
+    >
+      <div className="flex flex-col h-full bg-[#f8f9fc] dark:bg-[#030303]">
+        {/* Header (Custom) */}
+        <div className="sticky top-0 z-30 bg-white/80 dark:bg-[#080808]/80 backdrop-blur-xl px-10 py-4 border-b border-neutral-200 dark:border-neutral-800 space-y-4">
           <section className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button 
-                onClick={() => router.push(`/admin/${workspace_slug}/${project_slug}/studio/settings`)}
-                className="w-10 h-10 flex items-center justify-center rounded-xl bg-neutral-100 dark:bg-neutral-900 text-neutral-500 hover:text-indigo-600 dark:hover:text-white transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
               <div>
                 <h2 className="text-xl font-black tracking-tight text-neutral-900 dark:text-white flex items-center gap-2">
                   <span className="text-neutral-400 font-medium text-lg">{field.models?.db_table_name}.</span>
@@ -167,8 +161,8 @@ export function FieldSettingsClient({
           </div>
         </div>
 
-        {/* Content */}
-        <div className="bg-white dark:bg-neutral-900/50 p-8 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] shadow-sm max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex-1 overflow-y-auto p-8">
+          <div className="bg-white dark:bg-neutral-900/50 p-8 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] shadow-sm max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
           
           {activeTab === 'geral' && (
             <div className="space-y-10">
@@ -494,7 +488,7 @@ export function FieldSettingsClient({
                               className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
                             >
                               <option value="">{t('wizard.layout.drawer.options_select_placeholder')}</option>
-                              {getModelsWithRelations([models.find(m => m.id === field.model_id)], relations, models, 2).map((g: any, i: number) => (
+                              {getModelsWithRelations([models.find((m: any) => m.id === field.model_id)].filter(Boolean), relations, models, 2).map((g: any, i: number) => (
                                 <optgroup key={i} label={g.label}>
                                   {g.options.map((opt: any) => (
                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -692,8 +686,9 @@ export function FieldSettingsClient({
               />
             </div>
           )}
+          </div>
         </div>
-      </main>
-    </>
+      </div>
+    </Drawer>
   )
 }

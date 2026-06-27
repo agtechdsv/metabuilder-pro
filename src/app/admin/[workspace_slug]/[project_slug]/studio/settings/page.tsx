@@ -46,11 +46,24 @@ export default async function SettingsDashboard({ params }: SettingsDashboardPro
     .eq('project_id', project.id)
     .order('db_table_name', { ascending: true })
 
+  // 4. Busca relations e enumerations para passar ao client (usado no Drawer de configs)
+  const { data: relations } = await supabase
+    .from('relations')
+    .select('*')
+    .eq('project_id', project.id)
+
+  const { data: enumerations } = await supabase
+    .from('enumerations')
+    .select('id, name, values')
+    .eq('project_id', project.id)
+
   return (
     <SettingsDashboardClient
       workspace={workspace}
       project={project}
       models={models || []}
+      relations={relations || []}
+      enumerations={enumerations || []}
       workspace_slug={workspace_slug}
       project_slug={project_slug}
     />
