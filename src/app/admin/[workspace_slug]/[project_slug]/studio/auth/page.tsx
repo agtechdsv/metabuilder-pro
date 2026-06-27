@@ -7,6 +7,7 @@ import { useTheme } from 'next-themes'
 import { 
   ArrowLeft, 
   ShieldCheck, 
+  Shield,
   Database, 
   Users, 
   Save, 
@@ -34,6 +35,7 @@ import { Footer } from '@/components/layout/Footer'
 import { useI18n } from '@/i18n/I18nContext'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
+import { ProjectSecuritySettings } from '@/components/studio/ProjectSecuritySettings'
 
 export default function AuthSettingsPage() {
   const { t } = useI18n()
@@ -95,7 +97,7 @@ export default function AuthSettingsPage() {
     login_tooltip: t('dashboard.projects.studio.auth.default_tooltip')
   })
 
-  const [activeTab, setActiveTab] = useState<'visual' | 'strategy' | 'users'>('strategy')
+  const [activeTab, setActiveTab] = useState<'visual' | 'strategy' | 'users' | 'permissions'>('permissions')
   const [usersSubTab, setUsersSubTab] = useState<'list' | 'groups' | 'permissions'>('list')
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null)
   const [editingRoleName, setEditingRoleName] = useState('')
@@ -890,34 +892,44 @@ export default function AuthSettingsPage() {
               </div>
               <div>
                 <h2 className="text-xl font-black tracking-tight text-neutral-900 dark:text-white">
-                  {t('dashboard.projects.studio.auth.title')}
+                  {activeTab === 'permissions' ? 'Segurança e Acesso' : t('dashboard.projects.studio.auth.title')}
                 </h2>
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{t('dashboard.projects.studio.auth.strategy_desc')}</p>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">
+                  {activeTab === 'permissions' ? 'Gerencie papéis, acessos e políticas de segurança do projeto.' : t('dashboard.projects.studio.auth.strategy_desc')}
+                </p>
               </div>
             </div>
 
-            <button 
-              onClick={handleSave}
-              disabled={isSaving}
-              className={`flex items-center gap-2 px-6 h-12 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${
-                isSuccess 
-                  ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' 
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50'
-              }`}
-            >
-              {isSaving ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : isSuccess ? (
-                <ShieldCheck className="w-4 h-4" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              {isSaving ? t('common.saving') : isSuccess ? t('common.saved') : t('common.save')}
-            </button>
+            {activeTab !== 'permissions' && (
+              <button 
+                onClick={handleSave}
+                disabled={isSaving}
+                className={`flex items-center gap-2 px-6 h-12 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${
+                  isSuccess 
+                    ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' 
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50'
+                }`}
+              >
+                {isSaving ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : isSuccess ? (
+                  <ShieldCheck className="w-4 h-4" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {isSaving ? t('common.saving') : isSuccess ? t('common.saved') : t('common.save')}
+              </button>
+            )}
           </section>
 
           {/* Tabs */}
           <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 w-fit">
+            <button 
+              onClick={() => setActiveTab('permissions')}
+              className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'permissions' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
+            >
+              <Shield className="w-4 h-4" /> Controle de Acesso
+            </button>
             <button 
               onClick={() => setActiveTab('strategy')}
               className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'strategy' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
@@ -938,7 +950,14 @@ export default function AuthSettingsPage() {
             </button>
           </div>
         </div>
-        {activeTab === 'strategy' ? (
+        {activeTab === 'permissions' ? (
+          <div className="bg-white dark:bg-neutral-900/30 p-8 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] shadow-sm animate-in fade-in duration-300 pb-20">
+            <ProjectSecuritySettings 
+              project={project}
+              canEdit={true}
+            />
+          </div>
+        ) : activeTab === 'strategy' ? (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <button 

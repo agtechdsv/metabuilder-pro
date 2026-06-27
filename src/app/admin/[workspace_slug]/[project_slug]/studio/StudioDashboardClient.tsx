@@ -664,15 +664,6 @@ export function StudioDashboardClient({
                     >
                       <Database className="w-3.5 h-3.5" /> {t('dashboard.projects.studio.tabs.enums')}
                     </button>
-                     <button 
-                      onClick={() => setViewMode('security')}
-                      className={cn(
-                        "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
-                        viewMode === 'security' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
-                      )}
-                     >
-                       <Shield className="w-3.5 h-3.5" /> Segurança
-                     </button>
                  </>
                )}
             </div>
@@ -842,13 +833,6 @@ export function StudioDashboardClient({
           <div className="">
             <EnumerationsClient 
               project={project}
-            />
-          </div>
-        ) : viewMode === 'security' ? (
-          <div className="">
-            <ProjectSecuritySettings 
-              project={project}
-              canEdit={canCreate}
             />
           </div>
         ) : (

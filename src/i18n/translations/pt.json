@@ -563,7 +563,7 @@
         "sidebar": {
           "dashboard": "Painel de Controle",
           "data": "Estrutura de Dados",
-          "auth": "Portal de Login",
+          "auth": "Segurança",
           "settings": "Configurações"
         },
         "login": {
