@@ -40,6 +40,7 @@ export function FieldSettingsModal({
   const { t } = useI18n()
   const { toast } = useToast()
   const supabase = createClient()
+  const router = useRouter()
   
   const [activeTab, setActiveTab] = useState<'geral' | 'estilos' | 'logica'>('geral')
   const [isSaving, setIsSaving] = useState(false)
@@ -80,6 +81,7 @@ export function FieldSettingsModal({
       if (error) throw error
 
       toast('Propriedades salvas com sucesso!', 'success')
+      router.refresh()
       onClose()
     } catch (err: any) {
       console.error(err)
