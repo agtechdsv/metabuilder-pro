@@ -43,7 +43,8 @@ import {
   Network,
   Map as MapIcon,
   PieChart,
-  Image as ImageIcon
+  Image as ImageIcon,
+  ScrollText
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -62,6 +63,7 @@ import { EnumerationsClient } from '../enumerations/EnumerationsClient'
 import { TableFieldsManager } from '@/components/studio/TableFieldsManager'
 import { RelationsManager } from '@/components/studio/RelationsManager'
 import { ProjectSecuritySettings } from '@/components/studio/ProjectSecuritySettings'
+import ProjectLogsTab from '@/components/studio/ProjectLogs/ProjectLogsTab'
 
 const RETENTION_OPTIONS = [
   { value: '', labelKey: 'dashboard.projects.studio.stats.retention.forever' },
@@ -241,6 +243,7 @@ export function StudioDashboardClient({
   const isAutomationsActive = automationsView ? (automationsView.layout_config?.is_active !== false) : false
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isBpmConfigModalOpen, setIsBpmConfigModalOpen] = useState(false)
+  const [isLogsModalOpen, setIsLogsModalOpen] = useState(false)
   const [bpmConfig, setBpmConfig] = useState<any>(automationsView?.layout_config || { default_auto_align: false, error_email: '', log_retention: 30, timeout_mins: 5 })
 
   const [scale, setScale] = useState(1.0)
@@ -1166,6 +1169,41 @@ export function StudioDashboardClient({
               </>
               )}
 
+              {/* 4. Card de Logs (Sistema) */}
+              {canCreate && (
+              <div className="group relative p-5 bg-gradient-to-br from-violet-600/5 to-purple-600/5 dark:from-violet-600/10 dark:to-purple-600/10 border border-violet-500/20 dark:border-violet-500/30 rounded-[1.5rem] hover:border-violet-500 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-1">
+                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-violet-600 text-white text-[9px] font-black rounded-full uppercase tracking-widest shadow-lg shadow-violet-500/20 z-10 border border-white/10 dark:border-black/10 min-w-[140px] text-center">
+                  {t('dashboard.projects.system_label')}
+                </div>
+                <div className="flex flex-col h-full gap-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-base font-black tracking-tight text-neutral-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+                          Logs do Projeto
+                        </h4>
+                      </div>
+                      <p className="text-[10px] text-neutral-400 font-mono flex items-center gap-1.5 tracking-tight">
+                        Armazenados no banco do cliente
+                      </p>
+                    </div>
+                    <div className="p-2 bg-violet-500/10 rounded-2xl text-violet-600 dark:text-violet-400">
+                      <ScrollText className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  <div className="mt-auto flex gap-3">
+                    <button
+                      onClick={() => setIsLogsModalOpen(true)}
+                      className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-violet-600 text-white rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-violet-500/20"
+                    >
+                      <ScrollText className="w-4 h-4" /> Ver Logs
+                    </button>
+                  </div>
+                </div>
+              </div>
+              )}
+
               {userViews.filter(view => {
                 if (!activeFilter) return true;
                 if (activeFilter === 'sistema') return false;
@@ -1517,6 +1555,27 @@ export function StudioDashboardClient({
               </div>
             </div>
           )}
+        </Modal>
+
+        {/* Modal de Logs do Projeto */}
+        <Modal
+          isOpen={isLogsModalOpen}
+          onClose={() => setIsLogsModalOpen(false)}
+          title=""
+          size="xl"
+        >
+          <div className="flex flex-col gap-4" style={{ minHeight: '70vh' }}>
+            <div className="flex items-center gap-3 pb-3 border-b border-neutral-100 dark:border-neutral-800">
+              <div className="p-2 rounded-xl bg-violet-500/10">
+                <ScrollText className="w-5 h-5 text-violet-500" />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-neutral-900 dark:text-white">Logs do Projeto</h2>
+                <p className="text-[11px] text-neutral-400">Armazenados localmente no banco do cliente • Acesso via túnel CLI</p>
+              </div>
+            </div>
+            <ProjectLogsTab project={project} supabase={supabase} />
+          </div>
         </Modal>
 
       </main>

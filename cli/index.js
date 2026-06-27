@@ -31,6 +31,9 @@ const ldap = require('ldapjs');
 const oracledb = require('oracledb');
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 const { BpmEngine } = require('./bpmEngine');
+const logger = require('./logger');
+const { cliDbLogger } = require('./cliDbLogger');
+
 
 // Configurações do Supabase lidas do ambiente ou perguntadas depois
 let SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -220,6 +223,21 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
   }
   
   console.log(chalk.green(`✓ Conexão contínua estabelecida com sucesso! (${connectionName || 'public'})`));
+
+  // Inicializa o logger de banco (lê log_config do Supabase)
+  if (dbType === 'postgres' && pgClient) {
+    try {
+      const { data: projData } = await supabase
+        .from('projects')
+        .select('log_config')
+        .eq('id', projectId)
+        .single();
+      const logConfig = projData?.log_config || { enabled: false, types: ['SQL_ERROR'], retention_days: 7 };
+      await cliDbLogger.init(pgClient, connectionName || 'public', logConfig);
+    } catch (lcErr) {
+      console.error(chalk.yellow('[MBLog] Nao foi possivel ler log_config do projeto:'), lcErr.message);
+    }
+  }
 
   let bpmEngine = null;
   try {
@@ -447,6 +465,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             result = await pgClient.query(sql, params);
           }
           console.log(chalk.green(`[ OK ] SELECT: Retornou ${result.rows.length} linhas (Limit: ${limit}, Offset: ${offset}).`));
+          cliDbLogger.logSelect(safeTable, sql, result.rows.length, null);
           if (result.rows.length === 0) {
              console.log(chalk.yellow(`[ DEBUG ] SQL: ${sql}`));
              console.log(chalk.yellow(`[ DEBUG ] PARAMS: ${JSON.stringify(params)}`));
@@ -577,6 +596,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           
           const totalRows = result.rows.length > 0 ? parseInt(result.rows[0].total || result.rows[0].TOTAL || result.rows[0].count || 0) : 0;
           console.log(chalk.green(`[ OK ] COUNT: Retornou total de ${totalRows} linhas.`));
+          cliDbLogger.logCount(safeTable, sql, totalRows, null);
           
           result.totalRows = totalRows; // We will extract this at the end
         } else if (action === 'validate_login') {
@@ -830,6 +850,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             });
           }
           console.log(chalk.green(`[ OK ] INSERT: 1 linha criada.`));
+          cliDbLogger.logInsert(safeTable, sql, null);
         }
         else if (action === 'update') {
           const { idColumn, idValue, data } = payload.payload;
@@ -894,6 +915,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
                 });
               }
               console.log(chalk.green(`[ OK ] UPDATE: 1 linha atualizada.`));
+              cliDbLogger.logUpdate(safeTable, sql, null);
               break; // Sucesso — sai do loop
             } catch (updateErr) {
               const errMsg = updateErr.message || '';
@@ -938,6 +960,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             }
           }
           console.log(chalk.green(`[ OK ] DELETE: 1 linha removida.`));
+          cliDbLogger.logDelete(safeTable, sql, null);
 
           if (bpmEngine) {
             bpmEngine.processEvent(safeTable, 'record_deleted', deletedRowData).catch(err => {
@@ -966,6 +989,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           }
           result = execResult;
           console.log(chalk.green(`[ OK ] CUSTOM ACTION executada.`));
+          cliDbLogger.logCustom(safeTable, sql, null);
         } else if (action === 'trigger_bpm') {
           const { workflows, rowData, tableName } = payload.payload;
           const safeTable = (tableName || table || '').replace(/[^a-zA-Z0-9_]/g, '');
@@ -1021,6 +1045,18 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           }
           result = { rows: [] };
           console.log(chalk.green(`[ OK ] Fluxos BPM sincronizados com sucesso.`));
+        } else if (action === 'read_logs') {
+          // Leitura de logs para o Studio
+          const logsResult = await cliDbLogger.readLogs(payload.payload.filters || {});
+          result = { rows: logsResult.rows, _total: logsResult.total };
+          console.log(chalk.gray(`[ LOG ] Retornou ${logsResult.rows.length} entradas de log.`));
+        } else if (action === 'clear_logs') {
+          await cliDbLogger.clearLogs();
+          result = { rows: [] };
+          console.log(chalk.gray(`[ LOG ] Logs limpos com sucesso.`));
+        } else if (action === 'get_log_stats') {
+          const stats = await cliDbLogger.getStats();
+          result = { rows: [stats] };
         } else {
           throw new Error('Ação não suportada');
         }
@@ -1053,6 +1089,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
 
       } catch (err) {
         console.log(chalk.red(`[ ERRO ] Falha na query:`), err.message);
+        cliDbLogger.logError(table || '', sql || '', err.message, null);
         const errorPayload = {
           queryId,
           success: false,
@@ -1118,6 +1155,11 @@ async function run() {
     mode = initial.mode;
   }
 
+  // Inicializa o logger com o modo selecionado
+  logger.init(mode);
+  process.on('exit', () => logger.close());
+  process.on('SIGINT', () => { logger.close(); process.exit(0); });
+
   // 3. Executa a Ação com base no ConfigFile (Gateway)
   if (configData && configData.connections && configData.connections.length > 0) {
     if (mode === 'tunnel') {
@@ -1143,6 +1185,7 @@ async function run() {
         output: process.stdout
       });
       rl.question(chalk.gray(`\n[ TÚNEL ATIVO ] Pressione ENTER a qualquer momento para encerrar o túnel e fechar a janela...\n`), () => {
+        logger.close();
         process.exit(0);
       });
       return; 
@@ -1160,16 +1203,26 @@ async function run() {
               : await introspectPostgres(dbConfig.connectionString);
             console.log(chalk.blue(`\nEnviando metadados do projeto ${conn.projectId} (Schema: ${dbConfig.name})...`));
             try {
-              await axios.post(apiUrl, {
+              const syncResp = await axios.post(apiUrl, {
                 projectId: conn.projectId,
                 connectionName: dbConfig.name,
                 metadata: schemaDefinition
               }, {
                 headers: { 'Authorization': `Bearer ${conn.secretToken}`, 'Content-Type': 'application/json' }
               });
-              console.log(chalk.green.bold(`✅ Projeto ${conn.projectId} (${dbConfig.name}) sincronizado com sucesso!`));
+              const respData = syncResp.data || {};
+              // Loga resumo do schema
+              schemaDefinition.forEach(tbl => {
+                logger.logSyncChange({ table: tbl.name, type: 'added', item: `${tbl.columns.length} coluna(s) detectada(s)`, detail: `Schema: ${dbConfig.name}` });
+              });
+              if (respData.draftCreated) {
+                console.log(chalk.yellow.bold(`⚠️ Projeto ${conn.projectId} (${dbConfig.name}): divergências detectadas — draft criado para revisão manual.`));
+              } else {
+                console.log(chalk.green.bold(`✅ Projeto ${conn.projectId} (${dbConfig.name}) sincronizado com sucesso!`));
+              }
             } catch (error) {
               const errorMsg = formatAxiosError(error);
+              logger.logCriticalError(`Falha na sync do projeto ${conn.projectId} (${dbConfig.name})`, error);
               console.error(chalk.red.bold(`❌ Falha no projeto ${conn.projectId} (${dbConfig.name}):`), errorMsg);
             }
           }
@@ -1180,21 +1233,31 @@ async function run() {
             : await introspectPostgres(conn.connectionString);
           console.log(chalk.blue(`\nEnviando metadados do projeto ${conn.projectId}...`));
           try {
-            await axios.post(apiUrl, {
+            const syncResp = await axios.post(apiUrl, {
               projectId: conn.projectId,
               connectionName: 'public',
               metadata: schemaDefinition
             }, {
               headers: { 'Authorization': `Bearer ${conn.secretToken}`, 'Content-Type': 'application/json' }
             });
-            console.log(chalk.green.bold(`✅ Projeto ${conn.projectId} sincronizado com sucesso!`));
+            const respData = syncResp.data || {};
+            schemaDefinition.forEach(tbl => {
+              logger.logSyncChange({ table: tbl.name, type: 'added', item: `${tbl.columns.length} coluna(s) detectada(s)` });
+            });
+            if (respData.draftCreated) {
+              console.log(chalk.yellow.bold(`⚠️ Projeto ${conn.projectId}: divergências detectadas — draft criado para revisão manual.`));
+            } else {
+              console.log(chalk.green.bold(`✅ Projeto ${conn.projectId} sincronizado com sucesso!`));
+            }
           } catch (error) {
             const errorMsg = formatAxiosError(error);
+            logger.logCriticalError(`Falha na sync do projeto ${conn.projectId}`, error);
             console.error(chalk.red.bold(`❌ Falha no projeto ${conn.projectId}:`), errorMsg);
           }
         }
       }
       console.log(chalk.yellow('\nProcesso de Sincronização finalizado.'));
+      logger.close();
       process.exit(0);
     }
   } 
@@ -1237,18 +1300,28 @@ async function run() {
         : await introspectPostgres(answers.connectionString);
       console.log(chalk.blue('\nEnviando metadados para a plataforma MetaBuilderPRO...'));
       try {
-        await axios.post('http://localhost:3000/api/metadata/sync', {
+        const syncResp = await axios.post('http://localhost:3000/api/metadata/sync', {
           projectId: answers.projectId,
           connectionName: 'public',
           metadata: schemaDefinition
         }, {
           headers: { 'Authorization': `Bearer ${answers.secretToken}`, 'Content-Type': 'application/json' }
         });
-        console.log(chalk.green.bold('\n✅ Sincronização concluída com sucesso!'));
+        const respData = syncResp.data || {};
+        schemaDefinition.forEach(tbl => {
+          logger.logSyncChange({ table: tbl.name, type: 'added', item: `${tbl.columns.length} coluna(s) detectada(s)` });
+        });
+        if (respData.draftCreated) {
+          console.log(chalk.yellow.bold('\n⚠️ Divergências detectadas — draft criado para revisão manual.'));
+        } else {
+          console.log(chalk.green.bold('\n✅ Sincronização concluída com sucesso!'));
+        }
       } catch (error) {
         const errorMsg = formatAxiosError(error);
+        logger.logCriticalError('Falha ao enviar dados para a API (modo manual)', error);
         console.error(chalk.red.bold('\n❌ Falha ao enviar dados para a API.'), errorMsg);
       }
+      logger.close();
       process.exit(0);
     } else if (mode === 'tunnel') {
       await startTunnel(answers.projectId, answers.secretToken, 'public', answers.connectionString, null, null, null, answers.dbType);
@@ -1258,6 +1331,7 @@ async function run() {
         output: process.stdout
       });
       rl.question(chalk.gray(`\n[ TÚNEL ATIVO ] Pressione ENTER a qualquer momento para encerrar o túnel e fechar a janela...\n`), () => {
+        logger.close();
         process.exit(0);
       });
     }

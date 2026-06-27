@@ -69,5 +69,9 @@ node_modules
 
 /cli/dist
 
+# CLI log files (gerados localmente, não devem ir ao git)
+/cli/logs/
+
+
 /local_scripts/
 scripts/refactor/
