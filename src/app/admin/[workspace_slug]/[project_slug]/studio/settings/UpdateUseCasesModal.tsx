@@ -127,14 +127,24 @@ export function UpdateUseCasesModal({ isOpen, onClose, field, models, project }:
         const layoutConfig = currentDraft.layout_config || {}
         const fieldsMetadata = layoutConfig.fields_metadata || {}
 
+        // Atualizar todas as variações do campo (base, form-, grid-, filter-)
+        const updatedFieldsMetadata = { ...fieldsMetadata }
+        
+        // Atualiza o base
+        updatedFieldsMetadata[field.id] = newFieldMeta
+
+        // Atualiza as variações caso existam
+        Object.keys(updatedFieldsMetadata).forEach(key => {
+          if (key.endsWith(`-${field.id}`)) {
+            updatedFieldsMetadata[key] = newFieldMeta
+          }
+        })
+
         const updatedDraft = {
           ...currentDraft,
           layout_config: {
             ...layoutConfig,
-            fields_metadata: {
-              ...fieldsMetadata,
-              [field.id]: newFieldMeta
-            }
+            fields_metadata: updatedFieldsMetadata
           }
         }
 
