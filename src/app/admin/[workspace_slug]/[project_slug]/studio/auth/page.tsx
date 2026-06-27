@@ -1800,32 +1800,76 @@ export default function AuthSettingsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                      {uiViews.length > 0 ? uiViews.map(view => (
-                        <tr key={view.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
-                          <td className="px-6 py-4">
-                            <p className="text-sm font-bold text-neutral-900 dark:text-white">{view.name}</p>
-                            <p className="text-[10px] text-neutral-500">/{view.slug}</p>
-                          </td>
-                          {roles.map(role => {
-                            const permission = rolePermissions.find(rp => rp.role_id === role.id && rp.view_id === view.id)
-                            const isAutomations = view.slug === 'automations'
-                            const hasAccess = isAutomations 
-                              ? (permission && permission.can_read === true)
-                              : (!permission || permission.can_read !== false)
+                      {uiViews.length > 0 ? (() => {
+                        const SYSTEM_SLUGS = new Set(['login', 'downloads', 'automations', 'logs'])
+                        const systemViews = [...uiViews]
+                          .filter(v => SYSTEM_SLUGS.has(v.slug))
+                          .sort((a, b) => a.name.localeCompare(b.name))
+                        const devViews = [...uiViews]
+                          .filter(v => !SYSTEM_SLUGS.has(v.slug))
+                          .sort((a, b) => a.name.localeCompare(b.name))
 
-                            return (
-                              <td key={role.id} className="px-6 py-4 text-center">
-                                <button 
-                                  onClick={() => handleTogglePermission(role.id, view.id, isAutomations)}
-                                  className={`w-12 h-6 rounded-full transition-all relative inline-block align-middle ${hasAccess ? 'bg-indigo-600' : 'bg-neutral-200 dark:bg-neutral-800'}`}
-                                >
-                                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${hasAccess ? 'left-7' : 'left-1'}`} />
-                                </button>
+                        const renderRow = (view: any) => {
+                          const isAutomations = view.slug === 'automations'
+                          return (
+                            <tr key={view.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                              <td className="px-6 py-4">
+                                <p className="text-sm font-bold text-neutral-900 dark:text-white">{view.name}</p>
+                                <p className="text-[10px] text-neutral-500">/{view.slug}</p>
                               </td>
-                            )
-                          })}
-                        </tr>
-                      )) : (
+                              {roles.map(role => {
+                                const permission = rolePermissions.find(rp => rp.role_id === role.id && rp.view_id === view.id)
+                                const hasAccess = isAutomations 
+                                  ? (permission && permission.can_read === true)
+                                  : (!permission || permission.can_read !== false)
+
+                                return (
+                                  <td key={role.id} className="px-6 py-4 text-center">
+                                    <button 
+                                      onClick={() => handleTogglePermission(role.id, view.id, isAutomations)}
+                                      className={`w-12 h-6 rounded-full transition-all relative inline-block align-middle ${hasAccess ? 'bg-indigo-600' : 'bg-neutral-200 dark:bg-neutral-800'}`}
+                                    >
+                                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${hasAccess ? 'left-7' : 'left-1'}`} />
+                                    </button>
+                                  </td>
+                                )
+                              })}
+                            </tr>
+                          )
+                        }
+
+                        return (
+                          <>
+                            {/* Group: Sistema */}
+                            {systemViews.length > 0 && (
+                              <>
+                                <tr>
+                                  <td colSpan={roles.length + 1} className="px-6 pt-5 pb-2">
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-[9px] font-black uppercase tracking-widest border border-indigo-200 dark:border-indigo-500/20">
+                                      Casos de Uso do Sistema
+                                    </span>
+                                  </td>
+                                </tr>
+                                {systemViews.map(renderRow)}
+                              </>
+                            )}
+
+                            {/* Group: DEV */}
+                            {devViews.length > 0 && (
+                              <>
+                                <tr>
+                                  <td colSpan={roles.length + 1} className="px-6 pt-6 pb-2">
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[9px] font-black uppercase tracking-widest border border-emerald-200 dark:border-emerald-500/20">
+                                      Casos de Uso do DEV
+                                    </span>
+                                  </td>
+                                </tr>
+                                {devViews.map(renderRow)}
+                              </>
+                            )}
+                          </>
+                        )
+                      })() : (
                         <tr>
                           <td colSpan={roles.length + 1} className="p-8 text-center text-sm font-medium text-neutral-500">
                             Nenhuma tela (UI View) encontrada no projeto.

@@ -18,6 +18,7 @@ interface UseWizardDataReturn {
   isDownloadsActive: boolean
   currentProjectId: string | undefined
   currentWorkspaceId: string | undefined
+  virtualFields: any[]
 }
 
 /**
@@ -42,6 +43,7 @@ export function useWizardData({ projectSlug }: UseWizardDataParams): UseWizardDa
   const [isDownloadsActive, setIsDownloadsActive] = useState(false)
   const [currentProjectId, setCurrentProjectId] = useState<string>()
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string>()
+  const [virtualFields, setVirtualFields] = useState<any[]>([])
 
   useEffect(() => {
     const loadData = async () => {
@@ -57,6 +59,19 @@ export function useWizardData({ projectSlug }: UseWizardDataParams): UseWizardDa
       setIsDownloadsActive(project.theme_config?.enable_downloads !== false)
       setCurrentProjectId(project.id)
       setCurrentWorkspaceId(project.workspace_id)
+
+      // Fetch virtual_fields (calculated fields)
+      const { data: projectFull } = await supabase
+        .from('projects')
+        .select('virtual_fields')
+        .eq('id', project.id)
+        .single()
+      if (projectFull?.virtual_fields) {
+        const vf = typeof projectFull.virtual_fields === 'string'
+          ? JSON.parse(projectFull.virtual_fields)
+          : projectFull.virtual_fields
+        if (Array.isArray(vf)) setVirtualFields(vf)
+      }
 
       // 2. Fetch models for this project (with their fields)
       const { data: modelsData } = await supabase
@@ -123,6 +138,7 @@ export function useWizardData({ projectSlug }: UseWizardDataParams): UseWizardDa
     isLoading,
     isDownloadsActive,
     currentProjectId,
-    currentWorkspaceId
+    currentWorkspaceId,
+    virtualFields
   }
 }

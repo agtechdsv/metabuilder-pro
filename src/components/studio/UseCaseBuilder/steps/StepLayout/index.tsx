@@ -36,7 +36,7 @@ import { SpecialLayouts } from './SpecialLayouts'
 import { FieldSourcePanel } from './FieldSourcePanel'
 import { FieldZones } from './FieldZones'
 
-export function StepLayout({ config, setConfig, models, enumerations = [], relations = [], useCases = [], orderedModels = [] }: any) {
+export function StepLayout({ config, setConfig, models, enumerations = [], relations = [], useCases = [], orderedModels = [], virtualFields = [] }: any) {
   const { t } = useI18n()
   const { toast } = useToast()
   const [expandedCustomSlot, setExpandedCustomSlot] = useState<number | null>(null)
@@ -269,11 +269,12 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
           }
         } else {
           const isVirtualTool = id === 'virtual_calc_tool';
-          const fieldId = isVirtualTool ? `virt_${Math.random().toString(36).substring(2, 10)}` : id;
+          const isSavedVirtualField = id.startsWith('virtdef_');
+          const fieldId = (isVirtualTool || isSavedVirtualField) ? `virt_${Math.random().toString(36).substring(2, 10)}` : id;
 
           // Achar o campo no modelo para validar
           let fieldObj: any = null
-          if (!isVirtualTool) {
+          if (!isVirtualTool && !isSavedVirtualField) {
             for (const m of models) {
               fieldObj = m.fields.find((f: any) => f.id === fieldId)
               if (fieldObj) break
@@ -303,7 +304,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
             currentFields.push(fieldId)
 
             const newMetadata = { ...(config.layout_config.fields_metadata || {}) }
-            if (isVirtualTool) {
+            if (isVirtualTool || isSavedVirtualField) {
               let assignedModelId = null;
               if (targetZone === 'form_fields' && overIdStr.startsWith('droppable-form-')) {
                 assignedModelId = overIdStr.replace('droppable-form-', '');
@@ -319,11 +320,56 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                 if (!assignedModelId && droppedOnFieldId.startsWith('virt_')) {
                   assignedModelId = config.layout_config.fields_metadata?.[droppedOnFieldId]?.virtual_model_id || null;
                 }
+              } else if (targetZone === 'grid_fields' || targetZone === 'filter_fields') {
+                assignedModelId = config.model_id || (models[0]?.id ?? null);
+              }
+
+              let labelText = 'Campo Calculado';
+              let formulaTokens: any[] = [];
+
+              if (isSavedVirtualField) {
+                const defId = id.replace('virtdef_', '');
+                const savedDef = virtualFields.find((v: any) => v.id === defId);
+                if (savedDef) {
+                  labelText = savedDef.display_name || savedDef.name;
+                  formulaTokens = [...(savedDef.formula_tokens || [])];
+
+                  // SMART RESOLUTION
+                  if (assignedModelId) {
+                    const targetModel = models.find((m: any) => m.id === assignedModelId);
+                    if (targetModel) {
+                      formulaTokens = formulaTokens.map(token => {
+                        if (token.type === 'field' && !token.value.startsWith('virt:')) {
+                          const originalFieldId = token.value;
+                          let originalColName = null;
+                          for (const mm of models) {
+                            const f = mm.fields?.find((ff: any) => ff.id === originalFieldId);
+                            if (f) {
+                              originalColName = f.db_column_name;
+                              break;
+                            }
+                          }
+                          if (originalColName) {
+                            const targetField = targetModel.fields?.find((f: any) => f.db_column_name === originalColName);
+                            if (targetField) {
+                              return {
+                                ...token,
+                                value: targetField.id,
+                                label: `${targetModel.display_name || targetModel.db_table_name}: ${targetField.display_name || targetField.db_column_name}`
+                              };
+                            }
+                          }
+                        }
+                        return token;
+                      });
+                    }
+                  }
+                }
               }
 
               newMetadata[fieldId] = {
-                label: { text: 'Campo Calculado', show: true, position: 'top', width: 'auto' },
-                content: { readonly: true, formula_tokens: [] },
+                label: { text: labelText, show: true, position: 'top', width: 'auto' },
+                content: { readonly: true, formula_tokens: formulaTokens },
                 component: { type: 'virtual_calc', rel_table: '', rel_value: '', rel_label: '', fixed_options: '' },
                 viacep: { enabled: false },
                 virtual_model_id: assignedModelId
@@ -749,6 +795,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
             orderedModels={orderedModels}
             collapsedTables={collapsedTables}
             setCollapsedTables={setCollapsedTables}
+            virtualFields={virtualFields || []}
           />
           <div className="flex-1 space-y-10 min-w-0">
             <SpecialLayouts

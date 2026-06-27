@@ -61,7 +61,7 @@ export function UseCaseBuilderWizard({
   const {
     models, enumerations, relations, useCases, bpmWorkflows,
     isLoading, isDownloadsActive,
-    currentProjectId, currentWorkspaceId
+    currentProjectId, currentWorkspaceId, virtualFields
   } = useWizardData({ projectSlug: project_slug })
 
   // ── Telemetry ────────────────────────────────────────────────────────────────
@@ -479,7 +479,7 @@ export function UseCaseBuilderWizard({
           <StepTables config={config} setConfig={setConfig} models={models} relations={relations} />
         ) : null}
         {currentStep === 3 && (
-          <StepLayout config={config} setConfig={setConfig} models={models} enumerations={enumerations} relations={relations} useCases={useCases} orderedModels={orderedModels} />
+          <StepLayout config={config} setConfig={setConfig} models={models} enumerations={enumerations} relations={relations} useCases={useCases} orderedModels={orderedModels} virtualFields={virtualFields} />
         )}
         {currentStep === 4 && (
           <StepActions config={config} setConfig={setConfig} models={models} useCases={useCases} isDownloadsActive={isDownloadsActive} bpmWorkflows={bpmWorkflows} relations={relations} />

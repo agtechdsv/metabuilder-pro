@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Settings2, Database, Table, Columns, Search, ArrowRight, Type, Hash, Calendar, List, Link as LinkIcon, ToggleLeft, ArrowLeft, ScrollText } from 'lucide-react'
+import { Settings2, Database, Table, Columns, Search, ArrowRight, Type, Hash, Calendar, List, Link as LinkIcon, ToggleLeft, ArrowLeft, ScrollText, FunctionSquare } from 'lucide-react'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { FieldSettingsModal } from './FieldSettingsModal'
 import ProjectLogsTab from '@/components/studio/ProjectLogs/ProjectLogsTab'
+import { CalculatedFieldsTab } from './CalculatedFieldsTab'
 
 interface SettingsDashboardClientProps {
   workspace: any
@@ -34,7 +35,7 @@ export function SettingsDashboardClient({
   const { toast } = useToast()
   const supabase = createClient()
   
-  const [activeTab, setActiveTab] = useState<'fields' | 'global'>('fields')
+  const [activeTab, setActiveTab] = useState<'fields' | 'calculated' | 'global'>('fields')
   const [selectedModelId, setSelectedModelId] = useState<string | null>(models.length > 0 ? models[0].id : null)
   const [searchQuery, setSearchQuery] = useState('')
   
@@ -124,6 +125,12 @@ export function SettingsDashboardClient({
               className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'fields' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
             >
               <Columns className="w-4 h-4" /> Defaults dos Campos
+            </button>
+            <button 
+              onClick={() => setActiveTab('calculated')}
+              className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'calculated' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
+            >
+              <FunctionSquare className="w-4 h-4" /> Campos Calculados
             </button>
             <button 
               onClick={() => setActiveTab('global')}
@@ -270,6 +277,10 @@ export function SettingsDashboardClient({
               )}
             </div>
           </div>
+        )}
+
+        {activeTab === 'calculated' && (
+          <CalculatedFieldsTab project={project} models={models} />
         )}
 
         {activeTab === 'global' && (

@@ -1,11 +1,11 @@
-﻿import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { Plus, Search, ChevronDown, ChevronUp, Table } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { DraggableItem } from './dnd'
 
 export function FieldSourcePanel({
   dragControls, t, fieldSearchTerm, setFieldSearchTerm,
-  formTree, orderedModels, collapsedTables, setCollapsedTables
+  formTree, orderedModels, collapsedTables, setCollapsedTables, virtualFields = []
 }: any) {
   return (
           <div className="w-full xl:w-80 shrink-0">
@@ -49,18 +49,38 @@ export function FieldSourcePanel({
                       Ferramentas Virtuais
                     </h4>
                   </div>
-                  <div className="p-4 pt-2">
+                  <div className="p-4 pt-2 flex flex-col gap-2">
+                    {/* Generic empty calc field tool */}
                     <DraggableItem id="source-virtual_calc_tool" className="bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/50 p-3 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-indigo-400 dark:hover:border-indigo-500 transition-all shadow-sm">
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
                           <span className="text-indigo-600 dark:text-indigo-400 font-black text-[10px]">fx</span>
                         </div>
                         <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
-                          Campo Calculado
+                          Campo Calculado (em branco)
                         </span>
                       </div>
                       <Plus className="w-3.5 h-3.5 text-indigo-300 group-hover:text-indigo-500 transition-all" />
                     </DraggableItem>
+
+                    {/* Saved virtual fields from project settings */}
+                    {virtualFields.map((vf: any) => (
+                      <DraggableItem
+                        key={`source-virtdef_${vf.id}`}
+                        id={`source-virtdef_${vf.id}`}
+                        className="bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/50 p-3 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-emerald-400 dark:hover:border-emerald-500 transition-all shadow-sm"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-black text-[10px]">∑</span>
+                          </div>
+                          <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 truncate">
+                            {vf.display_name || vf.name}
+                          </span>
+                        </div>
+                        <Plus className="w-3.5 h-3.5 text-emerald-300 group-hover:text-emerald-500 transition-all" />
+                      </DraggableItem>
+                    ))}
                   </div>
                 </div>
 

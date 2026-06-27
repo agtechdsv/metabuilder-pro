@@ -162,16 +162,6 @@ export function FieldSettingsModal({
               ESTILOS
               {activeTab === 'estilos' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
             </button>
-            <button
-              onClick={() => setActiveTab('logica')}
-              className={cn(
-                "px-8 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
-                activeTab === 'logica' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
-              )}
-            >
-              FÓRMULA
-              {activeTab === 'logica' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
-            </button>
           </div>
         </div>
 
