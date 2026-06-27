@@ -637,6 +637,19 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
     return createDefaultFieldMeta(fid, models)
   }
 
+  const reloadFieldDefaults = (fid: string) => {
+    const newFieldsMetadata = { ...(config.layout_config.fields_metadata || {}) }
+    newFieldsMetadata[fid] = createDefaultFieldMeta(fid, models)
+    setConfig({
+      ...config,
+      layout_config: {
+        ...config.layout_config,
+        fields_metadata: newFieldsMetadata
+      }
+    })
+    toast(t('common.success', 'Padrões restaurados com sucesso!'), 'success')
+  }
+
   const currentFieldMeta = editingFieldId ? getFieldMeta(editingFieldId, editingFieldZone) : null
 
   const updateMeta = (section: 'label' | 'content' | 'component' | 'viacep', key: string, value: any) => {
@@ -912,6 +925,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
         editingTabId={editingTabId}
         editingFieldZone={editingFieldZone}
         handleApplyStylesToZone={handleApplyStylesToZone}
+        reloadFieldDefaults={reloadFieldDefaults}
         t={t}
       />
 

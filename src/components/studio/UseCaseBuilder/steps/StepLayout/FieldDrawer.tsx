@@ -1,6 +1,6 @@
 import { Drawer } from '@/components/ui/Drawer'
 import { cn } from '@/lib/utils'
-import { Plus, Copy } from 'lucide-react'
+import { Plus, Copy, RefreshCw } from 'lucide-react'
 import FormulaBuilder from '../../../FormulaBuilder'
 import { getModelsWithRelations } from '@/lib/relationPathFinder'
 
@@ -8,7 +8,7 @@ export function FieldDrawer({
   isDrawerOpen, setIsDrawerOpen, editingFieldId, getFieldName,
   currentFieldMeta, drawerActiveTab, setDrawerActiveTab,
   updateMeta, config, setConfig, models, relations,
-  enumerations, editingTabId, editingFieldZone, handleApplyStylesToZone, t
+  enumerations, editingTabId, editingFieldZone, handleApplyStylesToZone, reloadFieldDefaults, t
 }: any) {
   return (
 
@@ -54,7 +54,16 @@ export function FieldDrawer({
               </div>
             )}
 
-            <div className="space-y-8 pb-20">
+            {editingFieldId !== 'TABS' && (
+              <div className="flex justify-end px-6 mt-3">
+                 <button onClick={() => reloadFieldDefaults(editingFieldId)} className="text-[9px] text-indigo-500 font-bold hover:underline flex items-center gap-1.5 transition-all opacity-80 hover:opacity-100">
+                   <RefreshCw className="w-3 h-3" />
+                   Restaurar Padrões Globais
+                 </button>
+              </div>
+            )}
+
+            <div className="space-y-8 pb-20 pt-3">
               {editingFieldId === 'TABS' && (
                 <>
 

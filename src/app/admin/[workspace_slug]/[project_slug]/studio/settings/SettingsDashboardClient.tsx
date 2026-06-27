@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Settings2, Database, Table, Columns, Search, ArrowRight, Type, Hash, Calendar, List, Link as LinkIcon, ToggleLeft, ArrowLeft, ScrollText, FunctionSquare } from 'lucide-react'
+import { Settings2, Database, Table, Columns, Search, ArrowRight, Type, Hash, Calendar, List, Link as LinkIcon, ToggleLeft, ArrowLeft, ScrollText, FunctionSquare, RefreshCw } from 'lucide-react'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/Toast'
 import { FieldSettingsModal } from './FieldSettingsModal'
 import ProjectLogsTab from '@/components/studio/ProjectLogs/ProjectLogsTab'
 import { CalculatedFieldsTab } from './CalculatedFieldsTab'
+import { UpdateUseCasesModal } from './UpdateUseCasesModal'
 
 interface SettingsDashboardClientProps {
   workspace: any
@@ -42,6 +43,8 @@ export function SettingsDashboardClient({
   // States for Drawer
   const [selectedField, setSelectedField] = useState<any>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
+  const [updateTargetField, setUpdateTargetField] = useState<any>(null)
 
   // Handlers for Drawer
   const handleOpenDrawer = (field: any) => {
@@ -231,9 +234,22 @@ export function SettingsDashboardClient({
                               </div>
                               <div className="flex items-center gap-2">
                                 {hasCustomDefaults && (
-                                  <span className="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 text-[9px] font-bold rounded uppercase tracking-wider">
-                                    Customizado
-                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setUpdateTargetField(field)
+                                        setIsUpdateModalOpen(true)
+                                      }}
+                                      title="Atualizar Casos de Uso"
+                                      className="p-1 rounded-md text-indigo-500 hover:text-white hover:bg-indigo-600 transition-colors"
+                                    >
+                                      <RefreshCw className="w-3 h-3" />
+                                    </button>
+                                    <span className="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 text-[9px] font-bold rounded uppercase tracking-wider">
+                                      Customizado
+                                    </span>
+                                  </div>
                                 )}
                                 <div className="w-6 h-6 bg-white dark:bg-neutral-800 rounded-full shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity translate-x-2 group-hover:translate-x-0">
                                   <ArrowRight className="w-3 h-3 text-indigo-600" />
@@ -304,6 +320,13 @@ export function SettingsDashboardClient({
           project_slug={project_slug}
         />
       )}
+
+      <UpdateUseCasesModal
+        isOpen={isUpdateModalOpen}
+        onClose={() => setIsUpdateModalOpen(false)}
+        field={updateTargetField}
+        models={models}
+      />
     </>
   )
 }
