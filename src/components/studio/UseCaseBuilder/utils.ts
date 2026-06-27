@@ -51,7 +51,17 @@ export function getFormattedFieldName(id: string, models: Model[]): string {
  * metadata entries.
  */
 export function createDefaultFieldMeta(fid: string, models: Model[]): FieldMeta {
-  return {
+  let dbDefaults = null
+
+  for (const m of models) {
+    const f = (m.fields ?? []).find((f: Field) => f.id === fid)
+    if (f && f.widget_options && Object.keys(f.widget_options).length > 0) {
+      dbDefaults = f.widget_options
+      break
+    }
+  }
+
+  const baseMeta: FieldMeta = {
     label: {
       text: getFormattedFieldName(fid, models),
       font: 'Inter',
@@ -84,6 +94,20 @@ export function createDefaultFieldMeta(fid: string, models: Model[]): FieldMeta 
       uf: ''
     }
   }
+
+  // Se houver defaults salvos no DB, faz o merge profundo (para os níveis principais)
+  if (dbDefaults) {
+    return {
+      ...baseMeta,
+      ...dbDefaults,
+      label: { ...baseMeta.label, ...(dbDefaults.label || {}) },
+      content: { ...baseMeta.content, ...(dbDefaults.content || {}) },
+      component: { ...baseMeta.component, ...(dbDefaults.component || {}) },
+      viacep: { ...baseMeta.viacep, ...(dbDefaults.viacep || {}) }
+    }
+  }
+
+  return baseMeta
 }
 
 /**

@@ -40,7 +40,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps
       active: pathname.includes('/studio/auth')
     },
     {
-      href: `#`, // placeholder
+      href: `/admin/${workspaceSlug}/${projectSlug}/studio/settings`,
       icon: Settings2,
       label: t('dashboard.projects.studio.sidebar.settings'),
       active: pathname.includes('/studio/settings')

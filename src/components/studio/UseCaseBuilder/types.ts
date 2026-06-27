@@ -18,6 +18,7 @@ export interface Field {
   is_visible_in_list?: boolean
   is_visible_in_form?: boolean
   is_searchable?: boolean
+  widget_options?: any
 }
 
 export interface Model {
