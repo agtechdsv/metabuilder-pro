@@ -65,14 +65,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
     return formatLabelText(id)
   }
 
-  function createDefaultFieldMeta(fid: string) {
-    return {
-      label: { text: getFormattedFieldName(fid), font: 'Inter', size: '10px', color: '' },
-      content: { font: 'Inter', size: '12px', color: '', mask: '', required: false, readonly: false },
-      component: { type: 'text', rows: 3, width: '100%', options_type: 'relational', fixed_options: '', rel_table: '', rel_label: '', rel_value: '' },
-      viacep: { enabled: false, logradouro: '', bairro: '', cidade: '', uf: '' }
-    }
-  }
+
 
   // ââ€â‚¬ââ€â‚¬ââ€â‚¬ Santo Graal helpers para Personalizado ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬
   // Retorna todos os models alcançáveis a partir de um model_id via BFS do Santo Graal.
@@ -576,7 +569,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
 
     if (meta) return meta
 
-    return createDefaultFieldMeta(fid)
+    return createDefaultFieldMeta(fid, models)
   }
 
   const currentFieldMeta = editingFieldId ? getFieldMeta(editingFieldId, editingFieldZone) : null
@@ -720,7 +713,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                   ...(config.layout_config.filter_fields || []),
                 ])
                 allFieldIds.forEach(fid => {
-                  newFieldsMeta[fid] = createDefaultFieldMeta(fid)
+                  newFieldsMeta[fid] = createDefaultFieldMeta(fid, models)
                 })
 
                 setConfig({
