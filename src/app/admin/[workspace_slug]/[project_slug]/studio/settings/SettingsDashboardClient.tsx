@@ -326,6 +326,7 @@ export function SettingsDashboardClient({
         onClose={() => setIsUpdateModalOpen(false)}
         field={updateTargetField}
         models={models}
+        project={project}
       />
     </>
   )

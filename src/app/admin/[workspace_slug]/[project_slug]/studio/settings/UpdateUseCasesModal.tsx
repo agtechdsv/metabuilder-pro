@@ -13,9 +13,10 @@ interface UpdateUseCasesModalProps {
   onClose: () => void
   field: any
   models: any[]
+  project: any
 }
 
-export function UpdateUseCasesModal({ isOpen, onClose, field, models }: UpdateUseCasesModalProps) {
+export function UpdateUseCasesModal({ isOpen, onClose, field, models, project }: UpdateUseCasesModalProps) {
   const { toast } = useToast()
   const supabase = createClient()
   
@@ -25,7 +26,7 @@ export function UpdateUseCasesModal({ isOpen, onClose, field, models }: UpdateUs
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    if (!isOpen || !field) return
+    if (!isOpen || !field || !project) return
 
     const loadUseCases = async () => {
       setIsLoading(true)
@@ -33,8 +34,7 @@ export function UpdateUseCasesModal({ isOpen, onClose, field, models }: UpdateUs
         const { data, error } = await supabase
           .from('ui_views')
           .select('id, name, slug, draft_config, logic_type')
-          .eq('project_id', field.project_id)
-          .eq('is_deleted', false)
+          .eq('project_id', project.id)
           
         if (error) throw error
 
