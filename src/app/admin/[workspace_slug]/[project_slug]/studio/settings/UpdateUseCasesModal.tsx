@@ -33,7 +33,7 @@ export function UpdateUseCasesModal({ isOpen, onClose, field, models, project }:
       try {
         const { data, error } = await supabase
           .from('ui_views')
-          .select('id, name, slug, draft_config, layout_config, logic_type')
+          .select('*')
           .eq('project_id', project.id)
           
         if (error) throw error
@@ -90,7 +90,20 @@ export function UpdateUseCasesModal({ isOpen, onClose, field, models, project }:
       const newFieldMeta = createDefaultFieldMeta(field.id, models)
 
       for (const uc of selectedUCs) {
-        const currentDraft = uc.draft_config || { layout_config: uc.layout_config || {} }
+        const currentDraft = uc.draft_config || {
+          name: uc.name,
+          slug: uc.slug,
+          logic_type: uc.logic_type,
+          has_arguments: uc.has_arguments,
+          tables_config: uc.tables_config,
+          query_type: uc.query_type,
+          custom_query: uc.custom_query,
+          layout_config: uc.layout_config || {},
+          buttons_config: uc.buttons_config,
+          model_id: uc.model_id,
+          project_id: uc.project_id,
+          view_type: uc.view_type
+        }
         const layoutConfig = currentDraft.layout_config || {}
         const fieldsMetadata = layoutConfig.fields_metadata || {}
 
