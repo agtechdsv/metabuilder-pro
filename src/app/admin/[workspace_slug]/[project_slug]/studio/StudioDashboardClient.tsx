@@ -585,6 +585,22 @@ export function StudioDashboardClient({
     }
   }
 
+  const handleDiscardDraft = async (view: any) => {
+    try {
+      const { error } = await supabase
+        .from('ui_views')
+        .update({ draft_config: null })
+        .eq('id', view.id)
+
+      if (error) throw error
+
+      toast('Rascunho descartado com sucesso!', 'success')
+      router.refresh()
+    } catch (err: any) {
+      toast('Erro ao descartar rascunho: ' + err.message, 'error')
+    }
+  }
+
   const handleToggleDownloads = async () => {
     try {
       const newActiveState = !isDownloadsActive
@@ -1235,17 +1251,29 @@ export function StudioDashboardClient({
                       {canCreate ? (
                         <>
                           {(view.draft_config || !view.layout_config || Object.keys(view.layout_config).length === 0 || view.status === 'draft') && (
-                            <button
-                              onClick={() => {
-                                setViewToPublish(view)
-                                setIsPublishModalOpen(true)
-                              }}
-                              className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 rounded-2xl border border-emerald-200 dark:border-emerald-500/30 transition-all text-emerald-600 dark:text-emerald-500 shadow-sm group/publish-draft"
-                              title="Publicar Alterações"
-                            >
-                              <UploadCloud className="w-5 h-5 group-hover/publish-draft:scale-110 transition-transform" />
-                              <span className="text-xs font-bold">Publicar</span>
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  setViewToPublish(view)
+                                  setIsPublishModalOpen(true)
+                                }}
+                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 rounded-2xl border border-emerald-200 dark:border-emerald-500/30 transition-all text-emerald-600 dark:text-emerald-500 shadow-sm group/publish-draft"
+                                title="Publicar Alterações"
+                              >
+                                <UploadCloud className="w-5 h-5 group-hover/publish-draft:scale-110 transition-transform" />
+                                <span className="text-xs font-bold">Publicar</span>
+                              </button>
+                              
+                              {view.draft_config && view.status !== 'draft' && (
+                                <button
+                                  onClick={() => handleDiscardDraft(view)}
+                                  className="w-[42px] shrink-0 flex items-center justify-center bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 rounded-2xl border border-rose-200 dark:border-rose-500/30 transition-all text-rose-600 dark:text-rose-500 shadow-sm"
+                                  title="Descartar Rascunho"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
                           )}
                           <div className="flex gap-3">
                             <button

@@ -53,7 +53,7 @@ export default async function SettingsDashboard({ params }: SettingsDashboardPro
     .eq('project_id', project.id)
 
   const { data: enumerations } = await supabase
-    .from('enumerations')
+    .from('project_enumerations')
     .select('id, name, values')
     .eq('project_id', project.id)
 
