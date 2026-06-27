@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Save, Plus } from 'lucide-react'
+import { Save, Plus, X } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
@@ -95,9 +95,9 @@ export function FieldSettingsModal({
       onClose={onClose} 
       title={`Defaults: ${field.display_name || field.db_column_name}`}
       hideHeader
-      size="5xl"
+      size="4xl"
     >
-      <div className="flex flex-col h-[85vh] bg-[#f8f9fc] dark:bg-[#030303] overflow-hidden rounded-b-[2rem]">
+      <div className="flex flex-col h-[85vh] bg-[#f8f9fc] dark:bg-[#030303] overflow-hidden rounded-[2rem]">
         {/* Header (Custom) */}
         <div className="sticky top-0 z-30 bg-white/80 dark:bg-[#080808]/80 backdrop-blur-xl px-10 py-4 border-b border-neutral-200 dark:border-neutral-800 space-y-4 rounded-t-[2rem]">
           <section className="flex items-center justify-between">
@@ -113,18 +113,29 @@ export function FieldSettingsModal({
               </div>
             </div>
 
-            <button 
-              onClick={handleSave}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-6 h-12 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
-            >
-              {isSaving ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              {isSaving ? 'Salvando...' : 'Salvar Padrões'}
-            </button>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-6 h-12 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
+              >
+                {isSaving ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {isSaving ? 'Salvando...' : 'Salvar Padrões'}
+              </button>
+              
+              <div className="w-px h-8 bg-neutral-200 dark:bg-neutral-800 hidden sm:block"></div>
+              
+              <button
+                onClick={onClose}
+                className="w-12 h-12 flex items-center justify-center rounded-2xl bg-neutral-100 dark:bg-neutral-900 text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </section>
 
           {/* Tabs */}
