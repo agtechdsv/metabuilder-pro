@@ -664,25 +664,6 @@ export function StudioDashboardClient({
                     >
                       <Database className="w-3.5 h-3.5" /> {t('dashboard.projects.studio.tabs.enums')}
                     </button>
-                    <button 
-                      onClick={() => setViewMode('metadata')}
-                      className={cn(
-                        "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
-                        viewMode === 'metadata' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
-                      )}
-                     >
-                       <Table className="w-3.5 h-3.5" /> {t('dashboard.projects.studio.tabs.table_fields')}
-                     </button>
-                     <button 
-                      onClick={() => setViewMode('relations')}
-                      className={cn(
-                        "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
-                        viewMode === 'relations' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
-                      )}
-                     >
-                       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                       Relacionamentos
-                     </button>
                      <button 
                       onClick={() => setViewMode('security')}
                       className={cn(
@@ -861,21 +842,6 @@ export function StudioDashboardClient({
           <div className="">
             <EnumerationsClient 
               project={project}
-            />
-          </div>
-        ) : viewMode === 'metadata' ? (
-          <div className="">
-            <TableFieldsManager
-              project={project}
-              models={models}
-              onSaveSuccess={() => router.refresh()}
-            />
-          </div>
-        ) : viewMode === 'relations' ? (
-          <div className="">
-            <RelationsManager
-              project={project}
-              models={models}
             />
           </div>
         ) : viewMode === 'security' ? (

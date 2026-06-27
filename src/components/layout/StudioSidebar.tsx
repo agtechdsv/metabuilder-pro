@@ -28,7 +28,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps
       active: pathname === `/admin/${workspaceSlug}/${projectSlug}/studio`
     },
     {
-      href: `#`, // placeholder
+      href: `/admin/${workspaceSlug}/${projectSlug}/studio/data`,
       icon: Database,
       label: t('dashboard.projects.studio.sidebar.data'),
       active: pathname.includes('/studio/data')
