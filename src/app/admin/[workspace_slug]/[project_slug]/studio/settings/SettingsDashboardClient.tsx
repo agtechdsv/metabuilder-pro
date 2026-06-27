@@ -92,6 +92,7 @@ export function SettingsDashboardClient({
       <Breadcrumbs 
         workspaceName={workspace?.name}
         projectName={project?.name}
+        workspaceSlug={workspace_slug}
         projectSlug={project_slug}
         viewName="Configurações do Projeto"
       />
