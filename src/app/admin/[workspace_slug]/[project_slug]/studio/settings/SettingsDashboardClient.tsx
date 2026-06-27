@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Settings2, Database, Table, Columns, Search, ArrowRight, Type, Hash, Calendar, List, Link as LinkIcon, ToggleLeft, ArrowLeft } from 'lucide-react'
+import { Settings2, Database, Table, Columns, Search, ArrowRight, Type, Hash, Calendar, List, Link as LinkIcon, ToggleLeft, ArrowLeft, ScrollText } from 'lucide-react'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { FieldSettingsModal } from './FieldSettingsModal'
+import ProjectLogsTab from '@/components/studio/ProjectLogs/ProjectLogsTab'
 
 interface SettingsDashboardClientProps {
   workspace: any
@@ -125,11 +126,10 @@ export function SettingsDashboardClient({
               <Columns className="w-4 h-4" /> Defaults dos Campos
             </button>
             <button 
-              disabled
-              className="flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all text-neutral-300 dark:text-neutral-700 cursor-not-allowed"
-              title="Em breve"
+              onClick={() => setActiveTab('global')}
+              className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'global' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
             >
-              <Settings2 className="w-4 h-4" /> Configurações Globais
+              <ScrollText className="w-4 h-4" /> Configurações Globais
             </button>
           </div>
         </div>
@@ -269,6 +269,12 @@ export function SettingsDashboardClient({
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'global' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <ProjectLogsTab project={project} />
           </div>
         )}
       </main>
