@@ -585,6 +585,25 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
       currentFields.splice(index, 1)
     } else {
       currentFields.push(fieldId)
+      
+      const isAnywhere = 
+        (config.layout_config.form_fields || []).includes(fieldId) || 
+        (config.layout_config.grid_fields || []).includes(fieldId) || 
+        (config.layout_config.filter_fields || []).includes(fieldId);
+      
+      if (!isAnywhere) {
+        const newMetadata = { ...(config.layout_config.fields_metadata || {}) }
+        newMetadata[fieldId] = createDefaultFieldMeta(fieldId, models)
+        setConfig({
+          ...config,
+          layout_config: {
+            ...config.layout_config,
+            [zone]: currentFields,
+            fields_metadata: newMetadata
+          }
+        })
+        return
+      }
     }
 
     setConfig({

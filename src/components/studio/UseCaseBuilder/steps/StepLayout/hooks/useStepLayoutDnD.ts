@@ -6,6 +6,7 @@ import {
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
+import { createDefaultFieldMeta } from '../../../utils'
 
 export function useStepLayoutDnD(config: any, setConfig: any, models: any[]) {
   const { toast } = useToast()
@@ -57,12 +58,22 @@ export function useStepLayoutDnD(config: any, setConfig: any, models: any[]) {
           const newFields = [...currentFields]
           let addedCount = 0
 
+          const newMetadata = { ...(config.layout_config.fields_metadata || {}) }
           fieldIdsToAdd.forEach((fid: string) => {
             if (!newFields.includes(fid)) {
               if (targetZone === 'filter_fields' && (!config.has_arguments || config.logic_type === 'cadastro')) return
               if (targetZone === 'form_fields' && config.logic_type === 'pesquisa') return
               newFields.push(fid)
               addedCount++
+
+              const isAnywhere = 
+                (config.layout_config.form_fields || []).includes(fid) || 
+                (config.layout_config.grid_fields || []).includes(fid) || 
+                (config.layout_config.filter_fields || []).includes(fid);
+              
+              if (!isAnywhere) {
+                newMetadata[fid] = createDefaultFieldMeta(fid, models)
+              }
             }
           })
 
@@ -71,7 +82,8 @@ export function useStepLayoutDnD(config: any, setConfig: any, models: any[]) {
               ...config,
               layout_config: {
                 ...config.layout_config,
-                [targetZone]: newFields
+                [targetZone]: newFields,
+                fields_metadata: newMetadata
               }
             })
             toast(`${addedCount} campos permitidos da tabela "${model.display_name || model.db_table_name}" adicionados com sucesso!`, 'success')
@@ -138,6 +150,17 @@ export function useStepLayoutDnD(config: any, setConfig: any, models: any[]) {
                 component: { type: 'virtual_calc', rel_table: '', rel_value: '', rel_label: '', fixed_options: '' },
                 viacep: { enabled: false },
                 virtual_model_id: assignedModelId
+              }
+            } else {
+              // Se é um campo padrão e não está em nenhuma outra zona,
+              // forçamos o recarregamento dos defaults do DB para aplicar configurações recentes feitas no /studio/settings
+              const isAnywhere = 
+                (config.layout_config.form_fields || []).includes(fieldId) || 
+                (config.layout_config.grid_fields || []).includes(fieldId) || 
+                (config.layout_config.filter_fields || []).includes(fieldId);
+              
+              if (!isAnywhere) {
+                newMetadata[fieldId] = createDefaultFieldMeta(fieldId, models);
               }
             }
 
