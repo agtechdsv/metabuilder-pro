@@ -790,7 +790,8 @@
       "zero_trust": "Zero-Trust",
       "bpm": "BPM & Automation",
       "sync_resolution": "Auto Sync",
-      "source_code": "Source Code (Export)"
+      "source_code": "Source Code (Export)",
+      "logs": "Audit & Logs (CLI)"
     },
     "hero": {
       "badge": "The Software Engine of the Future",
@@ -1020,6 +1021,21 @@
         "block2_desc": "Started building screens via the MetaBuilder visual interface, but complexity increased? No problem. Export the entire source code and continue development in VSCode with your team. Zero lock-in.",
         "footer_title": "Total Sovereignty.",
         "footer_desc": "Unlike traditional no-code platforms, you have unrestricted access to every line of generated code. Create your app's infrastructure and intelligence here, and take the code anywhere."
+      },
+      "logs": {
+        "hero_title": "Auditing & Logs.",
+        "hero_title_highlight": "Total Transparency.",
+        "hero_desc": "Monitor everything in real time. With support for client-local logging or direct database logging, you have total control over tunnel traffic, BPM executions, and SQL mutations.",
+        "tech_title": "Advanced Traceability",
+        "tech_desc": "Configure custom retention policies, select which log types are stored, and visualize them through a premium interface inside the dashboard.",
+        "tag_realtime": "Real-time",
+        "tag_security": "Max Security",
+        "block1_title": "Dual Mode: Database or File",
+        "block1_desc": "Choose where you want to write your logs. Save them in a structured table on the client's database for integrated dashboard viewing, or output them to daily rotated local files on the client's server for offline external audits.",
+        "block2_title": "Zero Lock-In & Performance",
+        "block2_desc": "Local auditing is processed ultra-fast by the Tunnel CLI binary. Define retention policies to automatically purge old records and keep database query performance fully optimized.",
+        "footer_title": "Absolute control over your data.",
+        "footer_desc": "Whether debugging a complex business rule in BPM, monitoring heavy write queries, or auditing final user access, our logging engine provides the transparency required for robust operations."
       }
     },
     "use_cases_page": {

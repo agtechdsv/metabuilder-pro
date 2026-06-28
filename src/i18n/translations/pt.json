@@ -790,7 +790,8 @@
       "zero_trust": "Zero-Trust",
       "bpm": "BPM & Automação",
       "sync_resolution": "Sync Automático",
-      "source_code": "Código Fonte (Export)"
+      "source_code": "Código Fonte (Export)",
+      "logs": "Auditoria & Logs (CLI)"
     },
     "hero": {
       "badge": "A Engine de Software do Futuro",
@@ -1020,6 +1021,21 @@
         "block2_desc": "Começou construindo as telas via interface visual do MetaBuilder, mas a complexidade aumentou? Sem problemas. Exporte o código fonte inteiro e continue o desenvolvimento no VSCode com sua equipe. O lock-in é zero.",
         "footer_title": "Soberania Total.",
         "footer_desc": "Diferente das plataformas no-code tradicionais, você possui acesso irrestrito a cada linha de código gerada. Crie a infraestrutura e a inteligência do seu app aqui, e leve o código para qualquer lugar."
+      },
+      "logs": {
+        "hero_title": "Auditoria & Logs.",
+        "hero_title_highlight": "Transparência Total.",
+        "hero_desc": "Monitore tudo em tempo real. Com suporte a logs locais no cliente ou direto no banco de dados, você tem controle total sobre o tráfego do túnel, execuções de BPM e mutações SQL.",
+        "tech_title": "Rastreabilidade Avançada",
+        "tech_desc": "Configure retenção customizada, selecione os tipos de logs gravados e visualize em uma interface premium direto no painel.",
+        "tag_realtime": "Tempo Real",
+        "tag_security": "Segurança Máxima",
+        "block1_title": "Gravação Dual: Banco ou Arquivo",
+        "block1_desc": "Escolha onde quer gravar os seus logs. Salve de forma estruturada no banco de dados do cliente para visualização integrada no dashboard, ou direcione tudo para arquivos locais rotacionados diariamente no servidor do cliente para auditorias externas offline.",
+        "block2_title": "Zero Lock-In & Performance",
+        "block2_desc": "A auditoria local é processada de forma ultra rápida pelo binário do Túnel CLI. Defina políticas de retenção para expurgar registros antigos de forma automática e manter a performance de consultas ao banco sempre otimizadas.",
+        "footer_title": "Controle absoluto sobre seus dados.",
+        "footer_desc": "Seja depurando uma regra de negócio complexa no BPM, monitorando queries pesadas de escrita ou auditando o acesso de usuários finais, nossa engine de logs oferece a transparência necessária para operações robustas."
       }
     },
     "use_cases_page": {

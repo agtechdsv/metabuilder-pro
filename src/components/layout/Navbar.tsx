@@ -87,6 +87,9 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
                     <Link href="/features/sync-resolution" className="px-4 py-2 rounded-xl text-xs font-bold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
                       <span className="bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">{t('marketing_v2.navbar.sync_resolution')}</span>
                     </Link>
+                    <Link href="/features/logs" className="px-4 py-2 rounded-xl text-xs font-bold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+                      <span className="bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">{t('marketing_v2.navbar.logs')}</span>
+                    </Link>
                     <Link href="/features/speed" className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">{t('marketing_v2.navbar.speed')}</Link>
                     <Link href="/features/integration" className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">{t('marketing_v2.navbar.integration')}</Link>
                     <Link href="/features/use-cases" className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">{t('marketing_v2.navbar.use_cases')}</Link>

@@ -868,7 +868,8 @@
       "zero_trust": "Zero-Trust",
       "bpm": "BPM & Automatización",
       "sync_resolution": "Sync Automático",
-      "source_code": "Código Fuente (Export)"
+      "source_code": "Código Fuente (Export)",
+      "logs": "Auditoría & Logs (CLI)"
     },
     "hero": {
       "badge": "El Motor de Software del Futuro",
@@ -1098,6 +1099,21 @@
         "block2_desc": "¿Empezaste construyendo las pantallas a través de la interfaz visual de MetaBuilder, pero la complejidad aumentó? No hay problema. Exporta todo el código fuente y continúa el desarrollo en VSCode con tu equipo. Cero lock-in.",
         "footer_title": "Soberanía Total.",
         "footer_desc": "A diferencia de las plataformas no-code tradicionales, tienes acceso sin restricciones a cada línea de código generada. Crea la infraestructura e inteligencia de tu app aquí, y lleva el código a cualquier lugar."
+      },
+      "logs": {
+        "hero_title": "Auditoría & Logs.",
+        "hero_title_highlight": "Transparencia Total.",
+        "hero_desc": "Monitoree todo en tiempo real. Con soporte para logs locales en el cliente o directamente en la base de datos, tiene el control total sobre el tráfico del túnel, las ejecuciones de BPM y las mutaciones de SQL.",
+        "tech_title": "Trazabilidad Avanzada",
+        "tech_desc": "Configure la retención personalizada, seleccione los tipos de logs almacenados y visualícelos a través de una interfaz premium dentro del panel.",
+        "tag_realtime": "Tiempo Real",
+        "tag_security": "Máxima Seguridad",
+        "block1_title": "Modo Dual: Base de Datos o Archivo",
+        "block1_desc": "Elija dónde quiere escribir sus logs. Guárdelos en una tabla estructurada en la base de datos del cliente para visualizarlos de forma integrada en el panel, o diríjalos a archivos locales con rotación diaria en el servidor del cliente para auditorías externas offline.",
+        "block2_title": "Cero Lock-In & Rendimiento",
+        "block2_desc": "La auditoría local es procesada ultra rápido por el binario del Túnel CLI. Defina políticas de retención para purgar automáticamente los registros antiguos y mantener el rendimiento de consultas a la base de datos totalmente optimizado.",
+        "footer_title": "Control absoluto sobre sus datos.",
+        "footer_desc": "Ya sea depurando una regla de negocio compleja en BPM, monitoreando consultas de escritura pesadas o auditando el acceso de los usuarios finales, nuestro motor de logs proporciona la transparencia necesaria para operaciones robustas."
       }
     },
     "use_cases_page": {

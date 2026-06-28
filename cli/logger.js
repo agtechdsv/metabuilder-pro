@@ -196,7 +196,7 @@ class Logger {
   async readFileLogs(dateStr, filters = {}) {
     const filename = `tunnel-${dateStr}.log`;
     const filepath = path.join(LOGS_DIR, filename);
-    if (!fs.existsSync(filepath)) return [];
+    if (!fs.existsSync(filepath)) return { rows: [], total: 0 };
 
     const content = await fs.promises.readFile(filepath, 'utf8');
     const lines = content.split('\n').filter(l => l.trim().length > 0);
