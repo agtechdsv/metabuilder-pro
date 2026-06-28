@@ -278,7 +278,18 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
         return; // Ignora o broadcast, outro agente responderá
       }
 
-      console.log(chalk.yellow(`[ EXEC ] Comando Recebido no schema '${expectedSchema}': ${action === 'validate_login' ? 'Validar Login' : (action === 'sync_bpm' ? 'Sincronizar BPM' : `Buscar dados da tabela '${table}'`)}`));
+      let actionDesc = `Executar ${action}`;
+      if (action === 'validate_login') actionDesc = 'Validar Login';
+      else if (action === 'sync_bpm') actionDesc = 'Sincronizar BPM';
+      else if (action === 'read_logs') actionDesc = 'Ler Logs';
+      else if (action === 'get_log_stats') actionDesc = 'Buscar Estatísticas de Logs';
+      else if (action === 'clear_logs') actionDesc = 'Limpar Logs';
+      else if (action === 'sync_log_config') actionDesc = 'Sincronizar Configuração de Logs';
+      else if (action === 'select' || action === 'insert' || action === 'update' || action === 'delete') {
+        actionDesc = `${action.toUpperCase()} na tabela '${table || 'desconhecida'}'`;
+      }
+
+      console.log(chalk.yellow(`[ EXEC ] Comando Recebido no schema '${expectedSchema}': ${actionDesc}`));
 
       try {
         const safeTable = table ? table.replace(/[^a-zA-Z0-9_]/g, '') : '';

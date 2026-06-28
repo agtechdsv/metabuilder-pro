@@ -129,7 +129,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
     } finally {
       setIsLoadingLogs(false)
     }
-  }, [executeTunnelQuery, filterType, filterTable, filterSearch, filterFrom, filterTo, page, toast])
+  }, [executeTunnelQuery, filterType, filterTable, filterSearch, filterFrom, filterTo, logSource, fileDate, page, toast])
 
   // ── Load Stats ────────────────────────────────────────────────────────────
   const loadStats = useCallback(async () => {
