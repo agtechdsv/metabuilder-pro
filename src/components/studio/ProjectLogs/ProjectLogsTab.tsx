@@ -117,8 +117,18 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
         filters.source = 'file'
         filters.date   = fileDate
       } else {
-        if (filterFrom) filters.from = filterFrom
-        if (filterTo)   filters.to   = filterTo
+        if (filterFrom) {
+          try {
+            const d = new Date(filterFrom)
+            if (!isNaN(d.getTime())) filters.from = d.toISOString()
+          } catch (_) {}
+        }
+        if (filterTo) {
+          try {
+            const d = new Date(filterTo)
+            if (!isNaN(d.getTime())) filters.to = d.toISOString()
+          } catch (_) {}
+        }
       }
 
       const resp = await executeTunnelQuery({ action: 'read_logs', filters })
