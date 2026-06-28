@@ -269,9 +269,10 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
       }
       
       // Isolamento: Se o comando for para outro schema, este túnel o ignora silenciosamente
+      const META_ACTIONS = ['sync_bpm', 'sync_log_config'];
       const expectedSchema = connectionName || 'public';
       const incomingSchema = schemaName || 'public';
-      if (incomingSchema !== expectedSchema && action !== 'sync_bpm') {
+      if (incomingSchema !== expectedSchema && !META_ACTIONS.includes(action)) {
         console.log(chalk.yellow(`[ IGNORADO ] Comando destinado ao schema '${incomingSchema}', mas este agente atende '${expectedSchema}'.`));
         return; // Ignora o broadcast, outro agente responderá
       }

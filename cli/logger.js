@@ -25,22 +25,27 @@ if (!fs.existsSync(LOGS_DIR)) {
   fs.mkdirSync(LOGS_DIR, { recursive: true });
 }
 
-/** Retorna a data local no formato YYYY-MM-DD */
+/** Retorna a data local no formato YYYY-MM-DD usando o fuso horário local da máquina */
 function getDateStr() {
   const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  // Usa offset local para garantir que a data seja a da máquina cliente
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
 }
 
-/** Retorna a hora local no formato HH:MM:SS */
+/** Retorna a hora local no formato HH:MM:SS usando o fuso horário local da máquina */
 function getTimeStr() {
   const now = new Date();
   const h = String(now.getHours()).padStart(2, '0');
   const mi = String(now.getMinutes()).padStart(2, '0');
   const s = String(now.getSeconds()).padStart(2, '0');
-  return `${h}:${mi}:${s}`;
+  // Inclui o offset do fuso para rastreabilidade
+  const off = now.getTimezoneOffset();
+  const sign = off <= 0 ? '+' : '-';
+  const absOff = Math.abs(off);
+  const offH = String(Math.floor(absOff / 60)).padStart(2, '0');
+  const offM = String(absOff % 60).padStart(2, '0');
+  return `${h}:${mi}:${s}(UTC${sign}${offH}:${offM})`;
 }
 
 /**
@@ -77,7 +82,7 @@ class Logger {
       '',
       '='.repeat(70),
       `  MetaBuilderPRO CLI -- Modo: ${mode.toUpperCase()}`,
-      `  Sessao iniciada em: ${new Date().toLocaleString('pt-BR')}`,
+      `  Sessao iniciada em: ${new Date().toLocaleString()} [${Intl.DateTimeFormat().resolvedOptions().timeZone}]`,
       '='.repeat(70),
       '',
     ].join('\n');

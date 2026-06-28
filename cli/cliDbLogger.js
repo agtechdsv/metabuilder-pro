@@ -41,6 +41,18 @@ const CREATE_TABLE_SQL = `
   CREATE INDEX IF NOT EXISTS idx_mb_logs_table   ON __mb_logs (table_name, created_at DESC);
 `;
 
+/** Retorna o timestamp local do CLI como string ISO 8601 com offset (ex: 2026-06-28T09:15:00-03:00) */
+function localISOString() {
+  const now = new Date();
+  const off = now.getTimezoneOffset(); // em minutos, negativo para UTC+
+  const sign = off <= 0 ? '+' : '-';
+  const absOff = Math.abs(off);
+  const offH = String(Math.floor(absOff / 60)).padStart(2, '0');
+  const offM = String(absOff % 60).padStart(2, '0');
+  // Remove o 'Z' do toISOString e adiciona o offset real
+  return now.toISOString().replace('Z', `${sign}${offH}:${offM}`);
+}
+
 class CliDbLogger {
   constructor() {
     this._pgClient    = null;
@@ -120,8 +132,8 @@ class CliDbLogger {
     if (!this._pgClient || !this._ready) return;
     const sql = `
       INSERT INTO __mb_logs
-        (session_id, type, action, table_name, schema_name, message, sql_text, duration_ms, row_count, metadata)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        (session_id, type, action, table_name, schema_name, message, sql_text, duration_ms, row_count, metadata, created_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
     `;
     const params = [
       this._sessionId,
@@ -134,6 +146,7 @@ class CliDbLogger {
       durationMs   != null ? parseInt(durationMs) : null,
       rowCount     != null ? parseInt(rowCount)    : null,
       metadata     ? JSON.stringify(metadata) : null,
+      localISOString(), // horário local do CLI, não UTC do PostgreSQL
     ];
     // Fire-and-forget: nunca bloqueia a query principal
     this._pgClient.query(sql, params).catch(e => {
