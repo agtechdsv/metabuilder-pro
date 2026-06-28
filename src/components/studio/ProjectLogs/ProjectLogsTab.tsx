@@ -59,7 +59,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
   const [logSource, setLogSource] = useState<'db' | 'file'>('db')
   const [fileDate, setFileDate] = useState(new Date().toISOString().slice(0, 10))
   const [page, setPage]               = useState(0)
-  const PAGE_SIZE = 50
+  const [pageSize, setPageSize]       = useState(50)
 
   // ── Tunnel Helper ─────────────────────────────────────────────────────────
   const executeTunnelQuery = useCallback(async (payload: any): Promise<any> => {
@@ -108,7 +108,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
   const loadLogs = useCallback(async () => {
     setIsLoadingLogs(true)
     try {
-      const filters: any = { limit: PAGE_SIZE, offset: page * PAGE_SIZE }
+      const filters: any = { limit: pageSize, offset: page * pageSize }
       if (filterType)   filters.type       = filterType
       if (filterTable)  filters.table_name = filterTable
       if (filterSearch) filters.search     = filterSearch
@@ -129,7 +129,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
     } finally {
       setIsLoadingLogs(false)
     }
-  }, [executeTunnelQuery, filterType, filterTable, filterSearch, filterFrom, filterTo, logSource, fileDate, page, toast])
+  }, [executeTunnelQuery, filterType, filterTable, filterSearch, filterFrom, filterTo, logSource, fileDate, page, pageSize, toast])
 
   // ── Load Stats ────────────────────────────────────────────────────────────
   const loadStats = useCallback(async () => {
@@ -156,7 +156,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
       loadStats()
     }, 300)
     return () => clearTimeout(timer)
-  }, [filterType, filterTable, filterSearch, filterFrom, filterTo, logSource, fileDate, page, loadLogs, loadStats])
+  }, [filterType, filterTable, filterSearch, filterFrom, filterTo, logSource, fileDate, page, pageSize, loadLogs, loadStats])
 
   // ── Save Config ───────────────────────────────────────────────────────────
   const saveConfig = async () => {
@@ -205,7 +205,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
     }
   }
 
-  const totalPages = Math.ceil(totalLogs / PAGE_SIZE)
+  const totalPages = Math.ceil(totalLogs / pageSize)
 
   return (
     <div className="flex gap-6 h-full min-h-[600px]">
@@ -390,9 +390,25 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
 
           {/* Actions */}
           <button onClick={() => { loadLogs(); loadStats() }} disabled={isLoadingLogs}
-            className="p-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-indigo-400 transition-colors">
+            className="p-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-indigo-400 transition-colors"
+            title="Atualizar"
+          >
             <RefreshCw className={`w-3.5 h-3.5 text-neutral-500 ${isLoadingLogs ? 'animate-spin' : ''}`} />
           </button>
+
+          {/* Linhas por página */}
+          <select
+            value={pageSize}
+            onChange={e => { setPageSize(parseInt(e.target.value, 10)); setPage(0) }}
+            className="py-2 px-3 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none"
+            title="Linhas por página"
+          >
+            <option value="50">50 linhas</option>
+            <option value="100">100 linhas</option>
+            <option value="200">200 linhas</option>
+            <option value="500">500 linhas</option>
+            <option value="1000">1000 linhas</option>
+          </select>
 
           <button onClick={() => setAutoRefresh(r => !r)}
             className={`p-2 rounded-xl border transition-colors ${autoRefresh ? 'bg-indigo-500 border-indigo-500 text-white' : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-500'}`}

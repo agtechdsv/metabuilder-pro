@@ -204,33 +204,88 @@ class Logger {
     let rows = [];
     let idCounter = 1;
 
+    // Cache para acoplar o SQL executado ao seu resultado correspondente
+    const pendingQueries = {};
+    let lastQuery = '';
+
     for (const line of lines) {
       const match = line.match(/^\[(\d{2}:\d{2}:\d{2})\(UTC[+-]\d{2}:\d{2}\)\] \[(.*?)\] (.*)$/);
       if (!match) continue;
 
       const time = match[1];
       const level = match[2];
-      const rawMsg = match[3];
+      const rawMsg = match[3].trim();
+
+      // Se for linha de execução de SQL, guardamos e pulamos para não duplicar na lista
+      if (rawMsg.startsWith('[ SQL ] Executando COUNT:')) {
+        const sql = rawMsg.substring('[ SQL ] Executando COUNT:'.length).trim();
+        pendingQueries['COUNT'] = sql;
+        lastQuery = sql;
+        continue;
+      }
+      if (rawMsg.startsWith('[ SQL ] Executando:')) {
+        const sql = rawMsg.substring('[ SQL ] Executando:'.length).trim();
+        pendingQueries['SELECT'] = sql;
+        lastQuery = sql;
+        continue;
+      }
+      if (rawMsg.startsWith('[ SQL ] Executando UPDATE:')) {
+        const sql = rawMsg.substring('[ SQL ] Executando UPDATE:'.length).trim();
+        pendingQueries['UPDATE'] = sql;
+        lastQuery = sql;
+        continue;
+      }
+      if (rawMsg.startsWith('[ SQL ] Executando INSERT:')) {
+        const sql = rawMsg.substring('[ SQL ] Executando INSERT:'.length).trim();
+        pendingQueries['INSERT'] = sql;
+        lastQuery = sql;
+        continue;
+      }
+      if (rawMsg.startsWith('[ SQL ] Executando DELETE:')) {
+        const sql = rawMsg.substring('[ SQL ] Executando DELETE:'.length).trim();
+        pendingQueries['DELETE'] = sql;
+        lastQuery = sql;
+        continue;
+      }
 
       let type = 'Túnel';
       let action = 'Log';
       let tableName = '-';
       let message = rawMsg;
+      let sql_text = '';
 
-      if (rawMsg.includes('SELECT retornou')) {
-        type = 'Leitura'; action = 'Select';
-      } else if (rawMsg.includes('COUNT:')) {
-        type = 'Leitura'; action = 'Count';
+      if (rawMsg.includes('SELECT: Retornou') || rawMsg.includes('SELECT retornou')) {
+        type = 'Leitura'; 
+        action = 'Select';
+        sql_text = pendingQueries['SELECT'] || '';
+        pendingQueries['SELECT'] = '';
+      } else if (rawMsg.includes('COUNT: Retornou') || rawMsg.includes('COUNT:')) {
+        type = 'Leitura'; 
+        action = 'Count';
+        sql_text = pendingQueries['COUNT'] || '';
+        pendingQueries['COUNT'] = '';
       } else if (rawMsg.includes('UPDATE:')) {
-        type = 'Escrita'; action = 'Update';
+        type = 'Escrita'; 
+        action = 'Update';
+        sql_text = pendingQueries['UPDATE'] || '';
+        pendingQueries['UPDATE'] = '';
       } else if (rawMsg.includes('INSERT:')) {
-        type = 'Escrita'; action = 'Insert';
+        type = 'Escrita'; 
+        action = 'Insert';
+        sql_text = pendingQueries['INSERT'] || '';
+        pendingQueries['INSERT'] = '';
       } else if (rawMsg.includes('DELETE:')) {
-        type = 'Escrita'; action = 'Delete';
-      } else if (level === 'ERR') {
-        type = 'Erro SQL'; action = 'Error';
+        type = 'Escrita'; 
+        action = 'Delete';
+        sql_text = pendingQueries['DELETE'] || '';
+        pendingQueries['DELETE'] = '';
+      } else if (level === 'ERR' || rawMsg.includes('[ ERRO ]')) {
+        type = 'Erro SQL'; 
+        action = 'Error';
+        sql_text = lastQuery;
       } else if (level === 'SYNC') {
-        type = 'Sync'; action = 'Sync';
+        type = 'Sync'; 
+        action = 'Sync';
       } else if (rawMsg.includes('Comando Recebido')) {
         if (rawMsg.includes('Buscar dados da tabela')) {
           action = 'Select'; type = 'Leitura';
@@ -246,15 +301,16 @@ class Logger {
         tableName = tableMatch[1];
       }
 
-      const criado_em = `${dateStr}T${time}.000Z`;
+      const created_at = `${dateStr}T${time}.000Z`;
 
       rows.push({
         id: `file_${idCounter++}`,
-        criado_em,
+        created_at,
         type,
         action,
         table_name: tableName,
-        message: message.substring(0, 500)
+        message: message.substring(0, 500),
+        sql_text: sql_text
       });
     }
 
@@ -271,7 +327,7 @@ class Logger {
     }
     if (filters.search) {
       const q = filters.search.toLowerCase();
-      rows = rows.filter(r => (r.message || '').toLowerCase().includes(q));
+      rows = rows.filter(r => (r.message || '').toLowerCase().includes(q) || (r.sql_text || '').toLowerCase().includes(q));
     }
 
     // Paginação
