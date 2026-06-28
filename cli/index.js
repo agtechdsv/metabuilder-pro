@@ -441,22 +441,25 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           } else {
             let selectCols = `"${safeTable}".*`;
             let joinClause = '';
-
             if (joins && joins.length > 0) {
+              const joined = new Set();
               joins.forEach(j => {
-                 if(j.from && j.to && j.localKey && j.foreignKey) {
-                    const safeFrom = j.from.replace(/[^a-zA-Z0-9_]/g, '');
-                    const safeTo = j.to.replace(/[^a-zA-Z0-9_]/g, '');
-                    const safeLocal = j.localKey.replace(/[^a-zA-Z0-9_]/g, '');
-                    const safeForeign = j.foreignKey.replace(/[^a-zA-Z0-9_]/g, '');
-                    
-                    if (dbType === 'oracle') {
-                      selectCols += `, (SELECT JSON_OBJECT(*) FROM "${safeTo}" WHERE "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}") AS "${safeTo}"`;
-                    } else {
-                      selectCols += `, row_to_json("${safeTo}".*) AS "${safeTo}"`;
-                    }
-                    joinClause += ` LEFT JOIN "${safeTo}" ON "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}"`;
-                 }
+                  if(j.from && j.to && j.localKey && j.foreignKey) {
+                     const safeFrom = j.from.replace(/[^a-zA-Z0-9_]/g, '');
+                     const safeTo = j.to.replace(/[^a-zA-Z0-9_]/g, '');
+                     const safeLocal = j.localKey.replace(/[^a-zA-Z0-9_]/g, '');
+                     const safeForeign = j.foreignKey.replace(/[^a-zA-Z0-9_]/g, '');
+                     
+                     if (!joined.has(safeTo)) {
+                       joined.add(safeTo);
+                       if (dbType === 'oracle') {
+                         selectCols += `, (SELECT JSON_OBJECT(*) FROM "${safeTo}" WHERE "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}") AS "${safeTo}"`;
+                       } else {
+                         selectCols += `, row_to_json("${safeTo}".*) AS "${safeTo}"`;
+                       }
+                       joinClause += ` LEFT JOIN "${safeTo}" ON "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}"`;
+                     }
+                  }
               });
             }
             if (dbType === 'oracle') {

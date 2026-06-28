@@ -65,13 +65,17 @@ export async function executeExportBackground(params: {
 
     let joinClause = ''
     if (joins && joins.length > 0) {
+      const joinedTables = new Set()
       joins.forEach(j => {
         const fromT = String(j.table || j.from).replace(/[^a-zA-Z0-9_]/g, '')
         const toT = String(j.toTable || j.to).replace(/[^a-zA-Z0-9_]/g, '')
         const local = String(j.on || j.localKey).replace(/[^a-zA-Z0-9_]/g, '')
         const foreign = String(j.toOn || j.foreignKey).replace(/[^a-zA-Z0-9_]/g, '')
         if (fromT && toT && local && foreign) {
-          joinClause += ` LEFT JOIN "${toT}" ON "${fromT}"."${local}" = "${toT}"."${foreign}"`
+          if (!joinedTables.has(toT)) {
+            joinClause += ` LEFT JOIN "${toT}" ON "${fromT}"."${local}" = "${toT}"."${foreign}"`
+            joinedTables.add(toT)
+          }
         }
       })
     }
