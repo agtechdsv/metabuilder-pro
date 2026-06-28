@@ -340,22 +340,14 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                     if (targetModel) {
                       formulaTokens = formulaTokens.map(token => {
                         if (token.type === 'field' && !token.value.startsWith('virt:')) {
-                          const originalFieldId = token.value;
-                          let originalColName = null;
-                          for (const mm of models) {
-                            const f = mm.fields?.find((ff: any) => ff.id === originalFieldId);
-                            if (f) {
-                              originalColName = f.db_column_name;
-                              break;
-                            }
-                          }
+                          const originalColName = token.value; // Em FormulaBuilder, token.value para fields é db_column_name
                           if (originalColName) {
                             const targetField = targetModel.fields?.find((f: any) => f.db_column_name === originalColName);
                             if (targetField) {
                               return {
                                 ...token,
-                                value: targetField.id,
-                                label: `${targetModel.display_name || targetModel.db_table_name}: ${targetField.display_name || targetField.db_column_name}`
+                                value: targetField.db_column_name,
+                                label: `[${targetModel.display_name || targetModel.db_table_name}] ${targetField.display_name || targetField.db_column_name}`
                               };
                             }
                           }
@@ -686,7 +678,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
           newFieldsMetadata[zKey] = {
             ...(newFieldsMetadata[zKey] || newMeta),
             [section]: {
-              ...(newFieldsMetadata[zKey]?.[section] || {}),
+              ...((newFieldsMetadata[zKey] || newMeta)[section] || {}),
               [key]: value
             }
           }
