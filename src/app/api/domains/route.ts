@@ -96,16 +96,29 @@ export async function POST(req: Request) {
       const vercelData = await vercelResponse.json()
 
       if (!vercelResponse.ok) {
-        // If Vercel returns "already in use", and we didn't find it in our DB above, 
-        // it means another MetaBuilder customer owns it (or it's externally bound).
+        // Se a Vercel diz que já está em uso, vamos checar se está no NOSSO projeto.
+        // Como já verificamos o Supabase no início do arquivo e não achamos dono, 
+        // se o domínio estiver no nosso projeto Vercel, significa que ele ficou "órfão"
+        // (ex: o usuário deletou o workspace sem apagar o domínio). 
+        // Nesse caso, fazemos um "Self-Healing" e apenas aceitamos o domínio.
         if (vercelData.error?.code === 'domain_already_in_use' || vercelData.error?.message?.includes('already in use')) {
-          return NextResponse.json({ error: 'Este domínio já está associado a outra conta. Entre em contato com o suporte ou proprietário do domínio.' }, { status: 409 })
-        }
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Vercel API failed but proceeding anyway in development mode:', vercelData.error?.message)
+          const verifyResponse = await fetch(`https://api.vercel.com/v9/projects/${vercelProjectId}/domains/${domain}`, {
+            headers: { 'Authorization': `Bearer ${vercelToken}` }
+          });
+          
+          if (verifyResponse.ok) {
+            // O domínio está no nosso projeto Vercel e não tem dono no banco. Vamos adotar ele!
+            console.log(`[Self-Healing] Domínio órfão ${domain} detectado e reaproveitado.`);
+          } else {
+            // O domínio está em OUTRO projeto (de outra pessoa/empresa)
+            return NextResponse.json({ error: 'Este domínio já está associado a outra conta. Entre em contato com o suporte ou proprietário do domínio.' }, { status: 409 })
+          }
         } else {
-          return NextResponse.json({ error: vercelData.error?.message || 'Failed to add domain to Vercel' }, { status: 400 })
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Vercel API failed but proceeding anyway in development mode:', vercelData.error?.message)
+          } else {
+            return NextResponse.json({ error: vercelData.error?.message || 'Failed to add domain to Vercel' }, { status: 400 })
+          }
         }
       }
 
