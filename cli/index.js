@@ -269,7 +269,8 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
       }
       
       // Isolamento: Se o comando for para outro schema, este túnel o ignora silenciosamente
-      const META_ACTIONS = ['sync_bpm', 'sync_log_config'];
+      // Ações META não são queries de dados e ignoram o filtro de schema
+      const META_ACTIONS = ['sync_bpm', 'sync_log_config', 'read_logs', 'clear_logs', 'get_log_stats'];
       const expectedSchema = connectionName || 'public';
       const incomingSchema = schemaName || 'public';
       if (incomingSchema !== expectedSchema && !META_ACTIONS.includes(action)) {
