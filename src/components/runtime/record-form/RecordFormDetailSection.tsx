@@ -487,7 +487,12 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                 if (['select', 'Combo (Select)'].includes(type)) {
                                   let options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
                                   if (fieldConfig.component?.depends_on && fieldConfig.component?.filter_column) {
-                                    const depValue = detail[fieldConfig.component.depends_on] || detail[fieldConfig.component.depends_on.toUpperCase()];
+                                    const depName = fieldConfig.component.depends_on;
+                                    const depBase = depName.split('.').pop() || depName;
+                                    let depValue = detail[depName] ?? detail[depBase] ?? detail[depBase.toUpperCase()];
+                                    if (depValue === undefined || depValue === null) {
+                                      depValue = formData[depName] ?? formData[depBase];
+                                    }
                                     if (depValue !== undefined && depValue !== null && depValue !== '') {
                                       options = options.filter((o: any) => String(o.filter_value) === String(depValue));
                                     } else {
@@ -512,7 +517,12 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                 if (['radio', 'Radio Buttons'].includes(type)) {
                                   let options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
                                   if (fieldConfig.component?.depends_on && fieldConfig.component?.filter_column) {
-                                    const depValue = detail[fieldConfig.component.depends_on] || detail[fieldConfig.component.depends_on.toUpperCase()];
+                                    const depName = fieldConfig.component.depends_on;
+                                    const depBase = depName.split('.').pop() || depName;
+                                    let depValue = detail[depName] ?? detail[depBase] ?? detail[depBase.toUpperCase()];
+                                    if (depValue === undefined || depValue === null) {
+                                      depValue = formData[depName] ?? formData[depBase];
+                                    }
                                     if (depValue !== undefined && depValue !== null && depValue !== '') {
                                       options = options.filter((o: any) => String(o.filter_value) === String(depValue));
                                     } else {
@@ -542,7 +552,12 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                 if (['checkbox', 'Checkbox Group'].includes(type)) {
                                   let options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
                                   if (fieldConfig.component?.depends_on && fieldConfig.component?.filter_column) {
-                                    const depValue = detail[fieldConfig.component.depends_on] || detail[fieldConfig.component.depends_on.toUpperCase()];
+                                    const depName = fieldConfig.component.depends_on;
+                                    const depBase = depName.split('.').pop() || depName;
+                                    let depValue = detail[depName] ?? detail[depBase] ?? detail[depBase.toUpperCase()];
+                                    if (depValue === undefined || depValue === null) {
+                                      depValue = formData[depName] ?? formData[depBase];
+                                    }
                                     if (depValue !== undefined && depValue !== null && depValue !== '') {
                                       options = options.filter((o: any) => String(o.filter_value) === String(depValue));
                                     } else {
