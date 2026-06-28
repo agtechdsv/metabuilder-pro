@@ -343,6 +343,69 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         }
       }
       setRelationalOptions(newOptions)
+      
+      // Auto-fill reverse dependencies (e.g. virtual category fields based on loaded product ID)
+      setFormData((prev: any) => {
+        let changed = false;
+        const nextData = { ...prev };
+        
+        for (const field of fields) {
+          const config = field.config?.form_config || field.config;
+          const comp = config?.component;
+          if (comp?.depends_on && comp?.filter_column && newOptions[field.id]) {
+            const depName = comp.depends_on;
+            const depBase = depName.split('.').pop() || depName;
+            const fieldBase = field.db_column_name.split('.').pop() || field.db_column_name;
+            
+            // Check master fields
+            const masterVal = nextData[field.db_column_name] || nextData[fieldBase];
+            if (masterVal) {
+              const currentDep = nextData[depName] ?? nextData[depBase] ?? nextData[depBase.toUpperCase()];
+              if (currentDep === undefined || currentDep === null || currentDep === '') {
+                const opt = newOptions[field.id].find((o: any) => String(o.value) === String(masterVal));
+                if (opt && opt.filter_value) {
+                  nextData[depName] = opt.filter_value;
+                  nextData[depBase] = opt.filter_value;
+                  changed = true;
+                }
+              }
+            }
+
+            // Check detail rows
+            if (nextData._details && Array.isArray(nextData._details)) {
+              nextData._details = nextData._details.map((row: any) => {
+                let rowChanged = false;
+                const newRow = { ...row };
+                const fieldModelName = field.model_name || (field.db_column_name?.includes('.') ? field.db_column_name.split('.')[0] : null);
+                if (row.model_name?.toLowerCase() === fieldModelName?.toLowerCase()) {
+                  const rowVal = newRow[field.db_column_name] || newRow[fieldBase] || newRow[fieldBase.toUpperCase()];
+                  if (rowVal) {
+                    const isLocalDep = fields.some(f => (f.model_name?.toLowerCase() === row.model_name?.toLowerCase()) && (f.db_column_name === depName || f.id === depName));
+                    
+                    let currentDep = newRow[depName] ?? newRow[depBase] ?? newRow[depBase.toUpperCase()];
+                    if (!isLocalDep) {
+                      currentDep = currentDep ?? nextData[depName] ?? nextData[depBase];
+                    }
+
+                    if (currentDep === undefined || currentDep === null || currentDep === '') {
+                      const opt = newOptions[field.id].find((o: any) => String(o.value) === String(rowVal));
+                      if (opt && opt.filter_value) {
+                        newRow[depName] = opt.filter_value;
+                        newRow[depBase] = opt.filter_value;
+                        rowChanged = true;
+                        changed = true;
+                      }
+                    }
+                  }
+                }
+                return rowChanged ? newRow : row;
+              });
+            }
+          }
+        }
+        
+        return changed ? nextData : prev;
+      });
     }
 
     if (fields.length > 0) {

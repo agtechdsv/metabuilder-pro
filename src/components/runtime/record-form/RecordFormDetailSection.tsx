@@ -474,19 +474,26 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
 
                                 if (type === 'textarea') {
                                   return (
-                                    <textarea
-                                      value={rawValue || ''}
-                                      onChange={(e) => handleInlineChange(e.target.value)}
-                                      disabled={isInlineDisabled}
-                                      className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                                      rows={3}
-                                    />
+                                    <div className="flex flex-col gap-1">
+                                      <textarea
+                                        value={rawValue || ''}
+                                        onChange={(e) => handleInlineChange(e.target.value)}
+                                        disabled={isInlineDisabled}
+                                        rows={fieldConfig.content?.rows || 3}
+                                        className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none resize-y disabled:opacity-50 disabled:cursor-not-allowed"
+                                        placeholder={fieldConfig.content?.placeholder || t('runtime.type_here', 'Digite aqui...')}
+                                      />
+                                      {field.db_column_name.startsWith('virt_') && (
+                                        <div className="text-[10px] text-orange-500">
+                                          DEBUG VIRT: val={rawValue}, detail_keys={Object.keys(detail).filter(k=>k.startsWith('virt_')).join(',')}
+                                        </div>
+                                      )}
+                                    </div>
                                   );
                                 }
 
                                 if (['select', 'Combo (Select)'].includes(type)) {
                                   let options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
-                                  let debugInfo = '';
                                   if (fieldConfig.component?.depends_on && fieldConfig.component?.filter_column) {
                                     const depName = fieldConfig.component.depends_on;
                                     const depBase = depName.split('.').pop() || depName;
@@ -494,7 +501,6 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                     if (depValue === undefined || depValue === null) {
                                       depValue = formData[depName] ?? formData[depBase];
                                     }
-                                    debugInfo = `Dep: ${depName}, Val: ${depValue}, FilterCol: ${fieldConfig.component.filter_column}, Opt1Filter: ${options[0]?.filter_value}`;
                                     if (depValue !== undefined && depValue !== null && depValue !== '') {
                                       options = options.filter((o: any) => String(o.filter_value) === String(depValue));
                                     } else {
@@ -514,7 +520,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                           <option key={opt.value} value={opt.value}>{opt.label}</option>
                                         ))}
                                       </select>
-                                      {debugInfo && <div className="text-[9px] text-red-500">{debugInfo}</div>}
+                                      {/* Removed debug info */}
                                     </div>
                                   );
                                 }
