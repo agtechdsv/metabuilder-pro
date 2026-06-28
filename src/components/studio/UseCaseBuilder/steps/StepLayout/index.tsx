@@ -617,6 +617,10 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
         return `${tableName}.${fieldName}`
       }
     }
+    const meta = config.layout_config?.fields_metadata?.[id]
+    if (meta && meta.label && meta.label.text) {
+      return meta.label.text
+    }
     return id
   }
 

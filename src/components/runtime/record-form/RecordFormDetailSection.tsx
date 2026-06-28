@@ -485,7 +485,15 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                 }
 
                                 if (['select', 'Combo (Select)'].includes(type)) {
-                                  const options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
+                                  let options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
+                                  if (fieldConfig.component?.depends_on && fieldConfig.component?.filter_column) {
+                                    const depValue = detail[fieldConfig.component.depends_on] || detail[fieldConfig.component.depends_on.toUpperCase()];
+                                    if (depValue !== undefined && depValue !== null && depValue !== '') {
+                                      options = options.filter((o: any) => String(o.filter_value) === String(depValue));
+                                    } else {
+                                      options = [];
+                                    }
+                                  }
                                   return (
                                     <select
                                       value={rawValue || ''}
@@ -502,7 +510,15 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                 }
 
                                 if (['radio', 'Radio Buttons'].includes(type)) {
-                                  const options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
+                                  let options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
+                                  if (fieldConfig.component?.depends_on && fieldConfig.component?.filter_column) {
+                                    const depValue = detail[fieldConfig.component.depends_on] || detail[fieldConfig.component.depends_on.toUpperCase()];
+                                    if (depValue !== undefined && depValue !== null && depValue !== '') {
+                                      options = options.filter((o: any) => String(o.filter_value) === String(depValue));
+                                    } else {
+                                      options = [];
+                                    }
+                                  }
                                   return (
                                     <div className="flex flex-wrap gap-4 pt-1">
                                       {options.map((opt: any, i: number) => (
@@ -524,7 +540,15 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                 }
                                 
                                 if (['checkbox', 'Checkbox Group'].includes(type)) {
-                                  const options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
+                                  let options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
+                                  if (fieldConfig.component?.depends_on && fieldConfig.component?.filter_column) {
+                                    const depValue = detail[fieldConfig.component.depends_on] || detail[fieldConfig.component.depends_on.toUpperCase()];
+                                    if (depValue !== undefined && depValue !== null && depValue !== '') {
+                                      options = options.filter((o: any) => String(o.filter_value) === String(depValue));
+                                    } else {
+                                      options = [];
+                                    }
+                                  }
                                   return (
                                     <div className="flex flex-wrap gap-4 pt-1">
                                       {options.map((opt: any, i: number) => {
