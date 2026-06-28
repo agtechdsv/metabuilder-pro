@@ -55,9 +55,18 @@ export function ViewFilterBar({
                       {(() => {
                         const comp = zoneConfig.component || { type: 'text' }
                         const fieldType = comp.type || 'text'
-                        const options = (comp.options_type === 'relational' || comp.options_type === 'enumeration')
+                        let options = (comp.options_type === 'relational' || comp.options_type === 'enumeration')
                           ? (relationalOptions[field.id] || [])
                           : parseFixedOptions(comp.fixed_options)
+
+                        if (comp.depends_on && comp.filter_column) {
+                          const depValue = filterValues[comp.depends_on]
+                          if (depValue !== undefined && depValue !== null && depValue !== '') {
+                            options = options.filter((o: any) => String(o.filter_value) === String(depValue))
+                          } else {
+                            options = []
+                          }
+                        }
 
                         const commonClasses = cn(
                           "w-full py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all shadow-sm",

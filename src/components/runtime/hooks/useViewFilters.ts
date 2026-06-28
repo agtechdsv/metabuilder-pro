@@ -110,7 +110,8 @@ export function useViewFilters({
             if (projectId) {
               if (!tunnelChannel || !isTunnelReady) continue;
               const queryId = crypto.randomUUID()
-              const rawQuery = `SELECT "${comp.rel_label}", "${comp.rel_value}" FROM "${comp.rel_table}"`
+              const filterCol = comp.filter_column ? `, "${comp.filter_column}"` : ''
+              const rawQuery = `SELECT "${comp.rel_label}", "${comp.rel_value}"${filterCol} FROM "${comp.rel_table}"`
               const schemaToUse = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === comp.rel_table?.toLowerCase())?.db_schema_name || project?.slug || 'public'
 
               data = await new Promise<any[]>((resolve, reject) => {
@@ -166,16 +167,18 @@ export function useViewFilters({
                 }, 8000)
               })
             } else {
+              const filterCol = comp.filter_column ? `, ${comp.filter_column}` : ''
               const { data: directData } = await supabaseClient
                 .from(comp.rel_table)
-                .select(`${comp.rel_label}, ${comp.rel_value}`)
+                .select(`${comp.rel_label}, ${comp.rel_value}${filterCol}`)
               if (directData) data = directData
             }
 
             if (data) {
               newOptions[field.id] = data.map((item: any) => ({
                 label: item[comp.rel_label] || item[comp.rel_label?.toLowerCase()] || item[comp.rel_label?.toUpperCase()],
-                value: item[comp.rel_value] || item[comp.rel_value?.toLowerCase()] || item[comp.rel_value?.toUpperCase()]
+                value: item[comp.rel_value] || item[comp.rel_value?.toLowerCase()] || item[comp.rel_value?.toUpperCase()],
+                filter_value: comp.filter_column ? (item[comp.filter_column] || item[comp.filter_column?.toLowerCase()] || item[comp.filter_column?.toUpperCase()]) : undefined
               }))
             }
           } catch (err) {

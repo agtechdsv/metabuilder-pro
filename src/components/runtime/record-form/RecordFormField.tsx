@@ -165,9 +165,18 @@ export function RecordFormField(props: RecordFormFieldProps) {
       !zoneConfig.content?.color && "text-neutral-900 dark:text-white"
     )
 
-    const options = (comp.options_type === 'relational' || comp.options_type === 'enumeration')
+    let options = (comp.options_type === 'relational' || comp.options_type === 'enumeration')
       ? (relationalOptions[field.id] || [])
       : parseFixedOptions(comp.fixed_options)
+      
+    if (comp.depends_on && comp.filter_column) {
+      const depValue = formData[comp.depends_on]
+      if (depValue !== undefined && depValue !== null && depValue !== '') {
+        options = options.filter((o: any) => String(o.filter_value) === String(depValue))
+      } else {
+        options = []
+      }
+    }
     const isReadOnly = mode === 'view' || zoneConfig.content?.readonly === true || (field.config?.content?.formula_tokens && field.config.content.formula_tokens.length > 0);
     const isDisabled = isReadOnly || field.is_primary_key;
     const isInlineDisabled = isReadOnly || false;    return (

@@ -655,6 +655,45 @@ export function FieldDrawer({
                                   </select>
                                 </div>
                               </div>
+                              <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-800">
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.depends_on', 'Depende de (Filtro Em Cascata)')}</label>
+                                  <select
+                                    value={currentFieldMeta.component?.depends_on || ''}
+                                    onChange={e => updateMeta('component', 'depends_on', e.target.value)}
+                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                                  >
+                                    <option value="">{t('wizard.layout.drawer.options_select_placeholder', 'Nenhum')}</option>
+                                    {(() => {
+                                      const allZoneFields = [...(config.layout_config.form_fields || []), ...(config.layout_config.filter_fields || [])];
+                                      const uniqueFields = Array.from(new Set(allZoneFields));
+                                      return uniqueFields.map((fid: any) => {
+                                        const fObj = models.flatMap((m: any) => m.fields).find((f: any) => f.id === fid);
+                                        const val = fObj?.db_column_name || fid;
+                                        return (
+                                          <option key={`dep-${fid}`} value={val}>
+                                            {getFieldName(fid)} ({val})
+                                          </option>
+                                        )
+                                      })
+                                    })()}
+                                  </select>
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.filter_column', 'Filtrar Coluna Por')}</label>
+                                  <select
+                                    value={currentFieldMeta.component?.filter_column || ''}
+                                    onChange={e => updateMeta('component', 'filter_column', e.target.value)}
+                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none disabled:opacity-50"
+                                    disabled={!currentFieldMeta.component?.depends_on}
+                                  >
+                                    <option value="">{t('wizard.layout.drawer.options_select_placeholder', 'Selecione a coluna alvo')}</option>
+                                    {models.find((m: any) => m.db_table_name === currentFieldMeta.component?.rel_table)?.fields.map((f: any) => (
+                                      <option key={`fc-${f.id}`} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
                             </div>
                           )}
                         </div>
