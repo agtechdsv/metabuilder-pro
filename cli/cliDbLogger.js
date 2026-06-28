@@ -88,6 +88,28 @@ class CliDbLogger {
     }
   }
 
+  /**
+   * Atualiza as configurações de log dinamicamente.
+   * @param {object} logConfig      - { enabled, types[], retention_days }
+   */
+  updateConfig(logConfig) {
+    this._logConfig = logConfig || this._logConfig;
+    if (!this._logConfig.enabled) {
+      this._ready = false;
+      console.log('\x1b[90m[MBLog] Log de banco desativado dinamicamente.\x1b[0m');
+    } else {
+      const wasReady = this._ready;
+      this._ready = true;
+      console.log(`\x1b[90m[MBLog] Log atualizado dinamicamente. Tipos: [${this._logConfig.types?.join(', ')}]. Retencao: ${this._logConfig.retention_days}d.\x1b[0m`);
+      if (!wasReady && this._pgClient) {
+        // Inicializa a tabela caso não estivesse ativo antes
+        this._pgClient.query(CREATE_TABLE_SQL).catch(err => {
+          console.error('\x1b[33m[MBLog] Falha ao inicializar tabela de logs no update:\x1b[0m', err.message);
+        });
+      }
+    }
+  }
+
   /** Verifica se um tipo de log está habilitado */
   _isEnabled(type) {
     return this._ready && this._logConfig.enabled && this._logConfig.types.includes(type);

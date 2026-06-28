@@ -149,7 +149,14 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
         .update({ log_config: logConfig })
         .eq('id', project.id)
       if (error) throw error
-      toast('Configurações de log salvas! Reinicie o CLI para aplicar.', 'success')
+      
+      // Envia comando para o CLI sincronizar em tempo real pelo túnel
+      try {
+        await executeTunnelQuery({ action: 'sync_log_config' })
+        toast('Configurações de log salvas e aplicadas em tempo real!', 'success')
+      } catch (tErr) {
+        toast('Configurações de log salvas! (O CLI está offline, reinicie-o para aplicar).', 'success')
+      }
     } catch (err: any) {
       toast('Erro ao salvar: ' + err.message, 'error')
     } finally {

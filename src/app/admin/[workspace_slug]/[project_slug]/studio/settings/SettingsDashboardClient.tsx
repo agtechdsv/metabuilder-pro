@@ -139,7 +139,7 @@ export function SettingsDashboardClient({
               onClick={() => setActiveTab('global')}
               className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'global' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
             >
-              <ScrollText className="w-4 h-4" /> Configurações Globais
+              <ScrollText className="w-4 h-4" /> Configurações de Log
             </button>
           </div>
         </div>
