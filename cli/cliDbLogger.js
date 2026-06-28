@@ -131,6 +131,7 @@ class CliDbLogger {
 
   /** Verifica se um tipo de log está habilitado */
   _isEnabled(type) {
+    if (this._logConfig.log_to_db === false) return false;
     return this._ready && this._logConfig.enabled && this._logConfig.types.includes(type);
   }
 

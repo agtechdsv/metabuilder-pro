@@ -188,6 +188,100 @@ class Logger {
     console.error = this._originalError;
     console.warn = this._originalWarn;
   }
+
+  /**
+   * Lê um arquivo de log físico do dia especificado, parseia e retorna
+   * um array de objetos no formato esperado pela tabela do Studio.
+   */
+  async readFileLogs(dateStr, filters = {}) {
+    const filename = `tunnel-${dateStr}.log`;
+    const filepath = path.join(LOGS_DIR, filename);
+    if (!fs.existsSync(filepath)) return [];
+
+    const content = await fs.promises.readFile(filepath, 'utf8');
+    const lines = content.split('\n').filter(l => l.trim().length > 0);
+    
+    let rows = [];
+    let idCounter = 1;
+
+    for (const line of lines) {
+      const match = line.match(/^\[(\d{2}:\d{2}:\d{2})\(UTC[+-]\d{2}:\d{2}\)\] \[(.*?)\] (.*)$/);
+      if (!match) continue;
+
+      const time = match[1];
+      const level = match[2];
+      const rawMsg = match[3];
+
+      let type = 'Túnel';
+      let action = 'Log';
+      let tableName = '-';
+      let message = rawMsg;
+
+      if (rawMsg.includes('SELECT retornou')) {
+        type = 'Leitura'; action = 'Select';
+      } else if (rawMsg.includes('COUNT:')) {
+        type = 'Leitura'; action = 'Count';
+      } else if (rawMsg.includes('UPDATE:')) {
+        type = 'Escrita'; action = 'Update';
+      } else if (rawMsg.includes('INSERT:')) {
+        type = 'Escrita'; action = 'Insert';
+      } else if (rawMsg.includes('DELETE:')) {
+        type = 'Escrita'; action = 'Delete';
+      } else if (level === 'ERR') {
+        type = 'Erro SQL'; action = 'Error';
+      } else if (level === 'SYNC') {
+        type = 'Sync'; action = 'Sync';
+      } else if (rawMsg.includes('Comando Recebido')) {
+        if (rawMsg.includes('Buscar dados da tabela')) {
+          action = 'Select'; type = 'Leitura';
+        } else if (rawMsg.includes('Validar Login')) {
+          action = 'Auth'; type = 'Túnel';
+        } else if (rawMsg.includes('Sincronizar BPM')) {
+          action = 'Sync'; type = 'BPM';
+        }
+      }
+
+      const tableMatch = rawMsg.match(/tabela '([^']+)'/);
+      if (tableMatch) {
+        tableName = tableMatch[1];
+      }
+
+      const criado_em = `${dateStr}T${time}.000Z`;
+
+      rows.push({
+        id: `file_${idCounter++}`,
+        criado_em,
+        type,
+        action,
+        table_name: tableName,
+        message: message.substring(0, 500)
+      });
+    }
+
+    // A UI espera os logs mais recentes primeiro
+    rows.reverse();
+
+    // Aplica os filtros recebidos da UI
+    if (filters.type) {
+      rows = rows.filter(r => r.type === filters.type);
+    }
+    if (filters.table_name) {
+      const tbSearch = filters.table_name.toLowerCase();
+      rows = rows.filter(r => (r.table_name || '').toLowerCase().includes(tbSearch));
+    }
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      rows = rows.filter(r => (r.message || '').toLowerCase().includes(q));
+    }
+
+    // Paginação
+    const limit = filters.limit ? parseInt(filters.limit, 10) : 50;
+    const offset = filters.offset ? parseInt(filters.offset, 10) : 0;
+
+    const paginated = rows.slice(offset, offset + limit);
+
+    return { rows: paginated, total: rows.length };
+  }
 }
 
 // Exporta instância singleton

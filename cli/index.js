@@ -1064,10 +1064,23 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             throw lcErr;
           }
         } else if (action === 'read_logs') {
-          // Leitura de logs para o Studio
-          const logsResult = await cliDbLogger.readLogs(payload.payload.filters || {});
-          result = { rows: logsResult.rows, _total: logsResult.total };
-          console.log(chalk.gray(`[ LOG ] Retornou ${logsResult.rows.length} entradas de log.`));
+          // Leitura de logs para o Studio (DB ou Arquivo Físico)
+          const filters = payload.payload.filters || {};
+          let rows = [];
+          let total = 0;
+          
+          if (filters.source === 'file' && filters.date) {
+            const fileResult = await logger.readFileLogs(filters.date, filters);
+            rows = fileResult.rows;
+            total = fileResult.total;
+          } else {
+            const logsResult = await cliDbLogger.readLogs(filters);
+            rows = logsResult.rows;
+            total = logsResult.total;
+          }
+          
+          result = { rows, _total: total };
+          console.log(chalk.gray(`[ LOG ] Retornou ${rows.length} entradas de log.`));
         } else if (action === 'clear_logs') {
           await cliDbLogger.clearLogs();
           result = { rows: [] };

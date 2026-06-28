@@ -55,6 +55,9 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
   const [filterSearch, setFilterSearch] = useState('')
   const [filterFrom, setFilterFrom]   = useState('')
   const [filterTo, setFilterTo]       = useState('')
+  
+  const [logSource, setLogSource] = useState<'db' | 'file'>('db')
+  const [fileDate, setFileDate] = useState(new Date().toISOString().slice(0, 10))
   const [page, setPage]               = useState(0)
   const PAGE_SIZE = 50
 
@@ -109,8 +112,14 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
       if (filterType)   filters.type       = filterType
       if (filterTable)  filters.table_name = filterTable
       if (filterSearch) filters.search     = filterSearch
-      if (filterFrom)   filters.from       = filterFrom
-      if (filterTo)     filters.to         = filterTo
+      
+      if (logSource === 'file') {
+        filters.source = 'file'
+        filters.date   = fileDate
+      } else {
+        if (filterFrom) filters.from = filterFrom
+        if (filterTo)   filters.to   = filterTo
+      }
 
       const resp = await executeTunnelQuery({ action: 'read_logs', filters })
       setLogs(resp.data || [])
@@ -147,7 +156,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
       loadStats()
     }, 300)
     return () => clearTimeout(timer)
-  }, [filterType, filterTable, filterSearch, filterFrom, filterTo, page, loadLogs, loadStats])
+  }, [filterType, filterTable, filterSearch, filterFrom, filterTo, logSource, fileDate, page, loadLogs, loadStats])
 
   // ── Save Config ───────────────────────────────────────────────────────────
   const saveConfig = async () => {
@@ -359,12 +368,25 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
             className="w-28 py-2 px-3 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none"
           />
 
+          {/* Source Toggle */}
+          <div className="flex bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xl">
+            <button onClick={() => { setLogSource('db'); setPage(0) }} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${logSource === 'db' ? 'bg-white shadow dark:bg-neutral-900 text-indigo-500' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}>Banco</button>
+            <button onClick={() => { setLogSource('file'); setPage(0) }} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${logSource === 'file' ? 'bg-white shadow dark:bg-neutral-900 text-indigo-500' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}>Arquivo</button>
+          </div>
+
           {/* Date range */}
-          <input type="datetime-local" value={filterFrom} onChange={e => setFilterFrom(e.target.value)}
-            className="py-2 px-3 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none" />
-          <span className="text-xs text-neutral-400">até</span>
-          <input type="datetime-local" value={filterTo} onChange={e => setFilterTo(e.target.value)}
-            className="py-2 px-3 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none" />
+          {logSource === 'db' ? (
+            <>
+              <input type="datetime-local" value={filterFrom} onChange={e => setFilterFrom(e.target.value)}
+                className="py-2 px-3 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none" />
+              <span className="text-xs text-neutral-400">até</span>
+              <input type="datetime-local" value={filterTo} onChange={e => setFilterTo(e.target.value)}
+                className="py-2 px-3 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none" />
+            </>
+          ) : (
+            <input type="date" value={fileDate} onChange={e => setFileDate(e.target.value)}
+              className="py-2 px-3 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none" />
+          )}
 
           {/* Actions */}
           <button onClick={() => { loadLogs(); loadStats() }} disabled={isLoadingLogs}
