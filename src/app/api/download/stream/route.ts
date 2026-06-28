@@ -65,6 +65,7 @@ export async function GET(request: Request) {
           const { chunk, isLast, error } = payloadEvent.payload
 
           if (error) {
+            console.log(`[Stream API] Received ERROR for job ${jobId}:`, error)
             isDone = true
             controller.error(new Error(error))
             supabase.removeChannel(channel)
@@ -72,10 +73,12 @@ export async function GET(request: Request) {
           }
 
           if (chunk) {
+            console.log(`[Stream API] Received CHUNK for job ${jobId} (length: ${chunk.length})`)
             // Reset timeout
             clearTimeout(timeout)
             timeout = setTimeout(() => {
               if (!isDone) {
+                console.log(`[Stream API] Timeout waiting for NEXT chunk for job ${jobId}`)
                 isDone = true
                 controller.error(new Error('Timeout aguardando proximo chunk'))
                 supabase.removeChannel(channel)
@@ -88,6 +91,7 @@ export async function GET(request: Request) {
           }
 
           if (isLast) {
+            console.log(`[Stream API] Received IS_LAST for job ${jobId}. Closing stream.`)
             isDone = true
             clearTimeout(timeout)
             controller.close()

@@ -246,12 +246,13 @@ NEWFILEUID:NONE
        readStream.pause();
        try {
          const chunkBase64 = chunk.toString('base64');
+         console.log(chalk.cyan(`[ STREAM ] Enviando chunk de ${chunkBase64.length} caracteres para ${eventName}...`));
          await channel.send({
            type: 'broadcast',
            event: eventName,
            payload: { chunk: chunkBase64, isLast: false }
          });
-         // Resume stream after sending
+         console.log(chalk.cyan(`[ STREAM ] Chunk enviado com sucesso para ${eventName}.`));
          readStream.resume();
        } catch (err) {
          console.error(chalk.red(`[ STREAM ] Erro enviando chunk:`), err.message);
@@ -260,12 +261,23 @@ NEWFILEUID:NONE
     });
 
     readStream.on('end', async () => {
-       console.log(chalk.green(`[ STREAM ] Concluído para Job ${jobId}.`));
-       await channel.send({
-         type: 'broadcast',
-         event: eventName,
-         payload: { isLast: true }
-       });
+       console.log(chalk.cyan(`[ STREAM ] Fim do arquivo. Aguardando 200ms para enviar isLast:true...`));
+       setTimeout(async () => {
+         await channel.send({
+           type: 'broadcast',
+           event: eventName,
+           payload: { chunk: null, isLast: true }
+         });
+         console.log(chalk.cyan(`[ STREAM ] isLast: true enviado.`));
+       }, 200);
+
+       // Delete file after successful streaming
+       setTimeout(() => {
+         if (fs.existsSync(localPath)) {
+           fs.unlinkSync(localPath);
+           console.log(chalk.yellow(`[ STREAM ] Arquivo temporário excluído: ${localPath}`));
+         }
+       }, 1000);
     });
 
     readStream.on('error', async (err) => {
