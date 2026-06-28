@@ -5,7 +5,8 @@ import {
   LayoutDashboard,
   Database, 
   ShieldCheck, 
-  Settings2 
+  Settings2,
+  ScrollText
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -44,6 +45,12 @@ export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps
       icon: Settings2,
       label: t('dashboard.projects.studio.sidebar.settings'),
       active: pathname.includes('/studio/settings')
+    },
+    {
+      href: `/admin/${workspaceSlug}/${projectSlug}/studio/logs`,
+      icon: ScrollText,
+      label: 'Logs',
+      active: pathname.includes('/studio/logs')
     }
   ]
 

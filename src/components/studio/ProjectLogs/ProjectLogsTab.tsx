@@ -140,6 +140,15 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
     return () => { if (autoRefreshRef.current) clearInterval(autoRefreshRef.current) }
   }, [autoRefresh, loadLogs, loadStats])
 
+  // ── Load Logs on Filter Change ────────────────────────────────────────────
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadLogs()
+      loadStats()
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [filterType, filterTable, filterSearch, filterFrom, filterTo, page, loadLogs, loadStats])
+
   // ── Save Config ───────────────────────────────────────────────────────────
   const saveConfig = async () => {
     setIsSavingConfig(true)
@@ -208,17 +217,36 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
           </div>
 
           {/* Enable Toggle */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800">
-            <div>
-              <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">Ativar Logs</p>
-              <p className="text-[10px] text-neutral-400">Requer restart do CLI</p>
+          <div className="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">Ativar Logs</p>
+                <p className="text-[10px] text-neutral-400">Habilita ou desabilita o sistema de log</p>
+              </div>
+              <button
+                onClick={() => setLogConfig((p: any) => ({ ...p, enabled: !p.enabled }))}
+                className={`relative w-10 h-5 rounded-full transition-colors ${logConfig.enabled ? 'bg-indigo-500' : 'bg-neutral-300 dark:bg-neutral-600'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${logConfig.enabled ? 'translate-x-5' : ''}`} />
+              </button>
             </div>
-            <button
-              onClick={() => setLogConfig((p: any) => ({ ...p, enabled: !p.enabled }))}
-              className={`relative w-10 h-5 rounded-full transition-colors ${logConfig.enabled ? 'bg-indigo-500' : 'bg-neutral-300 dark:bg-neutral-600'}`}
-            >
-              <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${logConfig.enabled ? 'translate-x-5' : ''}`} />
-            </button>
+            
+            {logConfig.enabled && (
+              <div className="pt-3 border-t border-neutral-200 dark:border-neutral-700 flex flex-col gap-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={logConfig.log_to_db !== false}
+                    onChange={(e) => setLogConfig((p: any) => ({ ...p, log_to_db: e.target.checked }))}
+                    className="rounded text-indigo-500 focus:ring-indigo-500 bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-700" />
+                  <span className="text-xs text-neutral-600 dark:text-neutral-300">Gravar no Banco (Dashboard)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={logConfig.log_to_file !== false}
+                    onChange={(e) => setLogConfig((p: any) => ({ ...p, log_to_file: e.target.checked }))}
+                    className="rounded text-indigo-500 focus:ring-indigo-500 bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-700" />
+                  <span className="text-xs text-neutral-600 dark:text-neutral-300">Gravar em Arquivo (logs/tunnel-...)</span>
+                </label>
+              </div>
+            )}
           </div>
 
           {/* Log Types */}
@@ -387,7 +415,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50">
-                    <th className="text-left px-4 py-3 font-black uppercase tracking-widest text-neutral-400 text-[10px]">Hora</th>
+                    <th className="text-left px-4 py-3 font-black uppercase tracking-widest text-neutral-400 text-[10px]">Data / Hora</th>
                     <th className="text-left px-4 py-3 font-black uppercase tracking-widest text-neutral-400 text-[10px]">Tipo</th>
                     <th className="text-left px-4 py-3 font-black uppercase tracking-widest text-neutral-400 text-[10px]">Ação</th>
                     <th className="text-left px-4 py-3 font-black uppercase tracking-widest text-neutral-400 text-[10px]">Tabela</th>
@@ -401,7 +429,9 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
                     const meta = TYPE_META[log.type] || { label: log.type, color: 'text-neutral-400', bg: '', icon: Settings }
                     const Icon = meta.icon
                     const isExpanded = expandedRow === idx
-                    const time = new Date(log.created_at).toLocaleTimeString('pt-BR')
+                    const dateObj = new Date(log.created_at)
+                    const dateStr = dateObj.toLocaleDateString()
+                    const timeStr = dateObj.toLocaleTimeString()
                     return (
                       <>
                         <tr
@@ -412,7 +442,10 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
                           <td className="px-4 py-2.5 font-mono text-neutral-500 whitespace-nowrap">
                             <div className="flex items-center gap-1.5">
                               {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                              {time}
+                              <div className="flex flex-col">
+                                <span>{timeStr}</span>
+                                <span className="text-[10px] text-neutral-400">{dateStr}</span>
+                              </div>
                             </div>
                           </td>
                           <td className="px-4 py-2.5">
@@ -449,7 +482,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
                               <div className="grid grid-cols-4 gap-3 text-xs">
                                 <div><span className="text-neutral-400">Session ID:</span> <span className="font-mono text-neutral-600 dark:text-neutral-400">{log.session_id || '—'}</span></div>
                                 <div><span className="text-neutral-400">Schema:</span> <span className="font-mono text-neutral-600 dark:text-neutral-400">{log.schema_name || '—'}</span></div>
-                                <div><span className="text-neutral-400">Data:</span> <span className="font-mono text-neutral-600 dark:text-neutral-400">{new Date(log.created_at).toLocaleString('pt-BR')}</span></div>
+                                <div><span className="text-neutral-400">Data completa:</span> <span className="font-mono text-neutral-600 dark:text-neutral-400">{new Date(log.created_at).toLocaleString()}</span></div>
                               </div>
                             </td>
                           </tr>

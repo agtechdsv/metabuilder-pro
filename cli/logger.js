@@ -64,6 +64,12 @@ class Logger {
     this._originalLog = console.log.bind(console);
     this._originalError = console.error.bind(console);
     this._originalWarn = console.warn.bind(console);
+    this._fileLoggingEnabled = true;
+  }
+
+  /** Ativa ou desativa a gravação em arquivo físico dinamicamente */
+  setFileLoggingEnabled(enabled) {
+    this._fileLoggingEnabled = enabled !== false;
   }
 
   /**
@@ -111,7 +117,18 @@ class Logger {
 
   /** Escreve uma linha formatada no arquivo */
   _write(level, args) {
-    if (!this._stream) return;
+    if (!this._stream || !this._fileLoggingEnabled) return;
+    
+    // Rotação diária: verifica se virou o dia enquanto o processo rodava
+    const currentDay = getDateStr();
+    if (this._dateStr !== currentDay) {
+      this._dateStr = currentDay;
+      this._stream.end();
+      const filename = `${this._mode}-${currentDay}.log`;
+      const filepath = path.join(LOGS_DIR, filename);
+      this._stream = fs.createWriteStream(filepath, { flags: 'a', encoding: 'utf8' });
+    }
+
     const text = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' ');
     const clean = stripAnsi(text);
     const line = `[${getTimeStr()}] [${level}] ${clean}\n`;
@@ -127,8 +144,6 @@ class Logger {
    * @param {string} [params.detail] - Detalhe adicional (ex: tipo anterior → novo)
    */
   logSyncChange({ table, type, item, detail }) {
-    if (!this._stream) return;
-
     const typeLabel = {
       added:    '+ ADICIONADO',
       removed:  '- REMOVIDO  ',
@@ -137,7 +152,10 @@ class Logger {
 
     const detailStr = detail ? ` (${detail})` : '';
     const line = `[${getTimeStr()}] [SYNC] ${typeLabel} | Tabela: ${table} | ${item}${detailStr}\n`;
-    this._stream.write(line);
+    
+    if (this._stream && this._fileLoggingEnabled) {
+      this._stream.write(line);
+    }
 
     // Também imprime no console com cor
     const chalkColor = type === 'added' ? '\x1b[32m' : type === 'removed' ? '\x1b[31m' : '\x1b[33m';

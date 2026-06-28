@@ -1048,15 +1048,21 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           result = { rows: [] };
           console.log(chalk.green(`[ OK ] Fluxos BPM sincronizados com sucesso.`));
         } else if (action === 'sync_log_config') {
-          const { data: projData } = await supabase
-            .from('projects')
-            .select('log_config')
-            .eq('id', projectId)
-            .single();
-          const logConfig = projData?.log_config || { enabled: false, types: ['SQL_ERROR'], retention_days: 7 };
-          cliDbLogger.updateConfig(logConfig);
-          result = { rows: [] };
-          console.log(chalk.green(`[ OK ] Configurações de Log sincronizadas dinamicamente.`));
+          try {
+            const { data: projData } = await supabase
+              .from('projects')
+              .select('log_config')
+              .eq('id', projectId)
+              .single();
+            const logConfig = projData?.log_config || { enabled: false, types: ['SQL_ERROR'], retention_days: 7 };
+            await cliDbLogger.init(pgClient, connectionName || 'public', logConfig);
+            logger.setFileLoggingEnabled(logConfig.log_to_file !== false);
+            result = { rows: [] };
+            console.log(chalk.green(`[ OK ] Configurações de Log sincronizadas dinamicamente.`));
+          } catch (lcErr) {
+            console.error(chalk.red(`[ ERRO ] Falha ao sincronizar configs de log:`), lcErr);
+            throw lcErr;
+          }
         } else if (action === 'read_logs') {
           // Leitura de logs para o Studio
           const logsResult = await cliDbLogger.readLogs(payload.payload.filters || {});

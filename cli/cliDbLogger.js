@@ -41,16 +41,23 @@ const CREATE_TABLE_SQL = `
   CREATE INDEX IF NOT EXISTS idx_mb_logs_table   ON __mb_logs (table_name, created_at DESC);
 `;
 
-/** Retorna o timestamp local do CLI como string ISO 8601 com offset (ex: 2026-06-28T09:15:00-03:00) */
+/** Retorna o timestamp local do CLI como ISO 8601 com offset correto (ex: 2026-06-28T09:15:00.000-03:00) */
 function localISOString() {
   const now = new Date();
-  const off = now.getTimezoneOffset(); // em minutos, negativo para UTC+
+  const off = now.getTimezoneOffset(); // positivo para zonas West (UTC-), negativo para East (UTC+)
   const sign = off <= 0 ? '+' : '-';
   const absOff = Math.abs(off);
   const offH = String(Math.floor(absOff / 60)).padStart(2, '0');
   const offM = String(absOff % 60).padStart(2, '0');
-  // Remove o 'Z' do toISOString e adiciona o offset real
-  return now.toISOString().replace('Z', `${sign}${offH}:${offM}`);
+  // Usa componentes LOCAIS (getHours etc.), NÃO toISOString() que retorna UTC
+  const y  = now.getFullYear();
+  const mo = String(now.getMonth() + 1).padStart(2, '0');
+  const d  = String(now.getDate()).padStart(2, '0');
+  const h  = String(now.getHours()).padStart(2, '0');
+  const mi = String(now.getMinutes()).padStart(2, '0');
+  const s  = String(now.getSeconds()).padStart(2, '0');
+  const ms = String(now.getMilliseconds()).padStart(3, '0');
+  return `${y}-${mo}-${d}T${h}:${mi}:${s}.${ms}${sign}${offH}:${offM}`;
 }
 
 class CliDbLogger {
