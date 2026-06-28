@@ -65,19 +65,40 @@ export async function executeExportBackground(params: {
 
     let joinClause = ''
     if (joins && joins.length > 0) {
-      const joinedTables = new Set()
-      joins.forEach(j => {
-        const fromT = String(j.table || j.from).replace(/[^a-zA-Z0-9_]/g, '')
-        const toT = String(j.toTable || j.to).replace(/[^a-zA-Z0-9_]/g, '')
-        const local = String(j.on || j.localKey).replace(/[^a-zA-Z0-9_]/g, '')
-        const foreign = String(j.toOn || j.foreignKey).replace(/[^a-zA-Z0-9_]/g, '')
-        if (fromT && toT && local && foreign) {
-          if (!joinedTables.has(toT)) {
+      const joinedTables = new Set([safeTable])
+      let pendingJoins = [...joins]
+      let progress = true
+
+      while (pendingJoins.length > 0 && progress) {
+        progress = false
+        const deferred: any[] = []
+
+        for (const j of pendingJoins) {
+          const fromT = String(j.table || j.from).replace(/[^a-zA-Z0-9_]/g, '')
+          const toT = String(j.toTable || j.to).replace(/[^a-zA-Z0-9_]/g, '')
+          const local = String(j.on || j.localKey).replace(/[^a-zA-Z0-9_]/g, '')
+          const foreign = String(j.toOn || j.foreignKey).replace(/[^a-zA-Z0-9_]/g, '')
+
+          if (!fromT || !toT || !local || !foreign) continue
+
+          if (joinedTables.has(toT) && joinedTables.has(fromT)) {
+            continue
+          }
+
+          if (joinedTables.has(fromT)) {
             joinClause += ` LEFT JOIN "${toT}" ON "${fromT}"."${local}" = "${toT}"."${foreign}"`
             joinedTables.add(toT)
+            progress = true
+          } else if (joinedTables.has(toT)) {
+            joinClause += ` LEFT JOIN "${fromT}" ON "${toT}"."${foreign}" = "${fromT}"."${local}"`
+            joinedTables.add(fromT)
+            progress = true
+          } else {
+            deferred.push(j)
           }
         }
-      })
+        pendingJoins = deferred
+      }
     }
 
     let whereClause = ''

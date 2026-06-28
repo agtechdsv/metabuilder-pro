@@ -442,25 +442,50 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             let selectCols = `"${safeTable}".*`;
             let joinClause = '';
             if (joins && joins.length > 0) {
-              const joined = new Set();
-              joins.forEach(j => {
-                  if(j.from && j.to && j.localKey && j.foreignKey) {
-                     const safeFrom = j.from.replace(/[^a-zA-Z0-9_]/g, '');
-                     const safeTo = j.to.replace(/[^a-zA-Z0-9_]/g, '');
-                     const safeLocal = j.localKey.replace(/[^a-zA-Z0-9_]/g, '');
-                     const safeForeign = j.foreignKey.replace(/[^a-zA-Z0-9_]/g, '');
-                     
-                     if (!joined.has(safeTo)) {
-                       joined.add(safeTo);
-                       if (dbType === 'oracle') {
-                         selectCols += `, (SELECT JSON_OBJECT(*) FROM "${safeTo}" WHERE "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}") AS "${safeTo}"`;
-                       } else {
-                         selectCols += `, row_to_json("${safeTo}".*) AS "${safeTo}"`;
-                       }
-                       joinClause += ` LEFT JOIN "${safeTo}" ON "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}"`;
-                     }
+              const joinedTables = new Set([safeTable]);
+              let pendingJoins = [...joins];
+              let progress = true;
+
+              while (pendingJoins.length > 0 && progress) {
+                progress = false;
+                const deferred = [];
+
+                for (const j of pendingJoins) {
+                  if (j.from && j.to && j.localKey && j.foreignKey) {
+                    const safeFrom = j.from.replace(/[^a-zA-Z0-9_]/g, '');
+                    const safeTo = j.to.replace(/[^a-zA-Z0-9_]/g, '');
+                    const safeLocal = j.localKey.replace(/[^a-zA-Z0-9_]/g, '');
+                    const safeForeign = j.foreignKey.replace(/[^a-zA-Z0-9_]/g, '');
+
+                    if (joinedTables.has(safeTo) && joinedTables.has(safeFrom)) {
+                      continue;
+                    }
+
+                    if (joinedTables.has(safeFrom)) {
+                      if (dbType === 'oracle') {
+                        selectCols += `, (SELECT JSON_OBJECT(*) FROM "${safeTo}" WHERE "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}") AS "${safeTo}"`;
+                      } else {
+                        selectCols += `, row_to_json("${safeTo}".*) AS "${safeTo}"`;
+                      }
+                      joinClause += ` LEFT JOIN "${safeTo}" ON "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}"`;
+                      joinedTables.add(safeTo);
+                      progress = true;
+                    } else if (joinedTables.has(safeTo)) {
+                      if (dbType === 'oracle') {
+                        selectCols += `, (SELECT JSON_OBJECT(*) FROM "${safeFrom}" WHERE "${safeTo}"."${safeForeign}" = "${safeFrom}"."${safeLocal}") AS "${safeFrom}"`;
+                      } else {
+                        selectCols += `, row_to_json("${safeFrom}".*) AS "${safeFrom}"`;
+                      }
+                      joinClause += ` LEFT JOIN "${safeFrom}" ON "${safeTo}"."${safeForeign}" = "${safeFrom}"."${safeLocal}"`;
+                      joinedTables.add(safeFrom);
+                      progress = true;
+                    } else {
+                      deferred.push(j);
+                    }
                   }
-              });
+                }
+                pendingJoins = deferred;
+              }
             }
             if (dbType === 'oracle') {
               sql = `SELECT ${selectCols} FROM "${safeTable}"${joinClause}${whereClause} OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
