@@ -13,7 +13,7 @@ function registerExportHandlers(channel, pgClient, oracleConnection, dbType, sec
   }
 
   channel.on('broadcast', { event: 'export_job_start' }, async (payload) => {
-    const { jobId, token, sql, params, fileType, viewName, workspaceSlug, projectSlug, exportGraph, projectRelations, masterModelId, dictionary } = payload.payload;
+    const { jobId, token, sql, params, fileType, viewName, workspaceSlug, projectSlug, exportGraph, projectRelations, masterModelId, dictionary, recordId } = payload.payload;
 
     if (token !== secretToken) {
       console.log(chalk.red(`[ BLOQUEADO ] Export job negado por token inválido. (Job ${jobId})`));
@@ -44,7 +44,7 @@ function registerExportHandlers(channel, pgClient, oracleConnection, dbType, sec
             const detailModelId = rel.detail_model_id;
             const fk = rel.foreign_key;
             const detailTableName = dictionary[detailModelId];
-            const parentPk = parentRow.id || parentRow.ID;
+            const parentPk = parentRow.id || parentRow.ID || parentRow.Id || parentRow.codigo || parentRow.uuid || (parentRow === rows[0] ? recordId : null);
             if (!detailTableName || !parentPk) continue;
             
             let detailRows = [];

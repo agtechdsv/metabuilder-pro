@@ -151,7 +151,8 @@ export function ExportDropdown({
           exportGraph: !!selectedRecord,
           projectRelations: selectedRecord ? projectRelations : undefined,
           masterModelId: selectedRecord ? masterModelId : undefined,
-          dictionary: selectedRecord ? dictionary : undefined
+          dictionary: selectedRecord ? dictionary : undefined,
+          recordId: selectedRecord ? (selectedRecord.id || selectedRecord.ID) : undefined
         })
       })
 

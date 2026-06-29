@@ -45,7 +45,8 @@ export async function POST(request: Request) {
       exportGraph = false,
       projectRelations = [],
       masterModelId = null,
-      dictionary = {}
+      dictionary = {},
+      recordId = null
     } = body
 
     if (!projectId || !userId || !workspaceSlug || !viewName || !modelName || !fileType || !columnsList) {
@@ -106,7 +107,8 @@ export async function POST(request: Request) {
       exportGraph,
       projectRelations,
       masterModelId,
-      dictionary
+      dictionary,
+      recordId
     }).catch(err => {
       console.error(`[Export API] Background worker uncaught exception for Job ${jobId}:`, err)
     })

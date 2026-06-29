@@ -44,8 +44,9 @@ export async function executeExportBackground(params: {
   projectRelations?: any[]
   masterModelId?: string
   dictionary?: any
+  recordId?: any
 }) {
-  const { jobId, projectId, workspaceSlug, viewName, modelName, fileType, columnsList, joins, filters, exportGraph, projectRelations, masterModelId, dictionary } = params
+  const { jobId, projectId, workspaceSlug, viewName, modelName, fileType, columnsList, joins, filters, exportGraph, projectRelations, masterModelId, dictionary, recordId } = params
   const client = await dbPool.connect()
   
   try {
@@ -156,7 +157,8 @@ export async function executeExportBackground(params: {
               projectRelations,
               masterModelId,
               modelName,
-              dictionary
+              dictionary,
+              recordId
             }
           }).then(() => {
             if (!isDone) { isDone = true; clearTimeout(timeout); supabase.removeChannel(channel); resolve() }
