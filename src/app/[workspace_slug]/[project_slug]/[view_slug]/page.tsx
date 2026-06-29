@@ -334,11 +334,21 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
       view.ui_components = Object.values(componentMap)
     }
 
-    // Busca o Santo Graal — relacionamentos do projeto
-    const { data: projectRelations } = await supabase
+    const { data: rawProjectRelations } = await supabase
       .from('relations')
       .select('*')
       .eq('project_id', project.id)
+
+    const projectRelations = (rawProjectRelations || []).map((r: any) => {
+      const childModel = allModels?.find((m: any) => m.id === r.from_model_id)
+      const fkField = childModel?.fields?.find((f: any) => f.id === r.from_field_id)
+      return {
+        ...r,
+        master_model_id: r.to_model_id,
+        detail_model_id: r.from_model_id,
+        foreign_key: fkField?.db_column_name || ''
+      }
+    })
 
     viewName = view.name
     modelName = tableDictionary[view.model_id] || view.model?.db_table_name || ''

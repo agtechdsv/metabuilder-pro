@@ -91,9 +91,8 @@ export async function POST(request: Request) {
     const jobId = jobData.id
     console.log(`[Export API] Registered Job ${jobId} (pending). Launching background execution...`)
 
-    // 2. Launch background execution WITHOUT awaiting the promise.
-    // This offloads the job to Node's async event loop and returns 202 immediately to the browser.
-    executeExportBackground({
+    // 2. Fire and forget background execution (awaited to prevent Vercel suspension)
+    await executeExportBackground({
       jobId,
       projectId,
       userId,
@@ -109,8 +108,6 @@ export async function POST(request: Request) {
       masterModelId,
       dictionary,
       recordId
-    }).catch(err => {
-      console.error(`[Export API] Background worker uncaught exception for Job ${jobId}:`, err)
     })
 
     // 3. Return 202 Accepted response with jobId

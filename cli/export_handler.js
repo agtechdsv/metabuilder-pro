@@ -13,7 +13,7 @@ function registerExportHandlers(channel, pgClient, oracleConnection, dbType, sec
   }
 
   channel.on('broadcast', { event: 'export_job_start' }, async (payload) => {
-    const { jobId, token, sql, params, fileType, viewName, workspaceSlug, projectSlug, exportGraph, projectRelations, masterModelId, dictionary, recordId } = payload.payload;
+    const { jobId, token, sql, params, fileType, viewName, workspaceSlug, projectSlug, exportGraph, projectRelations, masterModelId, modelName, dictionary, recordId } = payload.payload;
 
     if (token !== secretToken) {
       console.log(chalk.red(`[ BLOQUEADO ] Export job negado por token inválido. (Job ${jobId})`));
