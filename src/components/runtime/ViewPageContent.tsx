@@ -481,18 +481,21 @@ const isModal = actionInterfaceType === 'modal'
               </button>
             )}
             {logicType !== 'analytics' && project.theme_config?.enable_downloads !== false && canExport && (
-              <ExportDropdown 
-                projectId={project.id}
-                workspaceSlug={workspace.slug}
-                projectSlug={project.slug}
-                viewName={viewName}
-                modelName={modelName}
-                displayFields={cleanDisplayFields}
-                joins={joins}
-                filters={globalFilterValues}
-                exportFormats={exportFormats}
-                selectedRecord={(isPageVisible || isModalOpen || isDrawerOpen) ? selectedRow : null}
-              />
+                <ExportDropdown 
+                  projectId={project.id}
+                  workspaceSlug={workspace.slug}
+                  projectSlug={project.slug}
+                  viewName={viewName}
+                  modelName={modelName}
+                  displayFields={cleanDisplayFields}
+                  joins={joins}
+                  filters={globalFilterValues}
+                  exportFormats={exportFormats}
+                  selectedRecord={(isPageVisible || isModalOpen || isDrawerOpen) ? selectedRow : null}
+                  projectRelations={projectRelations}
+                  masterModelId={masterModelId}
+                  dictionary={dictionary}
+                />
             )}
             {canAdd && (
               <button 

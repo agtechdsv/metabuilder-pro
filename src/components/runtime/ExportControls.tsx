@@ -28,6 +28,9 @@ interface ExportDropdownProps {
   filters: Record<string, string>
   exportFormats?: string[]
   selectedRecord?: any
+  projectRelations?: any[]
+  masterModelId?: string
+  dictionary?: any
 }
 
 export function ExportDropdown({
@@ -40,7 +43,10 @@ export function ExportDropdown({
   joins,
   filters,
   exportFormats = ['xlsx', 'csv', 'json'],
-  selectedRecord
+  selectedRecord,
+  projectRelations,
+  masterModelId,
+  dictionary
 }: ExportDropdownProps) {
   const { t } = useI18n()
   const [isOpen, setIsOpen] = useState(false)
@@ -141,7 +147,11 @@ export function ExportDropdown({
           fileType,
           columnsList,
           joins,
-          filters: finalFilters
+          filters: finalFilters,
+          exportGraph: !!selectedRecord,
+          projectRelations: selectedRecord ? projectRelations : undefined,
+          masterModelId: selectedRecord ? masterModelId : undefined,
+          dictionary: selectedRecord ? dictionary : undefined
         })
       })
 

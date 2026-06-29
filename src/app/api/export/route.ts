@@ -41,7 +41,11 @@ export async function POST(request: Request) {
       fileType, // 'xlsx' | 'csv' | 'json'
       columnsList,
       joins = [],
-      filters = {}
+      filters = {},
+      exportGraph = false,
+      projectRelations = [],
+      masterModelId = null,
+      dictionary = {}
     } = body
 
     if (!projectId || !userId || !workspaceSlug || !viewName || !modelName || !fileType || !columnsList) {
@@ -98,7 +102,11 @@ export async function POST(request: Request) {
       fileType,
       columnsList,
       joins,
-      filters
+      filters,
+      exportGraph,
+      projectRelations,
+      masterModelId,
+      dictionary
     }).catch(err => {
       console.error(`[Export API] Background worker uncaught exception for Job ${jobId}:`, err)
     })
