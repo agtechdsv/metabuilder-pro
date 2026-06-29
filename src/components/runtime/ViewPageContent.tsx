@@ -63,6 +63,7 @@ interface ViewPageContentProps {
   ganttConfig?: any
   blueprintConfig?: any
   dictionary?: any
+  tableDictionary?: any
   joins?: any[]
   masterModelId?: string
   detailsDisplayMode?: Record<string, 'tabs' | 'sections'>
@@ -131,6 +132,7 @@ export default function ViewPageContent({
   ganttConfig,
   blueprintConfig,
   dictionary = {},
+  tableDictionary = {},
   joins = [],
   masterModelId,
   detailsDisplayMode,
@@ -494,7 +496,8 @@ const isModal = actionInterfaceType === 'modal'
                   selectedRecord={(isPageVisible || isModalOpen || isDrawerOpen) ? selectedRow : null}
                   projectRelations={projectRelations}
                   masterModelId={masterModelId}
-                  dictionary={dictionary}
+                  dictionary={tableDictionary}
+                  primaryKeyName={primaryKeyName}
                 />
             )}
             {canAdd && (

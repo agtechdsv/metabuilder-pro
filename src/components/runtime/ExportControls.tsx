@@ -31,6 +31,7 @@ interface ExportDropdownProps {
   projectRelations?: any[]
   masterModelId?: string
   dictionary?: any
+  primaryKeyName?: string
 }
 
 export function ExportDropdown({
@@ -46,7 +47,8 @@ export function ExportDropdown({
   selectedRecord,
   projectRelations,
   masterModelId,
-  dictionary
+  dictionary,
+  primaryKeyName = 'id'
 }: ExportDropdownProps) {
   const { t } = useI18n()
   const [isOpen, setIsOpen] = useState(false)
@@ -126,10 +128,14 @@ export function ExportDropdown({
 
       // Se estiver editando um registro específico, forçar o filtro no ID para o export do background (PDF, Excel, etc)
       let finalFilters = { ...filters }
+      let recordIdForExport = undefined
       if (selectedRecord) {
-        const pkName = selectedRecord.id ? 'id' : selectedRecord.ID ? 'ID' : null
-        if (pkName) {
+        const pkName = primaryKeyName || (selectedRecord.id !== undefined ? 'id' : selectedRecord.ID !== undefined ? 'ID' : null)
+        if (pkName && selectedRecord[pkName] !== undefined) {
            finalFilters[pkName] = String(selectedRecord[pkName])
+           recordIdForExport = selectedRecord[pkName]
+        } else if (selectedRecord.id !== undefined) {
+           recordIdForExport = selectedRecord.id
         }
       }
 
@@ -152,7 +158,7 @@ export function ExportDropdown({
           projectRelations: selectedRecord ? projectRelations : undefined,
           masterModelId: selectedRecord ? masterModelId : undefined,
           dictionary: selectedRecord ? dictionary : undefined,
-          recordId: selectedRecord ? (selectedRecord.id || selectedRecord.ID) : undefined
+          recordId: recordIdForExport
         })
       })
 

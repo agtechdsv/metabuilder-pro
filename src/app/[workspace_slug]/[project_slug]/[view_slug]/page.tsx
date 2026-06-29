@@ -818,6 +818,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
           ganttConfig={view.layout_config?.gantt_config}
           blueprintConfig={view.layout_config?.blueprint_config}
           dictionary={dictionary}
+          tableDictionary={tableDictionary}
           joins={view.layout_config?.joins || []}
           masterModelId={view.layout_config?.master_model_id || view.model_id}
           detailsDisplayMode={view.layout_config?.details_display_mode}

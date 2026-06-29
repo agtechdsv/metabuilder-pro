@@ -39,7 +39,7 @@ function registerExportHandlers(channel, pgClient, oracleConnection, dbType, sec
       if (exportGraph && projectRelations && masterModelId && dictionary) {
         console.log(chalk.yellow(`[ EXPORT ] Recuperando grafo aninhado para o Job ${jobId}...`));
         const fetchGraph = async (parentRow, currentModelId) => {
-          const relations = projectRelations.filter(r => r.master_model_id === currentModelId);
+          const relations = projectRelations.filter(r => String(r.master_model_id).toLowerCase() === String(currentModelId).toLowerCase());
           for (const rel of relations) {
             const detailModelId = rel.detail_model_id;
             const fk = rel.foreign_key;
