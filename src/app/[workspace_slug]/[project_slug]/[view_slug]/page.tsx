@@ -819,7 +819,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
           blueprintConfig={view.layout_config?.blueprint_config}
           dictionary={dictionary}
           joins={view.layout_config?.joins || []}
-          masterModelId={view.layout_config?.master_model_id}
+          masterModelId={view.layout_config?.master_model_id || view.model_id}
           detailsDisplayMode={view.layout_config?.details_display_mode}
           detailsInterfaceTypes={view.layout_config?.details_interface_types}
           detailsInlineTypes={view.layout_config?.details_inline_types}

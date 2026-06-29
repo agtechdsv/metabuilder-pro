@@ -34,6 +34,8 @@ function registerExportHandlers(channel, pgClient, oracleConnection, dbType, sec
       }
 
       // Step 1.1: Fetch full graph if requested
+      console.log(chalk.cyan(`[ EXPORT DEBUG ] exportGraph=${exportGraph}, hasRelations=${!!projectRelations}, masterModelId=${masterModelId}, hasDict=${!!dictionary}`));
+      
       if (exportGraph && projectRelations && masterModelId && dictionary) {
         console.log(chalk.yellow(`[ EXPORT ] Recuperando grafo aninhado para o Job ${jobId}...`));
         const fetchGraph = async (parentRow, currentModelId) => {
