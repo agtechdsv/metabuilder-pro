@@ -236,6 +236,16 @@ export default function ViewPageContent({
     cleanFormFields.filter(f => f.model_id && String(f.model_id) !== String(masterModelId)),
   [cleanFormFields, masterModelId])
 
+  const activeRelations = useMemo(() => {
+    if (!projectRelations) return []
+    const activeModelIds = new Set<string>()
+    if (masterModelId) activeModelIds.add(String(masterModelId))
+    cleanFormFields.forEach(f => {
+      if (f.model_id) activeModelIds.add(String(f.model_id))
+    })
+    return projectRelations.filter(r => activeModelIds.has(String(r.detail_model_id)))
+  }, [projectRelations, cleanFormFields, masterModelId])
+
   const isCadastroOnly = logicType === 'cadastro'
 
   const [activeTab, setActiveTab] = useState<'list' | 'card'>(defaultView)
@@ -494,7 +504,7 @@ const isModal = actionInterfaceType === 'modal'
                   filters={globalFilterValues}
                   exportFormats={exportFormats}
                   selectedRecord={(isPageVisible || isModalOpen || isDrawerOpen) ? selectedRow : null}
-                  projectRelations={projectRelations}
+                  projectRelations={activeRelations}
                   masterModelId={masterModelId}
                   dictionary={tableDictionary}
                   primaryKeyName={primaryKeyName}
