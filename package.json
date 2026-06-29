@@ -18,6 +18,8 @@
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.3",
     "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-deep-link": "^2.4.9",
+    "@tauri-apps/plugin-shell": "^2.3.5",
     "@xyflow/react": "^12.10.2",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",

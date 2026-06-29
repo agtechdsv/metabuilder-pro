@@ -11,7 +11,8 @@ import { AuthModal } from '@/components/auth/AuthModal'
 import { SetPasswordForm } from '@/components/auth/SetPasswordForm'
 import { useI18n } from '@/i18n/I18nContext'
 import { startAuthentication } from '@simplewebauthn/browser'
-
+import { isTauri, openExternalUrl } from '@/utils/tauriUtils'
+import { onOpenUrl } from '@tauri-apps/plugin-deep-link'
 interface LoginFormProps {
   error?: string
   className?: string
@@ -147,6 +148,32 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
       // para o servidor. Se usarmos router.push, o Next.js pode fazer um soft-navigation
       // antes do cookie estar pronto, causando um redirect fantasma de volta pro /login.
       window.location.href = redirectTo
+    }
+
+    // Tauri: Escuta deep links (metabuilder://) para capturar o login
+    if (isTauri()) {
+      let unlisten: (() => void) | undefined;
+      onOpenUrl((urls) => {
+        try {
+          const urlStr = urls[0];
+          if (urlStr) {
+            // Converte metabuilder://auth/callback?code=... para /auth/callback?code=...
+            const validUrlString = urlStr.replace(/^metabuilder:\/\//, window.location.origin + '/');
+            const urlObj = new URL(validUrlString);
+            
+            // Redireciona a janela atual da IDE para a rota de callback do Next.js
+            window.location.href = urlObj.pathname + urlObj.search + urlObj.hash;
+          }
+        } catch (e) {
+          console.error('Error handling deep link:', e);
+        }
+      }).then(fn => {
+        unlisten = fn;
+      }).catch(console.error);
+
+      return () => {
+        if (unlisten) unlisten();
+      }
     }
 
     // Abre o modal imediatamente se detectar o hash de convite
@@ -441,7 +468,9 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
     setClientError(null)
     
     let callbackUrl = `${window.location.origin}/auth/callback`
-    if (typeof window !== 'undefined') {
+    if (isTauri()) {
+      callbackUrl = 'metabuilder://auth/callback'
+    } else if (typeof window !== 'undefined') {
       const searchParams = new URLSearchParams(window.location.search)
       const redirectParam = searchParams.get('redirect_to')
       if (redirectParam) {
@@ -468,16 +497,20 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
     }
 
     if (data?.url) {
-      const width = 500
-      const height = 650
-      const left = window.screenX + (window.outerWidth - width) / 2
-      const top = window.screenY + (window.outerHeight - height) / 2
+      if (isTauri()) {
+        openExternalUrl(data.url)
+      } else {
+        const width = 500
+        const height = 650
+        const left = window.screenX + (window.outerWidth - width) / 2
+        const top = window.screenY + (window.outerHeight - height) / 2
 
-      window.open(
-        data.url,
-        'google-login',
-        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,status=yes`
-      )
+        window.open(
+          data.url,
+          'google-login',
+          `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,status=yes`
+        )
+      }
     }
   }
 

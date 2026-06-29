@@ -27,6 +27,7 @@ import { IconPicker } from '@/components/studio/IconPicker'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
+import { openExternalUrl } from '@/utils/tauriUtils'
 
 
 interface Project {
@@ -459,15 +460,16 @@ export function ProjectManager({
 
                       {!isNavigating && (project.can_edit || project.can_deactivate || project.can_delete) && (
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Link
-                            href={`/${workspaceSlug}/${project.slug}`}
-                            target="_blank"
+                          <button
                             className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
                             title="Acessar versão publicada"
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openExternalUrl(`${window.location.origin}/${workspaceSlug}/${project.slug}`)
+                            }}
                           >
                             <ArrowUpRight className="w-4 h-4" />
-                          </Link>
+                          </button>
                           {portalEnabled && (
                             <button
                               onClick={(e) => { e.preventDefault(); toggleProjectPortal(project); }}
