@@ -6,7 +6,8 @@ import {
   Database, 
   ShieldCheck, 
   Settings2,
-  ScrollText
+  ScrollText,
+  Code2
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -39,6 +40,12 @@ export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps
       icon: ShieldCheck,
       label: t('dashboard.projects.studio.sidebar.auth'),
       active: pathname.includes('/studio/auth')
+    },
+    {
+      href: `/admin/${workspaceSlug}/${projectSlug}/studio/byoc`,
+      icon: Code2,
+      label: 'BYOC',
+      active: pathname.includes('/studio/byoc')
     },
     {
       href: `/admin/${workspaceSlug}/${projectSlug}/studio/settings`,

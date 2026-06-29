@@ -24,14 +24,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })
     }
 
-    // 3. Fetch Models to generate Features
+    // 3. Fetch Models to generate Features (including fields and views)
     const { data: models } = await supabase
       .from('ui_models')
+      .select('*, ui_fields(*), ui_views(*)')
+      .eq('project_id', projectId)
+      
+    // 3.5 Fetch BYOC (Custom Components)
+    const { data: customComponents } = await supabase
+      .from('ui_custom_components')
       .select('*')
       .eq('project_id', projectId)
 
     // 4. Generate the Source Code (ZIP)
-    const generator = new SourceCodeGenerator(project, models || [])
+    const generator = new SourceCodeGenerator(project, models || [], customComponents || [])
     const zipBuffer = await generator.generate()
 
     // 5. Return as a downloadable stream
