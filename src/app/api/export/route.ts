@@ -3,16 +3,21 @@ import { NextResponse } from 'next/server'
 import { executeExportBackground } from '@/utils/export/worker'
 import ws from 'ws'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: { persistSession: false },
-  realtime: { transport: ws as any }
-})
-
+let _supabase: ReturnType<typeof createClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    _supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false },
+      realtime: { transport: ws as any }
+    })
+  }
+  return _supabase;
+}
 async function broadcastDelete(projectId: string, localPaths: string[]) {
   if (!localPaths || localPaths.length === 0) return
+  const supabase = getSupabase()
   const channel = supabase.channel(`tunnel:${projectId}`)
   await new Promise<void>((resolve) => {
     let isDone = false
@@ -31,6 +36,7 @@ async function broadcastDelete(projectId: string, localPaths: string[]) {
 
 export async function POST(request: Request) {
   try {
+    const supabase = getSupabase()
     const body = await request.json()
     const {
       projectId,
@@ -131,6 +137,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const supabase = getSupabase()
     const body = await request.json()
     const { userId, jobId, clearAll, projectId, cleanup } = body
 
@@ -284,6 +291,7 @@ export async function DELETE(request: Request) {
 
 export async function GET(request: Request) {
   try {
+    const supabase = getSupabase()
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get('projectId')
     const userId = searchParams.get('userId')
