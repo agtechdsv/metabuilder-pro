@@ -19,6 +19,7 @@ interface UseWizardDataReturn {
   currentProjectId: string | undefined
   currentWorkspaceId: string | undefined
   virtualFields: any[]
+  byocComponents: any[]
 }
 
 /**
@@ -44,6 +45,7 @@ export function useWizardData({ projectSlug }: UseWizardDataParams): UseWizardDa
   const [currentProjectId, setCurrentProjectId] = useState<string>()
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string>()
   const [virtualFields, setVirtualFields] = useState<any[]>([])
+  const [byocComponents, setByocComponents] = useState<any[]>([])
 
   useEffect(() => {
     const loadData = async () => {
@@ -106,13 +108,7 @@ export function useWizardData({ projectSlug }: UseWizardDataParams): UseWizardDa
         .eq('project_id', project.id)
         .order('name')
 
-      if (viewsData) {
-        // Deduplicate to avoid React key errors
-        const unique = viewsData.filter((v, i, a) =>
-          a.findIndex(t => t.slug === v.slug) === i
-        )
-        setUseCases(unique as UseCase[])
-      }
+      if (viewsData) setUseCases(viewsData as UseCase[])
 
       // 5. Fetch BPM Workflows for automations tab
       const { data: bpmData } = await supabase
@@ -123,11 +119,20 @@ export function useWizardData({ projectSlug }: UseWizardDataParams): UseWizardDa
 
       if (bpmData) setBpmWorkflows(bpmData as BpmWorkflow[])
 
+      // 6. Fetch BYOC Components
+      const { data: byocData } = await supabase
+        .from('ui_custom_components')
+        .select('id, name, description, compiled_code')
+        .eq('project_id', project.id)
+        .order('name')
+
+      if (byocData) setByocComponents(byocData)
+
       setIsLoading(false)
     }
 
     loadData()
-  }, [projectSlug]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [projectSlug, supabase])
 
   return {
     models,
@@ -139,6 +144,7 @@ export function useWizardData({ projectSlug }: UseWizardDataParams): UseWizardDa
     isDownloadsActive,
     currentProjectId,
     currentWorkspaceId,
-    virtualFields
+    virtualFields,
+    byocComponents
   }
 }

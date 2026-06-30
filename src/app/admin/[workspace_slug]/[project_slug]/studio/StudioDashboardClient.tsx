@@ -437,7 +437,7 @@ export function StudioDashboardClient({
         const componentMap: Record<string, any> = {}
 
         const addComponent = (fid: string, zone: string) => {
-          if (fid.startsWith('virt_')) return
+          if (fid.startsWith('virt_') || fid.startsWith('byoc_')) return
           const zoneMeta = draftMeta[`${zone}-${fid}`]
           const globalMeta = draftMeta[fid] || {}
           const metadata = zoneMeta || globalMeta

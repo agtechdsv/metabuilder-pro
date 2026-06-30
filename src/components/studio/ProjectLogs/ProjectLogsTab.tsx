@@ -481,9 +481,8 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
                     const dateStr = dateObj.toLocaleDateString()
                     const timeStr = dateObj.toLocaleTimeString()
                     return (
-                      <>
+                      <React.Fragment key={log.id}>
                         <tr
-                          key={log.id}
                           onClick={() => setExpandedRow(isExpanded ? null : idx)}
                           className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 cursor-pointer transition-colors"
                         >
@@ -535,7 +534,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     )
                   })}
                 </tbody>

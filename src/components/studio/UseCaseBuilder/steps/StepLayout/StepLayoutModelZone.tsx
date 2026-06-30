@@ -42,9 +42,10 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
 
     const isMaster = depth === 0 && index === 0
     const fieldsOfThisModel = config.layout_config.form_fields.filter((fid: string) => {
-      if (fid.startsWith('virt_')) {
+      if (fid.startsWith('virt_') || fid.startsWith('byoc_')) {
         const meta = (config.layout_config.fields_metadata || {})[fid] || {};
-        return meta.virtual_model_id === model.id || (!meta.virtual_model_id && isMaster);
+        const assignedModelId = fid.startsWith('byoc_') ? meta.byoc_model_id : meta.virtual_model_id;
+        return assignedModelId === model.id || (!assignedModelId && isMaster);
       }
       return model.fields.some((f: any) => f.id === fid)
     })

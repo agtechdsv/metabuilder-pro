@@ -134,12 +134,21 @@ ${tableCells}
         </div>`
       }).join('\n')
 
+      const view = model.ui_views?.[0]
+      const layoutConfig = view?.draft_config?.layout_config || {}
+      const byocFields = [...(layoutConfig.form_fields || []), ...(layoutConfig.grid_fields || []), ...(layoutConfig.filter_fields || [])]
+        .filter((fid: string) => fid.startsWith('byoc_'))
+      const uniqueByocNames = Array.from(new Set(byocFields.map((fid: string) => fid.split('_').slice(2).join('_'))))
+      const byocImports = uniqueByocNames.map(name => `import ${name} from '@/components/custom/${name}'`).join('\n')
+      const byocComponentsJSX = uniqueByocNames.map(name => `      <div className="my-6">\n        <${name} />\n      </div>`).join('\n')
+
       componentsFolder.file(`${modelName}Form.tsx`, `'use client'
 
 import React, { useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { create${modelName} } from '../actions'
+${byocImports}
 
 export function ${modelName}Form({ onSuccess }: { onSuccess?: () => void }) {
   const formRef = useRef<HTMLFormElement>(null)
@@ -152,6 +161,7 @@ export function ${modelName}Form({ onSuccess }: { onSuccess?: () => void }) {
 
   return (
     <form ref={formRef} action={handleSubmit} className="space-y-4">
+${byocComponentsJSX}
 ${formInputs}
       <div className="flex justify-end space-x-2">
         <Button type="submit">Salvar Registro</Button>

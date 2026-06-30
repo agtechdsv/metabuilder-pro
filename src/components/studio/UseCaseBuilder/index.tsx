@@ -61,7 +61,7 @@ export function UseCaseBuilderWizard({
   const {
     models, enumerations, relations, useCases, bpmWorkflows,
     isLoading, isDownloadsActive,
-    currentProjectId, currentWorkspaceId, virtualFields
+    currentProjectId, currentWorkspaceId, virtualFields, byocComponents
   } = useWizardData({ projectSlug: project_slug })
 
   // ── Telemetry ────────────────────────────────────────────────────────────────
@@ -183,7 +183,7 @@ export function UseCaseBuilderWizard({
       const { data: projectData } = await supabase.from('projects').select('id, navigation').eq('slug', project_slug).single()
 
       const validFieldIds = new Set(models.flatMap(m => (m.fields ?? []).map(f => f.id)))
-      const filterValid = (arr: string[]) => (arr || []).filter(fid => validFieldIds.has(fid) || fid.startsWith('virt_'))
+      const filterValid = (arr: string[]) => (arr || []).filter(fid => validFieldIds.has(fid) || fid.startsWith('virt_') || fid.startsWith('byoc_'))
 
       const validFormFields   = filterValid(config.layout_config.form_fields)
       const validGridFields   = filterValid(config.layout_config.grid_fields)
@@ -479,7 +479,7 @@ export function UseCaseBuilderWizard({
           <StepTables config={config} setConfig={setConfig} models={models} relations={relations} />
         ) : null}
         {currentStep === 3 && (
-          <StepLayout config={config} setConfig={setConfig} models={models} enumerations={enumerations} relations={relations} useCases={useCases} orderedModels={orderedModels} virtualFields={virtualFields} />
+          <StepLayout config={config} setConfig={setConfig} models={models} enumerations={enumerations} relations={relations} useCases={useCases} orderedModels={orderedModels} virtualFields={virtualFields} byocComponents={byocComponents} />
         )}
         {currentStep === 4 && (
           <StepActions config={config} setConfig={setConfig} models={models} useCases={useCases} isDownloadsActive={isDownloadsActive} bpmWorkflows={bpmWorkflows} relations={relations} />

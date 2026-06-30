@@ -78,7 +78,25 @@ export default function MeuNovoComponente(props: any) {
       project_id: projectId,
       name: activeComponent.name,
       description: activeComponent.description,
-      code: activeComponent.code
+      code: activeComponent.code,
+      compiled_code: null as string | null
+    }
+
+    try {
+      toast('Compilando componente...', 'info')
+      const compileRes = await fetch('/api/byoc/compile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: activeComponent.code })
+      })
+      
+      const compileData = await compileRes.json()
+      if (!compileRes.ok) throw new Error(compileData.error || 'Erro na compilação')
+      
+      payload.compiled_code = compileData.compiled_code
+    } catch (err: any) {
+      toast('Falha na compilação: ' + err.message, 'error')
+      return
     }
 
     let error;

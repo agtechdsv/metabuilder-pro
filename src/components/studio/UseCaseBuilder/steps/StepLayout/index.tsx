@@ -35,8 +35,7 @@ import { AnalyticsSection } from './AnalyticsSection'
 import { SpecialLayouts } from './SpecialLayouts'
 import { FieldSourcePanel } from './FieldSourcePanel'
 import { FieldZones } from './FieldZones'
-
-export function StepLayout({ config, setConfig, models, enumerations = [], relations = [], useCases = [], orderedModels = [], virtualFields = [] }: any) {
+export function StepLayout({ config, setConfig, models, enumerations = [], relations = [], useCases = [], orderedModels = [], virtualFields = [], byocComponents = [] }: any) {
   const { t } = useI18n()
   const { toast } = useToast()
   const [expandedCustomSlot, setExpandedCustomSlot] = useState<number | null>(null)
@@ -56,6 +55,10 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
   }
 
   function getFormattedFieldName(id: string) {
+    if (id.startsWith('byoc_')) {
+      const parts = id.split('_')
+      return `[BYOC] ${parts.slice(2).join('_')}`
+    }
     for (const m of models) {
       const f = m.fields?.find((f: any) => f.id === id)
       if (f) {
@@ -270,11 +273,20 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
         } else {
           const isVirtualTool = id === 'virtual_calc_tool';
           const isSavedVirtualField = id.startsWith('virtdef_');
-          const fieldId = (isVirtualTool || isSavedVirtualField) ? `virt_${Math.random().toString(36).substring(2, 10)}` : id;
+          const isByoc = id.startsWith('byoc_');
+          
+          let fieldId = id;
+          if (isVirtualTool || isSavedVirtualField) {
+            fieldId = `virt_${Math.random().toString(36).substring(2, 10)}`;
+          } else if (isByoc) {
+            // id is byoc_{db_id}_{ComponentName}
+            const byocName = id.split('_').slice(2).join('_');
+            fieldId = `byoc_${Math.random().toString(36).substring(2, 10)}_${byocName}`;
+          }
 
           // Achar o campo no modelo para validar
           let fieldObj: any = null
-          if (!isVirtualTool && !isSavedVirtualField) {
+          if (!isVirtualTool && !isSavedVirtualField && !isByoc) {
             for (const m of models) {
               fieldObj = m.fields.find((f: any) => f.id === fieldId)
               if (fieldObj) break
@@ -304,26 +316,29 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
             currentFields.push(fieldId)
 
             const newMetadata = { ...(config.layout_config.fields_metadata || {}) }
-            if (isVirtualTool || isSavedVirtualField) {
-              let assignedModelId = null;
-              if (targetZone === 'form_fields' && overIdStr.startsWith('droppable-form-')) {
-                assignedModelId = overIdStr.replace('droppable-form-', '');
-              } else if (targetZone === 'form_fields' && overIdStr.startsWith('form-')) {
-                const droppedOnFieldId = overIdStr.replace('form-', '');
-                for (const m of models) {
-                  if (m.fields.some((f: any) => f.id === droppedOnFieldId)) {
-                    assignedModelId = m.id;
-                    break;
-                  }
+            
+            let assignedModelId = null;
+            if (targetZone === 'form_fields' && overIdStr.startsWith('droppable-form-')) {
+              assignedModelId = overIdStr.replace('droppable-form-', '');
+            } else if (targetZone === 'form_fields' && overIdStr.startsWith('form-')) {
+              const droppedOnFieldId = overIdStr.replace('form-', '');
+              for (const m of models) {
+                if (m.fields.some((f: any) => f.id === droppedOnFieldId)) {
+                  assignedModelId = m.id;
+                  break;
                 }
-                // Herda a zona caso tenha sido solto em cima de outro campo virtual
-                if (!assignedModelId && droppedOnFieldId.startsWith('virt_')) {
-                  assignedModelId = config.layout_config.fields_metadata?.[droppedOnFieldId]?.virtual_model_id || null;
-                }
-              } else if (targetZone === 'grid_fields' || targetZone === 'filter_fields') {
-                assignedModelId = config.model_id || (models[0]?.id ?? null);
               }
+              if (!assignedModelId && droppedOnFieldId.startsWith('virt_')) {
+                assignedModelId = config.layout_config.fields_metadata?.[droppedOnFieldId]?.virtual_model_id || null;
+              }
+              if (!assignedModelId && droppedOnFieldId.startsWith('byoc_')) {
+                assignedModelId = config.layout_config.fields_metadata?.[droppedOnFieldId]?.byoc_model_id || null;
+              }
+            } else if (targetZone === 'grid_fields' || targetZone === 'filter_fields') {
+              assignedModelId = config.model_id || (models[0]?.id ?? null);
+            }
 
+            if (isVirtualTool || isSavedVirtualField) {
               let labelText = 'Campo Calculado';
               let formulaTokens: any[] = [];
 
@@ -340,7 +355,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                     if (targetModel) {
                       formulaTokens = formulaTokens.map(token => {
                         if (token.type === 'field' && !token.value.startsWith('virt:')) {
-                          const originalColName = token.value; // Em FormulaBuilder, token.value para fields é db_column_name
+                          const originalColName = token.value; 
                           if (originalColName) {
                             const targetField = targetModel.fields?.find((f: any) => f.db_column_name === originalColName);
                             if (targetField) {
@@ -365,6 +380,12 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                 component: { type: 'virtual_calc', rel_table: '', rel_value: '', rel_label: '', fixed_options: '' },
                 viacep: { enabled: false },
                 virtual_model_id: assignedModelId
+              }
+            } else if (isByoc) {
+              newMetadata[fieldId] = {
+                label: { text: getFormattedFieldName(fieldId), show: true, position: 'top', width: 'auto' },
+                component: { type: 'byoc' },
+                byoc_model_id: assignedModelId
               }
             }
 
@@ -824,6 +845,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
             collapsedTables={collapsedTables}
             setCollapsedTables={setCollapsedTables}
             virtualFields={virtualFields || []}
+            byocComponents={byocComponents || []}
           />
           <div className="flex-1 space-y-10 min-w-0">
             <SpecialLayouts

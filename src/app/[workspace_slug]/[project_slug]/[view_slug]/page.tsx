@@ -290,6 +290,9 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
     const { data: allModels } = await supabase.from('models').select('id, display_name, db_table_name, db_schema_name, fields(*)').eq('project_id', project.id)
     const dictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.display_name }), {}) || {}
     const tableDictionary = allModels?.reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.db_table_name }), {}) || {}
+    
+    const { data: byocData } = await supabase.from('ui_custom_components').select('name, compiled_code').eq('project_id', project.id)
+    const byocMap = byocData?.reduce((acc: any, comp: any) => ({ ...acc, [comp.name]: comp.compiled_code }), {}) || {}
 
     if (isPreview && view.draft_config) {
       const draftMeta = view.draft_config.layout_config?.fields_metadata || {}
@@ -301,7 +304,20 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
       const componentMap: Record<string, any> = {}
 
       const addComponent = (fid: string, zone: string) => {
-        const field = allFields.find(f => f.id === fid)
+        let field = allFields.find(f => f.id === fid)
+        if (!field && fid.startsWith('byoc_')) {
+          const byocName = fid.split('_').slice(2).join('_')
+          field = {
+            id: fid,
+            db_column_name: fid,
+            display_name: `[BYOC] ${byocName}`,
+            field_type: 'byoc',
+            model_id: view.model_id,
+            is_visible_in_form: true,
+            is_visible_in_list: true,
+            config: { compiled_code: byocMap[byocName] }
+          } as any
+        }
         if (!field) return
         const zoneMeta = draftMeta[`${zone}-${fid}`]
         const globalMeta = draftMeta[fid] || {}
@@ -431,23 +447,27 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
         zone: 3
       }))
 
-    // Inject Virtual Fields into Grid
-    gridFieldsOrder.filter((id: string) => id.startsWith('virt_')).forEach((id: string) => {
+    // Inject Virtual and BYOC Fields into Grid
+    gridFieldsOrder.filter((id: string) => id.startsWith('virt_') || id.startsWith('byoc_')).forEach((id: string) => {
       const gridMeta = view.layout_config?.fields_metadata?.[`grid-${id}`] || {}
       const baseMeta = view.layout_config?.fields_metadata?.[id] || {}
       const meta = { ...baseMeta, ...gridMeta }
+      
+      const isByoc = id.startsWith('byoc_')
+      const byocName = isByoc ? id.split('_').slice(2).join('_') : ''
+
       displayFields.push({
         id: id,
         model_id: null,
         model_name: '',
-        display_name: meta.label?.text || 'Campo Calculado',
+        display_name: meta.label?.text || (isByoc ? `[BYOC] ${byocName}` : 'Campo Calculado'),
         db_column_name: id,
         sql_expression: `NULL AS "${id}"`,
         is_primary_key: false,
-        data_type: 'virtual',
+        data_type: isByoc ? 'byoc' : 'virtual',
         is_sortable: false,
-        config: meta,
-        is_virtual: true
+        config: isByoc ? { ...meta, compiled_code: byocMap[byocName] } : meta,
+        is_virtual: !isByoc
       })
     })
 
@@ -500,8 +520,8 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
       return idxA - idxB
     })
 
-    // Inject Virtual Fields into Form
-    formFieldsOrder.filter((id: string) => id.startsWith('virt_')).forEach((id: string) => {
+    // Inject Virtual and BYOC Fields into Form
+    formFieldsOrder.filter((id: string) => id.startsWith('virt_') || id.startsWith('byoc_')).forEach((id: string) => {
       const formMeta = view.layout_config?.fields_metadata?.[`form-${id}`] || {}
       const baseMeta = view.layout_config?.fields_metadata?.[id] || {}
       const meta = { ...baseMeta, ...formMeta }
@@ -512,19 +532,22 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
         const foundModel = allModels?.find((m: any) => m.id === virtualModelId);
         if (foundModel) virtualModelName = foundModel.db_table_name;
       }
+      
+      const isByoc = id.startsWith('byoc_')
+      const byocName = isByoc ? id.split('_').slice(2).join('_') : ''
 
       formFields.push({
         id: id,
         model_id: virtualModelId,
         model_name: virtualModelName,
-        display_name: meta.label?.text || 'Campo Calculado',
+        display_name: meta.label?.text || (isByoc ? `[BYOC] ${byocName}` : 'Campo Calculado'),
         db_column_name: id,
         sql_expression: `NULL AS "${id}"`,
-        data_type: 'virtual',
+        data_type: isByoc ? 'byoc' : 'virtual',
         is_primary_key: false,
-        config: meta,
+        config: isByoc ? { ...meta, compiled_code: byocMap[byocName] } : meta,
         zone: 3,
-        is_virtual: true
+        is_virtual: !isByoc
       })
     })
 

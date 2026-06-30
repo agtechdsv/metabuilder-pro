@@ -398,6 +398,7 @@ export function useViewDataFetch({
 
       if (displayFields) {
         displayFields.forEach((f: any) => {
+          if (f.field_type === 'byoc' || f.db_column_name?.startsWith('byoc_')) return;
           const expr = f.sql_expression || f.db_column_name
           if (expr) addSelectExpr(expr, f.db_column_name)
         })
@@ -405,6 +406,7 @@ export function useViewDataFetch({
 
       if (formFields) {
         formFields.forEach((f: any) => {
+          if (f.field_type === 'byoc' || f.db_column_name?.startsWith('byoc_')) return;
           const isMasterModel = !f.model_name || f.model_name.toLowerCase() === modelName.toLowerCase()
           const isJoinedModel = joins && joins.some((j: any) => {
             const toTable = j.toTable || j.to

@@ -1,8 +1,8 @@
 {
   "connections": [
     {
-      "projectId": "9eef4f4d-149c-4a75-956a-86c033fed67d",
-      "secretToken": "dea2f5e9e5326c1a92c1cd76b3b4152076400f877b7c2e17e1d6a0a82e7b648b",
+      "projectId": "eeb85d69-c8ff-40bc-a401-1bd89b7e04ff",
+      "secretToken": "6bb2b15700733e618ae549aa88a0689df6c21d264ece8e50f213af408258fad7",
       "connectionsString": [
         {
           "name": "erp_local",

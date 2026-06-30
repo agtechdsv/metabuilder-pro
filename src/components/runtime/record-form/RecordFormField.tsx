@@ -1,4 +1,31 @@
-import React from 'react';
+import React, { useMemo, Suspense } from 'react'
+
+const ByocRemoteRenderer = ({ compiledCode, fieldName, componentProps }: { compiledCode: string, fieldName: string, componentProps?: any }) => {
+  const DynamicComponent = useMemo(() => {
+    try {
+      const dataUri = "data:text/javascript;charset=utf-8," + encodeURIComponent(compiledCode);
+      return React.lazy(() => import(/* webpackIgnore: true */ dataUri));
+    } catch (e) {
+      console.error('Failed to load BYOC Component', e);
+      return null;
+    }
+  }, [compiledCode]);
+
+  if (!DynamicComponent) {
+    return <div className="p-4 text-red-500 border border-red-200 bg-red-50 rounded-xl">Erro ao carregar {fieldName}</div>;
+  }
+
+  return (
+    <Suspense fallback={<div className="p-4 flex items-center justify-center animate-pulse bg-indigo-50/50 rounded-xl"><div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+      <div className="w-full relative group/byoc">
+        <div className="absolute top-2 right-2 opacity-0 group-hover/byoc:opacity-100 transition-opacity z-10 pointer-events-none">
+          <span className="bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md shadow-md">Microfrontend</span>
+        </div>
+        <DynamicComponent {...(componentProps || {})} />
+      </div>
+    </Suspense>
+  );
+};
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FileUploaderInput } from '@/components/runtime/FileUploaderInput';
@@ -305,6 +332,31 @@ export function RecordFormField(props: RecordFormFieldProps) {
                   value ? 'left-7' : 'left-1'
                 )} />
               </div>
+            ) : fieldType === 'byoc' ? (
+              field.config?.compiled_code ? (
+                <ByocRemoteRenderer 
+                  compiledCode={field.config.compiled_code} 
+                  fieldName={field.display_name} 
+                  componentProps={{
+                    value,
+                    onChange: handleChange,
+                    formData,
+                    mode,
+                    disabled: isDisabled
+                  }}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center p-6 bg-indigo-50/50 dark:bg-indigo-900/10 border-2 border-dashed border-indigo-200 dark:border-indigo-800 rounded-2xl w-full">
+                  <div className="w-10 h-10 mb-3 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-500">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+                  </div>
+                  <p className="text-sm font-bold text-indigo-900 dark:text-indigo-100 mb-1">Componente Customizado</p>
+                  <p className="text-[11px] text-indigo-600/70 dark:text-indigo-400/70 text-center max-w-[250px] font-medium">{field.display_name.replace('[BYOC] ', '')}</p>
+                  <div className="mt-4 px-3 py-1 bg-red-100/50 dark:bg-red-900/30 rounded-full border border-red-200/50 dark:border-red-800/50">
+                    <p className="text-[9px] font-black tracking-widest text-red-500 uppercase">Código não compilado</p>
+                  </div>
+                </div>
+              )
             ) : ['image_uploader', 'document_uploader', 'file_uploader'].includes(fieldType) ? (
               <FileUploaderInput
                 value={value}

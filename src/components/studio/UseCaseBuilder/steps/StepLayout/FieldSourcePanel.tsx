@@ -5,7 +5,7 @@ import { DraggableItem } from './dnd'
 
 export function FieldSourcePanel({
   dragControls, t, fieldSearchTerm, setFieldSearchTerm,
-  formTree, orderedModels, collapsedTables, setCollapsedTables, virtualFields = []
+  formTree, orderedModels, collapsedTables, setCollapsedTables, virtualFields = [], byocComponents = []
 }: any) {
   return (
           <div className="w-full xl:w-80 shrink-0">
@@ -83,6 +83,44 @@ export function FieldSourcePanel({
                     ))}
                   </div>
                 </div>
+
+                {/* Componentes BYOC */}
+                {byocComponents && byocComponents.length > 0 && (
+                  <div className="border-b border-neutral-100 dark:border-neutral-800">
+                    <div className="flex items-center gap-2 px-4 py-3 bg-indigo-50/50 dark:bg-indigo-900/20">
+                      <div className="w-1.5 h-3.5 bg-indigo-600 rounded-full"></div>
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-800 dark:text-indigo-200">
+                        Componentes BYOC
+                      </h4>
+                    </div>
+                    <div className="p-4 pt-2 flex flex-col gap-2">
+                      {byocComponents.map((byoc: any) => (
+                        <DraggableItem
+                          key={`source-byoc_${byoc.id}`}
+                          id={`source-byoc_${byoc.id}_${byoc.name}`}
+                          className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-3 rounded-xl flex items-center justify-between group cursor-grab active:cursor-grabbing hover:border-indigo-400 dark:hover:border-indigo-500 transition-all shadow-sm"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+                              <span className="text-neutral-600 dark:text-neutral-400 font-black text-[10px]">&lt;/&gt;</span>
+                            </div>
+                            <div className="flex flex-col overflow-hidden">
+                              <span className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 truncate">
+                                {byoc.name}
+                              </span>
+                              {byoc.description && (
+                                <span className="text-[9px] text-neutral-400 truncate max-w-[150px]">
+                                  {byoc.description}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <Plus className="w-3.5 h-3.5 text-neutral-300 group-hover:text-indigo-500 transition-all shrink-0" />
+                        </DraggableItem>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {(() => {
                   const formTreeIds = new Set<string>()
