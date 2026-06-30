@@ -15,6 +15,7 @@ import { Navbar } from '@/components/layout/Navbar'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { WorkspaceManager } from '@/components/workspace/WorkspaceManager'
 import { Footer } from '@/components/layout/Footer'
+import { WorkspaceTunnelControl } from '@/components/workspace/WorkspaceTunnelControl'
 
 import { getStudioTeamData } from '@/app/actions/workspace'
 
@@ -148,6 +149,8 @@ export default async function GlobalDashboard() {
 
       <main className="w-full mx-auto px-10 pt-4 pb-4 space-y-6 flex-grow">
         
+        <WorkspaceTunnelControl workspaceSlug="global" />
+
         {/* Gerenciador de Workspaces (Lista + Drawers) */}
         <WorkspaceManager 
           initialWorkspaces={workspaces || []} 
