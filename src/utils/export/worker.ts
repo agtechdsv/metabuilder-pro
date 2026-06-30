@@ -2,33 +2,44 @@ import { createClient } from '@supabase/supabase-js'
 import { Pool } from 'pg'
 import ws from 'ws'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const dbConnectionString = "postgresql://postgres.chmstvtepzmjhpyxjjam:Goeta815617%40@aws-1-sa-east-1.pooler.supabase.com:6543/postgres"
+let _supabase: any = null;
+function getSupabase(): any {
+  if (!_supabase) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    _supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false },
+      realtime: { transport: ws as any }
+    })
+  }
+  return _supabase;
+}
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: { persistSession: false },
-  realtime: { transport: ws as any }
-})
-const dbPool = new Pool({ connectionString: dbConnectionString })
-
+let _dbPool: any = null;
+function getDbPool(): any {
+  if (!_dbPool) {
+    const dbConnectionString = "postgresql://postgres.chmstvtepzmjhpyxjjam:Goeta815617%40@aws-1-sa-east-1.pooler.supabase.com:6543/postgres"
+    _dbPool = new Pool({ connectionString: dbConnectionString })
+  }
+  return _dbPool;
+}
 async function broadcastProgress(projectId: string, payload: {
   jobId: string, progress: number, status: string, error?: string, viewName?: string
 }) {
   try {
     const channelName = `tunnel:${projectId}`
-    const channel = supabase.channel(channelName)
+    const channel = getSupabase().channel(channelName)
     await new Promise<void>((resolve) => {
       let isDone = false
       const timeout = setTimeout(() => {
-        if (!isDone) { isDone = true; supabase.removeChannel(channel); resolve(); }
+        if (!isDone) { isDone = true; getSupabase().removeChannel(channel); resolve(); }
       }, 5000)
-      channel.subscribe((status) => {
+      channel.subscribe((status: string) => {
         if (status === 'SUBSCRIBED' && !isDone) {
           channel.send({ type: 'broadcast', event: 'download_progress', payload }).then(() => {
-            if (!isDone) { isDone = true; clearTimeout(timeout); supabase.removeChannel(channel); resolve() }
+            if (!isDone) { isDone = true; clearTimeout(timeout); getSupabase().removeChannel(channel); resolve() }
           }).catch(() => {
-            if (!isDone) { isDone = true; clearTimeout(timeout); supabase.removeChannel(channel); resolve() }
+            if (!isDone) { isDone = true; clearTimeout(timeout); getSupabase().removeChannel(channel); resolve() }
           })
         }
       })
@@ -47,11 +58,11 @@ export async function executeExportBackground(params: {
   recordId?: any
 }) {
   const { jobId, projectId, workspaceSlug, viewName, modelName, fileType, columnsList, joins, filters, exportGraph, projectRelations, masterModelId, dictionary, recordId } = params
-  const client = await dbPool.connect()
+  const client = await getDbPool().connect()
   
   try {
     // 1. Fetch secret token & Project Slug
-    const { data: projectData, error: projError } = await supabase
+    const { data: projectData, error: projError } = await getSupabase()
       .from('projects').select('secret_token, slug').eq('id', projectId).single()
 
     if (projError || !projectData) throw new Error('Project secret token not found')
@@ -131,15 +142,15 @@ export async function executeExportBackground(params: {
 
     // 4. Send request to CLI Tunnel
     const channelName = `tunnel:${projectId}`
-    const channel = supabase.channel(channelName)
+    const channel = getSupabase().channel(channelName)
 
     await new Promise<void>((resolve, reject) => {
       let isDone = false
       const timeout = setTimeout(() => {
-        if (!isDone) { isDone = true; supabase.removeChannel(channel); reject(new Error('Timeout enviando requisição para CLI local')); }
+        if (!isDone) { isDone = true; getSupabase().removeChannel(channel); reject(new Error('Timeout enviando requisição para CLI local')); }
       }, 10000)
 
-      channel.subscribe((status) => {
+      channel.subscribe((status: string) => {
         if (status === 'SUBSCRIBED' && !isDone) {
           channel.send({
             type: 'broadcast',
@@ -161,9 +172,9 @@ export async function executeExportBackground(params: {
               recordId
             }
           }).then(() => {
-            if (!isDone) { isDone = true; clearTimeout(timeout); supabase.removeChannel(channel); resolve() }
-          }).catch(err => {
-            if (!isDone) { isDone = true; clearTimeout(timeout); supabase.removeChannel(channel); reject(err) }
+            if (!isDone) { isDone = true; clearTimeout(timeout); getSupabase().removeChannel(channel); resolve() }
+          }).catch((err: any) => {
+            if (!isDone) { isDone = true; clearTimeout(timeout); getSupabase().removeChannel(channel); reject(err) }
           })
         }
       })
