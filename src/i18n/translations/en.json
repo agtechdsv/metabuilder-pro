@@ -564,7 +564,8 @@
           "dashboard": "Control Dashboard",
           "data": "Data Structure",
           "auth": "Security",
-          "settings": "Settings"
+          "settings": "Settings",
+          "tunnel": "Connection & Tunnel"
         },
         "login": {
           "title": "Login Portal",
@@ -637,6 +638,14 @@
             "edit": "Edit Record",
             "delete": "Delete Record",
             "export": "Export Data"
+          }
+        },
+        "tunnel": {
+          "title": "Connection & Tunnel Settings",
+          "subtitle": "Manage local connection to the client's database and start the secure tunnel.",
+          "tabs": {
+            "control": "Tunnel Control",
+            "config": "JSON Config (Data)"
           }
         }
       }

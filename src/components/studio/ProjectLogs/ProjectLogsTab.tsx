@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, Fragment } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import {
   ScrollText, RefreshCw, Trash2, Save, ChevronDown, ChevronRight,
@@ -481,7 +481,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
                     const dateStr = dateObj.toLocaleDateString()
                     const timeStr = dateObj.toLocaleTimeString()
                     return (
-                      <React.Fragment key={log.id}>
+                      <Fragment key={log.id}>
                         <tr
                           onClick={() => setExpandedRow(isExpanded ? null : idx)}
                           className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 cursor-pointer transition-colors"
@@ -497,14 +497,26 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
                           </td>
                           <td className="px-4 py-2.5">
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold ${meta.bg} ${meta.color}`}>
-                              <Icon className="w-2.5 h-2.5" />
+                              <Icon className="w-3 h-3" />
                               {meta.label}
                             </span>
                           </td>
-                          <td className="px-4 py-2.5 text-neutral-500 capitalize">{log.action || '—'}</td>
-                          <td className="px-4 py-2.5 font-mono text-neutral-600 dark:text-neutral-400">{log.table_name || '—'}</td>
+                          <td className="px-4 py-2.5 text-neutral-700 dark:text-neutral-300 capitalize">{log.action || '—'}</td>
+                          <td className="px-4 py-2.5">
+                            {log.table_name ? (
+                              <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-md text-[10px] font-mono">
+                                {log.table_name}
+                              </span>
+                            ) : <span className="text-neutral-400">—</span>}
+                          </td>
                           <td className="px-4 py-2.5 text-neutral-700 dark:text-neutral-300 truncate max-w-xs">{log.message || '—'}</td>
-                          <td className="px-4 py-2.5 text-right font-mono text-neutral-400">{log.duration_ms ?? '—'}</td>
+                          <td className="px-4 py-2.5 text-right font-mono text-neutral-400">
+                            {log.duration_ms ? (
+                              <span className={log.duration_ms > 1000 ? 'text-red-500 font-bold' : log.duration_ms > 300 ? 'text-orange-500' : 'text-green-500'}>
+                                {log.duration_ms}ms
+                              </span>
+                            ) : <span className="text-neutral-400">—</span>}
+                          </td>
                           <td className="px-4 py-2.5 text-right font-mono text-neutral-400">{log.row_count ?? '—'}</td>
                         </tr>
                         {isExpanded && (
@@ -534,7 +546,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
                             </td>
                           </tr>
                         )}
-                      </React.Fragment>
+                      </Fragment>
                     )
                   })}
                 </tbody>

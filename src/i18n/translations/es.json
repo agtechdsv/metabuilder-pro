@@ -642,7 +642,8 @@
           "dashboard": "Panel de Control",
           "data": "Estructura de Datos",
           "auth": "Seguridad",
-          "settings": "Configuraciones"
+          "settings": "Configuraciones",
+          "tunnel": "Conexión y Túnel"
         },
         "login": {
           "title": "Portal de Login",
@@ -715,6 +716,14 @@
             "edit": "Editar Registro",
             "delete": "Eliminar Registro",
             "export": "Exportar Datos"
+          }
+        },
+        "tunnel": {
+          "title": "Configuración de Conexión y Túnel",
+          "subtitle": "Administre la conexión local a la base de datos del cliente e inicie el túnel seguro.",
+          "tabs": {
+            "control": "Control del Túnel",
+            "config": "JSON Config (Datos)"
           }
         }
       }
@@ -2147,7 +2156,6 @@
       "message_tab_desc": "Defina un mensaje para ser mostrado después de la ejecución de esta acción, si lo desea.",
       "fields_to_mutate": "Campos para Actualizar",
       "insert_variable": "Insertar Variable",
-      "webhook_api_call": "Webhook (Llamada de API)",
       "no_groups_found": "No se encontraron grupos",
       "response_config": "Configuración de Respuesta",
       "action_allowed": "¿Acción Permitida?",

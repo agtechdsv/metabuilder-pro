@@ -564,7 +564,8 @@
           "dashboard": "Painel de Controle",
           "data": "Estrutura de Dados",
           "auth": "Segurança",
-          "settings": "Configurações"
+          "settings": "Configurações",
+          "tunnel": "Conexão e Túnel"
         },
         "login": {
           "title": "Portal de Login",
@@ -637,6 +638,14 @@
             "edit": "Editar Registro",
             "delete": "Excluir Registro",
             "export": "Exportar Dados"
+          }
+        },
+        "tunnel": {
+          "title": "Configurações de Conexão e Túnel",
+          "subtitle": "Gerencie a conexão local com o banco de dados do cliente e inicie o túnel seguro.",
+          "tabs": {
+            "control": "Controle do Túnel",
+            "config": "JSON Config (Dados)"
           }
         }
       }

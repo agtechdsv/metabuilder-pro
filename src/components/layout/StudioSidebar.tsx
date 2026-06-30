@@ -7,7 +7,8 @@ import {
   ShieldCheck, 
   Settings2,
   ScrollText,
-  Code2
+  Code2,
+  Network
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -52,6 +53,12 @@ export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps
       icon: Settings2,
       label: t('dashboard.projects.studio.sidebar.settings'),
       active: pathname.includes('/studio/settings')
+    },
+    {
+      href: `/admin/${workspaceSlug}/${projectSlug}/studio/tunnel`,
+      icon: Network,
+      label: 'Conexão e Túnel',
+      active: pathname.includes('/studio/tunnel')
     },
     {
       href: `/admin/${workspaceSlug}/${projectSlug}/studio/logs`,
