@@ -9,9 +9,18 @@ import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { useI18n } from '@/i18n/I18nContext'
 
-export default function TunnelSettingsClient({ workspaceSlug, projectSlug }: { workspaceSlug: string, projectSlug: string }) {
+export default function TunnelSettingsClient({ 
+  workspaceSlug, 
+  projectSlug,
+  initialProjectId,
+  initialProjectToken
+}: { 
+  workspaceSlug: string, 
+  projectSlug: string,
+  initialProjectId?: string,
+  initialProjectToken?: string
+}) {
   const { toast } = useToast()
-  const supabase = createClient()
   const { t } = useI18n()
   
   const [activeTab, setActiveTab] = useState<'tunnel' | 'config'>('tunnel')
@@ -20,7 +29,9 @@ export default function TunnelSettingsClient({ workspaceSlug, projectSlug }: { w
   const [tunnelStatus, setTunnelStatus] = useState<'stopped' | 'running' | 'loading'>('loading')
   const [tunnelPid, setTunnelPid] = useState<number | null>(null)
   
-  const [projectInfo, setProjectInfo] = useState<{ id: string, token: string } | null>(null)
+  const [projectInfo, setProjectInfo] = useState<{ id: string, token: string } | null>(
+    initialProjectId ? { id: initialProjectId, token: initialProjectToken || 'Não configurado' } : { id: 'Projeto não encontrado', token: 'Não configurado' }
+  )
 
   // DB Form State
   const [dbForm, setDbForm] = useState({
@@ -41,7 +52,6 @@ export default function TunnelSettingsClient({ workspaceSlug, projectSlug }: { w
 
   // Load config & status on mount
   useEffect(() => {
-    fetchProjectInfo()
     fetchConfig()
     checkStatus()
     
@@ -49,25 +59,6 @@ export default function TunnelSettingsClient({ workspaceSlug, projectSlug }: { w
     const interval = setInterval(checkStatus, 5000)
     return () => clearInterval(interval)
   }, [])
-
-  const fetchProjectInfo = async () => {
-    try {
-      const { data: project } = await supabase
-        .from('projects')
-        .select('id, integration_token')
-        .eq('slug', projectSlug)
-        .single()
-        
-      if (project) {
-        setProjectInfo({ 
-          id: project.id, 
-          token: project.integration_token || '' 
-        })
-      }
-    } catch (e) {
-      console.error('Error fetching project info', e)
-    }
-  }
 
   const parseConnectionString = (url: string) => {
     if (!url) return
