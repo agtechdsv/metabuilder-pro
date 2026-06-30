@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server'
 import { executeExportBackground } from '@/utils/export/worker'
 import ws from 'ws'
 
-let _supabase: ReturnType<typeof createClient> | null = null;
-function getSupabase() {
+let _supabase: any = null;
+function getSupabase(): any {
   if (!_supabase) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -22,9 +22,9 @@ async function broadcastDelete(projectId: string, localPaths: string[]) {
   await new Promise<void>((resolve) => {
     let isDone = false
     const timeout = setTimeout(() => { if (!isDone) { isDone = true; supabase.removeChannel(channel); resolve() } }, 3000)
-    channel.subscribe((status) => {
+    channel.subscribe((status: string) => {
       if (status === 'SUBSCRIBED' && !isDone) {
-        Promise.all(localPaths.filter(Boolean).map(localPath => 
+        Promise.all(localPaths.filter(Boolean).map((localPath: any) => 
           channel.send({ type: 'broadcast', event: 'delete_export_file', payload: { localPath } })
         )).then(() => {
           if (!isDone) { isDone = true; clearTimeout(timeout); supabase.removeChannel(channel); resolve() }
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
 
     // Fetch project slug for the filename
     const { data: projData } = await supabase.from('projects').select('slug').eq('id', projectId).single()
-    const projectSlug = projData?.slug || 'projeto'
+    const projectSlug = (projData as any)?.slug || 'projeto'
 
     // 1. Insert the pending job record in database
     const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14)
@@ -174,14 +174,14 @@ export async function DELETE(request: Request) {
         }
 
         if (expiredJobs && expiredJobs.length > 0) {
-          const localPaths = expiredJobs.map(j => j.local_path).filter(Boolean)
+          const localPaths = expiredJobs.map((j: any) => j.local_path).filter(Boolean)
           
           if (localPaths.length > 0) {
             await broadcastDelete(project.id, localPaths)
           }
 
           // Delete from database
-          const ids = expiredJobs.map(j => j.id)
+          const ids = expiredJobs.map((j: any) => j.id)
           const { error: deleteError } = await supabase
             .from('download_jobs')
             .delete()
@@ -256,7 +256,7 @@ export async function DELETE(request: Request) {
       }
 
       if (jobsToDelete && jobsToDelete.length > 0) {
-        const localPaths = jobsToDelete.map(j => j.local_path).filter(Boolean)
+        const localPaths = jobsToDelete.map((j: any) => j.local_path).filter(Boolean)
 
         // Broadcast deletion
         if (localPaths.length > 0) {
@@ -264,7 +264,7 @@ export async function DELETE(request: Request) {
         }
 
         // Remove from database
-        const ids = jobsToDelete.map(j => j.id)
+        const ids = jobsToDelete.map((j: any) => j.id)
         const { error: deleteError } = await supabase
           .from('download_jobs')
           .delete()
