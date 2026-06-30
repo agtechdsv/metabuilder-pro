@@ -64,7 +64,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps
     ...(isDesktop ? [{
       href: `/admin/${workspaceSlug}/${projectSlug}/studio/tunnel`,
       icon: Network,
-      label: 'Conexão e Túnel',
+      label: 'Configurações de Bancos (JSON)',
       active: pathname.includes('/studio/tunnel')
     }] : []),
     {

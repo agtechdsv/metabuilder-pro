@@ -9,6 +9,7 @@ import { Navbar } from '@/components/layout/Navbar'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { ProjectManager } from '@/components/workspace/ProjectManager'
 import { Footer } from '@/components/layout/Footer'
+import { WorkspaceTunnelControl } from '@/components/workspace/WorkspaceTunnelControl'
 
 interface WorkspaceDashboardProps {
   params: Promise<{
@@ -107,6 +108,8 @@ export default async function WorkspaceDashboard({ params }: WorkspaceDashboardP
 
       <main className="w-full px-10 pt-4 pb-4 flex-grow">
         
+        <WorkspaceTunnelControl workspaceSlug={workspace.slug} />
+
         <ProjectManager 
           initialProjects={mappedProjects} 
           workspaceId={workspace.id}
