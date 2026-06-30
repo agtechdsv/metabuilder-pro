@@ -13,6 +13,8 @@ import {
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
+import { isTauri } from '@/utils/tauriUtils'
+import { useState, useEffect } from 'react'
 
 interface StudioSidebarProps {
   workspaceSlug: string
@@ -22,6 +24,11 @@ interface StudioSidebarProps {
 export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps) {
   const pathname = usePathname()
   const { t } = useI18n()
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    setIsDesktop(isTauri())
+  }, [])
 
   const links = [
     {
@@ -54,12 +61,12 @@ export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps
       label: t('dashboard.projects.studio.sidebar.settings'),
       active: pathname.includes('/studio/settings')
     },
-    {
+    ...(isDesktop ? [{
       href: `/admin/${workspaceSlug}/${projectSlug}/studio/tunnel`,
       icon: Network,
       label: 'Conexão e Túnel',
       active: pathname.includes('/studio/tunnel')
-    },
+    }] : []),
     {
       href: `/admin/${workspaceSlug}/${projectSlug}/studio/logs`,
       icon: ScrollText,

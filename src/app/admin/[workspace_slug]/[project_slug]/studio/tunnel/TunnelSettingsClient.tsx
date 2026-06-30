@@ -8,6 +8,8 @@ import {
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { useI18n } from '@/i18n/I18nContext'
+import { isTauri } from '@/utils/tauriUtils'
+import Link from 'next/link'
 
 export default function TunnelSettingsClient({ 
   workspaceSlug, 
@@ -28,6 +30,7 @@ export default function TunnelSettingsClient({
   const [isSaving, setIsSaving] = useState(false)
   const [tunnelStatus, setTunnelStatus] = useState<'stopped' | 'running' | 'loading'>('loading')
   const [tunnelPid, setTunnelPid] = useState<number | null>(null)
+  const [isDesktopEnv, setIsDesktopEnv] = useState<boolean | null>(null)
   
   const [projectInfo, setProjectInfo] = useState<{ id: string, token: string } | null>(
     initialProjectId ? { id: initialProjectId, token: initialProjectToken || 'Não configurado' } : { id: 'Projeto não encontrado', token: 'Não configurado' }
@@ -49,16 +52,6 @@ export default function TunnelSettingsClient({
     ldap: { enabled: false, url: '', baseDn: '', bindDn: '', bindPassword: '', searchFilter: '' },
     downloadPath: ''
   })
-
-  // Load config & status on mount
-  useEffect(() => {
-    fetchConfig()
-    checkStatus()
-    
-    // Poll status every 5 seconds
-    const interval = setInterval(checkStatus, 5000)
-    return () => clearInterval(interval)
-  }, [])
 
   const parseConnectionString = (url: string) => {
     if (!url) return
@@ -135,6 +128,49 @@ export default function TunnelSettingsClient({
     } catch (e) {
       setTunnelStatus('stopped')
     }
+  }
+
+  // Load config & status on mount
+  useEffect(() => {
+    const isDesktop = isTauri();
+    setIsDesktopEnv(isDesktop);
+
+    if (isDesktop) {
+      fetchConfig()
+      checkStatus()
+      
+      // Poll status every 5 seconds
+      const interval = setInterval(checkStatus, 5000)
+      return () => clearInterval(interval)
+    }
+  }, [])
+
+  if (isDesktopEnv === false) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <div className="w-24 h-24 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-6">
+          <AlertCircle className="w-12 h-12 text-red-600 dark:text-red-400" />
+        </div>
+        <h2 className="text-2xl font-bold mb-4">Acesso Restrito ao Desktop</h2>
+        <p className="text-neutral-600 dark:text-neutral-400 max-w-lg mb-8">
+          A configuração e controle do túnel local exigem acesso direto à máquina do desenvolvedor (File System e Processos Binários) e não podem ser executados via Web.
+        </p>
+        <Link 
+          href="/features/ide"
+          className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all"
+        >
+          Baixe a MetaBuilderPRO IDE
+        </Link>
+      </div>
+    )
+  }
+
+  if (isDesktopEnv === null) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <RefreshCw className="w-8 h-8 animate-spin text-neutral-400" />
+      </div>
+    )
   }
 
   const handleSaveConfig = async () => {
