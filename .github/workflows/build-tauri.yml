@@ -46,6 +46,12 @@ jobs:
       - name: Install frontend dependencies
         run: npm install
 
+      - name: Create mock frontendDist
+        shell: bash
+        run: |
+          mkdir -p out
+          echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0; url=http://localhost:3000"></head><body><h2>Inicie o servidor Next.js localmente na porta 3000</h2></body></html>' > out/index.html
+
       - name: Build Tauri
         uses: tauri-apps/tauri-action@v0
         env:
