@@ -3,10 +3,22 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Usamos Service Role Key aqui para ter acesso à admin API e contornar RLS
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+let _supabaseAdmin: any = null;
+const supabaseAdmin = new Proxy({}, {
+  get: function(_, prop) {
+    if (!_supabaseAdmin) {
+      _supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+    }
+    const value = _supabaseAdmin[prop as keyof typeof _supabaseAdmin];
+    if (typeof value === 'function') {
+      return value.bind(_supabaseAdmin);
+    }
+    return value;
+  }
+}) as any;
 
 const isEmailExistsError = (err: any) => {
   if (!err) return false
@@ -31,7 +43,7 @@ async function getIClubAllowedGuestsExtra(ownerId: string): Promise<number> {
       .eq('status', 'active')
     
     if (rewards && rewards.length > 0) {
-      return rewards.reduce((sum, r) => sum + Number(r.reward_value), 0);
+      return rewards.reduce((sum: any, r: any) => sum + Number(r.reward_value), 0);
     }
   } catch (err) {
     console.error('Error fetching iClub allowed guests extra:', err);
@@ -102,7 +114,7 @@ export async function inviteWorkspaceMember(workspaceId: string, workspaceSlug: 
 
         if (!userId) {
           const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-          const existingUser = authUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+          const existingUser = authUsers.users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase())
           if (!existingUser) throw new Error('Usuário não encontrado.')
           userId = existingUser.id
         }
@@ -156,7 +168,7 @@ export async function inviteWorkspaceMember(workspaceId: string, workspaceSlug: 
             .eq('workspace_id', workspaceId)
 
           if (projects && projects.length > 0) {
-            const projectInserts = projects.map(p => ({
+            const projectInserts = projects.map((p: any) => ({
               workspace_id: workspaceId,
               user_id: userId,
               project_id: p.id
@@ -207,7 +219,7 @@ export async function inviteWorkspaceMember(workspaceId: string, workspaceSlug: 
           .eq('workspace_id', workspaceId)
 
         if (projects && projects.length > 0) {
-          const projectInserts = projects.map(p => ({
+          const projectInserts = projects.map((p: any) => ({
             workspace_id: workspaceId,
             user_id: authData.user.id,
             project_id: p.id
@@ -345,7 +357,7 @@ export async function getStudioTeamData() {
       .eq('owner_id', ownerId)
       .order('created_at', { ascending: true })
 
-    const workspaceIds = workspaces?.map(w => w.id) || []
+    const workspaceIds = workspaces?.map((w: any) => w.id) || []
 
     // 3. Fetch all projects in those workspaces
     let projects: any[] = []
@@ -370,7 +382,7 @@ export async function getStudioTeamData() {
     // Fetch details of guest profiles separately
     let guestDetails: any[] = []
     if (guests && guests.length > 0) {
-      const guestUserIds = guests.map(g => g.user_id)
+      const guestUserIds = guests.map((g: any) => g.user_id)
       const { data: profiles } = await supabaseAdmin
         .from('profiles')
         .select('id, full_name, email')
@@ -396,8 +408,8 @@ export async function getStudioTeamData() {
         projectAssignments = projAssigns || []
       }
 
-      guestDetails = guests.map(g => {
-        const profileInfo = profiles?.find(p => p.id === g.user_id) || { full_name: 'Desconhecido', email: '' }
+      guestDetails = guests.map((g: any) => {
+        const profileInfo = profiles?.find((p: any) => p.id === g.user_id) || { full_name: 'Desconhecido', email: '' }
         return {
           id: g.id,
           user_id: g.user_id,
@@ -405,8 +417,8 @@ export async function getStudioTeamData() {
           created_at: g.created_at,
           full_name: profileInfo.full_name,
           email: profileInfo.email,
-          workspaces: workspaceMemberships.filter(m => m.user_id === g.user_id),
-          projects: projectAssignments.filter(p => p.user_id === g.user_id)
+          workspaces: workspaceMemberships.filter((m: any) => m.user_id === g.user_id),
+          projects: projectAssignments.filter((p: any) => p.user_id === g.user_id)
         }
       })
     }
@@ -511,7 +523,7 @@ export async function inviteStudioGuest(email: string) {
 
         if (!userId) {
           const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-          const existingUser = authUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+          const existingUser = authUsers.users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase())
           if (!existingUser) throw new Error('Usuário não encontrado.')
           userId = existingUser.id
         }
@@ -599,7 +611,7 @@ export async function removeStudioGuest(guestUserId: string) {
       .select('id')
       .eq('owner_id', ownerId)
 
-    const ownerWorkspaceIds = ownerWorkspaces?.map(w => w.id) || []
+    const ownerWorkspaceIds = ownerWorkspaces?.map((w: any) => w.id) || []
 
     if (ownerWorkspaceIds.length > 0) {
       // Delete from workspace_members
@@ -691,7 +703,7 @@ export async function updateGuestAccess(
       .select('id')
       .eq('owner_id', ownerId)
 
-    const ownerWorkspaceIds = ownerWorkspaces?.map(w => w.id) || []
+    const ownerWorkspaceIds = ownerWorkspaces?.map((w: any) => w.id) || []
 
     if (ownerWorkspaceIds.length === 0) {
       return { success: true }
@@ -718,11 +730,11 @@ export async function updateGuestAccess(
     // 4. If granular access, rebuild memberships & project assignments
     if (accessLevel === 'granular') {
       // Filter workspaces to ensure they belong to this owner
-      const validWorkspaces = workspaces.filter(w => ownerWorkspaceIds.includes(w.id))
+      const validWorkspaces = workspaces.filter((w: any) => ownerWorkspaceIds.includes(w.id))
 
       if (validWorkspaces.length > 0) {
         // Insert new workspace memberships
-        const memberInserts = validWorkspaces.map(w => ({
+        const memberInserts = validWorkspaces.map((w: any) => ({
           workspace_id: w.id,
           user_id: guestUserId,
           role: 'developer', // Default role for granular guests
@@ -738,8 +750,8 @@ export async function updateGuestAccess(
         if (insertMembersError) throw insertMembersError
 
         // Filter projects to ensure they belong to the owner's workspaces
-        const validProjIds = projects.map(p => p.id)
-        const validWorkspaceIds = validWorkspaces.map(w => w.id)
+        const validProjIds = projects.map((p: any) => p.id)
+        const validWorkspaceIds = validWorkspaces.map((w: any) => w.id)
 
         const { data: validProjects } = await supabaseAdmin
           .from('projects')
@@ -748,8 +760,8 @@ export async function updateGuestAccess(
           .in('workspace_id', validWorkspaceIds)
 
         if (validProjects && validProjects.length > 0) {
-          const projectInserts = validProjects.map(p => {
-            const uiProj = projects.find(up => up.id === p.id)
+          const projectInserts = validProjects.map((p: any) => {
+            const uiProj = projects.find((up: any) => up.id === p.id)
             return {
               workspace_id: p.workspace_id,
               user_id: guestUserId,
@@ -799,7 +811,7 @@ export async function resendStudioGuestInvite(email: string) {
     const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
     if (listError) throw listError
 
-    const existingUser = authUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+    const existingUser = authUsers.users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase())
     if (!existingUser) {
       throw new Error('Convidado não encontrado no sistema de autenticação.')
     }
