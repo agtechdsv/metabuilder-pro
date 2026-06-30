@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy, Fingerprint, FileCode2, ScrollText } from 'lucide-react'
+import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy, Fingerprint, FileCode2, ScrollText, Network } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -90,6 +90,12 @@ export function MarketingSections() {
       title: t('marketing_v2.navbar.control_center'),
       desc: t('marketing_v2.home.control_center_desc'),
       href: "/features/control-center"
+    },
+    {
+      icon: <Network className="w-6 h-6 text-indigo-400" />,
+      title: t('marketing_v2.navbar.ide'),
+      desc: t('ide_landing.hero.subtitle'),
+      href: "/features/ide"
     }
   ]
 
@@ -209,6 +215,26 @@ export function MarketingSections() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* New IDE Native Card */}
+          <div className="col-span-1 md:col-span-2 lg:col-span-5 group p-8 rounded-[2.5rem] bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-200/50 dark:border-indigo-800/50 hover:border-indigo-500/50 transition-all duration-500 mt-2">
+             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                   <div className="w-14 h-14 rounded-2xl bg-white dark:bg-neutral-950 flex items-center justify-center shadow-inner border border-indigo-200 dark:border-indigo-800 group-hover:scale-110 transition-transform duration-500">
+                      <Network className="w-7 h-7 text-indigo-500" />
+                   </div>
+                   <div>
+                      <h3 className="text-2xl font-black dark:text-white mb-1">{t('marketing_v2.navbar.ide')}</h3>
+                      <p className="text-sm text-neutral-600 dark:text-neutral-400 max-w-3xl leading-relaxed">
+                         {t('ide_landing.hero.subtitle')}
+                      </p>
+                   </div>
+                </div>
+                <Link href="/features/ide" className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all hover:scale-102 shadow-lg shadow-indigo-600/20 shrink-0 self-start lg:self-center">
+                   {t('marketing_v2.home.learn_more')} <ArrowRight className="w-4 h-4" />
+                </Link>
+             </div>
           </div>
 
           {/* New MFA/Passkey, Source Code and Logs Cards */}

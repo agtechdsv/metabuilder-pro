@@ -800,7 +800,8 @@
       "bpm": "BPM & Automation",
       "sync_resolution": "Auto Sync",
       "source_code": "Source Code (Export)",
-      "logs": "Audit & Logs (CLI)"
+      "logs": "Audit & Logs (CLI)",
+      "ide": "Native IDE & Tunnel"
     },
     "hero": {
       "badge": "The Software Engine of the Future",
@@ -2224,5 +2225,25 @@
     "rename_to_column_group": "Rename to Column in {table}:",
     "applying": "Applying...",
     "apply_and_sync": "Apply Resolutions and Sync"
+  },
+  "ide_landing": {
+    "hero": {
+      "title": "Native IDE for Total Control",
+      "subtitle": "Manage local client database connections directly from a unified interface, no black terminal screens required."
+    },
+    "features": {
+      "tunnel": {
+        "title": "Integrated Tunnel & Connection",
+        "desc": "Visual control panel for start, stop, and sync of the secure tunnel. Client data never leaves their infrastructure."
+      },
+      "config": {
+        "title": "JSON Config Automation",
+        "desc": "Never edit files by hand again. An Enterprise interface to configure IPs, Ports, and project credentials."
+      },
+      "ldap": {
+        "title": "Corporate Authentication (LDAP)",
+        "desc": "Enable and connect the client company's Active Directory with just one click."
+      }
+    }
   }
 }

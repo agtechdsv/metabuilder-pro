@@ -800,7 +800,8 @@
       "bpm": "BPM & Automação",
       "sync_resolution": "Sync Automático",
       "source_code": "Código Fonte (Export)",
-      "logs": "Auditoria & Logs (CLI)"
+      "logs": "Auditoria & Logs (CLI)",
+      "ide": "IDE & Túnel Local"
     },
     "hero": {
       "badge": "A Engine de Software do Futuro",
@@ -2228,5 +2229,25 @@
     "rename_to_column_group": "Renomear para Coluna em {table}:",
     "applying": "Aplicando...",
     "apply_and_sync": "Aplicar Resoluções e Sincronizar"
+  },
+  "ide_landing": {
+    "hero": {
+      "title": "IDE Nativa para Controle Total",
+      "subtitle": "Gerencie a conexão local com o banco de dados do seu cliente diretamente de uma interface unificada, sem telas pretas de terminal."
+    },
+    "features": {
+      "tunnel": {
+        "title": "Túnel e Conexão Integrada",
+        "desc": "Painel de controle visual para start, stop e sync do túnel seguro. Os dados do cliente nunca saem da infraestrutura dele."
+      },
+      "config": {
+        "title": "Automação do JSON Config",
+        "desc": "Nunca mais edite arquivos à mão. Uma interface Enterprise para configurar IPs, Portas, e credenciais do projeto."
+      },
+      "ldap": {
+        "title": "Autenticação Corporativa (LDAP)",
+        "desc": "Habilite e conecte o Active Directory da empresa cliente com apenas um clique."
+      }
+    }
   }
 }
