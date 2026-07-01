@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "identifier": "com.metabuilder.pro",
   "build": {
-    "frontendDist": "../out",
+    "frontendDist": "https://metabuilderpro.com",
     "devUrl": "http://localhost:3000",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeBuildCommand": ""
   },
   "app": {
     "windows": [

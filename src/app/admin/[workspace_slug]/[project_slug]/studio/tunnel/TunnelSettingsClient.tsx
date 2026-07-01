@@ -103,8 +103,31 @@ export default function TunnelSettingsClient({
 
   const fetchConfig = async () => {
     try {
-      const res = await fetch('/api/tunnel/config')
-      const data = await res.json()
+      let data;
+      if (isTauri()) {
+        try {
+          const { readTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+          const fileContent = await readTextFile('metabuilder.config.json', { baseDir: BaseDirectory.AppLocalData });
+          data = JSON.parse(fileContent);
+          
+          // Removemos as chaves ocultas para a UI, igual o backend faria
+          if (data) {
+            const { supabaseUrl, supabaseAnonKey, apiUrl, ...safeConfig } = data;
+            data = safeConfig;
+          }
+        } catch (e) {
+          console.log('No local config found or error reading:', e);
+          data = {
+            connections: [],
+            ldap: { enabled: false },
+            downloadPath: ''
+          };
+        }
+      } else {
+        const res = await fetch('/api/tunnel/config')
+        data = await res.json()
+      }
+
       if (data && !data.error) {
         setConfig(data)
         
@@ -195,16 +218,42 @@ export default function TunnelSettingsClient({
     setConfig(newConfig)
 
     try {
-      const res = await fetch('/api/tunnel/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newConfig)
-      })
-      const data = await res.json()
-      if (data.success) {
-        toast('Configurações salvas com sucesso no arquivo local.', 'success')
+      if (isTauri()) {
+        const { writeTextFile, BaseDirectory, readTextFile } = await import('@tauri-apps/plugin-fs');
+        
+        let existingSystemKeys = {
+          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://chmstvtepzmjhpyxjjam.supabase.co',
+          supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+          apiUrl: 'https://metabuilderpro.com/api/metadata/sync'
+        };
+
+        try {
+          const fileContent = await readTextFile('metabuilder.config.json', { baseDir: BaseDirectory.AppLocalData });
+          const oldConfig = JSON.parse(fileContent);
+          existingSystemKeys.supabaseUrl = oldConfig.supabaseUrl || existingSystemKeys.supabaseUrl;
+          existingSystemKeys.supabaseAnonKey = oldConfig.supabaseAnonKey || existingSystemKeys.supabaseAnonKey;
+          existingSystemKeys.apiUrl = oldConfig.apiUrl || existingSystemKeys.apiUrl;
+        } catch (e) {}
+
+        const finalConfig = {
+          ...newConfig,
+          ...existingSystemKeys
+        };
+
+        await writeTextFile('metabuilder.config.json', JSON.stringify(finalConfig, null, 2), { baseDir: BaseDirectory.AppLocalData });
+        toast('Configurações salvas com sucesso na Casca Desktop.', 'success')
       } else {
-        toast(data.error || 'Erro ao salvar configurações.', 'error')
+        const res = await fetch('/api/tunnel/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newConfig)
+        })
+        const data = await res.json()
+        if (data.success) {
+          toast('Configurações salvas com sucesso no arquivo local.', 'success')
+        } else {
+          toast(data.error || 'Erro ao salvar configurações.', 'error')
+        }
       }
     } catch (e) {
       toast('Erro de comunicação ao salvar.', 'error')
