@@ -91,7 +91,9 @@ jobs:
           args: ${{ matrix.args }}
 
       - name: Upload Releases to Supabase
-        run: node scripts/upload-release.js
+        run: |
+          npm install ws
+          node scripts/upload-release.js
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
