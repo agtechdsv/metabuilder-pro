@@ -26,7 +26,13 @@ async function main() {
     process.exit(1);
   }
 
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  const ws = require('ws');
+  const supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: { persistSession: false },
+    realtime: {
+      transport: ws
+    }
+  });
 
   for (const filePath of artifactPaths) {
     if (!fs.existsSync(filePath)) {
