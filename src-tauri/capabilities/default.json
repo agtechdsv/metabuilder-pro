@@ -11,6 +11,10 @@
     "deep-link:default",
     "fs:default",
     "fs:allow-applocaldata-read",
-    "fs:allow-applocaldata-write"
+    "fs:allow-applocaldata-write",
+    {
+      "identifier": "shell:allow-open",
+      "allow": [{ "url": "^https?://.*" }]
+    }
   ]
 }
