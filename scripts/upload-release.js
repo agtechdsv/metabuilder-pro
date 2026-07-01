@@ -96,7 +96,7 @@ async function main() {
       const { data: existingRecords } = await supabase
         .from('app_downloads')
         .select('id')
-        .eq('title', title)
+        .eq('name', title)
         .eq('version', version)
         .eq('category', category)
         .eq('is_active', true);
@@ -104,20 +104,18 @@ async function main() {
       if (existingRecords && existingRecords.length > 0) {
         console.log(`Database record already exists for ${title}`);
       } else {
-        // Calculate file size in MB
         const stats = fs.statSync(filePath);
-        const sizeMb = (stats.size / (1024 * 1024)).toFixed(2) + ' MB';
+        const sizeBytes = stats.size;
 
         console.log(`Inserting database record for ${title}...`);
         const { error: dbError } = await supabase
           .from('app_downloads')
           .insert({
-            title: title,
-            description: `Instalador oficial do MetaBuilder PRO versão ${version}.`,
+            name: title,
             version: version,
             category: category,
             bucket_path: storagePath,
-            size: sizeMb,
+            size_bytes: sizeBytes,
             is_active: true
           });
 
