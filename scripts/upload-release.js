@@ -73,7 +73,31 @@ async function main() {
 
     console.log(`Uploading ${fileName} to ${storagePath}...`);
 
-    const fileBuffer = fs.readFileSync(filePath);
+    let fileBuffer = fs.readFileSync(filePath);
+
+    // Se for o latest.json, precisamos reescrever as URLs do Github para as do Supabase!
+    // Porque se o repo for privado, o Tauri não conseguirá baixar as atualizações do Github.
+    if (isLatestJson) {
+      try {
+        const latestData = JSON.parse(fileBuffer.toString('utf-8'));
+        const supabaseBaseUrl = `${supabaseUrl}/storage/v1/object/public/releases/ide/v${version}`;
+        
+        if (latestData.platforms) {
+          for (const platform of Object.keys(latestData.platforms)) {
+            const platformData = latestData.platforms[platform];
+            // Extrai apenas o nome do arquivo da URL original do Github
+            const originalFilename = platformData.url.split('/').pop();
+            // Troca pela URL do seu Supabase
+            platformData.url = `${supabaseBaseUrl}/${originalFilename}`;
+          }
+        }
+        
+        fileBuffer = Buffer.from(JSON.stringify(latestData, null, 2), 'utf-8');
+        console.log('URLs do latest.json foram reescritas para o Supabase com sucesso.');
+      } catch (e) {
+        console.error('Erro ao reescrever URLs no latest.json:', e);
+      }
+    }
     
     // Upload to Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
