@@ -10,7 +10,7 @@
     "shell:default",
     "deep-link:default",
     "fs:default",
-    "fs:allow-app-local-data-read",
-    "fs:allow-app-local-data-write"
+    "fs:allow-applocaldata-read",
+    "fs:allow-applocaldata-write"
   ]
 }
