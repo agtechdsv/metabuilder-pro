@@ -75,3 +75,7 @@ node_modules
 
 /local_scripts/
 scripts/refactor/
+
+# Ignorar binarios do tauri
+src-tauri/bin/*.exe
+src-tauri/bin/cli*

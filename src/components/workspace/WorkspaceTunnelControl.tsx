@@ -15,6 +15,14 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
 
   const checkStatus = async () => {
     try {
+      if (isTauri()) {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const isRunning = await invoke('status_cli');
+        setTunnelStatus(isRunning ? 'running' : 'stopped');
+        setTunnelPid(null);
+        return;
+      }
+
       const res = await fetch('/api/tunnel/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -44,6 +52,26 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
   const handleProcessControl = async (action: 'start' | 'stop' | 'sync', mode?: number) => {
     setTunnelStatus('loading')
     try {
+      if (isTauri()) {
+        const { invoke } = await import('@tauri-apps/api/core');
+        if (action === 'stop') {
+          await invoke('stop_cli');
+          toast('Processo parado com sucesso', 'success');
+        } else {
+          const { appLocalDataDir, join } = await import('@tauri-apps/api/path');
+          const dir = await appLocalDataDir();
+          const configPath = await join(dir, 'metabuilder.config.json');
+          
+          await invoke('start_cli', { 
+            mode: action === 'sync' ? 3 : (mode || 1), 
+            configPath: configPath 
+          });
+          toast(action === 'sync' ? 'Sincronização disparada.' : 'Túnel iniciado com sucesso.', 'success');
+        }
+        checkStatus();
+        return;
+      }
+
       const res = await fetch('/api/tunnel/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

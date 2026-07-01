@@ -13,7 +13,7 @@ export function CliFilesAdminView() {
   const [deleteConfirm, setDeleteConfirm] = useState<{id: string, bucketPath: string, name: string} | null>(null)
   
   // Filter state
-  const [filter, setFilter] = useState<'all' | 'cli-win' | 'cli-linux' | 'template' | 'manual'>('all')
+  const [filter, setFilter] = useState<'all' | 'cli-win' | 'cli-linux' | 'template' | 'manual' | 'ide-win' | 'ide-mac' | 'ide-linux'>('all')
 
   // Form state
   const [uploadForm, setUploadForm] = useState({
@@ -141,6 +141,9 @@ export function CliFilesAdminView() {
       case 'cli-linux': return 'CLI (Linux)'
       case 'template': return 'Template JSON'
       case 'manual': return 'Manual PDF'
+      case 'ide-win': return 'App (Windows)'
+      case 'ide-mac': return 'App (macOS)'
+      case 'ide-linux': return 'App (Linux)'
       default: return cat
     }
   }
@@ -171,6 +174,9 @@ export function CliFilesAdminView() {
         </div>
         {[
           { id: 'all', label: 'Todos' },
+          { id: 'ide-win', label: 'App (Windows)' },
+          { id: 'ide-mac', label: 'App (macOS)' },
+          { id: 'ide-linux', label: 'App (Linux)' },
           { id: 'cli-win', label: 'CLI Windows' },
           { id: 'cli-linux', label: 'CLI Linux' },
           { id: 'template', label: 'Templates' },
@@ -298,6 +304,9 @@ export function CliFilesAdminView() {
                     <option value="cli-linux">CLI (Linux)</option>
                     <option value="template">Template JSON</option>
                     <option value="manual">Manual PDF</option>
+                    <option value="ide-win">App Desktop (Windows)</option>
+                    <option value="ide-mac">App Desktop (macOS)</option>
+                    <option value="ide-linux">App Desktop (Linux)</option>
                   </select>
                 </div>
                 <div>

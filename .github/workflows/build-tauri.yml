@@ -14,14 +14,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest' # Para macOS .app / .dmg / .tar.gz
+          - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
-          - platform: 'macos-latest' # Para macOS Intel
+            pkg_target: 'node18-macos-arm64'
+            tauri_triple: 'aarch64-apple-darwin'
+          - platform: 'macos-latest'
             args: '--target x86_64-apple-darwin'
-          - platform: 'ubuntu-22.04' # Para Linux .deb / .AppImage
+            pkg_target: 'node18-macos-x64'
+            tauri_triple: 'x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04'
             args: ''
-          - platform: 'windows-latest' # Para Windows .exe / .msi
+            pkg_target: 'node18-linux-x64'
+            tauri_triple: 'x86_64-unknown-linux-gnu'
+          - platform: 'windows-latest'
             args: ''
+            pkg_target: 'node18-win-x64'
+            tauri_triple: 'x86_64-pc-windows-msvc'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -52,8 +60,24 @@ jobs:
           mkdir -p out
           echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0; url=http://localhost:3000"></head><body><h2>Inicie o servidor Next.js localmente na porta 3000</h2></body></html>' > out/index.html
 
+      - name: Build CLI Sidecar
+        shell: bash
+        run: |
+          cd cli
+          npm install
+          npx pkg . --targets ${{ matrix.pkg_target }} --out-path dist
+          mkdir -p ../src-tauri/bin
+          # O pkg gera o arquivo com o nome 'cli' (Linux/macOS) ou 'cli.exe' (Windows).
+          # Vamos mover para a pasta src-tauri/bin com o nome correto esperado pelo Tauri.
+          if [ "${{ matrix.platform }}" = "windows-latest" ]; then
+            mv dist/cli.exe ../src-tauri/bin/cli-${{ matrix.tauri_triple }}.exe
+          else
+            mv dist/cli ../src-tauri/bin/cli-${{ matrix.tauri_triple }}
+          fi
+
       - name: Build Tauri
         uses: tauri-apps/tauri-action@v0
+        id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
@@ -63,4 +87,13 @@ jobs:
           releaseBody: 'Nova versão do MetaBuilder PRO disponível!'
           releaseDraft: true
           prerelease: false
+          includeUpdaterJson: true
           args: ${{ matrix.args }}
+
+      - name: Upload Releases to Supabase
+        run: node scripts/upload-release.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ARTIFACT_PATHS: ${{ steps.tauri.outputs.artifactPaths }}
+          VERSION: ${{ steps.tauri.outputs.appVersion }}

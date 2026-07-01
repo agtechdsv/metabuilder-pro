@@ -1194,7 +1194,8 @@ const fs = require('fs');
 async function run() {
   console.log(chalk.bold.cyan('\n🚀 MetaBuilderPRO CLI - Enterprise Gateway\n'));
 
-  const configPath = './metabuilder.config.json';
+  const configArg = process.argv.find(arg => arg.startsWith('--config='));
+  const configPath = configArg ? configArg.split('=')[1] : './metabuilder.config.json';
   let configData = null;
 
   // 1. Tenta carregar as conexões do arquivo

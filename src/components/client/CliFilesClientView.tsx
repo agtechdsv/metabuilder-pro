@@ -19,8 +19,9 @@ export function CliFilesClientView({ projects = [] }: CliFilesClientViewProps) {
   const [files, setFiles] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   
-  // Filter state
-  const [filter, setFilter] = useState<'all' | 'cli-win' | 'cli-linux' | 'template' | 'manual'>('all')
+  // Tab & Filter state
+  const [mainTab, setMainTab] = useState<'ide' | 'utils'>('ide')
+  const [filter, setFilter] = useState<'all' | 'cli-win' | 'cli-linux' | 'template' | 'manual' | 'ide-win' | 'ide-mac' | 'ide-linux'>('all')
 
   // Modal state
   const [downloadModalFile, setDownloadModalFile] = useState<any | null>(null)
@@ -145,11 +146,21 @@ export function CliFilesClientView({ projects = [] }: CliFilesClientViewProps) {
       case 'cli-linux': return 'CLI (Linux)'
       case 'template': return 'Template JSON'
       case 'manual': return 'Manual PDF'
+      case 'ide-win': return 'App (Windows)'
+      case 'ide-mac': return 'App (macOS)'
+      case 'ide-linux': return 'App (Linux)'
       default: return cat
     }
   }
 
-  const filteredFiles = files.filter(f => filter === 'all' || f.category === filter)
+  const filteredFiles = files.filter(f => {
+    const isIde = ['ide-win', 'ide-mac', 'ide-linux'].includes(f.category);
+    if (mainTab === 'ide' && !isIde) return false;
+    if (mainTab === 'utils' && isIde) return false;
+    
+    if (filter === 'all') return true;
+    return f.category === filter;
+  });
 
   // Sync default port when dbType changes
   useEffect(() => {
@@ -175,19 +186,40 @@ export function CliFilesClientView({ projects = [] }: CliFilesClientViewProps) {
         </button>
       </div>
 
+      {/* Tabs */}
+      <div className="flex border-b border-neutral-200 dark:border-neutral-800 mb-4">
+        <button
+          onClick={() => { setMainTab('ide'); setFilter('all'); }}
+          className={`px-6 py-3 font-bold text-sm border-b-2 transition-colors ${mainTab === 'ide' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'}`}
+        >
+          App Desktop (IDE)
+        </button>
+        <button
+          onClick={() => { setMainTab('utils'); setFilter('all'); }}
+          className={`px-6 py-3 font-bold text-sm border-b-2 transition-colors ${mainTab === 'utils' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'}`}
+        >
+          Utilitários (CLI & JSON)
+        </button>
+      </div>
+
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 px-3 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-neutral-500 dark:text-neutral-400">
           <Filter className="w-4 h-4" />
           <span className="text-xs font-bold uppercase tracking-wider">Filtros:</span>
         </div>
-        {[
+        {(mainTab === 'ide' ? [
+          { id: 'all', label: 'Todos' },
+          { id: 'ide-win', label: 'Windows' },
+          { id: 'ide-mac', label: 'macOS' },
+          { id: 'ide-linux', label: 'Linux' }
+        ] : [
           { id: 'all', label: 'Todos' },
           { id: 'cli-win', label: 'CLI Windows' },
           { id: 'cli-linux', label: 'CLI Linux' },
           { id: 'template', label: 'Templates' },
           { id: 'manual', label: 'Manuais' }
-        ].map(f => (
+        ]).map(f => (
           <button
             key={f.id}
             onClick={() => setFilter(f.id as any)}
