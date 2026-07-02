@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, Suspense, useState } from 'react'
+import { useEffect, Suspense, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react'
@@ -14,6 +14,7 @@ function CallbackHandler() {
 
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [errorMessage, setErrorMessage] = useState<string | null>(errorDesc)
+  const exchangeAttempted = useRef(false)
 
   useEffect(() => {
     if (errorDesc) {
@@ -108,17 +109,27 @@ function CallbackHandler() {
     // Extrai o code (PKCE) da URL para forçar a troca (contorna falhas do Supabase SSR no client)
     const searchParams = new URLSearchParams(window.location.search)
     const code = searchParams.get('code')
-    if (code) {
+    if (code && !exchangeAttempted.current) {
+      exchangeAttempted.current = true
+      // Remove o código da URL para segurança visual, embora o Next.js possa restaurar depois
       window.history.replaceState(null, '', window.location.pathname)
+      
       supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
         if (error) {
-          setErrorMessage(error.message)
-          setStatus('error')
+          // Apenas mostra erro se realmente falhou a primeira vez e não temos sessão ativa
+          supabase.auth.getSession().then(({ data: currentData }) => {
+            if (currentData.session) {
+              notifyAndClose(currentData.session)
+            } else {
+              setErrorMessage(error.message)
+              setStatus('error')
+            }
+          })
         } else if (data.session) {
           notifyAndClose(data.session)
         }
       })
-      return
+      // Não damos return aqui para permitir que os listeners de fallback também rodem
     }
 
     // Extrai tokens manualmente do hash caso o Supabase não tenha feito o parse automático (comum em navegações client-side)
