@@ -5,6 +5,12 @@
   "windows": [
     "main"
   ],
+  "remote": {
+    "urls": [
+      "https://metabuilderpro.com",
+      "http://localhost:3000"
+    ]
+  },
   "permissions": [
     "core:default",
     "shell:default",
