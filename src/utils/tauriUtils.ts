@@ -27,7 +27,8 @@ export const openExternalUrl = async (url: string) => {
       await openUrl(url);
     } catch (error: any) {
       console.error('Falha ao abrir URL externa via Tauri (open):', error);
-      alert(`Falha ao abrir o seu navegador padrão. Por favor, acesse esta URL manualmente.\n\nURL: ${url}`);
+      const errMsg = error?.message || error || 'Unknown error';
+      alert(`Falha ao abrir o seu navegador padrão. Erro interno: ${errMsg}\n\nPor favor, acesse esta URL manualmente copiando-a abaixo:\n\n${url}`);
     }
   } else {
     window.open(url, '_blank');

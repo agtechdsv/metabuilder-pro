@@ -37,6 +37,9 @@
           "metabuilder"
         ]
       }
+    },
+    "opener": {
+      "open": true
     }
   },
   "bundle": {
