@@ -40,7 +40,18 @@ export async function POST(request: Request) {
       
       // Add all changes and commit
       await execAsync('git add .')
-      const { stdout, stderr } = await execAsync(`git commit -m "${message}"`)
+      let stdout = ''
+      let stderr = ''
+      try {
+        const result = await execAsync(`git commit -m "${message}"`)
+        stdout = result.stdout
+        stderr = result.stderr
+      } catch (err: any) {
+        if (err.stdout?.includes('nothing to commit') || err.message?.includes('nothing to commit')) {
+          return NextResponse.json({ success: true, stdout: 'Nenhuma alteração nova para commitar. Tudo já está salvo!', stderr: '' })
+        }
+        throw err
+      }
       
       return NextResponse.json({ success: true, stdout, stderr })
     } 
