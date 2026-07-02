@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { Download, File as FileIcon, Loader2, RefreshCw, Filter, X } from 'lucide-react'
+import { Download, File as FileIcon, Loader2, RefreshCw, Filter, X, History } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 
 interface Project {
@@ -22,6 +22,7 @@ export function CliFilesClientView({ projects = [] }: CliFilesClientViewProps) {
   // Tab & Filter state
   const [mainTab, setMainTab] = useState<'ide' | 'utils'>('ide')
   const [filter, setFilter] = useState<'all' | 'cli-win' | 'cli-linux' | 'template' | 'manual' | 'ide-win' | 'ide-mac' | 'ide-linux'>('all')
+  const [showOlderReleases, setShowOlderReleases] = useState(false)
 
   // Modal state
   const [downloadModalFile, setDownloadModalFile] = useState<any | null>(null)
@@ -162,6 +163,18 @@ export function CliFilesClientView({ projects = [] }: CliFilesClientViewProps) {
     return f.category === filter;
   });
 
+  const finalFilteredFiles = (() => {
+    if (mainTab === 'ide' && !showOlderReleases) {
+      const seen = new Set();
+      return filteredFiles.filter(f => {
+        if (seen.has(f.category)) return false;
+        seen.add(f.category);
+        return true;
+      });
+    }
+    return filteredFiles;
+  })();
+
   // Sync default port when dbType changes
   useEffect(() => {
     if (dbType === 'postgres') setDbPort('5432')
@@ -203,35 +216,51 @@ export function CliFilesClientView({ projects = [] }: CliFilesClientViewProps) {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-2 px-3 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-neutral-500 dark:text-neutral-400">
-          <Filter className="w-4 h-4" />
-          <span className="text-xs font-bold uppercase tracking-wider">Filtros:</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 px-3 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-neutral-500 dark:text-neutral-400">
+            <Filter className="w-4 h-4" />
+            <span className="text-xs font-bold uppercase tracking-wider">Filtros:</span>
+          </div>
+          {(mainTab === 'ide' ? [
+            { id: 'all', label: 'Todos' },
+            { id: 'ide-win', label: 'Windows' },
+            { id: 'ide-mac', label: 'macOS' },
+            { id: 'ide-linux', label: 'Linux' }
+          ] : [
+            { id: 'all', label: 'Todos' },
+            { id: 'cli-win', label: 'CLI Windows' },
+            { id: 'cli-linux', label: 'CLI Linux' },
+            { id: 'template', label: 'Templates' },
+            { id: 'manual', label: 'Manuais' }
+          ]).map(f => (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id as any)}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
+                filter === f.id 
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900' 
+                  : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
-        {(mainTab === 'ide' ? [
-          { id: 'all', label: 'Todos' },
-          { id: 'ide-win', label: 'Windows' },
-          { id: 'ide-mac', label: 'macOS' },
-          { id: 'ide-linux', label: 'Linux' }
-        ] : [
-          { id: 'all', label: 'Todos' },
-          { id: 'cli-win', label: 'CLI Windows' },
-          { id: 'cli-linux', label: 'CLI Linux' },
-          { id: 'template', label: 'Templates' },
-          { id: 'manual', label: 'Manuais' }
-        ]).map(f => (
+        
+        {mainTab === 'ide' && (
           <button
-            key={f.id}
-            onClick={() => setFilter(f.id as any)}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
-              filter === f.id 
-                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900' 
-                : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'
+            onClick={() => setShowOlderReleases(!showOlderReleases)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors border ${
+              showOlderReleases
+                ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/10 dark:border-indigo-500/20 dark:text-indigo-400'
+                : 'bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 dark:bg-neutral-900 dark:border-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800'
             }`}
           >
-            {f.label}
+            <History className="w-4 h-4" />
+            {showOlderReleases ? 'Ocultar versões antigas' : 'Exibir versões anteriores'}
           </button>
-        ))}
+        )}
       </div>
 
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden shadow-sm">
@@ -251,8 +280,8 @@ export function CliFilesClientView({ projects = [] }: CliFilesClientViewProps) {
                   <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mx-auto" />
                 </td>
               </tr>
-            ) : filteredFiles.length > 0 ? (
-              filteredFiles.map(file => (
+            ) : finalFilteredFiles.length > 0 ? (
+              finalFilteredFiles.map(file => (
                 <tr key={file.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
                   <td className="px-6 py-4 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
