@@ -8,7 +8,9 @@
   "remote": {
     "urls": [
       "https://metabuilderpro.com",
-      "http://localhost:3000"
+      "https://metabuilderpro.com/*",
+      "http://localhost:3000",
+      "http://localhost:3000/*"
     ]
   },
   "permissions": [
