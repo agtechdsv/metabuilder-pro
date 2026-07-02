@@ -1,4 +1,4 @@
-import { open } from '@tauri-apps/plugin-opener';
+import { openUrl } from '@tauri-apps/plugin-opener';
 
 /**
  * Verifica se a aplicação está rodando dentro do ambiente Desktop (Tauri)
@@ -24,7 +24,7 @@ export const isTauri = (): boolean => {
 export const openExternalUrl = async (url: string) => {
   if (isTauri()) {
     try {
-      await open(url);
+      await openUrl(url);
     } catch (error: any) {
       console.error('Falha ao abrir URL externa via Tauri (open):', error);
       alert(`Falha ao abrir o seu navegador padrão. Por favor, acesse esta URL manualmente.\n\nURL: ${url}`);
