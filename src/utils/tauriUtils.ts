@@ -25,10 +25,11 @@ export const openExternalUrl = async (url: string) => {
   if (isTauri()) {
     try {
       await open(url);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Falha ao abrir URL externa via Tauri:', error);
+      alert(`Falha ao abrir o seu navegador padrão. Por favor, acesse esta URL manualmente ou configure um navegador padrão no Windows.\n\nURL: ${url}`);
       // Fallback fallback, although usually caught by Tauri if unsupported
-      window.open(url, '_blank');
+      window.location.href = url;
     }
   } else {
     window.open(url, '_blank');
