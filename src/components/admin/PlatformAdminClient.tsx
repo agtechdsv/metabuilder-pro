@@ -10,7 +10,8 @@ import {
   Lightbulb,
   BarChart3,
   RefreshCw,
-  ShieldCheck
+  ShieldCheck,
+  Rocket
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
@@ -19,6 +20,7 @@ import { MetaVoiceAdminView } from './MetaVoiceAdminView'
 import CommunityHubView from '@/components/client/CommunityHubView'
 import { CliFilesAdminView } from './CliFilesAdminView'
 import { PricingRulesAdmin } from './PricingRulesAdmin'
+import { ReleaseAdminView } from './ReleaseAdminView'
 
 import { useDashboardAdmin } from './hooks/useDashboardAdmin'
 import { useClientsAdmin } from './hooks/useClientsAdmin'
@@ -76,6 +78,7 @@ const TAB_CONFIG = {
   metavoice: { label: 'MetaVoice', icon: Lightbulb, iconColor: 'text-amber-500 dark:text-amber-400' },
   community: { label: 'MetaBuilders', icon: Users, iconColor: 'text-blue-500 dark:text-blue-400' },
   arquivos: { label: 'Arquivos CLI', icon: Layers, iconColor: 'text-indigo-500 dark:text-indigo-400' },
+  releases: { label: 'Releases (IDE)', icon: Rocket, iconColor: 'text-rose-500 dark:text-rose-400' },
 } as const
 
 interface PlatformAdminClientProps {
@@ -104,7 +107,7 @@ export default function PlatformAdminClient({
     setTimeout(() => setIsRefreshing(false), 800)
   }
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'plans' | 'clients' | 'agenda' | 'iclub' | 'metavoice' | 'community' | 'arquivos'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'plans' | 'clients' | 'agenda' | 'iclub' | 'metavoice' | 'community' | 'arquivos' | 'releases'>('dashboard')
 
   const [workspaces, setWorkspaces] = useState<Workspace[]>(initialWorkspaces)
   const [clientProfiles, setClientProfiles] = useState<any[]>(profiles)
@@ -305,6 +308,19 @@ export default function PlatformAdminClient({
             className="space-y-6"
           >
             <PricingRulesAdmin />
+          </motion.div>
+        )}
+
+        {activeTab === 'releases' && (
+          <motion.div
+            key="releases"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 15 }}
+            transition={{ duration: 0.25 }}
+            className="space-y-6"
+          >
+            <ReleaseAdminView />
           </motion.div>
         )}
 
