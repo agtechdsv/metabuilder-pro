@@ -470,17 +470,21 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
     // Tática anti-popup blocker: abrir a janela de forma síncrona, ANTES do await.
     let popup: Window | null = null;
     if (!isTauri() && typeof window !== 'undefined') {
-      const width = 500
-      const height = 650
-      const left = window.screenX + (window.outerWidth - width) / 2
-      const top = window.screenY + (window.outerHeight - height) / 2
-      popup = window.open(
-        '',
-        'google-login',
-        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,status=yes`
-      )
-      if (popup) {
-        popup.document.write('<div style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh;">Aguarde, conectando ao Google...</div>');
+      try {
+        const width = 500
+        const height = 650
+        const left = window.screenX + (window.outerWidth - width) / 2
+        const top = window.screenY + (window.outerHeight - height) / 2
+        popup = window.open(
+          '',
+          'google-login',
+          `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,status=yes`
+        )
+        if (popup) {
+          popup.document.write('<div style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh;">Aguarde, conectando ao Google...</div>');
+        }
+      } catch (err) {
+        console.warn('Erro ao preparar popup (bloqueado pelo navegador):', err);
       }
     }
     
