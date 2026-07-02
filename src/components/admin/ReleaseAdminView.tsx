@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Rocket, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
+import { Rocket, FileText, CheckCircle2, AlertCircle, Loader2, Terminal, GitCommit, UploadCloud } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 
@@ -15,6 +15,12 @@ export function ReleaseAdminView() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
   const [releaseUrl, setReleaseUrl] = useState('')
+
+  // Local Git State
+  const [gitMessage, setGitMessage] = useState('')
+  const [gitStatus, setGitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [gitError, setGitError] = useState('')
+  const [gitLog, setGitLog] = useState('')
 
   const handleDeploy = async () => {
     if (!version.trim()) {
@@ -57,6 +63,43 @@ export function ReleaseAdminView() {
       console.error(error)
       setStatus('error')
       setErrorMessage(error.message || 'Falha na comunicação com a API')
+    }
+  }
+
+  const handleGitAction = async (action: 'commit' | 'push') => {
+    if (action === 'commit' && !gitMessage.trim()) {
+      setGitError('A mensagem de commit é obrigatória.')
+      setGitStatus('error')
+      return
+    }
+
+    try {
+      setGitStatus('loading')
+      setGitError('')
+      setGitLog('')
+      
+      const response = await fetch('/api/admin/git', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, message: gitMessage })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro na execução do git')
+      }
+
+      setGitLog(`STDOUT:\n${data.stdout}\n\nSTDERR:\n${data.stderr}`)
+      setGitStatus('success')
+      
+      if (action === 'commit') {
+        setGitMessage('')
+      }
+    } catch (error: any) {
+      console.error(error)
+      setGitStatus('error')
+      setGitError(error.message || 'Falha na comunicação')
     }
   }
 
@@ -210,6 +253,72 @@ export function ReleaseAdminView() {
 
         </div>
       </motion.div>
+
+      {/* LOCAL GIT PANEL */}
+      {process.env.NODE_ENV === 'development' && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-zinc-50 dark:bg-zinc-900 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm mt-8"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Terminal className="w-5 h-5 text-zinc-500" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Painel de Versionamento Local (Dev Only)</h3>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            Ferramentas exclusivas para o seu ambiente de desenvolvimento. Estes botões realizam operações do Git diretamente na sua máquina local.
+          </p>
+
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4 items-end">
+              <div className="flex-1 space-y-2 w-full">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Mensagem do Commit
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: feat: adiciona novo componente de upload"
+                  value={gitMessage}
+                  onChange={(e) => setGitMessage(e.target.value)}
+                  className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500/50"
+                />
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => handleGitAction('commit')}
+                  disabled={gitStatus === 'loading'}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-900 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-medium rounded-lg transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {gitStatus === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : <GitCommit className="w-4 h-4" />}
+                  Commit All
+                </button>
+                <button
+                  onClick={() => handleGitAction('push')}
+                  disabled={gitStatus === 'loading'}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-zinc-50 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white font-medium rounded-lg transition-colors border border-zinc-200 dark:border-zinc-700 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {gitStatus === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+                  Push
+                </button>
+              </div>
+            </div>
+
+            {gitStatus === 'error' && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm flex gap-2 items-center">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {gitError}
+              </div>
+            )}
+            
+            {gitStatus === 'success' && gitLog && (
+              <div className="mt-4 p-4 bg-black rounded-lg overflow-x-auto text-green-400 font-mono text-xs whitespace-pre-wrap">
+                {gitLog}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
     </div>
   )
 }

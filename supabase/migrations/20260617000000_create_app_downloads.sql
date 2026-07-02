@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS public.app_downloads (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name TEXT NOT NULL,
-    category TEXT NOT NULL CHECK (category IN ('cli-win', 'cli-linux', 'template', 'manual')),
+    category TEXT NOT NULL CHECK (category IN ('cli-win', 'cli-linux', 'template', 'manual', 'ide-win', 'ide-mac', 'ide-linux')),
     version TEXT NOT NULL,
     bucket_path TEXT NOT NULL,
     size_bytes BIGINT NOT NULL DEFAULT 0,
