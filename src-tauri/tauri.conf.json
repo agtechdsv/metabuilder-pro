@@ -33,7 +33,9 @@
     },
     "deep-link": {
       "desktop": {
-        "schemes": ["metabuilder"]
+        "schemes": [
+          "metabuilder"
+        ]
       }
     }
   },
