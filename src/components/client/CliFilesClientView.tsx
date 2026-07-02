@@ -70,7 +70,12 @@ export function CliFilesClientView({ projects = [] }: CliFilesClientViewProps) {
       if (error || !data) {
         toast('Erro ao gerar link de download.', 'error')
       } else {
-        window.open(data.signedUrl, '_blank')
+        const a = document.createElement('a')
+        a.href = data.signedUrl
+        a.download = file.name || 'download'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
       }
     }
   }
