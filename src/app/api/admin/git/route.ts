@@ -57,7 +57,8 @@ export async function POST(request: Request) {
     } 
     
     if (action === 'push') {
-      const { stdout, stderr } = await execAsync('git push')
+      // Sincroniza primeiro (pull) caso haja commits feitos pela API na nuvem, e depois faz o push
+      const { stdout, stderr } = await execAsync('git pull && git push')
       return NextResponse.json({ success: true, stdout, stderr })
     }
 
