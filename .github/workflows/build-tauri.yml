@@ -82,10 +82,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
         with:
-          tagName: MetaBuilderPRO-v__VERSION__
+          tagName: v__VERSION__
           releaseName: 'MetaBuilder PRO v__VERSION__'
           releaseBody: 'Nova versão do MetaBuilder PRO disponível!'
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
           args: ${{ matrix.args }}

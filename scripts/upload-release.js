@@ -145,6 +145,7 @@ async function main() {
 
         if (dbError) {
           console.error(`Error inserting DB record for ${fileName}:`, dbError.message);
+          throw new Error(`Database insert failed: ${dbError.message}`);
         } else {
           console.log(`Database record created for ${title}.`);
         }
