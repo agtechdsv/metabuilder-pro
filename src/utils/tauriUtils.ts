@@ -1,4 +1,4 @@
-import { open } from '@tauri-apps/plugin-shell';
+import { open } from '@tauri-apps/plugin-opener';
 
 /**
  * Verifica se a aplicação está rodando dentro do ambiente Desktop (Tauri)

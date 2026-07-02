@@ -20,9 +20,6 @@
     "fs:default",
     "fs:allow-applocaldata-read",
     "fs:allow-applocaldata-write",
-    {
-      "identifier": "shell:allow-open",
-      "allow": [{ "url": "^https?://.*" }]
-    }
+    "opener:default"
   ]
 }
