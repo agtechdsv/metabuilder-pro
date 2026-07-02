@@ -105,6 +105,22 @@ function CallbackHandler() {
       }
     }
 
+    // Extrai o code (PKCE) da URL para forçar a troca (contorna falhas do Supabase SSR no client)
+    const searchParams = new URLSearchParams(window.location.search)
+    const code = searchParams.get('code')
+    if (code) {
+      window.history.replaceState(null, '', window.location.pathname)
+      supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+        if (error) {
+          setErrorMessage(error.message)
+          setStatus('error')
+        } else if (data.session) {
+          notifyAndClose(data.session)
+        }
+      })
+      return
+    }
+
     // Extrai tokens manualmente do hash caso o Supabase não tenha feito o parse automático (comum em navegações client-side)
     const hash = window.location.hash
     if (hash && hash.includes('access_token=')) {
