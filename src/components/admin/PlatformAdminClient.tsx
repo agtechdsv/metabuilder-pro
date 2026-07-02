@@ -235,7 +235,7 @@ export default function PlatformAdminClient({
 
           {/* Right Tabs Group */}
           <div className="flex flex-wrap gap-1.5 bg-neutral-100 dark:bg-neutral-950 p-1.5 rounded-2xl border border-neutral-200/50 dark:border-neutral-850/80 w-fit">
-            {(['community', 'metavoice', 'iclub', 'arquivos'] as const).map(tab => {
+            {(['community', 'metavoice', 'iclub', 'arquivos', 'releases'] as const).map(tab => {
               const config = TAB_CONFIG[tab]
               const Icon = config.icon
               return (
