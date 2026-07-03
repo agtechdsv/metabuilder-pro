@@ -3,6 +3,7 @@ import { Navbar } from '@/components/layout/Navbar'
 import { HeroContent } from '@/components/landing/HeroContent'
 import { MarketingSections } from '@/components/marketing/MarketingSections'
 import { Footer } from '@/components/layout/Footer'
+import { HomeClientRouter } from '@/components/landing/HomeClientRouter'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -18,7 +19,7 @@ export default async function Home() {
     profile = data
   }
 
-  return (
+  const webContent = (
     <div className="min-h-screen pt-16 flex flex-col bg-white dark:bg-black text-black dark:text-white transition-colors duration-500 relative overflow-hidden">
       <Navbar user={user} profile={profile} />
 
@@ -37,4 +38,6 @@ export default async function Home() {
       <Footer />
     </div>
   )
+
+  return <HomeClientRouter webContent={webContent} user={user} />
 }
