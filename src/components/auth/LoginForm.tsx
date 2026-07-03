@@ -536,7 +536,16 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
       if (isTauri()) {
         // Na IDE, abrimos o fluxo OAuth em uma janela popup para que o usuário possa fechá-la (botão Voltar).
         // A janela principal fica escutando o onAuthStateChange.
-        import('@tauri-apps/api/webviewWindow').then(({ WebviewWindow }) => {
+        import('@tauri-apps/api/webviewWindow').then(async ({ WebviewWindow }) => {
+          try {
+            const existingPopup = await WebviewWindow.getByLabel('oauth_login');
+            if (existingPopup) {
+              await existingPopup.close();
+            }
+          } catch (e) {
+            // Ignora erro se não existir
+          }
+
           const popup = new WebviewWindow('oauth_login', {
             url: data.url,
             title: 'Google Login',
