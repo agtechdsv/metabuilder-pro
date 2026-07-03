@@ -21,6 +21,7 @@ import CommunityHubView from '@/components/client/CommunityHubView'
 import { CliFilesAdminView } from './CliFilesAdminView'
 import { PricingRulesAdmin } from './PricingRulesAdmin'
 import { ReleaseAdminView } from './ReleaseAdminView'
+import { ReleaseCompletionNotifier } from './ReleaseCompletionNotifier'
 
 import { useDashboardAdmin } from './hooks/useDashboardAdmin'
 import { useClientsAdmin } from './hooks/useClientsAdmin'
@@ -174,6 +175,7 @@ export default function PlatformAdminClient({
 
   return (
     <div className="space-y-8 pb-10">
+      <ReleaseCompletionNotifier />
 
       {/* Admin Panel Header */}
       <div className="flex flex-col gap-6 bg-white dark:bg-neutral-900/40 p-8 rounded-[2.5rem] border border-neutral-200 dark:border-neutral-800 shadow-sm">

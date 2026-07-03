@@ -281,8 +281,9 @@ export function ReleaseAdminView() {
               <div>
                 <h4 className="font-medium">Release criada com sucesso! 🚀</h4>
                 <p className="text-sm mt-1 opacity-90">
-                  Os arquivos do projeto foram atualizados e a Release foi gerada no Github. 
-                  O <strong>Github Actions</strong> já está rodando em background para compilar os instaladores e jogar no Supabase!
+                  Os arquivos do projeto foram atualizados e a Release está sendo gerada no Github. 
+                  O <strong>Github Actions</strong> já está rodando em background para compilar os instaladores e jogar no Supabase!{' '}
+                  Pode navegar à vontade por onde quiser! Assim que finalizado iremos lhe avisar!
                 </p>
                 <a 
                   href={releaseUrl} 
