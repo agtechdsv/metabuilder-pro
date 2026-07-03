@@ -566,7 +566,7 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
   }
 
   return (
-    <div className={cn("w-full max-w-sm mx-auto", className)}>
+    <div className={cn("w-full max-w-md mx-auto", className)}>
       {/* Header Section with Animated Gradient Icon */}
       <div className="text-center mb-10">
         <div className="inline-flex relative group mb-8">

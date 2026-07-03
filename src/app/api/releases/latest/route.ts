@@ -29,10 +29,42 @@ export async function GET() {
 
     const data = await res.json()
 
+    let body = data.body || '';
+
+    // Se o corpo tiver um link de compare (ex: gerado automaticamente pelo Github),
+    // vamos buscar os commits dessa diferença para listar em tópicos!
+    const compareMatch = body.match(/https:\/\/github\.com\/[^\/]+\/[^\/]+\/compare\/([^\s]+)/);
+    if (compareMatch && compareMatch[1]) {
+      const compareStr = compareMatch[1]; // ex: v0.1.2...v0.1.3
+      try {
+        const compareRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/compare/${compareStr}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+          }
+        });
+        
+        if (compareRes.ok) {
+          const compareData = await compareRes.json();
+          if (compareData.commits && compareData.commits.length > 0) {
+            // Filtra commits de merge automáticos para deixar mais limpo
+            const validCommits = compareData.commits.filter((c: any) => !c.commit.message.startsWith('Merge pull request') && !c.commit.message.startsWith('Merge branch'));
+            const commitsList = validCommits.map((c: any) => `✨ ${c.commit.message.split('\n')[0]}`).join('\n');
+            
+            // Substitui o final do arquivo injetando os tópicos antes do Full Changelog
+            body = body.replace(/(\*\*Full Changelog\*\*.*)/, `### Nesta Atualização:\n\n${commitsList}\n\n$1`);
+          }
+        }
+      } catch (e) {
+        console.error('Falha ao buscar commits do compare link', e);
+      }
+    }
+
     return NextResponse.json({
       version: data.tag_name,
       name: data.name,
-      body: data.body,
+      body: body,
       published_at: data.published_at
     })
   } catch (error: any) {
