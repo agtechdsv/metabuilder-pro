@@ -10,21 +10,18 @@ interface HomeClientRouterProps {
 }
 
 export function HomeClientRouter({ webContent, user }: HomeClientRouterProps) {
-  const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    setIsDesktop(isTauri())
-  }, [])
-
-  if (isDesktop === null) {
-    // Show web content initially to support SSR/SEO for the website
-    // Once React hydrates, if it's the IDE, it will swap to the IDELanding.
-    return <>{webContent}</>
-  }
-
-  if (isDesktop) {
-    return <IDELanding user={user} />
-  }
-
-  return <>{webContent}</>
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .is-tauri .web-only-content { display: none !important; }
+        html:not(.is-tauri) .ide-only-content { display: none !important; }
+      `}} />
+      <div className="web-only-content">
+        {webContent}
+      </div>
+      <div className="ide-only-content">
+        <IDELanding user={user} />
+      </div>
+    </>
+  )
 }
