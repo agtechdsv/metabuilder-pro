@@ -14,12 +14,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-13'
-            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin --bundles app,updater'
             pkg_target: 'node18-macos-arm64'
             tauri_triple: 'aarch64-apple-darwin'
-          - platform: 'macos-13'
-            args: '--target x86_64-apple-darwin'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin --bundles app,updater'
             pkg_target: 'node18-macos-x64'
             tauri_triple: 'x86_64-apple-darwin'
           - platform: 'ubuntu-22.04'
@@ -43,7 +43,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-13' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Install Linux dependencies
         if: matrix.platform == 'ubuntu-22.04'
