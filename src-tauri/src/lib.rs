@@ -1,5 +1,4 @@
 use tauri::{Emitter, Manager, State, command};
-use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_opener::OpenerExt;
 use std::sync::Mutex;
 use tauri_plugin_shell::ShellExt;
