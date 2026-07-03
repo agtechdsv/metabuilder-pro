@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "metabuilder-pro",
+  "productName": "MetaBuilder PRO - IDE",
   "version": "0.1.2",
   "identifier": "com.metabuilder.pro",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "MetaBuilder PRO",
+        "title": "MetaBuilder PRO - IDE",
         "width": 1280,
         "height": 720,
         "resizable": true,
