@@ -22,7 +22,19 @@ async function githubFetch(endpoint: string, options: RequestInit = {}) {
   if (!res.ok) {
     const errorText = await res.text()
     console.error(`GitHub API Error (${endpoint}):`, res.status, errorText)
-    throw new Error(`GitHub API Error: ${res.statusText}`)
+    
+    let detailedMessage = res.statusText
+    try {
+      const parsed = JSON.parse(errorText)
+      if (parsed.message) {
+        detailedMessage = parsed.message
+        if (parsed.errors && parsed.errors.length > 0) {
+          detailedMessage += ` - ${parsed.errors[0].code} in field ${parsed.errors[0].field}`
+        }
+      }
+    } catch(e) {}
+    
+    throw new Error(`GitHub API Error: ${detailedMessage}`)
   }
 
   return res.json()
