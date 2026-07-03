@@ -1,5 +1,4 @@
 import { invoke } from '@tauri-apps/api/core';
-import { openUrl } from '@tauri-apps/plugin-opener';
 
 /**
  * Verifica se a aplicação está rodando dentro do ambiente Desktop (Tauri)
@@ -19,22 +18,21 @@ export const isTauri = (): boolean => {
 
 /**
  * Abre uma URL externamente.
- * No Desktop (Tauri), usa o plugin oficial opener do Tauri (JS API).
+ * No Desktop (Tauri), usa o comando Rust 'open_browser' (com permissão ACL explícita via permissions/open-browser.toml).
  * Na Web, abre uma nova aba normalmente.
  */
 export const openExternalUrl = async (url: string) => {
   if (isTauri()) {
     try {
-      // Tenta o plugin JS oficial primeiro (melhor compatibilidade com ACL)
-      await openUrl(url);
-    } catch (err1: any) {
-      console.warn('opener plugin failed, trying invoke fallback:', err1);
+      await invoke('open_browser', { url });
+    } catch (error: any) {
+      console.error('Falha ao abrir URL externa via Tauri:', error);
+      const errMsg = error?.message || error || 'Unknown error';
+      // Fallback: tenta o plugin JS direto
       try {
-        // Fallback: invoke do comando Rust customizado
-        await invoke('open_browser', { url });
-      } catch (error: any) {
-        console.error('Falha ao abrir URL externa via Tauri:', error);
-        const errMsg = error?.message || error || 'Unknown error';
+        const { openUrl } = await import('@tauri-apps/plugin-opener');
+        await openUrl(url);
+      } catch (err2) {
         alert(`Falha ao abrir o seu navegador padrão. Erro interno: ${errMsg}\n\nPor favor, acesse esta URL manualmente copiando-a abaixo:\n\n${url}`);
       }
     }

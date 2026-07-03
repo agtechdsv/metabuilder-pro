@@ -1,0 +1,8 @@
+# Permissão para o comando customizado open_browser
+# Este arquivo é necessário no Tauri v2 para que comandos #[command] 
+# sejam acessíveis via invoke() de origens remotas (metabuilderpro.com)
+
+[[permission]]
+identifier = "allow-open-browser"
+description = "Permite chamar o comando open_browser para abrir URLs no navegador padrão do sistema."
+commands.allow = ["open_browser"]
