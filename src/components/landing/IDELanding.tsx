@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { HeaderActions } from '@/components/layout/HeaderActions'
 import { LoginForm } from '@/components/auth/LoginForm'
-import { Zap, Code2, Info, X, FileText } from 'lucide-react'
+import { Zap, Code2, Info, X, FileText, Rocket } from 'lucide-react'
 
 export function IDELanding({ user }: { user: any }) {
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
