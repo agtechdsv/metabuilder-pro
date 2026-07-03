@@ -45,6 +45,15 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (window.__TAURI_INTERNALS__ || window.__TAURI__ || window.__TAURI_IPC__) {
+                document.documentElement.classList.add('is-tauri');
+              }
+            `
+          }}
+        />
         <Script
           id="oauth-redirect"
           strategy="beforeInteractive"
