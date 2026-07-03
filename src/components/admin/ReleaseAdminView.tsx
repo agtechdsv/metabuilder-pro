@@ -12,6 +12,9 @@ export function ReleaseAdminView() {
   const [version, setVersion] = useState('')
   const [generateReleaseNotes, setGenerateReleaseNotes] = useState(true)
   const [releaseNotes, setReleaseNotes] = useState('')
+  const [buildWindows, setBuildWindows] = useState(true)
+  const [buildMacOs, setBuildMacOs] = useState(true)
+  const [buildLinux, setBuildLinux] = useState(true)
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
   const [releaseUrl, setReleaseUrl] = useState('')
@@ -46,7 +49,10 @@ export function ReleaseAdminView() {
         body: JSON.stringify({
           version: version.trim(),
           generateReleaseNotes,
-          releaseNotes: generateReleaseNotes ? '' : releaseNotes
+          releaseNotes: generateReleaseNotes ? '' : releaseNotes,
+          buildWindows,
+          buildMacOs,
+          buildLinux
         })
       })
 
@@ -188,6 +194,50 @@ export function ReleaseAdminView() {
                 />
               </motion.div>
             )}
+          </div>
+
+          {/* OS Targets Selection */}
+          <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+            <div>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Sistemas Operacionais
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Selecione para quais plataformas você deseja gerar os instaladores.
+              </p>
+              
+              <div className="flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={buildWindows}
+                    onChange={(e) => setBuildWindows(e.target.checked)}
+                    className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Windows (.exe / .msi)</span>
+                </label>
+                
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={buildMacOs}
+                    onChange={(e) => setBuildMacOs(e.target.checked)}
+                    className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">macOS (.app / .dmg)</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={buildLinux}
+                    onChange={(e) => setBuildLinux(e.target.checked)}
+                    className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Linux (.deb / .AppImage)</span>
+                </label>
+              </div>
+            </div>
           </div>
 
           {/* Action Button */}

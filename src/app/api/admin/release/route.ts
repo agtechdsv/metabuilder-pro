@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { version, releaseNotes, generateReleaseNotes } = body
+    const { version, releaseNotes, generateReleaseNotes, buildWindows = true, buildMacOs = true, buildLinux = true } = body
 
     if (!version) {
       return NextResponse.json({ error: 'Version is required' }, { status: 400 })
@@ -134,6 +134,19 @@ export async function POST(request: Request) {
     const releaseData = await githubFetch(`releases`, {
       method: 'POST',
       body: JSON.stringify(releasePayload)
+    })
+
+    // Step 9: Trigger the GitHub Action via workflow_dispatch with OS selections
+    await githubFetch(`actions/workflows/build-tauri.yml/dispatches`, {
+      method: 'POST',
+      body: JSON.stringify({
+        ref: 'master',
+        inputs: {
+          build_windows: buildWindows ? 'true' : 'false',
+          build_macos: buildMacOs ? 'true' : 'false',
+          build_linux: buildLinux ? 'true' : 'false'
+        }
+      })
     })
 
     return NextResponse.json({ success: true, releaseUrl: releaseData.html_url })

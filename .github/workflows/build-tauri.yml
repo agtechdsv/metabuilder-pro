@@ -1,13 +1,27 @@
 name: 'Build and Release Tauri App'
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
+    inputs:
+      build_windows:
+        description: 'Build for Windows'
+        type: boolean
+        default: true
+      build_macos:
+        description: 'Build for macOS'
+        type: boolean
+        default: true
+      build_linux:
+        description: 'Build for Linux'
+        type: boolean
+        default: true
 
 jobs:
   build-tauri:
+    if: >
+      (matrix.os == 'windows' && github.event.inputs.build_windows == 'true') ||
+      (matrix.os == 'macos' && github.event.inputs.build_macos == 'true') ||
+      (matrix.os == 'linux' && github.event.inputs.build_linux == 'true')
     permissions:
       contents: write
     strategy:
@@ -18,18 +32,22 @@ jobs:
             args: '--target aarch64-apple-darwin --bundles app,updater'
             pkg_target: 'node18-macos-arm64'
             tauri_triple: 'aarch64-apple-darwin'
+            os: 'macos'
           - platform: 'macos-latest'
             args: '--target x86_64-apple-darwin --bundles app,updater'
             pkg_target: 'node18-macos-x64'
             tauri_triple: 'x86_64-apple-darwin'
+            os: 'macos'
           - platform: 'ubuntu-22.04'
             args: ''
             pkg_target: 'node18-linux-x64'
             tauri_triple: 'x86_64-unknown-linux-gnu'
+            os: 'linux'
           - platform: 'windows-latest'
             args: ''
             pkg_target: 'node18-win-x64'
             tauri_triple: 'x86_64-pc-windows-msvc'
+            os: 'windows'
 
     runs-on: ${{ matrix.platform }}
     steps:
