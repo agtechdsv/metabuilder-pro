@@ -488,9 +488,13 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
       }
     }
     
+    // Para Tauri: usa a mesma callbackUrl do browser (HTTPS), pois a WebView
+    // navega internamente pelo fluxo OAuth sem precisar abrir browser externo.
+    // Para browser: usa a callbackUrl normal com suporte ao redirect_to param.
     let callbackUrl = `${window.location.origin}/auth/callback`
     if (isTauri()) {
-      callbackUrl = 'metabuilder://auth/callback'
+      // Mantém HTTPS — a WebView vai navegar para o Google e voltar para cá
+      callbackUrl = 'https://metabuilderpro.com/auth/callback'
     } else if (typeof window !== 'undefined') {
       const searchParams = new URLSearchParams(window.location.search)
       const redirectParam = searchParams.get('redirect_to')
@@ -520,7 +524,10 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
 
     if (data?.url) {
       if (isTauri()) {
-        openExternalUrl(data.url)
+        // Navega a própria WebView da IDE para o fluxo OAuth do Google.
+        // Não precisa de browser externo nem de permissões Tauri (ACL).
+        // Google → Supabase → metabuilderpro.com/auth/callback → app logado.
+        window.location.href = data.url
       } else {
         if (popup) {
           popup.location.href = data.url
