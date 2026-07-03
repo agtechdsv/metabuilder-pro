@@ -206,36 +206,31 @@ export function ReleaseAdminView() {
                 Selecione para quais plataformas você deseja gerar os instaladores.
               </p>
               
-              <div className="flex flex-wrap gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={buildWindows}
-                    onChange={(e) => setBuildWindows(e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Windows (.exe / .msi)</span>
-                </label>
-                
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={buildMacOs}
-                    onChange={(e) => setBuildMacOs(e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">macOS (.app / .dmg)</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={buildLinux}
-                    onChange={(e) => setBuildLinux(e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Linux (.deb / .AppImage)</span>
-                </label>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { id: 'windows', label: 'Windows (.exe / .msi)', state: buildWindows, setter: setBuildWindows },
+                  { id: 'macos', label: 'macOS (.app / .dmg)', state: buildMacOs, setter: setBuildMacOs },
+                  { id: 'linux', label: 'Linux (.deb / .AppImage)', state: buildLinux, setter: setBuildLinux },
+                ].map((os) => (
+                  <button
+                    key={os.id}
+                    type="button"
+                    onClick={() => os.setter(!os.state)}
+                    className={cn(
+                      "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border flex items-center gap-2",
+                      os.state 
+                        ? "bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-400 shadow-sm"
+                        : "bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-gray-600 dark:text-gray-400 hover:bg-zinc-50 dark:hover:bg-zinc-700/50"
+                    )}
+                  >
+                    {os.state ? (
+                      <CheckCircle2 className="w-4 h-4" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border-2 border-current opacity-30" />
+                    )}
+                    {os.label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
