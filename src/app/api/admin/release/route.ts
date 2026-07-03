@@ -37,6 +37,10 @@ async function githubFetch(endpoint: string, options: RequestInit = {}) {
     throw new Error(`GitHub API Error: ${detailedMessage}`)
   }
 
+  if (res.status === 204) {
+    return null
+  }
+
   return res.json()
 }
 
