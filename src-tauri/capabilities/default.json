@@ -22,7 +22,6 @@
     "fs:allow-applocaldata-read",
     "fs:allow-applocaldata-write",
     "opener:default",
-    "opener:allow-open-url",
-    "app:allow-open-browser"
+    "opener:allow-open-url"
   ]
 }

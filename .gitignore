@@ -84,3 +84,5 @@ src-tauri/bin/cli*
 # logs do github actions
 /logs/
 /logs.zip
+/logs2/
+/logs2.zip
