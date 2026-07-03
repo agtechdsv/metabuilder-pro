@@ -239,19 +239,8 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Em Tauri, se o usuário logou por um popup, o evento SIGNED_IN será disparado aqui (sincronizado via localStorage)
-      if (isTauri() && event === 'SIGNED_IN' && session) {
-        import('@tauri-apps/api/webviewWindow').then(({ WebviewWindow }) => {
-          WebviewWindow.getByLabel('oauth_login').then(popup => {
-            if (popup) popup.close();
-          });
-        }).catch(() => {});
-        navigateToDashboard(session.user.id);
-        return;
-      }
-
       // Tratamos apenas hash-based flows (Magic Link, convite, recuperação de senha).
-      // NÃO navegamos no evento SIGNED_IN padrão na Web — o /auth/callback já cuida disso.
+      // NÃO navegamos no evento SIGNED_IN para OAuth na Web ou Tauri — o /auth/callback já cuida disso.
       if (session && (event === 'PASSWORD_RECOVERY' || event === 'INITIAL_SESSION')) {
         const user = session.user
         if (user) {
@@ -534,35 +523,9 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
 
     if (data?.url) {
       if (isTauri()) {
-        // Na IDE, abrimos o fluxo OAuth em uma janela popup para que o usuário possa fechá-la (botão Voltar).
-        // A janela principal fica escutando o onAuthStateChange.
-        import('@tauri-apps/api/webviewWindow').then(async ({ WebviewWindow }) => {
-          try {
-            const existingPopup = await WebviewWindow.getByLabel('oauth_login');
-            if (existingPopup) {
-              await existingPopup.close();
-            }
-          } catch (e) {
-            // Ignora erro se não existir
-          }
-
-          const popup = new WebviewWindow('oauth_login', {
-            url: data.url,
-            title: 'Google Login',
-            width: 500,
-            height: 700,
-            center: true
-          });
-          
-          popup.once('tauri://error', (e) => {
-            console.error('Erro ao abrir popup de login:', e);
-            // Fallback: navega na janela principal se falhar
-            window.location.href = data.url;
-          });
-        }).catch(err => {
-          console.error("Falha ao importar WebviewWindow:", err);
-          window.location.href = data.url;
-        });
+        // Redirecionamento tela-cheia (In-App Browser). 
+        // 100% estável e imune aos bloqueios de popup do Tauri.
+        window.location.href = data.url;
       } else {
         if (popup) {
           popup.location.href = data.url
