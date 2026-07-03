@@ -1,5 +1,6 @@
 use tauri::{Emitter, Manager, State, command};
 use tauri_plugin_deep_link::DeepLinkExt;
+use tauri_plugin_opener::OpenerExt;
 use std::sync::Mutex;
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandChild;
@@ -75,6 +76,15 @@ fn status_cli(state: State<'_, CliState>) -> Result<bool, String> {
     Ok(child_guard.is_some())
 }
 
+/// Abre uma URL no navegador padrão do sistema.
+/// Executado do lado Rust para contornar restrições de ACL do plugin opener.
+#[command]
+fn open_browser(app: tauri::AppHandle, url: String) -> Result<(), String> {
+    app.opener()
+        .open_url(&url, None::<&str>)
+        .map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -111,7 +121,7 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![start_cli, stop_cli, status_cli])
+        .invoke_handler(tauri::generate_handler![start_cli, stop_cli, status_cli, open_browser])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
