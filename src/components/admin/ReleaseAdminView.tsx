@@ -391,7 +391,7 @@ export function ReleaseAdminView() {
                       <span className="px-2 py-0.5 text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 rounded-full font-mono">{release.tag_name}</span>
                     </div>
                     <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                      <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(release.published_at).toLocaleDateString()}</span>
+                      <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(release.published_at).toLocaleDateString()} às {new Date(release.published_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       <span className="flex items-center gap-1"><DownloadCloud className="w-3.5 h-3.5" /> {release.assets.length} assets disponíveis</span>
                     </div>
                   </div>
