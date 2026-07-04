@@ -78,7 +78,7 @@ const TAB_CONFIG = {
   iclub: { label: 'Gestão do iClub', icon: Zap, iconColor: 'text-indigo-500 dark:text-indigo-400' },
   metavoice: { label: 'MetaVoice', icon: Lightbulb, iconColor: 'text-amber-500 dark:text-amber-400' },
   community: { label: 'MetaBuilders', icon: Users, iconColor: 'text-blue-500 dark:text-blue-400' },
-  arquivos: { label: 'Arquivos CLI', icon: Layers, iconColor: 'text-indigo-500 dark:text-indigo-400' },
+  arquivos: { label: 'IDEs, CLI & Manuais', icon: Layers, iconColor: 'text-indigo-500 dark:text-indigo-400' },
   releases: { label: 'Releases (IDE)', icon: Rocket, iconColor: 'text-rose-500 dark:text-rose-400' },
 } as const
 

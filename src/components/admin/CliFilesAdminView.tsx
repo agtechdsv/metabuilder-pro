@@ -10,8 +10,8 @@ export function CliFilesAdminView() {
   const [isLoading, setIsLoading] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
   const [showModal, setShowModal] = useState(false)
-  const [deleteConfirm, setDeleteConfirm] = useState<{id: string, bucketPath: string, name: string} | null>(null)
-  
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, bucketPath: string, name: string } | null>(null)
+
   // Filter state
   const [filter, setFilter] = useState<'all' | 'cli-win' | 'cli-linux' | 'template' | 'manual' | 'ide-win' | 'ide-mac' | 'ide-linux'>('all')
 
@@ -55,12 +55,12 @@ export function CliFilesAdminView() {
     }
 
     setIsUploading(true)
-    
+
     // 1. Upload to Storage
     // Format path: cli/v1.0.0/filename or template/v1.0.0/filename
     const folderName = uploadForm.category.startsWith('cli') ? 'cli' : uploadForm.category
     const bucketPath = `${folderName}/v${uploadForm.version}/${uploadForm.file.name}`
-    
+
     const { error: uploadError } = await supabase.storage
       .from('releases')
       .upload(bucketPath, uploadForm.file, {
@@ -116,17 +116,17 @@ export function CliFilesAdminView() {
 
   const confirmDelete = async () => {
     if (!deleteConfirm) return
-    
+
     setIsLoading(true)
     const { id, bucketPath } = deleteConfirm
     setDeleteConfirm(null)
-    
+
     // 1. Delete from storage
     await supabase.storage.from('releases').remove([bucketPath])
-    
+
     // 2. Delete from DB
     const { error } = await supabase.from('app_downloads').delete().eq('id', id)
-    
+
     if (error) {
       toast('Erro ao excluir do banco de dados: ' + error.message, 'error')
     } else {
@@ -154,10 +154,10 @@ export function CliFilesAdminView() {
     <div className="space-y-6 relative">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 shadow-sm gap-4">
         <div>
-          <h2 className="text-xl font-black text-neutral-900 dark:text-white">Arquivos CLI & Manuais</h2>
+          <h2 className="text-xl font-black text-neutral-900 dark:text-white">IDEs, Arquivos CLI & Manuais</h2>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Gerencie os arquivos que seus clientes podem baixar na Central de Downloads.</p>
         </div>
-        <button 
+        <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-lg active:scale-95 text-sm"
         >
@@ -185,11 +185,10 @@ export function CliFilesAdminView() {
           <button
             key={f.id}
             onClick={() => setFilter(f.id as any)}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
-              filter === f.id 
-                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900' 
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${filter === f.id
+                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
                 : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'
-            }`}
+              }`}
           >
             {f.label}
           </button>
@@ -244,7 +243,7 @@ export function CliFilesAdminView() {
                     </button>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button 
+                    <button
                       onClick={() => handleDeleteClick(file.id, file.bucket_path, file.name)}
                       className="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 text-neutral-400 hover:text-red-500 rounded-lg transition-colors"
                       title="Excluir Arquivo"
@@ -278,27 +277,27 @@ export function CliFilesAdminView() {
                 <X className="w-6 h-6" />
               </button>
             </div>
-            
+
             <form onSubmit={handleUploadSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">Nome do Arquivo (Exibição)</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   required
                   placeholder="Ex: CLI Windows - MetaBuilder"
                   className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm dark:text-white"
                   value={uploadForm.name}
-                  onChange={e => setUploadForm({...uploadForm, name: e.target.value})}
+                  onChange={e => setUploadForm({ ...uploadForm, name: e.target.value })}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">Categoria</label>
-                  <select 
+                  <select
                     className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm dark:text-white"
                     value={uploadForm.category}
-                    onChange={e => setUploadForm({...uploadForm, category: e.target.value})}
+                    onChange={e => setUploadForm({ ...uploadForm, category: e.target.value })}
                   >
                     <option value="cli-win">CLI (Windows)</option>
                     <option value="cli-linux">CLI (Linux)</option>
@@ -311,34 +310,34 @@ export function CliFilesAdminView() {
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">Versão</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     required
                     placeholder="Ex: 1.0.0"
                     className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm dark:text-white"
                     value={uploadForm.version}
-                    onChange={e => setUploadForm({...uploadForm, version: e.target.value})}
+                    onChange={e => setUploadForm({ ...uploadForm, version: e.target.value })}
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">Selecione o Arquivo</label>
-                <input 
-                  type="file" 
+                <input
+                  type="file"
                   required
                   className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                  onChange={e => setUploadForm({...uploadForm, file: e.target.files?.[0] || null})}
+                  onChange={e => setUploadForm({ ...uploadForm, file: e.target.files?.[0] || null })}
                 />
               </div>
 
               <label className="flex items-center gap-3 p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl cursor-pointer">
                 <div className="relative flex items-center">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     className="peer w-6 h-6 rounded-md border-2 border-neutral-300 dark:border-neutral-600 appearance-none checked:bg-indigo-500 checked:border-indigo-500 transition-colors"
                     checked={uploadForm.isActive}
-                    onChange={e => setUploadForm({...uploadForm, isActive: e.target.checked})}
+                    onChange={e => setUploadForm({ ...uploadForm, isActive: e.target.checked })}
                   />
                   <Check className="w-4 h-4 text-white absolute left-1 pointer-events-none opacity-0 peer-checked:opacity-100" />
                 </div>
@@ -349,14 +348,14 @@ export function CliFilesAdminView() {
               </label>
 
               <div className="pt-4 flex gap-3">
-                <button 
+                <button
                   type="button"
                   onClick={() => setShowModal(false)}
                   className="flex-1 px-6 py-3 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-xl font-bold transition-all text-sm"
                 >
                   Cancelar
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={isUploading}
                   className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all text-sm disabled:opacity-50"
@@ -379,17 +378,17 @@ export function CliFilesAdminView() {
             </div>
             <h3 className="text-xl font-black text-neutral-900 dark:text-white mb-2">Excluir Arquivo</h3>
             <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">
-              Tem certeza que deseja excluir <strong>{deleteConfirm.name}</strong>?<br/>
+              Tem certeza que deseja excluir <strong>{deleteConfirm.name}</strong>?<br />
               Esta ação não pode ser desfeita.
             </p>
             <div className="flex gap-3">
-              <button 
+              <button
                 onClick={() => setDeleteConfirm(null)}
                 className="flex-1 px-6 py-3 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-xl font-bold transition-all text-sm"
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 onClick={confirmDelete}
                 className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold transition-all text-sm"
               >
