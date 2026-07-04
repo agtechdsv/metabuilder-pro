@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { Download, File as FileIcon, Loader2, RefreshCw, Filter, X, History, FolderOpen, Play, CheckCircle } from 'lucide-react'
+import { Download, File as FileIcon, Loader2, RefreshCw, Filter, X, History, FolderOpen, Play, CheckCircle, ExternalLink } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { isTauri } from '@/utils/tauriUtils'
 
@@ -15,9 +15,10 @@ interface Project {
 interface CliFilesClientViewProps {
   projects?: Project[]
   devOnly?: boolean // When true (dev user), only the IDE sub-tab is shown
+  isPopout?: boolean
 }
 
-export function CliFilesClientView({ projects = [], devOnly = false }: CliFilesClientViewProps) {
+export function CliFilesClientView({ projects = [], devOnly = false, isPopout = false }: CliFilesClientViewProps) {
   const [files, setFiles] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   
@@ -303,14 +304,30 @@ export function CliFilesClientView({ projects = [], devOnly = false }: CliFilesC
           <h2 className="text-xl font-black text-neutral-900 dark:text-white">Central de Downloads</h2>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Baixe aqui o CLI (Windows/Linux), Manuais em PDF e Templates JSON.</p>
         </div>
-        <button
-          onClick={() => fetchFiles()}
-          disabled={isLoading}
-          title="Atualizar lista"
-          className="p-3 text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-800 rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center justify-center disabled:opacity-50 group active:scale-95 duration-200"
-        >
-          <RefreshCw className={`w-5 h-5 transition-transform duration-500 ease-out ${isLoading ? 'animate-spin' : 'group-hover:rotate-180'}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          {!isPopout && (
+            <button 
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.open('/client/downloads/popout', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no')
+                }
+              }}
+              className="p-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-xl transition-all flex items-center gap-2 group"
+              title="Abrir em Nova Janela (Modo Foco)"
+            >
+              <span className="hidden md:inline text-xs font-bold uppercase tracking-widest group-hover:text-neutral-900 dark:group-hover:text-white">Modo Foco</span>
+              <ExternalLink className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={() => fetchFiles()}
+            disabled={isLoading}
+            title="Atualizar lista"
+            className="p-2.5 text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-800 rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center justify-center disabled:opacity-50 group active:scale-95 duration-200"
+          >
+            <RefreshCw className={`w-5 h-5 transition-transform duration-500 ease-out ${isLoading ? 'animate-spin' : 'group-hover:rotate-180'}`} />
+          </button>
+        </div>
       </div>
 
       {/* Tabs — hide Utilitários for dev-only users */}
