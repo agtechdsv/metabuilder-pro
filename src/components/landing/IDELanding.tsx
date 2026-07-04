@@ -9,8 +9,10 @@ import { Zap, Code2, Info, X, FileText, Rocket } from 'lucide-react'
 export function IDELanding({ user }: { user: any }) {
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
   const [releaseNotes, setReleaseNotes] = useState<{ version: string, body: string, published_at: string } | null>(null)
+  const [localVersion, setLocalVersion] = useState<string | null>(null)
 
   useEffect(() => {
+    // Fetch the latest release notes from GitHub (for the modal)
     fetch('/api/releases/latest')
       .then(res => res.json())
       .then(data => {
@@ -19,6 +21,12 @@ export function IDELanding({ user }: { user: any }) {
         }
       })
       .catch(console.error)
+
+    // In Tauri, get the real installed binary version for the badge
+    import('@tauri-apps/api/app')
+      .then(({ getVersion }) => getVersion())
+      .then(v => setLocalVersion(`v${v}`))
+      .catch(() => { /* not in Tauri, ignore */ })
   }, [])
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-black text-neutral-900 dark:text-white flex flex-col relative overflow-hidden font-sans transition-colors duration-500">
@@ -53,7 +61,7 @@ export function IDELanding({ user }: { user: any }) {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                IDE Engine {releaseNotes ? releaseNotes.version : 'v0.1.2'}
+                IDE Engine {localVersion || (releaseNotes ? releaseNotes.version : 'v...')}
               </div>
               
               <button 
@@ -149,7 +157,14 @@ export function IDELanding({ user }: { user: any }) {
                 {releaseNotes ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none">
                     <pre className="whitespace-pre-wrap font-sans text-sm text-neutral-700 dark:text-neutral-300 bg-transparent border-0 p-0 m-0 leading-relaxed">
-                      {releaseNotes.body || 'Sem detalhes fornecidos para esta versão.'}
+                      {releaseNotes.body
+                        // Remove Full Changelog GitHub link line
+                        .replace(/\*\*Full Changelog\*\*:.*?(\n|$)/g, '')
+                        // Remove chore: commit lines
+                        .split('\n')
+                        .filter(line => !line.toLowerCase().includes('chore:'))
+                        .join('\n')
+                        .trim() || 'Sem detalhes fornecidos para esta versão.'}
                     </pre>
                   </div>
                 ) : (
