@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Rocket, FileText, CheckCircle2, AlertCircle, Loader2, Terminal, GitCommit, UploadCloud, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
+import { openExternalUrl } from '@/utils/tauriUtils'
 
 export function ReleaseAdminView() {
   const { t } = useI18n()
@@ -118,16 +119,14 @@ export function ReleaseAdminView() {
               <Rocket className="w-6 h-6 text-indigo-500" />
               Lançamento de Releases (IDE)
             </h2>
-            <a 
-              href="https://github.com/agtechdsv/metabuilder-pro/releases" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-lg transition-colors"
+            <button 
+              onClick={() => openExternalUrl('https://github.com/agtechdsv/metabuilder-pro/releases')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-lg transition-colors cursor-pointer"
               title="Ver todas as releases no GitHub"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               Ver Histórico
-            </a>
+            </button>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Lance novas atualizações do Desktop com apenas 1 clique. Nós cuidamos do versionamento e do Github Actions para você!
