@@ -2,6 +2,7 @@ import { CustomThemeProvider } from './CustomThemeProvider'
 import { I18nProvider } from '@/i18n/I18nContext'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ProgressBarProvider } from './ProgressBarProvider'
+import { AutoUpdater } from '@/components/tauri/AutoUpdater'
 
 export function Providers({ 
   children,
@@ -15,6 +16,7 @@ export function Providers({
       <I18nProvider initialLocale={initialLocale}>
         <ToastProvider>
           <ProgressBarProvider />
+          <AutoUpdater />
           {children}
         </ToastProvider>
       </I18nProvider>
