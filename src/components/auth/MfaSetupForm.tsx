@@ -179,7 +179,7 @@ export function MfaSetupForm() {
       <div className="mt-8 text-center">
         <button onClick={() => {
           signOut().then(() => {
-            window.location.href = '/login'
+            window.location.href = '/'
           })
         }} className="text-[10px] font-bold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 uppercase tracking-widest">
           Fazer login com outra conta
