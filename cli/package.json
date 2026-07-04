@@ -6,7 +6,7 @@
   "bin": "index.js",
   "scripts": {
     "start": "node index.js",
-    "build": "npx pkg . --targets node18-win-x64 --out-path dist"
+    "build": "npx pkg . --targets node18-win-x64,node18-linux-x64 --output dist/cli && ren dist\\cli.exe dist\\cli-win.exe && ren dist\\cli dist\\cli-linux"
   },
   "keywords": [],
   "author": "",
