@@ -90,8 +90,8 @@ export default function CommunityHubView({
               </button>
             </div>
             <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-2">MetaBuilders</h2>
-            <p className="text-indigo-100 text-sm md:text-base leading-relaxed max-w-2xl">
-              Conecte-se com outros Owners e Desenvolvedores. Compartilhe insights, peça ajuda, ou faça networking.
+            <p className="text-indigo-100 text-sm md:text-base leading-relaxed">
+              Conecte-se com outros Owners e Desenvolvedores, compartilhe insights e faça networking.
             </p>
           </div>
         </div>

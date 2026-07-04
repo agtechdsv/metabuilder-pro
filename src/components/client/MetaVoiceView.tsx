@@ -229,8 +229,8 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
               </button>
             </div>
             <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-2">Ideias & Sugestões</h2>
-            <p className="text-indigo-200 text-sm md:text-base leading-relaxed mb-6 max-w-2xl">
-              Ajude-nos a construir o futuro do MetaBuilderPRO. Envie suas ideias, vote nas sugestões de outros usuários e acompanhe nosso roadmap.
+            <p className="text-indigo-100 text-sm md:text-base leading-relaxed">
+              Envie suas ideias, vote nas sugestões da comunidade e acompanhe o nosso roadmap.
             </p>
             <button
               onClick={() => setShowNewModal(true)}
