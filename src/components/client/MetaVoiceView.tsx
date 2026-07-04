@@ -19,7 +19,8 @@ import {
   Layers,
   MoreVertical,
   ShieldAlert,
-  RefreshCw
+  RefreshCw,
+  ExternalLink
 } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
@@ -35,6 +36,7 @@ import { cn } from '@/lib/utils'
 
 interface MetaVoiceViewProps {
   userId?: string
+  hideHeader?: boolean
 }
 
 const CATEGORIES = [
@@ -55,7 +57,7 @@ const STATUS_MAP: Record<string, { label: string, color: string, icon: any }> = 
   duplicate: { label: 'Duplicata', color: 'bg-neutral-500/10 text-neutral-500', icon: Layers },
 }
 
-export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
+export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [loading, setLoading] = useState(true)
   const [filterCategory, setFilterCategory] = useState('all')
@@ -204,24 +206,40 @@ export function MetaVoiceView({ userId }: MetaVoiceViewProps) {
     <div className="space-y-6 animate-in fade-in-50 duration-200">
 
       {/* Header Banner */}
-      <div className="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-3xl p-8 text-white relative overflow-hidden shadow-lg border border-indigo-500/20">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="relative z-10 max-w-2xl">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-white/10 border border-white/20 mb-4">
-            <Lightbulb className="w-3.5 h-3.5 text-amber-400" /> MetaVoice
-          </span>
-          <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-2">Ideias & Sugestões</h2>
-          <p className="text-indigo-200 text-sm md:text-base leading-relaxed mb-6">
-            Ajude-nos a construir o futuro do MetaBuilderPRO. Envie suas ideias, vote nas sugestões de outros usuários e acompanhe nosso roadmap.
-          </p>
-          <button
-            onClick={() => setShowNewModal(true)}
-            className="px-5 py-2.5 bg-white text-indigo-900 font-black text-sm uppercase tracking-wider rounded-xl hover:bg-neutral-100 transition-colors shadow-sm flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Nova Sugestão
-          </button>
+      {!hideHeader && (
+        <div className="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-3xl p-8 text-white relative overflow-hidden shadow-lg border border-indigo-500/20">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="relative z-10 max-w-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-white/10 border border-white/20">
+                <Lightbulb className="w-3.5 h-3.5 text-amber-400" /> MetaVoice
+              </span>
+              <button 
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.open('/client/metavoice/popout', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no')
+                  }
+                }}
+                className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md border border-white/20 transition-all flex items-center gap-2 group"
+                title="Abrir em Nova Janela (Modo Foco)"
+              >
+                <span className="hidden md:inline text-xs font-bold uppercase tracking-widest group-hover:text-white">Modo Foco</span>
+                <ExternalLink className="w-4 h-4" />
+              </button>
+            </div>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-2">Ideias & Sugestões</h2>
+            <p className="text-indigo-200 text-sm md:text-base leading-relaxed mb-6">
+              Ajude-nos a construir o futuro do MetaBuilderPRO. Envie suas ideias, vote nas sugestões de outros usuários e acompanhe nosso roadmap.
+            </p>
+            <button
+              onClick={() => setShowNewModal(true)}
+              className="px-5 py-2.5 bg-white text-indigo-900 font-black text-sm uppercase tracking-wider rounded-xl hover:bg-neutral-100 transition-colors shadow-sm flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Nova Sugestão
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-2 rounded-2xl">
