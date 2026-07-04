@@ -431,40 +431,42 @@ export default function ClientDashboardClient({
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row items-center gap-4">
-          {/* Right Tab Group (Engagement / MetaVoice & iClub) */}
-          <div className={cn(
-            "flex sm:grid gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-fit",
-            isGuest ? "sm:grid-cols-2" : "sm:grid-cols-3"
-          )}>
-          {TABS.filter(tab => {
-            if (isGuest && tab.id === 'iclub') return false;
-            return tab.id === 'metavoice' || tab.id === 'iclub' || tab.id === 'community';
-          }).map(tab => (
-            <button
-              key={tab.id}
-              id={`client-tab-${tab.id}`}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                'flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 w-full whitespace-nowrap',
-                activeTab === tab.id
-                  ? 'bg-white dark:bg-neutral-800 shadow-sm text-neutral-900 dark:text-white'
-                  : 'text-neutral-500 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
-              )}
-            >
-              <tab.icon className={cn(
-                "w-4 h-4",
-                tab.id === 'iclub'
-                  ? "text-indigo-500 dark:text-indigo-400"
-                  : tab.id === 'community'
-                  ? "text-blue-500 dark:text-blue-400"
-                  : "text-amber-500 dark:text-amber-400"
-              )} />
-              <span>{tab.label}</span>
-            </button>
-          ))}
+        {!isGuest && (
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            {/* Right Tab Group (Engagement / MetaVoice & iClub) */}
+            <div className={cn(
+              "flex sm:grid gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-fit",
+              isGuest ? "sm:grid-cols-2" : "sm:grid-cols-3"
+            )}>
+            {TABS.filter(tab => {
+              if (isGuest && tab.id === 'iclub') return false;
+              return tab.id === 'metavoice' || tab.id === 'iclub' || tab.id === 'community';
+            }).map(tab => (
+              <button
+                key={tab.id}
+                id={`client-tab-${tab.id}`}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 w-full whitespace-nowrap',
+                  activeTab === tab.id
+                    ? 'bg-white dark:bg-neutral-800 shadow-sm text-neutral-900 dark:text-white'
+                    : 'text-neutral-500 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+                )}
+              >
+                <tab.icon className={cn(
+                  "w-4 h-4",
+                  tab.id === 'iclub'
+                    ? "text-indigo-500 dark:text-indigo-400"
+                    : tab.id === 'community'
+                    ? "text-blue-500 dark:text-blue-400"
+                    : "text-amber-500 dark:text-amber-400"
+                )} />
+                <span>{tab.label}</span>
+              </button>
+            ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Tab Panels */}

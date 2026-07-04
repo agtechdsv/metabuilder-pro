@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Rocket, FileText, CheckCircle2, AlertCircle, Loader2, Terminal, GitCommit, UploadCloud } from 'lucide-react'
+import { Rocket, FileText, CheckCircle2, AlertCircle, Loader2, Terminal, GitCommit, UploadCloud, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 
@@ -113,10 +113,22 @@ export function ReleaseAdminView() {
     <div className="w-full max-w-4xl mx-auto space-y-6 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Rocket className="w-6 h-6 text-indigo-500" />
-            Lançamento de Releases (IDE)
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Rocket className="w-6 h-6 text-indigo-500" />
+              Lançamento de Releases (IDE)
+            </h2>
+            <a 
+              href="https://github.com/agtechdsv/metabuilder-pro/releases" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-lg transition-colors"
+              title="Ver todas as releases no GitHub"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Ver Histórico
+            </a>
+          </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Lance novas atualizações do Desktop com apenas 1 clique. Nós cuidamos do versionamento e do Github Actions para você!
           </p>
