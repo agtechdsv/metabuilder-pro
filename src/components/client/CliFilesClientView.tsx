@@ -299,34 +299,43 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-xl font-black text-neutral-900 dark:text-white">Central de Downloads</h2>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Baixe aqui o CLI (Windows/Linux), Manuais em PDF e Templates JSON.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {!isPopout && (
-            <button 
-              onClick={() => {
-                if (typeof window !== 'undefined') {
-                  window.open('/client/downloads/popout', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no')
-                }
-              }}
-              className="p-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-xl transition-all flex items-center gap-2 group"
-              title="Abrir em Nova Janela (Modo Foco)"
-            >
-              <span className="hidden md:inline text-xs font-bold uppercase tracking-widest group-hover:text-neutral-900 dark:group-hover:text-white">Modo Foco</span>
-              <ExternalLink className="w-4 h-4" />
-            </button>
-          )}
-          <button
-            onClick={() => fetchFiles()}
-            disabled={isLoading}
-            title="Atualizar lista"
-            className="p-2.5 text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-800 rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center justify-center disabled:opacity-50 group active:scale-95 duration-200"
-          >
-            <RefreshCw className={`w-5 h-5 transition-transform duration-500 ease-out ${isLoading ? 'animate-spin' : 'group-hover:rotate-180'}`} />
-          </button>
+      <div className="bg-gradient-to-br from-indigo-900 to-blue-900 rounded-3xl p-8 text-white relative overflow-hidden shadow-lg border border-indigo-500/20">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="relative z-10">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-white/10 border border-white/20 backdrop-blur-md uppercase tracking-widest">
+              <Download className="w-3.5 h-3.5 text-cyan-400" /> Central de Downloads
+            </span>
+            <div className="flex items-center gap-2">
+              {!isPopout && (
+                <button 
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.open('/client/downloads/popout', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no')
+                    }
+                  }}
+                  className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md border border-white/20 transition-all flex items-center gap-2 group"
+                  title="Abrir em Nova Janela (Modo Foco)"
+                >
+                  <span className="hidden md:inline text-xs font-bold uppercase tracking-widest group-hover:text-white">Modo Foco</span>
+                  <ExternalLink className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                onClick={() => fetchFiles()}
+                disabled={isLoading}
+                title="Atualizar lista"
+                className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md border border-white/20 transition-all flex items-center justify-center disabled:opacity-50 group active:scale-95 duration-200"
+              >
+                <RefreshCw className={`w-4 h-4 transition-transform duration-500 ease-out ${isLoading ? 'animate-spin' : 'group-hover:rotate-180'}`} />
+              </button>
+            </div>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-2">Central de Downloads</h2>
+          <p className="text-indigo-100 text-sm md:text-base leading-relaxed max-w-2xl">
+            Baixe aqui o CLI (Windows/Linux), Manuais em PDF e Templates JSON.
+          </p>
         </div>
       </div>
 
