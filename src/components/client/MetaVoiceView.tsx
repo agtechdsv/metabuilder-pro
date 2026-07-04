@@ -209,7 +209,7 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
       {!hideHeader && (
         <div className="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-3xl p-8 text-white relative overflow-hidden shadow-lg border border-indigo-500/20">
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
-          <div className="relative z-10 max-w-2xl">
+          <div className="relative z-10">
             <div className="flex items-center justify-between mb-4">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-white/10 border border-white/20">
                 <Lightbulb className="w-3.5 h-3.5 text-amber-400" /> MetaVoice
@@ -228,7 +228,7 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
               </button>
             </div>
             <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-2">Ideias & Sugestões</h2>
-            <p className="text-indigo-200 text-sm md:text-base leading-relaxed mb-6">
+            <p className="text-indigo-200 text-sm md:text-base leading-relaxed mb-6 max-w-2xl">
               Ajude-nos a construir o futuro do MetaBuilderPRO. Envie suas ideias, vote nas sugestões de outros usuários e acompanhe nosso roadmap.
             </p>
             <button
