@@ -10,7 +10,7 @@ export function CliFilesAdminView() {
   const [isLoading, setIsLoading] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
   const [showModal, setShowModal] = useState(false)
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, bucketPath: string, name: string } | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, bucketPath: string, name: string, category: string } | null>(null)
 
   // Filter state
   const [filter, setFilter] = useState<'all' | 'cli-win' | 'cli-linux' | 'template' | 'manual' | 'ide-win' | 'ide-mac' | 'ide-linux'>('all')
@@ -110,15 +110,15 @@ export function CliFilesAdminView() {
     }
   }
 
-  const handleDeleteClick = (id: string, bucketPath: string, name: string) => {
-    setDeleteConfirm({ id, bucketPath, name })
+  const handleDeleteClick = (id: string, bucketPath: string, name: string, category: string) => {
+    setDeleteConfirm({ id, bucketPath, name, category })
   }
 
   const confirmDelete = async () => {
     if (!deleteConfirm) return
 
     setIsLoading(true)
-    const { id, bucketPath } = deleteConfirm
+    const { id, bucketPath, category } = deleteConfirm
     setDeleteConfirm(null)
 
     // 1. Delete from storage
@@ -126,6 +126,15 @@ export function CliFilesAdminView() {
 
     // 2. Delete from DB
     const { error } = await supabase.from('app_downloads').delete().eq('id', id)
+
+    if (!error && category.startsWith('ide-')) {
+      try {
+        toast('Excluindo assets do GitHub...', 'info')
+        await fetch(`/api/admin/release/assets?category=${category}`, { method: 'DELETE' })
+      } catch (e) {
+        console.error('Failed to delete github assets', e)
+      }
+    }
 
     if (error) {
       toast('Erro ao excluir do banco de dados: ' + error.message, 'error')
@@ -244,7 +253,7 @@ export function CliFilesAdminView() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button
-                      onClick={() => handleDeleteClick(file.id, file.bucket_path, file.name)}
+                      onClick={() => handleDeleteClick(file.id, file.bucket_path, file.name, file.category)}
                       className="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 text-neutral-400 hover:text-red-500 rounded-lg transition-colors"
                       title="Excluir Arquivo"
                     >
