@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Send, Image as ImageIcon, Heart, MessageCircle, UserPlus, Check, X, 
   MoreHorizontal, MessageSquare, ExternalLink, Loader2, ArrowLeft, 
-  Paperclip, Trash2, UserMinus, MessageSquareOff, EyeOff, Eye, UserX, UserCheck
+  Paperclip, Trash2, UserMinus, MessageSquareOff, EyeOff, Eye, UserX, UserCheck, Users
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Modal } from '@/components/ui/Modal'
