@@ -352,10 +352,9 @@ export function ReleaseAdminView() {
             >
               <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-medium">Release criada com sucesso! 🚀</h4>
+                <h4 className="font-medium">Build disparado com sucesso! 🚀</h4>
                 <p className="text-sm mt-1 opacity-90">
-                  Os arquivos do projeto foram atualizados e a Release está sendo gerada no Github.
-                  O <strong>Github Actions</strong> já está rodando em background para compilar os instaladores e jogar no Supabase!{' '}
+                  Os arquivos do projeto foram atualizados no Github e o <strong>Github Actions</strong> já está rodando em background para compilar os instaladores e publicar a release automaticamente.
                   Pode navegar à vontade por onde quiser!
                 </p>
               </div>

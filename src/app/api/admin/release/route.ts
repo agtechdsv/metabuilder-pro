@@ -133,26 +133,8 @@ export async function POST(request: Request) {
       body: JSON.stringify({ sha: newCommit.sha })
     })
 
-    // Step 8: Create the Release (which will also create the tag)
-    const releasePayload: any = {
-      tag_name: `v${version}`,
-      target_commitish: 'master',
-      name: `MetaBuilder PRO v${version}`,
-      draft: false,
-      prerelease: false,
-      generate_release_notes: generateReleaseNotes
-    }
-
-    if (!generateReleaseNotes && releaseNotes) {
-      releasePayload.body = releaseNotes
-    }
-
-    const releaseData = await githubFetch(`releases`, {
-      method: 'POST',
-      body: JSON.stringify(releasePayload)
-    })
-
-    // Step 9: Trigger the GitHub Action via workflow_dispatch with OS selections
+    // Step 8: Trigger the GitHub Action via workflow_dispatch with OS selections
+    // (The tauri-action will create the GitHub Release and upload all assets automatically)
     await githubFetch(`actions/workflows/build-tauri.yml/dispatches`, {
       method: 'POST',
       body: JSON.stringify({
@@ -165,7 +147,7 @@ export async function POST(request: Request) {
       })
     })
 
-    return NextResponse.json({ success: true, releaseUrl: releaseData.html_url })
+    return NextResponse.json({ success: true, message: `Build disparado para v${version}. A release será publicada quando o workflow concluir.` })
 
   } catch (error: any) {
     console.error('Release API error:', error)
