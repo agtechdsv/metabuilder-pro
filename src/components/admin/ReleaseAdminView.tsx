@@ -1,11 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Rocket, FileText, CheckCircle2, AlertCircle, Loader2, Terminal, GitCommit, UploadCloud, ExternalLink } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Rocket, FileText, CheckCircle2, AlertCircle, Loader2, Terminal, GitCommit, UploadCloud, ExternalLink, Trash2, Calendar, DownloadCloud, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
-import { openExternalUrl } from '@/utils/tauriUtils'
 
 export function ReleaseAdminView() {
   const { t } = useI18n()
@@ -20,11 +19,52 @@ export function ReleaseAdminView() {
   const [errorMessage, setErrorMessage] = useState('')
   const [releaseUrl, setReleaseUrl] = useState('')
 
+  // Tabs State
+  const [activeTab, setActiveTab] = useState<'launch' | 'history'>('launch')
+
+  // History State
+  const [historyReleases, setHistoryReleases] = useState<any[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [deleteConfirmTag, setDeleteConfirmTag] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
   // Local Git State
   const [gitMessage, setGitMessage] = useState('')
   const [gitStatus, setGitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [gitError, setGitError] = useState('')
   const [gitLog, setGitLog] = useState('')
+
+  const fetchHistory = async () => {
+    setLoadingHistory(true)
+    try {
+      const res = await fetch('/api/admin/release/history')
+      const data = await res.json()
+      if (data.releases) setHistoryReleases(data.releases)
+    } catch (e) {
+      console.error(e)
+    }
+    setLoadingHistory(false)
+  }
+
+  useEffect(() => {
+    if (activeTab === 'history' && historyReleases.length === 0) {
+      fetchHistory()
+    }
+  }, [activeTab])
+
+  const confirmDeleteRelease = async () => {
+    if (!deleteConfirmTag) return
+    setIsDeleting(true)
+    try {
+      const res = await fetch(`/api/admin/release/history?tag=${deleteConfirmTag}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Erro ao deletar release')
+      await fetchHistory()
+    } catch (e) {
+      console.error(e)
+    }
+    setIsDeleting(false)
+    setDeleteConfirmTag(null)
+  }
 
   const handleDeploy = async () => {
     if (!version.trim()) {
@@ -117,26 +157,48 @@ export function ReleaseAdminView() {
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <Rocket className="w-6 h-6 text-indigo-500" />
-              Lançamento de Releases (IDE)
+              Releases (IDE)
             </h2>
-            <button 
-              onClick={() => openExternalUrl('https://github.com/agtechdsv/metabuilder-pro/releases')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-lg transition-colors cursor-pointer"
-              title="Ver todas as releases no GitHub"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              Ver Histórico
-            </button>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Lance novas atualizações do Desktop com apenas 1 clique. Nós cuidamos do versionamento e do Github Actions para você!
+            Lance novas atualizações do Desktop com apenas 1 clique ou gerencie o histórico.
           </p>
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-zinc-200 dark:border-zinc-800">
+        <button
+          onClick={() => setActiveTab('launch')}
+          className={cn(
+            "px-4 py-3 text-sm font-bold transition-colors border-b-2",
+            activeTab === 'launch'
+              ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
+              : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+          )}
+        >
+          Lançamento
+        </button>
+        <button
+          onClick={() => setActiveTab('history')}
+          className={cn(
+            "px-4 py-3 text-sm font-bold transition-colors border-b-2 flex items-center gap-2",
+            activeTab === 'history'
+              ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
+              : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+          )}
+        >
+          Histórico
+        </button>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {activeTab === 'launch' && (
       <motion.div
+        key="launch"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
         className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm"
       >
         <div className="space-y-6">
@@ -302,6 +364,62 @@ export function ReleaseAdminView() {
 
         </div>
       </motion.div>
+        )}
+
+        {activeTab === 'history' && (
+      <motion.div
+        key="history"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm"
+      >
+        {loadingHistory ? (
+          <div className="flex items-center justify-center p-12">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {historyReleases.length === 0 ? (
+              <div className="text-center p-8 text-gray-500 dark:text-gray-400">Nenhuma release encontrada no Github.</div>
+            ) : (
+              historyReleases.map(release => (
+                <div key={release.id} className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-indigo-500/50 transition-colors bg-zinc-50 dark:bg-zinc-800/50">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-gray-900 dark:text-white">{release.name}</h3>
+                      <span className="px-2 py-0.5 text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 rounded-full font-mono">{release.tag_name}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                      <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(release.published_at).toLocaleDateString()}</span>
+                      <span className="flex items-center gap-1"><DownloadCloud className="w-3.5 h-3.5" /> {release.assets.length} assets disponíveis</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end shrink-0">
+                    {deleteConfirmTag === release.tag_name ? (
+                      <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-200">
+                        <span className="text-xs font-bold text-red-500 mr-2">Excluir Tudo?</span>
+                        <button onClick={() => setDeleteConfirmTag(null)} className="p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded-lg transition-colors">
+                          <X className="w-4 h-4" />
+                        </button>
+                        <button onClick={confirmDeleteRelease} disabled={isDeleting} className="p-2 bg-red-600 hover:bg-red-500 text-white rounded-lg disabled:opacity-50 transition-colors shadow-sm">
+                          {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setDeleteConfirmTag(release.tag_name)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors">
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* LOCAL GIT PANEL */}
       {process.env.NODE_ENV === 'development' && (
