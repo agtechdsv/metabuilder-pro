@@ -44,7 +44,7 @@ jobs:
           echo ']}' >> matrix.json
           
           # Output to GitHub Actions
-          MATRIX_JSON=$(cat matrix.json | tr -d '\n' | tr -d ' ')
+          MATRIX_JSON=$(cat matrix.json | tr -d '\n')
           echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
 
   build-tauri:

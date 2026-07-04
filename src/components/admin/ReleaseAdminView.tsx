@@ -8,7 +8,7 @@ import { useI18n } from '@/i18n/I18nContext'
 
 export function ReleaseAdminView() {
   const { t } = useI18n()
-  
+
   const [version, setVersion] = useState('')
   const [generateReleaseNotes, setGenerateReleaseNotes] = useState(true)
   const [releaseNotes, setReleaseNotes] = useState('')
@@ -42,7 +42,7 @@ export function ReleaseAdminView() {
     try {
       setStatus('loading')
       setErrorMessage('')
-      
+
       const response = await fetch('/api/admin/release', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -64,7 +64,7 @@ export function ReleaseAdminView() {
 
       setStatus('success')
       setReleaseUrl(data.releaseUrl)
-      
+
     } catch (error: any) {
       console.error(error)
       setStatus('error')
@@ -83,7 +83,7 @@ export function ReleaseAdminView() {
       setGitStatus('loading')
       setGitError('')
       setGitLog('')
-      
+
       const response = await fetch('/api/admin/git', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -98,7 +98,7 @@ export function ReleaseAdminView() {
 
       setGitLog(`STDOUT:\n${data.stdout}\n\nSTDERR:\n${data.stderr}`)
       setGitStatus('success')
-      
+
       if (action === 'commit') {
         setGitMessage('')
       }
@@ -129,7 +129,7 @@ export function ReleaseAdminView() {
         className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm"
       >
         <div className="space-y-6">
-          
+
           {/* Version Input */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -205,12 +205,12 @@ export function ReleaseAdminView() {
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                 Selecione para quais plataformas você deseja gerar os instaladores.
               </p>
-              
+
               <div className="flex flex-wrap gap-3">
                 {[
-                  { id: 'windows', label: 'Windows (.exe / .msi)', state: buildWindows, setter: setBuildWindows },
-                  { id: 'macos', label: 'macOS (.app / .dmg)', state: buildMacOs, setter: setBuildMacOs },
-                  { id: 'linux', label: 'Linux (.deb / .AppImage)', state: buildLinux, setter: setBuildLinux },
+                  { id: 'windows', label: 'Windows (.msi)', state: buildWindows, setter: setBuildWindows },
+                  { id: 'macos', label: 'macOS (.dmg)', state: buildMacOs, setter: setBuildMacOs },
+                  { id: 'linux', label: 'Linux (.deb)', state: buildLinux, setter: setBuildLinux },
                 ].map((os) => (
                   <button
                     key={os.id}
@@ -218,7 +218,7 @@ export function ReleaseAdminView() {
                     onClick={() => os.setter(!os.state)}
                     className={cn(
                       "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border flex items-center gap-2",
-                      os.state 
+                      os.state
                         ? "bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-400 shadow-sm"
                         : "bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-gray-600 dark:text-gray-400 hover:bg-zinc-50 dark:hover:bg-zinc-700/50"
                     )}
@@ -281,18 +281,10 @@ export function ReleaseAdminView() {
               <div>
                 <h4 className="font-medium">Release criada com sucesso! 🚀</h4>
                 <p className="text-sm mt-1 opacity-90">
-                  Os arquivos do projeto foram atualizados e a Release está sendo gerada no Github. 
+                  Os arquivos do projeto foram atualizados e a Release está sendo gerada no Github.
                   O <strong>Github Actions</strong> já está rodando em background para compilar os instaladores e jogar no Supabase!{' '}
-                  Pode navegar à vontade por onde quiser! Assim que finalizado iremos lhe avisar!
+                  Pode navegar à vontade por onde quiser!
                 </p>
-                <a 
-                  href={releaseUrl} 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="inline-block mt-3 text-sm font-medium hover:underline"
-                >
-                  Ver release no Github &rarr;
-                </a>
               </div>
             </motion.div>
           )}
@@ -355,7 +347,7 @@ export function ReleaseAdminView() {
                 {gitError}
               </div>
             )}
-            
+
             {gitStatus === 'success' && gitLog && (
               <div className="mt-4 p-4 bg-black rounded-lg overflow-x-auto text-green-400 font-mono text-xs whitespace-pre-wrap">
                 {gitLog}
