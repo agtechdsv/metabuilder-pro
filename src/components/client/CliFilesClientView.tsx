@@ -14,13 +14,14 @@ interface Project {
 
 interface CliFilesClientViewProps {
   projects?: Project[]
+  devOnly?: boolean // When true (dev user), only the IDE sub-tab is shown
 }
 
-export function CliFilesClientView({ projects = [] }: CliFilesClientViewProps) {
+export function CliFilesClientView({ projects = [], devOnly = false }: CliFilesClientViewProps) {
   const [files, setFiles] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   
-  // Tab & Filter state
+  // Tab & Filter state — devOnly users are locked to the IDE tab
   const [mainTab, setMainTab] = useState<'ide' | 'utils'>('ide')
   const [filter, setFilter] = useState<'all' | 'cli-win' | 'cli-linux' | 'template' | 'manual' | 'ide-win' | 'ide-mac' | 'ide-linux'>('all')
   const [showOlderReleases, setShowOlderReleases] = useState(false)
@@ -312,7 +313,7 @@ export function CliFilesClientView({ projects = [] }: CliFilesClientViewProps) {
         </button>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs — hide Utilitários for dev-only users */}
       <div className="flex border-b border-neutral-200 dark:border-neutral-800 mb-4">
         <button
           onClick={() => { setMainTab('ide'); setFilter('all'); }}
@@ -320,12 +321,14 @@ export function CliFilesClientView({ projects = [] }: CliFilesClientViewProps) {
         >
           App Desktop (IDE)
         </button>
-        <button
-          onClick={() => { setMainTab('utils'); setFilter('all'); }}
-          className={`px-6 py-3 font-bold text-sm border-b-2 transition-colors ${mainTab === 'utils' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'}`}
-        >
-          Utilitários (CLI & JSON)
-        </button>
+        {!devOnly && (
+          <button
+            onClick={() => { setMainTab('utils'); setFilter('all'); }}
+            className={`px-6 py-3 font-bold text-sm border-b-2 transition-colors ${mainTab === 'utils' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'}`}
+          >
+            Utilitários (CLI & JSON)
+          </button>
+        )}
       </div>
 
       {/* Filters */}

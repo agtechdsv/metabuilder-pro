@@ -236,7 +236,7 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                   </Link>
                 )}
 
-                {!localProfile?.is_super_admin && (localProfile?.subscription_licenses > 0) && (
+                {!localProfile?.is_super_admin && (
                   <Link
                     href="/client/dashboard"
                     onClick={() => setIsOpen(false)}

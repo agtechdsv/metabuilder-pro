@@ -161,7 +161,7 @@ export default function ClientDashboardClient({
 }: ClientDashboardClientProps) {
   const [localProfile, setLocalProfile] = useState(profile)
   const isGuest = !localProfile?.is_super_admin && !localProfile?.subscription_licenses
-  const [activeTab, setActiveTab] = useState<TabId>(isGuest ? 'metavoice' : 'dashboard')
+  const [activeTab, setActiveTab] = useState<TabId>(isGuest ? 'downloads' : 'dashboard')
 
   const [isTeamDrawerOpen, setIsTeamDrawerOpen] = useState(false)
 
@@ -184,7 +184,7 @@ export default function ClientDashboardClient({
       const params = new URLSearchParams(window.location.search)
       const tab = params.get('tab') as TabId
       if (tab && TABS.some(t => t.id === tab)) {
-        if (!isGuest || tab === 'metavoice' || tab === 'community') {
+        if (!isGuest || tab === 'metavoice' || tab === 'community' || tab === 'downloads') {
           setActiveTab(tab)
         }
       }
@@ -192,8 +192,8 @@ export default function ClientDashboardClient({
   }, [isGuest])
 
   useEffect(() => {
-    if (isGuest && activeTab !== 'metavoice' && activeTab !== 'community') {
-      setActiveTab('metavoice')
+    if (isGuest && activeTab !== 'metavoice' && activeTab !== 'community' && activeTab !== 'downloads') {
+      setActiveTab('downloads')
     }
   }, [isGuest, activeTab])
 
@@ -296,11 +296,13 @@ export default function ClientDashboardClient({
             </div>
             <div>
               <h1 className="text-2xl font-black text-neutral-900 dark:text-white">
-                {activeTab === 'community' ? 'MetaBuilders' : 'Sugestões & Ideias (MetaVoice)'}
+                {activeTab === 'community' ? 'MetaBuilders' : activeTab === 'downloads' ? 'Central de Downloads' : 'Sugestões & Ideias (MetaVoice)'}
               </h1>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
                 {activeTab === 'community' 
                   ? 'Conecte-se com outros Owners e Desenvolvedores' 
+                  : activeTab === 'downloads'
+                  ? 'Baixe a IDE Desktop e mantenha seu ambiente de trabalho sempre atualizado'
                   : 'Deixe sugestões ou vote nas ideias da comunidade para nos ajudar a melhorar o MetaBuilder PRO'
                 }
               </p>
@@ -369,8 +371,38 @@ export default function ClientDashboardClient({
 
       {/* Tab Navigation */}
       <div className={cn("flex flex-col sm:flex-row gap-4 w-full", isGuest ? "sm:justify-end" : "sm:items-center sm:justify-between")}>
-        {/* Left Tabs Group */}
-        {!isGuest && (
+          {/* Guests (devs): show 3-tab bar with Downloads, MetaBuilders, MetaVoice */}
+          {isGuest && (
+            <div className="flex sm:grid sm:grid-cols-3 gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-full xl:w-fit overflow-x-auto no-scrollbar">
+              {(['downloads', 'community', 'metavoice'] as const).map(tabId => {
+                const tab = TABS.find(t => t.id === tabId)!
+                return (
+                  <button
+                    key={tab.id}
+                    id={`client-tab-${tab.id}`}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      'flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 whitespace-nowrap min-w-[130px] sm:min-w-0',
+                      activeTab === tab.id
+                        ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm'
+                        : 'text-neutral-500 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+                    )}
+                  >
+                    <tab.icon className={cn(
+                      "w-4 h-4",
+                      tab.id === 'downloads' && "text-cyan-500 dark:text-cyan-400",
+                      tab.id === 'community' && "text-blue-500 dark:text-blue-400",
+                      tab.id === 'metavoice' && "text-amber-500 dark:text-amber-400",
+                    )} />
+                    <span className="hidden sm:block">{tab.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Owners: existing left tab group */}
+          {!isGuest && (
           <div className="flex sm:grid sm:grid-cols-5 gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-full xl:w-fit overflow-x-auto no-scrollbar">
             {TABS.filter(tab => !['iclub', 'metavoice', 'community', 'subscription', 'cancel'].includes(tab.id)).map(tab => (
               <button
@@ -456,7 +488,7 @@ export default function ClientDashboardClient({
 
           {/* ── TAB: Central de Downloads ─────────────────────────────────────── */}
           {activeTab === 'downloads' && (
-            <CliFilesClientView projects={projects} />
+            <CliFilesClientView projects={projects} devOnly={isGuest} />
           )}
 
           {/* ── TAB: White Label ─────────────────────────────────────── */}
