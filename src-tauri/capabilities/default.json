@@ -17,6 +17,7 @@
   },
   "permissions": [
     "core:default",
+    "core:app:default",
     "core:app:allow-version",
     "shell:default",
     "deep-link:default",

@@ -134,7 +134,9 @@ export async function POST(request: Request) {
     })
 
     // Step 8: Trigger the GitHub Action via workflow_dispatch with OS selections
-    // (The tauri-action will create the GitHub Release and upload all assets automatically)
+    // Wait a few seconds to ensure GitHub's git ref cache is updated across its distributed systems
+    // otherwise the workflow might run on the previous commit.
+    await new Promise(resolve => setTimeout(resolve, 3000))
     await githubFetch(`actions/workflows/build-tauri.yml/dispatches`, {
       method: 'POST',
       body: JSON.stringify({

@@ -52,8 +52,8 @@ export async function GET() {
             const validCommits = compareData.commits.filter((c: any) => !c.commit.message.startsWith('Merge pull request') && !c.commit.message.startsWith('Merge branch'));
             const commitsList = validCommits.map((c: any) => `✨ ${c.commit.message.split('\n')[0]}`).join('\n');
             
-            // Substitui o final do arquivo injetando os tópicos antes do Full Changelog
-            body = body.replace(/(\*\*Full Changelog\*\*.*)/, `### Nesta Atualização:\n\n${commitsList}\n\n$1`);
+            // Remove a linha do Full Changelog e insere os tópicos
+            body = body.replace(/\*\*Full Changelog\*\*.*/, `### Nesta Atualização:\n\n${commitsList}`);
           }
         }
       } catch (e) {

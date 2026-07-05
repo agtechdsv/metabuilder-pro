@@ -35,9 +35,9 @@ export function IDELanding({ user }: { user: any }) {
         const { getVersion } = await import('@tauri-apps/api/app')
         const v = await getVersion()
         setLocalVersion(`IDE Engine v${v}`)
-      } catch (e) {
+      } catch (e: any) {
         console.error('Failed to get Tauri version', e)
-        setLocalVersion('IDE Engine (Erro)')
+        setLocalVersion(`Erro: ${e.message || String(e)}`)
       }
 
     }
