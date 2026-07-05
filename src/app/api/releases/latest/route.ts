@@ -61,6 +61,9 @@ export async function GET() {
       }
     }
 
+    // Remove a linha do Full Changelog de qualquer forma, mesmo se for o primeiro release (link /commits/)
+    body = body.replace(/\*\*Full Changelog\*\*.*/g, '').trim()
+
     return NextResponse.json({
       version: data.tag_name,
       name: data.name,
