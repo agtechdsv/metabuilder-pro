@@ -131,11 +131,13 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
         for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.length }
 
         const { downloadDir } = await import('@tauri-apps/api/path')
-        const { writeFile } = await import('@tauri-apps/plugin-fs')
-        const { BaseDirectory } = await import('@tauri-apps/plugin-fs')
+        const { writeFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
 
         const dir = await downloadDir()
         const fullPath = `${dir}${fileName}`
+
+        console.log(`[Download] Saving to: ${fullPath}`)
+        console.log(`[Download] File size: ${merged.length} bytes`)
 
         await writeFile(fileName, merged, { baseDir: BaseDirectory.Download })
 
@@ -155,7 +157,9 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
         })
       } catch (err: any) {
         if (err?.name === 'AbortError') return
-        console.error(err)
+        console.error('[Download] Error details:', err)
+        console.error('[Download] Error message:', err?.message)
+        console.error('[Download] Error type:', err?.constructor?.name)
         setIdeDownloadModal(prev => prev ? { ...prev, phase: 'error' } : prev)
       }
       return
