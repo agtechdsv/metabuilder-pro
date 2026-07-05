@@ -19,6 +19,10 @@ on:
         description: 'Release notes / changelog'
         type: string
         default: 'Nova versão do MetaBuilder PRO disponível!'
+      generate_release_notes:
+        description: 'Auto-generate release notes from commits'
+        type: boolean
+        default: false
 
 jobs:
   setup:
@@ -112,7 +116,8 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: 'MetaBuilder PRO v__VERSION__'
-          releaseBody: '${{ github.event.inputs.release_notes }}'
+          releaseBody: '${{ github.event.inputs.generate_release_notes != \'true\' && github.event.inputs.release_notes || \'\' }}'
+          generateReleaseNotes: ${{ github.event.inputs.generate_release_notes == 'true' }}
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
