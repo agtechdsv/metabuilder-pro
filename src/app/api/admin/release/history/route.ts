@@ -77,12 +77,23 @@ export async function DELETE(request: Request) {
     const versionStr = tag.startsWith('v') ? tag : `v${tag}`
     const rawVersion = versionStr.replace(/^v/, '') // "1.0.0"
 
-    // 1. Delete all files in the specific version folder from the Supabase Bucket
-    const folderPath = `ide/${versionStr}`
-    const { data: bucketFiles } = await supabase.storage.from('releases').list(folderPath)
-    
-    if (bucketFiles && bucketFiles.length > 0) {
-      const pathsToRemove = bucketFiles.map(f => `${folderPath}/${f.name}`)
+    // 1. Delete files in all possible category folders from the Supabase Bucket
+    const rootFolders = ['ide', 'cli', 'template', 'manuals']
+    const pathsToRemove: string[] = []
+
+    for (const root of rootFolders) {
+      // Tenta tanto com "v" quanto sem "v" dependendo de como foi salvo
+      for (const vFolder of [versionStr, rawVersion]) {
+        const folderPath = `${root}/${vFolder}`
+        const { data: bucketFiles } = await supabase.storage.from('releases').list(folderPath)
+        
+        if (bucketFiles && bucketFiles.length > 0) {
+          pathsToRemove.push(...bucketFiles.map(f => `${folderPath}/${f.name}`))
+        }
+      }
+    }
+
+    if (pathsToRemove.length > 0) {
       await supabase.storage.from('releases').remove(pathsToRemove)
     }
 
