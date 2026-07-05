@@ -15,6 +15,10 @@ on:
         description: 'Build for Linux'
         type: boolean
         default: true
+      release_notes:
+        description: 'Release notes / changelog'
+        type: string
+        default: 'Nova versão do MetaBuilder PRO disponível!'
 
 jobs:
   setup:
@@ -108,7 +112,7 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: 'MetaBuilder PRO v__VERSION__'
-          releaseBody: 'Nova versão do MetaBuilder PRO disponível!'
+          releaseBody: '${{ github.event.inputs.release_notes }}'
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true

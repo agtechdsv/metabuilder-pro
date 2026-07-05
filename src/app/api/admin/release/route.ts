@@ -142,7 +142,8 @@ export async function POST(request: Request) {
         inputs: {
           build_windows: buildWindows ? 'true' : 'false',
           build_macos: buildMacOs ? 'true' : 'false',
-          build_linux: buildLinux ? 'true' : 'false'
+          build_linux: buildLinux ? 'true' : 'false',
+          release_notes: releaseNotes || 'Nova versão do MetaBuilder PRO disponível!'
         }
       })
     })
