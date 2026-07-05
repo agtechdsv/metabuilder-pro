@@ -20,13 +20,24 @@ export function IDELanding({ user }: { user: any }) {
           setReleaseNotes(data)
         }
       })
-      .catch(console.error)
-
-    // In Tauri, get the real installed binary version for the badge
-    import('@tauri-apps/api/app')
-      .then(({ getVersion }) => getVersion())
-      .then(v => setLocalVersion(`v${v}`))
-      .catch(() => { /* not in Tauri, ignore */ })
+    // Fetch the real installed version based on environment
+    const checkVersion = async () => {
+      // @ts-ignore
+      const isTauriEnv = typeof window !== 'undefined' && (window.__TAURI_INTERNALS__ || window.__TAURI__ || window.__TAURI_IPC__)
+      if (isTauriEnv) {
+        try {
+          const { getVersion } = await import('@tauri-apps/api/app')
+          const v = await getVersion()
+          setLocalVersion(`IDE Engine v${v}`)
+        } catch (e) {
+          console.error('Failed to get Tauri version', e)
+          setLocalVersion('IDE Engine (Erro)')
+        }
+      } else {
+        setLocalVersion('Web App Edition')
+      }
+    }
+    checkVersion()
   }, [])
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-black text-neutral-900 dark:text-white flex flex-col relative overflow-hidden font-sans transition-colors duration-500">
@@ -61,7 +72,7 @@ export function IDELanding({ user }: { user: any }) {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                IDE Engine {localVersion || (releaseNotes ? releaseNotes.version : 'v...')}
+                {localVersion || 'Carregando...'}
               </div>
               
               <button 
