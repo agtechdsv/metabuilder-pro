@@ -4,7 +4,8 @@
   "description": "enables the default permissions",
   "local": true,
   "windows": [
-    "main"
+    "main",
+    "splashscreen"
   ],
   "remote": {
     "urls": [
