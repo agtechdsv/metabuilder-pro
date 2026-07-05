@@ -77,19 +77,16 @@ export async function DELETE(request: Request) {
     const versionStr = tag.startsWith('v') ? tag : `v${tag}`
     const rawVersion = versionStr.replace(/^v/, '') // "1.0.0"
 
-    // 1. Delete files in all possible category folders from the Supabase Bucket
-    const rootFolders = ['ide', 'cli', 'template', 'manuals']
+    // 1. Delete apenas os arquivos da IDE no Supabase Bucket
     const pathsToRemove: string[] = []
 
-    for (const root of rootFolders) {
-      // Tenta tanto com "v" quanto sem "v" dependendo de como foi salvo
-      for (const vFolder of [versionStr, rawVersion]) {
-        const folderPath = `${root}/${vFolder}`
-        const { data: bucketFiles } = await supabase.storage.from('releases').list(folderPath)
-        
-        if (bucketFiles && bucketFiles.length > 0) {
-          pathsToRemove.push(...bucketFiles.map(f => `${folderPath}/${f.name}`))
-        }
+    // Tenta tanto com "v" quanto sem "v" dependendo de como foi salvo
+    for (const vFolder of [versionStr, rawVersion]) {
+      const folderPath = `ide/${vFolder}`
+      const { data: bucketFiles } = await supabase.storage.from('releases').list(folderPath)
+      
+      if (bucketFiles && bucketFiles.length > 0) {
+        pathsToRemove.push(...bucketFiles.map(f => `${folderPath}/${f.name}`))
       }
     }
 
@@ -97,10 +94,11 @@ export async function DELETE(request: Request) {
       await supabase.storage.from('releases').remove(pathsToRemove)
     }
 
-    // 2. Delete from DB app_downloads
+    // 2. Delete from DB app_downloads APENAS da categoria IDE
     const { data: filesToDelete, error: dbFetchError } = await supabase
       .from('app_downloads')
       .select('id')
+      .like('category', 'ide-%')
       .or(`version.eq.${versionStr},version.eq.${rawVersion}`)
 
     if (!dbFetchError && filesToDelete && filesToDelete.length > 0) {
