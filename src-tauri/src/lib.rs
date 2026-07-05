@@ -119,6 +119,20 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            // Splash Screen → Main Window transition (handled in Rust, no frontend permissions needed)
+            let app_handle = app.handle().clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_millis(2800));
+                if let Some(splash) = app_handle.get_webview_window("splashscreen") {
+                    let _ = splash.close();
+                }
+                if let Some(main) = app_handle.get_webview_window("main") {
+                    let _ = main.show();
+                    let _ = main.set_focus();
+                }
+            });
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![start_cli, stop_cli, status_cli, open_browser])
