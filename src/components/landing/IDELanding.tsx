@@ -29,6 +29,25 @@ export function IDELanding({ user }: { user: any }) {
           const { getVersion } = await import('@tauri-apps/api/app')
           const v = await getVersion()
           setLocalVersion(`IDE Engine v${v}`)
+
+          // Transição Splash Screen -> Main Window
+          const { Window, getCurrentWindow } = await import('@tauri-apps/api/window')
+          
+          // Aguarda a animação da splash screen terminar (2.5s)
+          setTimeout(async () => {
+            try {
+              const splash = await Window.getByLabel('splashscreen')
+              if (splash) {
+                await splash.close()
+              }
+              const main = getCurrentWindow()
+              await main.show()
+              await main.setFocus()
+            } catch (err) {
+              console.error('Erro na transição da splash screen:', err)
+            }
+          }, 2500)
+          
         } catch (e) {
           console.error('Failed to get Tauri version', e)
           setLocalVersion('IDE Engine (Erro)')

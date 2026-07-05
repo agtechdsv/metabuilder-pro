@@ -12,14 +12,31 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "MetaBuilder PRO - IDE",
         "width": 1280,
         "height": 720,
         "resizable": true,
         "fullscreen": false,
-        "maximized": true
+        "maximized": true,
+        "visible": false
+      },
+      {
+        "label": "splashscreen",
+        "title": "Iniciando MetaBuilder PRO...",
+        "url": "/splash",
+        "width": 600,
+        "height": 380,
+        "resizable": false,
+        "fullscreen": false,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "center": true,
+        "visible": true
       }
     ],
+    "macOSPrivateApi": true,
     "security": {
       "csp": null
     }
