@@ -47,25 +47,7 @@ export default function SplashPage() {
         currentStep++
       } else {
         clearInterval(interval)
-        
-        // Ensure we are in Tauri before calling API
-        // @ts-ignore
-        if (typeof window !== 'undefined' && (window.__TAURI_INTERNALS__ || window.__TAURI__ || window.__TAURI_IPC__)) {
-          setTimeout(() => {
-            import('@tauri-apps/api/window').then(async ({ Window, getCurrentWindow }) => {
-              try {
-                const main = await Window.getByLabel('main')
-                if (main) {
-                  await main.show()
-                  await main.setFocus()
-                }
-                await getCurrentWindow().close()
-              } catch (e) {
-                console.error('Error transitioning from splash:', e)
-              }
-            }).catch(console.error)
-          }, 300) // Small delay after reaching 100%
-        }
+        // Rust (lib.rs) handles the window transition after 2800ms
       }
     }, 400) // Each step takes 400ms
 
