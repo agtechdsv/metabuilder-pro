@@ -16,6 +16,7 @@ export function AutoUpdater() {
 
   useEffect(() => {
     if (!isTauri()) return
+    if (window.location.pathname === '/splash') return
 
     const checkForUpdates = async () => {
       try {
