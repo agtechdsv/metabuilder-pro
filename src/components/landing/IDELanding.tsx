@@ -24,36 +24,40 @@ export function IDELanding({ user }: { user: any }) {
     const checkVersion = async () => {
       // @ts-ignore
       const isTauriEnv = typeof window !== 'undefined' && (window.__TAURI_INTERNALS__ || window.__TAURI__ || window.__TAURI_IPC__)
-      if (isTauriEnv) {
-        try {
-          const { getVersion } = await import('@tauri-apps/api/app')
-          const v = await getVersion()
-          setLocalVersion(`IDE Engine v${v}`)
-
-          // Transição Splash Screen -> Main Window
-          const { Window, getCurrentWindow } = await import('@tauri-apps/api/window')
-          
-          // Aguarda a animação da splash screen terminar (2.5s)
-          setTimeout(async () => {
-            try {
-              const splash = await Window.getByLabel('splashscreen')
-              if (splash) {
-                await splash.close()
-              }
-              const main = getCurrentWindow()
-              await main.show()
-              await main.setFocus()
-            } catch (err) {
-              console.error('Erro na transição da splash screen:', err)
-            }
-          }, 2500)
-          
-        } catch (e) {
-          console.error('Failed to get Tauri version', e)
-          setLocalVersion('IDE Engine (Erro)')
-        }
-      } else {
+      
+      if (!isTauriEnv) {
         setLocalVersion('Web App Edition')
+        return
+      }
+
+      // 1. Fetch Version Independently
+      try {
+        const { getVersion } = await import('@tauri-apps/api/app')
+        const v = await getVersion()
+        setLocalVersion(`IDE Engine v${v}`)
+      } catch (e) {
+        console.error('Failed to get Tauri version', e)
+        setLocalVersion('IDE Engine (Erro)')
+      }
+
+      // 2. Handle Splash Screen Transition Independently
+      try {
+        const { Window, getCurrentWindow } = await import('@tauri-apps/api/window')
+        setTimeout(async () => {
+          try {
+            const splash = await Window.getByLabel('splashscreen')
+            if (splash) {
+              await splash.close()
+            }
+            const main = getCurrentWindow()
+            await main.show()
+            await main.setFocus()
+          } catch (err) {
+            console.error('Erro na transição da splash screen:', err)
+          }
+        }, 2500)
+      } catch (err) {
+        console.error('Failed to import Tauri window API', err)
       }
     }
     checkVersion()
