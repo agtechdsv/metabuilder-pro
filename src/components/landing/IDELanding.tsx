@@ -22,8 +22,8 @@ export function IDELanding({ user }: { user: any }) {
       })
     // Fetch the real installed version based on environment
     const checkVersion = async () => {
-      // @ts-ignore
-      const isTauriEnv = typeof window !== 'undefined' && (window.__TAURI_INTERNALS__ || window.__TAURI__ || window.__TAURI_IPC__)
+      const { isTauri } = await import('@tauri-apps/api/core')
+      const isTauriEnv = isTauri()
       
       if (!isTauriEnv) {
         setLocalVersion('Web App Edition')
@@ -152,8 +152,8 @@ export function IDELanding({ user }: { user: any }) {
             >
               <div className="flex items-center justify-between p-6 border-b border-neutral-200 dark:border-neutral-800">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
-                    <Rocket className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center overflow-hidden">
+                    <img src="/logo-transparent.png" alt="MetaBuilder PRO" className="w-8 h-8 object-contain" />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold">O que há de novo?</h3>
