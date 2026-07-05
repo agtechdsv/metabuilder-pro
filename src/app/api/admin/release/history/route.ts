@@ -77,19 +77,22 @@ export async function DELETE(request: Request) {
     const versionStr = tag.startsWith('v') ? tag : `v${tag}`
     const rawVersion = versionStr.replace(/^v/, '') // "1.0.0"
 
-    // 1. Delete from DB app_downloads
-    // Wait, the version in app_downloads might be 'v1.0.0' or '1.0.0'.
+    // 1. Delete all files in the specific version folder from the Supabase Bucket
+    const folderPath = `ide/${versionStr}`
+    const { data: bucketFiles } = await supabase.storage.from('releases').list(folderPath)
+    
+    if (bucketFiles && bucketFiles.length > 0) {
+      const pathsToRemove = bucketFiles.map(f => `${folderPath}/${f.name}`)
+      await supabase.storage.from('releases').remove(pathsToRemove)
+    }
+
+    // 2. Delete from DB app_downloads
     const { data: filesToDelete, error: dbFetchError } = await supabase
       .from('app_downloads')
-      .select('id, bucket_path')
+      .select('id')
       .or(`version.eq.${versionStr},version.eq.${rawVersion}`)
 
     if (!dbFetchError && filesToDelete && filesToDelete.length > 0) {
-      const bucketPaths = filesToDelete.map(f => f.bucket_path)
-      // 2. Delete from Supabase Bucket
-      await supabase.storage.from('releases').remove(bucketPaths)
-
-      // Delete from DB table
       const ids = filesToDelete.map(f => f.id)
       await supabase.from('app_downloads').delete().in('id', ids)
     }
