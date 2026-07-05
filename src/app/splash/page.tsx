@@ -7,8 +7,25 @@ import { Rocket, Loader2 } from 'lucide-react'
 export default function SplashPage() {
   const [progress, setProgress] = useState(0)
   const [status, setStatus] = useState('Iniciando módulos core...')
+  const [version, setVersion] = useState('v1.0')
 
   useEffect(() => {
+    // Busca a versão real do executável
+    const fetchVersion = async () => {
+      // @ts-ignore
+      const isTauri = typeof window !== 'undefined' && (window.__TAURI_INTERNALS__ || window.__TAURI__ || window.__TAURI_IPC__)
+      if (isTauri) {
+        try {
+          const { getVersion } = await import('@tauri-apps/api/app')
+          const v = await getVersion()
+          setVersion(`v${v}`)
+        } catch (e) {
+          console.error('Splash screen version error', e)
+        }
+      }
+    }
+    fetchVersion()
+
     // Force transparent background on body to allow rounded corners in Tauri
     document.body.style.backgroundColor = 'transparent'
     document.documentElement.style.backgroundColor = 'transparent'
@@ -77,7 +94,7 @@ export default function SplashPage() {
             MetaBuilder<span className="text-indigo-400">PRO</span>
           </h1>
           <p className="text-sm font-medium text-indigo-200/60 uppercase tracking-widest">
-            IDE Engine v1.0
+            IDE Engine {version}
           </p>
         </div>
 
