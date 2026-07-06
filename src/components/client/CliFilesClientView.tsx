@@ -90,14 +90,15 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
       return
     }
     const signedUrl = data.signedUrl
-    const fileName = (file.name || 'download').replace(/[^a-zA-Z0-9._\- ()]/g, '_')
+    const realFileName = file.file_path?.split('/').pop() || 'download'
+    const labelName = (file.name || 'download').replace(/[^a-zA-Z0-9._\- ()]/g, '_')
 
     // â”€â”€ Tauri IDE path: download with progress â”€â”€
     if (isTauri()) {
       setIdeDownloadModal({
         open: true,
         phase: 'downloading',
-        fileName,
+        fileName: labelName,
         progress: 0,
         savedPath: '',
         savedDir: '',
@@ -135,22 +136,22 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
         const { writeFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
 
         const dir = await downloadDir()
-        const fullPath = `${dir}${fileName}`
+        const fullPath = `${dir}${realFileName}`
 
         console.log(`[Download] Saving to: ${fullPath}`)
         console.log(`[Download] File size: ${merged.length} bytes`)
 
-        await writeFile(fileName, merged, { baseDir: BaseDirectory.Download })
+        await writeFile(realFileName, merged, { baseDir: BaseDirectory.Download })
 
         // Detect if it's an installer that can run on this OS
-        const lower = fileName.toLowerCase()
+        const lower = realFileName.toLowerCase()
         const isWindows = navigator.userAgent.toLowerCase().includes('win')
         const canRun = isWindows && (lower.endsWith('.msi') || lower.endsWith('.exe'))
 
         setIdeDownloadModal({
           open: true,
           phase: 'done',
-          fileName,
+          fileName: labelName,
           progress: 100,
           savedPath: fullPath,
           savedDir: dir,
@@ -175,10 +176,15 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
     document.body.removeChild(a)
   }
 
-  const handleOpenFolder = async (dir: string) => {
+  const handleOpenFolder = async (dir: string, fileFullPath: string) => {
     try {
-      const { openPath } = await import('@tauri-apps/plugin-opener')
-      await openPath(dir)
+      if (fileFullPath) {
+        const { revealItemInDir } = await import('@tauri-apps/plugin-opener')
+        await revealItemInDir([fileFullPath])
+      } else {
+        const { openPath } = await import('@tauri-apps/plugin-opener')
+        await openPath(dir)
+      }
     } catch (e) {
       console.error('Não foi possível abrir o explorador:', e)
     }
@@ -188,7 +194,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
     try {
       const { openPath } = await import('@tauri-apps/plugin-opener')
       await openPath(path)
-      
+
       // Auto-close the app after launching the installer so it can replace the files
       const { getCurrentWindow } = await import('@tauri-apps/api/window')
       const current = getCurrentWindow()
@@ -388,8 +394,8 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
               key={f.id}
               onClick={() => setFilter(f.id as any)}
               className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${filter === f.id
-                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                  : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'
+                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+                : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'
                 }`}
             >
               {f.label}
@@ -401,12 +407,12 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
           <button
             onClick={() => setShowOlderReleases(!showOlderReleases)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors border ${showOlderReleases
-                ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/10 dark:border-indigo-500/20 dark:text-indigo-400'
-                : 'bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 dark:bg-neutral-900 dark:border-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800'
+              ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/10 dark:border-indigo-500/20 dark:text-indigo-400'
+              : 'bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 dark:bg-neutral-900 dark:border-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800'
               }`}
           >
             <History className="w-4 h-4" />
-            {showOlderReleases ? 'Ocultar versÃµes antigas' : 'Exibir versÃµes anteriores'}
+            {showOlderReleases ? 'Ocultar versões antigas' : 'Exibir versões anteriores'}
           </button>
         )}
       </div>
@@ -524,7 +530,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                   {/* Action buttons */}
                   <div className="flex gap-2.5">
                     <button
-                      onClick={() => handleOpenFolder(ideDownloadModal.savedDir)}
+                      onClick={() => handleOpenFolder(ideDownloadModal.savedDir, ideDownloadModal.savedPath)}
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
                     >
                       <FolderOpen className="w-4 h-4" />
