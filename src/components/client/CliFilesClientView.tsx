@@ -170,7 +170,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
     // â”€â”€ Browser fallback â”€â”€
     const a = document.createElement('a')
     a.href = signedUrl
-    a.download = fileName
+    a.download = realFileName
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
