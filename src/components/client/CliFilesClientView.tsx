@@ -1,6 +1,7 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { IdeUpdaterButton } from '@/components/runtime/IdeUpdaterButton'
 import { createClient } from '@/utils/supabase/client'
 import { Download, File as FileIcon, Loader2, RefreshCw, Filter, X, History, FolderOpen, Play, CheckCircle, ExternalLink } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
@@ -22,7 +23,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
   const [files, setFiles] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   
-  // Tab & Filter state — devOnly users are locked to the IDE tab
+  // Tab & Filter state â€” devOnly users are locked to the IDE tab
   const [mainTab, setMainTab] = useState<'ide' | 'utils'>('ide')
   const [filter, setFilter] = useState<'all' | 'cli-win' | 'cli-linux' | 'template' | 'manual' | 'ide-win' | 'ide-mac' | 'ide-linux'>('all')
   const [showOlderReleases, setShowOlderReleases] = useState(false)
@@ -65,7 +66,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
 
     if (error) {
       console.error(error)
-      toast('Erro ao carregar arquivos disponíveis: ' + error.message, 'error')
+      toast('Erro ao carregar arquivos disponÃ­veis: ' + error.message, 'error')
     } else {
       setFiles(data || [])
     }
@@ -91,7 +92,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
     const signedUrl = data.signedUrl
     const fileName = (file.name || 'download').replace(/[^a-zA-Z0-9._\- ()]/g, '_')
 
-    // ── Tauri IDE path: download with progress ──
+    // â”€â”€ Tauri IDE path: download with progress â”€â”€
     if (isTauri()) {
       setIdeDownloadModal({
         open: true,
@@ -165,7 +166,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
       return
     }
 
-    // ── Browser fallback ──
+    // â”€â”€ Browser fallback â”€â”€
     const a = document.createElement('a')
     a.href = signedUrl
     a.download = fileName
@@ -179,18 +180,18 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
       const { open } = await import('@tauri-apps/plugin-shell')
       await open(dir)
     } catch (e) {
-      console.error('Não foi possível abrir o explorador:', e)
+      console.error('NÃ£o foi possÃ­vel abrir o explorador:', e)
     }
   }
 
   const handleRunInstaller = async (path: string) => {
     try {
       const { Command } = await import('@tauri-apps/plugin-shell')
-      // We open the file via shell open – this triggers the default handler (installer)
+      // We open the file via shell open â€“ this triggers the default handler (installer)
       const { open } = await import('@tauri-apps/plugin-shell')
       await open(path)
     } catch (e) {
-      console.error('Não foi possível executar o instalador:', e)
+      console.error('NÃ£o foi possÃ­vel executar o instalador:', e)
     }
   }
 
@@ -343,7 +344,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
         </div>
       </div>
 
-      {/* Tabs — hide Utilitários for dev-only users */}
+      {/* Tabs â€” hide UtilitÃ¡rios for dev-only users */}
       <div className="flex border-b border-neutral-200 dark:border-neutral-800 mb-4">
         <button
           onClick={() => { setMainTab('ide'); setFilter('all'); }}
@@ -356,7 +357,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
             onClick={() => { setMainTab('utils'); setFilter('all'); }}
             className={`px-6 py-3 font-bold text-sm border-b-2 transition-colors ${mainTab === 'utils' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'}`}
           >
-            Utilitários (CLI & JSON)
+            UtilitÃ¡rios (CLI & JSON)
           </button>
         )}
       </div>
@@ -404,7 +405,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
             }`}
           >
             <History className="w-4 h-4" />
-            {showOlderReleases ? 'Ocultar versões antigas' : 'Exibir versões anteriores'}
+            {showOlderReleases ? 'Ocultar versÃµes antigas' : 'Exibir versÃµes anteriores'}
           </button>
         )}
       </div>
@@ -463,7 +464,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                   <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <Download className="w-8 h-8 text-neutral-400" />
                   </div>
-                  <p className="text-sm font-bold text-neutral-500">Nenhum arquivo disponível no momento.</p>
+                  <p className="text-sm font-bold text-neutral-500">Nenhum arquivo disponÃ­vel no momento.</p>
                 </td>
               </tr>
             )}
@@ -488,7 +489,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
               </div>
               <h3 className="text-lg font-black">
                 {ideDownloadModal.phase === 'downloading' && 'Baixando...'}
-                {ideDownloadModal.phase === 'done' && 'Download Concluído!'}
+                {ideDownloadModal.phase === 'done' && 'Download ConcluÃ­do!'}
                 {ideDownloadModal.phase === 'error' && 'Erro no Download'}
               </h3>
               <p className="text-indigo-100 text-sm mt-1 truncate max-w-xs mx-auto">{ideDownloadModal.fileName}</p>
@@ -556,7 +557,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
               {/* Error state */}
               {ideDownloadModal.phase === 'error' && (
                 <div className="space-y-3">
-                  <p className="text-sm text-center text-red-500 font-medium">Não foi possível completar o download. Tente novamente.</p>
+                  <p className="text-sm text-center text-red-500 font-medium">NÃ£o foi possÃ­vel completar o download. Tente novamente.</p>
                   <button
                     onClick={() => setIdeDownloadModal(null)}
                     className="w-full px-4 py-2.5 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
@@ -594,12 +595,12 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
-                <p className="text-[11px] text-neutral-400">Ao selecionar, o arquivo já virá com o Project ID e Secret Token preenchidos.</p>
+                <p className="text-[11px] text-neutral-400">Ao selecionar, o arquivo jÃ¡ virÃ¡ com o Project ID e Secret Token preenchidos.</p>
               </div>
 
               <div className="space-y-3">
-                <label className="text-xs font-bold uppercase tracking-widest text-neutral-500">Conexão do Banco de Dados (Opcional)</label>
-                <p className="text-[11px] text-neutral-400 mb-2">Preencha se quiser que a string de conexão já venha montada no JSON.</p>
+                <label className="text-xs font-bold uppercase tracking-widest text-neutral-500">ConexÃ£o do Banco de Dados (Opcional)</label>
+                <p className="text-[11px] text-neutral-400 mb-2">Preencha se quiser que a string de conexÃ£o jÃ¡ venha montada no JSON.</p>
                 
                 <div className="grid grid-cols-2 gap-3">
                   <select
@@ -634,7 +635,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
 
                 <div className="grid grid-cols-2 gap-3">
                   <input 
-                    type="text" placeholder="Usuário" 
+                    type="text" placeholder="UsuÃ¡rio" 
                     value={dbUser} onChange={(e) => setDbUser(e.target.value)}
                     className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl px-4 py-3 text-sm font-medium text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                   />

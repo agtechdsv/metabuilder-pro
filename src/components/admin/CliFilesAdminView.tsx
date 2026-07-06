@@ -1,6 +1,7 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
+import { IdeUpdaterButton } from '@/components/runtime/IdeUpdaterButton'
 import { createClient } from '@/utils/supabase/client'
 import { Download, Upload, Trash2, File as FileIcon, Loader2, X, Check, Filter } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
@@ -139,7 +140,7 @@ export function CliFilesAdminView() {
     if (error) {
       toast('Erro ao excluir do banco de dados: ' + error.message, 'error')
     } else {
-      toast('Arquivo excluído com sucesso.', 'success')
+      toast('Arquivo excluÃ­do com sucesso.', 'success')
       fetchFiles()
     }
   }
@@ -161,6 +162,7 @@ export function CliFilesAdminView() {
 
   return (
     <div className="space-y-6 relative">
+      <IdeUpdaterButton />
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 shadow-sm gap-4">
         <div>
           <h2 className="text-xl font-black text-neutral-900 dark:text-white">IDEs, Arquivos CLI & Manuais</h2>
@@ -210,10 +212,10 @@ export function CliFilesAdminView() {
             <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Arquivo</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Categoria</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Versão</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">VersÃ£o</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Tamanho</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-center">Ativo?</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">Ações</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">AÃ§Ãµes</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -289,7 +291,7 @@ export function CliFilesAdminView() {
 
             <form onSubmit={handleUploadSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">Nome do Arquivo (Exibição)</label>
+                <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">Nome do Arquivo (ExibiÃ§Ã£o)</label>
                 <input
                   type="text"
                   required
@@ -318,7 +320,7 @@ export function CliFilesAdminView() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">Versão</label>
+                  <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">VersÃ£o</label>
                   <input
                     type="text"
                     required
@@ -352,7 +354,7 @@ export function CliFilesAdminView() {
                 </div>
                 <div>
                   <div className="text-sm font-bold text-neutral-900 dark:text-white">Deixar arquivo Ativo?</div>
-                  <div className="text-xs text-neutral-500">Se marcado, aparecerá imediatamente para os clientes.</div>
+                  <div className="text-xs text-neutral-500">Se marcado, aparecerÃ¡ imediatamente para os clientes.</div>
                 </div>
               </label>
 
@@ -388,7 +390,7 @@ export function CliFilesAdminView() {
             <h3 className="text-xl font-black text-neutral-900 dark:text-white mb-2">Excluir Arquivo</h3>
             <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">
               Tem certeza que deseja excluir <strong>{deleteConfirm.name}</strong>?<br />
-              Esta ação não pode ser desfeita.
+              Esta aÃ§Ã£o nÃ£o pode ser desfeita.
             </p>
             <div className="flex gap-3">
               <button
