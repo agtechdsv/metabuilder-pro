@@ -45,10 +45,10 @@ export function PersonalizadoMockup({ mockupsState }: { mockupsState: ReturnType
                           </div>
                           <div>
                             <h4 className="text-sm font-bold text-neutral-800 dark:text-white leading-tight">
-                              Painel de Controle Financeiro (H├¡brido)
+                              Painel de Controle Financeiro (Híbrido)
                             </h4>
                             <p className="text-[10px] text-neutral-400">
-                              Exemplo de Layout Personalizado com m├║ltiplas vis├Áes e bot├Áes din├ómicos
+                              Exemplo de Layout Personalizado com múltiplas visões e botões dinâmicos
                             </p>
                           </div>
                         </div>
@@ -69,19 +69,19 @@ export function PersonalizadoMockup({ mockupsState }: { mockupsState: ReturnType
                           onClick={() => setCustomHybridTab('metrics')}
                           className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${customHybridTab === 'metrics' ? 'border-amber-500 text-amber-600 dark:text-amber-500' : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'}`}
                         >
-                          M├®tricas e Gr├íficos
+                          Métricas e Gráficos
                         </button>
                         <button 
                           onClick={() => setCustomHybridTab('kanban')}
                           className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${customHybridTab === 'kanban' ? 'border-amber-500 text-amber-600 dark:text-amber-500' : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'}`}
                         >
-                          Kanban de Aprova├º├Áes
+                          Kanban de Aprovações
                         </button>
                         <button 
                           onClick={() => setCustomHybridTab('history')}
                           className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${customHybridTab === 'history' ? 'border-amber-500 text-amber-600 dark:text-amber-500' : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'}`}
                         >
-                          Hist├│rico (Grid)
+                          Histórico (Grid)
                         </button>
                       </div>
 
@@ -103,18 +103,18 @@ export function PersonalizadoMockup({ mockupsState }: { mockupsState: ReturnType
                                     <p className="text-xl font-black text-neutral-800 dark:text-white mt-1">R$ 1.452.900</p>
                                   </div>
                                   <div className="p-4 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50">
-                                    <span className="text-[10px] font-black uppercase text-neutral-400">Custos Vari├íveis</span>
+                                    <span className="text-[10px] font-black uppercase text-neutral-400">Custos Variáveis</span>
                                     <p className="text-xl font-black text-rose-500 mt-1">R$ 384.200</p>
                                   </div>
                                 </div>
                                 <div className="h-32 rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 flex items-center justify-center text-xs text-neutral-400 font-medium">
                                   <BarChart3 className="w-5 h-5 mr-2 opacity-50" />
-                                  [Gr├ífico Anal├¡tico Embutido]
+                                  [Gráfico Analítico Embutido]
                                 </div>
                               </div>
                               <div className="col-span-1 border-l border-neutral-100 dark:border-neutral-800 pl-4">
                                 <h5 className="text-[10px] font-black uppercase text-neutral-400 mb-3">
-                                  A├º├Áes R├ípidas Customizadas
+                                  Ações Rápidas Customizadas
                                </h5>
                                 <div className="space-y-2">
                                   <button className="w-full text-left p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:border-indigo-500/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/10 transition-colors flex items-center justify-between group">
@@ -145,12 +145,12 @@ export function PersonalizadoMockup({ mockupsState }: { mockupsState: ReturnType
                               <div className="bg-neutral-50 dark:bg-neutral-900/50 rounded-xl p-3 border border-neutral-100 dark:border-neutral-800 h-48 flex flex-col gap-2">
                                 <span className="text-[10px] font-black uppercase text-neutral-400 px-1">Pendente</span>
                                 <div className="bg-white dark:bg-neutral-950 p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 shadow-sm">
-                                  <p className="text-[10px] font-bold text-neutral-800 dark:text-neutral-200">Revis├úo Cont├íbil Q2</p>
+                                  <p className="text-[10px] font-bold text-neutral-800 dark:text-neutral-200">Revisão Contábil Q2</p>
                                 </div>
                                 <div className="bg-white dark:bg-neutral-950 p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 shadow-sm opacity-50 border-dashed"></div>
                               </div>
                               <div className="bg-neutral-50 dark:bg-neutral-900/50 rounded-xl p-3 border border-neutral-100 dark:border-neutral-800 h-48 flex flex-col gap-2">
-                                <span className="text-[10px] font-black uppercase text-amber-500 px-1">Em An├ílise</span>
+                                <span className="text-[10px] font-black uppercase text-amber-500 px-1">Em Análise</span>
                                 <div className="bg-white dark:bg-neutral-950 p-2.5 rounded-lg border border-amber-200 dark:border-amber-900/30 shadow-sm border-l-2 border-l-amber-500">
                                   <p className="text-[10px] font-bold text-neutral-800 dark:text-neutral-200">Aprovar Adiantamentos</p>
                                 </div>
@@ -176,14 +176,14 @@ export function PersonalizadoMockup({ mockupsState }: { mockupsState: ReturnType
                                 <thead>
                                   <tr className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 text-[9px] font-black uppercase text-neutral-400 tracking-wider">
                                     <th className="px-4 py-2">Data</th>
-                                    <th className="px-4 py-2">A├º├úo</th>
-                                    <th className="px-4 py-2">Usu├írio</th>
+                                    <th className="px-4 py-2">Ação</th>
+                                    <th className="px-4 py-2">Usuário</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800 text-xs">
                                   <tr className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/30">
                                     <td className="px-4 py-2 font-mono text-neutral-500">Hoje, 14:30</td>
-                                    <td className="px-4 py-2 font-bold text-neutral-800 dark:text-neutral-200">Emiss├úo de NFe Avulsa</td>
+                                    <td className="px-4 py-2 font-bold text-neutral-800 dark:text-neutral-200">Emissão de NFe Avulsa</td>
                                     <td className="px-4 py-2 text-indigo-500">@alexandre</td>
                                   </tr>
                                   <tr className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/30">
@@ -193,7 +193,7 @@ export function PersonalizadoMockup({ mockupsState }: { mockupsState: ReturnType
                                   </tr>
                                   <tr className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/30">
                                     <td className="px-4 py-2 font-mono text-neutral-500">05/06, 16:00</td>
-                                    <td className="px-4 py-2 font-bold text-neutral-800 dark:text-neutral-200">Altera├º├úo de Meta</td>
+                                    <td className="px-4 py-2 font-bold text-neutral-800 dark:text-neutral-200">Alteração de Meta</td>
                                     <td className="px-4 py-2 text-indigo-500">@diretoria</td>
                                   </tr>
                                 </tbody>

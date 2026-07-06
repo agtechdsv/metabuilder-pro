@@ -183,7 +183,7 @@ export function MapaMentalMockup({ mockupsState }: { mockupsState: ReturnType<ty
                               }}
                               className="absolute left-[30px] top-[40px] px-4 py-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-purple-500/40 text-neutral-800 dark:text-neutral-200 text-xs font-bold shadow-md cursor-pointer hover:scale-105 transition-transform z-10"
                             >
-                              ­ƒÆÁ {t('marketing_v2.use_cases_page.mockups.node_finance')}
+                              💸 {t('marketing_v2.use_cases_page.mockups.node_finance')}
                             </motion.div>
                           )}
 
@@ -232,7 +232,7 @@ export function MapaMentalMockup({ mockupsState }: { mockupsState: ReturnType<ty
                               }}
                               className="absolute right-[30px] top-[40px] px-4 py-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-pink-500/40 text-neutral-800 dark:text-neutral-200 text-xs font-bold shadow-md cursor-pointer hover:scale-105 transition-transform z-10"
                             >
-                              ­ƒôê {t('marketing_v2.use_cases_page.mockups.node_sales')}
+                              📈 {t('marketing_v2.use_cases_page.mockups.node_sales')}
                             </motion.div>
                           )}
 
@@ -281,7 +281,7 @@ export function MapaMentalMockup({ mockupsState }: { mockupsState: ReturnType<ty
                               }}
                               className="absolute bottom-[25px] px-4 py-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-indigo-500/40 text-neutral-800 dark:text-neutral-200 text-xs font-bold shadow-md cursor-pointer hover:scale-105 transition-transform z-10"
                             >
-                              ­ƒæÑ {t('marketing_v2.use_cases_page.mockups.node_hr')}
+                              👥 {t('marketing_v2.use_cases_page.mockups.node_hr')}
                             </motion.div>
                           )}
 

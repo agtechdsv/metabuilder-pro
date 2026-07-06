@@ -36,7 +36,7 @@ export function KanbanMockup({ mockupsState }: { mockupsState: ReturnType<typeof
                     className="space-y-4"
                   >
                     <div className="bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-2xl p-4 text-xs font-bold text-center">
-                      ­ƒÆí Arraste os cart├Áes entre as colunas para simular a atualiza├º├úo do DB!
+                      💡 Arraste os cartões entre as colunas para simular a atualização do DB!
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">

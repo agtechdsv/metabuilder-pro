@@ -37,7 +37,7 @@ export function TimelineMockup({ mockupsState }: { mockupsState: ReturnType<type
                   >
                     <div className="flex items-center justify-between bg-white dark:bg-neutral-950 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
                       <span className="text-xs font-bold text-neutral-800 dark:text-white">
-                        Hist├│rico de Auditoria
+                        Histórico de Auditoria
                       </span>
                       <span className="px-2.5 py-1 bg-violet-500/10 text-violet-500 text-[10px] font-black rounded-full uppercase tracking-wider">
                         Real-time Feed
@@ -46,9 +46,9 @@ export function TimelineMockup({ mockupsState }: { mockupsState: ReturnType<type
 
                     <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-neutral-200 dark:before:bg-neutral-850">
                       {[
-                        { time: 'Hoje, 18:30', title: 'Caso de Uso Publicado', desc: 'O desenvolvedor Jo├úo entregou a tela "Gest├úo de Contratos".', type: 'success' },
-                        { time: 'Hoje, 15:45', title: 'Integra├º├úo Estabelecida', desc: 'Conex├úo via T├║nel Seguro estabelecida com o banco Postgres de produ├º├úo.', type: 'info' },
-                        { time: 'Ontem, 10:15', title: 'Altera├º├úo de Permiss├Áes', desc: 'Permiss├Áes do usu├írio Maria Santos alteradas para Administrador.', type: 'warning' },
+                        { time: 'Hoje, 18:30', title: 'Caso de Uso Publicado', desc: 'O desenvolvedor João entregou a tela "Gestão de Contratos".', type: 'success' },
+                        { time: 'Hoje, 15:45', title: 'Integração Estabelecida', desc: 'Conexão via Túnel Seguro estabelecida com o banco Postgres de produção.', type: 'info' },
+                        { time: 'Ontem, 10:15', title: 'Alteração de Permissões', desc: 'Permissões do usuário Maria Santos alteradas para Administrador.', type: 'warning' },
                         { time: '24 Mai, 14:00', title: 'Novo Integrador Adicionado', desc: 'Webhook configurado para disparar eventos para o Asaas.', type: 'default' }
                       ].map((item, idx) => (
                         <div key={idx} className="relative group">

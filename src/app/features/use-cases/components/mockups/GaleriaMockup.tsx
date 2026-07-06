@@ -160,7 +160,7 @@ export function GaleriaMockup({ mockupsState }: { mockupsState: ReturnType<typeo
                           >
                             <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
                               <span className="text-[10px] font-black uppercase text-neutral-450 tracking-wider">
-                                Pr├®-visualiza├º├úo do Asset
+                                Pré-visualização do Asset
                               </span>
                               <button 
                                 type="button"

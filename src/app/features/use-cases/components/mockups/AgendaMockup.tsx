@@ -36,7 +36,7 @@ export function AgendaMockup({ mockupsState }: { mockupsState: ReturnType<typeof
                     className="space-y-6 w-full"
                   >
                     <div className="bg-teal-500/10 border border-teal-500/20 text-teal-600 dark:text-teal-400 rounded-2xl p-4 text-xs font-bold text-center">
-                      ­ƒÆí Arraste os compromissos entre os dias para reagend├í-los no calend├írio!
+                      💡 Arraste os compromissos entre os dias para reagendá-los no calendário!
                     </div>
 
                     {/* Calendar Month Header */}
@@ -88,19 +88,19 @@ export function AgendaMockup({ mockupsState }: { mockupsState: ReturnType<typeof
                         {/* Mode toggle pill */}
                         <div className="flex items-center bg-neutral-100 dark:bg-neutral-900 p-1.5 rounded-full border border-neutral-200 dark:border-neutral-800 shrink-0">
                           <button
-                            onClick={() => triggerToast('Visualiza├º├úo Mensal ativa')}
+                            onClick={() => triggerToast('Visualização Mensal ativa')}
                             className="px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-full bg-white dark:bg-neutral-800 text-[#5c72e7] dark:text-indigo-400 shadow-sm transition-colors"
                           >
-                            M├¬s
+                            Mês
                           </button>
                           <button
-                            onClick={() => triggerToast('Visualiza├º├úo de Semana em desenvolvimento')}
+                            onClick={() => triggerToast('Visualização de Semana em desenvolvimento')}
                             className="px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-full text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-250 transition-colors"
                           >
                             Semana
                           </button>
                           <button
-                            onClick={() => triggerToast('Visualiza├º├úo Di├íria em desenvolvimento')}
+                            onClick={() => triggerToast('Visualização Diária em desenvolvimento')}
                             className="px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-full text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-250 transition-colors"
                           >
                             Dia
@@ -116,7 +116,7 @@ export function AgendaMockup({ mockupsState }: { mockupsState: ReturnType<typeof
                               day: selectedAgendaDay, 
                               time: '12:00', 
                               title: 'Novo Compromisso', 
-                              type: 'reuni├úo' 
+                              type: 'reunião' 
                             }
                             setAgendaEvents(prev => [...prev, newEv])
                             triggerToast(`Compromisso agendado no dia ${selectedAgendaDay}!`)
@@ -138,7 +138,7 @@ export function AgendaMockup({ mockupsState }: { mockupsState: ReturnType<typeof
                       <span>Qua</span>
                       <span>Qui</span>
                       <span>Sex</span>
-                      <span>S├íb</span>
+                      <span>Sáb</span>
                     </div>
 
                     {/* Calendar Grid */}

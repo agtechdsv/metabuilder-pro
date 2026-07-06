@@ -40,7 +40,7 @@ export function CadastroMockup({ mockupsState }: { mockupsState: ReturnType<type
                         {t('marketing_v2.use_cases_page.items.cadastro.title')}
                       </h4>
                       <p className="text-[10px] text-neutral-400 mt-1">
-                        Instancia├º├úo pura e isolada de inputs para grava├º├úo direta no banco.
+                        Instanciação pura e isolada de inputs para gravação direta no banco.
                       </p>
                     </div>
 
@@ -54,11 +54,11 @@ export function CadastroMockup({ mockupsState }: { mockupsState: ReturnType<type
                           className="py-10 text-center space-y-4"
                         >
                           <div className="w-12 h-12 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center mx-auto text-xl font-bold">
-                            Ô£ô
+                            ✅
                           </div>
                           <div className="space-y-1">
                             <h5 className="font-bold text-emerald-500 text-sm">Registro Salvo!</h5>
-                            <p className="text-[11px] text-neutral-400">Dados persistidos com sucesso via T├║nel do MetaBuilder.</p>
+                            <p className="text-[11px] text-neutral-400">Dados persistidos com sucesso via Túnel do MetaBuilder.</p>
                           </div>
                         </motion.div>
                       ) : (

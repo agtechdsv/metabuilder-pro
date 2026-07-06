@@ -39,7 +39,7 @@ export function PesquisaMockup({ mockupsState }: { mockupsState: ReturnType<type
                       <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
                       <input 
                         type="text" 
-                        placeholder="Pesquisar por descri├º├úo ou c├│digo (Ex: Servidor, Edge)..."
+                        placeholder="Pesquisar por descrição ou código (Ex: Servidor, Edge)..."
                         value={searchOnlyQuery}
                         onChange={(e) => setSearchOnlyQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-xs font-medium focus:outline-none focus:border-indigo-500 text-neutral-800 dark:text-neutral-200"
@@ -50,9 +50,9 @@ export function PesquisaMockup({ mockupsState }: { mockupsState: ReturnType<type
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 text-[10px] font-black uppercase text-neutral-400 tracking-wider">
-                            <th className="px-4 py-3">C├│digo</th>
-                            <th className="px-4 py-3">Descri├º├úo</th>
-                            <th className="px-4 py-3">Regi├úo</th>
+                            <th className="px-4 py-3">Código</th>
+                            <th className="px-4 py-3">Descrição</th>
+                            <th className="px-4 py-3">Região</th>
                             <th className="px-4 py-3 text-right">Uso de CPU</th>
                           </tr>
                         </thead>

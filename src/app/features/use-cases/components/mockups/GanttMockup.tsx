@@ -37,7 +37,7 @@ export function GanttMockup({ mockupsState }: { mockupsState: ReturnType<typeof 
                   >
                     <div className="flex items-center justify-between bg-white dark:bg-neutral-950 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
                       <span className="text-xs font-bold text-neutral-800 dark:text-white">
-                        Cronograma de Implementa├º├úo
+                        Cronograma de Implementação
                       </span>
                       <span className="px-2.5 py-1 bg-sky-500/10 text-sky-500 text-[10px] font-black rounded-full uppercase tracking-wider">
                         Gantt Chart
@@ -58,9 +58,9 @@ export function GanttMockup({ mockupsState }: { mockupsState: ReturnType<typeof 
                       <div className="space-y-3.5">
                         {[
                           { task: 'Mapeamento SQL', start: 0, width: 3, progress: '100%', color: 'from-sky-500 to-sky-600' },
-                          { task: 'Configura├º├úo RLS', start: 2, width: 4, progress: '80%', color: 'from-indigo-500 to-indigo-600' },
-                          { task: 'Integra├º├úo de APIs', start: 5, width: 5, progress: '40%', color: 'from-purple-500 to-purple-600' },
-                          { task: 'Homologa├º├úo final', start: 9, width: 3, progress: '0%', color: 'from-neutral-450 to-neutral-500' }
+                          { task: 'Configuração RLS', start: 2, width: 4, progress: '80%', color: 'from-indigo-500 to-indigo-600' },
+                          { task: 'Integração de APIs', start: 5, width: 5, progress: '40%', color: 'from-purple-500 to-purple-600' },
+                          { task: 'Homologação final', start: 9, width: 3, progress: '0%', color: 'from-neutral-450 to-neutral-500' }
                         ].map((row, idx) => (
                           <div 
                             key={idx} 

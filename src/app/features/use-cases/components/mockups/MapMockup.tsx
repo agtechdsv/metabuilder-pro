@@ -37,7 +37,7 @@ export function MapMockup({ mockupsState }: { mockupsState: ReturnType<typeof us
                   >
                     <div className="flex items-center justify-between bg-white dark:bg-neutral-950 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
                       <span className="text-xs font-bold text-neutral-800 dark:text-white">
-                        Geolocaliza├º├úo de Operadores
+                        Geolocalização de Operadores
                       </span>
                       <span className="px-2.5 py-1 bg-blue-500/10 text-blue-500 text-[10px] font-black rounded-full uppercase tracking-wider">
                         Map View (Leaflet)
@@ -57,7 +57,7 @@ export function MapMockup({ mockupsState }: { mockupsState: ReturnType<typeof us
                       {/* Map Pins */}
                       <div className="relative w-full h-full">
                         {[
-                          { name: 'Filial S├úo Paulo (Matriz)', operators: 12, top: '25%', left: '40%' },
+                          { name: 'Filial São Paulo (Matriz)', operators: 12, top: '25%', left: '40%' },
                           { name: 'Filial Rio de Janeiro', operators: 8, top: '60%', left: '75%' },
                           { name: 'CD Campinas', operators: 4, top: '45%', left: '20%' }
                         ].map((pin, idx) => (

@@ -78,18 +78,18 @@ export function DashboardMockup({ mockupsState }: { mockupsState: ReturnType<typ
                         </span>
                       </div>
                       <div className="p-4 bg-white dark:bg-neutral-950 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-1">
-                        <span className="text-[9px] font-black uppercase text-neutral-400">Ticket M├®dio</span>
+                        <span className="text-[9px] font-black uppercase text-neutral-400">Ticket Médio</span>
                         <h4 className="text-sm font-black text-neutral-850 dark:text-white">
                           {dashboardPeriod === '7d' ? 'R$ 115' : dashboardPeriod === '30d' ? 'R$ 427' : 'R$ 2.791'}
                         </h4>
-                        <span className="text-[9px] font-bold text-indigo-500 block">Est├ível</span>
+                        <span className="text-[9px] font-bold text-indigo-500 block">Estável</span>
                       </div>
                     </div>
 
                     {/* Animated Bar Chart SVG representation */}
                     <div className="p-5 bg-white dark:bg-neutral-950 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-4">
                       <span className="text-[10px] font-black uppercase text-neutral-450 tracking-wider">
-                        Gr├ífico de Tend├¬ncia de Receita
+                        Gráfico de Tendência de Receita
                       </span>
                       <div className="h-32 flex items-end justify-between gap-2 px-2 pt-4 relative">
                         {/* Helper grid lines */}
@@ -167,10 +167,10 @@ export function DashboardMockup({ mockupsState }: { mockupsState: ReturnType<typ
                         >
                           {[
                             { name: 'NOTEBOOK NEO 15', value: 532, percent: 0.532, color: '#00b074' },
-                            { name: 'C├éMERA DSLR HYPER 18', value: 35, percent: 0.175, color: '#ff9f00' },
+                            { name: 'CÂMERA DSLR HYPER 18', value: 35, percent: 0.175, color: '#ff9f00' },
                             { name: 'FONE DE OUVIDO APEX 21', value: 492, percent: 0.615, color: '#00b074' },
                             { name: 'SMARTWATCH PRIME 24', value: 10, percent: 0.033, color: '#ff3b30' },
-                            { name: 'TECLADO MEC├éNICO VORTEX 27', value: 1029, percent: 0.686, color: '#00b074' },
+                            { name: 'TECLADO MECÂNICO VORTEX 27', value: 1029, percent: 0.686, color: '#00b074' },
                             { name: 'MOUSE GAMER LEGEND 30', value: 1161, percent: 0.774, color: '#00b074' },
                             { name: 'MONITOR 4K ULTRA 33', value: 98, percent: 0.196, color: '#ff9f00' },
                             { name: 'IMPRESSORA 3D PRO MAX 36', value: 15, percent: 0.15, color: '#ff3b30' },
