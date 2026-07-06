@@ -186,7 +186,7 @@ export function IDELanding({ user }: { user: any }) {
                       (() => {
                         const installed = localVersion.replace('IDE Engine v', '').trim()
                         const latest = releaseNotesList[0].version.replace('v', '')
-                        const isOutdated = installed !== latest && installed !== 'Erro:' && !localVersion.includes('Erro')
+                        const isOutdated = localVersion.startsWith('IDE Engine') && installed !== latest && installed !== 'Erro:' && !localVersion.includes('Erro')
 
                         if (isOutdated) {
                           return (
