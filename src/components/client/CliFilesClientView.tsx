@@ -66,7 +66,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
 
     if (error) {
       console.error(error)
-      toast('Erro ao carregar arquivos disponÃ­veis: ' + error.message, 'error')
+      toast('Erro ao carregar arquivos disponíveis: ' + error.message, 'error')
     } else {
       setFiles(data || [])
     }
@@ -353,7 +353,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
         </div>
       </div>
 
-      {/* Tabs â€” hide UtilitÃ¡rios for dev-only users */}
+      {/* Tabs â€” hide Utilitários for dev-only users */}
       <div className="flex border-b border-neutral-200 dark:border-neutral-800 mb-4">
         <button
           onClick={() => { setMainTab('ide'); setFilter('all'); }}
@@ -366,7 +366,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
             onClick={() => { setMainTab('utils'); setFilter('all'); }}
             className={`px-6 py-3 font-bold text-sm border-b-2 transition-colors ${mainTab === 'utils' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'}`}
           >
-            UtilitÃ¡rios (CLI & JSON)
+            Utilitários (CLI & JSON)
           </button>
         )}
       </div>
@@ -471,7 +471,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                   <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <Download className="w-8 h-8 text-neutral-400" />
                   </div>
-                  <p className="text-sm font-bold text-neutral-500">Nenhum arquivo disponÃ­vel no momento.</p>
+                  <p className="text-sm font-bold text-neutral-500">Nenhum arquivo disponível no momento.</p>
                 </td>
               </tr>
             )}
@@ -564,7 +564,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
               {/* Error state */}
               {ideDownloadModal.phase === 'error' && (
                 <div className="space-y-3">
-                  <p className="text-sm text-center text-red-500 font-medium">NÃ£o foi possÃ­vel completar o download. Tente novamente.</p>
+                  <p className="text-sm text-center text-red-500 font-medium">Não foi possível completar o download. Tente novamente.</p>
                   <button
                     onClick={() => setIdeDownloadModal(null)}
                     className="w-full px-4 py-2.5 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
@@ -602,12 +602,12 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
-                <p className="text-[11px] text-neutral-400">Ao selecionar, o arquivo jÃ¡ virÃ¡ com o Project ID e Secret Token preenchidos.</p>
+                <p className="text-[11px] text-neutral-400">Ao selecionar, o arquivo já virá com o Project ID e Secret Token preenchidos.</p>
               </div>
 
               <div className="space-y-3">
-                <label className="text-xs font-bold uppercase tracking-widest text-neutral-500">ConexÃ£o do Banco de Dados (Opcional)</label>
-                <p className="text-[11px] text-neutral-400 mb-2">Preencha se quiser que a string de conexÃ£o jÃ¡ venha montada no JSON.</p>
+                <label className="text-xs font-bold uppercase tracking-widest text-neutral-500">Conexão do Banco de Dados (Opcional)</label>
+                <p className="text-[11px] text-neutral-400 mb-2">Preencha se quiser que a string de conexão já venha montada no JSON.</p>
 
                 <div className="grid grid-cols-2 gap-3">
                   <select
@@ -642,7 +642,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
 
                 <div className="grid grid-cols-2 gap-3">
                   <input
-                    type="text" placeholder="UsuÃ¡rio"
+                    type="text" placeholder="Usuário"
                     value={dbUser} onChange={(e) => setDbUser(e.target.value)}
                     className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl px-4 py-3 text-sm font-medium text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                   />

@@ -140,7 +140,7 @@ export function CliFilesAdminView() {
     if (error) {
       toast('Erro ao excluir do banco de dados: ' + error.message, 'error')
     } else {
-      toast('Arquivo excluÃ­do com sucesso.', 'success')
+      toast('Arquivo excluído com sucesso.', 'success')
       fetchFiles()
     }
   }
@@ -197,8 +197,8 @@ export function CliFilesAdminView() {
             key={f.id}
             onClick={() => setFilter(f.id as any)}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${filter === f.id
-                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'
+              ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+              : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'
               }`}
           >
             {f.label}
@@ -212,10 +212,10 @@ export function CliFilesAdminView() {
             <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Arquivo</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Categoria</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">VersÃ£o</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Versão</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Tamanho</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-center">Ativo?</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">AÃ§Ãµes</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -291,7 +291,7 @@ export function CliFilesAdminView() {
 
             <form onSubmit={handleUploadSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">Nome do Arquivo (ExibiÃ§Ã£o)</label>
+                <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">Nome do Arquivo (Exibição)</label>
                 <input
                   type="text"
                   required
@@ -320,7 +320,7 @@ export function CliFilesAdminView() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">VersÃ£o</label>
+                  <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">Versão</label>
                   <input
                     type="text"
                     required
@@ -354,7 +354,7 @@ export function CliFilesAdminView() {
                 </div>
                 <div>
                   <div className="text-sm font-bold text-neutral-900 dark:text-white">Deixar arquivo Ativo?</div>
-                  <div className="text-xs text-neutral-500">Se marcado, aparecerÃ¡ imediatamente para os clientes.</div>
+                  <div className="text-xs text-neutral-500">Se marcado, aparecerá imediatamente para os clientes.</div>
                 </div>
               </label>
 
@@ -390,7 +390,7 @@ export function CliFilesAdminView() {
             <h3 className="text-xl font-black text-neutral-900 dark:text-white mb-2">Excluir Arquivo</h3>
             <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">
               Tem certeza que deseja excluir <strong>{deleteConfirm.name}</strong>?<br />
-              Esta aÃ§Ã£o nÃ£o pode ser desfeita.
+              Esta ação não pode ser desfeita.
             </p>
             <div className="flex gap-3">
               <button

@@ -28,7 +28,7 @@ export function IDELanding({ user }: { user: any }) {
     const checkVersion = async () => {
       const { isTauri } = await import('@tauri-apps/api/core')
       const isTauriEnv = isTauri()
-      
+
       if (!isTauriEnv) {
         setLocalVersion('Web App Edition')
         return
@@ -52,7 +52,7 @@ export function IDELanding({ user }: { user: any }) {
       {/* Background glow effects */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-emerald-500/10 dark:bg-emerald-500/20 rounded-full blur-[120px] pointer-events-none" />
-      
+
       {/* Header */}
       <header className="w-full px-8 py-6 flex items-center justify-between relative z-10">
         <div className="flex items-center gap-3">
@@ -66,7 +66,7 @@ export function IDELanding({ user }: { user: any }) {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-12 px-8 py-12 max-w-7xl mx-auto w-full relative z-10">
-        
+
         {/* Left Side: Welcome & Features */}
         <div className="flex-1 flex flex-col items-start max-w-xl">
           <motion.div
@@ -82,8 +82,8 @@ export function IDELanding({ user }: { user: any }) {
                 </span>
                 {localVersion || 'Carregando...'}
               </div>
-              
-              <button 
+
+              <button
                 onClick={() => setShowReleaseNotes(true)}
                 title="Ver Histórico de Atualizações"
                 className="p-1.5 rounded-full bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors shadow-sm cursor-pointer"
@@ -98,7 +98,7 @@ export function IDELanding({ user }: { user: any }) {
               </span>
             </h2>
             <p className="text-lg text-neutral-600 dark:text-neutral-400 mb-10 leading-relaxed">
-              Bem-vindo ao MetaBuilder PRO IDE. Estruture interfaces premium, conecte bancos de dados e gere cÃ³digo de alta qualidade em tempo recorde.
+              Bem-vindo ao MetaBuilder PRO IDE. Estruture interfaces premium, conecte bancos de dados e gere código de alta qualidade em tempo recorde.
             </p>
 
             <div className="space-y-6">
@@ -108,17 +108,17 @@ export function IDELanding({ user }: { user: any }) {
                 </div>
                 <div>
                   <h4 className="font-bold">Performance Nativa</h4>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-500 mt-1">Acesso direto ao sistema de arquivos local para geraÃ§Ã£o ultra-rÃ¡pida de cÃ³digo.</p>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-500 mt-1">Acesso direto ao sistema de arquivos local para geração ultra-rápida de código.</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 shadow-sm flex items-center justify-center shrink-0">
                   <Code2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
-                  <h4 className="font-bold">Editor AvanÃ§ado</h4>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-500 mt-1">InteligÃªncia de metadados integrada diretamente no seu ambiente de trabalho.</p>
+                  <h4 className="font-bold">Editor Avançado</h4>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-500 mt-1">Inteligência de metadados integrada diretamente no seu ambiente de trabalho.</p>
                 </div>
               </div>
             </div>
@@ -126,7 +126,7 @@ export function IDELanding({ user }: { user: any }) {
         </div>
 
         {/* Right Side: Login Box */}
-        <motion.div 
+        <motion.div
           className="w-full max-w-md"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -154,7 +154,7 @@ export function IDELanding({ user }: { user: any }) {
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
             >
-                            <div className="flex items-center justify-between p-6 border-b border-neutral-200 dark:border-neutral-800">
+              <div className="flex items-center justify-between p-6 border-b border-neutral-200 dark:border-neutral-800">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center overflow-hidden">
                     <img src="/logo-transparent.png" alt="MetaBuilder PRO" className="w-8 h-8 object-contain" />
@@ -164,14 +164,14 @@ export function IDELanding({ user }: { user: any }) {
                     <p className="text-xs text-neutral-500">Acompanhe as novidades do MetaBuilder PRO</p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowReleaseNotes(false)}
                   className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              
+
               <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
                 {isFetchingNotes ? (
                   <div className="flex flex-col items-center justify-center py-10 opacity-50">
@@ -180,18 +180,18 @@ export function IDELanding({ user }: { user: any }) {
                   </div>
                 ) : (
                   <div className="space-y-8 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-neutral-200 dark:before:via-neutral-800 before:to-transparent">
-                    
+
                     {/* Botão de Atualizar no topo se tiver nova versão */}
                     {releaseNotesList.length > 0 && localVersion && (
                       (() => {
                         const installed = localVersion.replace('IDE Engine v', '').trim()
                         const latest = releaseNotesList[0].version.replace('v', '')
                         const isOutdated = installed !== latest && installed !== 'Erro:' && !localVersion.includes('Erro')
-                        
+
                         if (isOutdated) {
                           return (
                             <div className="relative flex items-center justify-center mb-10 z-10">
-                              <button 
+                              <button
                                 onClick={async () => {
                                   try {
                                     setIsUpdating(true)
@@ -230,14 +230,14 @@ export function IDELanding({ user }: { user: any }) {
 
                     {releaseNotesList.map((release, i) => {
                       const isCurrent = localVersion ? localVersion.includes(release.version.replace('v', '')) : false
-                      
+
                       return (
                         <div key={release.version} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                           {/* Icon */}
                           <div className="flex items-center justify-center w-6 h-6 rounded-full border-4 border-white dark:border-neutral-900 bg-indigo-500 text-white shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow z-10">
                             <div className="w-1.5 h-1.5 bg-white rounded-full" />
                           </div>
-                          
+
                           {/* Card */}
                           <div className="w-[calc(100%-2.5rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl bg-white dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 shadow-sm transition-all hover:shadow-md">
                             <div className="flex items-center justify-between mb-2">
@@ -253,7 +253,7 @@ export function IDELanding({ user }: { user: any }) {
                                 {new Date(release.published_at).toLocaleDateString('pt-BR')}
                               </time>
                             </div>
-                            
+
                             <div className="prose prose-sm dark:prose-invert max-w-none">
                               <pre className="whitespace-pre-wrap font-sans text-sm text-neutral-600 dark:text-neutral-300 bg-transparent border-0 p-0 m-0 leading-relaxed">
                                 {release.body
@@ -272,9 +272,9 @@ export function IDELanding({ user }: { user: any }) {
                 )}
               </div>
 
-              
+
               <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 flex justify-end">
-                <button 
+                <button
                   onClick={() => setShowReleaseNotes(false)}
                   className="px-6 py-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-sm font-bold rounded-lg hover:opacity-90 transition-opacity"
                 >
