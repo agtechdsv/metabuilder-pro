@@ -284,7 +284,7 @@ export function IDELanding({ user }: { user: any }) {
                                         .replace(/\*\*Full Changelog\*\*:.*?(\n|$)/g, '')
                                         .split('\n')
                                         .filter((line: any) => {
-                                          const cleanLine = line.replace(/^[\*\-\s]+/, '').toLowerCase()
+                                          const cleanLine = line.replace(/^[^a-zA-Z0-9]+/, '').toLowerCase()
                                           return !cleanLine.startsWith('chore:') && !cleanLine.startsWith('merge')
                                         })
                                         .join('\n')
