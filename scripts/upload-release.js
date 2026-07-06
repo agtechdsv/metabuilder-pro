@@ -47,7 +47,7 @@ async function main() {
     let title = `MetaBuilder PRO v${version}`;
     let isLatestJson = false;
 
-    if (fileName === 'latest.json') {
+    if (fileName.endsWith('.json')) {
       isLatestJson = true;
     } else if (fileName.endsWith('.exe') || fileName.endsWith('.msi')) {
       category = 'ide-win';
