@@ -484,5 +484,6 @@ export function CliFilesAdminView() {
         </div>
       )}
     </div>
+    </div>
   )
 }

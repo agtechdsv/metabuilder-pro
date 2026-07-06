@@ -739,5 +739,6 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
         </div>
       )}
     </div>
+    </div>
   )
 }
