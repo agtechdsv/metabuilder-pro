@@ -85,7 +85,10 @@ export function IDELanding({ user }: { user: any }) {
               </div>
 
               <button
-                onClick={() => setShowReleaseNotes(true)}
+                onClick={() => {
+                  setExpandedNotes({})
+                  setShowReleaseNotes(true)
+                }}
                 title="Ver Histórico de Atualizações"
                 className="p-1.5 rounded-full bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors shadow-sm cursor-pointer"
               >
@@ -234,6 +237,23 @@ export function IDELanding({ user }: { user: any }) {
                       const isExpanded = !!expandedNotes[release.version]
                       const isLatest = i === 0
 
+                      let filteredLines = release.body
+                        .replace(/\*\*Full Changelog\*\*:.*?(\n|$)/g, '')
+                        .split('\n')
+                        .filter((line: any) => {
+                          const cleanLine = line.replace(/^[^a-zA-Z0-9]+/, '').toLowerCase()
+                          return !cleanLine.startsWith('chore:') && !cleanLine.startsWith('merge')
+                        })
+                        
+                      const titleIndex = filteredLines.findIndex((l: string) => l.includes('### Nesta Atualização:'))
+                      if (titleIndex !== -1) {
+                        const hasContentAfter = filteredLines.slice(titleIndex + 1).some((l: string) => l.trim() !== '')
+                        if (!hasContentAfter) {
+                          filteredLines = filteredLines.slice(0, titleIndex)
+                        }
+                      }
+                      const finalBody = filteredLines.join('\n').trim() || 'Sem detalhes para esta versão.'
+
                       return (
                         <div key={release.version} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                           {/* Icon */}
@@ -280,15 +300,7 @@ export function IDELanding({ user }: { user: any }) {
                                 >
                                   <div className="prose prose-sm dark:prose-invert max-w-none">
                                     <pre className="whitespace-pre-wrap font-sans text-sm text-neutral-600 dark:text-neutral-300 bg-transparent border-0 p-0 m-0 leading-relaxed">
-                                      {release.body
-                                        .replace(/\*\*Full Changelog\*\*:.*?(\n|$)/g, '')
-                                        .split('\n')
-                                        .filter((line: any) => {
-                                          const cleanLine = line.replace(/^[^a-zA-Z0-9]+/, '').toLowerCase()
-                                          return !cleanLine.startsWith('chore:') && !cleanLine.startsWith('merge')
-                                        })
-                                        .join('\n')
-                                        .trim() || 'Sem detalhes para esta versão.'}
+                                      {finalBody}
                                     </pre>
                                   </div>
                                 </motion.div>
