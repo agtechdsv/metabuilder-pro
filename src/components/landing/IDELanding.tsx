@@ -48,6 +48,20 @@ export function IDELanding({ user }: { user: any }) {
     }
     checkVersion()
   }, [])
+
+  useEffect(() => {
+    if (showReleaseNotes) {
+      setIsFetchingNotes(true)
+      fetch('/api/releases')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setReleaseNotesList(data)
+          }
+        })
+        .finally(() => setIsFetchingNotes(false))
+    }
+  }, [showReleaseNotes])
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-black text-neutral-900 dark:text-white flex flex-col relative overflow-hidden font-sans transition-colors duration-500">
       {/* Background glow effects */}
