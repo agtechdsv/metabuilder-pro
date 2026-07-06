@@ -86,3 +86,4 @@ src-tauri/bin/cli*
 /logs.zip
 /logs2/
 /logs2.zip
+test-release.js
