@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import { IdeUpdaterButton } from '@/components/runtime/IdeUpdaterButton'
@@ -22,7 +22,7 @@ interface CliFilesClientViewProps {
 export function CliFilesClientView({ projects = [], devOnly = false, isPopout = false }: CliFilesClientViewProps) {
   const [files, setFiles] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  
+
   // Tab & Filter state â€” devOnly users are locked to the IDE tab
   const [mainTab, setMainTab] = useState<'ide' | 'utils'>('ide')
   const [filter, setFilter] = useState<'all' | 'cli-win' | 'cli-linux' | 'template' | 'manual' | 'ide-win' | 'ide-mac' | 'ide-linux'>('all')
@@ -31,7 +31,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
   // Modal state
   const [downloadModalFile, setDownloadModalFile] = useState<any | null>(null)
   const [selectedProjectId, setSelectedProjectId] = useState<string>('')
-  
+
   // DB config state
   const [dbType, setDbType] = useState('postgres')
   const [dbHost, setDbHost] = useState('localhost')
@@ -177,21 +177,24 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
 
   const handleOpenFolder = async (dir: string) => {
     try {
-      const { open } = await import('@tauri-apps/plugin-shell')
-      await open(dir)
+      const { openPath } = await import('@tauri-apps/plugin-opener')
+      await openPath(dir)
     } catch (e) {
-      console.error('NÃ£o foi possÃ­vel abrir o explorador:', e)
+      console.error('Não foi possível abrir o explorador:', e)
     }
   }
 
   const handleRunInstaller = async (path: string) => {
     try {
-      const { Command } = await import('@tauri-apps/plugin-shell')
-      // We open the file via shell open â€“ this triggers the default handler (installer)
-      const { open } = await import('@tauri-apps/plugin-shell')
-      await open(path)
+      const { openPath } = await import('@tauri-apps/plugin-opener')
+      await openPath(path)
+      
+      // Auto-close the app after launching the installer so it can replace the files
+      const { getCurrentWindow } = await import('@tauri-apps/api/window')
+      const current = getCurrentWindow()
+      await current.close()
     } catch (e) {
-      console.error('NÃ£o foi possÃ­vel executar o instalador:', e)
+      console.error('Não foi possível executar o instalador:', e)
     }
   }
 
@@ -234,9 +237,9 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
 
         if (jsonContent.connections && jsonContent.connections.length > 0) {
           if (jsonContent.connections[0].connectionsString && jsonContent.connections[0].connectionsString.length > 0) {
-             jsonContent.connections[0].connectionsString[0].name = 'erp'
-             jsonContent.connections[0].connectionsString[0].type = dbType
-             jsonContent.connections[0].connectionsString[0].connectionString = connectionString
+            jsonContent.connections[0].connectionsString[0].name = 'erp'
+            jsonContent.connections[0].connectionsString[0].type = dbType
+            jsonContent.connections[0].connectionsString[0].connectionString = connectionString
           }
         }
       }
@@ -278,7 +281,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
     const isIde = ['ide-win', 'ide-mac', 'ide-linux'].includes(f.category);
     if (mainTab === 'ide' && !isIde) return false;
     if (mainTab === 'utils' && isIde) return false;
-    
+
     if (filter === 'all') return true;
     return f.category === filter;
   });
@@ -314,7 +317,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
             </span>
             <div className="flex items-center gap-2">
               {!isPopout && (
-                <button 
+                <button
                   onClick={() => {
                     if (typeof window !== 'undefined') {
                       window.open('/client/downloads/popout', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no')
@@ -384,25 +387,23 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
             <button
               key={f.id}
               onClick={() => setFilter(f.id as any)}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
-                filter === f.id 
-                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900' 
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${filter === f.id
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
                   : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'
-              }`}
+                }`}
             >
               {f.label}
             </button>
           ))}
         </div>
-        
+
         {mainTab === 'ide' && (
           <button
             onClick={() => setShowOlderReleases(!showOlderReleases)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors border ${
-              showOlderReleases
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors border ${showOlderReleases
                 ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/10 dark:border-indigo-500/20 dark:text-indigo-400'
                 : 'bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 dark:bg-neutral-900 dark:border-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800'
-            }`}
+              }`}
           >
             <History className="w-4 h-4" />
             {showOlderReleases ? 'Ocultar versÃµes antigas' : 'Exibir versÃµes anteriores'}
@@ -448,7 +449,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                     {(file.size_bytes / 1024 / 1024).toFixed(2)} MB
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button 
+                    <button
                       onClick={() => handleDownloadClick(file)}
                       className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg font-bold text-xs uppercase tracking-widest transition-colors flex items-center gap-2 ml-auto"
                     >
@@ -489,7 +490,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
               </div>
               <h3 className="text-lg font-black">
                 {ideDownloadModal.phase === 'downloading' && 'Baixando...'}
-                {ideDownloadModal.phase === 'done' && 'Download ConcluÃ­do!'}
+                {ideDownloadModal.phase === 'done' && 'Download Concluído!'}
                 {ideDownloadModal.phase === 'error' && 'Erro no Download'}
               </h3>
               <p className="text-indigo-100 text-sm mt-1 truncate max-w-xs mx-auto">{ideDownloadModal.fileName}</p>
@@ -581,11 +582,11 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="space-y-6">
               <div className="space-y-3">
                 <label className="text-xs font-bold uppercase tracking-widest text-neutral-500">Vincular a um Projeto (Opcional)</label>
-                <select 
+                <select
                   value={selectedProjectId}
                   onChange={(e) => setSelectedProjectId(e.target.value)}
                   className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl px-4 py-3 text-sm font-medium text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -601,7 +602,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
               <div className="space-y-3">
                 <label className="text-xs font-bold uppercase tracking-widest text-neutral-500">ConexÃ£o do Banco de Dados (Opcional)</label>
                 <p className="text-[11px] text-neutral-400 mb-2">Preencha se quiser que a string de conexÃ£o jÃ¡ venha montada no JSON.</p>
-                
+
                 <div className="grid grid-cols-2 gap-3">
                   <select
                     value={dbType}
@@ -613,41 +614,41 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                     <option value="sqlserver">SQL Server</option>
                   </select>
 
-                  <input 
-                    type="text" placeholder="Host (ex: localhost)" 
+                  <input
+                    type="text" placeholder="Host (ex: localhost)"
                     value={dbHost} onChange={(e) => setDbHost(e.target.value)}
                     className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl px-4 py-3 text-sm font-medium text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
-                  <input 
-                    type="text" placeholder="Porta (ex: 5432)" 
+                  <input
+                    type="text" placeholder="Porta (ex: 5432)"
                     value={dbPort} onChange={(e) => setDbPort(e.target.value)}
                     className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl px-4 py-3 text-sm font-medium text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
-                  <input 
-                    type="text" placeholder="Database" 
+                  <input
+                    type="text" placeholder="Database"
                     className="col-span-2 w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl px-4 py-3 text-sm font-medium text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                     value={dbName} onChange={(e) => setDbName(e.target.value)}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <input 
-                    type="text" placeholder="UsuÃ¡rio" 
+                  <input
+                    type="text" placeholder="UsuÃ¡rio"
                     value={dbUser} onChange={(e) => setDbUser(e.target.value)}
                     className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl px-4 py-3 text-sm font-medium text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
-                  <input 
-                    type="password" placeholder="Senha" 
+                  <input
+                    type="password" placeholder="Senha"
                     value={dbPass} onChange={(e) => setDbPass(e.target.value)}
                     className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl px-4 py-3 text-sm font-medium text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={processTemplateDownload}
                 disabled={isDownloading}
                 className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-4"
