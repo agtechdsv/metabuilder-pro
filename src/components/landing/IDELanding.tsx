@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { HeaderActions } from '@/components/layout/HeaderActions'
 import { LoginForm } from '@/components/auth/LoginForm'
-import { Zap, Code2, Info, X, FileText, Rocket, History, Download } from 'lucide-react'
+import { Zap, Code2, Info, X, FileText, Rocket, History, Download, ChevronDown, ChevronUp } from 'lucide-react'
 
 export function IDELanding({ user }: { user: any }) {
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
+  const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({})
   const [releaseNotesList, setReleaseNotesList] = useState<any[]>([])
   const [isFetchingNotes, setIsFetchingNotes] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -230,6 +231,8 @@ export function IDELanding({ user }: { user: any }) {
 
                     {releaseNotesList.map((release, i) => {
                       const isCurrent = localVersion ? localVersion.includes(release.version.replace('v', '')) : false
+                      const isExpanded = !!expandedNotes[release.version]
+                      const isLatest = i === 0
 
                       return (
                         <div key={release.version} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
@@ -241,29 +244,56 @@ export function IDELanding({ user }: { user: any }) {
                           {/* Card */}
                           <div className="w-[calc(100%-2.5rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl bg-white dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 shadow-sm transition-all hover:shadow-md">
                             <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-lg text-indigo-600 dark:text-indigo-400">{release.version}</span>
-                                {isCurrent && (
-                                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
-                                    Sua versão atual
-                                  </span>
-                                )}
-                              </div>
+                              <span className="font-bold text-lg text-indigo-600 dark:text-indigo-400">{release.version}</span>
                               <time className="text-xs text-neutral-400">
                                 {new Date(release.published_at).toLocaleDateString('pt-BR')}
                               </time>
                             </div>
-
-                            <div className="prose prose-sm dark:prose-invert max-w-none">
-                              <pre className="whitespace-pre-wrap font-sans text-sm text-neutral-600 dark:text-neutral-300 bg-transparent border-0 p-0 m-0 leading-relaxed">
-                                {release.body
-                                  .replace(/\*\*Full Changelog\*\*:.*?(\n|$)/g, '')
-                                  .split('\n')
-                                  .filter((line: any) => !line.toLowerCase().includes('chore:'))
-                                  .join('\n')
-                                  .trim() || 'Sem detalhes para esta versão.'}
-                              </pre>
+                            
+                            <div className="mb-2">
+                              {isCurrent ? (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
+                                  Versão Atual
+                                </span>
+                              ) : isLatest ? (
+                                <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider">
+                                  Nova Versão
+                                </span>
+                              ) : null}
                             </div>
+
+                            <button 
+                              onClick={() => setExpandedNotes(prev => ({ ...prev, [release.version]: !prev[release.version] }))}
+                              className="flex items-center gap-1 text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                            >
+                              Release Notes
+                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </button>
+
+                            <AnimatePresence>
+                              {isExpanded && (
+                                <motion.div 
+                                  initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                                  animate={{ height: 'auto', opacity: 1, marginTop: 12 }}
+                                  exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                                    <pre className="whitespace-pre-wrap font-sans text-sm text-neutral-600 dark:text-neutral-300 bg-transparent border-0 p-0 m-0 leading-relaxed">
+                                      {release.body
+                                        .replace(/\*\*Full Changelog\*\*:.*?(\n|$)/g, '')
+                                        .split('\n')
+                                        .filter((line: any) => {
+                                          const cleanLine = line.replace(/^[\*\-\s]+/, '').toLowerCase()
+                                          return !cleanLine.startsWith('chore:') && !cleanLine.startsWith('merge')
+                                        })
+                                        .join('\n')
+                                        .trim() || 'Sem detalhes para esta versão.'}
+                                    </pre>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
                         </div>
                       )
