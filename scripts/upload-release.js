@@ -45,8 +45,17 @@ async function main() {
   try {
     const targetDir = path.join(process.cwd(), 'src-tauri', 'target');
     const jsonFiles = findFiles(targetDir, '.json');
-    // Updater JSON files are usually in 'bundle/updater' or 'bundle'
-    const updaterJson = jsonFiles.find(f => f.includes('updater') || f.includes('latest.json'));
+    
+    let updaterJson = null;
+    for (const f of jsonFiles) {
+      try {
+        const content = JSON.parse(fs.readFileSync(f, 'utf8'));
+        if (content.version && content.platforms) {
+          updaterJson = f;
+          break;
+        }
+      } catch(e) {}
+    }
     
     if (updaterJson && !artifactPaths.includes(updaterJson)) {
       console.log(`[FIX] Manually found updater JSON: ${updaterJson}`);
