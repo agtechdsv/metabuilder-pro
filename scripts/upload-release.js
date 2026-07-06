@@ -26,6 +26,36 @@ async function main() {
     process.exit(1);
   }
 
+  // Manually search for the updater JSON file in src-tauri/target
+  // Because tauri-action@v0 might omit it from ARTIFACT_PATHS in Tauri v2
+  const findFiles = (dir, ext, fileList = []) => {
+    if (!fs.existsSync(dir)) return fileList;
+    const files = fs.readdirSync(dir);
+    for (const file of files) {
+      const filePath = path.join(dir, file);
+      if (fs.statSync(filePath).isDirectory()) {
+        findFiles(filePath, ext, fileList);
+      } else if (filePath.endsWith(ext)) {
+        fileList.push(filePath);
+      }
+    }
+    return fileList;
+  };
+
+  try {
+    const targetDir = path.join(process.cwd(), 'src-tauri', 'target');
+    const jsonFiles = findFiles(targetDir, '.json');
+    // Updater JSON files are usually in 'bundle/updater' or 'bundle'
+    const updaterJson = jsonFiles.find(f => f.includes('updater') || f.includes('latest.json'));
+    
+    if (updaterJson && !artifactPaths.includes(updaterJson)) {
+      console.log(`[FIX] Manually found updater JSON: ${updaterJson}`);
+      artifactPaths.push(updaterJson);
+    }
+  } catch (err) {
+    console.warn('Could not manually search for updater JSON:', err.message);
+  }
+
   const ws = require('ws');
   const supabase = createClient(supabaseUrl, supabaseKey, {
     auth: { persistSession: false },
