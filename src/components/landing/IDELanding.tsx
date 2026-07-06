@@ -183,9 +183,8 @@ export function IDELanding({ user }: { user: any }) {
                     <p className="text-sm">Buscando histórico...</p>
                   </div>
                 ) : (
-                  <div className="space-y-8 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-neutral-200 dark:before:via-neutral-800 before:to-transparent">
-
-                    {/* Botão de Atualizar no topo se tiver nova versão */}
+                  <>
+                    {/* Botão de Atualizar fixo no topo se tiver nova versão */}
                     {releaseNotesList.length > 0 && localVersion && (
                       (() => {
                         const installed = localVersion.replace('IDE Engine v', '').trim()
@@ -194,7 +193,7 @@ export function IDELanding({ user }: { user: any }) {
 
                         if (isOutdated) {
                           return (
-                            <div className="relative flex items-center justify-center mb-10 z-10">
+                            <div className="sticky top-0 z-30 flex items-center justify-center pb-6 pt-2 bg-white/95 dark:bg-black/95 backdrop-blur-sm -mx-6 px-6 -mt-4 mb-8 shadow-sm">
                               <button
                                 onClick={async () => {
                                   try {
@@ -231,6 +230,8 @@ export function IDELanding({ user }: { user: any }) {
                         return null
                       })()
                     )}
+
+                    <div className="space-y-8 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-neutral-200 dark:before:via-neutral-800 before:to-transparent">
 
                     {releaseNotesList.map((release, i) => {
                       const isCurrent = localVersion ? localVersion.includes(release.version.replace('v', '')) : false
@@ -310,7 +311,8 @@ export function IDELanding({ user }: { user: any }) {
                         </div>
                       )
                     })}
-                  </div>
+                    </div>
+                  </>
                 )}
               </div>
 
