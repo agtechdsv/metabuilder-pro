@@ -27,6 +27,9 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
   const [mainTab, setMainTab] = useState<'ide' | 'utils'>('ide')
   const [filter, setFilter] = useState<'all' | 'cli-win' | 'cli-linux' | 'template' | 'manual' | 'ide-win' | 'ide-mac' | 'ide-linux'>('all')
   const [showOlderReleases, setShowOlderReleases] = useState(false)
+  const [localVersion, setLocalVersion] = useState<string>('')
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [releaseNotesList, setReleaseNotesList] = useState<any[]>([])
 
   // Modal state
   const [downloadModalFile, setDownloadModalFile] = useState<any | null>(null)
@@ -75,6 +78,29 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
 
   useEffect(() => {
     fetchFiles()
+    
+    // Fetch release notes and local version for Auto Updater
+    fetch('/api/releases')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setReleaseNotesList(data)
+      })
+
+    const checkVersion = async () => {
+      const { isTauri } = await import('@tauri-apps/api/core')
+      if (!isTauri()) {
+        setLocalVersion('Web App Edition')
+        return
+      }
+      try {
+        const { getVersion } = await import('@tauri-apps/api/app')
+        const v = await getVersion()
+        setLocalVersion(`IDE Engine v${v}`)
+      } catch (e: any) {
+        setLocalVersion(`Erro: ${e.message || String(e)}`)
+      }
+    }
+    checkVersion()
   }, [])
 
   const handleDownloadClick = async (file: any) => {
@@ -144,9 +170,8 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
         await writeFile(realFileName, merged, { baseDir: BaseDirectory.Download })
 
         // Detect if it's an installer that can run on this OS
-        const lower = realFileName.toLowerCase()
         const isWindows = navigator.userAgent.toLowerCase().includes('win')
-        const canRun = isWindows && (lower.endsWith('.msi') || lower.endsWith('.exe'))
+        const canRun = isWindows && file.category === 'ide-win'
 
         setIdeDownloadModal({
           open: true,
@@ -312,46 +337,93 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
   }, [dbType])
 
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-br from-indigo-900 to-blue-900 rounded-3xl p-8 text-white relative overflow-hidden shadow-lg border border-indigo-500/20">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="relative z-10">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-white/10 border border-white/20 backdrop-blur-md uppercase tracking-widest">
-              <Download className="w-3.5 h-3.5 text-cyan-400" /> Central de Downloads
-            </span>
-            <div className="flex items-center gap-2">
-              {!isPopout && (
+    <div className={`flex flex-col h-full bg-neutral-50 dark:bg-black p-8 pt-10 ${isPopout ? 'mt-8' : ''}`}>
+      <div className="max-w-5xl mx-auto w-full space-y-6">
+        <div className="bg-gradient-to-br from-indigo-900 to-blue-900 rounded-3xl p-8 text-white relative overflow-hidden shadow-lg border border-indigo-500/20">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="relative z-10">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-white/10 border border-white/20 backdrop-blur-md uppercase tracking-widest">
+                <Download className="w-3.5 h-3.5 text-cyan-400" /> Central de Downloads
+              </span>
+              <div className="flex items-center gap-2">
+                {!isPopout && (
+                  <button
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        window.open('/client/downloads/popout', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no')
+                      }
+                    }}
+                    className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md border border-white/20 transition-all flex items-center gap-2 group"
+                    title="Abrir em Nova Janela (Modo Foco)"
+                  >
+                    <span className="hidden md:inline text-xs font-bold uppercase tracking-widest group-hover:text-white">Modo Foco</span>
+                    <ExternalLink className="w-4 h-4" />
+                  </button>
+                )}
                 <button
-                  onClick={() => {
-                    if (typeof window !== 'undefined') {
-                      window.open('/client/downloads/popout', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no')
-                    }
-                  }}
-                  className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md border border-white/20 transition-all flex items-center gap-2 group"
-                  title="Abrir em Nova Janela (Modo Foco)"
+                  onClick={() => fetchFiles()}
+                  disabled={isLoading}
+                  title="Atualizar lista"
+                  className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md border border-white/20 transition-all flex items-center justify-center disabled:opacity-50 group active:scale-95 duration-200"
                 >
-                  <span className="hidden md:inline text-xs font-bold uppercase tracking-widest group-hover:text-white">Modo Foco</span>
-                  <ExternalLink className="w-4 h-4" />
+                  <RefreshCw className={`w-4 h-4 transition-transform duration-500 ease-out ${isLoading ? 'animate-spin' : 'group-hover:rotate-180'}`} />
                 </button>
-              )}
-              <button
-                onClick={() => fetchFiles()}
-                disabled={isLoading}
-                title="Atualizar lista"
-                className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md border border-white/20 transition-all flex items-center justify-center disabled:opacity-50 group active:scale-95 duration-200"
-              >
-                <RefreshCw className={`w-4 h-4 transition-transform duration-500 ease-out ${isLoading ? 'animate-spin' : 'group-hover:rotate-180'}`} />
-              </button>
+              </div>
             </div>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-2">Central de Downloads</h2>
+            <p className="text-indigo-100 text-sm md:text-base leading-relaxed max-w-2xl">
+              Baixe aqui o CLI (Windows/Linux), Manuais em PDF e Templates JSON.
+            </p>
           </div>
-          <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-2">Central de Downloads</h2>
-          <p className="text-indigo-100 text-sm md:text-base leading-relaxed max-w-2xl">
-            Baixe aqui o CLI (Windows/Linux), Manuais em PDF e Templates JSON.
-          </p>
         </div>
-      </div>
+
+        {releaseNotesList.length > 0 && localVersion && (
+          (() => {
+            const installed = localVersion.replace('IDE Engine v', '').trim()
+            const latest = releaseNotesList[0].version.replace('v', '')
+            const isOutdated = installed !== latest && installed !== 'Erro:' && !localVersion.includes('Erro')
+            
+            if (isOutdated) {
+              return (
+                <div className="relative flex items-center justify-center mb-10 z-10">
+                  <button 
+                    onClick={async () => {
+                      try {
+                        setIsUpdating(true)
+                        const { check } = await import('@tauri-apps/plugin-updater')
+                        const update = await check()
+                        if (update) {
+                          await update.downloadAndInstall()
+                        }
+                      } catch (e) {
+                        console.error('Update failed', e)
+                      } finally {
+                        setIsUpdating(false)
+                      }
+                    }}
+                    disabled={isUpdating}
+                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-full shadow-lg shadow-indigo-500/25 transition-all flex items-center gap-2"
+                  >
+                    {isUpdating ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Atualizando...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        Atualizar para a versão {latest}
+                      </>
+                    )}
+                  </button>
+                </div>
+              )
+            }
+            return null
+          })()
+        )}
 
       {/* Tabs â€” hide Utilitários for dev-only users */}
       <div className="flex border-b border-neutral-200 dark:border-neutral-800 mb-4">

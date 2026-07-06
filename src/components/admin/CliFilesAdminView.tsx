@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { IdeUpdaterButton } from '@/components/runtime/IdeUpdaterButton'
@@ -11,6 +11,10 @@ export function CliFilesAdminView() {
   const [isLoading, setIsLoading] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [showOlderReleases, setShowOlderReleases] = useState(false)
+  const [localVersion, setLocalVersion] = useState<string>('')
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [releaseNotesList, setReleaseNotesList] = useState<any[]>([])
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, bucketPath: string, name: string, category: string } | null>(null)
 
   // Filter state
@@ -46,6 +50,29 @@ export function CliFilesAdminView() {
 
   useEffect(() => {
     fetchFiles()
+    
+    // Fetch release notes and local version for Auto Updater
+    fetch('/api/releases')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setReleaseNotesList(data)
+      })
+
+    const checkVersion = async () => {
+      const { isTauri } = await import('@tauri-apps/api/core')
+      if (!isTauri()) {
+        setLocalVersion('Web App Edition')
+        return
+      }
+      try {
+        const { getVersion } = await import('@tauri-apps/api/app')
+        const v = await getVersion()
+        setLocalVersion(`IDE Engine v${v}`)
+      } catch (e: any) {
+        setLocalVersion(`Erro: ${e.message || String(e)}`)
+      }
+    }
+    checkVersion()
   }, [])
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
@@ -161,8 +188,55 @@ export function CliFilesAdminView() {
   const filteredFiles = files.filter(f => filter === 'all' || f.category === filter)
 
   return (
-    <div className="space-y-6 relative">
-      <IdeUpdaterButton />
+    <div className="flex flex-col h-full bg-neutral-50 dark:bg-black p-8 pt-10">
+      <div className="max-w-5xl mx-auto w-full space-y-6">
+
+        {releaseNotesList.length > 0 && localVersion && (
+          (() => {
+            const installed = localVersion.replace('IDE Engine v', '').trim()
+            const latest = releaseNotesList[0].version.replace('v', '')
+            const isOutdated = installed !== latest && installed !== 'Erro:' && !localVersion.includes('Erro')
+            
+            if (isOutdated) {
+              return (
+                <div className="relative flex items-center justify-center mb-10 z-10">
+                  <button 
+                    onClick={async () => {
+                      try {
+                        setIsUpdating(true)
+                        const { check } = await import('@tauri-apps/plugin-updater')
+                        const update = await check()
+                        if (update) {
+                          await update.downloadAndInstall()
+                        }
+                      } catch (e) {
+                        console.error('Update failed', e)
+                      } finally {
+                        setIsUpdating(false)
+                      }
+                    }}
+                    disabled={isUpdating}
+                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-full shadow-lg shadow-indigo-500/25 transition-all flex items-center gap-2"
+                  >
+                    {isUpdating ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Atualizando...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        Atualizar para a versão {latest}
+                      </>
+                    )}
+                  </button>
+                </div>
+              )
+            }
+            return null
+          })()
+        )}
+
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 shadow-sm gap-4">
         <div>
           <h2 className="text-xl font-black text-neutral-900 dark:text-white">IDEs, Arquivos CLI & Manuais</h2>
