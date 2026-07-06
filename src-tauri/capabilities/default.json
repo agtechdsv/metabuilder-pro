@@ -19,6 +19,7 @@
     "core:default",
     "core:app:default",
     "core:app:allow-version",
+    "core:path:default",
     "shell:default",
     "deep-link:default",
     "fs:default",
