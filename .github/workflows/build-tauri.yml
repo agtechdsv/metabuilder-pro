@@ -153,30 +153,38 @@ jobs:
             # Sign the MSI using tauri signer
             npx tauri signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" "$MSI_PATH"
             SIG_FILE="${MSI_PATH}.sig"
-            SIG_CONTENT=$(cat "$SIG_FILE")
             
-            # Get file size
-            FILE_SIZE=$(stat -c%s "$MSI_PATH" 2>/dev/null || stat -f%z "$MSI_PATH")
-            
-            # Build public download URL (will be rewritten to Supabase by upload-release.js)
+            # Build public download URL - FIXED: quote "$MSI_PATH" to handle spaces in filename
+            MSI_BASENAME=$(basename "$MSI_PATH")
             GITHUB_REPO="$GITHUB_REPOSITORY"
-            DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v${VERSION}/$(basename $MSI_PATH)"
+            DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v${VERSION}/${MSI_BASENAME}"
             
-            # Generate latest.json
-            cat > src-tauri/target/latest.json <<EOF
-          {
-            "version": "$VERSION",
-            "notes": "${{ github.event.inputs.release_notes }}",
-            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "platforms": {
-              "windows-x86_64": {
-                "signature": "$SIG_CONTENT",
-                "url": "$DOWNLOAD_URL"
-              }
-            }
-          }
-          EOF
-            echo "[INFO] Generated latest.json at src-tauri/target/latest.json"
+            echo "[INFO] MSI basename: $MSI_BASENAME"
+            echo "[INFO] Download URL: $DOWNLOAD_URL"
+            
+            # Generate latest.json using python3 to safely handle special chars in signature
+            SIG_FILE_PATH="$SIG_FILE" DOWNLOAD_URL="$DOWNLOAD_URL" python3 - <<'PYEOF'
+import json, os
+sig_file = os.environ['SIG_FILE_PATH']
+version = os.environ['VERSION']
+download_url = os.environ['DOWNLOAD_URL']
+with open(sig_file) as f:
+    signature = f.read().strip()
+data = {
+  'version': version,
+  'notes': '',
+  'pub_date': '',
+  'platforms': {
+    'windows-x86_64': {
+      'signature': signature,
+      'url': download_url
+    }
+  }
+}
+with open('src-tauri/target/latest.json', 'w') as f:
+    json.dump(data, f, indent=2)
+print('[INFO] Generated latest.json successfully')
+PYEOF
           else
             echo "[INFO] Updater JSON already present in artifacts, skipping manual generation."
           fi
