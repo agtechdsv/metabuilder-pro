@@ -116,7 +116,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
       return
     }
     const signedUrl = data.signedUrl
-    const realFileName = file.file_path?.split('/').pop() || 'download'
+    const realFileName = file.bucket_path?.split('/').pop() || file.file_path?.split('/').pop() || 'download.msi'
     const labelName = (file.name || 'download').replace(/[^a-zA-Z0-9._\- ()]/g, '_')
 
     // â”€â”€ Tauri IDE path: download with progress â”€â”€
@@ -205,13 +205,18 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
     try {
       if (fileFullPath) {
         const { revealItemInDir } = await import('@tauri-apps/plugin-opener')
-        await revealItemInDir([fileFullPath])
+        await revealItemInDir(fileFullPath)
       } else {
         const { openPath } = await import('@tauri-apps/plugin-opener')
         await openPath(dir)
       }
     } catch (e) {
       console.error('Não foi possível abrir o explorador:', e)
+      // fallback: tenta abrir apenas a pasta
+      try {
+        const { openPath } = await import('@tauri-apps/plugin-opener')
+        await openPath(dir)
+      } catch {}
     }
   }
 

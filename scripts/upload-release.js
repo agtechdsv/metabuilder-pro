@@ -47,14 +47,30 @@ async function main() {
     const jsonFiles = findFiles(targetDir, '.json');
     
     let updaterJson = null;
-    for (const f of jsonFiles) {
+    
+    // First: check if we have the manually generated latest.json
+    const manualLatestJson = path.join(targetDir, 'latest.json');
+    if (fs.existsSync(manualLatestJson)) {
       try {
-        const content = JSON.parse(fs.readFileSync(f, 'utf8'));
+        const content = JSON.parse(fs.readFileSync(manualLatestJson, 'utf8'));
         if (content.version && content.platforms) {
-          updaterJson = f;
-          break;
+          updaterJson = manualLatestJson;
+          console.log('[FIX] Found manually generated latest.json');
         }
       } catch(e) {}
+    }
+    
+    // Fallback: scan all json files for version+platforms signature
+    if (!updaterJson) {
+      for (const f of jsonFiles) {
+        try {
+          const content = JSON.parse(fs.readFileSync(f, 'utf8'));
+          if (content.version && content.platforms) {
+            updaterJson = f;
+            break;
+          }
+        } catch(e) {}
+      }
     }
     
     if (updaterJson && !artifactPaths.includes(updaterJson)) {

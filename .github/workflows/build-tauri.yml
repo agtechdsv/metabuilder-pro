@@ -125,6 +125,62 @@ jobs:
           includeUpdaterJson: true
           args: ${{ matrix.args }}
 
+      - name: Generate latest.json if missing
+        if: matrix.os == 'windows'
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_PRIVATE_KEY_PASSWORD }}
+          VERSION: ${{ steps.tauri.outputs.appVersion }}
+        run: |
+          echo "[INFO] Checking for updater JSON in artifacts..."
+          ARTIFACT_PATHS='${{ steps.tauri.outputs.artifactPaths }}'
+          echo "[INFO] Artifacts: $ARTIFACT_PATHS"
+          
+          # Check if a .json file exists in artifacts
+          HAS_JSON=$(echo "$ARTIFACT_PATHS" | python3 -c "import sys,json; paths=json.load(sys.stdin); print(any(p.endswith('.json') for p in paths))" 2>/dev/null || echo "False")
+          
+          if [ "$HAS_JSON" != "True" ]; then
+            echo "[INFO] No updater JSON found - generating manually with tauri signer..."
+            # Find the MSI file
+            MSI_PATH=$(find src-tauri/target -name '*.msi' | head -1)
+            if [ -z "$MSI_PATH" ]; then
+              echo "[ERROR] No MSI file found!"
+              exit 1
+            fi
+            echo "[INFO] Found MSI: $MSI_PATH"
+            
+            # Sign the MSI using tauri signer
+            npx tauri signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" "$MSI_PATH"
+            SIG_FILE="${MSI_PATH}.sig"
+            SIG_CONTENT=$(cat "$SIG_FILE")
+            
+            # Get file size
+            FILE_SIZE=$(stat -c%s "$MSI_PATH" 2>/dev/null || stat -f%z "$MSI_PATH")
+            
+            # Build public download URL (will be rewritten to Supabase by upload-release.js)
+            GITHUB_REPO="$GITHUB_REPOSITORY"
+            DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v${VERSION}/$(basename $MSI_PATH)"
+            
+            # Generate latest.json
+            cat > src-tauri/target/latest.json <<EOF
+          {
+            "version": "$VERSION",
+            "notes": "${{ github.event.inputs.release_notes }}",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "windows-x86_64": {
+                "signature": "$SIG_CONTENT",
+                "url": "$DOWNLOAD_URL"
+              }
+            }
+          }
+          EOF
+            echo "[INFO] Generated latest.json at src-tauri/target/latest.json"
+          else
+            echo "[INFO] Updater JSON already present in artifacts, skipping manual generation."
+          fi
+
       - name: Upload Releases to Supabase
         run: |
           npm install ws
