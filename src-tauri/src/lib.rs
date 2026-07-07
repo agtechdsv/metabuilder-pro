@@ -123,8 +123,11 @@ pub fn run() {
 
             // Grava o HTML da splash em um arquivo temporário e carrega via file://
             // WebView2 (Windows) bloqueia data: URIs mas aceita file:// sem problemas.
-            let splash_html = include_str!("../splash.html");
-            let splash_path = std::env::temp_dir().join("metabuilder_splash.html");
+            let splash_html_raw = include_str!("../splash.html");
+            let version = app.package_info().version.to_string();
+            let splash_html = splash_html_raw.replace("<span id=\"version\">v1.0</span>", &format!("<span id=\"version\">v{}</span>", version));
+            
+            let splash_path = std::env::temp_dir().join(format!("metabuilder_splash_{}.html", version));
             std::fs::write(&splash_path, splash_html)
                 .expect("Falha ao escrever splash.html temporário");
 

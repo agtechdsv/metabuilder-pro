@@ -182,14 +182,7 @@
     const status = document.getElementById('status')
     const verEl  = document.getElementById('version')
 
-    // Busca a versão real via Tauri
-    async function fetchVersion() {
-      try {
-        const { getVersion } = await import('https://unpkg.com/@tauri-apps/api@2/core')
-        const v = await getVersion()
-        verEl.textContent = 'v' + v
-      } catch (e) { /* mantém v1.0 */ }
-    }
+
 
     // Progresso sincronizado: começa imediatamente quando a página carrega
     let step = 0
@@ -207,7 +200,6 @@
 
     // Inicia o progresso assim que a página renderiza, sem delay artificial
     requestAnimationFrame(() => setTimeout(tick, 100))
-    fetchVersion()
 
     // Escuta evento do Rust para acelerar/forçar o fechamento
     if (window.__TAURI_INTERNALS__) {
