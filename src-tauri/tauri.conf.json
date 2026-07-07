@@ -21,20 +21,6 @@
         "maximized": true,
         "visible": false,
         "backgroundColor": "#F8F7FF"
-      },
-      {
-        "label": "splashscreen",
-        "title": "Iniciando MetaBuilder PRO...",
-        "url": "/splash",
-        "width": 600,
-        "height": 380,
-        "resizable": false,
-        "fullscreen": false,
-        "transparent": true,
-        "decorations": false,
-        "alwaysOnTop": true,
-        "center": true,
-        "visible": true
       }
     ],
     "macOSPrivateApi": true,

@@ -4,6 +4,7 @@ use std::sync::Mutex;
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandChild;
 use tauri_plugin_deep_link::DeepLinkExt;
+use base64::Engine;
 
 struct CliState {
     child: Mutex<Option<CommandChild>>,
@@ -120,10 +121,38 @@ pub fn run() {
                 )?;
             }
 
-            // Splash Screen → Main Window transition (handled in Rust, no frontend permissions needed)
+            // Cria a splash screen com HTML embutido diretamente no binário.
+            // Desta forma ela abre INSTANTANEAMENTE sem depender de rede.
+            let splash_html = include_str!("../splash.html");
+            let splash_b64 = base64::prelude::BASE64_STANDARD.encode(splash_html);
+            let splash_url = format!("data:text/html;base64,{}", splash_b64);
+            
+            let splash_window = tauri::WebviewWindowBuilder::new(
+                app,
+                "splashscreen",
+                tauri::WebviewUrl::External(tauri::Url::parse(&splash_url).unwrap()),
+            )
+            .title("MetaBuilder PRO")
+            .inner_size(600.0, 380.0)
+            .resizable(false)
+            .decorations(false)
+            .transparent(true)
+            .always_on_top(true)
+            .center()
+            .visible(true)
+            .build()?;
+
+            // A janela principal fica escondida durante a splash
+            let _ = splash_window; // mantém ownership até o spawn
+
+            // Transição: aguarda animação completa e mostra a janela principal
             let app_handle = app.handle().clone();
             std::thread::spawn(move || {
-                std::thread::sleep(std::time::Duration::from_millis(2800));
+                // Aguarda a animação de progresso rodar completamente
+                // 6 steps × ~450ms + fadeIn 350ms + margem = ~3.5s
+                std::thread::sleep(std::time::Duration::from_millis(3500));
+
+                // Fecha a splash e mostra a janela principal
                 if let Some(splash) = app_handle.get_webview_window("splashscreen") {
                     let _ = splash.close();
                 }
