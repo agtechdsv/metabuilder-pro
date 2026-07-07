@@ -51,12 +51,19 @@ export function IdeUpdaterButton() {
               setIsUpdating(true)
               const { check } = await import('@tauri-apps/plugin-updater')
               const update = await check()
-              if (update) {
-                await update.downloadAndInstall()
+              if (update?.available) {
+                await update.downloadAndInstall((event: any) => {
+                  if (event.event === 'Finished') {
+                    // done
+                  }
+                })
+              } else {
+                alert('Não foi possível iniciar a atualização automaticamente. Tente via Central de Downloads.')
+                setIsUpdating(false)
               }
-            } catch (e) {
+            } catch (e: any) {
               console.error('Update failed', e)
-            } finally {
+              alert(`Erro na atualização: ${e?.message || String(e)}`)
               setIsUpdating(false)
             }
           }}

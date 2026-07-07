@@ -163,7 +163,7 @@ jobs:
             echo "[INFO] Download URL: $DOWNLOAD_URL"
             
             # Generate latest.json using python3 to safely handle special chars in signature
-            SIG_FILE_PATH="$SIG_FILE" DOWNLOAD_URL="$DOWNLOAD_URL" python3 -c "import os, json; data={'version': os.environ['VERSION'], 'notes': '', 'pub_date': '', 'platforms': {'windows-x86_64': {'signature': open(os.environ['SIG_FILE_PATH']).read().strip(), 'url': os.environ['DOWNLOAD_URL']}}}; open('src-tauri/target/latest.json', 'w').write(json.dumps(data, indent=2)); print('[INFO] Generated latest.json successfully')"
+            SIG_FILE_PATH="$SIG_FILE" DOWNLOAD_URL="$DOWNLOAD_URL" python3 -c "import os, json, datetime; data={'version': os.environ['VERSION'], 'notes': '', 'pub_date': datetime.datetime.utcnow().isoformat() + 'Z', 'platforms': {'windows-x86_64': {'signature': open(os.environ['SIG_FILE_PATH']).read().strip(), 'url': os.environ['DOWNLOAD_URL']}}}; open('src-tauri/target/latest.json', 'w').write(json.dumps(data, indent=2)); print('[INFO] Generated latest.json successfully')"
           else
             echo "[INFO] Updater JSON already present in artifacts, skipping manual generation."
           fi
