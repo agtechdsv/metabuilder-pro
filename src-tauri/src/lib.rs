@@ -3,8 +3,8 @@ use tauri_plugin_opener::OpenerExt;
 use std::sync::Mutex;
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandChild;
+#[cfg(all(debug_assertions, windows))]
 use tauri_plugin_deep_link::DeepLinkExt;
-use base64::Engine;
 
 struct CliState {
     child: Mutex<Option<CommandChild>>,
@@ -121,16 +121,22 @@ pub fn run() {
                 )?;
             }
 
-            // Cria a splash screen com HTML embutido diretamente no binário.
-            // Desta forma ela abre INSTANTANEAMENTE sem depender de rede.
+            // Grava o HTML da splash em um arquivo temporário e carrega via file://
+            // WebView2 (Windows) bloqueia data: URIs mas aceita file:// sem problemas.
             let splash_html = include_str!("../splash.html");
-            let splash_b64 = base64::prelude::BASE64_STANDARD.encode(splash_html);
-            let splash_url = format!("data:text/html;base64,{}", splash_b64);
-            
-            let splash_window = tauri::WebviewWindowBuilder::new(
+            let splash_path = std::env::temp_dir().join("metabuilder_splash.html");
+            std::fs::write(&splash_path, splash_html)
+                .expect("Falha ao escrever splash.html temporário");
+
+            // Converte o caminho para URL file:// compatível com qualquer OS
+            let splash_url_str = format!("file:///{}", splash_path.to_string_lossy().replace('\\', "/"));
+            let splash_url = tauri::Url::parse(&splash_url_str)
+                .expect("URL da splash inválida");
+
+            let _splash_window = tauri::WebviewWindowBuilder::new(
                 app,
                 "splashscreen",
-                tauri::WebviewUrl::External(tauri::Url::parse(&splash_url).unwrap()),
+                tauri::WebviewUrl::External(splash_url),
             )
             .title("MetaBuilder PRO")
             .inner_size(600.0, 380.0)
@@ -141,9 +147,6 @@ pub fn run() {
             .center()
             .visible(true)
             .build()?;
-
-            // A janela principal fica escondida durante a splash
-            let _ = splash_window; // mantém ownership até o spawn
 
             // Transição: aguarda animação completa e mostra a janela principal
             let app_handle = app.handle().clone();
@@ -160,6 +163,10 @@ pub fn run() {
                     let _ = main.show();
                     let _ = main.set_focus();
                 }
+
+                // Limpa o arquivo temporário da splash
+                let splash_tmp = std::env::temp_dir().join("metabuilder_splash.html");
+                let _ = std::fs::remove_file(splash_tmp);
             });
 
             Ok(())
