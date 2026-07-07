@@ -162,16 +162,18 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
         const { writeFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
 
         const dir = await downloadDir()
-        const fullPath = `${dir}${realFileName}`
+        // Garante separador de pasta correto no Windows (pode vir com ou sem barra)
+        const separator = dir.endsWith('/') || dir.endsWith('\\') ? '' : '/'
+        const fullPath = `${dir}${separator}${realFileName}`
 
         console.log(`[Download] Saving to: ${fullPath}`)
         console.log(`[Download] File size: ${merged.length} bytes`)
 
         await writeFile(realFileName, merged, { baseDir: BaseDirectory.Download })
 
-        // Detect if it's an installer that can run on this OS
-        const isWindows = navigator.userAgent.toLowerCase().includes('win')
-        const canRun = isWindows && file.category === 'ide-win'
+        // Arquivo .msi no Windows sempre pode ser executado
+        const canRun = file.bucket_path?.toLowerCase().endsWith('.msi') || 
+                       realFileName?.toLowerCase().endsWith('.msi')
 
         setIdeDownloadModal({
           open: true,
@@ -399,12 +401,21 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                         setIsUpdating(true)
                         const { check } = await import('@tauri-apps/plugin-updater')
                         const update = await check()
-                        if (update) {
-                          await update.downloadAndInstall()
+                        if (update?.available) {
+                          await update.downloadAndInstall((event: any) => {
+                            // Progresso opcional — mantém o spinner visível
+                            if (event.event === 'Finished') {
+                              // Tauri reinicia automaticamente após instalar
+                            }
+                          })
+                        } else {
+                          // Nenhuma atualização encontrada pelo updater nativo — tenta abrir a Central de Downloads
+                          toast('Não foi possível atualizar automaticamente. Baixe a nova versão pela Central de Downloads.', 'error')
+                          setIsUpdating(false)
                         }
-                      } catch (e) {
+                      } catch (e: any) {
                         console.error('Update failed', e)
-                      } finally {
+                        toast(`Erro na atualização: ${e?.message || String(e)}`, 'error')
                         setIsUpdating(false)
                       }
                     }}
