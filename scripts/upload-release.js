@@ -144,6 +144,17 @@ async function main() {
             const originalFilename = platformData.url.split('/').pop();
             // Troca pela URL do seu Supabase
             platformData.url = `${supabaseBaseUrl}/${originalFilename}`;
+            
+            // Corrige a assinatura se ela estiver encodada em base64 (tauri-action@v0 faz isso)
+            // Tauri v2 exige a string crua do arquivo .sig (com quebras de linha e "untrusted comment:")
+            if (platformData.signature && !platformData.signature.includes('untrusted comment:')) {
+              try {
+                platformData.signature = Buffer.from(platformData.signature, 'base64').toString('utf-8');
+                console.log(`[FIX] Decoded base64 signature for platform ${platform}`);
+              } catch (e) {
+                console.error(`Erro ao decodificar assinatura para ${platform}:`, e);
+              }
+            }
           }
         }
         
