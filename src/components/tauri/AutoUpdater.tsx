@@ -60,8 +60,9 @@ export function AutoUpdater() {
             break
         }
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro durante a atualização:', error)
+      alert(`Erro na atualização: ${error?.message || String(error)}`)
       setIsDownloading(false)
     }
   }
