@@ -16,14 +16,11 @@ export function AutoUpdater() {
   const [progress, setProgress] = useState({ downloaded: 0, total: 0 })
   const [isOpen, setIsOpen] = useState(false)
   
-  // Rastreamento para exibir 1 vez no login e 1 vez após logado
-  const [shownPreLogin, setShownPreLogin] = useState(false)
   const [shownPostLogin, setShownPostLogin] = useState(false)
 
   // Verifica qual a fase atual
   const isPreLogin = pathname === '/' || pathname.startsWith('/login')
   const isSplash = pathname === '/splash'
-  // Consideramos 'pós-login' qualquer tela que não seja splash nem pré-login (e que não seja fluxo de MFA, pois o MFA fica em /login/mfa)
   const isPostLogin = !isPreLogin && !isSplash
 
   useEffect(() => {
@@ -48,21 +45,18 @@ export function AutoUpdater() {
 
   // Efeito que decide se o modal deve abrir baseado na navegação
   useEffect(() => {
-    if (!updateInfo || isSplash) return
+    if (!updateInfo) return
 
-    if (isPreLogin) {
+    if (isPreLogin || isSplash) {
       setShownPostLogin(false) // reseta se o usuario deslogar
-      if (!shownPreLogin) {
-        setIsOpen(true)
-        setShownPreLogin(true)
-      }
+      setIsOpen(false) // Fecha o modal se o usuário for deslogado
     } else if (isPostLogin) {
       if (!shownPostLogin) {
         setIsOpen(true)
         setShownPostLogin(true)
       }
     }
-  }, [pathname, updateInfo, isPreLogin, isPostLogin, isSplash, shownPreLogin, shownPostLogin])
+  }, [pathname, updateInfo, isPreLogin, isPostLogin, isSplash, shownPostLogin])
 
   const handleUpdate = async () => {
     if (!updateInfo) return
