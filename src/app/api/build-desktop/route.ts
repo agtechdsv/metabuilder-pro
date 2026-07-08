@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     }
 
     // 4. Configurações do GitHub Actions
-    const token = process.env.GITHUB_PERSONAL_ACCESS_TOKEN
+    const token = process.env.GITHUB_PAT || process.env.GITHUB_PERSONAL_ACCESS_TOKEN
     const owner = process.env.GITHUB_DESKTOP_TEMPLATE_OWNER || 'agtechdsv'
     const repo = process.env.GITHUB_DESKTOP_TEMPLATE_REPO || 'metabuilder-desktop-template'
 
