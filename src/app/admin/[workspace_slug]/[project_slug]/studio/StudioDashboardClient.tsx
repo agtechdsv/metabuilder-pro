@@ -45,8 +45,10 @@ import {
   Map as MapIcon,
   PieChart,
   Image as ImageIcon,
-  ScrollText
+  ScrollText,
+  Monitor
 } from 'lucide-react'
+import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { HeaderActions } from '@/components/layout/HeaderActions'
@@ -231,6 +233,7 @@ export function StudioDashboardClient({
   }
 
   const [viewMode, setViewMode] = useState<'list' | 'builder' | 'navigation' | 'enumerations' | 'metadata' | 'relations' | 'security'>('list')
+  const [showDesktopModal, setShowDesktopModal] = useState(false)
   const [viewToEdit, setViewToEdit] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [viewToDelete, setViewToDelete] = useState<any>(null)
@@ -687,6 +690,12 @@ export function StudioDashboardClient({
 
             {canCreate && (
               <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setShowDesktopModal(true)}
+                  className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-neutral-900/5 active:scale-95"
+                >
+                  <Monitor className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> Gerar App Desktop
+                </button>
                 <button
                   onClick={async () => {
                     toast('Iniciando orquestração da arquitetura do código...', 'info')
@@ -1554,6 +1563,13 @@ export function StudioDashboardClient({
           </div>
         </Modal>
 
+        <DesktopAppGeneratorModal
+          isOpen={showDesktopModal}
+          onClose={() => setShowDesktopModal(false)}
+          contextType="project"
+          contextId={project.id}
+          defaultName={project.name}
+        />
       </main>
     </>
   )

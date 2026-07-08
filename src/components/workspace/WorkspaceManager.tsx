@@ -20,9 +20,11 @@ import {
   Power,
   PowerOff,
   RefreshCw,
-  ArrowUpRight
+  ArrowUpRight,
+  Monitor
 } from 'lucide-react'
 import Link from 'next/link'
+import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
@@ -90,6 +92,8 @@ export function WorkspaceManager({
   const [isTeamDrawerOpen, setIsTeamDrawerOpen] = useState(false)
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [showDesktopModal, setShowDesktopModal] = useState(false)
+  const [selectedDesktopWorkspace, setSelectedDesktopWorkspace] = useState<Workspace | null>(null)
 
   const supabase = createClient()
   const { toast } = useToast()
@@ -328,15 +332,28 @@ export function WorkspaceManager({
                     {!isNavigating && (workspace.can_edit || workspace.can_delete || workspace.theme_config?.portal_enabled) && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         {workspace.theme_config?.portal_enabled && (
-                          <Link
-                            href={`/${workspace.slug}`}
-                            target="_blank"
-                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
-                            title="Acessar Portal"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ArrowUpRight className="w-4 h-4" />
-                          </Link>
+                          <>
+                            <Link
+                              href={`/${workspace.slug}`}
+                              target="_blank"
+                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
+                              title="Acessar Portal"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ArrowUpRight className="w-4 h-4" />
+                            </Link>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDesktopWorkspace(workspace);
+                                setShowDesktopModal(true);
+                              }}
+                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-emerald-500 hover:text-emerald-400"
+                              title="Gerar App Desktop Nativo"
+                            >
+                              <Monitor className="w-4 h-4" />
+                            </button>
+                          </>
                         )}
                         {workspace.can_edit && (
                           <button
@@ -511,6 +528,19 @@ export function WorkspaceManager({
         </Modal>
       )}
 
+      {/* Modal Desktop App */}
+      {selectedDesktopWorkspace && (
+        <DesktopAppGeneratorModal
+          isOpen={showDesktopModal}
+          onClose={() => {
+            setShowDesktopModal(false)
+            setSelectedDesktopWorkspace(null)
+          }}
+          contextType="workspace"
+          contextId={selectedDesktopWorkspace.id}
+          defaultName={selectedDesktopWorkspace.name}
+        />
+      )}
     </div>
   )
 }
