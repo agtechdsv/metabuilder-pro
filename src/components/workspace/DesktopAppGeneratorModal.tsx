@@ -196,13 +196,13 @@ export function DesktopAppGeneratorModal({
 
                       <div>
                         <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2 flex items-center gap-1">
-                          <Link2 className="w-3 h-3" /> URL do Tunnel / Backend (Opcional)
+                          <Link2 className="w-3 h-3" /> URL da Aplicação Web (Para Modo Wrapper)
                         </label>
                         <input
                           type="text"
                           value={tunnelUrl}
                           onChange={e => setTunnelUrl(e.target.value)}
-                          placeholder="https://meu-tunnel.ngrok.io"
+                          placeholder="https://www.metabuilderpro.com/agtechtrade/crm"
                           className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                         />
                         <p className="text-[10px] text-neutral-500 mt-1">Endereço do backend central caso este app seja um Client.</p>
