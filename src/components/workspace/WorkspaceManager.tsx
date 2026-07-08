@@ -539,6 +539,8 @@ export function WorkspaceManager({
           contextType="workspace"
           contextId={selectedDesktopWorkspace.id}
           defaultName={selectedDesktopWorkspace.name}
+          defaultDescription="Portal de Aplicações do Workspace"
+          defaultTunnelUrl={typeof window !== 'undefined' ? `${window.location.origin}/${selectedDesktopWorkspace.slug}` : ''}
         />
       )}
     </div>

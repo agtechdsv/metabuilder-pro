@@ -9,6 +9,7 @@ interface DesktopAppGeneratorModalProps {
   contextId: string
   defaultName?: string
   defaultDescription?: string
+  defaultTunnelUrl?: string
 }
 
 export function DesktopAppGeneratorModal({
@@ -17,13 +18,14 @@ export function DesktopAppGeneratorModal({
   contextType,
   contextId,
   defaultName,
-  defaultDescription
+  defaultDescription,
+  defaultTunnelUrl
 }: DesktopAppGeneratorModalProps) {
   const [appName, setAppName] = useState(defaultName || '')
   const [appDescription, setAppDescription] = useState(defaultDescription || '')
   const [iconBase64, setIconBase64] = useState<string | null>(null)
   const [dbConnectionString, setDbConnectionString] = useState('')
-  const [tunnelUrl, setTunnelUrl] = useState('')
+  const [tunnelUrl, setTunnelUrl] = useState(defaultTunnelUrl || '')
 
   const [isGenerating, setIsGenerating] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
