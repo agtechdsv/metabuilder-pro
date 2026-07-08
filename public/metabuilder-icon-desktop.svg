@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- O famoso gradiente Neon do MetaBuilder -->
+    <linearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9333ea" /> <!-- Purple 600 -->
+      <stop offset="50%" stop-color="#4f46e5" /> <!-- Indigo 600 -->
+      <stop offset="100%" stop-color="#2563eb" /> <!-- Blue 600 -->
+    </linearGradient>
+  </defs>
+  
+  <rect width="512" height="512" fill="transparent"/>
+
+  <g transform="translate(256, 256) scale(1.1) translate(-256, -256)">
+    <!-- Círculo Superior Esquerdo (Interligado) -->
+    <path d="M 256 160 A 96 96 0 1 0 160 256 A 96 96 0 0 0 256 160 Z" fill="none" stroke="url(#neonGradient)" stroke-width="48" stroke-linecap="round" stroke-linejoin="round" />
+    
+    <!-- Círculo Inferior Direito (Interligado) -->
+    <path d="M 256 352 A 96 96 0 1 0 352 256 A 96 96 0 0 0 256 352 Z" fill="none" stroke="url(#neonGradient)" stroke-width="48" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Pontos de conexão do núcleo -->
+    <circle cx="160" cy="160" r="24" fill="url(#neonGradient)" />
+    <circle cx="352" cy="352" r="24" fill="url(#neonGradient)" />
+  </g>
+</svg>
