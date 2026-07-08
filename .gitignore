@@ -87,3 +87,4 @@ src-tauri/bin/cli*
 /logs2/
 /logs2.zip
 test-release.js
+test_minisign
