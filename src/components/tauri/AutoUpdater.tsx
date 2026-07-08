@@ -19,7 +19,7 @@ export function AutoUpdater() {
   const [shownPostLogin, setShownPostLogin] = useState(false)
 
   // Verifica qual a fase atual
-  const isPreLogin = pathname === '/' || pathname.startsWith('/login')
+  const isPreLogin = pathname === '/' || pathname.startsWith('/login') || pathname.startsWith('/auth')
   const isSplash = pathname === '/splash'
   const isPostLogin = !isPreLogin && !isSplash
 
