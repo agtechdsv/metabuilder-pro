@@ -5,6 +5,7 @@ import { LanguageSelector } from './LanguageSelector'
 import { UserMenu } from '@/components/auth/UserMenu'
 import { createClient } from '@/utils/supabase/client'
 import { useEffect, useState } from 'react'
+import { ReleaseNotes } from '@/components/tauri/ReleaseNotes'
 
 interface HeaderActionsProps {
   user?: any
@@ -44,6 +45,7 @@ export function HeaderActions({
   return (
     <div className="flex items-center gap-3 md:gap-4">
       <div className="flex items-center gap-2 pr-2 border-r border-neutral-200 dark:border-neutral-800">
+        <ReleaseNotes />
         {!hideTheme && <ThemeToggle />}
         <LanguageSelector />
       </div>
