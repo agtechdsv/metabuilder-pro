@@ -1,22 +1,33 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { check, Update } from '@tauri-apps/plugin-updater'
 import { getVersion } from '@tauri-apps/api/app'
 import { isTauri } from '@/utils/tauriUtils'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Download, Rocket, X, RefreshCw } from 'lucide-react'
+import { usePathname } from 'next/navigation'
 
 export function AutoUpdater() {
+  const pathname = usePathname()
   const [updateInfo, setUpdateInfo] = useState<Update | null>(null)
   const [currentVersion, setCurrentVersion] = useState('')
   const [isDownloading, setIsDownloading] = useState(false)
   const [progress, setProgress] = useState({ downloaded: 0, total: 0 })
   const [isOpen, setIsOpen] = useState(false)
+  
+  // Rastreamento para exibir 1 vez no login e 1 vez após logado
+  const [shownPreLogin, setShownPreLogin] = useState(false)
+  const [shownPostLogin, setShownPostLogin] = useState(false)
+
+  // Verifica qual a fase atual
+  const isPreLogin = pathname === '/' || pathname.startsWith('/login')
+  const isSplash = pathname === '/splash'
+  // Consideramos 'pós-login' qualquer tela que não seja splash nem pré-login (e que não seja fluxo de MFA, pois o MFA fica em /login/mfa)
+  const isPostLogin = !isPreLogin && !isSplash
 
   useEffect(() => {
     if (!isTauri()) return
-    if (window.location.pathname === '/splash') return
 
     const checkForUpdates = async () => {
       try {
@@ -26,16 +37,32 @@ export function AutoUpdater() {
         const update = await check()
         if (update && update.available) {
           setUpdateInfo(update)
-          setIsOpen(true)
         }
       } catch (error) {
         console.error('Erro ao buscar atualizações:', error)
       }
     }
 
-    // Delay the check slightly so it doesn't block initial render
     setTimeout(checkForUpdates, 3000)
   }, [])
+
+  // Efeito que decide se o modal deve abrir baseado na navegação
+  useEffect(() => {
+    if (!updateInfo || isSplash) return
+
+    if (isPreLogin) {
+      setShownPostLogin(false) // reseta se o usuario deslogar
+      if (!shownPreLogin) {
+        setIsOpen(true)
+        setShownPreLogin(true)
+      }
+    } else if (isPostLogin) {
+      if (!shownPostLogin) {
+        setIsOpen(true)
+        setShownPostLogin(true)
+      }
+    }
+  }, [pathname, updateInfo, isPreLogin, isPostLogin, isSplash, shownPreLogin, shownPostLogin])
 
   const handleUpdate = async () => {
     if (!updateInfo) return

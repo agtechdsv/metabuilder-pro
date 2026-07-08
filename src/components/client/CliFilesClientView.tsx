@@ -225,7 +225,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
   const handleRunInstaller = async (path: string) => {
     try {
       const { invoke } = await import('@tauri-apps/api/core')
-      await invoke('run_installer', { path })
+      await invoke('runinstaller', { path })
 
       // Aguarda 1.5 segundos para garantir que o instalador do Windows (msiexec) inicie em background
       await new Promise(resolve => setTimeout(resolve, 1500))

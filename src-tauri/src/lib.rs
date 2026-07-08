@@ -11,7 +11,7 @@ struct CliState {
 }
 
 #[command]
-fn start_cli(app: tauri::AppHandle, state: State<'_, CliState>, mode: Option<i32>, config_path: Option<String>) -> Result<String, String> {
+fn startcli(app: tauri::AppHandle, state: State<'_, CliState>, mode: Option<i32>, config_path: Option<String>) -> Result<String, String> {
     let mut child_guard = state.child.lock().unwrap();
     if child_guard.is_some() {
         return Ok("Já está rodando".to_string());
@@ -62,7 +62,7 @@ fn start_cli(app: tauri::AppHandle, state: State<'_, CliState>, mode: Option<i32
 }
 
 #[command]
-fn stop_cli(state: State<'_, CliState>) -> Result<String, String> {
+fn stopcli(state: State<'_, CliState>) -> Result<String, String> {
     let mut child_guard = state.child.lock().unwrap();
     if let Some(child) = child_guard.take() {
         let _ = child.kill();
@@ -72,7 +72,7 @@ fn stop_cli(state: State<'_, CliState>) -> Result<String, String> {
 }
 
 #[command]
-fn status_cli(state: State<'_, CliState>) -> Result<bool, String> {
+fn statuscli(state: State<'_, CliState>) -> Result<bool, String> {
     let child_guard = state.child.lock().unwrap();
     Ok(child_guard.is_some())
 }
@@ -80,7 +80,7 @@ fn status_cli(state: State<'_, CliState>) -> Result<bool, String> {
 /// Abre uma URL no navegador padrão do sistema.
 /// Executado do lado Rust para contornar restrições de ACL do plugin opener.
 #[command]
-fn open_browser(app: tauri::AppHandle, url: String) -> Result<(), String> {
+fn openbrowser(app: tauri::AppHandle, url: String) -> Result<(), String> {
     app.opener()
         .open_url(&url, None::<&str>)
         .map_err(|e| e.to_string())
@@ -88,7 +88,7 @@ fn open_browser(app: tauri::AppHandle, url: String) -> Result<(), String> {
 
 /// Executa um instalador MSI de forma nativa e independente.
 #[command]
-fn run_installer(path: String) -> Result<(), String> {
+fn runinstaller(path: String) -> Result<(), String> {
     std::process::Command::new("msiexec")
         .args(&["/i", &path])
         .spawn()
@@ -185,11 +185,11 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            start_cli,
-            stop_cli,
-            status_cli,
-            open_browser,
-            run_installer
+            startcli,
+            stopcli,
+            statuscli,
+            openbrowser,
+            runinstaller
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

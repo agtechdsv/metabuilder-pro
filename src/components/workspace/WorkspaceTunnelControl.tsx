@@ -17,7 +17,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
     try {
       if (isTauri()) {
         const { invoke } = await import('@tauri-apps/api/core');
-        const isRunning = await invoke('status_cli');
+        const isRunning = await invoke('statuscli');
         setTunnelStatus(isRunning ? 'running' : 'stopped');
         setTunnelPid(null);
         return;
@@ -55,14 +55,14 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
       if (isTauri()) {
         const { invoke } = await import('@tauri-apps/api/core');
         if (action === 'stop') {
-          await invoke('stop_cli');
+          await invoke('stopcli');
           toast('Processo parado com sucesso', 'success');
         } else {
           const { appLocalDataDir, join } = await import('@tauri-apps/api/path');
           const dir = await appLocalDataDir();
           const configPath = await join(dir, 'metabuilder.config.json');
           
-          await invoke('start_cli', { 
+          await invoke('startcli', { 
             mode: action === 'sync' ? 3 : (mode || 1), 
             configPath: configPath 
           });

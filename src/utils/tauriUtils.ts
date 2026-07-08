@@ -47,7 +47,7 @@ export const openExternalUrl = async (url: string) => {
   // Método 3: invoke direto (fallback para versões antigas)
   try {
     const { invoke } = await import('@tauri-apps/api/core');
-    await invoke('open_browser', { url });
+    await invoke('openbrowser', { url });
     return; // sucesso!
   } catch (invokeErr: any) {
     errors.push(`invoke:open_browser → ${invokeErr?.message || String(invokeErr)}`);

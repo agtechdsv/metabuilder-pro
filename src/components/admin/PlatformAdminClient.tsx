@@ -322,7 +322,7 @@ export default function PlatformAdminClient({
             transition={{ duration: 0.25 }}
             className="space-y-6"
           >
-            <ReleaseAdminView />
+            <ReleaseAdminView refreshTrigger={isRefreshing} />
           </motion.div>
         )}
 

@@ -6,7 +6,7 @@ import { Rocket, FileText, CheckCircle2, AlertCircle, Loader2, Terminal, GitComm
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 
-export function ReleaseAdminView() {
+export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: boolean }) {
   const { t } = useI18n()
 
   const [version, setVersion] = useState('')
@@ -47,10 +47,10 @@ export function ReleaseAdminView() {
   }
 
   useEffect(() => {
-    if (activeTab === 'history' && historyReleases.length === 0) {
+    if (activeTab === 'history') {
       fetchHistory()
     }
-  }, [activeTab])
+  }, [activeTab, refreshTrigger])
 
   const confirmDeleteRelease = async () => {
     if (!deleteConfirmTag) return
