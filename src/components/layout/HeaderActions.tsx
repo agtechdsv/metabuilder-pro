@@ -12,13 +12,15 @@ interface HeaderActionsProps {
   profile?: any
   hideUser?: boolean
   hideTheme?: boolean
+  hideReleaseNotes?: boolean
 }
 
 export function HeaderActions({ 
   user: initialUser, 
   profile: initialProfile, 
   hideUser = false,
-  hideTheme = false 
+  hideTheme = false,
+  hideReleaseNotes = false
 }: HeaderActionsProps) {
   const [user, setUser] = useState(initialUser)
   const [profile, setProfile] = useState(initialProfile)
@@ -45,7 +47,7 @@ export function HeaderActions({
   return (
     <div className="flex items-center gap-3 md:gap-4">
       <div className="flex items-center gap-2 pr-2 border-r border-neutral-200 dark:border-neutral-800">
-        <ReleaseNotes />
+        {!hideReleaseNotes && <ReleaseNotes />}
         {!hideTheme && <ThemeToggle />}
         <LanguageSelector />
       </div>

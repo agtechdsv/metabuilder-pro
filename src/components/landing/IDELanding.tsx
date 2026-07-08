@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { HeaderActions } from '@/components/layout/HeaderActions'
+import { ReleaseNotes } from '@/components/tauri/ReleaseNotes'
 import { LoginForm } from '@/components/auth/LoginForm'
-import { Zap, Code2, Info, X, FileText, Rocket, History, Download, ChevronDown, ChevronUp } from 'lucide-react'
+import { Zap, Code2 } from 'lucide-react'
 
 export function IDELanding({ user }: { user: any }) {
   const [localVersion, setLocalVersion] = useState<string | null>(null)
@@ -45,7 +46,7 @@ export function IDELanding({ user }: { user: any }) {
             MetaBuilder<span className="text-indigo-600 dark:text-indigo-500">PRO</span>
           </h1>
         </div>
-        <HeaderActions hideUser={true} />
+        <HeaderActions hideUser={true} hideReleaseNotes={true} />
       </header>
 
       {/* Main Content */}
@@ -66,6 +67,7 @@ export function IDELanding({ user }: { user: any }) {
                 </span>
                 {localVersion || 'Carregando...'}
               </div>
+              <ReleaseNotes variant="pill" />
             </div>
             <h2 className="text-4xl md:text-5xl font-black tracking-tight leading-tight mb-6">
               O futuro do <br />

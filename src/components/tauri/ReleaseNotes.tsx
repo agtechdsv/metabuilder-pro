@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { History, X, Download, ChevronDown, ChevronUp } from 'lucide-react'
 
-export function ReleaseNotes() {
+export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pill' }) {
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({})
   const [releaseNotesList, setReleaseNotesList] = useState<any[]>([])
@@ -56,9 +56,13 @@ export function ReleaseNotes() {
           setShowReleaseNotes(true)
         }}
         title="Ver Histórico de Atualizações"
-        className="flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-indigo-600 hover:text-white hover:bg-indigo-600 dark:hover:bg-indigo-600 transition-colors shadow-sm cursor-pointer group"
+        className={
+          variant === 'header'
+            ? "flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-indigo-600 hover:text-white hover:bg-indigo-600 dark:hover:bg-indigo-600 transition-colors shadow-sm cursor-pointer group"
+            : "p-1.5 rounded-full bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors shadow-sm cursor-pointer"
+        }
       >
-        <History className="w-5 h-5 group-hover:rotate-[-30deg] transition-transform" />
+        <History className={variant === 'header' ? "w-5 h-5 group-hover:rotate-[-30deg] transition-transform" : "w-3.5 h-3.5"} />
       </button>
 
       <AnimatePresence>
