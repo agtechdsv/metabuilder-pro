@@ -8,6 +8,7 @@ interface DesktopAppGeneratorModalProps {
   contextType: 'workspace' | 'project'
   contextId: string
   defaultName?: string
+  defaultDescription?: string
 }
 
 export function DesktopAppGeneratorModal({
@@ -15,10 +16,11 @@ export function DesktopAppGeneratorModal({
   onClose,
   contextType,
   contextId,
-  defaultName
+  defaultName,
+  defaultDescription
 }: DesktopAppGeneratorModalProps) {
   const [appName, setAppName] = useState(defaultName || '')
-  const [appDescription, setAppDescription] = useState('')
+  const [appDescription, setAppDescription] = useState(defaultDescription || '')
   const [iconBase64, setIconBase64] = useState<string | null>(null)
   const [dbConnectionString, setDbConnectionString] = useState('')
   const [tunnelUrl, setTunnelUrl] = useState('')

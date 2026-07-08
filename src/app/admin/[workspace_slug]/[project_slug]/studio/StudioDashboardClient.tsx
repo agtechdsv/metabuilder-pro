@@ -1569,6 +1569,7 @@ export function StudioDashboardClient({
           contextType="project"
           contextId={project.id}
           defaultName={project.name}
+          defaultDescription={project.description || ''}
         />
       </main>
     </>
