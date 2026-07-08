@@ -1,0 +1,13 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "runinstaller",
+      "description": "allow runinstaller",
+      "commands": {
+        "allow": ["runinstaller"],
+        "deny": []
+      }
+    }
+  ]
+}

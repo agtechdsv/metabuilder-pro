@@ -1,0 +1,13 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "openbrowser",
+      "description": "allow openbrowser",
+      "commands": {
+        "allow": ["openbrowser"],
+        "deny": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "statuscli",
+      "description": "allow statuscli",
+      "commands": {
+        "allow": ["statuscli"],
+        "deny": []
+      }
+    }
+  ]
+}

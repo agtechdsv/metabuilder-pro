@@ -1,0 +1,15 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "startcli",
+      "description": "allow startcli",
+      "commands": {
+        "allow": [
+          "startcli"
+        ],
+        "deny": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "stopcli",
+      "description": "allow stopcli",
+      "commands": {
+        "allow": ["stopcli"],
+        "deny": []
+      }
+    }
+  ]
+}
