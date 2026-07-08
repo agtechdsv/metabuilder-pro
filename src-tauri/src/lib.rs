@@ -86,6 +86,16 @@ fn open_browser(app: tauri::AppHandle, url: String) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+/// Executa um instalador MSI de forma nativa e independente.
+#[command]
+fn run_installer(path: String) -> Result<(), String> {
+    std::process::Command::new("msiexec")
+        .args(&["/i", &path])
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -174,7 +184,13 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![start_cli, stop_cli, status_cli, open_browser])
+        .invoke_handler(tauri::generate_handler![
+            start_cli,
+            stop_cli,
+            status_cli,
+            open_browser,
+            run_installer
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

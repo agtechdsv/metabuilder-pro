@@ -224,11 +224,10 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
 
   const handleRunInstaller = async (path: string) => {
     try {
-      const { openPath } = await import('@tauri-apps/plugin-opener')
-      await openPath(path)
+      const { invoke } = await import('@tauri-apps/api/core')
+      await invoke('run_installer', { path })
 
       // Aguarda 1.5 segundos para garantir que o instalador do Windows (msiexec) inicie em background
-      // Se fecharmos a IDE imediatamente, o sistema operacional pode abortar o processo filho.
       await new Promise(resolve => setTimeout(resolve, 1500))
 
       // Auto-close the app after launching the installer so it can replace the files
@@ -237,6 +236,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
       await current.close()
     } catch (e) {
       console.error('Não foi possível executar o instalador:', e)
+      alert(`Não foi possível executar o instalador: ${e}`)
     }
   }
 
