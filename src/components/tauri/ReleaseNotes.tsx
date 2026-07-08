@@ -64,7 +64,7 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
             <div className="flex items-center justify-between p-6 border-b border-neutral-200 dark:border-neutral-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center overflow-hidden">
-                  <img src="/logo-transparent.png" alt="MetaBuilder PRO" className="w-8 h-8 object-contain" />
+                  <img src="/icon-desktop-square.png" alt="MetaBuilder PRO" className="w-8 h-8 object-contain" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold">Histórico de Atualizações</h3>

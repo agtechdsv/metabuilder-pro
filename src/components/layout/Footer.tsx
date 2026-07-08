@@ -18,9 +18,7 @@ export function Footer() {
 
         {/* Lado Esquerdo: Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-            <Layers className="w-5 h-5 text-white" />
-          </div>
+          <img src="/icon-desktop-square.png" className="w-8 h-8 object-contain drop-shadow-sm" alt="Logo" />
           <span className="text-base font-bold tracking-tight text-neutral-900 dark:text-white">
             MetaBuilder<span className="text-indigo-600">PRO</span>
           </span>

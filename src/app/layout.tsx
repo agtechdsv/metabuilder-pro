@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: "MetaBuilderPRO | The Dynamic Metadata Engine",
   description: "Generate dynamic database-driven CRUD applications without physical file generation.",
   icons: {
-    icon: "/logo-crystal.png",
+    icon: "/icon-desktop-square.png",
   },
 };
 import { preinit } from "react-dom";

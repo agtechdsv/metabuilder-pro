@@ -59,7 +59,7 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-3 group transition-all">
               <img 
-                src="/logo-crystal.png" 
+                src="/icon-desktop-square.png" 
                 className="w-12 h-12 object-contain rounded-full group-hover:scale-105 transition-transform" 
                 alt="Logo" 
               />

@@ -41,7 +41,7 @@ export function IDELanding({ user }: { user: any }) {
       {/* Header */}
       <header className="w-full px-8 py-6 flex items-center justify-between relative z-10">
         <div className="flex items-center gap-3">
-          <img src="/logo-crystal.png" alt="MetaBuilder PRO" className="w-10 h-10 object-contain drop-shadow-md" />
+          <img src="/icon-desktop-square.png" alt="MetaBuilder PRO" className="w-10 h-10 object-contain drop-shadow-md" />
           <h1 className="text-xl font-bold tracking-tight">
             MetaBuilder<span className="text-indigo-600 dark:text-indigo-500">PRO</span>
           </h1>
