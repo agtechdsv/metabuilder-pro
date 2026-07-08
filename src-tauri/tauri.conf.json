@@ -30,7 +30,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "UldTNjBxZzZKNGxLT1ZnL3J5VWF2ZUorS1JKMTRBeTVzTkRUK3VJSXRkbjMrd3haUCs1Q0o2aTE=",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IG9sZF9rZXkKUldTNjBxZzZKNGxLT1ZnL3J5VWF2ZUorS1JKMTRBeTVzTkRUK3VJSXRkbjMrd3haUCs1Q0o2aTEK",
       "endpoints": [
         "https://chmstvtepzmjhpyxjjam.supabase.co/storage/v1/object/public/releases/ide/latest.json"
       ]
