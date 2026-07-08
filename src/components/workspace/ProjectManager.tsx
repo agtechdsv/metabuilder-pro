@@ -15,7 +15,8 @@ import {
   Settings,
   RefreshCw,
   Loader2,
-  ArrowUpRight
+  ArrowUpRight,
+  Monitor
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -28,6 +29,7 @@ import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 import { openExternalUrl } from '@/utils/tauriUtils'
+import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
 
 
 interface Project {
@@ -87,6 +89,8 @@ export function ProjectManager({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [navigatingSlug, setNavigatingSlug] = useState<string | null>(null)
   
+  const [showDesktopModal, setShowDesktopModal] = useState(false)
+  const [selectedDesktopProject, setSelectedDesktopProject] = useState<Project | null>(null)
   const [portalEnabled, setPortalEnabled] = useState(workspaceThemeConfig?.portal_enabled || false)
   const [isTogglingPortal, setIsTogglingPortal] = useState(false)
   
@@ -472,6 +476,20 @@ export function ProjectManager({
                           </button>
                           {portalEnabled && (
                             <button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setSelectedDesktopProject(project)
+                                setShowDesktopModal(true)
+                              }}
+                              className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                              title="Gerar App Desktop Nativo"
+                            >
+                              <Monitor className="w-4 h-4" />
+                            </button>
+                          )}
+                          {portalEnabled && (
+                            <button
                               onClick={(e) => { e.preventDefault(); toggleProjectPortal(project); }}
                               className={`p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ${project.theme_config?.show_in_portal ? 'text-indigo-500 hover:text-indigo-600' : 'text-neutral-400 hover:text-indigo-400'}`}
                               title={project.theme_config?.show_in_portal ? 'Remover do Portal' : 'Adicionar ao Portal'}
@@ -804,6 +822,22 @@ export function ProjectManager({
           </div>
         </form>
       </Modal>
+
+      {/* Modal Desktop App */}
+      {selectedDesktopProject && (
+        <DesktopAppGeneratorModal
+          isOpen={showDesktopModal}
+          onClose={() => {
+            setShowDesktopModal(false)
+            setSelectedDesktopProject(null)
+          }}
+          contextType="project"
+          contextId={selectedDesktopProject.id}
+          defaultName={selectedDesktopProject.name}
+          defaultDescription={selectedDesktopProject.description || ''}
+          defaultTunnelUrl={typeof window !== 'undefined' ? `${window.location.origin}/${workspaceSlug}/${selectedDesktopProject.slug}` : ''}
+        />
+      )}
 
     </div>
   )
