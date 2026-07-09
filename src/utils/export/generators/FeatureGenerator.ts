@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 
-export function generateFeatures(zip: JSZip, models: any[]) {
+export function generateFeatures(zip: JSZip, models: any[], dbType: string = 'supabase') {
   const featuresFolder = zip.folder('src/features')
   if (!featuresFolder) return
 
@@ -12,7 +12,46 @@ export function generateFeatures(zip: JSZip, models: any[]) {
     const fields = model.ui_fields || []
 
     // 1. Server Actions (CRUD)
-    const actionsCode = `'use server'
+    let actionsCode = ''
+    if (dbType === 'postgres') {
+      const hasCreatedAt = fields.some((f: any) => f.column_name === 'created_at')
+      const hasCriadoEm = fields.some((f: any) => f.column_name === 'criado_em')
+      const orderBy = hasCreatedAt ? ' ORDER BY created_at DESC' : (hasCriadoEm ? ' ORDER BY criado_em DESC' : '')
+
+      const writeableFields = fields.filter((f: any) => f.column_name !== 'id' && f.column_name !== 'created_at' && f.column_name !== 'criado_em')
+      const columnNames = writeableFields.map((f: any) => f.column_name)
+      const placeholders = columnNames.map((_: any, idx: number) => `$${idx + 1}`)
+
+      actionsCode = `'use server'
+
+import { query } from '@/lib/db'
+import { revalidatePath } from 'next/cache'
+
+export async function fetch${modelName}s() {
+  const result = await query('SELECT * FROM ${model.table_name}${orderBy}')
+  return result.rows
+}
+
+export async function create${modelName}(formData: FormData) {
+  const data = Object.fromEntries(formData.entries())
+  
+  await query(
+    \`INSERT INTO ${model.table_name} (${columnNames.join(', ')}) VALUES (${placeholders.join(', ')})\`,
+    [
+      ${columnNames.map((col: string) => `data.${col} || null`).join(',\n      ')}
+    ]
+  )
+  
+  revalidatePath('/${model.table_name}')
+}
+
+export async function delete${modelName}(id: string) {
+  await query('DELETE FROM ${model.table_name} WHERE id = $1', [id])
+  revalidatePath('/${model.table_name}')
+}
+`
+    } else {
+      actionsCode = `'use server'
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
@@ -42,6 +81,7 @@ export async function delete${modelName}(id: string) {
   revalidatePath('/${model.table_name}')
 }
 `
+    }
     featFolder.file('actions.ts', actionsCode)
 
     // 2. Components Folder

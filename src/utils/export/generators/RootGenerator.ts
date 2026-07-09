@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 
-export function generateRootFiles(zip: JSZip, project: any) {
+export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'supabase') {
   const security = project.theme_config?.security || { traditional_login: true, mfa_enabled: false, passkey_enabled: false }
 
   zip.file('package.json', JSON.stringify({
@@ -23,6 +23,7 @@ export function generateRootFiles(zip: JSZip, project: any) {
       'tailwind-merge': '^2.3.0',
       '@supabase/supabase-js': '^2.43.4',
       '@supabase/ssr': '^0.3.0',
+      ...(dbType === 'postgres' ? { 'pg': '^8.11.5' } : {}),
       ...(security.passkey_enabled ? { '@simplewebauthn/browser': '^9.0.1' } : {})
     },
     devDependencies: {
@@ -31,7 +32,8 @@ export function generateRootFiles(zip: JSZip, project: any) {
       '@types/react': '^18',
       '@types/react-dom': '^18',
       'postcss': '^8',
-      'tailwindcss': '^3.4.1'
+      'tailwindcss': '^3.4.1',
+      ...(dbType === 'postgres' ? { '@types/pg': '^8.11.5' } : {})
     }
   }, null, 2))
 
@@ -83,12 +85,21 @@ export default config;
 `)
 }
 
-export function generateEnv(zip: JSZip, project: any) {
-  zip.file('.env.example', `# Authentication
+export function generateEnv(zip: JSZip, project: any, dbType: string = 'supabase') {
+  let envContent = `# Authentication
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 # Project Token
 META_PROJECT_TOKEN=${project.secret_token || 'your_project_token'}
-`)
+`
+
+  if (dbType === 'postgres') {
+    envContent += `
+# Database Connection
+DATABASE_URL=postgresql://postgres:senha@localhost:5432/${project.slug || 'app'}_db
+`
+  }
+
+  zip.file('.env.example', envContent)
 }

@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 
-export function generateLib(zip: JSZip) {
+export function generateLib(zip: JSZip, dbType: string = 'supabase') {
   const libFolder = zip.folder('src/lib')
   if (!libFolder) return
 
@@ -11,6 +11,17 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 `)
+
+  if (dbType === 'postgres') {
+    libFolder.file('db.ts', `import { Pool } from 'pg'
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+})
+
+export const query = (text: string, params?: any[]) => pool.query(text, params)
+`)
+  }
 
   const supabaseFolder = libFolder.folder('supabase')
   supabaseFolder?.file('server.ts', `import { createServerClient, type CookieOptions } from '@supabase/ssr'

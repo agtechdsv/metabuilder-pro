@@ -107,12 +107,15 @@ export function ProjectManager({
 
   const [downloadModal, setDownloadModal] = useState<{
     open: boolean
-    phase: 'downloading' | 'done' | 'error'
+    phase: 'selecting' | 'downloading' | 'done' | 'error'
     fileName: string
     progress: number
     savedPath: string
     savedDir: string
+    projectId?: string
   } | null>(null)
+
+  const [exportDbType, setExportDbType] = useState<'supabase' | 'postgres'>('supabase')
 
   const handleOpenFolder = async (dir: string, fileFullPath: string) => {
     try {
@@ -129,6 +132,93 @@ export function ProjectManager({
         const { openPath } = await import('@tauri-apps/plugin-opener')
         await openPath(dir)
       } catch {}
+    }
+  }
+
+  const handleStartExport = async (projectId: string, dbType: 'supabase' | 'postgres', fileName: string) => {
+    setDownloadModal({
+      open: true,
+      phase: 'downloading',
+      fileName,
+      progress: 0,
+      savedPath: '',
+      savedDir: '',
+      projectId
+    })
+
+    try {
+      const res = await fetch('/api/export-source', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId, dbType })
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Erro ao gerar código')
+      }
+      
+      const contentLength = Number(res.headers.get('content-length') || 0)
+      const reader = res.body!.getReader()
+      const chunks: Uint8Array[] = []
+      let received = 0
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        chunks.push(value)
+        received += value.length
+        const pct = contentLength > 0 ? Math.min(Math.round((received / contentLength) * 100), 99) : 0
+        setDownloadModal(prev => prev ? { ...prev, progress: pct } : prev)
+      }
+
+      const total = chunks.reduce((a, c) => a + c.length, 0)
+      const merged = new Uint8Array(total)
+      let offset = 0
+      for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.length }
+
+      if (isTauri()) {
+        const { downloadDir } = await import('@tauri-apps/api/path')
+        const { writeFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+        const dir = await downloadDir()
+        const isWindows = dir.includes('\\') || !dir.startsWith('/')
+        const separator = isWindows ? '\\' : '/'
+        let fullPath = `${dir}${separator}${fileName}`
+        if (isWindows) {
+          fullPath = fullPath.replace(/\//g, '\\')
+        }
+        await writeFile(fileName, merged, { baseDir: BaseDirectory.Download })
+        
+        setDownloadModal({
+          open: true,
+          phase: 'done',
+          fileName,
+          progress: 100,
+          savedPath: fullPath,
+          savedDir: dir
+        })
+      } else {
+        const blob = new Blob([merged], { type: 'application/zip' })
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = fileName
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        window.URL.revokeObjectURL(url)
+
+        setDownloadModal({
+          open: true,
+          phase: 'done',
+          fileName,
+          progress: 100,
+          savedPath: '',
+          savedDir: 'Downloads'
+        })
+      }
+    } catch (error: any) {
+      setDownloadModal(prev => prev ? { ...prev, phase: 'error', progress: 0 } : null)
+      toast('Falha na exportação: ' + error.message, 'error')
     }
   }
 
@@ -518,94 +608,19 @@ export function ProjectManager({
                             </button>
                           )}
                           <button
-                            onClick={async (e) => {
+                            onClick={(e) => {
                               e.preventDefault()
                               e.stopPropagation()
                               
-                              const fileName = `${project.slug || 'app'}-source-code.zip`
                               setDownloadModal({
                                 open: true,
-                                phase: 'downloading',
-                                fileName,
+                                phase: 'selecting',
+                                fileName: `${project.slug || 'app'}-source-code.zip`,
                                 progress: 0,
                                 savedPath: '',
-                                savedDir: ''
+                                savedDir: '',
+                                projectId: project.id
                               })
-
-                              try {
-                                const res = await fetch('/api/export-source', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ projectId: project.id })
-                                })
-                                if (!res.ok) {
-                                  const err = await res.json()
-                                  throw new Error(err.error || 'Erro ao gerar código')
-                                }
-                                
-                                const contentLength = Number(res.headers.get('content-length') || 0)
-                                const reader = res.body!.getReader()
-                                const chunks: Uint8Array[] = []
-                                let received = 0
-
-                                while (true) {
-                                  const { done, value } = await reader.read()
-                                  if (done) break
-                                  chunks.push(value)
-                                  received += value.length
-                                  const pct = contentLength > 0 ? Math.min(Math.round((received / contentLength) * 100), 99) : 0
-                                  setDownloadModal(prev => prev ? { ...prev, progress: pct } : prev)
-                                }
-
-                                const total = chunks.reduce((a, c) => a + c.length, 0)
-                                const merged = new Uint8Array(total)
-                                let offset = 0
-                                for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.length }
-
-                                if (isTauri()) {
-                                  const { downloadDir } = await import('@tauri-apps/api/path')
-                                  const { writeFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-                                  const dir = await downloadDir()
-                                  const isWindows = dir.includes('\\') || !dir.startsWith('/')
-                                  const separator = isWindows ? '\\' : '/'
-                                  let fullPath = `${dir}${separator}${fileName}`
-                                  if (isWindows) {
-                                    fullPath = fullPath.replace(/\//g, '\\')
-                                  }
-                                  await writeFile(fileName, merged, { baseDir: BaseDirectory.Download })
-                                  
-                                  setDownloadModal({
-                                    open: true,
-                                    phase: 'done',
-                                    fileName,
-                                    progress: 100,
-                                    savedPath: fullPath,
-                                    savedDir: dir
-                                  })
-                                } else {
-                                  const blob = new Blob([merged], { type: 'application/zip' })
-                                  const url = window.URL.createObjectURL(blob)
-                                  const a = document.createElement('a')
-                                  a.href = url
-                                  a.download = fileName
-                                  document.body.appendChild(a)
-                                  a.click()
-                                  a.remove()
-                                  window.URL.revokeObjectURL(url)
-
-                                  setDownloadModal({
-                                    open: true,
-                                    phase: 'done',
-                                    fileName,
-                                    progress: 100,
-                                    savedPath: '',
-                                    savedDir: 'Downloads'
-                                  })
-                                }
-                              } catch (error: any) {
-                                setDownloadModal(prev => prev ? { ...prev, phase: 'error', progress: 0 } : null)
-                                toast('Falha na exportação: ' + error.message, 'error')
-                              }
                             }}
                             className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
                             title="Exportar Código Fonte (Next.js)"
@@ -970,7 +985,9 @@ export function ProjectManager({
             {/* Header */}
             <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white text-center">
               <div className="mx-auto bg-white/20 w-14 h-14 rounded-full flex items-center justify-center mb-3">
-                {downloadModal.phase === 'done' ? (
+                {downloadModal.phase === 'selecting' ? (
+                  <Database className="w-7 h-7 text-white animate-pulse" />
+                ) : downloadModal.phase === 'done' ? (
                   <CheckCircle className="w-7 h-7 text-white" />
                 ) : downloadModal.phase === 'error' ? (
                   <X className="w-7 h-7 text-white" />
@@ -979,6 +996,7 @@ export function ProjectManager({
                 )}
               </div>
               <h3 className="text-lg font-black">
+                {downloadModal.phase === 'selecting' && 'Configurar Exportação'}
                 {downloadModal.phase === 'downloading' && 'Baixando Código Fonte...'}
                 {downloadModal.phase === 'done' && 'Download Concluído!'}
                 {downloadModal.phase === 'error' && 'Erro no Download'}
@@ -987,6 +1005,77 @@ export function ProjectManager({
             </div>
 
             <div className="p-6 space-y-5">
+              {/* Selecting Database Option */}
+              {downloadModal.phase === 'selecting' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest block mb-2">
+                      Banco de Dados de Destino
+                    </label>
+                    <div className="grid grid-cols-1 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setExportDbType('supabase')}
+                        className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${
+                          exportDbType === 'supabase'
+                            ? 'border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10'
+                            : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${
+                          exportDbType === 'supabase' ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'
+                        }`}>
+                          {exportDbType === 'supabase' && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-neutral-900 dark:text-white">Supabase (Nativo)</p>
+                          <p className="text-xs text-neutral-500 mt-0.5">
+                            Conecta via SDK oficial do Supabase. Ideal para infraestrutura serverless na nuvem.
+                          </p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setExportDbType('postgres')}
+                        className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${
+                          exportDbType === 'postgres'
+                            ? 'border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10'
+                            : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${
+                          exportDbType === 'postgres' ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'
+                        }`}>
+                          {exportDbType === 'postgres' && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-neutral-900 dark:text-white">PostgreSQL (Nativo - pg)</p>
+                          <p className="text-xs text-neutral-500 mt-0.5">
+                            Gera queries SQL diretas via driver `pg`. Ideal para hospedar localmente (on-premise) no servidor do cliente.
+                          </p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2.5 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+                    <button
+                      onClick={() => handleStartExport(downloadModal.projectId!, exportDbType, downloadModal.fileName)}
+                      className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(79,70,229,0.2)]"
+                    >
+                      Iniciar Exportação
+                    </button>
+                    <button
+                      onClick={() => setDownloadModal(null)}
+                      className="px-4 py-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-950 dark:text-white rounded-xl text-sm font-bold transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Progress bar */}
               {downloadModal.phase === 'downloading' && (
                 <div className="space-y-2">
