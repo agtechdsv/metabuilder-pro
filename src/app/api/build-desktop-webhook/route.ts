@@ -6,7 +6,7 @@ import { createClient } from '@/utils/supabase/server'
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { buildId, status, downloadUrl, errorMessage, secret } = body
+    const { buildId, status, downloadUrl, errorMessage, sizeBytes, secret } = body
 
     if (!buildId || !status) {
       return NextResponse.json({ error: 'Campos buildId e status são obrigatórios' }, { status: 400 })
@@ -28,6 +28,7 @@ export async function POST(req: Request) {
     
     if (downloadUrl) updatePayload.download_url = downloadUrl
     if (errorMessage) updatePayload.error_message = errorMessage
+    if (sizeBytes !== undefined && sizeBytes !== null) updatePayload.size_bytes = sizeBytes
 
     const { error } = await supabase
       .from('desktop_builds')

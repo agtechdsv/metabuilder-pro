@@ -41,12 +41,25 @@ export default async function ClientDashboardPage() {
     .limit(1)
     .single()
 
-  // Fetch user's workspaces (owner only)
-  const { data: workspaces } = await supabase
+  // Fetch user's workspaces (owned or joined as member)
+  const { data: memberships } = await supabase
+    .from('workspace_members')
+    .select('workspace_id')
+    .eq('user_id', user.id)
+
+  const memberWorkspaceIds = memberships?.map(m => m.workspace_id) || []
+
+  let workspacesQuery = supabase
     .from('workspaces')
     .select('id, name, slug, created_at, custom_domain')
-    .eq('owner_id', user.id)
-    .order('created_at', { ascending: false })
+
+  if (memberWorkspaceIds.length > 0) {
+    workspacesQuery = workspacesQuery.or(`owner_id.eq.${user.id},id.in.(${memberWorkspaceIds.join(',')})`)
+  } else {
+    workspacesQuery = workspacesQuery.eq('owner_id', user.id)
+  }
+
+  const { data: workspaces } = await workspacesQuery.order('created_at', { ascending: false })
 
   // Fetch projects for each workspace
   let projectsData: any[] = []

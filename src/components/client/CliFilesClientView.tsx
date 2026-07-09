@@ -577,7 +577,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                   : getCategoryLabel(file.category);
                   
                 const displaySize = isWorkspaceTab
-                  ? '--'
+                  ? (file.size_bytes ? `${(file.size_bytes / 1024 / 1024).toFixed(2)} MB` : '--')
                   : `${(file.size_bytes / 1024 / 1024).toFixed(2)} MB`;
 
                 return (
