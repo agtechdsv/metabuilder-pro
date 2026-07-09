@@ -31,6 +31,7 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
   // Bulk Delete State
   const [selectedReleases, setSelectedReleases] = useState<string[]>([])
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false)
 
   // Local Git State
   const [gitMessage, setGitMessage] = useState('')
@@ -72,7 +73,6 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
 
   const handleBulkDelete = async () => {
     if (selectedReleases.length === 0) return
-    if (!confirm(`Tem certeza que deseja excluir as ${selectedReleases.length} releases selecionadas?`)) return
     
     setIsBulkDeleting(true)
     try {
@@ -81,10 +81,10 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
         await fetch(`/api/admin/release/history?tag=${tag}`, { method: 'DELETE' })
       }
       setSelectedReleases([])
+      setShowBulkConfirm(false)
       await fetchHistory()
     } catch (e) {
       console.error(e)
-      alert('Houve um erro ao deletar algumas releases. Tente novamente.')
     }
     setIsBulkDeleting(false)
   }
@@ -423,14 +423,27 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
                     Selecionar Todos
                   </label>
                   {selectedReleases.length > 0 && (
-                    <button
-                      onClick={handleBulkDelete}
-                      disabled={isBulkDeleting}
-                      className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 font-medium rounded-lg transition-colors shadow-sm disabled:opacity-50 text-sm"
-                    >
-                      {isBulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                      Excluir selecionados ({selectedReleases.length})
-                    </button>
+                    <div className="flex items-center justify-end shrink-0">
+                      {showBulkConfirm ? (
+                        <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-200">
+                          <span className="text-xs font-bold text-red-500 mr-2">Excluir {selectedReleases.length} releases?</span>
+                          <button onClick={() => setShowBulkConfirm(false)} className="p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded-lg transition-colors">
+                            <X className="w-4 h-4" />
+                          </button>
+                          <button onClick={handleBulkDelete} disabled={isBulkDeleting} className="p-2 bg-red-600 hover:bg-red-500 text-white rounded-lg disabled:opacity-50 transition-colors shadow-sm">
+                            {isBulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setShowBulkConfirm(true)}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 font-medium rounded-lg transition-colors shadow-sm text-sm"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Excluir selecionados ({selectedReleases.length})
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
                 {historyReleases.map(release => (
