@@ -17,7 +17,10 @@ import {
   Loader2,
   ArrowUpRight,
   Monitor,
-  Download
+  Download,
+  CheckCircle,
+  X,
+  FolderOpen
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -29,7 +32,7 @@ import { IconPicker } from '@/components/studio/IconPicker'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
-import { openExternalUrl } from '@/utils/tauriUtils'
+import { isTauri, openExternalUrl } from '@/utils/tauriUtils'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
 
 
@@ -101,6 +104,33 @@ export function ProjectManager({
     portal_banner_url: workspaceThemeConfig?.portal_banner_url || ''
   })
   const [isSavingWorkspaceSettings, setIsSavingWorkspaceSettings] = useState(false)
+
+  const [downloadModal, setDownloadModal] = useState<{
+    open: boolean
+    phase: 'downloading' | 'done' | 'error'
+    fileName: string
+    progress: number
+    savedPath: string
+    savedDir: string
+  } | null>(null)
+
+  const handleOpenFolder = async (dir: string, fileFullPath: string) => {
+    try {
+      if (fileFullPath) {
+        const { revealItemInDir } = await import('@tauri-apps/plugin-opener')
+        await revealItemInDir(fileFullPath)
+      } else {
+        const { openPath } = await import('@tauri-apps/plugin-opener')
+        await openPath(dir)
+      }
+    } catch (e) {
+      console.error('Não foi possível abrir o explorador:', e)
+      try {
+        const { openPath } = await import('@tauri-apps/plugin-opener')
+        await openPath(dir)
+      } catch {}
+    }
+  }
 
   const supabase = createClient()
   const router = useRouter()
@@ -491,7 +521,17 @@ export function ProjectManager({
                             onClick={async (e) => {
                               e.preventDefault()
                               e.stopPropagation()
-                              toast('Iniciando orquestração da arquitetura do código...', 'info')
+                              
+                              const fileName = `${project.slug || 'app'}-source-code.zip`
+                              setDownloadModal({
+                                open: true,
+                                phase: 'downloading',
+                                fileName,
+                                progress: 0,
+                                savedPath: '',
+                                savedDir: ''
+                              })
+
                               try {
                                 const res = await fetch('/api/export-source', {
                                   method: 'POST',
@@ -503,19 +543,67 @@ export function ProjectManager({
                                   throw new Error(err.error || 'Erro ao gerar código')
                                 }
                                 
-                                // Trigger download
-                                const blob = await res.blob()
-                                const url = window.URL.createObjectURL(blob)
-                                const a = document.createElement('a')
-                                a.href = url
-                                a.download = `${project.slug || 'app'}-source-code.zip`
-                                document.body.appendChild(a)
-                                a.click()
-                                a.remove()
-                                window.URL.revokeObjectURL(url)
-                                
-                                toast('Código Fonte exportado com sucesso!', 'success')
+                                const contentLength = Number(res.headers.get('content-length') || 0)
+                                const reader = res.body!.getReader()
+                                const chunks: Uint8Array[] = []
+                                let received = 0
+
+                                while (true) {
+                                  const { done, value } = await reader.read()
+                                  if (done) break
+                                  chunks.push(value)
+                                  received += value.length
+                                  const pct = contentLength > 0 ? Math.min(Math.round((received / contentLength) * 100), 99) : 0
+                                  setDownloadModal(prev => prev ? { ...prev, progress: pct } : prev)
+                                }
+
+                                const total = chunks.reduce((a, c) => a + c.length, 0)
+                                const merged = new Uint8Array(total)
+                                let offset = 0
+                                for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.length }
+
+                                if (isTauri()) {
+                                  const { downloadDir } = await import('@tauri-apps/api/path')
+                                  const { writeFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+                                  const dir = await downloadDir()
+                                  const isWindows = dir.includes('\\') || !dir.startsWith('/')
+                                  const separator = isWindows ? '\\' : '/'
+                                  let fullPath = `${dir}${separator}${fileName}`
+                                  if (isWindows) {
+                                    fullPath = fullPath.replace(/\//g, '\\')
+                                  }
+                                  await writeFile(fileName, merged, { baseDir: BaseDirectory.Download })
+                                  
+                                  setDownloadModal({
+                                    open: true,
+                                    phase: 'done',
+                                    fileName,
+                                    progress: 100,
+                                    savedPath: fullPath,
+                                    savedDir: dir
+                                  })
+                                } else {
+                                  const blob = new Blob([merged], { type: 'application/zip' })
+                                  const url = window.URL.createObjectURL(blob)
+                                  const a = document.createElement('a')
+                                  a.href = url
+                                  a.download = fileName
+                                  document.body.appendChild(a)
+                                  a.click()
+                                  a.remove()
+                                  window.URL.revokeObjectURL(url)
+
+                                  setDownloadModal({
+                                    open: true,
+                                    phase: 'done',
+                                    fileName,
+                                    progress: 100,
+                                    savedPath: '',
+                                    savedDir: 'Downloads'
+                                  })
+                                }
                               } catch (error: any) {
+                                setDownloadModal(prev => prev ? { ...prev, phase: 'error', progress: 0 } : null)
                                 toast('Falha na exportação: ' + error.message, 'error')
                               }
                             }}
@@ -873,6 +961,106 @@ export function ProjectManager({
           defaultDescription={selectedDesktopProject.description || ''}
           defaultTunnelUrl={typeof window !== 'undefined' ? `${window.location.origin}/${workspaceSlug}/${selectedDesktopProject.slug}` : ''}
         />
+      )}
+
+      {/* Source Code Download Progress Modal */}
+      {downloadModal?.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white text-center">
+              <div className="mx-auto bg-white/20 w-14 h-14 rounded-full flex items-center justify-center mb-3">
+                {downloadModal.phase === 'done' ? (
+                  <CheckCircle className="w-7 h-7 text-white" />
+                ) : downloadModal.phase === 'error' ? (
+                  <X className="w-7 h-7 text-white" />
+                ) : (
+                  <Download className="w-7 h-7 text-white" />
+                )}
+              </div>
+              <h3 className="text-lg font-black">
+                {downloadModal.phase === 'downloading' && 'Baixando Código Fonte...'}
+                {downloadModal.phase === 'done' && 'Download Concluído!'}
+                {downloadModal.phase === 'error' && 'Erro no Download'}
+              </h3>
+              <p className="text-indigo-100 text-sm mt-1 truncate max-w-xs mx-auto">{downloadModal.fileName}</p>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Progress bar */}
+              {downloadModal.phase === 'downloading' && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs font-semibold text-neutral-500">
+                    <span>Progresso</span>
+                    <span>{downloadModal.progress}%</span>
+                  </div>
+                  <div className="h-2.5 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-indigo-500 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${downloadModal.progress}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-center text-neutral-400">
+                    {isTauri() ? 'Salvando na pasta Downloads do sistema...' : 'Preparando arquivo no navegador...'}
+                  </p>
+                </div>
+              )}
+
+              {/* Done state */}
+              {downloadModal.phase === 'done' && (
+                <div className="space-y-3">
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl p-3 text-xs text-emerald-700 dark:text-emerald-400 text-center font-medium">
+                    Arquivo salvo em: <span className="font-bold">Downloads</span>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2.5">
+                    {isTauri() ? (
+                      <button
+                        onClick={() => handleOpenFolder(downloadModal.savedDir, downloadModal.savedPath)}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                      >
+                        <FolderOpen className="w-4 h-4" />
+                        Abrir Pasta
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setDownloadModal(null)}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
+                      >
+                        Concluído
+                      </button>
+                    )}
+                  </div>
+
+                  {isTauri() && (
+                    <button
+                      onClick={() => setDownloadModal(null)}
+                      className="w-full text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 font-bold uppercase tracking-widest py-1 transition-colors"
+                    >
+                      Fechar
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Error state */}
+              {downloadModal.phase === 'error' && (
+                <div className="space-y-3">
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-xl p-3 text-xs text-red-700 dark:text-red-400 text-center font-medium">
+                    Ocorreu um erro ao gerar o arquivo de código fonte.
+                  </div>
+                  <button
+                    onClick={() => setDownloadModal(null)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white rounded-xl text-sm font-bold transition-colors"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
