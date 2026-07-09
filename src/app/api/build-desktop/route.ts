@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 // Mapeamento de quais repositórios serão usados como "Templates" para o build do cliente
 // Você precisará configurar essas variáveis de ambiente na Vercel:
@@ -77,6 +78,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Falha ao inicializar o processo de build.' }, { status: 500 })
     }
 
+    // 4.2 Upload do ícone personalizado para o Supabase Storage se fornecido
+    let iconUrl = null
+    if (iconBase64 && iconBase64.trim() !== '') {
+      try {
+        const supabaseService = createSupabaseClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!
+        )
+        const base64Data = iconBase64.replace(/^data:image\/\w+;base64,/, '')
+        const buffer = Buffer.from(base64Data, 'base64')
+        const fileName = `desktop-builds/${desktopBuild.id}/icon.png`
+        
+        const { error: uploadError } = await supabaseService.storage
+          .from('releases')
+          .upload(fileName, buffer, {
+            contentType: 'image/png',
+            upsert: true
+          })
+          
+        if (uploadError) {
+          console.error('Falha ao fazer upload do ícone:', uploadError)
+        } else {
+          const { data: { publicUrl } } = supabaseService.storage
+            .from('releases')
+            .getPublicUrl(fileName)
+          iconUrl = publicUrl
+          console.log('Ícone personalizado salvo em:', iconUrl)
+        }
+      } catch (err) {
+        console.error('Erro ao processar base64 do ícone:', err)
+      }
+    }
+
     if (!token) {
       // Como ainda estamos implementando a pipeline, vou simular o sucesso se o token não existir
       // Em produção, você deverá configurar o token do github.
@@ -106,9 +140,7 @@ export async function POST(req: Request) {
           appDescription,
           dbConnectionString,
           tunnelUrl,
-          // O Base64 pode ser muito grande para payload do github, mas geralmente icones ICO são <= 100kb
-          // Se falhar, precisaremos salvar no Supabase Storage e enviar a URL.
-          iconBase64: iconBase64 ? iconBase64.substring(0, 100000) : null,
+          iconUrl, // Enviado como URL em vez do Base64 bruto para não exceder limites do Github
           contextType,
           contextId,
           userId: user.id,
