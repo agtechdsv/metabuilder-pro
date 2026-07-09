@@ -78,11 +78,6 @@ export async function POST(req: Request) {
       // Em produção, você deverá configurar o token do github.
       console.warn('GITHUB_PERSONAL_ACCESS_TOKEN não configurado. Simulando disparo de build...')
       
-      // Simulando o webhook de sucesso em 5 segundos (apenas para ambiente de desenvolvimento)
-      setTimeout(async () => {
-        await createClient().from('desktop_builds').update({ status: 'success', download_url: 'https://github.com/simulated.zip' }).eq('id', desktopBuild.id)
-      }, 5000)
-
       return NextResponse.json({
         success: true,
         message: 'Modo Simulação: Build disparado com sucesso.',
