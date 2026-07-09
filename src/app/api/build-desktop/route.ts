@@ -56,14 +56,37 @@ export async function POST(req: Request) {
     const owner = process.env.GITHUB_DESKTOP_TEMPLATE_OWNER || 'agtechdsv'
     const repo = process.env.GITHUB_DESKTOP_TEMPLATE_REPO || 'metabuilder-desktop-template'
 
+    // 4.1 Criar o registro de build na tabela desktop_builds
+    const { data: desktopBuild, error: buildInsertError } = await supabase
+      .from('desktop_builds')
+      .insert({
+        user_id: user.id,
+        context_type: contextType,
+        context_id: contextId,
+        status: 'pending'
+      })
+      .select('id')
+      .single()
+
+    if (buildInsertError || !desktopBuild) {
+      console.error('Falha ao criar registro de build:', buildInsertError)
+      return NextResponse.json({ error: 'Falha ao inicializar o processo de build.' }, { status: 500 })
+    }
+
     if (!token) {
       // Como ainda estamos implementando a pipeline, vou simular o sucesso se o token não existir
       // Em produção, você deverá configurar o token do github.
       console.warn('GITHUB_PERSONAL_ACCESS_TOKEN não configurado. Simulando disparo de build...')
+      
+      // Simulando o webhook de sucesso em 5 segundos (apenas para ambiente de desenvolvimento)
+      setTimeout(async () => {
+        await createClient().from('desktop_builds').update({ status: 'success', download_url: 'https://github.com/simulated.zip' }).eq('id', desktopBuild.id)
+      }, 5000)
+
       return NextResponse.json({
         success: true,
         message: 'Modo Simulação: Build disparado com sucesso.',
-        jobId: 'simulated-job-' + Date.now()
+        jobId: desktopBuild.id
       })
     }
 
@@ -79,6 +102,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         event_type: 'build-desktop-app',
         client_payload: {
+          buildId: desktopBuild.id, // Enviando o ID para a Action devolver no Webhook!
           appName,
           appDescription,
           dbConnectionString,

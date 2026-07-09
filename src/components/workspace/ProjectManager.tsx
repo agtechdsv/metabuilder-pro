@@ -112,7 +112,50 @@ export function ProjectManager({
     setNavigatingSlug(null)
   }, [searchParams, pathname])
 
+  // Listener para os status de Build do App Desktop
+  useEffect(() => {
+    const channel = supabase
+      .channel('desktop-builds-listener')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'desktop_builds'
+        },
+        (payload) => {
+          const build = payload.new
+          
+          if (build.status === 'success' && build.download_url) {
+            toast({
+              title: '🎉 App Desktop Pronto!',
+              description: 'O instalador Windows foi gerado com sucesso. O download começará agora!',
+              variant: 'success'
+            })
+            
+            // Trigger download automático
+            const link = document.createElement('a')
+            link.href = build.download_url
+            link.setAttribute('download', '')
+            link.target = '_blank'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+          } else if (build.status === 'failed') {
+            toast({
+              title: 'Erro no Build Desktop',
+              description: build.error_message || 'Falha ao compilar o aplicativo na nuvem.',
+              variant: 'destructive'
+            })
+          }
+        }
+      )
+      .subscribe()
 
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [supabase, toast])
   const openDrawer = (project: Project | null = null) => {
     setSelectedProject(project)
     setFormData(project
