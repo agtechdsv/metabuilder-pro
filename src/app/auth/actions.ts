@@ -397,31 +397,13 @@ export async function getPostLoginRedirectPath(userId: string): Promise<string> 
     // 2. Check if they are a guest (in owner_guests)
     const { data: guestRecord } = await supabase
       .from('owner_guests')
-      .select('access_level')
+      .select('id')
       .eq('user_id', userId)
       .limit(1)
       .maybeSingle()
 
     if (guestRecord) {
-      if (guestRecord.access_level === 'global') {
-        return '/workspace'
-      } else {
-        // access_level === 'granular'
-        const { data: memberships } = await supabase
-          .from('workspace_members')
-          .select('workspace_id, workspaces(slug)')
-          .eq('user_id', userId)
-
-        const validMemberships = memberships?.filter((m: any) => m.workspaces?.slug) || []
-
-        if (validMemberships.length === 1) {
-          const slug = (validMemberships[0]?.workspaces as any)?.slug
-          if (slug) {
-            return `/admin/${slug}`
-          }
-        }
-        return '/workspace'
-      }
+      return '/workspace'
     }
 
     // 3. User is an Owner (not super admin, not guest)
