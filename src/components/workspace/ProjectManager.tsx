@@ -16,7 +16,8 @@ import {
   RefreshCw,
   Loader2,
   ArrowUpRight,
-  Monitor
+  Monitor,
+  Download
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -486,6 +487,43 @@ export function ProjectManager({
                               <Monitor className="w-4 h-4" />
                             </button>
                           )}
+                          <button
+                            onClick={async (e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              toast('Iniciando orquestração da arquitetura do código...', 'info')
+                              try {
+                                const res = await fetch('/api/export-source', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ projectId: project.id })
+                                })
+                                if (!res.ok) {
+                                  const err = await res.json()
+                                  throw new Error(err.error || 'Erro ao gerar código')
+                                }
+                                
+                                // Trigger download
+                                const blob = await res.blob()
+                                const url = window.URL.createObjectURL(blob)
+                                const a = document.createElement('a')
+                                a.href = url
+                                a.download = `${project.slug || 'app'}-source-code.zip`
+                                document.body.appendChild(a)
+                                a.click()
+                                a.remove()
+                                window.URL.revokeObjectURL(url)
+                                
+                                toast('Código Fonte exportado com sucesso!', 'success')
+                              } catch (error: any) {
+                                toast('Falha na exportação: ' + error.message, 'error')
+                              }
+                            }}
+                            className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                            title="Exportar Código Fonte (Next.js)"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
                           {portalEnabled && (
                             <button
                               onClick={(e) => { e.preventDefault(); toggleProjectPortal(project); }}
