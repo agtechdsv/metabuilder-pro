@@ -56,14 +56,18 @@ export async function POST(req: Request) {
     const owner = process.env.GITHUB_DESKTOP_TEMPLATE_OWNER || 'agtechdsv'
     const repo = process.env.GITHUB_DESKTOP_TEMPLATE_REPO || 'metabuilder-desktop-template'
 
-    // 4.1 Criar o registro de build na tabela desktop_builds
+    // 4.1 Criar o registro de build na tabela desktop_builds com validade de 48h
+    const expiresAt = new Date()
+    expiresAt.setHours(expiresAt.getHours() + 48)
+
     const { data: desktopBuild, error: buildInsertError } = await supabase
       .from('desktop_builds')
       .insert({
         user_id: user.id,
         context_type: contextType,
         context_id: contextId,
-        status: 'pending'
+        status: 'pending',
+        expires_at: expiresAt.toISOString()
       })
       .select('id')
       .single()
