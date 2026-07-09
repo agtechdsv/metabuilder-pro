@@ -801,7 +801,8 @@
       "sync_resolution": "Sync Automático",
       "source_code": "Código Fonte (Export)",
       "logs": "Auditoria & Logs (CLI)",
-      "ide": "IDE & Túnel Local"
+      "ide": "IDE & Túnel Local",
+      "desktop": "Compilador Desktop"
     },
     "hero": {
       "badge": "A Engine de Software do Futuro",

@@ -97,11 +97,14 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
                     <span className="hidden xl:flex items-center gap-1">Developers <ChevronDown className="w-3 h-3 group-hover:rotate-180 transition-transform" /></span>
                   </div>
                   <div className="absolute top-full left-0 w-56 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 flex flex-col p-2">
-                    <Link href="/bpm" className="px-4 py-2 rounded-xl text-xs font-bold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+                    <Link href="/features/bpm" className="px-4 py-2 rounded-xl text-xs font-bold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
                       <span className="bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">{t('marketing_v2.navbar.bpm')}</span>
                     </Link>
                     <Link href="/features/ide" className="px-4 py-2 rounded-xl text-xs font-bold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
                       <span className="bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">{t('marketing_v2.navbar.ide')}</span>
+                    </Link>
+                    <Link href="/features/desktop" className="px-4 py-2 rounded-xl text-xs font-bold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+                      <span className="bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">{t('marketing_v2.navbar.desktop')}</span>
                     </Link>
                     <Link href="/features/source-code" className="px-4 py-2 rounded-xl text-xs font-bold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
                       <span className="bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">{t('marketing_v2.navbar.source_code')}</span>
@@ -129,6 +132,7 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
                       <span className="bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">{t('marketing_v2.navbar.control_center')}</span>
                     </Link>
                     <Link href="/features/branding" className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">{t('marketing_v2.navbar.branding')}</Link>
+                    <Link href="/features/desktop" className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">{t('marketing_v2.navbar.desktop')}</Link>
                     <Link href="/#pricing" className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">{t('marketing_v2.navbar.pricing')}</Link>
                   </div>
                 </div>

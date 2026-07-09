@@ -612,7 +612,7 @@ export function MarketingSections() {
               </div>
             </div>
             <Link
-              href="/bpm"
+              href="/features/bpm"
               className="inline-flex items-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:scale-105 shadow-xl shadow-emerald-500/20"
             >
               {t('marketing_v2.home.bpm_cta')}

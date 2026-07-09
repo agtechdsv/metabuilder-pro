@@ -879,7 +879,8 @@
       "sync_resolution": "Sync Automático",
       "source_code": "Código Fuente (Export)",
       "logs": "Auditoría & Logs (CLI)",
-      "ide": "IDE Nativo y Túnel"
+      "ide": "IDE Nativo y Túnel",
+      "desktop": "Compilador Desktop"
     },
     "hero": {
       "badge": "El Motor de Software del Futuro",

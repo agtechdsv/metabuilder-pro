@@ -801,7 +801,8 @@
       "sync_resolution": "Auto Sync",
       "source_code": "Source Code (Export)",
       "logs": "Audit & Logs (CLI)",
-      "ide": "Native IDE & Tunnel"
+      "ide": "Native IDE & Tunnel",
+      "desktop": "Desktop Compiler"
     },
     "hero": {
       "badge": "The Software Engine of the Future",
