@@ -19,10 +19,15 @@ interface NavbarProps {
 
 export function Navbar({ user, profile, showLogin = true, isStudio = false }: NavbarProps) {
   const [isAuthOpen, setIsAuthOpen] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(false)
   const { t } = useI18n()
   const pathname = usePathname()
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && '__TAURI__' in window) {
+      setIsDesktop(true)
+    }
+
     const handleOpenAuth = (e: Event) => {
       const customEvent = e as CustomEvent
       const redirectTo = customEvent.detail?.redirectTo
@@ -57,16 +62,29 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
       <header className={`fixed top-0 left-0 right-0 w-full border-b border-neutral-200 dark:border-neutral-900 bg-white/70 dark:bg-black/70 backdrop-blur-xl z-50 transition-all duration-300 ${isStudio ? 'pl-20' : ''}`}>
         <div className="w-full px-10 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-3 group transition-all">
-              <img 
-                src="/icon-desktop-square.png" 
-                className="w-12 h-12 object-contain rounded-full group-hover:scale-105 transition-transform" 
-                alt="Logo" 
-              />
-              <h1 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
-                MetaBuilder<span className="text-indigo-500">PRO</span>
-              </h1>
-            </Link>
+            {isDesktop ? (
+              <div className="flex items-center gap-3">
+                <img 
+                  src="/icon-desktop-square.png" 
+                  className="w-12 h-12 object-contain rounded-full" 
+                  alt="Logo" 
+                />
+                <h1 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white cursor-default">
+                  MetaBuilder<span className="text-indigo-500">PRO</span>
+                </h1>
+              </div>
+            ) : (
+              <Link href="/" className="flex items-center gap-3 group transition-all">
+                <img 
+                  src="/icon-desktop-square.png" 
+                  className="w-12 h-12 object-contain rounded-full group-hover:scale-105 transition-transform" 
+                  alt="Logo" 
+                />
+                <h1 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
+                  MetaBuilder<span className="text-indigo-500">PRO</span>
+                </h1>
+              </Link>
+            )}
 
             {(pathname === '/' || pathname?.startsWith('/features') || pathname?.startsWith('/bpm')) && (
               <nav className="hidden md:flex items-center gap-4 xl:gap-6">
