@@ -21,11 +21,12 @@ interface CliFilesClientViewProps {
 
 export function CliFilesClientView({ projects = [], devOnly = false, isPopout = false }: CliFilesClientViewProps) {
   const [files, setFiles] = useState<any[]>([])
+  const [desktopBuilds, setDesktopBuilds] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Tab & Filter state â€” devOnly users are locked to the IDE tab
-  const [mainTab, setMainTab] = useState<'ide' | 'utils'>('ide')
-  const [filter, setFilter] = useState<'all' | 'cli-win' | 'cli-linux' | 'template' | 'manual' | 'ide-win' | 'ide-mac' | 'ide-linux'>('all')
+  const [mainTab, setMainTab] = useState<'ide' | 'utils' | 'workspaces'>('ide')
+  const [filter, setFilter] = useState<'all' | 'cli-win' | 'cli-linux' | 'template' | 'manual' | 'ide-win' | 'ide-mac' | 'ide-linux' | 'workspace' | 'project'>('all')
   const [showOlderReleases, setShowOlderReleases] = useState(false)
   const [localVersion, setLocalVersion] = useState<string>('')
   const [isUpdating, setIsUpdating] = useState(false)
@@ -61,6 +62,8 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
 
   const fetchFiles = async () => {
     setIsLoading(true)
+    
+    // Fetch global downloads (IDE, CLI, Manuals)
     const { data, error } = await supabase
       .from('app_downloads')
       .select('*')
@@ -73,6 +76,19 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
     } else {
       setFiles(data || [])
     }
+    
+    // Fetch desktop builds (Workspaces & Projects)
+    const { data: buildsData, error: buildsError } = await supabase
+      .from('desktop_builds')
+      .select('*')
+      .eq('status', 'success')
+      .not('download_url', 'is', null)
+      .order('created_at', { ascending: false })
+      
+    if (!buildsError && buildsData) {
+      setDesktopBuilds(buildsData)
+    }
+
     setIsLoading(false)
   }
 
@@ -329,6 +345,13 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
   });
 
   const finalFilteredFiles = (() => {
+    if (mainTab === 'workspaces') {
+      return desktopBuilds.filter(b => {
+        if (filter === 'all') return true;
+        return b.context_type === filter;
+      });
+    }
+
     if (mainTab === 'ide' && !showOlderReleases) {
       const seen = new Set();
       return filteredFiles.filter(f => {
@@ -446,17 +469,23 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
         )}
 
       {/* Tabs â€” hide Utilitários for dev-only users */}
-      <div className="flex border-b border-neutral-200 dark:border-neutral-800 mb-4">
+      <div className="flex border-b border-neutral-200 dark:border-neutral-800 mb-4 overflow-x-auto hide-scrollbar">
         <button
           onClick={() => { setMainTab('ide'); setFilter('all'); }}
-          className={`px-6 py-3 font-bold text-sm border-b-2 transition-colors ${mainTab === 'ide' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'}`}
+          className={`px-6 py-3 font-bold text-sm border-b-2 whitespace-nowrap transition-colors ${mainTab === 'ide' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'}`}
         >
           App Desktop (IDE)
+        </button>
+        <button
+          onClick={() => { setMainTab('workspaces'); setFilter('all'); }}
+          className={`px-6 py-3 font-bold text-sm border-b-2 whitespace-nowrap transition-colors ${mainTab === 'workspaces' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'}`}
+        >
+          Workspaces & Projetos
         </button>
         {!devOnly && (
           <button
             onClick={() => { setMainTab('utils'); setFilter('all'); }}
-            className={`px-6 py-3 font-bold text-sm border-b-2 transition-colors ${mainTab === 'utils' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'}`}
+            className={`px-6 py-3 font-bold text-sm border-b-2 whitespace-nowrap transition-colors ${mainTab === 'utils' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'}`}
           >
             Utilitários (CLI & JSON)
           </button>
@@ -475,6 +504,10 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
             { id: 'ide-win', label: 'Windows' },
             { id: 'ide-mac', label: 'macOS' },
             { id: 'ide-linux', label: 'Linux' }
+          ] : mainTab === 'workspaces' ? [
+            { id: 'all', label: 'Todos' },
+            { id: 'workspace', label: 'Workspaces' },
+            { id: 'project', label: 'Projetos' }
           ] : [
             { id: 'all', label: 'Todos' },
             { id: 'cli-win', label: 'CLI Windows' },
@@ -527,36 +560,63 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                 </td>
               </tr>
             ) : finalFilteredFiles.length > 0 ? (
-              finalFilteredFiles.map(file => (
-                <tr key={file.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
-                  <td className="px-6 py-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
-                      <FileIcon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="text-sm font-bold text-neutral-900 dark:text-white block">{file.name}</span>
-                      <span className="text-xs font-medium text-neutral-500">v{file.version}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-300">
-                      {getCategoryLabel(file.category)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-neutral-400">
-                    {(file.size_bytes / 1024 / 1024).toFixed(2)} MB
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => handleDownloadClick(file)}
-                      className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg font-bold text-xs uppercase tracking-widest transition-colors flex items-center gap-2 ml-auto"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>Baixar</span>
-                    </button>
-                  </td>
-                </tr>
-              ))
+              finalFilteredFiles.map(file => {
+                const isWorkspaceTab = mainTab === 'workspaces';
+                const displayName = isWorkspaceTab
+                  ? (file.context_type === 'project' 
+                      ? projects.find(p => p.id === file.context_id)?.name || 'Projeto Desconhecido'
+                      : 'Workspace App')
+                  : file.name;
+                  
+                const displayVersion = isWorkspaceTab
+                  ? new Date(file.created_at).toLocaleDateString()
+                  : `v${file.version}`;
+                  
+                const displayCategory = isWorkspaceTab
+                  ? (file.context_type === 'project' ? 'Projeto' : 'Workspace')
+                  : getCategoryLabel(file.category);
+                  
+                const displaySize = isWorkspaceTab
+                  ? '--'
+                  : `${(file.size_bytes / 1024 / 1024).toFixed(2)} MB`;
+
+                return (
+                  <tr key={file.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                    <td className="px-6 py-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
+                        <FileIcon className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-bold text-neutral-900 dark:text-white block">{displayName}</span>
+                        <span className="text-xs font-medium text-neutral-500">{displayVersion}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-300">
+                        {displayCategory}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                      {displaySize}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => {
+                          if (isWorkspaceTab) {
+                            window.open(file.download_url, '_blank');
+                          } else {
+                            handleDownloadClick(file);
+                          }
+                        }}
+                        className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg font-bold text-xs uppercase tracking-widest transition-colors flex items-center gap-2 ml-auto"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Baixar</span>
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td colSpan={4} className="p-12 text-center">
