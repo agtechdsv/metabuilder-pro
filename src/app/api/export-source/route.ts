@@ -26,8 +26,8 @@ export async function POST(request: Request) {
 
     // 3. Fetch Models to generate Features (including fields and views)
     const { data: models } = await supabase
-      .from('ui_models')
-      .select('*, ui_fields(*), ui_views(*)')
+      .from('models')
+      .select('*, fields(*), ui_views(*)')
       .eq('project_id', projectId)
       
     // 3.5 Fetch BYOC (Custom Components)
@@ -36,8 +36,28 @@ export async function POST(request: Request) {
       .select('*')
       .eq('project_id', projectId)
 
+    // Mapear os modelos do banco de dados (models e fields) para o formato esperado pelo exportador
+    const mappedModels = (models || []).map((m: any) => {
+      const mappedFields = (m.fields || []).map((f: any) => ({
+        column_name: f.db_column_name,
+        label: f.display_name,
+        field_type: f.data_type,
+        list_visible: f.is_visible_in_list !== false,
+        form_visible: f.is_visible_in_form !== false,
+        required: !f.is_nullable
+      }))
+
+      return {
+        ...m,
+        table_name: m.db_table_name,
+        name: m.display_name,
+        ui_fields: mappedFields,
+        ui_views: m.ui_views || []
+      }
+    })
+
     // 4. Generate the Source Code (ZIP)
-    const generator = new SourceCodeGenerator(project, models || [], customComponents || [])
+    const generator = new SourceCodeGenerator(project, mappedModels, customComponents || [])
     const zipBuffer = await generator.generate()
 
     // 5. Return as a downloadable stream
