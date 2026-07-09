@@ -125,15 +125,28 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
       return
     }
 
-    // Generate signed URL
-    const { data, error } = await supabase.storage.from('releases').createSignedUrl(file.bucket_path, 60 * 60)
-    if (error || !data) {
-      toast('Erro ao gerar link de download.', 'error')
-      return
+    let downloadUrlToUse = ''
+    let realFileName = ''
+    let labelName = ''
+
+    if (file.download_url) {
+      downloadUrlToUse = file.download_url
+      realFileName = file.download_url.split('/').pop() || 'app-installer.msi'
+      const isWorkspaceTab = mainTab === 'workspaces'
+      const projectName = isWorkspaceTab && file.context_type === 'project'
+        ? (projects.find(p => p.id === file.context_id)?.name || 'Projeto')
+        : 'Workspace App'
+      labelName = `${projectName} (${realFileName})`
+    } else {
+      const { data, error } = await supabase.storage.from('releases').createSignedUrl(file.bucket_path, 60 * 60)
+      if (error || !data) {
+        toast('Erro ao gerar link de download.', 'error')
+        return
+      }
+      downloadUrlToUse = data.signedUrl
+      realFileName = file.bucket_path?.split('/').pop() || file.file_path?.split('/').pop() || 'download.msi'
+      labelName = (file.name || 'download').replace(/[^a-zA-Z0-9._\- ()]/g, '_')
     }
-    const signedUrl = data.signedUrl
-    const realFileName = file.bucket_path?.split('/').pop() || file.file_path?.split('/').pop() || 'download.msi'
-    const labelName = (file.name || 'download').replace(/[^a-zA-Z0-9._\- ()]/g, '_')
 
     // â”€â”€ Tauri IDE path: download with progress â”€â”€
     if (isTauri()) {
@@ -151,7 +164,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
         const abort = new AbortController()
         abortRef.current = abort
 
-        const response = await fetch(signedUrl, { signal: abort.signal })
+        const response = await fetch(downloadUrlToUse, { signal: abort.signal })
         if (!response.ok) throw new Error('Falha ao iniciar download')
 
         const contentLength = Number(response.headers.get('content-length') || 0)
@@ -212,7 +225,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
 
     // â”€â”€ Browser fallback â”€â”€
     const a = document.createElement('a')
-    a.href = signedUrl
+    a.href = downloadUrlToUse
     a.download = realFileName
     document.body.appendChild(a)
     a.click()
@@ -601,13 +614,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
-                        onClick={() => {
-                          if (isWorkspaceTab) {
-                            window.open(file.download_url, '_blank');
-                          } else {
-                            handleDownloadClick(file);
-                          }
-                        }}
+                        onClick={() => handleDownloadClick(file)}
                         className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg font-bold text-xs uppercase tracking-widest transition-colors flex items-center gap-2 ml-auto"
                       >
                         <Download className="w-4 h-4" />
