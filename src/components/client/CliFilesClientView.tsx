@@ -148,8 +148,9 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
       labelName = (file.name || 'download').replace(/[^a-zA-Z0-9._\- ()]/g, '_')
     }
 
-    // â”€â”€ Tauri IDE path: download with progress â”€â”€
+    // â”€â”€ Tauri IDE path: download with progress ───
     if (isTauri()) {
+      const isProjectBuild = !!file.download_url
       setIdeDownloadModal({
         open: true,
         phase: 'downloading',
@@ -158,6 +159,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
         savedPath: '',
         savedDir: '',
         canRun: false,
+        isProject: isProjectBuild,
       })
 
       try {
@@ -191,9 +193,12 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
         const { writeFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
 
         const dir = await downloadDir()
-        // Garante separador de pasta correto no Windows (pode vir com ou sem barra)
-        const separator = dir.endsWith('/') || dir.endsWith('\\') ? '' : '/'
-        const fullPath = `${dir}${separator}${realFileName}`
+        const isWindows = dir.includes('\\') || !dir.startsWith('/')
+        const separator = isWindows ? '\\' : '/'
+        let fullPath = `${dir}${separator}${realFileName}`
+        if (isWindows) {
+          fullPath = fullPath.replace(/\//g, '\\')
+        }
 
         console.log(`[Download] Saving to: ${fullPath}`)
         console.log(`[Download] File size: ${merged.length} bytes`)
@@ -212,6 +217,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
           savedPath: fullPath,
           savedDir: dir,
           canRun,
+          isProject: isProjectBuild,
         })
       } catch (err: any) {
         if (err?.name === 'AbortError') return
@@ -251,7 +257,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
     }
   }
 
-  const handleRunInstaller = async (path: string) => {
+  const handleRunInstaller = async (path: string, isProject?: boolean) => {
     try {
       const { invoke } = await import('@tauri-apps/api/core')
       await invoke('runinstaller', { path })
@@ -259,10 +265,12 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
       // Aguarda 1.5 segundos para garantir que o instalador do Windows (msiexec) inicie em background
       await new Promise(resolve => setTimeout(resolve, 1500))
 
-      // Auto-close the app after launching the installer so it can replace the files
-      const { getCurrentWindow } = await import('@tauri-apps/api/window')
-      const current = getCurrentWindow()
-      await current.close()
+      // Só fecha a IDE se não for um projeto customizado (caso contrário a IDE continua aberta)
+      if (!isProject) {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window')
+        const current = getCurrentWindow()
+        await current.close()
+      }
     } catch (e) {
       console.error('Não foi possível executar o instalador:', e)
       alert(`Não foi possível executar o instalador: ${e}`)
@@ -698,7 +706,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
 
                     {ideDownloadModal.canRun ? (
                       <button
-                        onClick={() => handleRunInstaller(ideDownloadModal.savedPath)}
+                        onClick={() => handleRunInstaller(ideDownloadModal.savedPath, ideDownloadModal.isProject)}
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
                       >
                         <Play className="w-4 h-4" />
