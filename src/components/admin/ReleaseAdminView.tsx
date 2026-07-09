@@ -27,6 +27,10 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [deleteConfirmTag, setDeleteConfirmTag] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  
+  // Bulk Delete State
+  const [selectedReleases, setSelectedReleases] = useState<string[]>([])
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   // Local Git State
   const [gitMessage, setGitMessage] = useState('')
@@ -64,6 +68,25 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
     }
     setIsDeleting(false)
     setDeleteConfirmTag(null)
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedReleases.length === 0) return
+    if (!confirm(`Tem certeza que deseja excluir as ${selectedReleases.length} releases selecionadas?`)) return
+    
+    setIsBulkDeleting(true)
+    try {
+      // Deleta um por um em paralelo ou sequencialmente. Sequencialmente é mais seguro para não tomar rate limit da api do github.
+      for (const tag of selectedReleases) {
+        await fetch(`/api/admin/release/history?tag=${tag}`, { method: 'DELETE' })
+      }
+      setSelectedReleases([])
+      await fetchHistory()
+    } catch (e) {
+      console.error(e)
+      alert('Houve um erro ao deletar algumas releases. Tente novamente.')
+    }
+    setIsBulkDeleting(false)
   }
 
   const handleDeploy = async () => {
@@ -382,17 +405,59 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
             {historyReleases.length === 0 ? (
               <div className="text-center p-8 text-gray-500 dark:text-gray-400">Nenhuma release encontrada no Github.</div>
             ) : (
-              historyReleases.map(release => (
-                <div key={release.id} className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-indigo-500/50 transition-colors bg-zinc-50 dark:bg-zinc-800/50">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-gray-900 dark:text-white">{release.name}</h3>
-                      <span className="px-2 py-0.5 text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 rounded-full font-mono">{release.tag_name}</span>
-                    </div>
+              <>
+                <div className="flex items-center justify-between p-2 mb-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-600 dark:text-gray-300">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      checked={selectedReleases.length === historyReleases.length && historyReleases.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedReleases(historyReleases.map(r => r.tag_name));
+                        } else {
+                          setSelectedReleases([]);
+                        }
+                      }}
+                    />
+                    Selecionar Todos
+                  </label>
+                  {selectedReleases.length > 0 && (
+                    <button
+                      onClick={handleBulkDelete}
+                      disabled={isBulkDeleting}
+                      className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 font-medium rounded-lg transition-colors shadow-sm disabled:opacity-50 text-sm"
+                    >
+                      {isBulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      Excluir selecionados ({selectedReleases.length})
+                    </button>
+                  )}
+                </div>
+                {historyReleases.map(release => (
+                  <div key={release.id} className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-indigo-500/50 transition-colors bg-zinc-50 dark:bg-zinc-800/50">
+                    <div className="flex items-center gap-4 w-full">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0"
+                        checked={selectedReleases.includes(release.tag_name)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedReleases([...selectedReleases, release.tag_name]);
+                          } else {
+                            setSelectedReleases(selectedReleases.filter(id => id !== release.tag_name));
+                          }
+                        }}
+                      />
+                      <div className="space-y-1 w-full">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-gray-900 dark:text-white">{release.name}</h3>
+                          <span className="px-2 py-0.5 text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 rounded-full font-mono">{release.tag_name}</span>
+                        </div>
                     <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                       <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(release.published_at).toLocaleDateString()} às {new Date(release.published_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       <span className="flex items-center gap-1"><DownloadCloud className="w-3.5 h-3.5" /> {release.assets.length} assets disponíveis</span>
                     </div>
+                  </div>
                   </div>
                   <div className="flex items-center justify-end shrink-0">
                     {deleteConfirmTag === release.tag_name ? (
@@ -413,6 +478,8 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
                   </div>
                 </div>
               ))
+              }
+              </>
             )}
           </div>
         )}
