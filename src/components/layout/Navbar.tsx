@@ -9,6 +9,7 @@ import { HeaderActions } from '@/components/layout/HeaderActions'
 import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { isTauri } from '@/utils/tauriUtils'
 
 interface NavbarProps {
   user: any // Supabase user object
@@ -24,7 +25,7 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
   const pathname = usePathname()
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && '__TAURI__' in window) {
+    if (isTauri()) {
       setIsDesktop(true)
     }
 
