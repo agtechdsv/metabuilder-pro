@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Monitor, Upload, Key, Link2, Download, CheckCircle2 } from 'lucide-react'
 
@@ -29,6 +29,18 @@ export function DesktopAppGeneratorModal({
 
   const [isGenerating, setIsGenerating] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsSuccess(false)
+      setIsGenerating(false)
+      setAppName(defaultName || '')
+      setAppDescription(defaultDescription || '')
+      setTunnelUrl(defaultTunnelUrl || '')
+      setIconBase64(null)
+      setDbConnectionString('')
+    }
+  }, [isOpen, defaultName, defaultDescription, defaultTunnelUrl])
 
   const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
