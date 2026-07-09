@@ -124,7 +124,7 @@ export function DesktopAppGeneratorModal({
                   </div>
                   <h3 className="text-2xl font-black mb-2 text-neutral-900 dark:text-white">Build Iniciado na Nuvem!</h3>
                   <p className="text-neutral-500 mb-8 max-w-sm">
-                    A infraestrutura do GitHub Actions está compilando o seu instalador Windows. Isso pode levar de 3 a 5 minutos. Você receberá o arquivo <strong>{appName || 'App'}.msi</strong> quando estiver pronto.
+                    A infraestrutura do GitHub Actions está compilando o seu instalador Windows. Isso pode levar de 3 a 5 minutos. Assim que estiver pronto, o arquivo <strong>{appName || 'App'}.msi</strong> ficará disponível na sua <strong>Central de Downloads</strong>.
                   </p>
                   <button
                     onClick={onClose}
