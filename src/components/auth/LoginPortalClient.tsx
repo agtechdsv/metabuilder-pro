@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
-import { LayoutTemplate, AlertCircle, Loader2, Eye, EyeOff, Fingerprint } from 'lucide-react'
+import { LayoutTemplate, AlertCircle, Loader2, Eye, EyeOff, Fingerprint, ArrowLeft } from 'lucide-react'
 import { HeaderActions } from '@/components/layout/HeaderActions'
 import { LoginPortalThemeWrapper } from '@/components/auth/LoginPortalThemeWrapper'
 import { TranslationProvider } from '@/i18n/TranslationProvider'
@@ -401,6 +401,18 @@ export function LoginPortalClient({
               )}
 
               
+              {workspaceSlug && (
+                <div className="mt-6 text-center border-t border-neutral-100 dark:border-neutral-800 pt-6">
+                  <a 
+                    href={`/${workspaceSlug}`}
+                    className="text-[10px] font-bold text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 uppercase tracking-widest transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    Voltar ao Portal do Workspace
+                  </a>
+                </div>
+              )}
+
               <div className="mt-10 flex flex-col items-center gap-4">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-px bg-neutral-100 dark:bg-neutral-800" />
