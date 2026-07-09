@@ -157,10 +157,14 @@ class CliDbLogger {
       localISOString(), // horário local do CLI, não UTC do PostgreSQL
     ];
     // Fire-and-forget: nunca bloqueia a query principal
-    this._pgClient.query(sql, params).catch(e => {
-      // Silencia erros de log para não afetar o usuário
-      console.error('\x1b[33m[MBLog] Erro ao gravar log:\x1b[0m', e.message);
-    });
+    try {
+      this._pgClient.query(sql, params).catch(e => {
+        // Silencia erros de log para não afetar o usuário
+        console.error('\x1b[33m[MBLog] Erro ao gravar log:\x1b[0m', e.message);
+      });
+    } catch (queryErr) {
+      console.error('\x1b[33m[MBLog] Erro síncrono ao gravar log:\x1b[0m', queryErr.message);
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────

@@ -1144,39 +1144,61 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
         }
 
         // Evento Genérico (para o Dashboard BI)
-        await channel.send({
-          type: 'broadcast',
-          event: 'sql_result',
-          payload: responsePayload
-        });
+        try {
+          await channel.send({
+            type: 'broadcast',
+            event: 'sql_result',
+            payload: responsePayload
+          });
+        } catch (sendErr) {
+          console.error(chalk.yellow(`[ AVISO ] Falha ao enviar broadcast 'sql_result': ${sendErr.message}`));
+        }
 
         // Evento Específico (para compatibilidade com a Grade/Grid)
-        await channel.send({
-          type: 'broadcast',
-          event: `query_result_${queryId}`,
-          payload: responsePayload
-        });
+        try {
+          await channel.send({
+            type: 'broadcast',
+            event: `query_result_${queryId}`,
+            payload: responsePayload
+          });
+        } catch (sendErr) {
+          console.error(chalk.yellow(`[ AVISO ] Falha ao enviar broadcast 'query_result_${queryId}': ${sendErr.message}`));
+        }
 
       } catch (err) {
         console.log(chalk.red(`[ ERRO ] Falha na query:`), err.message);
-        cliDbLogger.logError(table || '', sql || '', err.message, null);
+        
+        try {
+          cliDbLogger.logError(table || '', sql || '', err.message, null);
+        } catch (logErr) {
+          console.error(chalk.yellow(`[ AVISO ] Falha ao registrar log de erro no banco local: ${logErr.message}`));
+        }
+
         const errorPayload = {
           queryId,
           success: false,
           error: err.message
         };
 
-        await channel.send({
-          type: 'broadcast',
-          event: 'sql_result',
-          payload: errorPayload
-        });
+        try {
+          await channel.send({
+            type: 'broadcast',
+            event: 'sql_result',
+            payload: errorPayload
+          });
+        } catch (sendErr) {
+          console.error(chalk.yellow(`[ AVISO ] Falha ao enviar broadcast de erro 'sql_result': ${sendErr.message}`));
+        }
 
-        await channel.send({
-          type: 'broadcast',
-          event: `query_result_${queryId}`,
-          payload: errorPayload
-        });
+        try {
+          await channel.send({
+            type: 'broadcast',
+            event: `query_result_${queryId}`,
+            payload: errorPayload
+          });
+        } catch (sendErr) {
+          console.error(chalk.yellow(`[ AVISO ] Falha ao enviar broadcast de erro 'query_result_${queryId}': ${sendErr.message}`));
+        }
       }
     });
 
