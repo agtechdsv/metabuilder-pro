@@ -48,8 +48,30 @@ export function DesktopAppGeneratorModal({
 
     const reader = new FileReader()
     reader.onload = (event) => {
-      const base64 = event.target?.result as string
-      setIconBase64(base64)
+      const base64Src = event.target?.result as string
+      
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = 512
+        canvas.height = 512
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          ctx.clearRect(0, 0, 512, 512)
+          
+          // Redimensiona mantendo a proporção (modo 'contain')
+          const scale = Math.min(512 / img.width, 512 / img.height)
+          const w = img.width * scale
+          const h = img.height * scale
+          const x = (512 - w) / 2
+          const y = (512 - h) / 2
+          
+          ctx.drawImage(img, x, y, w, h)
+          const squaredBase64 = canvas.toDataURL('image/png')
+          setIconBase64(squaredBase64)
+        }
+      }
+      img.src = base64Src
     }
     reader.readAsDataURL(file)
   }
