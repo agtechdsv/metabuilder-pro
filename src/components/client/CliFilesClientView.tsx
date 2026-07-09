@@ -54,6 +54,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
     savedPath: string
     savedDir: string
     canRun: boolean
+    isProject?: boolean
   } | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
