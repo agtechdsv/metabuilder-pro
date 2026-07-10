@@ -121,6 +121,8 @@ export function ProjectManager({
   const [exportDbHost, setExportDbHost] = useState('localhost')
   const [exportDbPort, setExportDbPort] = useState('5432')
   const [exportDbName, setExportDbName] = useState('app_db')
+  const [exportSupaUrl, setExportSupaUrl] = useState('')
+  const [exportSupaAnonKey, setExportSupaAnonKey] = useState('')
 
   const handleOpenFolder = async (dir: string, fileFullPath: string) => {
     try {
@@ -623,6 +625,8 @@ export function ProjectManager({
                               setExportDbHost('localhost')
                               setExportDbPort('5432')
                               setExportDbName(`${project.slug || 'app'}_db`)
+                              setExportSupaUrl(process.env.NEXT_PUBLIC_SUPABASE_URL || '')
+                              setExportSupaAnonKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '')
 
                               setDownloadModal({
                                 open: true,
@@ -1071,6 +1075,35 @@ export function ProjectManager({
                     </div>
                   </div>
 
+                  {/* Inline Supabase Configuration Settings */}
+                  {exportDbType === 'supabase' && (
+                    <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 font-mono text-[10px] text-neutral-600 dark:text-neutral-400">
+                      <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">Configuração do Supabase</p>
+                      <div className="space-y-2">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-neutral-500 font-sans text-xs">Supabase URL</span>
+                          <input
+                            type="text"
+                            value={exportSupaUrl}
+                            onChange={(e) => setExportSupaUrl(e.target.value)}
+                            placeholder="https://your-project.supabase.co"
+                            className="px-3 py-1.5 border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 rounded-lg text-neutral-900 dark:text-white outline-none focus:border-indigo-500 text-xs w-full font-mono"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-neutral-500 font-sans text-xs">Supabase Anon Key</span>
+                          <input
+                            type="text"
+                            value={exportSupaAnonKey}
+                            onChange={(e) => setExportSupaAnonKey(e.target.value)}
+                            placeholder="your-anon-key"
+                            className="px-3 py-1.5 border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 rounded-lg text-neutral-900 dark:text-white outline-none focus:border-indigo-500 text-xs w-full font-mono truncate"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Inline Database Connection Settings */}
                   {exportDbType === 'postgres' && (
                     <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 font-mono text-[10px] text-neutral-600 dark:text-neutral-400">
@@ -1131,13 +1164,16 @@ export function ProjectManager({
                         downloadModal.projectId!, 
                         exportDbType, 
                         downloadModal.fileName,
-                        exportDbType === 'postgres' ? {
+                        exportDbType === 'supabase' ? {
+                          supabaseUrl: exportSupaUrl,
+                          supabaseAnonKey: exportSupaAnonKey
+                        } : {
                           user: exportDbUser,
                           password: exportDbPassword,
                           host: exportDbHost,
                           port: exportDbPort,
                           database: exportDbName
-                        } : null
+                        }
                       )}
                       className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(79,70,229,0.2)]"
                     >

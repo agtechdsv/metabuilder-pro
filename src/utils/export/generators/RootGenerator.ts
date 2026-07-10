@@ -86,9 +86,12 @@ export default config;
 }
 
 export function generateEnv(zip: JSZip, project: any, dbType: string = 'supabase', dbConfig: any = null) {
+  const supaUrl = dbType === 'supabase' && dbConfig?.supabaseUrl ? dbConfig.supabaseUrl : 'your_supabase_url'
+  const supaAnon = dbType === 'supabase' && dbConfig?.supabaseAnonKey ? dbConfig.supabaseAnonKey : 'your_supabase_anon_key'
+
   let envContent = `# Authentication
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SUPABASE_URL=${supaUrl}
+NEXT_PUBLIC_SUPABASE_ANON_KEY=${supaAnon}
 
 # Project Token
 META_PROJECT_TOKEN=${project.secret_token || 'your_project_token'}
