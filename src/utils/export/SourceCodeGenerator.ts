@@ -55,6 +55,7 @@ export class SourceCodeGenerator {
       await this.copyFolderToZip(path.join(cwd, 'src/components/layout'), componentsFolder.folder('layout')!)
       await this.copyFolderToZip(path.join(cwd, 'src/components/auth'), componentsFolder.folder('auth')!)
       await this.copyFolderToZip(path.join(cwd, 'src/components/shared'), componentsFolder.folder('shared')!)
+      await this.copyFolderToZip(path.join(cwd, 'src/components/profile'), componentsFolder.folder('profile')!)
       
       // Root components
       const rootFiles = ['CustomThemeProvider.tsx', 'ProgressBarProvider.tsx']
@@ -62,6 +63,15 @@ export class SourceCodeGenerator {
         const filePath = path.join(cwd, 'src/components', file)
         if (fs.existsSync(filePath)) {
           componentsFolder.file(file, fs.readFileSync(filePath))
+        }
+      }
+
+      // Workspace specific component needed by profile
+      const workspaceFolder = componentsFolder.folder('workspace')
+      if (workspaceFolder) {
+        const securitySettingsPath = path.join(cwd, 'src/components/workspace/SecuritySettings.tsx')
+        if (fs.existsSync(securitySettingsPath)) {
+          workspaceFolder.file('SecuritySettings.tsx', fs.readFileSync(securitySettingsPath))
         }
       }
     }
