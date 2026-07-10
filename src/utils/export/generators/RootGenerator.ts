@@ -32,7 +32,8 @@ export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'su
       '@supabase/supabase-js': '^2.43.4',
       '@supabase/ssr': '^0.3.0',
       ...(dbType === 'postgres' ? { 'pg': '^8.11.5' } : {}),
-      ...(security.passkey_enabled ? { '@simplewebauthn/browser': '^9.0.1' } : {})
+      '@simplewebauthn/browser': '^9.0.1',
+      '@simplewebauthn/server': '^9.0.1'
     },
     devDependencies: {
       'typescript': '^5',

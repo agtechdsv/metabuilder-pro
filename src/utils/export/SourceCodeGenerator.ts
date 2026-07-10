@@ -75,6 +75,16 @@ export class SourceCodeGenerator {
     if (utilsFolder) {
       await this.copyFolderToZip(path.join(cwd, 'src/utils/supabase'), utilsFolder)
     }
+
+    const appAuthFolder = this.zip.folder('src/app/auth')
+    if (appAuthFolder) {
+      await this.copyFolderToZip(path.join(cwd, 'src/app/auth'), appAuthFolder)
+    }
+
+    const appApiAuthFolder = this.zip.folder('src/app/api/auth')
+    if (appApiAuthFolder) {
+      await this.copyFolderToZip(path.join(cwd, 'src/app/api/auth'), appApiAuthFolder)
+    }
     
     const i18nFolder = this.zip.folder('src/i18n')
     if (i18nFolder) {
