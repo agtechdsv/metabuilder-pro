@@ -60,8 +60,9 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
 
     configFolder.file(`${view.slug}.json`, JSON.stringify(viewConfig, null, 2))
 
-    // Generate Wrapper Page
-    const pageFolder = appFolder.folder(view.slug)
+    // Generate Wrapper Page inside (dashboard)
+    const dashboardFolder = appFolder.folder('(dashboard)') || appFolder
+    const pageFolder = dashboardFolder.folder(view.slug)
     if (pageFolder) {
       pageFolder.file('page.tsx', `'use client'
 

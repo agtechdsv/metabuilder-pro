@@ -74,9 +74,11 @@ import projectConfig from '@/config/project.json'
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <RuntimeLayoutClient 
-      workspace={{ slug: 'export', name: 'Local' }}
+      workspaceSlug="export"
+      projectSlug="export"
       project={projectConfig}
       navigation={projectConfig.navigation}
+      baseNavUrl=""
     >
       {children}
     </RuntimeLayoutClient>
@@ -113,56 +115,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 }
 `)
 
-    // Create a dynamic route for each ui_view
-    uiViews.forEach(view => {
-      const viewRoute = dashboardFolder.folder(view.slug)
-      if (viewRoute) {
-        
-        // Se a view está associada a um model (ex: CRUD ou Use Case Avançado)
-        if (view.model_id) {
-          const model = models.find(m => m.id === view.model_id)
-          if (model) {
-            viewRoute.file('page.tsx', `import { ${model.name.replace(/\s/g, '')}List } from "@/features/${model.table_name}/components/${model.name.replace(/\s/g, '')}List"
-import { fetch${model.name.replace(/\s/g, '')}s } from "@/features/${model.table_name}/actions"
+    // Generate Login Page
+    const loginFolder = appFolder.folder('login')
+    if (loginFolder) {
+      loginFolder.file('page.tsx', `'use client'
 
-export default async function ${view.slug.replace(/-/g, '')}Page() {
-  const data = await fetch${model.name.replace(/\s/g, '')}s()
+import React from 'react'
+import { LoginPortalClient } from '@/components/auth/LoginPortalClient'
+import projectConfig from '@/config/project.json'
+import { CustomThemeProvider } from '@/components/CustomThemeProvider'
+
+export default function LoginPage() {
+  const visual = projectConfig.theme_config?.ui_config || {}
+  const auth = {
+    allow_signup: visual.allow_signup || false,
+    auth_type: projectConfig.auth_type || 'none',
+  }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">${view.name}</h2>
-        <p className="text-neutral-500">Gerencie os registros de ${view.name.toLowerCase()}</p>
-      </div>
-      <${model.name.replace(/\s/g, '')}List initialData={data} viewConfig={${JSON.stringify(view.layout_config || view.draft_config?.layout_config || {})}} />
+    <div className="flex-1 min-h-screen bg-slate-50 dark:bg-[#050505]">
+      <LoginPortalClient 
+        project={projectConfig}
+        workspaceSlug="export"
+        projectSlug="export"
+        locale="pt"
+        t={(key: string) => key}
+        config={{ visual, auth }}
+      />
     </div>
   )
 }
 `)
-            return
-          }
-        }
-
-        // Se não tiver model_id (ex: Dashboards), gera um skeleton premium
-        viewRoute.file('page.tsx', `export default function ${view.slug.replace(/-/g, '')}Page() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">${view.name}</h2>
-        <p className="text-neutral-500">Página customizada ou Dashboard</p>
-      </div>
-      
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-800 p-12 rounded-2xl shadow-sm text-center">
-        <h3 className="text-lg font-medium text-neutral-900 dark:text-white mb-2">Área de Desenvolvimento</h3>
-        <p className="text-neutral-500 text-sm max-w-md mx-auto">
-          Esta view não possui um modelo de dados associado. Insira seus componentes customizados (BYOC) ou dashboards aqui.
-        </p>
-      </div>
-    </div>
-  )
-}
-`)
-      }
-    })
+    }
   }
 }
