@@ -39,46 +39,101 @@ export default function RootLayout({
   const dashboardFolder = appFolder.folder('(dashboard)')
   if (dashboardFolder) {
     const navLinks = models.map(m => `
-            <Link href="/${m.table_name}" className="flex items-center gap-3 rounded-lg px-3 py-2 text-neutral-500 transition-all hover:text-neutral-900 hover:bg-neutral-100">
-              {/* Adicione um ícone aqui se desejar */}
+            <Link href="/${m.table_name}" className="flex items-center gap-3 rounded-xl px-4 py-3 text-neutral-600 dark:text-neutral-400 transition-all hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10">
+              <Database className="w-4 h-4" />
               ${m.name}
             </Link>`).join('')
 
     dashboardFolder.file('layout.tsx', `import Link from "next/link"
+import { Home, Database, Settings, Bell, Search, User, Menu, ChevronDown, Activity, Sparkles } from "lucide-react"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
-      <div className="hidden border-r bg-neutral-50/40 lg:block">
-        <div className="flex h-full max-h-screen flex-col gap-2">
-          <div className="flex h-[60px] items-center border-b px-6">
-            <Link className="flex items-center gap-2 font-semibold" href="/">
-              <span className="text-indigo-600 font-black tracking-tight">${projectName}</span>
+    <div className="flex min-h-screen bg-neutral-50 dark:bg-neutral-950 font-sans">
+      {/* Sidebar */}
+      <aside className="hidden w-72 flex-col border-r border-neutral-200/60 dark:border-neutral-800 bg-white dark:bg-neutral-900 lg:flex shadow-sm z-10">
+        <div className="flex h-16 items-center border-b border-neutral-200/60 dark:border-neutral-800 px-6">
+          <Link className="flex items-center gap-2 font-bold" href="/">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-xl tracking-tight text-neutral-900 dark:text-white">${projectName}</span>
+          </Link>
+        </div>
+        <div className="flex-1 overflow-auto py-6 flex flex-col gap-6">
+          <nav className="grid items-start px-4 gap-1 text-sm font-medium">
+            <Link href="/" className="flex items-center gap-3 rounded-xl px-4 py-3 text-neutral-600 dark:text-neutral-400 transition-all hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10">
+              <Home className="w-4 h-4" />
+              Início
             </Link>
-          </div>
-          <div className="flex-1 overflow-auto py-2">
-            <nav className="grid items-start px-4 text-sm font-medium">
-              <Link href="/" className="flex items-center gap-3 rounded-lg px-3 py-2 text-neutral-500 transition-all hover:text-neutral-900 hover:bg-neutral-100">
-                Início
-              </Link>
-              <div className="my-2 border-t" />
-              <div className="px-3 py-2 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                Módulos
-              </div>
+          </nav>
+          
+          <div>
+            <div className="px-8 py-2 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+              Módulos do Sistema
+            </div>
+            <nav className="grid items-start px-4 gap-1 text-sm font-medium mt-1">
 ${navLinks}
             </nav>
           </div>
         </div>
-      </div>
-      <div className="flex flex-col">
-        <header className="flex h-[60px] items-center gap-4 border-b bg-neutral-50/40 px-6">
-          <div className="w-full flex-1">
-            {/* Adicione breadcrumbs ou barra de busca aqui */}
+        <div className="p-4 border-t border-neutral-200/60 dark:border-neutral-800">
+          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-800/50 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors">
+            <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center shrink-0">
+              <User className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-sm font-bold truncate">Usuário Atual</p>
+              <p className="text-xs text-neutral-500 truncate">Admin</p>
+            </div>
+            <Settings className="w-4 h-4 text-neutral-400" />
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Header */}
+        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-neutral-200/60 dark:border-neutral-800 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-md px-6 sticky top-0 z-20">
+          <button className="lg:hidden text-neutral-500 hover:text-neutral-900 dark:hover:text-white">
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex-1">
+            <div className="relative w-full max-w-md hidden md:block">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <input 
+                type="text" 
+                placeholder="Buscar em todo o sistema..." 
+                className="w-full pl-9 pr-4 py-2 bg-neutral-100 dark:bg-neutral-800/50 border-none rounded-full text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all text-neutral-900 dark:text-white placeholder:text-neutral-500"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="relative p-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-neutral-900"></span>
+            </button>
           </div>
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6 bg-white">
-          {children}
+
+        {/* Page Content */}
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-neutral-50 dark:bg-neutral-950">
+          <div className="mx-auto max-w-6xl">
+            {children}
+          </div>
         </main>
+        
+        {/* Footer */}
+        <footer className="py-6 px-8 border-t border-neutral-200/60 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-xs text-neutral-500 font-medium">
+            &copy; {new Date().getFullYear()} ${projectName}. Gerado por MetaBuilderPRO.
+          </p>
+          <div className="flex items-center gap-4 text-xs font-medium text-neutral-400">
+            <Link href="#" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Suporte</Link>
+            <Link href="#" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Termos</Link>
+            <Link href="#" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Privacidade</Link>
+          </div>
+        </footer>
       </div>
     </div>
   )
