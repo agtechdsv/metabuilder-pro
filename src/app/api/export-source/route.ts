@@ -36,6 +36,25 @@ export async function POST(request: Request) {
       .select('*')
       .eq('project_id', projectId)
 
+    // 3.6 Fetch all UI Views independently to drive the export logic
+    const { data: uiViews } = await supabase
+      .from('ui_views')
+      .select('*')
+      .eq('project_id', projectId)
+      .eq('status', 'published') // Somente views publicadas
+      .order('created_at', { ascending: true })
+
+    // Se não tiver views publicadas, pega todas (fallback temporário)
+    let finalUiViews = uiViews
+    if (!finalUiViews || finalUiViews.length === 0) {
+      const { data: allViews } = await supabase
+        .from('ui_views')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: true })
+      finalUiViews = allViews
+    }
+
     // Mapear os modelos do banco de dados (models e fields) para o formato esperado pelo exportador
     const mappedModels = (models || []).map((m: any) => {
       const mappedFields = (m.fields || []).map((f: any) => ({
@@ -57,7 +76,7 @@ export async function POST(request: Request) {
     })
 
     // 4. Generate the Source Code (ZIP)
-    const generator = new SourceCodeGenerator(project, mappedModels, customComponents || [], dbType, dbConfig)
+    const generator = new SourceCodeGenerator(project, mappedModels, finalUiViews || [], customComponents || [], dbType, dbConfig)
     const zipBuffer = await generator.generate()
 
     // 5. Return as a downloadable stream

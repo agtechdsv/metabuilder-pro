@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 
-export function generateFeatures(zip: JSZip, models: any[], dbType: string = 'supabase') {
+export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbType: string = 'supabase') {
   const featuresFolder = zip.folder('src/features')
   if (!featuresFolder) return
 
@@ -88,8 +88,17 @@ export async function delete${modelName}(id: string) {
     const componentsFolder = featFolder.folder('components')
     if (componentsFolder) {
       
+      const view = uiViews.find(v => v.model_id === model.id)
+      const layoutConfig = view?.layout_config || view?.draft_config?.layout_config || {}
+
       // Generate Table Headers and Cells based on fields
-      const visibleFields = fields.filter((f: any) => f.list_visible !== false).slice(0, 5) // Show up to 5 columns
+      let visibleFields = fields.filter((f: any) => f.list_visible !== false)
+      if (layoutConfig.grid_fields && layoutConfig.grid_fields.length > 0) {
+        // filter by column name
+        visibleFields = fields.filter((f: any) => layoutConfig.grid_fields.includes(f.column_name))
+      } else {
+        visibleFields = visibleFields.slice(0, 5) // Fallback
+      }
       
       const tableHeaders = visibleFields.map((f: any) => 
         `            <TableHead>${f.label}</TableHead>`
@@ -221,7 +230,12 @@ ${tableCells}
 `)
 
       // Form Component
-      const formInputs = fields.filter((f: any) => f.form_visible !== false && f.column_name !== 'id' && f.column_name !== 'created_at').map((f: any) => {
+      let formFieldsList = fields.filter((f: any) => f.form_visible !== false && f.column_name !== 'id' && f.column_name !== 'created_at' && f.column_name !== 'criado_em')
+      if (layoutConfig.form_fields && layoutConfig.form_fields.length > 0) {
+        formFieldsList = fields.filter((f: any) => layoutConfig.form_fields.includes(f.column_name))
+      }
+
+      const formInputs = formFieldsList.map((f: any) => {
         let inputType = 'text'
         if (f.field_type === 'number') inputType = 'number'
         if (f.field_type === 'date') inputType = 'date'
@@ -232,8 +246,6 @@ ${tableCells}
         </div>`
       }).join('\n')
 
-      const view = model.ui_views?.[0]
-      const layoutConfig = view?.draft_config?.layout_config || {}
       const byocFields = [...(layoutConfig.form_fields || []), ...(layoutConfig.grid_fields || []), ...(layoutConfig.filter_fields || [])]
         .filter((fid: string) => fid.startsWith('byoc_'))
       const uniqueByocNames = Array.from(new Set(byocFields.map((fid: string) => fid.split('_').slice(2).join('_'))))

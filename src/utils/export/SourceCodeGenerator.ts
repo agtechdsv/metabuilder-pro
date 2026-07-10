@@ -10,14 +10,16 @@ export class SourceCodeGenerator {
   private zip: JSZip
   private project: any
   private models: any[]
+  private uiViews: any[]
   private customComponents: any[]
   private dbType: string
   private dbConfig: any
 
-  constructor(project: any, models: any[], customComponents: any[] = [], dbType: string = 'supabase', dbConfig: any = null) {
+  constructor(project: any, models: any[], uiViews: any[], customComponents: any[] = [], dbType: string = 'supabase', dbConfig: any = null) {
     this.zip = new JSZip()
     this.project = project
     this.models = models
+    this.uiViews = uiViews
     this.customComponents = customComponents
     this.dbType = dbType
     this.dbConfig = dbConfig
@@ -28,8 +30,8 @@ export class SourceCodeGenerator {
     generateEnv(this.zip, this.project, this.dbType, this.dbConfig)
     generateLib(this.zip, this.dbType)
     generateUIComponents(this.zip)
-    generateAppRouter(this.zip, this.project, this.models)
-    generateFeatures(this.zip, this.models, this.dbType)
+    generateAppRouter(this.zip, this.project, this.models, this.uiViews)
+    generateFeatures(this.zip, this.models, this.uiViews, this.dbType)
     generateBYOC(this.zip, this.customComponents)
 
     return await this.zip.generateAsync({ type: 'nodebuffer' })

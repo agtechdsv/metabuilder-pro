@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 
-export function generateAppRouter(zip: JSZip, project: any, models: any[]) {
+export function generateAppRouter(zip: JSZip, project: any, models: any[], uiViews: any[] = []) {
   const appFolder = zip.folder('src/app')
   if (!appFolder) return
 
@@ -38,10 +38,17 @@ export default function RootLayout({
   // Dashboard Group Layout (Sidebar navigation)
   const dashboardFolder = appFolder.folder('(dashboard)')
   if (dashboardFolder) {
-    const navLinks = models.map(m => `
-            <Link href="/${m.table_name}" className="flex items-center gap-3 rounded-xl px-4 py-3 text-neutral-600 dark:text-neutral-400 transition-all hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10">
-              <Database className="w-4 h-4" />
-              ${m.name}
+    // Helper para obter o ícone de uma view
+    const getViewIcon = (view: any) => {
+      if (view.logic_type === 'dashboard') return '<Activity className="w-4 h-4" />'
+      if (view.logic_type === 'advanced_use_case') return '<Database className="w-4 h-4" />'
+      return '<Database className="w-4 h-4" />' // Default
+    }
+
+    const navLinks = uiViews.map(view => `
+            <Link href="/${view.slug}" className="flex items-center gap-3 rounded-xl px-4 py-3 text-neutral-600 dark:text-neutral-400 transition-all hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10">
+              ${getViewIcon(view)}
+              ${view.name}
             </Link>`).join('')
 
     dashboardFolder.file('layout.tsx', `import Link from "next/link"
@@ -169,23 +176,51 @@ ${navLinks}
 }
 `)
 
-    // Create a dynamic route for each model
-    models.forEach(m => {
-      const modelRoute = dashboardFolder.folder(m.table_name)
-      if (modelRoute) {
-        modelRoute.file('page.tsx', `import { ${m.name.replace(/\s/g, '')}List } from "@/features/${m.table_name}/components/${m.name.replace(/\s/g, '')}List"
-import { fetch${m.name.replace(/\s/g, '')}s } from "@/features/${m.table_name}/actions"
+    // Create a dynamic route for each ui_view
+    uiViews.forEach(view => {
+      const viewRoute = dashboardFolder.folder(view.slug)
+      if (viewRoute) {
+        
+        // Se a view está associada a um model (ex: CRUD ou Use Case Avançado)
+        if (view.model_id) {
+          const model = models.find(m => m.id === view.model_id)
+          if (model) {
+            viewRoute.file('page.tsx', `import { ${model.name.replace(/\s/g, '')}List } from "@/features/${model.table_name}/components/${model.name.replace(/\s/g, '')}List"
+import { fetch${model.name.replace(/\s/g, '')}s } from "@/features/${model.table_name}/actions"
 
-export default async function ${m.name.replace(/\s/g, '')}Page() {
-  const data = await fetch${m.name.replace(/\s/g, '')}s()
+export default async function ${view.slug.replace(/-/g, '')}Page() {
+  const data = await fetch${model.name.replace(/\s/g, '')}s()
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">${m.name}</h2>
-        <p className="text-neutral-500">Gerencie os registros de ${m.name.toLowerCase()}</p>
+        <h2 className="text-2xl font-bold tracking-tight">${view.name}</h2>
+        <p className="text-neutral-500">Gerencie os registros de ${view.name.toLowerCase()}</p>
       </div>
-      <${m.name.replace(/\s/g, '')}List initialData={data} />
+      <${model.name.replace(/\s/g, '')}List initialData={data} viewConfig={${JSON.stringify(view.layout_config || view.draft_config?.layout_config || {})}} />
+    </div>
+  )
+}
+`)
+            return
+          }
+        }
+
+        // Se não tiver model_id (ex: Dashboards), gera um skeleton premium
+        viewRoute.file('page.tsx', `export default function ${view.slug.replace(/-/g, '')}Page() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">${view.name}</h2>
+        <p className="text-neutral-500">Página customizada ou Dashboard</p>
+      </div>
+      
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-800 p-12 rounded-2xl shadow-sm text-center">
+        <h3 className="text-lg font-medium text-neutral-900 dark:text-white mb-2">Área de Desenvolvimento</h3>
+        <p className="text-neutral-500 text-sm max-w-md mx-auto">
+          Esta view não possui um modelo de dados associado. Insira seus componentes customizados (BYOC) ou dashboards aqui.
+        </p>
+      </div>
     </div>
   )
 }
