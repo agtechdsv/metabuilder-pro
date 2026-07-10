@@ -50,9 +50,20 @@ export class SourceCodeGenerator {
     const cwd = process.cwd()
     const componentsFolder = this.zip.folder('src/components')
     if (componentsFolder) {
-       await this.copyFolderToZip(path.join(cwd, 'src/components/ui'), componentsFolder.folder('ui')!)
-       await this.copyFolderToZip(path.join(cwd, 'src/components/runtime'), componentsFolder.folder('runtime')!)
-       await this.copyFolderToZip(path.join(cwd, 'src/components/shared'), componentsFolder.folder('shared')!)
+      await this.copyFolderToZip(path.join(cwd, 'src/components/runtime'), componentsFolder.folder('runtime')!)
+      await this.copyFolderToZip(path.join(cwd, 'src/components/ui'), componentsFolder.folder('ui')!)
+      await this.copyFolderToZip(path.join(cwd, 'src/components/layout'), componentsFolder.folder('layout')!)
+      await this.copyFolderToZip(path.join(cwd, 'src/components/auth'), componentsFolder.folder('auth')!)
+      await this.copyFolderToZip(path.join(cwd, 'src/components/shared'), componentsFolder.folder('shared')!)
+      
+      // Root components
+      const rootFiles = ['CustomThemeProvider.tsx', 'ProgressBarProvider.tsx']
+      for (const file of rootFiles) {
+        const filePath = path.join(cwd, 'src/components', file)
+        if (fs.existsSync(filePath)) {
+          componentsFolder.file(file, fs.readFileSync(filePath))
+        }
+      }
     }
     
     const libFolder = this.zip.folder('src/lib')

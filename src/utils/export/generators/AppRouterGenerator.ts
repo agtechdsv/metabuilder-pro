@@ -34,7 +34,8 @@ export function generateAppRouter(zip: JSZip, project: any, models: any[], uiVie
   appFolder.file('layout.tsx', `import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "next-themes";
+import { CustomThemeProvider } from "@/components/CustomThemeProvider";
+import { ProgressBarProvider } from "@/components/ProgressBarProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -51,9 +52,10 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <CustomThemeProvider defaultTheme="system" attribute="class">
+          <ProgressBarProvider />
           {children}
-        </ThemeProvider>
+        </CustomThemeProvider>
       </body>
     </html>
   );
