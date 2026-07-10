@@ -53,6 +53,16 @@ export class SourceCodeGenerator {
       await this.copyFolderToZip(path.join(cwd, 'src/components/runtime'), componentsFolder.folder('runtime')!)
       await this.copyFolderToZip(path.join(cwd, 'src/components/ui'), componentsFolder.folder('ui')!)
       await this.copyFolderToZip(path.join(cwd, 'src/components/layout'), componentsFolder.folder('layout')!)
+      
+      // Cleanup HeaderActions to remove Tauri specific ReleaseNotes
+      const headerActionsPath = path.join(cwd, 'src/components/layout/HeaderActions.tsx')
+      if (fs.existsSync(headerActionsPath)) {
+        let content = fs.readFileSync(headerActionsPath, 'utf8')
+        content = content.replace(/import \{ ReleaseNotes \} from '@\/components\/tauri\/ReleaseNotes'/g, '')
+        content = content.replace(/\{!hideReleaseNotes && <ReleaseNotes \/>\}/g, '')
+        componentsFolder.folder('layout')?.file('HeaderActions.tsx', content)
+      }
+
       await this.copyFolderToZip(path.join(cwd, 'src/components/auth'), componentsFolder.folder('auth')!)
       await this.copyFolderToZip(path.join(cwd, 'src/components/shared'), componentsFolder.folder('shared')!)
       await this.copyFolderToZip(path.join(cwd, 'src/components/profile'), componentsFolder.folder('profile')!)
