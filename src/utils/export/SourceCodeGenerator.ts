@@ -68,7 +68,12 @@ export class SourceCodeGenerator {
     
     const libFolder = this.zip.folder('src/lib')
     if (libFolder) {
-       await this.copyFolderToZip(path.join(cwd, 'src/lib'), libFolder)
+      await this.copyFolderToZip(path.join(cwd, 'src/lib'), libFolder)
+    }
+
+    const utilsFolder = this.zip.folder('src/utils/supabase')
+    if (utilsFolder) {
+      await this.copyFolderToZip(path.join(cwd, 'src/utils/supabase'), utilsFolder)
     }
     
     const i18nFolder = this.zip.folder('src/i18n')
