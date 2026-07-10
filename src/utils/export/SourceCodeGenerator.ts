@@ -12,18 +12,20 @@ export class SourceCodeGenerator {
   private models: any[]
   private customComponents: any[]
   private dbType: string
+  private dbConfig: any
 
-  constructor(project: any, models: any[], customComponents: any[] = [], dbType: string = 'supabase') {
+  constructor(project: any, models: any[], customComponents: any[] = [], dbType: string = 'supabase', dbConfig: any = null) {
     this.zip = new JSZip()
     this.project = project
     this.models = models
     this.customComponents = customComponents
     this.dbType = dbType
+    this.dbConfig = dbConfig
   }
 
   public async generate(): Promise<Buffer> {
     generateRootFiles(this.zip, this.project, this.dbType)
-    generateEnv(this.zip, this.project, this.dbType)
+    generateEnv(this.zip, this.project, this.dbType, this.dbConfig)
     generateLib(this.zip, this.dbType)
     generateUIComponents(this.zip)
     generateAppRouter(this.zip, this.project, this.models)

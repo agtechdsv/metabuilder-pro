@@ -116,6 +116,11 @@ export function ProjectManager({
   } | null>(null)
 
   const [exportDbType, setExportDbType] = useState<'supabase' | 'postgres'>('supabase')
+  const [exportDbUser, setExportDbUser] = useState('postgres')
+  const [exportDbPassword, setExportDbPassword] = useState('senha')
+  const [exportDbHost, setExportDbHost] = useState('localhost')
+  const [exportDbPort, setExportDbPort] = useState('5432')
+  const [exportDbName, setExportDbName] = useState('app_db')
 
   const handleOpenFolder = async (dir: string, fileFullPath: string) => {
     try {
@@ -135,7 +140,7 @@ export function ProjectManager({
     }
   }
 
-  const handleStartExport = async (projectId: string, dbType: 'supabase' | 'postgres', fileName: string) => {
+  const handleStartExport = async (projectId: string, dbType: 'supabase' | 'postgres', fileName: string, dbConfig?: any) => {
     setDownloadModal({
       open: true,
       phase: 'downloading',
@@ -150,7 +155,7 @@ export function ProjectManager({
       const res = await fetch('/api/export-source', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, dbType })
+        body: JSON.stringify({ projectId, dbType, dbConfig })
       })
       if (!res.ok) {
         const err = await res.json()
@@ -612,6 +617,13 @@ export function ProjectManager({
                               e.preventDefault()
                               e.stopPropagation()
                               
+                              setExportDbType('supabase')
+                              setExportDbUser('postgres')
+                              setExportDbPassword('senha')
+                              setExportDbHost('localhost')
+                              setExportDbPort('5432')
+                              setExportDbName(`${project.slug || 'app'}_db`)
+
                               setDownloadModal({
                                 open: true,
                                 phase: 'selecting',
@@ -1059,9 +1071,74 @@ export function ProjectManager({
                     </div>
                   </div>
 
+                  {/* Inline Database Connection Settings */}
+                  {exportDbType === 'postgres' && (
+                    <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 font-mono text-[10px] text-neutral-600 dark:text-neutral-400">
+                      <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">Configuração da URL de Conexão</p>
+                      <div className="flex flex-wrap items-center gap-1.5 bg-white dark:bg-neutral-950 p-3 rounded-xl border border-neutral-200/60 dark:border-neutral-800/80 leading-relaxed text-xs">
+                        <span className="text-neutral-500">postgresql://</span>
+                        <input
+                          type="text"
+                          value={exportDbUser}
+                          onChange={(e) => setExportDbUser(e.target.value)}
+                          placeholder="usuario"
+                          className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-16"
+                          title="Usuário"
+                        />
+                        <span className="text-neutral-500">:</span>
+                        <input
+                          type="text"
+                          value={exportDbPassword}
+                          onChange={(e) => setExportDbPassword(e.target.value)}
+                          placeholder="senha"
+                          className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-16"
+                          title="Senha"
+                        />
+                        <span className="text-neutral-500">@</span>
+                        <input
+                          type="text"
+                          value={exportDbHost}
+                          onChange={(e) => setExportDbHost(e.target.value)}
+                          placeholder="localhost"
+                          className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-24"
+                          title="Host"
+                        />
+                        <span className="text-neutral-500">:</span>
+                        <input
+                          type="text"
+                          value={exportDbPort}
+                          onChange={(e) => setExportDbPort(e.target.value)}
+                          placeholder="5432"
+                          className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-14"
+                          title="Porta"
+                        />
+                        <span className="text-neutral-500">/</span>
+                        <input
+                          type="text"
+                          value={exportDbName}
+                          onChange={(e) => setExportDbName(e.target.value)}
+                          placeholder="banco_db"
+                          className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-32"
+                          title="Nome do Banco de Dados"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex gap-2.5 pt-4 border-t border-neutral-100 dark:border-neutral-800">
                     <button
-                      onClick={() => handleStartExport(downloadModal.projectId!, exportDbType, downloadModal.fileName)}
+                      onClick={() => handleStartExport(
+                        downloadModal.projectId!, 
+                        exportDbType, 
+                        downloadModal.fileName,
+                        exportDbType === 'postgres' ? {
+                          user: exportDbUser,
+                          password: exportDbPassword,
+                          host: exportDbHost,
+                          port: exportDbPort,
+                          database: exportDbName
+                        } : null
+                      )}
                       className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(79,70,229,0.2)]"
                     >
                       Iniciar Exportação

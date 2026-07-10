@@ -85,7 +85,7 @@ export default config;
 `)
 }
 
-export function generateEnv(zip: JSZip, project: any, dbType: string = 'supabase') {
+export function generateEnv(zip: JSZip, project: any, dbType: string = 'supabase', dbConfig: any = null) {
   let envContent = `# Authentication
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
@@ -95,11 +95,23 @@ META_PROJECT_TOKEN=${project.secret_token || 'your_project_token'}
 `
 
   if (dbType === 'postgres') {
+    const user = dbConfig?.user || 'postgres'
+    const password = dbConfig?.password || 'senha'
+    const host = dbConfig?.host || 'localhost'
+    const port = dbConfig?.port || '5432'
+    const database = dbConfig?.database || `${project.slug || 'app'}_db`
+    const connectionString = `postgresql://${user}:${password}@${host}:${port}/${database}`
+
     envContent += `
 # Database Connection
-DATABASE_URL=postgresql://postgres:senha@localhost:5432/${project.slug || 'app'}_db
+DATABASE_URL=${connectionString}
 `
   }
 
-  zip.file('.env.example', envContent)
+  const envFileName = dbConfig ? '.env.local' : '.env.example'
+  zip.file(envFileName, envContent)
+
+  if (envFileName !== '.env.example') {
+    zip.file('.env.example', envContent)
+  }
 }
