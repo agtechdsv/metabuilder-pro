@@ -21,6 +21,8 @@ export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'su
       'lucide-react': '^0.395.0',
       'clsx': '^2.1.1',
       'tailwind-merge': '^2.3.0',
+      'next-themes': '^0.3.0',
+      'date-fns': '^3.6.0',
       '@supabase/supabase-js': '^2.43.4',
       '@supabase/ssr': '^0.3.0',
       ...(dbType === 'postgres' ? { 'pg': '^8.11.5' } : {}),

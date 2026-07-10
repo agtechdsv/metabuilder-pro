@@ -1,9 +1,9 @@
 import JSZip from 'jszip'
+import fs from 'fs'
+import path from 'path'
 import { generateRootFiles, generateEnv } from './generators/RootGenerator'
 import { generateAppRouter } from './generators/AppRouterGenerator'
 import { generateFeatures } from './generators/FeatureGenerator'
-import { generateLib } from './generators/LibGenerator'
-import { generateUIComponents } from './generators/UIGenerator'
 import { generateBYOC } from './generators/ByocGenerator'
 
 export class SourceCodeGenerator {
@@ -25,11 +25,60 @@ export class SourceCodeGenerator {
     this.dbConfig = dbConfig
   }
 
+  private async copyFolderToZip(sourcePath: string, zipFolder: JSZip) {
+    if (!fs.existsSync(sourcePath)) return
+    const entries = await fs.promises.readdir(sourcePath, { withFileTypes: true })
+    for (const entry of entries) {
+      const fullPath = path.join(sourcePath, entry.name)
+      if (entry.isDirectory()) {
+        const subFolder = zipFolder.folder(entry.name)
+        if (subFolder) {
+          await this.copyFolderToZip(fullPath, subFolder)
+        }
+      } else {
+        const fileContent = await fs.promises.readFile(fullPath)
+        zipFolder.file(entry.name, fileContent)
+      }
+    }
+  }
+
   public async generate(): Promise<Buffer> {
     generateRootFiles(this.zip, this.project, this.dbType)
     generateEnv(this.zip, this.project, this.dbType, this.dbConfig)
-    generateLib(this.zip, this.dbType)
-    generateUIComponents(this.zip)
+    
+    // Fase 2: Copiar a Engrenagem Visual Inteira
+    const cwd = process.cwd()
+    const componentsFolder = this.zip.folder('src/components')
+    if (componentsFolder) {
+       await this.copyFolderToZip(path.join(cwd, 'src/components/ui'), componentsFolder.folder('ui')!)
+       await this.copyFolderToZip(path.join(cwd, 'src/components/runtime'), componentsFolder.folder('runtime')!)
+       await this.copyFolderToZip(path.join(cwd, 'src/components/shared'), componentsFolder.folder('shared')!)
+    }
+    
+    const libFolder = this.zip.folder('src/lib')
+    if (libFolder) {
+       await this.copyFolderToZip(path.join(cwd, 'src/lib'), libFolder)
+    }
+    
+    const i18nFolder = this.zip.folder('src/i18n')
+    if (i18nFolder) {
+       await this.copyFolderToZip(path.join(cwd, 'src/i18n'), i18nFolder)
+    }
+
+    // Injetar os Adapters Escolhidos (sobrescrevendo os hooks copiados acima)
+    const adapterPath = path.join(cwd, 'src/templates/export/adapters', this.dbType)
+    if (fs.existsSync(adapterPath)) {
+      const hooksFolder = componentsFolder?.folder('runtime')?.folder('hooks')
+      if (hooksFolder && fs.existsSync(path.join(adapterPath, 'hooks'))) {
+        await this.copyFolderToZip(path.join(adapterPath, 'hooks'), hooksFolder)
+      }
+      
+      const libFolderDst = this.zip.folder('src/lib')
+      if (libFolderDst && fs.existsSync(path.join(adapterPath, 'lib'))) {
+        await this.copyFolderToZip(path.join(adapterPath, 'lib'), libFolderDst)
+      }
+    }
+
     generateAppRouter(this.zip, this.project, this.models, this.uiViews)
     generateFeatures(this.zip, this.models, this.uiViews, this.dbType)
     generateBYOC(this.zip, this.customComponents)
