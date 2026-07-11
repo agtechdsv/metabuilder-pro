@@ -93,6 +93,33 @@ export class SourceCodeGenerator {
         content = content.replace(/import \{ onOpenUrl \} from '@tauri-apps\/plugin-deep-link'/g, 'const onOpenUrl = async (cb: (urls: string[]) => void) => { return () => {}; }')
         componentsFolder.folder('auth')?.file('LoginForm.tsx', content)
       }
+
+      // Cleanup tunnel logic from LoginPortalClient.tsx
+      const loginPortalPath = path.join(cwd, 'src/components/auth/LoginPortalClient.tsx')
+      if (fs.existsSync(loginPortalPath)) {
+        let content = fs.readFileSync(loginPortalPath, 'utf8')
+        
+        // Convert handleSubmit to use Supabase Auth
+        content = content.replace(
+          /const queryId = crypto\.randomUUID\(\)[\s\S]*?\} catch \(err: any\) \{/m,
+          `try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) throw error
+      if (data?.user) finalizeLogin(data.user)
+    } catch (err: any) {`
+        )
+
+        // Convert handlePasskeyLogin to use Supabase Auth
+        content = content.replace(
+          /const queryId = crypto\.randomUUID\(\)[\s\S]*?\} catch \(err: any\) \{/m,
+          `const { data: { user }, error } = await supabase.auth.getUser()
+      if (error || !user) throw new Error('Sessão inválida após biometria')
+      finalizeLogin(user)
+    } catch (err: any) {`
+        )
+
+        componentsFolder.folder('auth')?.file('LoginPortalClient.tsx', content)
+      }
       await this.copyFolderToZip(path.join(cwd, 'src/components/shared'), componentsFolder.folder('shared')!)
       
       const biWidgetEditorPath = path.join(cwd, 'src/components/shared/BIWidgetEditor.tsx')
