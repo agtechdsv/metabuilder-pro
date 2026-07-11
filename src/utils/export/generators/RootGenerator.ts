@@ -58,6 +58,8 @@ export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'su
 
   zip.file('tsconfig.json', JSON.stringify({
     compilerOptions: {
+      target: "es2015",
+      downlevelIteration: true,
       lib: ["dom", "dom.iterable", "esnext"],
       allowJs: true,
       skipLibCheck: true,
