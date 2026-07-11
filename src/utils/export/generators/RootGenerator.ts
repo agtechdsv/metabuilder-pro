@@ -37,7 +37,9 @@ export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'su
       '@xyflow/react': '^12.10.2',
       'dagre': '^0.8.5',
       'leaflet': '^1.9.4',
-      'react-leaflet': '^4.2.1'
+      'react-leaflet': '^4.2.1',
+      'otplib': '^13.4.1',
+      'qrcode': '^1.5.4'
     },
     devDependencies: {
       'typescript': '^5',
@@ -48,6 +50,7 @@ export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'su
       'tailwindcss': '^3.4.1',
       '@types/dagre': '^0.7.54',
       '@types/leaflet': '^1.9.21',
+      '@types/qrcode': '^1.5.6',
       ...(dbType === 'postgres' ? { '@types/pg': '^8.11.5' } : {})
     }
   }, null, 2))

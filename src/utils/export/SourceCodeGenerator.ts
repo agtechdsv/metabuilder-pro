@@ -84,6 +84,15 @@ export class SourceCodeGenerator {
           workspaceFolder.file('SecuritySettings.tsx', fs.readFileSync(securitySettingsPath))
         }
       }
+
+      // Studio components needed by shared
+      const studioFolder = componentsFolder.folder('studio')
+      if (studioFolder) {
+        const formulaBuilderPath = path.join(cwd, 'src/components/studio/FormulaBuilder.tsx')
+        if (fs.existsSync(formulaBuilderPath)) {
+          studioFolder.file('FormulaBuilder.tsx', fs.readFileSync(formulaBuilderPath))
+        }
+      }
     }
     
     const libFolder = this.zip.folder('src/lib')
