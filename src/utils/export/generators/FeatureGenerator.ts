@@ -74,7 +74,7 @@ export default function ${view.slug.replace(/-/g, '')}Page() {
   return (
     <div className="flex-1 w-full h-full relative">
       <ViewPageContent 
-        {...viewConfig}
+        {...(viewConfig as any)}
         viewId="${view.id}"
         workspace={null}
         project={null}
