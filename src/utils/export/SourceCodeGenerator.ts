@@ -64,6 +64,15 @@ export class SourceCodeGenerator {
       }
 
       await this.copyFolderToZip(path.join(cwd, 'src/components/auth'), componentsFolder.folder('auth')!)
+      
+      // Cleanup Tauri dependencies from LoginForm.tsx
+      const loginFormPath = path.join(cwd, 'src/components/auth/LoginForm.tsx')
+      if (fs.existsSync(loginFormPath)) {
+        let content = fs.readFileSync(loginFormPath, 'utf8')
+        content = content.replace(/import \{ isTauri, openExternalUrl \} from '@\/utils\/tauriUtils'/g, 'const isTauri = () => false; const openExternalUrl = (url: string) => window.open(url, "_blank");')
+        content = content.replace(/import \{ onOpenUrl \} from '@tauri-apps\/plugin-deep-link'/g, 'const onOpenUrl = (cb: any) => {}')
+        componentsFolder.folder('auth')?.file('LoginForm.tsx', content)
+      }
       await this.copyFolderToZip(path.join(cwd, 'src/components/shared'), componentsFolder.folder('shared')!)
       await this.copyFolderToZip(path.join(cwd, 'src/components/profile'), componentsFolder.folder('profile')!)
       
