@@ -53,7 +53,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={inter.className}>
-        <CustomThemeProvider defaultTheme="system" attribute="class">
+        <CustomThemeProvider defaultTheme="light" attribute="class">
           <I18nProvider>
             <ProgressBarProvider />
             {children}
