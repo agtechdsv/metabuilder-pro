@@ -39,7 +39,8 @@ export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'su
       'leaflet': '^1.9.4',
       'react-leaflet': '^4.2.1',
       'otplib': '^13.4.1',
-      'qrcode': '^1.5.4'
+      'qrcode': '^1.5.4',
+      'qrcode.react': '^4.2.0'
     },
     devDependencies: {
       'typescript': '^5',
