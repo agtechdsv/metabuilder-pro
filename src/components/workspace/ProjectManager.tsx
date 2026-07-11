@@ -625,8 +625,8 @@ export function ProjectManager({
                               setExportDbHost('localhost')
                               setExportDbPort('5432')
                               setExportDbName(`${project.slug || 'app'}_db`)
-                              setExportSupaUrl(process.env.NEXT_PUBLIC_SUPABASE_URL || '')
-                              setExportSupaAnonKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '')
+                              setExportSupaUrl('')
+                              setExportSupaAnonKey('')
 
                               setDownloadModal({
                                 open: true,
