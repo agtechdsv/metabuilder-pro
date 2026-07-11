@@ -21,7 +21,7 @@ export function useViewDataFetch({
   const [hasFetchedInitial, setHasFetchedInitial] = useState(false)
   const handleMove = useCallback((sourceIndex: number, destinationIndex: number) => {}, [])
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (filters?: any, forceRefresh?: boolean, append?: boolean) => {
     setIsLoading(true)
     setError(null)
     try {
