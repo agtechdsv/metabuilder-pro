@@ -66,20 +66,22 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
     if (pageFolder) {
       pageFolder.file('page.tsx', `'use client'
 
-import React from 'react'
+import React, { Suspense } from 'react'
 import ViewPageContent from '@/components/runtime/ViewPageContent'
 import viewConfig from '@/config/views/${view.slug}.json'
 
 export default function ${view.slug.replace(/-/g, '')}Page() {
   return (
     <div className="flex-1 w-full h-full relative">
-      <ViewPageContent 
-        {...(viewConfig as any)}
-        viewId="${view.id}"
-        workspace={null}
-        project={null}
-        locale="pt"
-      />
+      <Suspense fallback={null}>
+        <ViewPageContent 
+          {...(viewConfig as any)}
+          viewId="${view.id}"
+          workspace={null}
+          project={null}
+          locale="pt"
+        />
+      </Suspense>
     </div>
   )
 }

@@ -70,21 +70,23 @@ export default function RootLayout({
   if (dashboardFolder) {
     dashboardFolder.file('layout.tsx', `'use client'
 
-import React from 'react'
+import React, { Suspense } from 'react'
 import { RuntimeLayoutClient } from '@/components/runtime/RuntimeLayoutClient'
 import projectConfig from '@/config/project.json'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RuntimeLayoutClient 
-      workspaceSlug="export"
-      projectSlug="export"
-      project={projectConfig}
-      navigation={projectConfig.navigation}
-      baseNavUrl=""
-    >
-      {children}
-    </RuntimeLayoutClient>
+    <Suspense fallback={null}>
+      <RuntimeLayoutClient 
+        workspaceSlug="export"
+        projectSlug="export"
+        project={projectConfig}
+        navigation={projectConfig.navigation}
+        baseNavUrl=""
+      >
+        {children}
+      </RuntimeLayoutClient>
+    </Suspense>
   )
 }
 `)
