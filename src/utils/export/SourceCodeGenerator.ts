@@ -68,7 +68,7 @@ export class SourceCodeGenerator {
       await this.copyFolderToZip(path.join(cwd, 'src/components/profile'), componentsFolder.folder('profile')!)
       
       // Root components
-      const rootFiles = ['CustomThemeProvider.tsx', 'ProgressBarProvider.tsx']
+      const rootFiles = ['CustomThemeProvider.tsx', 'ProgressBarProvider.tsx', 'DynamicGrid.tsx']
       for (const file of rootFiles) {
         const filePath = path.join(cwd, 'src/components', file)
         if (fs.existsSync(filePath)) {

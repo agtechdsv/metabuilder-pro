@@ -33,7 +33,11 @@ export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'su
       '@supabase/ssr': '^0.3.0',
       ...(dbType === 'postgres' ? { 'pg': '^8.11.5' } : {}),
       '@simplewebauthn/browser': '^9.0.1',
-      '@simplewebauthn/server': '^9.0.1'
+      '@simplewebauthn/server': '^9.0.1',
+      '@xyflow/react': '^12.10.2',
+      'dagre': '^0.8.5',
+      'leaflet': '^1.9.4',
+      'react-leaflet': '^5.0.0'
     },
     devDependencies: {
       'typescript': '^5',
@@ -42,6 +46,8 @@ export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'su
       '@types/react-dom': '^18',
       'postcss': '^8',
       'tailwindcss': '^3.4.1',
+      '@types/dagre': '^0.7.54',
+      '@types/leaflet': '^1.9.21',
       ...(dbType === 'postgres' ? { '@types/pg': '^8.11.5' } : {})
     }
   }, null, 2))
