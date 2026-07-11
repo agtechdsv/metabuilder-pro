@@ -15,7 +15,7 @@ export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'su
       lint: 'next lint'
     },
     dependencies: {
-      'next': '14.2.22',
+      'next': '^14.2.26',
       'react': '^18',
       'react-dom': '^18',
       'lucide-react': '^0.395.0',
