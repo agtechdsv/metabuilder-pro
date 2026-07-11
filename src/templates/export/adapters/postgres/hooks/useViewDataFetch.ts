@@ -19,7 +19,7 @@ export function useViewDataFetch({
   const [error, setError] = useState<string | null>(null)
   const [totalServerRows, setTotalServerRows] = useState<number>(0)
   const [hasFetchedInitial, setHasFetchedInitial] = useState(false)
-  const handleMove = useCallback((sourceIndex: number, destinationIndex: number) => {}, [])
+  const handleMove = useCallback(async (recordId: string, newValue: any) => {}, [])
 
   const fetchData = useCallback(async (filters?: any, forceRefresh?: boolean, append?: boolean) => {
     setIsLoading(true)
