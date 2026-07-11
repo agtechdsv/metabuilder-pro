@@ -80,9 +80,7 @@ export class SourceCodeGenerator {
 
       const updaterPath = path.join(cwd, 'src/components/runtime/IdeUpdaterButton.tsx')
       if (fs.existsSync(updaterPath)) {
-        let content = fs.readFileSync(updaterPath, 'utf8')
-        content = content.replace(/import \{ isTauri \} from '@\/utils\/tauriUtils'/g, 'const isTauri = () => false;')
-        componentsFolder.folder('runtime')?.file('IdeUpdaterButton.tsx', content)
+        componentsFolder.folder('runtime')?.file('IdeUpdaterButton.tsx', 'export function IdeUpdaterButton() { return null }')
       }
 
       await this.copyFolderToZip(path.join(cwd, 'src/components/auth'), componentsFolder.folder('auth')!)
