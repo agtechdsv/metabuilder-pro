@@ -113,7 +113,7 @@ export class SourceCodeGenerator {
       const authActionsPath = path.join(cwd, 'src/app/auth/actions.ts')
       if (fs.existsSync(authActionsPath)) {
         let content = fs.readFileSync(authActionsPath, 'utf8')
-        content = content.replace(/await import\('@\/app\/actions\/iclub'\)/g, '{ registerReferral: async () => {} }')
+        content = content.replace(/await import\('@\/app\/actions\/iclub'\)/g, '{ registerReferral: async (...args: any[]) => {} }')
         appAuthFolder.file('actions.ts', content)
       }
 
@@ -121,7 +121,7 @@ export class SourceCodeGenerator {
       const authCallbackPath = path.join(cwd, 'src/app/auth/callback/page.tsx')
       if (fs.existsSync(authCallbackPath)) {
         let content = fs.readFileSync(authCallbackPath, 'utf8')
-        content = content.replace(/await import\('@\/app\/actions\/iclub'\)/g, '{ registerReferral: async () => {} }')
+        content = content.replace(/await import\('@\/app\/actions\/iclub'\)/g, '{ registerReferral: async (...args: any[]) => {} }')
         appAuthFolder.folder('callback')?.file('page.tsx', content)
       }
     }
