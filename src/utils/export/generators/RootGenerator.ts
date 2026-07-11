@@ -15,7 +15,7 @@ export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'su
       lint: 'next lint'
     },
     dependencies: {
-      'next': '14.2.4',
+      'next': '14.2.22',
       'react': '^18',
       'react-dom': '^18',
       'lucide-react': '^0.395.0',
@@ -32,8 +32,8 @@ export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'su
       '@supabase/supabase-js': '^2.43.4',
       '@supabase/ssr': '^0.3.0',
       ...(dbType === 'postgres' ? { 'pg': '^8.11.5' } : {}),
-      '@simplewebauthn/browser': '^9.0.1',
-      '@simplewebauthn/server': '^9.0.1',
+      '@simplewebauthn/browser': '^13.3.0',
+      '@simplewebauthn/server': '^13.3.1',
       '@xyflow/react': '^12.10.2',
       'dagre': '^0.8.5',
       'leaflet': '^1.9.4',
