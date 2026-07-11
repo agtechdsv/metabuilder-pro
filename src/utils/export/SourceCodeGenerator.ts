@@ -116,6 +116,14 @@ export class SourceCodeGenerator {
         content = content.replace(/await import\('@\/app\/actions\/iclub'\)/g, '{ registerReferral: async () => {} }')
         appAuthFolder.file('actions.ts', content)
       }
+
+      // Cleanup callback/page.tsx to remove MetaBuilder specific iclub
+      const authCallbackPath = path.join(cwd, 'src/app/auth/callback/page.tsx')
+      if (fs.existsSync(authCallbackPath)) {
+        let content = fs.readFileSync(authCallbackPath, 'utf8')
+        content = content.replace(/await import\('@\/app\/actions\/iclub'\)/g, '{ registerReferral: async () => {} }')
+        appAuthFolder.folder('callback')?.file('page.tsx', content)
+      }
     }
 
     const appApiAuthFolder = this.zip.folder('src/app/api/auth')
