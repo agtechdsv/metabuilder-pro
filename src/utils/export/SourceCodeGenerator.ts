@@ -97,7 +97,7 @@ export class SourceCodeGenerator {
       
       const biWidgetEditorPath = path.join(cwd, 'src/components/shared/BIWidgetEditor.tsx')
       if (fs.existsSync(biWidgetEditorPath)) {
-        componentsFolder.folder('shared')?.file('BIWidgetEditor.tsx', 'export function BIWidgetEditor() { return null }')
+        componentsFolder.folder('shared')?.file('BIWidgetEditor.tsx', 'export function BIWidgetEditor(props: any) { return null }')
       }
 
       await this.copyFolderToZip(path.join(cwd, 'src/components/profile'), componentsFolder.folder('profile')!)
