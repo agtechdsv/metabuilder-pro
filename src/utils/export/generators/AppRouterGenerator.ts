@@ -142,8 +142,8 @@ export default function LoginPage() {
         workspaceSlug="export"
         projectSlug="export"
         locale="pt"
-        t={(key: string) => key}
-        config={{ visual, auth }}
+        visualConfig={visual}
+        authConfig={auth}
       />
     </div>
   )
