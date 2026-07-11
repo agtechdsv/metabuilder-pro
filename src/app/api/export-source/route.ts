@@ -83,7 +83,8 @@ export async function POST(request: Request) {
     return new NextResponse(zipBuffer as any, {
       headers: {
         'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename="${project.slug || 'app'}-source-code.zip"`
+        'Content-Disposition': `attachment; filename="${project.slug || 'app'}-source-code.zip"`,
+        'Content-Length': zipBuffer.length.toString()
       }
     })
 
