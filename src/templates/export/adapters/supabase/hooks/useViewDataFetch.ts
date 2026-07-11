@@ -20,6 +20,8 @@ export function useViewDataFetch({
   const [isFetchingBackground, setIsFetchingBackground] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [totalServerRows, setTotalServerRows] = useState<number>(0)
+  const [hasFetchedInitial, setHasFetchedInitial] = useState(false)
+  const handleMove = useCallback((sourceIndex: number, destinationIndex: number) => {}, [])
 
   const fetchData = useCallback(async () => {
     setIsLoading(true)
@@ -60,5 +62,16 @@ export function useViewDataFetch({
     fetchData()
   }, [fetchData])
 
-  return { data, isLoading, isFetchingBackground, error, totalServerRows, manualRefetch: fetchData }
+  return {
+    data,
+    setData,
+    isLoading,
+    isFetchingBackground,
+    error,
+    totalServerRows,
+    fetchData,
+    handleMove,
+    hasFetchedInitial,
+    setHasFetchedInitial
+  }
 }
