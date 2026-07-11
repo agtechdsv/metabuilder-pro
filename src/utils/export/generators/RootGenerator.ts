@@ -95,8 +95,8 @@ export default config;
 }
 
 export function generateEnv(zip: JSZip, project: any, dbType: string = 'supabase', dbConfig: any = null) {
-  const supaUrl = dbType === 'supabase' && dbConfig?.supabaseUrl ? dbConfig.supabaseUrl : 'your_supabase_url'
-  const supaAnon = dbType === 'supabase' && dbConfig?.supabaseAnonKey ? dbConfig.supabaseAnonKey : 'your_supabase_anon_key'
+  const supaUrl = dbConfig?.supabaseUrl ? dbConfig.supabaseUrl : 'https://your-project.supabase.co'
+  const supaAnon = dbConfig?.supabaseAnonKey ? dbConfig.supabaseAnonKey : 'your_supabase_anon_key'
 
   let envContent = `# Authentication
 NEXT_PUBLIC_SUPABASE_URL=${supaUrl}
