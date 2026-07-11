@@ -31,7 +31,7 @@ export function useMasterData({
   const { toast } = useToast()
 
   const handleSave = async (formData: any) => {
-    setIsProcessing(true)
+    setIsProcessing?.(true)
     try {
       const action = drawerMode === 'create' ? 'insert' : 'update'
       const cleanPkName = primaryKeyName.split('.').pop() || 'id'
@@ -55,21 +55,22 @@ export function useMasterData({
         toast(t('runtime.record_updated_success') || 'Registro atualizado', 'success')
       }
 
-      setRefreshKey((prev: number) => prev + 1)
-      setOpen(false)
-      setIsPageVisible(false)
+      setRefreshKey?.((prev: number) => prev + 1)
+      setOpen?.(false)
+      setIsPageVisible?.(false)
     } catch (err: any) {
       toast(err.message, 'error')
     } finally {
-      setIsProcessing(false)
+      setIsProcessing?.(false)
     }
   }
 
-  const handleDelete = async (row: any) => {
+  const handleDelete = async () => {
+    if (!selectedRow) return
     setIsProcessing?.(true)
     try {
       const cleanPkName = primaryKeyName.split('.').pop() || 'id'
-      const pkValue = row[primaryKeyName] ?? row[cleanPkName] ?? row.id
+      const pkValue = selectedRow[primaryKeyName] ?? selectedRow[cleanPkName] ?? selectedRow.id
       const { error } = await supabase.from(modelName).delete().eq(cleanPkName, pkValue)
       if (error) throw error
       toast(t('runtime.record_deleted_success') || 'Registro excluído', 'success')

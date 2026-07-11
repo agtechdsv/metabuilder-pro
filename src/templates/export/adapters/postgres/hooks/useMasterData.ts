@@ -21,7 +21,7 @@ export function useMasterData({
   const { toast } = useToast()
 
   const handleSave = async (formData: any) => {
-    setIsProcessing(true)
+    setIsProcessing?.(true)
     try {
       const action = drawerMode === 'create' ? 'insert' : 'update'
       const cleanPkName = primaryKeyName.split('.').pop() || 'id'
@@ -53,15 +53,16 @@ export function useMasterData({
     } catch (err: any) {
       toast(err.message, 'error')
     } finally {
-      setIsProcessing(false)
+      setIsProcessing?.(false)
     }
   }
 
-  const handleDelete = async (row: any) => {
-    setIsProcessing(true)
+  const handleDelete = async () => {
+    if (!selectedRow) return
+    setIsProcessing?.(true)
     try {
       const cleanPkName = primaryKeyName.split('.').pop() || 'id'
-      const pkValue = row[primaryKeyName] ?? row[cleanPkName] ?? row.id
+      const pkValue = selectedRow[primaryKeyName] ?? selectedRow[cleanPkName] ?? selectedRow.id
       
       const res = await fetch(`/api/${modelName}?id=${pkValue}`, { method: 'DELETE' })
       if (!res.ok) {
@@ -76,7 +77,7 @@ export function useMasterData({
     } catch (err: any) {
       toast(err.message, 'error')
     } finally {
-      setIsProcessing(false)
+      setIsProcessing?.(false)
     }
   }
 
