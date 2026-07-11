@@ -99,6 +99,14 @@ export class SourceCodeGenerator {
     const appAuthFolder = this.zip.folder('src/app/auth')
     if (appAuthFolder) {
       await this.copyFolderToZip(path.join(cwd, 'src/app/auth'), appAuthFolder)
+      
+      // Cleanup actions.ts to remove MetaBuilder specific iclub
+      const authActionsPath = path.join(cwd, 'src/app/auth/actions.ts')
+      if (fs.existsSync(authActionsPath)) {
+        let content = fs.readFileSync(authActionsPath, 'utf8')
+        content = content.replace(/await import\('@\/app\/actions\/iclub'\)/g, '{ registerReferral: async () => {} }')
+        appAuthFolder.file('actions.ts', content)
+      }
     }
 
     const appApiAuthFolder = this.zip.folder('src/app/api/auth')
