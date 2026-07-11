@@ -129,7 +129,7 @@ import projectConfig from '@/config/project.json'
 import { CustomThemeProvider } from '@/components/CustomThemeProvider'
 
 export default function LoginPage() {
-  const visual = projectConfig.theme_config?.ui_config || {}
+  const visual = (projectConfig.theme_config as any)?.ui_config || {}
   const auth = {
     allow_signup: visual.allow_signup || false,
     auth_type: projectConfig.auth_type || 'none',
