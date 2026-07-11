@@ -1,9 +1,23 @@
 import { useToast } from '@/components/ui/Toast'
 
+interface UseMasterDataProps {
+  project?: any;
+  modelName?: string;
+  primaryKeyName?: string;
+  drawerMode?: string;
+  selectedRow?: any;
+  t?: any;
+  setIsProcessing?: any;
+  setRefreshKey?: any;
+  setOpen?: (val: boolean) => void;
+  setIsPageVisible?: any;
+  [key: string]: any;
+}
+
 export function useMasterData({
-  project, modelName, primaryKeyName, drawerMode, selectedRow, t,
+  project, modelName, primaryKeyName = 'id', drawerMode, selectedRow, t,
   setIsProcessing, setRefreshKey, setOpen, setIsPageVisible
-}: any) {
+}: UseMasterDataProps) {
   const { toast } = useToast()
 
   const handleSave = async (formData: any) => {
@@ -33,9 +47,9 @@ export function useMasterData({
       }
 
       toast(t('runtime.record_saved_success') || 'Registro salvo com sucesso', 'success')
-      setRefreshKey((prev: number) => prev + 1)
-      setOpen(false)
-      setIsPageVisible(false)
+      setRefreshKey?.((prev: number) => prev + 1)
+      setOpen?.(false)
+      setIsPageVisible?.(false)
     } catch (err: any) {
       toast(err.message, 'error')
     } finally {
@@ -56,9 +70,9 @@ export function useMasterData({
       }
 
       toast(t('runtime.record_deleted_success') || 'Registro excluído', 'success')
-      setRefreshKey((prev: number) => prev + 1)
-      setOpen(false)
-      setIsPageVisible(false)
+      setRefreshKey?.((prev: number) => prev + 1)
+      setOpen?.(false)
+      setIsPageVisible?.(false)
     } catch (err: any) {
       toast(err.message, 'error')
     } finally {
@@ -66,5 +80,9 @@ export function useMasterData({
     }
   }
 
-  return { handleSave, handleDelete }
+  const getFkErrorMessage = (errorMsg: string, fallbackMsg: string) => {
+    return fallbackMsg
+  }
+
+  return { handleSave, handleDelete, getFkErrorMessage }
 }
