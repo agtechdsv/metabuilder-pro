@@ -71,6 +71,20 @@ export class SourceCodeGenerator {
         componentsFolder.folder('layout')?.file('Navbar.tsx', content)
       }
 
+      const sidebarPath = path.join(cwd, 'src/components/layout/StudioSidebar.tsx')
+      if (fs.existsSync(sidebarPath)) {
+        let content = fs.readFileSync(sidebarPath, 'utf8')
+        content = content.replace(/import \{ isTauri \} from '@\/utils\/tauriUtils'/g, 'const isTauri = () => false;')
+        componentsFolder.folder('layout')?.file('StudioSidebar.tsx', content)
+      }
+
+      const updaterPath = path.join(cwd, 'src/components/runtime/IdeUpdaterButton.tsx')
+      if (fs.existsSync(updaterPath)) {
+        let content = fs.readFileSync(updaterPath, 'utf8')
+        content = content.replace(/import \{ isTauri \} from '@\/utils\/tauriUtils'/g, 'const isTauri = () => false;')
+        componentsFolder.folder('runtime')?.file('IdeUpdaterButton.tsx', content)
+      }
+
       await this.copyFolderToZip(path.join(cwd, 'src/components/auth'), componentsFolder.folder('auth')!)
       
       // Cleanup Tauri dependencies from LoginForm.tsx
