@@ -36,6 +36,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { CustomThemeProvider } from "@/components/CustomThemeProvider";
 import { ProgressBarProvider } from "@/components/ProgressBarProvider";
+import { I18nProvider } from "@/i18n/I18nContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -53,8 +54,10 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={inter.className}>
         <CustomThemeProvider defaultTheme="system" attribute="class">
-          <ProgressBarProvider />
-          {children}
+          <I18nProvider>
+            <ProgressBarProvider />
+            {children}
+          </I18nProvider>
         </CustomThemeProvider>
       </body>
     </html>
