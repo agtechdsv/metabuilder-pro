@@ -37,7 +37,7 @@ export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'su
       '@xyflow/react': '^12.10.2',
       'dagre': '^0.8.5',
       'leaflet': '^1.9.4',
-      'react-leaflet': '^5.0.0'
+      'react-leaflet': '^4.2.1'
     },
     devDependencies: {
       'typescript': '^5',
