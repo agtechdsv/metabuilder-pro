@@ -63,6 +63,14 @@ export class SourceCodeGenerator {
         componentsFolder.folder('layout')?.file('HeaderActions.tsx', content)
       }
 
+      // Cleanup Tauri dependencies from Navbar.tsx
+      const navbarPath = path.join(cwd, 'src/components/layout/Navbar.tsx')
+      if (fs.existsSync(navbarPath)) {
+        let content = fs.readFileSync(navbarPath, 'utf8')
+        content = content.replace(/import \{ isTauri \} from '@\/utils\/tauriUtils'/g, 'const isTauri = () => false;')
+        componentsFolder.folder('layout')?.file('Navbar.tsx', content)
+      }
+
       await this.copyFolderToZip(path.join(cwd, 'src/components/auth'), componentsFolder.folder('auth')!)
       
       // Cleanup Tauri dependencies from LoginForm.tsx
