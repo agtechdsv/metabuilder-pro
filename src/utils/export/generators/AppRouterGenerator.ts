@@ -9,13 +9,18 @@ export function generateAppRouter(zip: JSZip, project: any, models: any[], uiVie
 
   // Freeze Navigation and Project Config
   const navigationGroups = Array.from(new Set(uiViews.map(v => v.group_name || 'Geral')))
-  const navigation = navigationGroups.map(group => ({
-    title: group,
-    items: uiViews.filter(v => (v.group_name || 'Geral') === group).map(view => ({
-      name: view.name,
-      href: `/${view.slug}`,
+  const navigation = navigationGroups.map((group, idx) => ({
+    id: `group-${idx}`,
+    label: group,
+    icon: 'Folder',
+    type: 'folder',
+    target: '',
+    children: uiViews.filter(v => (v.group_name || 'Geral') === group).map(view => ({
+      id: view.id || view.slug,
+      label: view.name,
       icon: view.logic_type === 'dashboard' ? 'Activity' : 'Database',
-      logic_type: view.logic_type
+      type: 'view',
+      target: view.slug
     }))
   }))
 

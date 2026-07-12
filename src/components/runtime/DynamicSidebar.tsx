@@ -156,13 +156,13 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
     }
 
     const href = item.type === 'view' 
-      ? `${finalBaseNavUrl}/${item.target}` 
-      : item.target
+      ? `${finalBaseNavUrl}/${item.target || ''}` 
+      : (item.target || '#')
 
     return (
       <Link
         key={item.id}
-        href={href}
+        href={href || '#'}
         target={item.type === 'link' ? '_blank' : undefined}
         className={cn(
           "flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group relative",
