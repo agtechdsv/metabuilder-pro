@@ -40,7 +40,7 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
   useEffect(() => {
     if (showReleaseNotes) {
       setIsFetchingNotes(true)
-      fetch('/api/releases')
+      fetch(`/api/releases?t=${Date.now()}`, { cache: 'no-store' })
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) {
