@@ -235,20 +235,20 @@ export class SourceCodeGenerator {
       // Quando não há autenticação (None), criamos mocks dos server actions de auth para não quebrar os imports nos componentes
       const appAuthFolder = this.zip.folder('src/app/auth')
       appAuthFolder?.file('actions.ts', `'use server'
-export async function login(...args: any[]) { return { success: true } }
-export async function signup(...args: any[]) { return { success: true } }
-export async function verifyMfaPolicy(...args: any[]) { return { success: true } }
-export async function signOut(...args: any[]) { return { success: true } }
-export async function updateAvatar(...args: any[]) { return { success: true } }
-export async function resetAvatar(...args: any[]) { return { success: true } }
-export async function updateProfile(...args: any[]) { return { success: true } }
-export async function updateEnforceMfa(...args: any[]) { return { success: true } }
-export async function unenrollPersonalMfa(...args: any[]) { return { success: true } }
-export async function removePasskeys(...args: any[]) { return { success: true } }
-export async function getPostLoginRedirectPath(...args: any[]) { return '/' }
+export async function login(...args: any[]): Promise<any> { return { success: true } }
+export async function signup(...args: any[]): Promise<any> { return { success: true } }
+export async function verifyMfaPolicy(...args: any[]): Promise<any> { return { success: true } }
+export async function signOut(...args: any[]): Promise<any> { return { success: true } }
+export async function updateAvatar(...args: any[]): Promise<any> { return { success: true } }
+export async function resetAvatar(...args: any[]): Promise<any> { return { success: true } }
+export async function updateProfile(...args: any[]): Promise<any> { return { success: true } }
+export async function updateEnforceMfa(...args: any[]): Promise<any> { return { success: true } }
+export async function unenrollPersonalMfa(...args: any[]): Promise<any> { return { success: true } }
+export async function removePasskeys(...args: any[]): Promise<any> { return { success: true } }
+export async function getPostLoginRedirectPath(...args: any[]): Promise<any> { return '/' }
 `)
       appAuthFolder?.folder('set-password')?.file('actions.ts', `'use server'
-export async function setPasswordAction(...args: any[]) { return { success: true } }
+export async function setPasswordAction(...args: any[]): Promise<any> { return { success: true } }
 `)
     }
       
