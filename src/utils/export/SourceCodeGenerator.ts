@@ -453,6 +453,16 @@ export function PermissionGuard({ viewSlug, children }: { viewSlug: string, chil
 }
 `
       this.zip.folder('src/components/auth')?.file('PermissionGuard.tsx', guardCode)
+    } else {
+      // Quando não há autenticação (None), criamos um Guard de mentira apenas para não quebrar o import
+      const dummyGuardCode = `'use client'
+import React from 'react'
+
+export function PermissionGuard({ children }: { viewSlug: string, children: React.ReactNode }) {
+  return <>{children}</>
+}
+`
+      this.zip.folder('src/components/auth')?.file('PermissionGuard.tsx', dummyGuardCode)
     }
 
     generateAppRouter(this.zip, this.project, this.models, this.uiViews)
