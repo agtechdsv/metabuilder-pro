@@ -231,6 +231,26 @@ export class SourceCodeGenerator {
       if (appApiAuthFolder) {
         await this.copyFolderToZip(path.join(cwd, 'src/app/api/auth'), appApiAuthFolder)
       }
+    } else {
+      // Quando não há autenticação (None), criamos mocks dos server actions de auth para não quebrar os imports nos componentes
+      const appAuthFolder = this.zip.folder('src/app/auth')
+      appAuthFolder?.file('actions.ts', `'use server'
+export async function login() { return { success: true } }
+export async function signup() { return { success: true } }
+export async function verifyMfaPolicy() { return { success: true } }
+export async function signOut() { return { success: true } }
+export async function updateAvatar() { return { success: true } }
+export async function resetAvatar() { return { success: true } }
+export async function updateProfile() { return { success: true } }
+export async function updateEnforceMfa() { return { success: true } }
+export async function unenrollPersonalMfa() { return { success: true } }
+export async function removePasskeys() { return { success: true } }
+export async function getPostLoginRedirectPath() { return '/' }
+`)
+      appAuthFolder?.folder('set-password')?.file('actions.ts', `'use server'
+export async function setPasswordAction() { return { success: true } }
+`)
+    }
       
       // Inject custom auth API route if legacy or ldap
       if (this.authStrategy === 'legacy' || this.authStrategy === 'ldap') {
@@ -324,8 +344,6 @@ export async function POST(request: Request) {
           }
         }
       }
-    }
-    
     const i18nFolder = this.zip.folder('src/i18n')
     if (i18nFolder) {
        await this.copyFolderToZip(path.join(cwd, 'src/i18n'), i18nFolder)
