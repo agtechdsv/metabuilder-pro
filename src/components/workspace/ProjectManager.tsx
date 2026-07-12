@@ -113,8 +113,14 @@ export function ProjectManager({
     savedPath: string
     savedDir: string
     projectId?: string
+    authConfig?: any
   } | null>(null)
 
+  const [exportTab, setExportTab] = useState<'database' | 'auth'>('database')
+  const [exportDataMode, setExportDataMode] = useState<'tunnel' | 'supabase' | 'postgres'>('supabase')
+  const [exportAuthStrategy, setExportAuthStrategy] = useState<'managed' | 'legacy' | 'ldap' | 'none'>('managed')
+  const [exportLegacyDriver, setExportLegacyDriver] = useState<'supabase' | 'postgres'>('supabase')
+  const [exportTunnelUrl, setExportTunnelUrl] = useState('')
   const [exportDbType, setExportDbType] = useState<'supabase' | 'postgres'>('supabase')
   const [exportDbUser, setExportDbUser] = useState('postgres')
   const [exportDbPassword, setExportDbPassword] = useState('senha')
@@ -142,7 +148,7 @@ export function ProjectManager({
     }
   }
 
-  const handleStartExport = async (projectId: string, dbType: 'supabase' | 'postgres', fileName: string, dbConfig?: any) => {
+  const handleStartExport = async (projectId: string, fileName: string, dataMode: string, authStrategy: string, legacyDriver: string, dbConfig?: any) => {
     setDownloadModal({
       open: true,
       phase: 'downloading',
@@ -157,7 +163,7 @@ export function ProjectManager({
       const res = await fetch('/api/export-source', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, dbType, dbConfig })
+        body: JSON.stringify({ projectId, dataMode, authStrategy, legacyDriver, dbConfig })
       })
       if (!res.ok) {
         const err = await res.json()
@@ -477,7 +483,6 @@ export function ProjectManager({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Botão de Equipe & Configurações foi removido conforme solicitação (Item 11) */}
             {canCreate && (
               <button
                 onClick={() => openDrawer()}
@@ -615,7 +620,7 @@ export function ProjectManager({
                             </button>
                           )}
                           <button
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.preventDefault()
                               e.stopPropagation()
                               
@@ -628,6 +633,21 @@ export function ProjectManager({
                               setExportSupaUrl('')
                               setExportSupaAnonKey('')
 
+                              // Fetch auth config to pre-select
+                              const supabase = createClient()
+                              const { data: authConf } = await supabase
+                                .from('project_auth_config')
+                                .select('auth_type, auth_config')
+                                .eq('project_id', project.id)
+                                .maybeSingle()
+
+                              const authType = authConf?.auth_type || 'managed'
+                              setExportAuthStrategy(
+                                authType === 'ldap' ? 'ldap' : 
+                                authType === 'legacy' ? 'legacy' : 
+                                authType === 'none' ? 'none' : 'managed'
+                              )
+
                               setDownloadModal({
                                 open: true,
                                 phase: 'selecting',
@@ -635,7 +655,8 @@ export function ProjectManager({
                                 progress: 0,
                                 savedPath: '',
                                 savedDir: '',
-                                projectId: project.id
+                                projectId: project.id,
+                                authConfig: authConf?.auth_config
                               })
                             }}
                             className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
@@ -1024,134 +1045,287 @@ export function ProjectManager({
               {/* Selecting Database Option */}
               {downloadModal.phase === 'selecting' && (
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest block mb-2">
-                      Banco de Dados de Destino
-                    </label>
-                    <div className="grid grid-cols-1 gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() => setExportDbType('supabase')}
-                        className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${
-                          exportDbType === 'supabase'
-                            ? 'border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10'
-                            : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
-                        }`}
-                      >
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${
-                          exportDbType === 'supabase' ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'
-                        }`}>
-                          {exportDbType === 'supabase' && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-neutral-900 dark:text-white">Supabase (Nativo)</p>
-                          <p className="text-xs text-neutral-500 mt-0.5">
-                            Conecta via SDK oficial do Supabase. Ideal para infraestrutura serverless na nuvem.
-                          </p>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setExportDbType('postgres')}
-                        className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${
-                          exportDbType === 'postgres'
-                            ? 'border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10'
-                            : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
-                        }`}
-                      >
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${
-                          exportDbType === 'postgres' ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'
-                        }`}>
-                          {exportDbType === 'postgres' && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-neutral-900 dark:text-white">PostgreSQL (Nativo - pg)</p>
-                          <p className="text-xs text-neutral-500 mt-0.5">
-                            Gera queries SQL diretas via driver `pg`. Ideal para hospedar localmente (on-premise) no servidor do cliente.
-                          </p>
-                        </div>
-                      </button>
-                    </div>
+                  {/* Tabs */}
+                  <div className="flex border-b border-neutral-200 dark:border-neutral-800">
+                    <button
+                      type="button"
+                      onClick={() => setExportTab('database')}
+                      className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${
+                        exportTab === 'database' 
+                          ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' 
+                          : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+                      }`}
+                    >
+                      Banco de Dados
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExportTab('auth')}
+                      className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${
+                        exportTab === 'auth' 
+                          ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' 
+                          : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+                      }`}
+                    >
+                      Autenticação (Login)
+                    </button>
                   </div>
 
-                  {/* Always show Supabase Configuration Settings since Auth depends on it */}
-                  <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 font-mono text-[10px] text-neutral-600 dark:text-neutral-400">
-                    <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">Configuração do Supabase (Obrigatório para Login)</p>
-                    <div className="space-y-2">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-neutral-500 font-sans text-xs">Supabase URL</span>
-                        <input
-                          type="text"
-                          value={exportSupaUrl}
-                          onChange={(e) => setExportSupaUrl(e.target.value)}
-                          placeholder="https://your-project.supabase.co"
-                          className="px-3 py-1.5 border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 rounded-lg text-neutral-900 dark:text-white outline-none focus:border-indigo-500 text-xs w-full font-mono"
-                        />
+                  {/* Database Tab */}
+                  {exportTab === 'database' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setExportDataMode('tunnel')}
+                          className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${
+                            exportDataMode === 'tunnel'
+                              ? 'border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10'
+                              : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${
+                            exportDataMode === 'tunnel' ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'
+                          }`}>
+                            {exportDataMode === 'tunnel' && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-neutral-900 dark:text-white">MetaBuilder Tunnel (BaaS)</p>
+                            <p className="text-xs text-neutral-500 mt-0.5">
+                              Conecta via Websocket ao servidor online. Ideal para Frontend Desacoplado.
+                            </p>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExportDataMode('supabase')}
+                          className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${
+                            exportDataMode === 'supabase'
+                              ? 'border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10'
+                              : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${
+                            exportDataMode === 'supabase' ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'
+                          }`}>
+                            {exportDataMode === 'supabase' && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-neutral-900 dark:text-white">Supabase (Nativo)</p>
+                            <p className="text-xs text-neutral-500 mt-0.5">
+                              Conecta via SDK oficial do Supabase. Ideal para infraestrutura serverless na nuvem.
+                            </p>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExportDataMode('postgres')}
+                          className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${
+                            exportDataMode === 'postgres'
+                              ? 'border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10'
+                              : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${
+                            exportDataMode === 'postgres' ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'
+                          }`}>
+                            {exportDataMode === 'postgres' && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-neutral-900 dark:text-white">PostgreSQL (Nativo - pg)</p>
+                            <p className="text-xs text-neutral-500 mt-0.5">
+                              Gera queries SQL diretas via driver `pg`. Ideal para hospedar localmente (on-premise) no servidor do cliente.
+                            </p>
+                          </div>
+                        </button>
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-neutral-500 font-sans text-xs">Supabase Anon Key</span>
-                        <input
-                          type="text"
-                          value={exportSupaAnonKey}
-                          onChange={(e) => setExportSupaAnonKey(e.target.value)}
-                          placeholder="your-anon-key"
-                          className="px-3 py-1.5 border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 rounded-lg text-neutral-900 dark:text-white outline-none focus:border-indigo-500 text-xs w-full font-mono truncate"
-                        />
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Inline Database Connection Settings */}
-                  {exportDbType === 'postgres' && (
-                    <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 font-mono text-[10px] text-neutral-600 dark:text-neutral-400">
-                      <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">Configuração da URL de Conexão</p>
-                      <div className="flex flex-wrap items-center gap-1.5 bg-white dark:bg-neutral-950 p-3 rounded-xl border border-neutral-200/60 dark:border-neutral-800/80 leading-relaxed text-xs">
-                        <span className="text-neutral-500">postgresql://</span>
-                        <input
-                          type="text"
-                          value={exportDbUser}
-                          onChange={(e) => setExportDbUser(e.target.value)}
-                          placeholder="usuario"
-                          className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-16"
-                          title="Usuário"
-                        />
-                        <span className="text-neutral-500">:</span>
-                        <input
-                          type="text"
-                          value={exportDbPassword}
-                          onChange={(e) => setExportDbPassword(e.target.value)}
-                          placeholder="senha"
-                          className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-16"
-                          title="Senha"
-                        />
-                        <span className="text-neutral-500">@</span>
-                        <input
-                          type="text"
-                          value={exportDbHost}
-                          onChange={(e) => setExportDbHost(e.target.value)}
-                          placeholder="localhost"
-                          className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-24"
-                          title="Host"
-                        />
-                        <span className="text-neutral-500">:</span>
-                        <input
-                          type="text"
-                          value={exportDbPort}
-                          onChange={(e) => setExportDbPort(e.target.value)}
-                          placeholder="5432"
-                          className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-14"
-                          title="Porta"
-                        />
-                        <span className="text-neutral-500">/</span>
-                        <input
-                          type="text"
-                          value={exportDbName}
-                          onChange={(e) => setExportDbName(e.target.value)}
-                          placeholder="banco_db"
-                          className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-32"
-                          title="Nome do Banco de Dados"
-                        />
+                      {/* Configuração Supabase Data */}
+                      {exportDataMode === 'supabase' && (
+                        <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 font-mono text-[10px] text-neutral-600 dark:text-neutral-400">
+                          <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">Configuração do Supabase</p>
+                          <div className="space-y-2">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-neutral-500 font-sans text-xs">Supabase URL</span>
+                              <input
+                                type="text"
+                                value={exportSupaUrl}
+                                onChange={(e) => setExportSupaUrl(e.target.value)}
+                                placeholder="https://your-project.supabase.co"
+                                className="px-3 py-1.5 border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 rounded-lg text-neutral-900 dark:text-white outline-none focus:border-indigo-500 text-xs w-full font-mono"
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <span className="text-neutral-500 font-sans text-xs">Supabase Anon Key</span>
+                              <input
+                                type="text"
+                                value={exportSupaAnonKey}
+                                onChange={(e) => setExportSupaAnonKey(e.target.value)}
+                                placeholder="your-anon-key"
+                                className="px-3 py-1.5 border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 rounded-lg text-neutral-900 dark:text-white outline-none focus:border-indigo-500 text-xs w-full font-mono truncate"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Configuração Postgres Data */}
+                      {exportDataMode === 'postgres' && (
+                        <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 font-mono text-[10px] text-neutral-600 dark:text-neutral-400">
+                          <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">Configuração da URL de Conexão</p>
+                          <div className="flex flex-wrap items-center gap-1.5 bg-white dark:bg-neutral-950 p-3 rounded-xl border border-neutral-200/60 dark:border-neutral-800/80 leading-relaxed text-xs">
+                            <span className="text-neutral-500">postgresql://</span>
+                            <input
+                              type="text"
+                              value={exportDbUser}
+                              onChange={(e) => setExportDbUser(e.target.value)}
+                              placeholder="usuario"
+                              className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-16"
+                              title="Usuário"
+                            />
+                            <span className="text-neutral-500">:</span>
+                            <input
+                              type="text"
+                              value={exportDbPassword}
+                              onChange={(e) => setExportDbPassword(e.target.value)}
+                              placeholder="senha"
+                              className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-16"
+                              title="Senha"
+                            />
+                            <span className="text-neutral-500">@</span>
+                            <input
+                              type="text"
+                              value={exportDbHost}
+                              onChange={(e) => setExportDbHost(e.target.value)}
+                              placeholder="localhost"
+                              className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-24"
+                              title="Host"
+                            />
+                            <span className="text-neutral-500">:</span>
+                            <input
+                              type="text"
+                              value={exportDbPort}
+                              onChange={(e) => setExportDbPort(e.target.value)}
+                              placeholder="5432"
+                              className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-14"
+                              title="Porta"
+                            />
+                            <span className="text-neutral-500">/</span>
+                            <input
+                              type="text"
+                              value={exportDbName}
+                              onChange={(e) => setExportDbName(e.target.value)}
+                              placeholder="banco_db"
+                              className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-32"
+                              title="Nome do Banco de Dados"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Auth Tab */}
+                  {exportTab === 'auth' && (
+                    <div className="space-y-4 pt-4">
+                      <div 
+                        onClick={() => setExportAuthStrategy('managed')}
+                        className={cn(
+                          "p-4 rounded-xl border border-white/10 cursor-pointer transition-all duration-200",
+                          exportAuthStrategy === 'managed' ? "bg-white/10 border-white/20" : "hover:bg-white/5"
+                        )}
+                      >
+                        <div className="flex items-center space-x-3 mb-2">
+                          <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", exportAuthStrategy === 'managed' ? "border-[#5E2BFF]" : "border-gray-500")}>
+                            {exportAuthStrategy === 'managed' && <div className="w-2 h-2 bg-[#5E2BFF] rounded-full" />}
+                          </div>
+                          <span className="font-medium">Managed Auth</span>
+                        </div>
+                        <p className="text-sm text-gray-400 ml-7">
+                          Auth nativo no Supabase do cliente ou do MetaBuilder (Central).
+                        </p>
+                      </div>
+
+                      <div 
+                        onClick={() => setExportAuthStrategy('legacy')}
+                        className={cn(
+                          "p-4 rounded-xl border border-white/10 cursor-pointer transition-all duration-200",
+                          exportAuthStrategy === 'legacy' ? "bg-white/10 border-white/20" : "hover:bg-white/5"
+                        )}
+                      >
+                        <div className="flex items-center space-x-3 mb-2">
+                          <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", exportAuthStrategy === 'legacy' ? "border-[#5E2BFF]" : "border-gray-500")}>
+                            {exportAuthStrategy === 'legacy' && <div className="w-2 h-2 bg-[#5E2BFF] rounded-full" />}
+                          </div>
+                          <span className="font-medium">Via Banco de Dados Legado</span>
+                        </div>
+                        <p className="text-sm text-gray-400 ml-7 mb-4">
+                          O app exportado validará o login comparando com SUA tabela de usuários sincronizada.
+                        </p>
+                        
+                        {exportAuthStrategy === 'legacy' && (
+                          <div className="ml-7 space-y-4 border-t border-white/10 pt-4">
+                            <div>
+                              <label className="block text-sm text-gray-400 mb-2">Driver de Conexão do BD Legado</label>
+                              <div className="flex items-center space-x-4">
+                                <label className="flex items-center space-x-2 cursor-pointer">
+                                  <input 
+                                    type="radio" 
+                                    checked={exportLegacyDriver === 'supabase'} 
+                                    onChange={() => setExportLegacyDriver('supabase')}
+                                    className="text-[#5E2BFF] focus:ring-[#5E2BFF]"
+                                  />
+                                  <span className="text-sm">Supabase SDK</span>
+                                </label>
+                                <label className="flex items-center space-x-2 cursor-pointer">
+                                  <input 
+                                    type="radio" 
+                                    checked={exportLegacyDriver === 'postgres'} 
+                                    onChange={() => setExportLegacyDriver('postgres')}
+                                    className="text-[#5E2BFF] focus:ring-[#5E2BFF]"
+                                  />
+                                  <span className="text-sm">Driver PostgreSQL Nativo (pg)</span>
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div 
+                        onClick={() => setExportAuthStrategy('ldap')}
+                        className={cn(
+                          "p-4 rounded-xl border border-white/10 cursor-pointer transition-all duration-200",
+                          exportAuthStrategy === 'ldap' ? "bg-white/10 border-white/20" : "hover:bg-white/5"
+                        )}
+                      >
+                        <div className="flex items-center space-x-3 mb-2">
+                          <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", exportAuthStrategy === 'ldap' ? "border-[#5E2BFF]" : "border-gray-500")}>
+                            {exportAuthStrategy === 'ldap' && <div className="w-2 h-2 bg-[#5E2BFF] rounded-full" />}
+                          </div>
+                          <span className="font-medium">LDAP / AD</span>
+                        </div>
+                        <p className="text-sm text-gray-400 ml-7">
+                          Integração corporativa nativa. O app gerado validará no Active Directory do cliente.
+                        </p>
+                      </div>
+
+                      <div 
+                        onClick={() => setExportAuthStrategy('none')}
+                        className={cn(
+                          "p-4 rounded-xl border border-white/10 cursor-pointer transition-all duration-200",
+                          exportAuthStrategy === 'none' ? "bg-white/10 border-white/20" : "hover:bg-white/5"
+                        )}
+                      >
+                        <div className="flex items-center space-x-3 mb-2">
+                          <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", exportAuthStrategy === 'none' ? "border-[#5E2BFF]" : "border-gray-500")}>
+                            {exportAuthStrategy === 'none' && <div className="w-2 h-2 bg-[#5E2BFF] rounded-full" />}
+                          </div>
+                          <span className="font-medium">Sem Autenticação</span>
+                        </div>
+                        <p className="text-sm text-gray-400 ml-7">
+                          O app exportado não exigirá login. Middlewares de proteção serão removidos.
+                        </p>
                       </div>
                     </div>
                   )}
@@ -1160,20 +1334,20 @@ export function ProjectManager({
                     <button
                       onClick={() => handleStartExport(
                         downloadModal.projectId!, 
-                        exportDbType, 
-                        downloadModal.fileName,
-                        exportDbType === 'supabase' ? {
-                          supabaseUrl: exportSupaUrl,
-                          supabaseAnonKey: exportSupaAnonKey
-                        } : {
+                        downloadModal.fileName, 
+                        exportDataMode, 
+                        exportAuthStrategy,
+                        exportLegacyDriver,
+                        exportDataMode === 'postgres' ? {
                           user: exportDbUser,
                           password: exportDbPassword,
                           host: exportDbHost,
                           port: exportDbPort,
-                          database: exportDbName,
+                          database: exportDbName
+                        } : exportDataMode === 'supabase' ? {
                           supabaseUrl: exportSupaUrl,
                           supabaseAnonKey: exportSupaAnonKey
-                        }
+                        } : null
                       )}
                       className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(79,70,229,0.2)]"
                     >

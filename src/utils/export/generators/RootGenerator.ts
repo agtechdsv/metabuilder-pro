@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 
-export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'supabase') {
+export function generateRootFiles(zip: JSZip, project: any, dataMode: string = 'supabase', authStrategy: string = 'managed') {
   const security = project.theme_config?.security || { traditional_login: true, mfa_enabled: false, passkey_enabled: false }
 
   zip.file('package.json', JSON.stringify({
@@ -31,7 +31,7 @@ export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'su
       'next-nprogress-bar': '^2.4.7',
       '@supabase/supabase-js': '^2.43.4',
       '@supabase/ssr': '^0.3.0',
-      ...(dbType === 'postgres' ? { 'pg': '^8.11.5' } : {}),
+      ...(dataMode === 'postgres' ? { 'pg': '^8.11.5' } : {}),
       '@simplewebauthn/browser': '^13.3.0',
       '@simplewebauthn/server': '^13.3.1',
       '@xyflow/react': '^12.10.2',
@@ -40,7 +40,9 @@ export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'su
       'react-leaflet': '^4.2.1',
       'otplib': '^13.4.1',
       'qrcode': '^1.5.4',
-      'qrcode.react': '^4.2.0'
+      'qrcode.react': '^4.2.0',
+      ...(authStrategy === 'legacy' || authStrategy === 'ldap' ? { 'jose': '^5.4.0' } : {}),
+      ...(authStrategy === 'ldap' ? { 'ldapjs': '^3.0.7' } : {})
     },
     devDependencies: {
       'typescript': '^5',
@@ -52,7 +54,8 @@ export function generateRootFiles(zip: JSZip, project: any, dbType: string = 'su
       '@types/dagre': '^0.7.54',
       '@types/leaflet': '^1.9.21',
       '@types/qrcode': '^1.5.6',
-      ...(dbType === 'postgres' ? { '@types/pg': '^8.11.5' } : {})
+      ...(dataMode === 'postgres' ? { '@types/pg': '^8.11.5' } : {}),
+      ...(authStrategy === 'ldap' ? { '@types/ldapjs': '^3.0.5' } : {})
     }
   }, null, 2))
 
@@ -106,9 +109,15 @@ export default config;
 `)
 }
 
-export function generateEnv(zip: JSZip, project: any, dbType: string = 'supabase', dbConfig: any = null) {
-  const supaUrl = dbConfig?.supabaseUrl ? dbConfig.supabaseUrl : 'https://your-project.supabase.co'
-  const supaAnon = dbConfig?.supabaseAnonKey ? dbConfig.supabaseAnonKey : 'your_supabase_anon_key'
+export function generateEnv(zip: JSZip, project: any, dataMode: string = 'supabase', authStrategy: string = 'managed', dbConfig: any = null) {
+  let supaUrl = dbConfig?.supabaseUrl ? dbConfig.supabaseUrl : 'https://your-project.supabase.co'
+  let supaAnon = dbConfig?.supabaseAnonKey ? dbConfig.supabaseAnonKey : 'your_supabase_anon_key'
+
+  // If using Tunnel for anything, inject Central MetaBuilder credentials
+  if (dataMode === 'tunnel' || authStrategy === 'tunnel') {
+    supaUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || supaUrl
+    supaAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || supaAnon
+  }
 
   let envContent = `# Authentication
 NEXT_PUBLIC_SUPABASE_URL=${supaUrl}
@@ -118,7 +127,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=${supaAnon}
 META_PROJECT_TOKEN=${project.secret_token || 'your_project_token'}
 `
 
-  if (dbType === 'postgres') {
+  if (dataMode === 'postgres') {
     const user = dbConfig?.user || 'postgres'
     const password = dbConfig?.password || 'senha'
     const host = dbConfig?.host || 'localhost'
@@ -129,6 +138,23 @@ META_PROJECT_TOKEN=${project.secret_token || 'your_project_token'}
     envContent += `
 # Database Connection
 DATABASE_URL=${connectionString}
+`
+  }
+
+  if (authStrategy === 'legacy' || authStrategy === 'ldap') {
+    envContent += `
+# JWT Session Secret
+JWT_SECRET=super-secret-key-replace-me-in-production
+`
+  }
+
+  if (authStrategy === 'ldap') {
+    envContent += `
+# LDAP Configuration
+LDAP_URL=ldap://10.0.0.15:389
+LDAP_BASE_DN=dc=empresa,dc=local
+LDAP_BIND_DN=cn=admin,dc=empresa,dc=local
+LDAP_BIND_PASSWORD=admin_password
 `
   }
 

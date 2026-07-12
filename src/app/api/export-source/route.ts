@@ -4,7 +4,7 @@ import { SourceCodeGenerator } from '@/utils/export/SourceCodeGenerator'
 
 export async function POST(request: Request) {
   try {
-    const { projectId, dbType = 'supabase', dbConfig } = await request.json()
+    const { projectId, dataMode = 'supabase', authStrategy = 'managed', legacyDriver = 'supabase', dbConfig } = await request.json()
     const supabase = await createClient()
 
     // 1. Authenticate
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     })
 
     // 4. Generate the Source Code (ZIP)
-    const generator = new SourceCodeGenerator(project, mappedModels, finalUiViews || [], customComponents || [], dbType, dbConfig)
+    const generator = new SourceCodeGenerator(project, mappedModels, finalUiViews || [], customComponents || [], dataMode, authStrategy, legacyDriver, dbConfig)
     const zipBuffer = await generator.generate()
 
     // 5. Return as a downloadable stream

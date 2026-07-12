@@ -12,16 +12,20 @@ export class SourceCodeGenerator {
   private models: any[]
   private uiViews: any[]
   private customComponents: any[]
-  private dbType: string
+  private dataMode: string
+  private authStrategy: string
+  private legacyDriver: string
   private dbConfig: any
 
-  constructor(project: any, models: any[], uiViews: any[], customComponents: any[] = [], dbType: string = 'supabase', dbConfig: any = null) {
+  constructor(project: any, models: any[], uiViews: any[], customComponents: any[] = [], dataMode: string = 'supabase', authStrategy: string = 'managed', legacyDriver: string = 'supabase', dbConfig: any = null) {
     this.zip = new JSZip()
     this.project = project
     this.models = models
     this.uiViews = uiViews
     this.customComponents = customComponents
-    this.dbType = dbType
+    this.dataMode = dataMode
+    this.authStrategy = authStrategy
+    this.legacyDriver = legacyDriver
     this.dbConfig = dbConfig
   }
 
@@ -43,8 +47,8 @@ export class SourceCodeGenerator {
   }
 
   public async generate(): Promise<Buffer> {
-    generateRootFiles(this.zip, this.project, this.dbType)
-    generateEnv(this.zip, this.project, this.dbType, this.dbConfig)
+    generateRootFiles(this.zip, this.project, this.dataMode, this.authStrategy)
+    generateEnv(this.zip, this.project, this.dataMode, this.authStrategy, this.dbConfig)
     
     // Fase 2: Copiar a Engrenagem Visual Inteira
     const cwd = process.cwd()
@@ -99,24 +103,42 @@ export class SourceCodeGenerator {
       if (fs.existsSync(loginPortalPath)) {
         let content = fs.readFileSync(loginPortalPath, 'utf8')
         
-        // Convert handleSubmit to use Supabase Auth
-        content = content.replace(
-          /const queryId = crypto\.randomUUID\(\)[\s\S]*?\} catch \(err: any\) \{/m,
-          `try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) throw error
-      if (data?.user) finalizeLogin(data.user)
-    } catch (err: any) {`
-        )
+        if (this.authStrategy === 'managed') {
+          // Convert handleSubmit to use Supabase Auth
+          content = content.replace(
+            /const queryId = crypto\.randomUUID\(\)[\s\S]*?\} catch \(err: any\) \{/m,
+            `try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error) throw error
+        if (data?.user) finalizeLogin(data.user)
+      } catch (err: any) {`
+          )
 
-        // Convert handlePasskeyLogin to use Supabase Auth
-        content = content.replace(
-          /const queryId = crypto\.randomUUID\(\)[\s\S]*?\} catch \(err: any\) \{/m,
-          `const { data: { user }, error } = await supabase.auth.getUser()
-      if (error || !user) throw new Error('Sessão inválida após biometria')
-      finalizeLogin(user)
-    } catch (err: any) {`
-        )
+          // Convert handlePasskeyLogin to use Supabase Auth
+          content = content.replace(
+            /const queryId = crypto\.randomUUID\(\)[\s\S]*?\} catch \(err: any\) \{/m,
+            `const { data: { user }, error } = await supabase.auth.getUser()
+        if (error || !user) throw new Error('Sessão inválida após biometria')
+        finalizeLogin(user)
+      } catch (err: any) {`
+          )
+        } else if (this.authStrategy === 'legacy' || this.authStrategy === 'ldap') {
+          const endpoint = this.authStrategy === 'legacy' ? '/api/auth/login' : '/api/auth/ldap'
+          // Convert handleSubmit to POST custom endpoint
+          content = content.replace(
+            /const queryId = crypto\.randomUUID\(\)[\s\S]*?\} catch \(err: any\) \{/m,
+            `try {
+        const res = await fetch('${endpoint}', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Erro no login')
+        finalizeLogin(data.user || { id: data.userId || 'legacy-user' })
+      } catch (err: any) {`
+          )
+        }
 
         componentsFolder.folder('auth')?.file('LoginPortalClient.tsx', content)
       }
@@ -168,30 +190,125 @@ export class SourceCodeGenerator {
       await this.copyFolderToZip(path.join(cwd, 'src/utils/supabase'), utilsFolder)
     }
 
-    const appAuthFolder = this.zip.folder('src/app/auth')
-    if (appAuthFolder) {
-      await this.copyFolderToZip(path.join(cwd, 'src/app/auth'), appAuthFolder)
-      
-      // Cleanup actions.ts to remove MetaBuilder specific iclub
-      const authActionsPath = path.join(cwd, 'src/app/auth/actions.ts')
-      if (fs.existsSync(authActionsPath)) {
-        let content = fs.readFileSync(authActionsPath, 'utf8')
-        content = content.replace(/await import\('@\/app\/actions\/iclub'\)/g, '{ registerReferral: async (...args: any[]) => {} }')
-        appAuthFolder.file('actions.ts', content)
+    if (this.authStrategy !== 'none') {
+      const appAuthFolder = this.zip.folder('src/app/auth')
+      if (appAuthFolder) {
+        await this.copyFolderToZip(path.join(cwd, 'src/app/auth'), appAuthFolder)
+        
+        // Cleanup actions.ts to remove MetaBuilder specific iclub
+        const authActionsPath = path.join(cwd, 'src/app/auth/actions.ts')
+        if (fs.existsSync(authActionsPath)) {
+          let content = fs.readFileSync(authActionsPath, 'utf8')
+          content = content.replace(/await import\('@\/app\/actions\/iclub'\)/g, '{ registerReferral: async (...args: any[]) => {} }')
+          appAuthFolder.file('actions.ts', content)
+        }
+
+        // Cleanup callback/page.tsx to remove MetaBuilder specific iclub
+        const authCallbackPath = path.join(cwd, 'src/app/auth/callback/page.tsx')
+        if (fs.existsSync(authCallbackPath)) {
+          let content = fs.readFileSync(authCallbackPath, 'utf8')
+          content = content.replace(/await import\('@\/app\/actions\/iclub'\)/g, '{ registerReferral: async (...args: any[]) => {} }')
+          appAuthFolder.folder('callback')?.file('page.tsx', content)
+        }
       }
 
-      // Cleanup callback/page.tsx to remove MetaBuilder specific iclub
-      const authCallbackPath = path.join(cwd, 'src/app/auth/callback/page.tsx')
-      if (fs.existsSync(authCallbackPath)) {
-        let content = fs.readFileSync(authCallbackPath, 'utf8')
-        content = content.replace(/await import\('@\/app\/actions\/iclub'\)/g, '{ registerReferral: async (...args: any[]) => {} }')
-        appAuthFolder.folder('callback')?.file('page.tsx', content)
+      const appApiAuthFolder = this.zip.folder('src/app/api/auth')
+      if (appApiAuthFolder) {
+        await this.copyFolderToZip(path.join(cwd, 'src/app/api/auth'), appApiAuthFolder)
       }
+      
+      // Inject custom auth API route if legacy or ldap
+      if (this.authStrategy === 'legacy' || this.authStrategy === 'ldap') {
+        const customApiFolder = this.zip.folder(this.authStrategy === 'legacy' ? 'src/app/api/auth/login' : 'src/app/api/auth/ldap')
+        if (customApiFolder) {
+          const authConf = this.project?.auth_config || {}
+          if (this.authStrategy === 'legacy') {
+            const tableName = authConf.db_table_name || 'usuarios'
+            const emailCol = authConf.db_email_column || 'email'
+            const passCol = authConf.db_password_column || 'senha'
+            const idCol = authConf.db_user_role_column || 'id'
+            
+            const routeContent = `import { NextResponse } from 'next/server';
+import { SignJWT } from 'jose';
+import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
+${this.legacyDriver === 'postgres' ? "import { Pool } from 'pg';" : ""}
+
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'super-secret-key-replace-me');
+
+export async function POST(request: Request) {
+  try {
+    const { email, password } = await request.json();
+    let user = null;
+
+    ${this.legacyDriver === 'postgres' ? `
+    // Postgres Native Mode
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const result = await pool.query('SELECT * FROM "${tableName}" WHERE "${emailCol}" = $1 LIMIT 1', [email]);
+    if (result.rows.length > 0) user = result.rows[0];
+    await pool.end();
+    ` : `
+    // Supabase SDK Mode
+    const supabase = await createClient();
+    const { data } = await supabase.from('${tableName}').select('*').eq('${emailCol}', email).limit(1).single();
+    user = data;
+    `}
+
+    if (!user) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 401 });
+
+    // ATENÇÃO: Adicione a validação de hash (bcrypt) aqui na implementação final
+    if (user["${passCol}"] !== password) {
+      return NextResponse.json({ error: 'Senha incorreta' }, { status: 401 });
     }
 
-    const appApiAuthFolder = this.zip.folder('src/app/api/auth')
-    if (appApiAuthFolder) {
-      await this.copyFolderToZip(path.join(cwd, 'src/app/api/auth'), appApiAuthFolder)
+    // Gerar JWT de Sessão
+    const token = await new SignJWT({ userId: user["${idCol}"], email: user["${emailCol}"] })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('24h')
+      .sign(JWT_SECRET);
+
+    cookies().set('legacy_auth_token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 60 * 60 * 24 });
+    return NextResponse.json({ success: true, user: { id: user["${idCol}"], email: user["${emailCol}"] } });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}`
+            customApiFolder.file('route.ts', routeContent)
+          } else if (this.authStrategy === 'ldap') {
+            const routeContent = `import { NextResponse } from 'next/server';
+import { SignJWT } from 'jose';
+import { cookies } from 'next/headers';
+import ldap from 'ldapjs';
+
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'super-secret-key-replace-me');
+
+export async function POST(request: Request) {
+  try {
+    const { email, password } = await request.json();
+    
+    // In a real implementation, you would authenticate against the LDAP server using ldapjs.
+    // For now, this is a placeholder where you can inject the Active Directory logic:
+    // const client = ldap.createClient({ url: process.env.LDAP_URL });
+    // client.bind(...) 
+
+    // Simulate LDAP success
+    const token = await new SignJWT({ userId: email, email })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('24h')
+      .sign(JWT_SECRET);
+
+    cookies().set('legacy_auth_token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 60 * 60 * 24 });
+    return NextResponse.json({ success: true, user: { id: email, email } });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}`
+            customApiFolder.file('route.ts', routeContent)
+          }
+        }
+      }
     }
     
     const i18nFolder = this.zip.folder('src/i18n')
@@ -200,21 +317,44 @@ export class SourceCodeGenerator {
     }
 
     // Injetar os Adapters Escolhidos (sobrescrevendo os hooks copiados acima)
-    const adapterPath = path.join(cwd, 'src/templates/export/adapters', this.dbType)
-    if (fs.existsSync(adapterPath)) {
-      const hooksFolder = componentsFolder?.folder('runtime')?.folder('hooks')
-      if (hooksFolder && fs.existsSync(path.join(adapterPath, 'hooks'))) {
-        await this.copyFolderToZip(path.join(adapterPath, 'hooks'), hooksFolder)
-      }
-      
-      const libFolderDst = this.zip.folder('src/lib')
-      if (libFolderDst && fs.existsSync(path.join(adapterPath, 'lib'))) {
-        await this.copyFolderToZip(path.join(adapterPath, 'lib'), libFolderDst)
+    if (this.dataMode !== 'tunnel') {
+      const adapterPath = path.join(cwd, 'src/templates/export/adapters', this.dataMode)
+      if (fs.existsSync(adapterPath)) {
+        const hooksFolder = componentsFolder?.folder('runtime')?.folder('hooks')
+        if (hooksFolder && fs.existsSync(path.join(adapterPath, 'hooks'))) {
+          await this.copyFolderToZip(path.join(adapterPath, 'hooks'), hooksFolder)
+        }
+        
+        const libFolderDst = this.zip.folder('src/lib')
+        if (libFolderDst && fs.existsSync(path.join(adapterPath, 'lib'))) {
+          await this.copyFolderToZip(path.join(adapterPath, 'lib'), libFolderDst)
+        }
       }
     }
 
+    // Gerar schema.sql
+    if (this.dataMode !== 'tunnel') {
+      let schemaSql = '-- MetaBuilder Exported Schema\n\n'
+      for (const model of this.models) {
+        schemaSql += `CREATE TABLE IF NOT EXISTS "${model.table_name}" (\n`
+        const columnDefs: string[] = []
+        schemaSql += `  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n`
+        for (const field of model.ui_fields) {
+          if (field.column_name === 'id') continue
+          let type = 'TEXT'
+          if (field.field_type === 'number') type = 'NUMERIC'
+          if (field.field_type === 'boolean') type = 'BOOLEAN'
+          if (field.field_type === 'timestamp') type = 'TIMESTAMP WITH TIME ZONE'
+          columnDefs.push(`  "${field.column_name}" ${type}${field.required ? ' NOT NULL' : ''}`)
+        }
+        columnDefs.push(`  "created_at" TIMESTAMP WITH TIME ZONE DEFAULT NOW()\n`)
+        schemaSql += columnDefs.join(',\n') + '\n);\n\n'
+      }
+      this.zip.file('schema.sql', schemaSql)
+    }
+
     generateAppRouter(this.zip, this.project, this.models, this.uiViews)
-    generateFeatures(this.zip, this.models, this.uiViews, this.dbType)
+    generateFeatures(this.zip, this.models, this.uiViews, this.dataMode)
     generateBYOC(this.zip, this.customComponents)
 
     return await this.zip.generateAsync({ type: 'nodebuffer' })
