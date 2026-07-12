@@ -495,7 +495,7 @@ export function PermissionGuard({ children }: { viewSlug: string, children: Reac
       this.zip.folder('src/components/auth')?.file('PermissionGuard.tsx', dummyGuardCode)
     }
 
-    generateAppRouter(this.zip, this.project, this.models, this.uiViews)
+    generateAppRouter(this.zip, this.project, this.models, this.uiViews, this.authStrategy)
     generateFeatures(this.zip, this.models, this.uiViews, this.dataMode)
     generateBYOC(this.zip, this.customComponents)
 

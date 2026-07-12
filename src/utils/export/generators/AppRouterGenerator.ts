@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 
-export function generateAppRouter(zip: JSZip, project: any, models: any[], uiViews: any[] = []) {
+export function generateAppRouter(zip: JSZip, project: any, models: any[], uiViews: any[] = [], authStrategy: string = 'managed') {
   const appFolder = zip.folder('src/app')
   const configFolder = zip.folder('src/config')
   if (!appFolder || !configFolder) return
@@ -83,6 +83,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         project={projectConfig}
         navigation={projectConfig.navigation}
         baseNavUrl=""
+        isNoAuth={${authStrategy === 'none'}}
       >
         {children}
       </RuntimeLayoutClient>
