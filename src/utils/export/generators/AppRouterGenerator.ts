@@ -7,9 +7,9 @@ export function generateAppRouter(zip: JSZip, project: any, models: any[], uiVie
 
   const projectName = project.name || 'Metabuilder App'
 
-  // Freeze Navigation and Project Config
+  // Fallback Navigation generation if project doesn't have custom navigation defined
   const navigationGroups = Array.from(new Set(uiViews.map(v => v.group_name || 'Geral')))
-  const navigation = navigationGroups.map((group, idx) => ({
+  const fallbackNavigation = navigationGroups.map((group, idx) => ({
     id: `group-${idx}`,
     label: group,
     icon: 'Folder',
@@ -26,7 +26,9 @@ export function generateAppRouter(zip: JSZip, project: any, models: any[], uiVie
 
   const projectConfig = {
     ...project,
-    navigation
+    navigation: (project.navigation && Array.isArray(project.navigation) && project.navigation.length > 0) 
+      ? project.navigation 
+      : fallbackNavigation
   }
 
   configFolder.file('project.json', JSON.stringify(projectConfig, null, 2))
@@ -42,6 +44,7 @@ import "./globals.css";
 import { CustomThemeProvider } from "@/components/CustomThemeProvider";
 import { ProgressBarProvider } from "@/components/ProgressBarProvider";
 import { I18nProvider } from "@/i18n/I18nContext";
+import { ToastProvider } from "@/components/ui/Toast";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -61,7 +64,9 @@ export default function RootLayout({
         <CustomThemeProvider defaultTheme="light" attribute="class">
           <I18nProvider>
             <ProgressBarProvider />
-            {children}
+            <ToastProvider>
+              {children}
+            </ToastProvider>
           </I18nProvider>
         </CustomThemeProvider>
       </body>
