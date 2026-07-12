@@ -69,20 +69,23 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
 import React, { Suspense } from 'react'
 import ViewPageContent from '@/components/runtime/ViewPageContent'
 import viewConfig from '@/config/views/${view.slug}.json'
+import { PermissionGuard } from '@/components/auth/PermissionGuard'
 
 export default function ${view.slug.replace(/-/g, '')}Page() {
   return (
-    <div className="flex-1 w-full h-full relative">
-      <Suspense fallback={null}>
-        <ViewPageContent 
-          {...(viewConfig as any)}
-          viewId="${view.id}"
-          workspace={null}
-          project={null}
-          locale="pt"
-        />
-      </Suspense>
-    </div>
+    <PermissionGuard viewSlug="${view.slug}">
+      <div className="flex-1 w-full h-full relative">
+        <Suspense fallback={null}>
+          <ViewPageContent 
+            {...(viewConfig as any)}
+            viewId="${view.id}"
+            workspace={null}
+            project={null}
+            locale="pt"
+          />
+        </Suspense>
+      </div>
+    </PermissionGuard>
   )
 }
 `)

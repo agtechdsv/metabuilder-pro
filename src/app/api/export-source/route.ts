@@ -75,8 +75,23 @@ export async function POST(request: Request) {
       }
     })
 
+    // 3.7 Fetch Roles and Permissions
+    const { data: projectRoles } = await supabase
+      .from('project_roles')
+      .select('*')
+      .eq('project_id', projectId)
+
+    let rolePermissions: any[] = []
+    if (projectRoles && projectRoles.length > 0) {
+      const { data: perms } = await supabase
+        .from('project_role_permissions')
+        .select('*')
+        .in('role_id', projectRoles.map((r: any) => r.id))
+      if (perms) rolePermissions = perms
+    }
+
     // 4. Generate the Source Code (ZIP)
-    const generator = new SourceCodeGenerator(project, mappedModels, finalUiViews || [], customComponents || [], dataMode, authStrategy, legacyDriver, dbConfig)
+    const generator = new SourceCodeGenerator(project, mappedModels, finalUiViews || [], customComponents || [], dataMode, authStrategy, legacyDriver, dbConfig, projectRoles || [], rolePermissions)
     const zipBuffer = await generator.generate()
 
     // 5. Return as a downloadable stream

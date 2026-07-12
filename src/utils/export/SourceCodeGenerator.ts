@@ -16,8 +16,21 @@ export class SourceCodeGenerator {
   private authStrategy: string
   private legacyDriver: string
   private dbConfig: any
+  private projectRoles: any[]
+  private rolePermissions: any[]
 
-  constructor(project: any, models: any[], uiViews: any[], customComponents: any[] = [], dataMode: string = 'supabase', authStrategy: string = 'managed', legacyDriver: string = 'supabase', dbConfig: any = null) {
+  constructor(
+    project: any, 
+    models: any[], 
+    uiViews: any[], 
+    customComponents: any[] = [], 
+    dataMode: string = 'supabase', 
+    authStrategy: string = 'managed', 
+    legacyDriver: string = 'supabase', 
+    dbConfig: any = null,
+    projectRoles: any[] = [],
+    rolePermissions: any[] = []
+  ) {
     this.zip = new JSZip()
     this.project = project
     this.models = models
@@ -27,6 +40,8 @@ export class SourceCodeGenerator {
     this.authStrategy = authStrategy
     this.legacyDriver = legacyDriver
     this.dbConfig = dbConfig
+    this.projectRoles = projectRoles
+    this.rolePermissions = rolePermissions
   }
 
   private async copyFolderToZip(sourcePath: string, zipFolder: JSZip) {
@@ -351,6 +366,93 @@ export async function POST(request: Request) {
         schemaSql += columnDefs.join(',\n') + '\n);\n\n'
       }
       this.zip.file('schema.sql', schemaSql)
+    }
+
+    // Gerar config de Permissões
+    if (this.authStrategy !== 'none') {
+      const permissionsMap: Record<string, { blockedRoles: string[], allowedRoles: string[], isDefaultBlocked: boolean }> = {}
+      const SYSTEM_SLUGS = new Set(['login', 'downloads', 'automations', 'logs'])
+      
+      for (const view of this.uiViews) {
+        const isAutomations = view.slug === 'automations'
+        const blockedRoles: string[] = []
+        const allowedRoles: string[] = []
+        
+        for (const rp of this.rolePermissions) {
+          if (rp.view_id === view.id) {
+            if (rp.can_read === false) blockedRoles.push(rp.role_id)
+            if (rp.can_read === true) allowedRoles.push(rp.role_id)
+          }
+        }
+        
+        permissionsMap[view.slug] = {
+          blockedRoles,
+          allowedRoles,
+          isDefaultBlocked: isAutomations
+        }
+      }
+
+      const permissionsCode = `// Generated Permissions Map based on MetaBuilder Roles
+export const PERMISSIONS_MAP = ${JSON.stringify(permissionsMap, null, 2)};
+
+export function hasViewAccess(viewSlug: string, roleId: string | null): boolean {
+  if (!roleId) return false; // Sem role não acessa nada
+  const conf = PERMISSIONS_MAP[viewSlug as keyof typeof PERMISSIONS_MAP];
+  if (!conf) return true; // Se não tem config, o default é liberado
+  
+  if (conf.isDefaultBlocked) {
+    return conf.allowedRoles.includes(roleId);
+  } else {
+    return !conf.blockedRoles.includes(roleId);
+  }
+}
+`
+      this.zip.folder('src/config')?.file('permissions.ts', permissionsCode)
+      
+      const guardCode = `'use client'
+import React, { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { hasViewAccess } from '@/config/permissions'
+
+function useUserRole() {
+  const [role, setRole] = useState<string | null | undefined>(undefined)
+  useEffect(() => {
+    const stored = localStorage.getItem('meta_user')
+    if (stored) {
+      try {
+        const u = JSON.parse(stored)
+        setRole(u.role_id || u.role || null)
+      } catch(e) {
+        setRole(null)
+      }
+    } else {
+      setRole(null)
+    }
+  }, [])
+  return role
+}
+
+export function PermissionGuard({ viewSlug, children }: { viewSlug: string, children: React.ReactNode }) {
+  const roleId = useUserRole()
+  const router = useRouter()
+
+  if (roleId === undefined) return null
+
+  if (!hasViewAccess(viewSlug, roleId)) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-4">
+        <div className="w-16 h-16 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-2xl">!</div>
+        <h2 className="text-2xl font-bold text-rose-900">Acesso Restrito</h2>
+        <p className="text-neutral-500 max-w-md">Seu perfil atual não possui permissões suficientes para visualizar esta tela.</p>
+        <button onClick={() => router.push('/')} className="px-6 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-bold hover:bg-neutral-800 transition-colors">Voltar ao Início</button>
+      </div>
+    )
+  }
+
+  return <>{children}</>
+}
+`
+      this.zip.folder('src/components/auth')?.file('PermissionGuard.tsx', guardCode)
     }
 
     generateAppRouter(this.zip, this.project, this.models, this.uiViews)
