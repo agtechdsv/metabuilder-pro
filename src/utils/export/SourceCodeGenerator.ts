@@ -349,6 +349,18 @@ export async function POST(request: Request) {
        await this.copyFolderToZip(path.join(cwd, 'src/i18n'), i18nFolder)
     }
 
+    // Copiar scripts de deploy para a raiz do ZIP
+    const scriptsFolderSrc = path.join(cwd, 'src/templates/export/scripts')
+    if (fs.existsSync(scriptsFolderSrc)) {
+      const scriptFiles = fs.readdirSync(scriptsFolderSrc)
+      for (const scriptFile of scriptFiles) {
+        const fullPath = path.join(scriptsFolderSrc, scriptFile)
+        if (fs.statSync(fullPath).isFile()) {
+          this.zip.file(scriptFile, fs.readFileSync(fullPath))
+        }
+      }
+    }
+
     // Injetar os Adapters Escolhidos (sobrescrevendo os hooks copiados acima)
     if (this.dataMode !== 'tunnel') {
       const adapterPath = path.join(cwd, 'src/templates/export/adapters', this.dataMode)
