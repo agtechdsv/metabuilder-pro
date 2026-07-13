@@ -158,6 +158,12 @@ LDAP_BIND_PASSWORD=admin_password
 `
   }
 
+  envContent += `
+# Export Manager Configuration
+# Defina a pasta onde os arquivos XLS/JSON gerados em background serão salvos e lidos pelo Gerenciador de Downloads
+LOCAL_DOWNLOAD_PATH=C:\\AgTech\\DownloadsMetaBuilder
+`
+
   const envFileName = dbConfig ? '.env.local' : '.env.example'
   zip.file(envFileName, envContent)
 

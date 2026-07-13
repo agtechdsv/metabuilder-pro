@@ -217,7 +217,7 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
       {/* Sidebar Header - Aligned with Global Header */}
       <div className="h-16 flex items-center px-6 border-b border-neutral-200/50 dark:border-white/5 shrink-0">
         <Link 
-          href={`${finalBaseNavUrl}/dashboard`}
+          href={finalBaseNavUrl === '' ? '/' : `${finalBaseNavUrl}/dashboard`}
           className="flex items-center gap-3 group relative"
         >
           <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0 group-hover:scale-110 transition-transform">

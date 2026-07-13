@@ -37,7 +37,7 @@ export function RuntimeGlobalHeader({
   const viewSlug = params?.view_slug as string
   const folderId = params?.folder_id?.[0] as string
   const pathTarget = pathname ? pathname.split('/').filter(Boolean).pop() : ''
-  const targetId = viewSlug || folderId || pathTarget
+  const targetId = (viewSlug || folderId || pathTarget || '') as string
   
   const defaultBaseUrl = `/${workspaceSlug}/${projectSlug}`
   const baseUrl = baseNavUrl ?? defaultBaseUrl

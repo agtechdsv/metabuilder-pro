@@ -104,6 +104,12 @@ export class SourceCodeGenerator {
         componentsFolder.folder('layout')?.file('Navbar.tsx', content)
       }
 
+      // Export Gerenciador de Downloads
+      const downloadsManagerPath = path.join(cwd, 'src/components/runtime/DownloadsManagerClient.tsx')
+      if (fs.existsSync(downloadsManagerPath)) {
+        componentsFolder.folder('runtime')?.file('DownloadsManagerClient.tsx', fs.readFileSync(downloadsManagerPath))
+      }
+
       const sidebarPath = path.join(cwd, 'src/components/layout/StudioSidebar.tsx')
       if (fs.existsSync(sidebarPath)) {
         let content = fs.readFileSync(sidebarPath, 'utf8')
@@ -217,6 +223,97 @@ export class SourceCodeGenerator {
     const utilsFolder = this.zip.folder('src/utils/supabase')
     if (utilsFolder) {
       await this.copyFolderToZip(path.join(cwd, 'src/utils/supabase'), utilsFolder)
+    }
+
+    // Export async exports API (Central de Exportações) - Standalone Mock
+    const exportApiFolder = this.zip.folder('src/app/api/export')
+    if (exportApiFolder) {
+      exportApiFolder.file('route.ts', `import { NextResponse } from 'next/server'
+import fs from 'fs'
+import path from 'path'
+
+// Em ambiente standalone, o Gerenciador de Downloads lê a pasta configurada
+function getDownloadPath() {
+  if (process.env.LOCAL_DOWNLOAD_PATH) {
+    return process.env.LOCAL_DOWNLOAD_PATH
+  }
+  return path.join(process.cwd(), 'downloads')
+}
+
+export async function GET(request: Request) {
+  try {
+    const downloadPath = getDownloadPath()
+    if (!fs.existsSync(downloadPath)) {
+      return NextResponse.json({ jobs: [] })
+    }
+    
+    const files = fs.readdirSync(downloadPath)
+    const jobs = files.map((file, idx) => ({
+      id: \`job-\${idx}\`,
+      file_name: file,
+      file_type: path.extname(file).replace('.', ''),
+      status: 'completed',
+      progress: 100,
+      created_at: fs.statSync(path.join(downloadPath, file)).mtime.toISOString(),
+      file_url: \`/api/download?file=\${encodeURIComponent(file)}\`
+    }))
+    
+    return NextResponse.json({ jobs })
+  } catch (e: any) {
+    return NextResponse.json({ jobs: [] })
+  }
+}
+
+export async function POST(request: Request) {
+  return NextResponse.json({ success: true, jobId: 'standalone-job', message: 'Exportação encaminhada para o agente local.' }, { status: 202 })
+}
+
+export async function DELETE(request: Request) {
+  return NextResponse.json({ success: true })
+}
+`)
+    }
+
+    // Export standalone API para download local
+    const downloadApiFolder = this.zip.folder('src/app/api/download')
+    if (downloadApiFolder) {
+      downloadApiFolder.file('route.ts', `import { NextResponse } from 'next/server'
+import fs from 'fs'
+import path from 'path'
+
+function getDownloadPath() {
+  if (process.env.LOCAL_DOWNLOAD_PATH) {
+    return process.env.LOCAL_DOWNLOAD_PATH
+  }
+  return path.join(process.cwd(), 'downloads')
+}
+
+export async function GET(request: Request) {
+  try {
+    const url = new URL(request.url)
+    const fileName = url.searchParams.get('file')
+    if (!fileName) return new NextResponse('File not specified', { status: 400 })
+
+    const downloadPath = getDownloadPath()
+    const filePath = path.join(downloadPath, fileName)
+
+    if (!fs.existsSync(filePath)) {
+      return new NextResponse('File not found', { status: 404 })
+    }
+
+    const fileBuffer = fs.readFileSync(filePath)
+    
+    return new NextResponse(fileBuffer, {
+      headers: {
+        'Content-Disposition': \`attachment; filename="\${fileName}"\`,
+        'Content-Type': 'application/octet-stream',
+      }
+    })
+  } catch (e: any) {
+    return new NextResponse('Internal error', { status: 500 })
+  }
+}
+`)
     }
 
     if (this.authStrategy !== 'none') {

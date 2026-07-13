@@ -22,6 +22,7 @@ interface UseCustomActionsRuntimeProps {
   setIsIframeModalOpen: React.Dispatch<React.SetStateAction<boolean>>
   setIsIframeDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>
   fetchDetails: (parentRow: any, parentModel: string) => Promise<any[]>
+  baseUrl?: string
 }
 
 export function useCustomActionsRuntime({
@@ -29,6 +30,7 @@ export function useCustomActionsRuntime({
   modelName,
   customSlots,
   customActions,
+  baseUrl,
   tunnelChannel,
   isTunnelReady,
   selectedRow,
@@ -217,11 +219,12 @@ export function useCustomActionsRuntime({
 
       const allParamParts = [...currentLevelParams, ...ancestorParams, params].filter(Boolean)
       const allParams = allParamParts.join('&')
-      const pathParts = window.location.pathname.split('/').filter(Boolean)
-      const isAdminPath = pathParts[0] === 'admin'
-      const currentWorkspaceSlug = isAdminPath ? pathParts[1] : pathParts[0]
-      const currentProjectSlug = isAdminPath ? pathParts[2] : pathParts[1]
-      const url = `/${project?.workspace?.slug || currentWorkspaceSlug}/${project?.slug || currentProjectSlug}/${slug}${allParams ? '?' + allParams : ''}`
+      
+      const base = baseUrl !== undefined 
+        ? baseUrl 
+        : `/${project?.workspace?.slug || (window.location.pathname.split('/').filter(Boolean)[0] === 'admin' ? window.location.pathname.split('/').filter(Boolean)[1] : window.location.pathname.split('/').filter(Boolean)[0])}/${project?.slug || (window.location.pathname.split('/').filter(Boolean)[0] === 'admin' ? window.location.pathname.split('/').filter(Boolean)[2] : window.location.pathname.split('/').filter(Boolean)[1])}`
+      
+      const url = `${base}/${slug}${allParams ? '?' + allParams : ''}`
       const openMode = action.usecase_open_mode || 'page'
       
       if (openMode === 'modal') {

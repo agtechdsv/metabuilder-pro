@@ -125,6 +125,31 @@ export default function Home() {
 }
 `)
 
+    // Central de Downloads Page inside (dashboard)
+    const downloadsFolder = dashboardFolder.folder('downloads')
+    if (downloadsFolder) {
+      downloadsFolder.file('page.tsx', `
+import React from 'react'
+import { DownloadsManagerClient } from '@/components/runtime/DownloadsManagerClient'
+import projectConfig from '@/config/project.json'
+
+export default function DownloadsPage() {
+  return (
+    <div className="flex-1 overflow-y-auto w-full h-full p-4 lg:p-8">
+      <div className="max-w-7xl mx-auto h-full">
+        <DownloadsManagerClient 
+          workspaceSlug="export"
+          projectSlug="export"
+          projectId={projectConfig.id}
+          userId="00000000-0000-0000-0000-000000000000"
+        />
+      </div>
+    </div>
+  )
+}
+`)
+    }
+
     // Generate Login Page
     const loginFolder = appFolder.folder('login')
     if (loginFolder) {

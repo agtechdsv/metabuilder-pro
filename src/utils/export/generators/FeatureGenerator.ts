@@ -119,6 +119,7 @@ export default function ${view.slug.replace(/-/g, '')}Page() {
             workspace={{ slug: 'export' }}
             project={projectConfig}
             locale="pt"
+            baseUrl=""
           />
         </Suspense>
       </div>

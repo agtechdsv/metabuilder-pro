@@ -348,6 +348,7 @@ export default function ViewPageContent({
     modelName,
     customSlots,
     customActions,
+    baseUrl,
     tunnelChannel,
     isTunnelReady,
     selectedRow,
