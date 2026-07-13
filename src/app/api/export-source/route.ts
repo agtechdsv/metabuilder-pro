@@ -58,12 +58,14 @@ export async function POST(request: Request) {
     // Mapear os modelos do banco de dados (models e fields) para o formato esperado pelo exportador
     const mappedModels = (models || []).map((m: any) => {
       const mappedFields = (m.fields || []).map((f: any) => ({
+        id: f.id,
         column_name: f.db_column_name,
         label: f.display_name,
         field_type: f.data_type,
         list_visible: f.is_visible_in_list !== false,
         form_visible: f.is_visible_in_form !== false,
-        required: !f.is_nullable
+        required: !f.is_nullable,
+        config: f.config || {}
       }))
 
       return {
