@@ -103,31 +103,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 `)
 
     // Home Page inside (dashboard)
-    dashboardFolder.file('page.tsx', `export default function Home() {
+    dashboardFolder.file('page.tsx', `
+import projectConfig from '@/config/project.json'
+import { DynamicDashboard } from '@/components/runtime/DynamicDashboard'
+
+export default function Home() {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-      <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-600 text-sm font-bold tracking-widest uppercase mb-4">
-        MetaBuilderPRO Architecture
-      </div>
-      <h1 className="text-4xl font-black tracking-tight">
-        Bem-vindo ao ${projectName}
-      </h1>
-      <p className="text-lg text-neutral-500 max-w-2xl mx-auto">
-        Código fonte exportado com sucesso. Arquitetura Modular (FSD) pronta para ser escalada pelo seu time de desenvolvedores sêniores.
-      </p>
-      
-      <div className="pt-8 grid grid-cols-1 md:grid-cols-2 gap-4 text-left max-w-3xl w-full">
-        <div className="p-6 bg-white rounded-2xl shadow-sm border border-neutral-200">
-          <h3 className="font-bold mb-2">📁 src/features</h3>
-          <p className="text-sm text-neutral-500">Módulos isolados por domínio de negócio. Contém as regras de negócio, chamadas de API e componentes específicos.</p>
-        </div>
-        <div className="p-6 bg-white rounded-2xl shadow-sm border border-neutral-200">
-          <h3 className="font-bold mb-2">📁 src/components/ui</h3>
-          <p className="text-sm text-neutral-500">Componentes visuais agnósticos e reutilizáveis (Botões, Modais, Inputs), padrão Shadcn.</p>
-        </div>
-      </div>
+    <div className="flex-1 overflow-y-auto">
+      <DynamicDashboard 
+        items={projectConfig.navigation || []}
+        workspaceSlug="export"
+        projectSlug="export"
+        title="Dashboard"
+        subtitle="Bem-vindo ao sistema"
+        icon="LayoutDashboard"
+        breadcrumbs={[]}
+        baseNavUrl=""
+      />
     </div>
-  );
+  )
 }
 `)
 

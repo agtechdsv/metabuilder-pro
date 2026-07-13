@@ -69,6 +69,7 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
 import React, { Suspense } from 'react'
 import ViewPageContent from '@/components/runtime/ViewPageContent'
 import viewConfig from '@/config/views/${view.slug}.json'
+import projectConfig from '@/config/project.json'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
 
 export default function ${view.slug.replace(/-/g, '')}Page() {
@@ -79,8 +80,8 @@ export default function ${view.slug.replace(/-/g, '')}Page() {
           <ViewPageContent 
             {...(viewConfig as any)}
             viewId="${view.id}"
-            workspace={null}
-            project={null}
+            workspace={{ slug: 'export' }}
+            project={projectConfig}
             locale="pt"
           />
         </Suspense>

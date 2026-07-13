@@ -73,6 +73,20 @@ export class SourceCodeGenerator {
       await this.copyFolderToZip(path.join(cwd, 'src/components/ui'), componentsFolder.folder('ui')!)
       await this.copyFolderToZip(path.join(cwd, 'src/components/layout'), componentsFolder.folder('layout')!)
       
+      // Override hooks if adapter exists (e.g. postgres or native supabase)
+      if (this.dataMode && this.dataMode !== 'tunnel') {
+        const adapterHooksPath = path.join(cwd, 'src/templates/export/adapters', this.dataMode, 'hooks')
+        if (fs.existsSync(adapterHooksPath)) {
+          const hooksFolder = componentsFolder.folder('runtime')?.folder('hooks')
+          if (hooksFolder) {
+            await this.copyFolderToZip(adapterHooksPath, hooksFolder)
+            // Mock tunnel connection to prevent the exported app from connecting to MetaBuilder's central tunnel
+            hooksFolder.file('useTunnelConnection.ts', 'export function useTunnelConnection(props: any) { return { tunnelChannel: null, isTunnelReady: false, supabase: null } }')
+          }
+        }
+      }
+
+      
       // Cleanup HeaderActions to remove Tauri specific ReleaseNotes
       const headerActionsPath = path.join(cwd, 'src/components/layout/HeaderActions.tsx')
       if (fs.existsSync(headerActionsPath)) {
