@@ -18,15 +18,15 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
     // Reconstruct display fields
     let displayFields = fields.filter((f: any) => f.list_visible !== false)
     if (layoutConfig.grid_fields && layoutConfig.grid_fields.length > 0) {
-      displayFields = layoutConfig.grid_fields.map((colName: string) => 
-        fields.find((f: any) => f.column_name === colName)
+      displayFields = layoutConfig.grid_fields.map((fieldIdOrName: string) => 
+        fields.find((f: any) => f.id === fieldIdOrName || f.column_name === fieldIdOrName)
       ).filter(Boolean)
     }
 
     let formFields = fields.filter((f: any) => f.form_visible !== false && f.column_name !== 'id')
     if (layoutConfig.form_fields && layoutConfig.form_fields.length > 0) {
-      formFields = layoutConfig.form_fields.map((colName: string) => 
-        fields.find((f: any) => f.column_name === colName)
+      formFields = layoutConfig.form_fields.map((fieldIdOrName: string) => 
+        fields.find((f: any) => f.id === fieldIdOrName || f.column_name === fieldIdOrName)
       ).filter(Boolean)
     }
 
@@ -39,23 +39,35 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
       defaultView: layoutConfig.default_view || 'list',
       logicType: view.logic_type,
       displayFields: displayFields.map((f: any) => ({
-        id: f.column_name,
-        db_column_name: f.column_name,
-        display_name: f.label,
-        field_type: f.field_type
-      })),
-      formFields: formFields.map((f: any) => ({
-        id: f.column_name,
+        id: f.id || f.column_name,
         db_column_name: f.column_name,
         display_name: f.label,
         field_type: f.field_type,
-        is_nullable: !f.required
+        config: f.config || {}
+      })),
+      formFields: formFields.map((f: any) => ({
+        id: f.id || f.column_name,
+        db_column_name: f.column_name,
+        display_name: f.label,
+        field_type: f.field_type,
+        is_nullable: !f.required,
+        config: f.config || {}
       })),
       filterFields: [], // Can be expanded later
       buttonsConfig: view.buttons_config || [],
       canAdd: true,
       canExport: true,
-      isAutomationsEnabled: false
+      isAutomationsEnabled: false,
+      timelineConfig: layoutConfig.timeline_config || layoutConfig.timelineConfig,
+      ganttConfig: layoutConfig.gantt_config || layoutConfig.ganttConfig,
+      kanbanConfig: layoutConfig.kanban_config || layoutConfig.kanbanConfig,
+      schedulerConfig: layoutConfig.scheduler_config || layoutConfig.schedulerConfig,
+      galleryConfig: layoutConfig.gallery_config || layoutConfig.galleryConfig,
+      mapConfig: layoutConfig.map_config || layoutConfig.mapConfig,
+      blueprintConfig: layoutConfig.blueprint_config || layoutConfig.blueprintConfig,
+      kanbanGroupField: layoutConfig.kanban_group_field || layoutConfig.kanbanGroupField,
+      kanbanGroupDisplayField: layoutConfig.kanban_group_display_field || layoutConfig.kanbanGroupDisplayField,
+      kanbanCardFields: layoutConfig.kanban_card_fields || layoutConfig.kanbanCardFields
     }
 
     configFolder.file(`${view.slug}.json`, JSON.stringify(viewConfig, null, 2))

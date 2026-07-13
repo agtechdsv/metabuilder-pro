@@ -58,9 +58,6 @@ export function useViewDataFetch({
     }
   }, [modelName, filterValues, currentPage, itemsPerPage, refreshKey])
 
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
 
   return {
     data,

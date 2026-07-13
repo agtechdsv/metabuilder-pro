@@ -81,7 +81,7 @@ export class SourceCodeGenerator {
           if (hooksFolder) {
             await this.copyFolderToZip(adapterHooksPath, hooksFolder)
             // Mock tunnel connection to prevent the exported app from connecting to MetaBuilder's central tunnel
-            hooksFolder.file('useTunnelConnection.ts', 'export function useTunnelConnection(props: any) { return { tunnelChannel: null, isTunnelReady: false, supabase: null } }')
+            hooksFolder.file('useTunnelConnection.ts', 'export function useTunnelConnection(props: any) { return { tunnelChannel: {}, isTunnelReady: true, supabase: null } }')
           }
         }
       }
