@@ -90,8 +90,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <RuntimeLayoutClient 
         workspaceSlug="export"
         projectSlug="export"
-        project={projectConfig}
-        navigation={projectConfig.navigation}
+        project={projectConfig as any}
+        navigation={(projectConfig.navigation as any) || []}
         baseNavUrl=""
         isNoAuth={${authStrategy === 'none'}}
       >
@@ -111,7 +111,7 @@ export default function Home() {
   return (
     <div className="flex-1 overflow-y-auto">
       <DynamicDashboard 
-        items={projectConfig.navigation || []}
+        items={(projectConfig.navigation as any) || []}
         workspaceSlug="export"
         projectSlug="export"
         title="Dashboard"
