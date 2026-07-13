@@ -38,23 +38,47 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
       displayType: layoutConfig.display_type || 'list',
       defaultView: layoutConfig.default_view || 'list',
       logicType: view.logic_type,
-      displayFields: displayFields.map((f: any) => ({
-        id: f.id || f.column_name,
-        db_column_name: f.column_name,
-        display_name: f.label,
-        field_type: f.field_type,
-        config: f.config || {}
-      })),
-      formFields: formFields.map((f: any) => ({
-        id: f.id || f.column_name,
-        db_column_name: f.column_name,
-        display_name: f.label,
-        field_type: f.field_type,
-        is_nullable: !f.required,
-        config: f.config || {}
-      })),
-      filterFields: [], // Can be expanded later
+      displayFields: displayFields.map((f: any) => {
+        const baseMeta = layoutConfig.fields_metadata?.[f.id] || {}
+        const specificMeta = layoutConfig.fields_metadata?.[`grid-${f.id}`] || {}
+        const mergedMeta = { ...baseMeta, ...specificMeta }
+        return {
+          id: f.id || f.column_name,
+          db_column_name: f.column_name,
+          display_name: mergedMeta.label?.text || f.label,
+          field_type: f.field_type,
+          config: { ...(f.config || {}), ...mergedMeta }
+        }
+      }),
+      formFields: formFields.map((f: any) => {
+        const baseMeta = layoutConfig.fields_metadata?.[f.id] || {}
+        const specificMeta = layoutConfig.fields_metadata?.[`form-${f.id}`] || {}
+        const mergedMeta = { ...baseMeta, ...specificMeta }
+        return {
+          id: f.id || f.column_name,
+          db_column_name: f.column_name,
+          display_name: mergedMeta.label?.text || f.label,
+          field_type: f.field_type,
+          is_nullable: !f.required,
+          config: { ...(f.config || {}), ...mergedMeta }
+        }
+      }),
+      filterFields: (layoutConfig.filter_fields || []).map((fieldIdOrName: string) => {
+        const f = fields.find((f: any) => f.id === fieldIdOrName || f.column_name === fieldIdOrName)
+        if (!f) return null
+        const baseMeta = layoutConfig.fields_metadata?.[f.id] || {}
+        const specificMeta = layoutConfig.fields_metadata?.[`filter-${f.id}`] || {}
+        const mergedMeta = { ...baseMeta, ...specificMeta }
+        return {
+          id: f.id || f.column_name,
+          db_column_name: f.column_name,
+          display_name: mergedMeta.label?.text || f.label,
+          field_type: f.field_type,
+          config: { ...(f.config || {}), ...mergedMeta }
+        }
+      }).filter(Boolean),
       buttonsConfig: view.buttons_config || [],
+      customActions: layoutConfig.custom_actions || [],
       canAdd: true,
       canExport: true,
       isAutomationsEnabled: false,
