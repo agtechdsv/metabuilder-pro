@@ -91,7 +91,8 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
       blueprintConfig: layoutConfig.blueprint_config || layoutConfig.blueprintConfig,
       kanbanGroupField: layoutConfig.kanban_group_field || layoutConfig.kanbanGroupField,
       kanbanGroupDisplayField: layoutConfig.kanban_group_display_field || layoutConfig.kanbanGroupDisplayField,
-      kanbanCardFields: layoutConfig.kanban_card_fields || layoutConfig.kanbanCardFields
+      kanbanCardFields: layoutConfig.kanban_card_fields || layoutConfig.kanbanCardFields,
+      detailsInterfaceTypes: layoutConfig.details_interface_types || layoutConfig.detailsInterfaceTypes
     }
 
     configFolder.file(`${view.slug}.json`, JSON.stringify(viewConfig, null, 2))

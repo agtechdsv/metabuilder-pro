@@ -649,7 +649,17 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
     const specificKey = zone ? `${zone}-${fid}` : null
     const meta = (specificKey ? config.layout_config.fields_metadata[specificKey] : null) || config.layout_config.fields_metadata[fid]
 
-    if (meta) return meta
+    if (meta) {
+      const defaultMeta = createDefaultFieldMeta(fid, models)
+      return {
+        ...defaultMeta,
+        ...meta,
+        label: { ...defaultMeta.label, ...(meta.label || {}) },
+        content: { ...defaultMeta.content, ...(meta.content || {}) },
+        component: { ...defaultMeta.component, ...(meta.component || {}) },
+        viacep: { ...defaultMeta.viacep, ...(meta.viacep || {}) }
+      }
+    }
 
     return createDefaultFieldMeta(fid, models)
   }

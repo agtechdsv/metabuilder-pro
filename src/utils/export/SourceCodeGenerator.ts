@@ -73,6 +73,11 @@ export class SourceCodeGenerator {
       await this.copyFolderToZip(path.join(cwd, 'src/components/ui'), componentsFolder.folder('ui')!)
       await this.copyFolderToZip(path.join(cwd, 'src/components/layout'), componentsFolder.folder('layout')!)
       
+      const userDefinedPath = path.join(cwd, 'src/components/user-defined');
+      if (fs.existsSync(userDefinedPath)) {
+        await this.copyFolderToZip(userDefinedPath, componentsFolder.folder('user-defined')!);
+      }
+      
       // Override hooks if adapter exists (e.g. postgres or native supabase)
       if (this.dataMode && this.dataMode !== 'tunnel') {
         const adapterHooksPath = path.join(cwd, 'src/templates/export/adapters', this.dataMode, 'hooks')
