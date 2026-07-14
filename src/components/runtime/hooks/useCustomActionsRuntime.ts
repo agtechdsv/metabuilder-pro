@@ -220,8 +220,9 @@ export function useCustomActionsRuntime({
       const allParamParts = [...currentLevelParams, ...ancestorParams, params].filter(Boolean)
       const allParams = allParamParts.join('&')
       
-      const base = baseUrl !== undefined 
-        ? baseUrl 
+      const actualBaseUrl = baseUrl !== undefined ? baseUrl.replace(/\/dashboard\/?$/, '') : undefined;
+      const base = actualBaseUrl !== undefined 
+        ? actualBaseUrl 
         : `/${project?.workspace?.slug || (window.location.pathname.split('/').filter(Boolean)[0] === 'admin' ? window.location.pathname.split('/').filter(Boolean)[1] : window.location.pathname.split('/').filter(Boolean)[0])}/${project?.slug || (window.location.pathname.split('/').filter(Boolean)[0] === 'admin' ? window.location.pathname.split('/').filter(Boolean)[2] : window.location.pathname.split('/').filter(Boolean)[1])}`
       
       const url = `${base}/${slug}${allParams ? '?' + allParams : ''}`
