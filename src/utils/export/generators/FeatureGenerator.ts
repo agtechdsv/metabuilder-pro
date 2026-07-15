@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 
-export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbType: string = 'supabase') {
+export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbType: string = 'supabase', customComponents: any[] = []) {
   const configFolder = zip.folder('src/config/views')
   const appFolder = zip.folder('src/app')
   if (!configFolder || !appFolder) return
@@ -25,9 +25,23 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
 
     let formFields = fields.filter((f: any) => f.form_visible !== false && f.column_name !== 'id')
     if (layoutConfig.form_fields && layoutConfig.form_fields.length > 0) {
-      formFields = layoutConfig.form_fields.map((fieldIdOrName: string) => 
-        fields.find((f: any) => f.id === fieldIdOrName || f.column_name === fieldIdOrName)
-      ).filter(Boolean)
+      formFields = layoutConfig.form_fields.map((fieldIdOrName: string) => {
+        if (fieldIdOrName.startsWith('byoc-') || fieldIdOrName.startsWith('byoc_')) {
+          const byocName = fieldIdOrName.split('_').pop() || ''
+          const matchingComp = customComponents.find((c: any) => c.name === byocName || fieldIdOrName.includes(c.name))
+          return {
+            id: fieldIdOrName,
+            column_name: fieldIdOrName,
+            label: `[BYOC] ${matchingComp ? matchingComp.name : ''}`,
+            field_type: 'byoc',
+            required: false,
+            config: {
+              compiled_code: matchingComp ? matchingComp.compiled_code || matchingComp.compiledCode : ''
+            }
+          }
+        }
+        return fields.find((f: any) => f.id === fieldIdOrName || f.column_name === fieldIdOrName)
+      }).filter(Boolean)
     }
 
     // Freeze Configuration into JSON
@@ -45,7 +59,10 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
         return {
           id: f.id || f.column_name,
           db_column_name: f.column_name,
-          display_name: mergedMeta.label?.text || f.label,
+          display_name: (() => {
+            const val = mergedMeta.label?.text || mergedMeta.label || f.label;
+            return typeof val === 'object' && val !== null ? (val.pt || val.en || val.text || String(val)) : String(val || '');
+          })(),
           field_type: f.field_type,
           config: { ...(f.config || {}), ...mergedMeta }
         }
@@ -57,7 +74,10 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
         return {
           id: f.id || f.column_name,
           db_column_name: f.column_name,
-          display_name: mergedMeta.label?.text || f.label,
+          display_name: (() => {
+            const val = mergedMeta.label?.text || mergedMeta.label || f.label;
+            return typeof val === 'object' && val !== null ? (val.pt || val.en || val.text || String(val)) : String(val || '');
+          })(),
           field_type: f.field_type,
           is_nullable: !f.required,
           config: { ...(f.config || {}), ...mergedMeta }
@@ -72,7 +92,10 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
         return {
           id: f.id || f.column_name,
           db_column_name: f.column_name,
-          display_name: mergedMeta.label?.text || f.label,
+          display_name: (() => {
+            const val = mergedMeta.label?.text || mergedMeta.label || f.label;
+            return typeof val === 'object' && val !== null ? (val.pt || val.en || val.text || String(val)) : String(val || '');
+          })(),
           field_type: f.field_type,
           config: { ...(f.config || {}), ...mergedMeta }
         }
@@ -92,7 +115,14 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
       kanbanGroupField: layoutConfig.kanban_group_field || layoutConfig.kanbanGroupField,
       kanbanGroupDisplayField: layoutConfig.kanban_group_display_field || layoutConfig.kanbanGroupDisplayField,
       kanbanCardFields: layoutConfig.kanban_card_fields || layoutConfig.kanbanCardFields,
-      detailsInterfaceTypes: layoutConfig.details_interface_types || layoutConfig.detailsInterfaceTypes
+      detailsInterfaceTypes: layoutConfig.details_interface_types || layoutConfig.detailsInterfaceTypes,
+      actionInterfaceType: layoutConfig.action_interface_type || layoutConfig.actionInterfaceType || 'drawer',
+      detailsDisplayMode: layoutConfig.details_display_mode || layoutConfig.detailsDisplayMode || {},
+      detailsInlineTypes: layoutConfig.details_inline_types || layoutConfig.detailsInlineTypes || {},
+      detailsTabTitles: Object.fromEntries(Object.entries(layoutConfig.details_tab_titles || layoutConfig.detailsTabTitles || {}).map(([k, v]: [string, any]) => [k, typeof v === 'object' && v !== null ? (v.pt || v.text || String(v)) : String(v || '')])),
+      detailsItemTitles: Object.fromEntries(Object.entries(layoutConfig.details_item_titles || layoutConfig.detailsItemTitles || {}).map(([k, v]: [string, any]) => [k, typeof v === 'object' && v !== null ? (v.pt || v.text || String(v)) : String(v || '')])),
+      tabsStyleConfig: layoutConfig.tabs_style_config || layoutConfig.tabsStyleConfig || {},
+      masterTabTitle: (() => { const val = layoutConfig.master_tab_title || layoutConfig.masterTabTitle; return typeof val === 'object' && val !== null ? (val.pt || val.text || String(val)) : (val ? String(val) : ''); })()
     }
 
     configFolder.file(`${view.slug}.json`, JSON.stringify(viewConfig, null, 2))

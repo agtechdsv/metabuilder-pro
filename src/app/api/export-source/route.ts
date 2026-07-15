@@ -92,8 +92,14 @@ export async function POST(request: Request) {
       if (perms) rolePermissions = perms
     }
 
+    // 3.8 Fetch Enumerations
+    const { data: enumerations } = await supabase
+      .from('project_enumerations')
+      .select('*')
+      .eq('project_id', projectId)
+
     // 4. Generate the Source Code (ZIP)
-    const generator = new SourceCodeGenerator(project, mappedModels, finalUiViews || [], customComponents || [], dataMode, authStrategy, legacyDriver, dbConfig, projectRoles || [], rolePermissions)
+    const generator = new SourceCodeGenerator(project, mappedModels, finalUiViews || [], customComponents || [], dataMode, authStrategy, legacyDriver, dbConfig, projectRoles || [], rolePermissions, enumerations || [])
     const zipBuffer = await generator.generate()
 
     // 5. Return as a downloadable stream

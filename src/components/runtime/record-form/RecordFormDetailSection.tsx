@@ -413,9 +413,10 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                   fontStyle: field.config?.label?.italic ? 'italic' : undefined,
                                   textTransform: field.config?.label?.uppercase ? 'uppercase' : undefined,
                                 }}
-                                className="text-[10px] font-black tracking-widest text-neutral-400"
+                                className="text-[10px] font-black tracking-widest text-neutral-500 mb-1 ml-1"
                               >
-                                {field.display_name}
+                                {typeof field.display_name === 'object' && field.display_name !== null ? (field.display_name.pt || field.display_name.text || JSON.stringify(field.display_name)) : field.display_name}
+                                {fieldConfig.content?.required && <span className="text-red-500 ml-1">*</span>}
                               </label>
                               {(() => {
                                 const baseCol = field.db_column_name.split('.').pop() || field.db_column_name;
@@ -517,7 +518,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                       >
                                         <option value="">Selecione...</option>
                                         {options.map((opt: any) => (
-                                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                          <option key={opt.value} value={opt.value}>{typeof opt.label === 'object' && opt.label !== null ? (opt.label.pt || opt.label.text || JSON.stringify(opt.label)) : opt.label}</option>
                                         ))}
                                       </select>
                                       {/* Removed debug info */}
@@ -553,7 +554,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                           >
                                             {String(rawValue) === String(opt.value) && <div className="w-2 h-2 bg-white rounded-full" />}
                                           </div>
-                                          <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 group-hover/opt:text-indigo-600 transition-colors">{opt.label}</span>
+                                          <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 group-hover/opt:text-indigo-600 transition-colors">{typeof opt.label === 'object' && opt.label !== null ? (opt.label.pt || opt.label.text || JSON.stringify(opt.label)) : opt.label}</span>
                                         </label>
                                       ))}
                                     </div>
@@ -599,7 +600,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                             >
                                               {checked && <div className="w-2 h-2 bg-white" style={{ clipPath: 'polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%)' }} />}
                                             </div>
-                                            <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 group-hover/opt:text-indigo-600 transition-colors">{opt.label}</span>
+                                            <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 group-hover/opt:text-indigo-600 transition-colors">{typeof opt.label === 'object' && opt.label !== null ? (opt.label.pt || opt.label.text || JSON.stringify(opt.label)) : opt.label}</span>
                                           </label>
                                         );
                                       })}

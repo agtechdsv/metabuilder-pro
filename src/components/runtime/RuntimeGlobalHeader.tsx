@@ -42,7 +42,7 @@ export function RuntimeGlobalHeader({
   const defaultBaseUrl = `/${workspaceSlug}/${projectSlug}`
   const baseUrl = baseNavUrl ?? defaultBaseUrl
   const breadcrumbs = findBreadcrumbPath(navigation, targetId, [], baseUrl) || []
-  const dashboardHomeUrl = `${baseUrl}/dashboard`
+  const dashboardHomeUrl = baseUrl === '' ? '/' : `${baseUrl}/dashboard`
 
   return (
     <header className="h-16 border-b border-neutral-200/50 dark:border-white/5 bg-white/80 dark:bg-black/40 backdrop-blur-xl sticky top-0 z-[90] flex items-center px-6 gap-4">

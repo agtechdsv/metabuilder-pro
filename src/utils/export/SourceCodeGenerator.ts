@@ -18,6 +18,7 @@ export class SourceCodeGenerator {
   private dbConfig: any
   private projectRoles: any[]
   private rolePermissions: any[]
+  private enumerations: any[]
 
   constructor(
     project: any, 
@@ -29,7 +30,8 @@ export class SourceCodeGenerator {
     legacyDriver: string = 'supabase', 
     dbConfig: any = null,
     projectRoles: any[] = [],
-    rolePermissions: any[] = []
+    rolePermissions: any[] = [],
+    enumerations: any[] = []
   ) {
     this.zip = new JSZip()
     this.project = project
@@ -42,6 +44,7 @@ export class SourceCodeGenerator {
     this.dbConfig = dbConfig
     this.projectRoles = projectRoles
     this.rolePermissions = rolePermissions
+    this.enumerations = enumerations
   }
 
   private async copyFolderToZip(sourcePath: string, zipFolder: JSZip) {
@@ -320,6 +323,34 @@ export async function GET(request: Request) {
 }
 `)
     }
+
+    // Export Enumerations API
+    const enumerationsApiFolder = this.zip.folder('src/app/api/enumerations')
+    if (enumerationsApiFolder) {
+      enumerationsApiFolder.file('route.ts', `import { NextResponse } from 'next/server'
+import enumerations from '@/config/enumerations.json'
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+
+  if (!id) {
+    return NextResponse.json({ error: 'Missing id parameter' }, { status: 400 })
+  }
+
+  const enumData = (enumerations as any[]).find(e => e.id === id)
+
+  if (!enumData) {
+    return NextResponse.json({ error: 'Enumeration not found' }, { status: 404 })
+  }
+
+  return NextResponse.json({ data: enumData })
+}
+`)
+    }
+
+    // Export Enumerations Config
+    this.zip.folder('src/config')?.file('enumerations.json', JSON.stringify(this.enumerations || [], null, 2))
 
     if (this.authStrategy !== 'none') {
       const appAuthFolder = this.zip.folder('src/app/auth')
@@ -612,8 +643,11 @@ export function PermissionGuard({ children }: { viewSlug: string, children: Reac
     }
 
     generateAppRouter(this.zip, this.project, this.models, this.uiViews, this.authStrategy)
-    generateFeatures(this.zip, this.models, this.uiViews, this.dataMode)
+    generateFeatures(this.zip, this.models, this.uiViews, this.dataMode, this.customComponents)
     generateBYOC(this.zip, this.customComponents)
+
+    // Prevent Next.js favicon 404 in console
+    this.zip.folder('public')?.file('favicon.ico', '')
 
     return await this.zip.generateAsync({ type: 'nodebuffer' })
   }
