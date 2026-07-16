@@ -170,9 +170,13 @@ export default function ${view.slug.replace(/-/g, '')}Page() {
 }
 `)
     }
+  })
 
-    // Generate API Routes for Postgres
-    if (dbType === 'postgres') {
+  // Generate API Routes for Postgres for ALL models (not just ones with views)
+  if (dbType === 'postgres') {
+    models.forEach(model => {
+      if (!model.table_name) return
+      const modelName = model.table_name
       const apiFolder = appFolder.folder('api')?.folder(modelName)
       if (apiFolder) {
         apiFolder.file('route.ts', `import { NextResponse } from 'next/server'
@@ -184,8 +188,8 @@ export async function GET(request: Request) {
   const limit = parseInt(searchParams.get('limit') || '50')
   const offset = (page - 1) * limit
   
-  let baseQuery = \`SELECT * FROM \${'${modelName}'}\`
-  let countQuery = \`SELECT COUNT(*) as total FROM \${'${modelName}'}\`
+  let baseQuery = \`SELECT * FROM "\${'${modelName}'}"\`
+  let countQuery = \`SELECT COUNT(*) as total FROM "\${'${modelName}'}"\`
   
   const filters: string[] = []
   const values: any[] = []
@@ -220,7 +224,7 @@ export async function POST(request: Request) {
     const placeholders = Object.keys(data).map((_, i) => \`$\${i + 1}\`).join(', ')
     const values = Object.values(data)
     
-    const result = await query(\`INSERT INTO \${'${modelName}'} (\${columns}) VALUES (\${placeholders}) RETURNING *\`, values)
+    const result = await query(\`INSERT INTO "\${'${modelName}'}" (\${columns}) VALUES (\${placeholders}) RETURNING *\`, values)
     return NextResponse.json(result.rows[0])
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
@@ -234,7 +238,7 @@ export async function PUT(request: Request) {
     const setClause = Object.keys(data).map((k, i) => \`"\${k}" = $\${i + 2}\`).join(', ')
     const values = [pkValue, ...Object.values(data)]
     
-    const result = await query(\`UPDATE \${'${modelName}'} SET \${setClause} WHERE id = $1 RETURNING *\`, values)
+    const result = await query(\`UPDATE "\${'${modelName}'}" SET \${setClause} WHERE id = $1 RETURNING *\`, values)
     return NextResponse.json(result.rows[0])
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
@@ -247,7 +251,7 @@ export async function DELETE(request: Request) {
   if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 })
   
   try {
-    await query(\`DELETE FROM \${'${modelName}'} WHERE id = $1\`, [id])
+    await query(\`DELETE FROM "\${'${modelName}'}" WHERE id = $1\`, [id])
     return NextResponse.json({ success: true })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
@@ -255,6 +259,6 @@ export async function DELETE(request: Request) {
 }
 `)
       }
-    }
-  })
+    })
+  }
 }
