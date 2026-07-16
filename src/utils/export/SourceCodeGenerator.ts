@@ -19,7 +19,6 @@ export class SourceCodeGenerator {
   private projectRoles: any[]
   private rolePermissions: any[]
   private enumerations: any[]
-  private projectRelations: any[]
 
   constructor(
     project: any, 
@@ -32,8 +31,7 @@ export class SourceCodeGenerator {
     dbConfig: any = null,
     projectRoles: any[] = [],
     rolePermissions: any[] = [],
-    enumerations: any[] = [],
-    projectRelations: any[] = []
+    enumerations: any[] = []
   ) {
     this.zip = new JSZip()
     this.project = project
@@ -47,7 +45,6 @@ export class SourceCodeGenerator {
     this.projectRoles = projectRoles
     this.rolePermissions = rolePermissions
     this.enumerations = enumerations
-    this.projectRelations = projectRelations
   }
 
   private async copyFolderToZip(sourcePath: string, zipFolder: JSZip) {
@@ -646,7 +643,7 @@ export function PermissionGuard({ children }: { viewSlug: string, children: Reac
     }
 
     generateAppRouter(this.zip, this.project, this.models, this.uiViews, this.authStrategy)
-    generateFeatures(this.zip, this.models, this.uiViews, this.dataMode, this.customComponents, this.projectRelations)
+    generateFeatures(this.zip, this.models, this.uiViews, this.dataMode)
     generateBYOC(this.zip, this.customComponents)
 
     // Prevent Next.js favicon 404 in console
