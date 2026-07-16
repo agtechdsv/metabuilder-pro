@@ -359,7 +359,7 @@ export default function AuthSettingsPage() {
       try {
         const currentModel = models.find(m => m.db_table_name === authConfig.db_groups_table)
         const schemaName = currentModel?.db_schema_name || 'public'
-        const data = await executeTunnelQuery({ action: 'select', table: authConfig.db_groups_table, schemaName })
+        const data = await executeTunnelQuery({ action: 'select', table: authConfig.db_groups_table, schemaName, limit: 1000, offset: 0 })
         
         const pkField = currentModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
         const nameField = authConfig.db_groups_name_column || 'name'
@@ -383,7 +383,7 @@ export default function AuthSettingsPage() {
         if (authConfig.db_user_groups_type === 'n_to_n' && authConfig.db_user_roles_table) {
           const urModel = models.find(m => m.db_table_name === authConfig.db_user_roles_table)
           const urSchemaName = urModel?.db_schema_name || 'public'
-          const urData = await executeTunnelQuery({ action: 'select', table: authConfig.db_user_roles_table, schemaName: urSchemaName })
+          const urData = await executeTunnelQuery({ action: 'select', table: authConfig.db_user_roles_table, schemaName: urSchemaName, limit: 10000, offset: 0 })
           const urPk = urModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
           const mappedUR = urData.map((ur: any) => ({
             id: ur[urPk]?.toString() || crypto.randomUUID(),
@@ -591,7 +591,7 @@ export default function AuthSettingsPage() {
         toast('Grupo criado com sucesso no banco legado!', 'success')
         setNewRoleName('')
         setIsCreatingRole(false)
-        const data = await executeTunnelQuery({ action: 'select', table: authConfig.db_groups_table, schemaName })
+        const data = await executeTunnelQuery({ action: 'select', table: authConfig.db_groups_table, schemaName, limit: 1000, offset: 0 })
         const pkField = rModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
         const mappedRoles = data.map((r: any) => ({
           id: r[pkField]?.toString() || crypto.randomUUID(),
@@ -632,7 +632,7 @@ export default function AuthSettingsPage() {
         })
         toast('Grupo renomeado com sucesso no banco legado!', 'success')
         setEditingRoleId(null)
-        const data = await executeTunnelQuery({ action: 'select', table: authConfig.db_groups_table, schemaName })
+        const data = await executeTunnelQuery({ action: 'select', table: authConfig.db_groups_table, schemaName, limit: 1000, offset: 0 })
         const mappedRoles = data.map((r: any) => ({
           id: r[pkField]?.toString() || crypto.randomUUID(),
           name: r[authConfig.db_groups_name_column] || 'Grupo'
@@ -674,7 +674,7 @@ export default function AuthSettingsPage() {
           idColumn: pkField, idValue: roleId
         })
         toast('Grupo excluído com sucesso do banco legado!', 'success')
-        const data = await executeTunnelQuery({ action: 'select', table: authConfig.db_groups_table, schemaName })
+        const data = await executeTunnelQuery({ action: 'select', table: authConfig.db_groups_table, schemaName, limit: 1000, offset: 0 })
         const mappedRoles = data.map((r: any) => ({
           id: r[pkField]?.toString() || crypto.randomUUID(),
           name: r[authConfig.db_groups_name_column] || 'Grupo'
