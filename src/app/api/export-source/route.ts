@@ -98,8 +98,14 @@ export async function POST(request: Request) {
       .select('*')
       .eq('project_id', projectId)
 
+    // 3.9 Fetch Relations
+    const { data: rawProjectRelations } = await supabase
+      .from('relations')
+      .select('*')
+      .eq('project_id', projectId)
+
     // 4. Generate the Source Code (ZIP)
-    const generator = new SourceCodeGenerator(project, mappedModels, finalUiViews || [], customComponents || [], dataMode, authStrategy, legacyDriver, dbConfig, projectRoles || [], rolePermissions, enumerations || [])
+    const generator = new SourceCodeGenerator(project, mappedModels, finalUiViews || [], customComponents || [], dataMode, authStrategy, legacyDriver, dbConfig, projectRoles || [], rolePermissions, enumerations || [], rawProjectRelations || [])
     const zipBuffer = await generator.generate()
 
     // 5. Return as a downloadable stream

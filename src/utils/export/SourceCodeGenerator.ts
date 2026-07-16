@@ -19,6 +19,7 @@ export class SourceCodeGenerator {
   private projectRoles: any[]
   private rolePermissions: any[]
   private enumerations: any[]
+  private projectRelations: any[]
 
   constructor(
     project: any, 
@@ -31,7 +32,8 @@ export class SourceCodeGenerator {
     dbConfig: any = null,
     projectRoles: any[] = [],
     rolePermissions: any[] = [],
-    enumerations: any[] = []
+    enumerations: any[] = [],
+    projectRelations: any[] = []
   ) {
     this.zip = new JSZip()
     this.project = project
@@ -45,6 +47,7 @@ export class SourceCodeGenerator {
     this.projectRoles = projectRoles
     this.rolePermissions = rolePermissions
     this.enumerations = enumerations
+    this.projectRelations = projectRelations
   }
 
   private async copyFolderToZip(sourcePath: string, zipFolder: JSZip) {
@@ -642,7 +645,8 @@ export function PermissionGuard({ children }: { viewSlug: string, children: Reac
       this.zip.folder('src/components/auth')?.file('PermissionGuard.tsx', dummyGuardCode)
     }
 
-    generateAppRouter(this.zip, this.project, this.models, this.uiViews, this.authStrategy)
+    // 2. Setup src/app structure and default pages
+    generateAppRouter(this.zip, { ...this.project, db_type: this.dataMode }, this.models, this.uiViews, this.authStrategy, this.projectRelations)
     generateFeatures(this.zip, this.models, this.uiViews, this.dataMode)
     generateBYOC(this.zip, this.customComponents)
 

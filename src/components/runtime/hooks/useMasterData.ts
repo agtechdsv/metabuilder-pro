@@ -138,8 +138,12 @@ export function useMasterData({
           }
 
           const attemptQueryId = attempts === 1 ? queryId : crypto.randomUUID()
+          
+          let result: { success: boolean; error?: string; data?: any[] } = { success: false }
+          
+          if (project?.id && project?.db_type !== 'postgres') {
 
-          const result = await new Promise<{ success: boolean; error?: string; data?: any[] }>((resolve) => {
+          result = await new Promise<{ success: boolean; error?: string; data?: any[] }>((resolve) => {
             const isTemp = !tunnelChannel || !isTunnelReady
             const ch = isTemp ? wrapChannelWithChunking(supabase.channel(`tunnel:${project.id}`)) : tunnelChannel
             let settled = false
@@ -212,6 +216,32 @@ export function useMasterData({
 
           if (result.success) {
             return { success: true, data: result.data }
+          }
+          } else {
+            // Direct DB fallback for Native Postgres / Supabase
+            try {
+              let directData;
+              if (action === 'update') {
+                 const { data, error } = await (supabase as any)
+                   .from(modelName)
+                   .update(currentData)
+                   .eq(cleanPkName, String(pkValue))
+                   .select('*')
+                 if (error) throw error
+                 directData = data
+              } else {
+                 const { data, error } = await (supabase as any)
+                   .from(modelName)
+                   .insert([currentData])
+                   .select('*')
+                 if (error) throw error
+                 directData = data
+              }
+              return { success: true, data: directData }
+            } catch (err: any) {
+              console.error('[MetaBuilder] Error saving directly to db:', err)
+              result = { success: false, error: err.message || 'Erro ao salvar direto' }
+            }
           }
 
           const genCol = parseGeneratedColError(result.error || '')

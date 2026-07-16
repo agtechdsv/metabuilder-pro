@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 
-export function generateAppRouter(zip: JSZip, project: any, models: any[], uiViews: any[] = [], authStrategy: string = 'managed') {
+export function generateAppRouter(zip: JSZip, project: any, models: any[], uiViews: any[] = [], authStrategy: string = 'managed', projectRelations: any[] = []) {
   const appFolder = zip.folder('src/app')
   const configFolder = zip.folder('src/config')
   if (!appFolder || !configFolder) return
@@ -28,7 +28,17 @@ export function generateAppRouter(zip: JSZip, project: any, models: any[], uiVie
     ...project,
     navigation: (project.navigation && Array.isArray(project.navigation) && project.navigation.length > 0) 
       ? project.navigation 
-      : fallbackNavigation
+      : fallbackNavigation,
+    relations: projectRelations.map((r: any) => {
+      const childModel = models.find((m: any) => m.id === r.from_model_id)
+      const fkField = childModel?.fields?.find((f: any) => f.id === r.from_field_id)
+      return {
+        ...r,
+        master_model_id: r.to_model_id,
+        detail_model_id: r.from_model_id,
+        foreign_key: fkField?.db_column_name || ''
+      }
+    })
   }
 
   configFolder.file('project.json', JSON.stringify(projectConfig, null, 2))

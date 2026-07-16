@@ -157,8 +157,9 @@ export function useDetailData({
         }
         
         let detailData: any[] = []
-        try {
-          detailData = await new Promise<any[]>((resolve, reject) => {
+        if (project?.id && tunnelChannel && isTunnelReady && project.db_type !== 'postgres') {
+          try {
+            detailData = await new Promise<any[]>((resolve, reject) => {
             const isTemporary = !tunnelChannel || !isTunnelReady
             const channelName = `tunnel:${project.id}`
             const channel = isTemporary ? wrapChannelWithChunking(supabase.channel(channelName)) : tunnelChannel
@@ -237,7 +238,23 @@ export function useDetailData({
           })
         } catch (err) {
           console.error(`[MetaBuilder] Error fetching details from ${join.to} via tunnel:`, err)
-          continue
+        }
+        } else {
+          try {
+            if (project?.db_type === 'postgres') {
+               const res = await fetch(`/api/${join.to}?filter_${join.foreignKey}=${localValue}`)
+               const json = await res.json()
+               if (json.data) detailData = json.data
+            } else {
+              const { data: directData } = await (supabase as any)
+                .from(join.to)
+                .select('*')
+                .eq(join.foreignKey, String(localValue))
+              if (directData) detailData = directData
+            }
+          } catch (err) {
+            console.error(`[MetaBuilder] Error fetching details directly from ${join.to}:`, err)
+          }
         }
 
         if (detailData) {

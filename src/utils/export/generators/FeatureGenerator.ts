@@ -14,12 +14,13 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
     const modelName = model.table_name
     const layoutConfig = view.layout_config || {}
     const fields = model.ui_fields || []
+    const allFields = models.flatMap(m => (m.ui_fields || []).map((f: any) => ({ ...f, model_id: m.id, model_name: m.table_name, display_model_name: m.name })))
 
     // Reconstruct display fields
     let displayFields = fields.filter((f: any) => f.list_visible !== false)
     if (layoutConfig.grid_fields && layoutConfig.grid_fields.length > 0) {
       displayFields = layoutConfig.grid_fields.map((fieldIdOrName: string) => 
-        fields.find((f: any) => f.id === fieldIdOrName || f.column_name === fieldIdOrName)
+        allFields.find((f: any) => f.id === fieldIdOrName || f.column_name === fieldIdOrName)
       ).filter(Boolean)
     }
 
@@ -36,7 +37,7 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
             config: {}
           }
         }
-        return fields.find((f: any) => f.id === fieldIdOrName || f.column_name === fieldIdOrName)
+        return allFields.find((f: any) => f.id === fieldIdOrName || f.column_name === fieldIdOrName)
       }).filter(Boolean)
     }
 
@@ -57,6 +58,9 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
           db_column_name: f.column_name,
           display_name: mergedMeta.label?.text || f.label,
           field_type: f.field_type,
+          model_id: f.model_id,
+          model_name: f.model_name,
+          display_model_name: f.display_model_name,
           config: { ...(f.config || {}), ...mergedMeta }
         }
       }),
@@ -70,11 +74,14 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
           display_name: mergedMeta.label?.text || f.label,
           field_type: f.field_type,
           is_nullable: !f.required,
+          model_id: f.model_id,
+          model_name: f.model_name,
+          display_model_name: f.display_model_name,
           config: { ...(f.config || {}), ...mergedMeta }
         }
       }),
       filterFields: (layoutConfig.filter_fields || []).map((fieldIdOrName: string) => {
-        const f = fields.find((f: any) => f.id === fieldIdOrName || f.column_name === fieldIdOrName)
+        const f = allFields.find((f: any) => f.id === fieldIdOrName || f.column_name === fieldIdOrName)
         if (!f) return null
         const baseMeta = layoutConfig.fields_metadata?.[f.id] || {}
         const specificMeta = layoutConfig.fields_metadata?.[`filter-${f.id}`] || {}
@@ -84,6 +91,9 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
           db_column_name: f.column_name,
           display_name: mergedMeta.label?.text || f.label,
           field_type: f.field_type,
+          model_id: f.model_id,
+          model_name: f.model_name,
+          display_model_name: f.display_model_name,
           config: { ...(f.config || {}), ...mergedMeta }
         }
       }).filter(Boolean),
@@ -103,7 +113,26 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
       kanbanGroupDisplayField: layoutConfig.kanban_group_display_field || layoutConfig.kanbanGroupDisplayField,
       kanbanCardFields: layoutConfig.kanban_card_fields || layoutConfig.kanbanCardFields,
       detailsInterfaceTypes: layoutConfig.details_interface_types || layoutConfig.detailsInterfaceTypes,
-      actionInterfaceType: layoutConfig.action_interface_type || layoutConfig.actionInterfaceType || 'drawer'
+      actionInterfaceType: layoutConfig.action_interface_type || layoutConfig.actionInterfaceType || 'drawer',
+      masterModelId: layoutConfig.master_model_id || view.model_id,
+      detailsDisplayMode: layoutConfig.details_display_mode || layoutConfig.detailsDisplayMode,
+      detailsInlineTypes: layoutConfig.details_inline_types || layoutConfig.detailsInlineTypes,
+      detailsModalSizes: layoutConfig.details_modal_sizes || layoutConfig.detailsModalSizes,
+      detailsModalWidths: layoutConfig.details_modal_widths || layoutConfig.detailsModalWidths,
+      detailsModalHeights: layoutConfig.details_modal_heights || layoutConfig.detailsModalHeights,
+      masterTabTitle: layoutConfig.master_tab_title || layoutConfig.masterTabTitle,
+      detailsTabTitles: layoutConfig.details_tab_titles || layoutConfig.detailsTabTitles,
+      detailsItemTitles: layoutConfig.details_item_titles || layoutConfig.detailsItemTitles,
+      tabsStyleConfig: layoutConfig.fields_metadata?.['form-TABS'] || layoutConfig.fields_metadata?.['TABS'] || layoutConfig.tabs_style_config || layoutConfig.tabsStyleConfig,
+      joins: layoutConfig.joins || [],
+      analyticsConfig: layoutConfig.analytics_config || layoutConfig.analyticsConfig,
+      exportFormats: layoutConfig.export_formats || layoutConfig.exportFormats,
+      filterGridColumns: layoutConfig.filter_grid_columns || layoutConfig.filterGridColumns,
+      galleryClickBehavior: layoutConfig.gallery_click_behavior || layoutConfig.galleryClickBehavior,
+      customSlots: layoutConfig.custom_slots || layoutConfig.customSlots || [],
+      formHeaderTitle: layoutConfig.form_header_title || layoutConfig.formHeaderTitle,
+      formHeaderSubtitleField: layoutConfig.form_header_subtitle_field || layoutConfig.formHeaderSubtitleField,
+      initialItemsPerPage: layoutConfig.items_per_page || layoutConfig.initialItemsPerPage || layoutConfig.itemsPerPage
     }
 
     configFolder.file(`${view.slug}.json`, JSON.stringify(viewConfig, null, 2))
@@ -132,6 +161,7 @@ export default function ${view.slug.replace(/-/g, '')}Page() {
             project={projectConfig}
             locale="pt"
             baseUrl=""
+            projectRelations={projectConfig.relations || []}
           />
         </Suspense>
       </div>

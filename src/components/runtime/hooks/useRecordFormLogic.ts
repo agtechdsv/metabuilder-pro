@@ -76,7 +76,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
 
       let data: any[] = []
 
-      if (projectId) {
+      if (projectId && project?.db_type !== 'postgres') {
         // Query via the secure data tunnel
         const queryId = crypto.randomUUID()
 
@@ -195,13 +195,21 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
           console.error(`[MetaBuilder] Error fetching sub-details from ${join.to} via tunnel:`, err)
         }
       } else {
-        // Fallback to direct supabase query
-        const { data: directData } = await (supabaseClient as any)
-          .from(join.to)
-          .select('*')
-          .eq(join.foreignKey, String(pkValue))
-        if (directData) {
-          data = directData
+        // Fallback to direct fetch or supabase query
+        try {
+          if (project?.db_type === 'postgres') {
+             const res = await fetch(`/api/${join.to}?filter_${join.foreignKey}=${pkValue}`)
+             const json = await res.json()
+             if (json.data) data = json.data
+          } else {
+            const { data: directData } = await (supabaseClient as any)
+              .from(join.to)
+              .select('*')
+              .eq(join.foreignKey, String(pkValue))
+            if (directData) data = directData
+          }
+        } catch (err) {
+          console.error(`[MetaBuilder] Error fetching details directly from ${join.to}:`, err)
         }
       }
 
@@ -235,7 +243,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         const isRelationalComp = comp?.type && (['select', 'radio', 'checkbox', 'Combo (Select)', 'Radio Buttons', 'Checkbox Group'].includes(comp.type) || comp.options_type === 'relational' || comp.options_type === 'enumeration')
         if (isRelationalComp && comp.options_type === 'relational' && comp.rel_table) {
           try {
-            if (projectId) {
+            if (projectId && project?.db_type !== 'postgres') {
               if (!tunnelChannel || !isTunnelReady) continue;
               const queryId = crypto.randomUUID()
               const filterCol = comp.filter_column ? `, "${comp.filter_column}"` : ''
@@ -309,13 +317,19 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                 }))
               }
             } else {
-              const filterCol = comp.filter_column ? `, ${comp.filter_column}` : ''
-              const { data } = await supabase
-                .from(comp.rel_table)
-                .select(`${comp.rel_label}, ${comp.rel_value}${filterCol}`)
-
-              if (data) {
-                newOptions[field.id] = data.map(item => ({
+              // Direct query or Postgres API fallback
+              let relData = null
+              if (project?.db_type === 'postgres') {
+                 const res = await fetch(`/api/${comp.rel_table}?limit=1000`)
+                 const json = await res.json()
+                 if (json.data) relData = json.data
+              } else {
+                 const { data } = await (supabase as any).from(comp.rel_table).select('*').order(comp.rel_column)
+                 relData = data
+              }
+              
+              if (relData) {
+                newOptions[field.id] = relData.map((item: any) => ({
                   label: item[comp.rel_label],
                   value: item[comp.rel_value],
                   filter_value: comp.filter_column ? item[comp.filter_column] : undefined
