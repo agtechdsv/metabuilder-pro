@@ -236,7 +236,25 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       const supabase = createClient()
       const newOptions: Record<string, any[]> = {}
 
-      for (const field of fields) {
+      const fieldsToFetch = [...fields]
+      if (detailsItemTitles && project?.models) {
+        Object.entries(detailsItemTitles).forEach(([mId, fieldName]) => {
+          const baseName = fieldName.includes('.') ? fieldName.split('.')[0] : fieldName
+          const safeBase = baseName?.toLowerCase()?.trim() || ''
+          const model = project.models.find((m: any) => m.id === mId)
+          if (model && model.ui_fields) {
+            const field = model.ui_fields.find((f: any) => {
+              const fName = f.db_column_name?.toLowerCase()?.trim() || ''
+              return fName === safeBase || fName.endsWith(`.${safeBase}`) || fName.endsWith(`_${safeBase}`)
+            })
+            if (field && !fieldsToFetch.find(f => f.id === field.id)) {
+              fieldsToFetch.push({ ...field, model_id: model.id, model_name: model.db_table_name || model.table_name })
+            }
+          }
+        })
+      }
+
+      for (const field of fieldsToFetch) {
         // Tenta pegar a config específica de formulário, senão usa a global
         const config = field.config?.form_config || field.config
         const comp = config?.component

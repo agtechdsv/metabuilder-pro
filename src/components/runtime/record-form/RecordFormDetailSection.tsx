@@ -254,7 +254,16 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                const fName = f.db_column_name?.toLowerCase()?.trim() || '';
                                return fName === safeBase || fName.endsWith(`.${safeBase}`) || fName.endsWith(`_${safeBase}`);
                             };
-                            const titleFieldDef = detailFields.find(checkMatch) || fields.find(checkMatch);
+                            let titleFieldDef = detailFields.find(checkMatch) || fields.find(checkMatch);
+                            if (!titleFieldDef && project?.models) {
+                               const mId = modelId || project.models.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase())?.id;
+                               if (mId) {
+                                  const model = project.models.find((m: any) => m.id === mId);
+                                  if (model && model.ui_fields) {
+                                     titleFieldDef = model.ui_fields.find(checkMatch);
+                                  }
+                               }
+                            }
                             
                             if (titleFieldDef && val !== undefined && val !== null) {
                                const opts = relationalOptions[titleFieldDef.id] || [];

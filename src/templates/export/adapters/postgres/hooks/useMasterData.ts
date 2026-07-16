@@ -11,13 +11,19 @@ interface UseMasterDataProps {
   setRefreshKey?: any;
   setOpen?: (val: boolean) => void;
   setIsPageVisible?: any;
+  isPage?: boolean;
+  setSelectedRow?: any;
+  setDrawerMode?: any;
+  fetchDetails?: any;
   [key: string]: any;
 }
 
-export function useMasterData({
-  project, modelName, primaryKeyName = 'id', drawerMode, selectedRow, t,
-  setIsProcessing, setRefreshKey, setOpen, setIsPageVisible
-}: UseMasterDataProps) {
+export function useMasterData(props: UseMasterDataProps) {
+  const {
+    project, modelName, primaryKeyName = 'id', drawerMode, selectedRow, t,
+    setIsProcessing, setRefreshKey, setOpen, setIsPageVisible,
+    isPage, setSelectedRow, setDrawerMode, fetchDetails
+  } = props;
   const { toast } = useToast()
 
   const handleSave = async (formData: any) => {
@@ -112,9 +118,21 @@ export function useMasterData({
       // --------------------------------
 
       toast(t('runtime.record_saved_success', 'Registro salvo com sucesso'), 'success')
-      setRefreshKey?.((prev: number) => prev + 1)
-      setOpen?.(false)
-      setIsPageVisible?.(false)
+      
+      if (isPage) {
+        const updatedRow = { ...(selectedRow || {}), ...formData, [cleanPkName]: masterId }
+        if (fetchDetails) {
+          const freshDetails = await fetchDetails(updatedRow, modelName)
+          updatedRow._details = freshDetails
+        }
+        setSelectedRow?.(updatedRow)
+        setDrawerMode?.('edit')
+        setRefreshKey?.((prev: number) => prev + 1)
+      } else {
+        setRefreshKey?.((prev: number) => prev + 1)
+        setOpen?.(false)
+        setIsPageVisible?.(false)
+      }
     } catch (err: any) {
       toast(err.message, 'error')
     } finally {

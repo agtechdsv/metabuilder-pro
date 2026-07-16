@@ -19,22 +19,60 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
     // Reconstruct display fields
     let displayFields = fields.filter((f: any) => f.list_visible !== false)
     if (layoutConfig.grid_fields && layoutConfig.grid_fields.length > 0) {
-      displayFields = layoutConfig.grid_fields.map((fieldIdOrName: string) => 
-        allFields.find((f: any) => f.id === fieldIdOrName || f.column_name === fieldIdOrName)
-      ).filter(Boolean)
+      displayFields = layoutConfig.grid_fields.map((fieldIdOrName: string) => {
+        if (fieldIdOrName.startsWith('virt_') || fieldIdOrName.startsWith('byoc_') || fieldIdOrName.startsWith('byoc-')) {
+          const isByoc = fieldIdOrName.startsWith('byoc')
+          const byocName = isByoc ? fieldIdOrName.split(/[-_]/).slice(2).join('_') : ''
+          const gridMeta = layoutConfig.fields_metadata?.[`grid-${fieldIdOrName}`] || {}
+          const baseMeta = layoutConfig.fields_metadata?.[fieldIdOrName] || {}
+          const meta = { ...baseMeta, ...gridMeta }
+          return {
+            id: fieldIdOrName,
+            column_name: fieldIdOrName,
+            label: meta.label?.text || (isByoc ? `[BYOC] ${byocName}` : 'Campo Calculado'),
+            field_type: isByoc ? 'byoc' : 'virtual',
+            data_type: isByoc ? 'byoc' : 'virtual',
+            required: false,
+            is_virtual: !isByoc,
+            config: meta
+          }
+        }
+        return allFields.find((f: any) => f.id === fieldIdOrName || f.column_name === fieldIdOrName)
+      }).filter(Boolean)
     }
 
     let formFields = fields.filter((f: any) => f.form_visible !== false && f.column_name !== 'id')
     if (layoutConfig.form_fields && layoutConfig.form_fields.length > 0) {
       formFields = layoutConfig.form_fields.map((fieldIdOrName: string) => {
-        if (fieldIdOrName.startsWith('byoc-') || fieldIdOrName.startsWith('byoc_')) {
+        if (fieldIdOrName.startsWith('byoc-') || fieldIdOrName.startsWith('byoc_') || fieldIdOrName.startsWith('virt_')) {
+          const isByoc = fieldIdOrName.startsWith('byoc')
+          const byocName = isByoc ? fieldIdOrName.split(/[-_]/).slice(2).join('_') : ''
+          const formMeta = layoutConfig.fields_metadata?.[`form-${fieldIdOrName}`] || {}
+          const baseMeta = layoutConfig.fields_metadata?.[fieldIdOrName] || {}
+          const meta = { ...baseMeta, ...formMeta }
+          
+          let virtualModelId: any = null;
+          let virtualModelName = '';
+          if (!isByoc) {
+             const vMatch = Object.entries(layoutConfig.fields_metadata || {}).find(([k, v]: [string, any]) => k === fieldIdOrName || k === `form-${fieldIdOrName}`);
+             if (vMatch && (vMatch[1] as any)?.model_id) {
+               virtualModelId = (vMatch[1] as any).model_id;
+               const foundModel = models.find(m => m.id === virtualModelId);
+               if (foundModel) virtualModelName = foundModel.table_name;
+             }
+          }
+
           return {
             id: fieldIdOrName,
             column_name: fieldIdOrName,
-            label: `[BYOC]`,
-            field_type: 'byoc',
+            label: meta.label?.text || (isByoc ? `[BYOC] ${byocName}` : 'Campo Calculado'),
+            field_type: isByoc ? 'byoc' : 'virtual',
+            data_type: isByoc ? 'byoc' : 'virtual',
             required: false,
-            config: {}
+            is_virtual: !isByoc,
+            model_id: virtualModelId,
+            model_name: virtualModelName,
+            config: meta
           }
         }
         return allFields.find((f: any) => f.id === fieldIdOrName || f.column_name === fieldIdOrName)
