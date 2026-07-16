@@ -132,7 +132,10 @@ export function useDetailData({
           j.from?.toLowerCase() === join.to?.toLowerCase()
         )
 
-        const detailModel = (project as any)?.models?.find((m: any) => m.db_table_name?.toLowerCase() === join.to?.toLowerCase())
+        const detailModel = (project as any)?.models?.find((m: any) => {
+          const tbl = (m.db_table_name || m.table_name || '').toLowerCase();
+          return tbl === join.to?.toLowerCase();
+        })
         const detailModelId = detailModel?.id
         const titleField = detailsItemTitles?.[detailModelId || '']
         if (titleField && titleField.includes('.')) {

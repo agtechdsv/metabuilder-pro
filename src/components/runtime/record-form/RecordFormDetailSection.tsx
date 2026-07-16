@@ -76,7 +76,10 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
     isPageMode
   } = props;
 
-    const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase())
+    const targetModel = project?.models?.find((m: any) => {
+      const tbl = (m.db_table_name || m.table_name || '').toLowerCase();
+      return tbl === tableName?.toLowerCase();
+    })
     const modelId = targetModel?.id || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
     const displayLabel = detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || targetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.display_model_name || tableName
 
@@ -236,7 +239,10 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                           if (detail._isNew || String(detailIdValue).startsWith('temp-')) {
                             return t('common.new_record', 'Novo Registro');
                           }
-                          const detailModelId = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase())?.id;
+                          const detailModelId = project?.models?.find((m: any) => {
+                            const tbl = (m.db_table_name || m.table_name || '').toLowerCase();
+                            return tbl === tableName?.toLowerCase();
+                          })?.id;
                           const customField = detailsItemTitles?.[detailModelId || ''];
                           if (customField) {
                             let val: any;

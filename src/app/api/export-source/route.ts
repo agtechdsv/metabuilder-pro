@@ -71,6 +71,7 @@ export async function POST(request: Request) {
       return {
         ...m,
         table_name: m.db_table_name,
+        db_table_name: m.db_table_name,  // keep both so runtime lookups work
         name: m.display_name,
         ui_fields: mappedFields,
         ui_views: m.ui_views || []
