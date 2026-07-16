@@ -170,19 +170,4 @@ LOCAL_DOWNLOAD_PATH=C:\\AgTech\\DownloadsMetaBuilder
   if (envFileName !== '.env.example') {
     zip.file('.env.example', envContent)
   }
-
-  // Generate metabuilder.config.json
-  zip.file('metabuilder.config.json', JSON.stringify({
-    project: {
-      id: project.id,
-      name: project.name,
-      slug: project.slug,
-      theme_config: project.theme_config
-    },
-    export_metadata: {
-      exported_at: new Date().toISOString(),
-      data_mode: dataMode,
-      auth_strategy: authStrategy
-    }
-  }, null, 2))
 }

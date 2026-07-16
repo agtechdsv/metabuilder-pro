@@ -12,7 +12,7 @@ const ByocRemoteRenderer = ({ compiledCode, fieldName, componentProps }: { compi
   }, [compiledCode]);
 
   if (!DynamicComponent) {
-    return <div className="p-4 text-red-500 border border-red-200 bg-red-50 rounded-xl">Erro ao carregar {typeof fieldName === 'object' && fieldName !== null ? JSON.stringify(fieldName) : fieldName}</div>;
+    return <div className="p-4 text-red-500 border border-red-200 bg-red-50 rounded-xl">Erro ao carregar {fieldName}</div>;
   }
 
   return (
@@ -219,7 +219,7 @@ export function RecordFormField(props: RecordFormFieldProps) {
             !zoneConfig.label?.color && "text-neutral-400"
           )}
         >
-          {typeof zoneConfig.label?.text === 'object' && zoneConfig.label?.text !== null ? ((zoneConfig.label.text as any).pt || (zoneConfig.label.text as any).text || String(zoneConfig.label.text)) : (zoneConfig.label?.text || (typeof field.display_name === 'object' && field.display_name !== null ? ((field.display_name as any).pt || (field.display_name as any).text || String(field.display_name)) : field.display_name))}
+          {zoneConfig.label?.text || field.display_name}
           {field.is_primary_key && <span className="ml-2 text-indigo-500"># PK</span>}
           {zoneConfig.content?.required && <span className="ml-1 text-red-500">*</span>}
         </label>
@@ -254,12 +254,12 @@ export function RecordFormField(props: RecordFormFieldProps) {
               <textarea
                 disabled={isDisabled}
                 required={zoneConfig.content?.required}
-                value={typeof value === 'object' && value !== null ? JSON.stringify(value) : value}
+                value={value}
                 onChange={e => handleChange(e.target.value)}
                 rows={comp.rows || 3}
                 style={inputStyle}
                 className={cn(commonClasses, "resize-none")}
-                placeholder={t('runtime.record_drawer.input_placeholder').replace('{field}', typeof field.display_name === 'object' && field.display_name !== null ? (field.display_name.pt || field.display_name.text || String(field.display_name)) : field.display_name)}
+                placeholder={mode === 'view' ? '' : t('runtime.record_drawer.input_placeholder').replace('{field}', field.display_name)}
               />
             ) : ['select', 'Combo (Select)'].includes(fieldType) ? (
               <select
@@ -272,7 +272,7 @@ export function RecordFormField(props: RecordFormFieldProps) {
               >
                 <option value="">{t('common.select', 'Selecione...')}</option>
                 {options.map((opt: any, i: number) => (
-                  <option key={i} value={opt.value}>{typeof opt.label === 'object' && opt.label !== null ? (opt.label.pt || opt.label.text || JSON.stringify(opt.label)) : opt.label}</option>
+                  <option key={i} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
             ) : ['radio', 'Radio Buttons'].includes(fieldType) ? (
@@ -288,7 +288,7 @@ export function RecordFormField(props: RecordFormFieldProps) {
                     >
                       {String(value) === String(opt.value) && <div className="w-2 h-2 bg-white rounded-full" />}
                     </div>
-                    <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 group-hover/opt:text-indigo-600 transition-colors">{typeof opt.label === 'object' && opt.label !== null ? (opt.label.pt || opt.label.text || JSON.stringify(opt.label)) : opt.label}</span>
+                    <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 group-hover/opt:text-indigo-600 transition-colors">{opt.label}</span>
                   </label>
                 ))}
               </div>
@@ -332,51 +332,11 @@ export function RecordFormField(props: RecordFormFieldProps) {
                   value ? 'left-7' : 'left-1'
                 )} />
               </div>
-            ) : mode === 'view' ? (
-          <div className="py-2 text-sm text-neutral-900 dark:text-white font-medium border-b border-transparent">
-            {['textarea', 'Área de Texto (Textarea)'].includes(fieldType) ? (
-              <div className="whitespace-pre-wrap">{typeof value === 'object' && value !== null ? JSON.stringify(value) : value}</div>
-            ) : fieldType === 'boolean' || fieldType === 'checkbox' ? (
-              <div className="flex items-center gap-2">
-                <div className={cn("w-5 h-5 flex items-center justify-center rounded-full border-2", String(value) === 'true' || value === true ? "bg-indigo-600 border-indigo-600 text-white" : "border-neutral-300 dark:border-neutral-700")}>
-                  {(String(value) === 'true' || value === true) && <Check className="w-3 h-3" />}
-                </div>
-                <span>{String(value) === 'true' || value === true ? t('common.yes', 'Sim') : t('common.no', 'Não')}</span>
-              </div>
             ) : fieldType === 'byoc' ? (
               field.config?.compiled_code ? (
                 <ByocRemoteRenderer 
                   compiledCode={field.config.compiled_code} 
-                  fieldName={typeof field.display_name === 'object' && field.display_name !== null ? (field.display_name.pt || field.display_name.text || String(field.display_name)) : field.display_name} 
-                  componentProps={{
-                    value,
-                    onChange: handleChange,
-                    formData,
-                    mode,
-                    disabled: isDisabled
-                  }}
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center p-6 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-dashed border-indigo-200 dark:border-indigo-800">
-                  <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center mb-3">
-                    <span className="text-indigo-600 dark:text-indigo-400 font-black">BYOC</span>
-                  </div>
-                  <p className="text-xs font-bold text-indigo-900 dark:text-indigo-100">{typeof field.display_name === 'object' && field.display_name !== null ? (field.display_name.pt || field.display_name.text || String(field.display_name)) : field.display_name}</p>
-                  <p className="text-[10px] text-indigo-600/70 dark:text-indigo-400/70 text-center mt-1 max-w-[200px]">Este é um componente React customizado.</p>
-                  <div className="mt-4 px-3 py-1 bg-red-100/50 dark:bg-red-900/30 rounded-full border border-red-200/50 dark:border-red-800/50">
-                    <p className="text-[9px] font-black tracking-widest text-red-500 uppercase">Código não compilado</p>
-                  </div>
-                </div>
-              )
-            ) : (
-              <div className="min-h-[20px]">{typeof value === 'object' && value !== null ? JSON.stringify(value) : (value || '-')}</div>
-            )}
-          </div>
-        ) : fieldType === 'byoc' ? (
-              field.config?.compiled_code ? (
-                <ByocRemoteRenderer 
-                  compiledCode={field.config.compiled_code} 
-                  fieldName={typeof field.display_name === 'object' && field.display_name !== null ? (field.display_name.pt || field.display_name.text || JSON.stringify(field.display_name)) : field.display_name} 
+                  fieldName={field.display_name} 
                   componentProps={{
                     value,
                     onChange: handleChange,
@@ -391,7 +351,7 @@ export function RecordFormField(props: RecordFormFieldProps) {
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
                   </div>
                   <p className="text-sm font-bold text-indigo-900 dark:text-indigo-100 mb-1">Componente Customizado</p>
-                  <p className="text-[11px] text-indigo-600/70 dark:text-indigo-400/70 text-center max-w-[250px] font-medium">{typeof field.display_name === 'string' ? field.display_name.replace('[BYOC] ', '') : (typeof field.display_name === 'object' && field.display_name !== null ? ((field.display_name as any).pt || (field.display_name as any).text || String(field.display_name)).replace('[BYOC] ', '') : String(field.display_name || '').replace('[BYOC] ', ''))}</p>
+                  <p className="text-[11px] text-indigo-600/70 dark:text-indigo-400/70 text-center max-w-[250px] font-medium">{field.display_name.replace('[BYOC] ', '')}</p>
                   <div className="mt-4 px-3 py-1 bg-red-100/50 dark:bg-red-900/30 rounded-full border border-red-200/50 dark:border-red-800/50">
                     <p className="text-[9px] font-black tracking-widest text-red-500 uppercase">Código não compilado</p>
                   </div>
@@ -416,11 +376,11 @@ export function RecordFormField(props: RecordFormFieldProps) {
                 }
                 disabled={isDisabled}
                 required={field.config?.content?.required}
-                value={typeof value === 'object' && value !== null ? JSON.stringify(value) : value}
+                value={value}
                 onChange={e => handleChange(e.target.value)}
                 style={inputStyle}
                 className={commonClasses}
-                placeholder={t('runtime.record_drawer.input_placeholder').replace('{field}', typeof field.display_name === 'object' && field.display_name !== null ? (field.display_name.pt || field.display_name.text || String(field.display_name)) : field.display_name)}
+                placeholder={mode === 'view' ? '' : t('runtime.record_drawer.input_placeholder').replace('{field}', field.display_name)}
               />
             )}
           </div>

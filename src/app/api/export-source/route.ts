@@ -98,8 +98,26 @@ export async function POST(request: Request) {
       .select('*')
       .eq('project_id', projectId)
 
+    // 3.9 Fetch Project Relations (for master-detail)
+    const { data: rawRelations } = await supabase
+      .from('relations')
+      .select('*')
+      .eq('project_id', projectId)
+
+    // Map relations with foreign_key resolved from fields
+    const projectRelations = (rawRelations || []).map((r: any) => {
+      const childModel = mappedModels.find((m: any) => m.id === r.from_model_id)
+      const fkField = (childModel?.fields || []).find((f: any) => f.id === r.from_field_id)
+      return {
+        ...r,
+        master_model_id: r.to_model_id,
+        detail_model_id: r.from_model_id,
+        foreign_key: fkField?.db_column_name || ''
+      }
+    })
+
     // 4. Generate the Source Code (ZIP)
-    const generator = new SourceCodeGenerator(project, mappedModels, finalUiViews || [], customComponents || [], dataMode, authStrategy, legacyDriver, dbConfig, projectRoles || [], rolePermissions, enumerations || [])
+    const generator = new SourceCodeGenerator(project, mappedModels, finalUiViews || [], customComponents || [], dataMode, authStrategy, legacyDriver, dbConfig, projectRoles || [], rolePermissions, enumerations || [], projectRelations)
     const zipBuffer = await generator.generate()
 
     // 5. Return as a downloadable stream

@@ -633,24 +633,21 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
     for (const m of models) {
       const f = m.fields.find((f: any) => f.id === id)
       if (f) {
-        const tableName = typeof m.display_name === 'object' && m.display_name !== null ? (m.display_name.pt || m.display_name.text || String(m.display_name)) : (m.display_name || m.db_table_name)
-        const fieldName = typeof f.display_name === 'object' && f.display_name !== null ? (f.display_name.pt || f.display_name.text || String(f.display_name)) : (f.display_name || f.db_column_name)
+        const tableName = m.display_name || m.db_table_name
+        const fieldName = f.display_name || f.db_column_name
         return `${tableName}.${fieldName}`
       }
     }
     const meta = config.layout_config?.fields_metadata?.[id]
     if (meta && meta.label && meta.label.text) {
-      return typeof meta.label.text === 'object' && meta.label.text !== null ? (meta.label.text.pt || meta.label.text.text || String(meta.label.text)) : meta.label.text
+      return meta.label.text
     }
     return id
   }
 
   const getFieldMeta = (fid: string, zone?: string | null) => {
     const specificKey = zone ? `${zone}-${fid}` : null
-    let meta = (specificKey ? config.layout_config.fields_metadata[specificKey] : null) || config.layout_config.fields_metadata[fid]
-    if (meta && meta.label && meta.label.text && typeof meta.label.text === 'object') {
-      meta = { ...meta, label: { ...meta.label, text: meta.label.text.pt || meta.label.text.text || String(meta.label.text) } }
-    }
+    const meta = (specificKey ? config.layout_config.fields_metadata[specificKey] : null) || config.layout_config.fields_metadata[fid]
 
     if (meta) {
       const defaultMeta = createDefaultFieldMeta(fid, models)

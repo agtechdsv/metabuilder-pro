@@ -211,7 +211,7 @@ export default function RecordForm({
                 )}
               >
                 {getActionIcon(action.icon)}
-                {typeof action.label === 'object' && action.label !== null ? (action.label.pt || action.label.text || String(action.label)) : action.label}
+                {action.label}
               </button>
             ))}
 
@@ -262,7 +262,7 @@ export default function RecordForm({
                           !tabsStyleConfig?.label?.color && activeTab === 'master' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
                         )}
                       >
-                        {typeof masterTabTitle === 'object' && masterTabTitle !== null ? ((masterTabTitle as any).pt || (masterTabTitle as any).text || String(masterTabTitle)) : (masterTabTitle || t('runtime.master_details.main_data', 'Dados Principais'))}
+                        {masterTabTitle || t('runtime.master_details.main_data', 'Dados Principais')}
                       </button>
                       {tabTables.map(tableName => {
                         const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase());
@@ -288,7 +288,7 @@ export default function RecordForm({
                               !tabsStyleConfig?.label?.color && String(activeTab) === String(tableName) ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
                             )}
                           >
-                            {typeof title === 'object' && title !== null ? ((title as any).pt || (title as any).text || String(title)) : title}
+                            {title}
                           </button>
                         );
                       })}
@@ -414,7 +414,7 @@ export default function RecordForm({
                         <div className="flex items-center gap-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
                           <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
                           <h3 className="text-[10px] font-black tracking-[0.2em] text-neutral-800 dark:text-neutral-200">
-                            {typeof masterTabTitle === 'object' && masterTabTitle !== null ? ((masterTabTitle as any).pt || (masterTabTitle as any).text || String(masterTabTitle)) : (masterTabTitle || t('runtime.master_details.main_data', 'Dados Principais'))}
+                            {masterTabTitle || t('runtime.master_details.main_data', 'Dados Principais')}
                           </h3>
                         </div>
                       )}
@@ -475,7 +475,7 @@ export default function RecordForm({
                               }}
                               className="text-[10px] font-black tracking-[0.2em] text-neutral-800 dark:text-neutral-200"
                             >
-                              {typeof sectionTitle === 'object' && sectionTitle !== null ? (sectionTitle.pt || sectionTitle.text || JSON.stringify(sectionTitle)) : sectionTitle}
+                              {sectionTitle}
                             </h3>
                           </div>
                         )} 

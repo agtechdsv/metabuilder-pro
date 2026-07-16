@@ -1,9 +1,25 @@
 import JSZip from 'jszip'
 
-export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbType: string = 'supabase', customComponents: any[] = []) {
+export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbType: string = 'supabase', customComponents: any[] = [], projectRelations: any[] = []) {
   const configFolder = zip.folder('src/config/views')
   const appFolder = zip.folder('src/app')
   if (!configFolder || !appFolder) return
+
+  // Build a map from BYOC component name to compiled_code
+  const byocMap: Record<string, string> = {}
+  for (const comp of customComponents) {
+    if (comp.name && comp.compiled_code) {
+      byocMap[comp.name] = comp.compiled_code
+    }
+  }
+
+  // Build dictionaries for all models
+  const dictionary: Record<string, string> = {}
+  const tableDictionary: Record<string, string> = {}
+  for (const m of models) {
+    dictionary[m.id] = m.name || m.display_name || m.table_name
+    tableDictionary[m.id] = m.table_name
+  }
 
   uiViews.forEach(view => {
     if (!view.slug || !view.model_id) return
@@ -13,34 +29,55 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
 
     const modelName = model.table_name
     const layoutConfig = view.layout_config || {}
+    const masterModelId = layoutConfig.master_model_id || view.model_id
     const fields = model.ui_fields || []
 
     // Reconstruct display fields
     let displayFields = fields.filter((f: any) => f.list_visible !== false)
     if (layoutConfig.grid_fields && layoutConfig.grid_fields.length > 0) {
-      displayFields = layoutConfig.grid_fields.map((fieldIdOrName: string) => 
+      displayFields = layoutConfig.grid_fields.map((fieldIdOrName: string) =>
         fields.find((f: any) => f.id === fieldIdOrName || f.column_name === fieldIdOrName)
       ).filter(Boolean)
     }
 
+    // Build a combined field lookup across master + all detail models (for master-detail tabs)
+    const allFieldsMap: Record<string, any> = {}
+    for (const f of fields) {
+      allFieldsMap[f.id] = { ...f, model_id: model.id, model_name: modelName }
+    }
+    for (const rel of projectRelations) {
+      if (String(rel.master_model_id) === String(masterModelId)) {
+        const detailModel = models.find(m => String(m.id) === String(rel.detail_model_id))
+        if (!detailModel) continue
+        for (const f of (detailModel.ui_fields || [])) {
+          allFieldsMap[f.id] = { ...f, model_id: detailModel.id, model_name: detailModel.table_name }
+        }
+      }
+    }
+
+    // Reconstruct form fields (master + detail + byoc)
     let formFields = fields.filter((f: any) => f.form_visible !== false && f.column_name !== 'id')
     if (layoutConfig.form_fields && layoutConfig.form_fields.length > 0) {
       formFields = layoutConfig.form_fields.map((fieldIdOrName: string) => {
-        if (fieldIdOrName.startsWith('byoc-') || fieldIdOrName.startsWith('byoc_')) {
-          const byocName = fieldIdOrName.split('_').pop() || ''
-          const matchingComp = customComponents.find((c: any) => c.name === byocName || fieldIdOrName.includes(c.name))
+        // Handle BYOC fields
+        if (fieldIdOrName.startsWith('byoc_') || fieldIdOrName.startsWith('byoc-')) {
+          const byocName = fieldIdOrName.split('_').slice(2).join('_')
+          const compiledCode = byocMap[byocName] || null
           return {
             id: fieldIdOrName,
             column_name: fieldIdOrName,
-            label: `[BYOC] ${matchingComp ? matchingComp.name : ''}`,
+            db_column_name: fieldIdOrName,
+            display_name: `[BYOC] ${byocName}`,
+            label: `[BYOC] ${byocName}`,
             field_type: 'byoc',
+            model_id: model.id,
+            model_name: modelName,
             required: false,
-            config: {
-              compiled_code: matchingComp ? matchingComp.compiled_code || matchingComp.compiledCode : ''
-            }
+            config: compiledCode ? { compiled_code: compiledCode } : {}
           }
         }
-        return fields.find((f: any) => f.id === fieldIdOrName || f.column_name === fieldIdOrName)
+        // Look up in combined map (master + all detail models)
+        return allFieldsMap[fieldIdOrName] || null
       }).filter(Boolean)
     }
 
@@ -48,10 +85,15 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
     const viewConfig = {
       viewName: view.name,
       modelName: modelName,
-      primaryKeyName: 'id', // Defaulting for exported projects
+      masterModelId: masterModelId,
+      primaryKeyName: 'id',
       displayType: layoutConfig.display_type || 'list',
       defaultView: layoutConfig.default_view || 'list',
       logicType: view.logic_type,
+      dictionary,
+      tableDictionary,
+      projectRelations,
+      joins: layoutConfig.joins || [],
       displayFields: displayFields.map((f: any) => {
         const baseMeta = layoutConfig.fields_metadata?.[f.id] || {}
         const specificMeta = layoutConfig.fields_metadata?.[`grid-${f.id}`] || {}
@@ -59,11 +101,10 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
         return {
           id: f.id || f.column_name,
           db_column_name: f.column_name,
-          display_name: (() => {
-            const val = mergedMeta.label?.text || mergedMeta.label || f.label;
-            return typeof val === 'object' && val !== null ? (val.pt || val.en || val.text || String(val)) : String(val || '');
-          })(),
+          display_name: mergedMeta.label?.text || f.label,
           field_type: f.field_type,
+          model_id: f.model_id || model.id,
+          model_name: tableDictionary[f.model_id] || modelName,
           config: { ...(f.config || {}), ...mergedMeta }
         }
       }),
@@ -71,16 +112,20 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
         const baseMeta = layoutConfig.fields_metadata?.[f.id] || {}
         const specificMeta = layoutConfig.fields_metadata?.[`form-${f.id}`] || {}
         const mergedMeta = { ...baseMeta, ...specificMeta }
+        const isByoc = f.field_type === 'byoc'
+        // For BYOC: preserve compiled_code from f.config, merge metadata on top (but don't overwrite compiled_code with empty)
+        const mergedConfig = isByoc
+          ? { ...mergedMeta, compiled_code: f.config?.compiled_code }
+          : { ...(f.config || {}), ...mergedMeta }
         return {
           id: f.id || f.column_name,
-          db_column_name: f.column_name,
-          display_name: (() => {
-            const val = mergedMeta.label?.text || mergedMeta.label || f.label;
-            return typeof val === 'object' && val !== null ? (val.pt || val.en || val.text || String(val)) : String(val || '');
-          })(),
+          db_column_name: f.column_name || f.db_column_name || f.id,
+          display_name: mergedMeta.label?.text || f.display_name || f.label,
           field_type: f.field_type,
           is_nullable: !f.required,
-          config: { ...(f.config || {}), ...mergedMeta }
+          model_id: f.model_id || model.id,
+          model_name: tableDictionary[f.model_id] || f.model_name || modelName,
+          config: mergedConfig
         }
       }),
       filterFields: (layoutConfig.filter_fields || []).map((fieldIdOrName: string) => {
@@ -92,11 +137,10 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
         return {
           id: f.id || f.column_name,
           db_column_name: f.column_name,
-          display_name: (() => {
-            const val = mergedMeta.label?.text || mergedMeta.label || f.label;
-            return typeof val === 'object' && val !== null ? (val.pt || val.en || val.text || String(val)) : String(val || '');
-          })(),
+          display_name: mergedMeta.label?.text || f.label,
           field_type: f.field_type,
+          model_id: f.model_id || model.id,
+          model_name: tableDictionary[f.model_id] || modelName,
           config: { ...(f.config || {}), ...mergedMeta }
         }
       }).filter(Boolean),
@@ -116,13 +160,16 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
       kanbanGroupDisplayField: layoutConfig.kanban_group_display_field || layoutConfig.kanbanGroupDisplayField,
       kanbanCardFields: layoutConfig.kanban_card_fields || layoutConfig.kanbanCardFields,
       detailsInterfaceTypes: layoutConfig.details_interface_types || layoutConfig.detailsInterfaceTypes,
-      actionInterfaceType: layoutConfig.action_interface_type || layoutConfig.actionInterfaceType || 'drawer',
-      detailsDisplayMode: layoutConfig.details_display_mode || layoutConfig.detailsDisplayMode || {},
-      detailsInlineTypes: layoutConfig.details_inline_types || layoutConfig.detailsInlineTypes || {},
-      detailsTabTitles: Object.fromEntries(Object.entries(layoutConfig.details_tab_titles || layoutConfig.detailsTabTitles || {}).map(([k, v]: [string, any]) => [k, typeof v === 'object' && v !== null ? (v.pt || v.text || String(v)) : String(v || '')])),
-      detailsItemTitles: Object.fromEntries(Object.entries(layoutConfig.details_item_titles || layoutConfig.detailsItemTitles || {}).map(([k, v]: [string, any]) => [k, typeof v === 'object' && v !== null ? (v.pt || v.text || String(v)) : String(v || '')])),
-      tabsStyleConfig: layoutConfig.tabs_style_config || layoutConfig.tabsStyleConfig || {},
-      masterTabTitle: (() => { const val = layoutConfig.master_tab_title || layoutConfig.masterTabTitle; return typeof val === 'object' && val !== null ? (val.pt || val.text || String(val)) : (val ? String(val) : ''); })()
+      detailsDisplayMode: layoutConfig.details_display_mode,
+      detailsInlineTypes: layoutConfig.details_inline_types,
+      detailsModalSizes: layoutConfig.details_modal_sizes,
+      detailsModalWidths: layoutConfig.details_modal_widths,
+      detailsModalHeights: layoutConfig.details_modal_heights,
+      masterTabTitle: layoutConfig.master_tab_title,
+      detailsTabTitles: layoutConfig.details_tab_titles,
+      detailsItemTitles: layoutConfig.details_item_titles,
+      tabsStyleConfig: layoutConfig.fields_metadata?.['form-TABS'] || layoutConfig.fields_metadata?.['TABS'],
+      actionInterfaceType: layoutConfig.action_interface_type || layoutConfig.actionInterfaceType || 'drawer'
     }
 
     configFolder.file(`${view.slug}.json`, JSON.stringify(viewConfig, null, 2))
@@ -247,3 +294,4 @@ export async function DELETE(request: Request) {
     }
   })
 }
+
