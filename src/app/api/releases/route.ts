@@ -12,14 +12,13 @@ export async function GET() {
       return NextResponse.json({ error: 'GITHUB_PAT is missing' }, { status: 500 })
     }
 
-    // Fetches all releases from GitHub API. 
     const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/releases`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/vnd.github.v3+json',
         'X-GitHub-Api-Version': '2022-11-28',
       },
-      next: { revalidate: 60 }
+      cache: 'no-store'
     })
 
     if (!res.ok) {
