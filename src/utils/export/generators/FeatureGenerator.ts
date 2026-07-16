@@ -26,6 +26,18 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
           const gridMeta = layoutConfig.fields_metadata?.[`grid-${fieldIdOrName}`] || {}
           const baseMeta = layoutConfig.fields_metadata?.[fieldIdOrName] || {}
           const meta = { ...baseMeta, ...gridMeta }
+          
+          let virtualModelId: any = null;
+          let virtualModelName = '';
+          const vMatch = Object.entries(layoutConfig.fields_metadata || {}).find(([k, v]: [string, any]) => k === fieldIdOrName || k === `grid-${fieldIdOrName}`);
+          if (vMatch) {
+             virtualModelId = (vMatch[1] as any)?.virtual_model_id || (vMatch[1] as any)?.byoc_model_id || (vMatch[1] as any)?.model_id;
+             if (virtualModelId) {
+               const foundModel = models.find(m => m.id === virtualModelId);
+               if (foundModel) virtualModelName = foundModel.table_name;
+             }
+          }
+
           return {
             id: fieldIdOrName,
             column_name: fieldIdOrName,
@@ -34,6 +46,9 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
             data_type: isByoc ? 'byoc' : 'virtual',
             required: false,
             is_virtual: !isByoc,
+            model_id: virtualModelId,
+            model_name: virtualModelName,
+            display_model_name: virtualModelName,
             config: meta
           }
         }
@@ -53,10 +68,10 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
           
           let virtualModelId: any = null;
           let virtualModelName = '';
-          if (!isByoc) {
-             const vMatch = Object.entries(layoutConfig.fields_metadata || {}).find(([k, v]: [string, any]) => k === fieldIdOrName || k === `form-${fieldIdOrName}`);
-             if (vMatch && (vMatch[1] as any)?.model_id) {
-               virtualModelId = (vMatch[1] as any).model_id;
+          const vMatch = Object.entries(layoutConfig.fields_metadata || {}).find(([k, v]: [string, any]) => k === fieldIdOrName || k === `form-${fieldIdOrName}`);
+          if (vMatch) {
+             virtualModelId = (vMatch[1] as any)?.virtual_model_id || (vMatch[1] as any)?.byoc_model_id || (vMatch[1] as any)?.model_id;
+             if (virtualModelId) {
                const foundModel = models.find(m => m.id === virtualModelId);
                if (foundModel) virtualModelName = foundModel.table_name;
              }

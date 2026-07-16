@@ -26,6 +26,7 @@ export function generateAppRouter(zip: JSZip, project: any, models: any[], uiVie
 
   const projectConfig = {
     ...project,
+    models: models,
     navigation: (project.navigation && Array.isArray(project.navigation) && project.navigation.length > 0) 
       ? project.navigation 
       : fallbackNavigation,

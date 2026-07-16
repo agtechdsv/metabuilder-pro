@@ -1019,7 +1019,7 @@ export function ProjectManager({
       {/* Source Code Download Progress Modal */}
       {downloadModal?.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800">
             {/* Header */}
             <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white text-center">
               <div className="mx-auto bg-white/20 w-14 h-14 rounded-full flex items-center justify-center mb-3">
