@@ -384,72 +384,84 @@ export function useDetailData({
     const pkValue = itemToDelete[pkName] || itemToDelete[pkName.toUpperCase()] || itemToDelete.id || itemToDelete.ID
 
     try {
-      const queryId = crypto.randomUUID()
-      const rawQuery = `DELETE FROM ${tableName} WHERE ${pkName} = '${String(pkValue).replace(/'/g, "''")}'`
+      let result: { success: boolean; error?: string } = { success: false }
 
-      const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
-        const isTemp = !tunnelChannel || !isTunnelReady
-        const channelName = `tunnel:${project.id}`
-        const channel = isTemp ? wrapChannelWithChunking(supabase.channel(channelName)) : tunnelChannel
-        let settled = false
-
-        const handleResult = (payload: any) => {
-          if (payload.payload?.queryId === queryId) {
-            settled = true
-            cleanup()
-            resolve({ success: payload.payload.success, error: payload.payload.error })
-          }
-        }
-
-        const cleanup = () => {
-          try {
-            const bindings = channel.bindings?.broadcast
-            if (Array.isArray(bindings)) {
-              channel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult)
-            }
-            if (isTemp) {
-              channel.unsubscribe()
-              supabase.removeChannel(channel)
-            }
-          } catch (_) {}
-        }
-
-        channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
-        channel.on('broadcast', { event: 'sql_result' }, handleResult)
-
-        const doSend = () => {
-          channel.send({
-            type: 'broadcast',
-            event: 'sql_query',
-            payload: {
-              queryId,
-              table: tableName,
-              action: 'delete',
-              query: rawQuery,
-              sql: rawQuery,
-              token: project?.secret_token || 'test-token',
-              schemaName: project?.models?.find((m: any) => m.db_table_name === tableName)?.db_schema_name || project?.slug || 'public',
-              slug: project?.slug,
-              idColumn: pkName,
-              idValue: pkValue
-            }
-          })
-        }
-
-        if (isTemp) {
-          channel.subscribe((status: string) => { if (status === 'SUBSCRIBED') doSend() })
+      if (project?.db_type === 'postgres') {
+        const res = await fetch(`/api/${tableName}?id=${pkValue}`, { method: 'DELETE' })
+        if (!res.ok) { 
+          const err = await res.json()
+          result = { success: false, error: err.error || 'Erro ao excluir' } 
         } else {
-          doSend()
+          result = { success: true }
         }
+      } else {
+        const queryId = crypto.randomUUID()
+        const rawQuery = `DELETE FROM ${tableName} WHERE ${pkName} = '${String(pkValue).replace(/'/g, "''")}'`
 
-        setTimeout(() => {
-          if (!settled) {
-            settled = true
-            cleanup()
-            resolve({ success: false, error: 'Timeout' })
+        result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
+          const isTemp = !tunnelChannel || !isTunnelReady
+          const channelName = `tunnel:${project.id}`
+          const channel = isTemp ? wrapChannelWithChunking(supabase.channel(channelName)) : tunnelChannel
+          let settled = false
+
+          const handleResult = (payload: any) => {
+            if (payload.payload?.queryId === queryId) {
+              settled = true
+              cleanup()
+              resolve({ success: payload.payload.success, error: payload.payload.error })
+            }
           }
-        }, 9000)
-      })
+
+          const cleanup = () => {
+            try {
+              const bindings = channel.bindings?.broadcast
+              if (Array.isArray(bindings)) {
+                channel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult)
+              }
+              if (isTemp) {
+                channel.unsubscribe()
+                supabase.removeChannel(channel)
+              }
+            } catch (_) {}
+          }
+
+          channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
+          channel.on('broadcast', { event: 'sql_result' }, handleResult)
+
+          const doSend = () => {
+            channel.send({
+              type: 'broadcast',
+              event: 'sql_query',
+              payload: {
+                queryId,
+                table: tableName,
+                action: 'delete',
+                query: rawQuery,
+                sql: rawQuery,
+                token: project?.secret_token || 'test-token',
+                schemaName: project?.models?.find((m: any) => m.db_table_name === tableName)?.db_schema_name || project?.slug || 'public',
+                slug: project?.slug,
+                idColumn: pkName,
+                idValue: pkValue
+              }
+            })
+          }
+
+          if (isTemp) {
+            channel.subscribe((status: string) => { if (status === 'SUBSCRIBED') doSend() })
+          } else {
+            doSend()
+          }
+
+          setTimeout(() => {
+            if (!settled) {
+              settled = true
+              cleanup()
+              resolve({ success: false, error: 'Timeout' })
+            }
+          }, 9000)
+        })
+      }
 
       setIsDetailDeleteModalOpen(false)
       setIsProcessing(false)
@@ -580,6 +592,30 @@ export function useDetailData({
       }
 
       const sendWithRetry = async (): Promise<boolean> => {
+        if (project?.db_type === 'postgres') {
+          try {
+            const method = action === 'edit' ? 'PUT' : 'POST'
+            const payload = action === 'edit' ? { pkValue: dPkValue, data: sanitizedData } : sanitizedData
+            
+            if (Object.keys(sanitizedData).length === 0) return true
+            
+            const res = await fetch(`/api/${tableName}`, {
+              method,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            })
+            if (!res.ok) {
+              const err = await res.json()
+              toast(err.error || 'Erro ao salvar', 'error')
+              return false
+            }
+            return true
+          } catch (err: any) {
+            toast(err.message || 'Erro ao salvar', 'error')
+            return false
+          }
+        }
+
         let currentData = { ...sanitizedData }
         let attempts = 0
         const MAX_RETRIES = 5
@@ -788,6 +824,17 @@ export function useDetailData({
           }
 
           if (sql) {
+            if (project?.db_type === 'postgres') {
+              const method = (!isNew && rowPkVal) ? 'PUT' : 'POST'
+              const payload = method === 'PUT' ? { pkValue: rowPkVal, data: sanitized } : sanitized
+              await fetch(`/api/${rowTable}`, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              })
+              continue
+            }
+
             const qId = crypto.randomUUID()
             await new Promise<void>((resolve) => {
               let done = false

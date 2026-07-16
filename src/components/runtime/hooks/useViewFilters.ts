@@ -107,7 +107,11 @@ export function useViewFilters({
         if (isRelationalComp && comp.options_type === 'relational' && comp.rel_table) {
           try {
             let data: any[] = []
-            if (projectId) {
+            if (project?.db_type === 'postgres') {
+              const res = await fetch(`/api/${comp.rel_table}?limit=1000`)
+              const json = await res.json()
+              if (json.data) data = json.data
+            } else if (projectId) {
               if (!tunnelChannel || !isTunnelReady) continue;
               const queryId = crypto.randomUUID()
               const filterCol = comp.filter_column ? `, "${comp.filter_column}"` : ''

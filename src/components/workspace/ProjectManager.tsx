@@ -118,15 +118,15 @@ export function ProjectManager({
 
   const [exportTab, setExportTab] = useState<'database' | 'auth'>('database')
   const [exportDataMode, setExportDataMode] = useState<'tunnel' | 'supabase' | 'postgres'>('supabase')
-  const [exportAuthStrategy, setExportAuthStrategy] = useState<'managed' | 'legacy' | 'ldap' | 'none'>('managed')
+  const [exportAuthStrategy, setExportAuthStrategy] = useState<'managed' | 'legacy' | 'ldap' | 'none'>('none')
   const [exportLegacyDriver, setExportLegacyDriver] = useState<'supabase' | 'postgres'>('supabase')
   const [exportTunnelUrl, setExportTunnelUrl] = useState('')
   const [exportDbType, setExportDbType] = useState<'supabase' | 'postgres'>('supabase')
-  const [exportDbUser, setExportDbUser] = useState('postgres')
-  const [exportDbPassword, setExportDbPassword] = useState('senha')
+  const [exportDbUser, setExportDbUser] = useState('user')
+  const [exportDbPassword, setExportDbPassword] = useState('password')
   const [exportDbHost, setExportDbHost] = useState('localhost')
   const [exportDbPort, setExportDbPort] = useState('5432')
-  const [exportDbName, setExportDbName] = useState('app_db')
+  const [exportDbName, setExportDbName] = useState('dataBase')
   const [exportSupaUrl, setExportSupaUrl] = useState('')
   const [exportSupaAnonKey, setExportSupaAnonKey] = useState('')
 
@@ -627,9 +627,11 @@ export function ProjectManager({
                               setExportDbType('supabase')
                               setExportDbUser('postgres')
                               setExportDbPassword('senha')
+                              setExportDbUser('user')
+                              setExportDbPassword('password')
                               setExportDbHost('localhost')
                               setExportDbPort('5432')
-                              setExportDbName(`${project.slug || 'app'}_db`)
+                              setExportDbName(`dataBase`)
                               setExportSupaUrl('')
                               setExportSupaAnonKey('')
 
@@ -641,11 +643,10 @@ export function ProjectManager({
                                 .eq('project_id', project.id)
                                 .maybeSingle()
 
-                              const authType = authConf?.auth_type || 'managed'
+                              const authType = authConf?.auth_type || 'none'
                               setExportAuthStrategy(
                                 authType === 'ldap' ? 'ldap' : 
-                                authType === 'legacy' ? 'legacy' : 
-                                authType === 'none' ? 'none' : 'managed'
+                                authType === 'legacy' ? 'legacy' : 'none'
                               )
 
                               setDownloadModal({
@@ -1018,7 +1019,7 @@ export function ProjectManager({
       {/* Source Code Download Progress Modal */}
       {downloadModal?.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800">
             {/* Header */}
             <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white text-center">
               <div className="mx-auto bg-white/20 w-14 h-14 rounded-full flex items-center justify-center mb-3">
@@ -1179,7 +1180,7 @@ export function ProjectManager({
                               type="text"
                               value={exportDbUser}
                               onChange={(e) => setExportDbUser(e.target.value)}
-                              placeholder="usuario"
+                              placeholder="user"
                               className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-16"
                               title="Usuário"
                             />
@@ -1188,7 +1189,7 @@ export function ProjectManager({
                               type="text"
                               value={exportDbPassword}
                               onChange={(e) => setExportDbPassword(e.target.value)}
-                              placeholder="senha"
+                              placeholder="password"
                               className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-16"
                               title="Senha"
                             />
@@ -1215,7 +1216,7 @@ export function ProjectManager({
                               type="text"
                               value={exportDbName}
                               onChange={(e) => setExportDbName(e.target.value)}
-                              placeholder="banco_db"
+                              placeholder="dataBase"
                               className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-32"
                               title="Nome do Banco de Dados"
                             />
@@ -1227,22 +1228,22 @@ export function ProjectManager({
 
                   {/* Auth Tab */}
                   {exportTab === 'auth' && (
-                    <div className="space-y-4 pt-4">
+                    <div className="space-y-4 pt-4 max-h-[50vh] overflow-y-auto pr-2 pb-2">
                       <div 
-                        onClick={() => setExportAuthStrategy('managed')}
+                        onClick={() => setExportAuthStrategy('none')}
                         className={cn(
                           "p-4 rounded-xl border border-white/10 cursor-pointer transition-all duration-200",
-                          exportAuthStrategy === 'managed' ? "bg-white/10 border-white/20" : "hover:bg-white/5"
+                          exportAuthStrategy === 'none' ? "bg-white/10 border-white/20" : "hover:bg-white/5"
                         )}
                       >
                         <div className="flex items-center space-x-3 mb-2">
-                          <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", exportAuthStrategy === 'managed' ? "border-[#5E2BFF]" : "border-gray-500")}>
-                            {exportAuthStrategy === 'managed' && <div className="w-2 h-2 bg-[#5E2BFF] rounded-full" />}
+                          <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", exportAuthStrategy === 'none' ? "border-[#5E2BFF]" : "border-gray-500")}>
+                            {exportAuthStrategy === 'none' && <div className="w-2 h-2 bg-[#5E2BFF] rounded-full" />}
                           </div>
-                          <span className="font-medium">Managed Auth</span>
+                          <span className="font-medium">Sem Autenticação</span>
                         </div>
                         <p className="text-sm text-gray-400 ml-7">
-                          Auth nativo no Supabase do cliente ou do MetaBuilder (Central).
+                          O app exportado não exigirá login. Middlewares de proteção serão removidos.
                         </p>
                       </div>
 
@@ -1266,7 +1267,7 @@ export function ProjectManager({
                         {exportAuthStrategy === 'legacy' && (
                           <div className="ml-7 space-y-4 border-t border-white/10 pt-4">
                             <div>
-                              <label className="block text-sm text-gray-400 mb-2">Driver de Conexão do BD Legado</label>
+                              <label className="block text-xs font-medium text-gray-400 mb-2">Driver de Conexão do BD Legado</label>
                               <div className="flex items-center space-x-4">
                                 <label className="flex items-center space-x-2 cursor-pointer">
                                   <input 
@@ -1275,7 +1276,7 @@ export function ProjectManager({
                                     onChange={() => setExportLegacyDriver('supabase')}
                                     className="text-[#5E2BFF] focus:ring-[#5E2BFF]"
                                   />
-                                  <span className="text-sm">Supabase SDK</span>
+                                  <span className="text-xs">Supabase SDK</span>
                                 </label>
                                 <label className="flex items-center space-x-2 cursor-pointer">
                                   <input 
@@ -1284,10 +1285,21 @@ export function ProjectManager({
                                     onChange={() => setExportLegacyDriver('postgres')}
                                     className="text-[#5E2BFF] focus:ring-[#5E2BFF]"
                                   />
-                                  <span className="text-sm">Driver PostgreSQL Nativo (pg)</span>
+                                  <span className="text-xs">Driver PostgreSQL Nativo (pg)</span>
                                 </label>
                               </div>
                             </div>
+                            {downloadModal.authConfig?.legacy && (
+                              <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                                <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-2 uppercase">Mapeamento de Autenticação Identificado</p>
+                                <div className="grid grid-cols-2 gap-3 text-xs">
+                                  <div><span className="text-neutral-500 block">Tabela Usuários:</span><span className="font-mono text-indigo-500">{downloadModal.authConfig.legacy.usersTable}</span></div>
+                                  <div><span className="text-neutral-500 block">Coluna Email:</span><span className="font-mono text-indigo-500">{downloadModal.authConfig.legacy.emailColumn}</span></div>
+                                  <div><span className="text-neutral-500 block">Coluna Senha:</span><span className="font-mono text-indigo-500">{downloadModal.authConfig.legacy.passwordColumn}</span></div>
+                                  <div><span className="text-neutral-500 block">Hash:</span><span className="font-mono text-indigo-500">{downloadModal.authConfig.legacy.passwordHash || 'Bcrypt'}</span></div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1308,24 +1320,24 @@ export function ProjectManager({
                         <p className="text-sm text-gray-400 ml-7">
                           Integração corporativa nativa. O app gerado validará no Active Directory do cliente.
                         </p>
-                      </div>
-
-                      <div 
-                        onClick={() => setExportAuthStrategy('none')}
-                        className={cn(
-                          "p-4 rounded-xl border border-white/10 cursor-pointer transition-all duration-200",
-                          exportAuthStrategy === 'none' ? "bg-white/10 border-white/20" : "hover:bg-white/5"
-                        )}
-                      >
-                        <div className="flex items-center space-x-3 mb-2">
-                          <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", exportAuthStrategy === 'none' ? "border-[#5E2BFF]" : "border-gray-500")}>
-                            {exportAuthStrategy === 'none' && <div className="w-2 h-2 bg-[#5E2BFF] rounded-full" />}
+                        {exportAuthStrategy === 'ldap' && (
+                          <div className="ml-7 mt-4 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">
+                              Por questões de segurança corporativa, você precisará configurar as variáveis do LDAP diretamente nas propriedades do projeto exportado.
+                              No fonte exportado, preencha o bloco <code>ldap</code> em suas configurações (ex: <code>project.json</code> ou <code>.env</code>) da seguinte forma:
+                            </p>
+                            <pre className="text-[10px] text-indigo-400 bg-neutral-950 p-2 rounded border border-neutral-800 overflow-x-auto font-mono leading-tight">
+{`"ldap": {
+  "enabled": false,
+  "url": "ldap://10.0.0.15:389",
+  "baseDn": "dc=empresa,dc=local",
+  "bindDn": "cn=metabuilder_service,ou=Services,dc=empresa,dc=local",
+  "bindPassword": "senha_secreta_do_bind",
+  "searchFilter": "(sAMAccountName={{username}})"
+}`}
+                            </pre>
                           </div>
-                          <span className="font-medium">Sem Autenticação</span>
-                        </div>
-                        <p className="text-sm text-gray-400 ml-7">
-                          O app exportado não exigirá login. Middlewares de proteção serão removidos.
-                        </p>
+                        )}
                       </div>
                     </div>
                   )}

@@ -46,7 +46,72 @@ export function useMasterData({
         throw new Error(errorData.error || 'Erro na operação')
       }
 
-      toast(t('runtime.record_saved_success') || 'Registro salvo com sucesso', 'success')
+      const savedData = await res.json().catch(() => ({}))
+      let masterId = pkValue
+      if (action === 'insert' && savedData) {
+        masterId = savedData[cleanPkName] || savedData.id || pkValue
+      }
+
+      // --- SALVAR DETALHES INLINE ---
+      const saveNestedDetails = async (detailRows: any[], parentTable: string, parentPkVal: any) => {
+        for (const row of detailRows) {
+          const rowTable = row.model_name
+          if (!rowTable) continue
+
+          const isNew = row._isNew
+          const rowPkName = 'id' // Fallback
+          const rowPkVal = row[rowPkName] ?? row.ID
+
+          const SKIP = new Set(['_details', 'model_name', 'display_model_name', '_isNew'])
+          const childSanitized: any = {}
+          
+          for (const [k, v] of Object.entries(row)) {
+            const lk = k.toLowerCase()
+            if (SKIP.has(lk) || k.startsWith('_') || k.startsWith('virt_') || k.includes('.') || lk === rowPkName.toLowerCase() || lk === 'created_at' || lk === 'updated_at' || v === undefined || typeof v === 'object') continue
+            childSanitized[k] = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
+          }
+
+          if (isNew && parentPkVal !== undefined && parentPkVal !== null) {
+            let fkCol = parentTable.endsWith('s') ? `${parentTable.slice(0, -1)}_id` : `${parentTable}_id`
+            if (project?.models) {
+              const childModel = project.models.find((m: any) => m.db_table_name === rowTable)
+              if (childModel?.fields) {
+                const possibleFk = childModel.fields.find((f: any) => f.db_column_name.toLowerCase().includes(parentTable.replace(/s$/, '').toLowerCase()) && f.db_column_name.toLowerCase().endsWith('_id'))
+                if (possibleFk) fkCol = possibleFk.db_column_name
+              }
+            }
+            childSanitized[fkCol] = String(parentPkVal)
+          }
+
+          let childPkToPass = rowPkVal
+          if (Object.keys(childSanitized).length > 0 || !isNew) {
+            const childMethod = isNew ? 'POST' : 'PUT'
+            const childRes = await fetch(`/api/${rowTable}`, {
+              method: childMethod,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(isNew ? childSanitized : { pkValue: rowPkVal, data: childSanitized })
+            }).catch(e => console.error("Erro ao salvar detalhe:", e))
+            
+            if (childRes && childRes.ok && isNew) {
+              const childSavedData = await childRes.json().catch(() => ({}))
+              if (childSavedData) {
+                childPkToPass = childSavedData[rowPkName] || childSavedData.id || rowPkVal
+              }
+            }
+          }
+
+          if (Array.isArray(row._details) && row._details.length > 0) {
+            await saveNestedDetails(row._details, rowTable, childPkToPass)
+          }
+        }
+      }
+
+      if (formData._details && formData._details.length > 0) {
+        await saveNestedDetails(formData._details, modelName || '', masterId)
+      }
+      // --------------------------------
+
+      toast(t('runtime.record_saved_success', 'Registro salvo com sucesso'), 'success')
       setRefreshKey?.((prev: number) => prev + 1)
       setOpen?.(false)
       setIsPageVisible?.(false)
@@ -70,7 +135,7 @@ export function useMasterData({
         throw new Error(errorData.error || 'Erro ao excluir')
       }
 
-      toast(t('runtime.record_deleted_success') || 'Registro excluído', 'success')
+      toast(t('runtime.record_deleted_success', 'Registro excluído'), 'success')
       setRefreshKey?.((prev: number) => prev + 1)
       setOpen?.(false)
       setIsPageVisible?.(false)

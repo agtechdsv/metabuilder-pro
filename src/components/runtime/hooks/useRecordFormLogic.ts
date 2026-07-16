@@ -467,7 +467,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
     
     // ======== BPM SYNC EVENT ========
     // Se o túnel estiver pronto e tivermos os dados necessários, disparamos o fluxo síncrono.
-    if (projectId && tunnelChannel && isTunnelReady && masterModelName) {
+    if (projectId && project?.db_type !== 'postgres' && tunnelChannel && isTunnelReady && masterModelName) {
       const eventType = mode === 'create' ? 'BEFORE_INSERT' : 'BEFORE_UPDATE';
       const queryId = crypto.randomUUID();
       
