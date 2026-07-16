@@ -236,7 +236,8 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                           if (detail._isNew || String(detailIdValue).startsWith('temp-')) {
                             return t('common.new_record', 'Novo Registro');
                           }
-                          const customField = detailsItemTitles?.[modelId || ''];
+                          const detailModelId = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase())?.id;
+                          const customField = detailsItemTitles?.[detailModelId || ''];
                           if (customField) {
                             let val: any;
                             
@@ -255,13 +256,10 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                return fName === safeBase || fName.endsWith(`.${safeBase}`) || fName.endsWith(`_${safeBase}`);
                             };
                             let titleFieldDef = detailFields.find(checkMatch) || fields.find(checkMatch);
-                            if (!titleFieldDef && project?.models) {
-                               const mId = modelId || project.models.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase())?.id;
-                               if (mId) {
-                                  const model = project.models.find((m: any) => m.id === mId);
-                                  if (model && model.ui_fields) {
-                                     titleFieldDef = model.ui_fields.find(checkMatch);
-                                  }
+                            if (!titleFieldDef && project?.models && detailModelId) {
+                               const model = project.models.find((m: any) => m.id === detailModelId);
+                               if (model && model.ui_fields) {
+                                  titleFieldDef = model.ui_fields.find(checkMatch);
                                }
                             }
                             
