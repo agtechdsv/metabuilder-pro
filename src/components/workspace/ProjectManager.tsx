@@ -662,7 +662,7 @@ export function ProjectManager({
 
                               const { data: models } = await supabase
                                 .from('models')
-                                .select('id, name, db_table_name, fields')
+                                .select('id, name, db_table_name, fields(*)')
                                 .eq('project_id', project.id)
                                 .order('db_table_name')
                               setExportModels(models || [])
