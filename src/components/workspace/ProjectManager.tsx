@@ -660,12 +660,27 @@ export function ProjectManager({
                               setExportAuthPassCol(authConf?.auth_config?.legacy?.passwordColumn || authConf?.auth_config?.db_password_column || 'senha')
                               setExportAuthHash(authConf?.auth_config?.legacy?.passwordHash || authConf?.auth_config?.db_password_hash || 'Bcrypt')
 
-                              const { data: models } = await supabase
+                              const { data: models, error: modelsError } = await supabase
                                 .from('models')
-                                .select('id, name, db_table_name, fields(*)')
+                                .select('id, name, db_table_name')
                                 .eq('project_id', project.id)
                                 .order('db_table_name')
-                              setExportModels(models || [])
+                              
+                              if (models && models.length > 0) {
+                                const { data: fields } = await supabase
+                                  .from('fields')
+                                  .select('id, db_column_name, model_id')
+                                  .in('model_id', models.map(m => m.id))
+                                
+                                const mappedModels = models.map(m => ({
+                                  ...m,
+                                  fields: fields?.filter(f => f.model_id === m.id) || []
+                                }))
+                                setExportModels(mappedModels)
+                              } else {
+                                console.error('Error fetching models:', modelsError)
+                                setExportModels([])
+                              }
 
                               setDownloadModal({
                                 open: true,
