@@ -134,6 +134,7 @@ export function ProjectManager({
   const [exportAuthEmailCol, setExportAuthEmailCol] = useState('email')
   const [exportAuthPassCol, setExportAuthPassCol] = useState('senha')
   const [exportAuthHash, setExportAuthHash] = useState('Bcrypt')
+  const [exportModels, setExportModels] = useState<any[]>([])
 
   const handleOpenFolder = async (dir: string, fileFullPath: string) => {
     try {
@@ -658,6 +659,13 @@ export function ProjectManager({
                               setExportAuthEmailCol(authConf?.auth_config?.legacy?.emailColumn || authConf?.auth_config?.db_email_column || 'email')
                               setExportAuthPassCol(authConf?.auth_config?.legacy?.passwordColumn || authConf?.auth_config?.db_password_column || 'senha')
                               setExportAuthHash(authConf?.auth_config?.legacy?.passwordHash || authConf?.auth_config?.db_password_hash || 'Bcrypt')
+
+                              const { data: models } = await supabase
+                                .from('models')
+                                .select('id, name, db_table_name, fields')
+                                .eq('project_id', project.id)
+                                .order('db_table_name')
+                              setExportModels(models || [])
 
                               setDownloadModal({
                                 open: true,
@@ -1304,15 +1312,30 @@ export function ProjectManager({
                               <div className="grid grid-cols-2 gap-4 text-xs">
                                 <div className="flex flex-col gap-1">
                                   <span className="text-neutral-500 font-sans text-xs">Tabela Usuários:</span>
-                                  <input type="text" value={exportAuthTableName} onChange={(e) => setExportAuthTableName(e.target.value)} className="w-full px-2 py-1.5 bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded text-neutral-900 dark:text-white outline-none focus:border-indigo-500 font-mono" />
+                                  <select value={exportAuthTableName} onChange={(e) => setExportAuthTableName(e.target.value)} className="w-full px-2 py-1.5 bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded text-neutral-900 dark:text-white outline-none focus:border-indigo-500 font-mono">
+                                    <option value="">Selecione a tabela...</option>
+                                    {exportModels.map(m => (
+                                      <option key={m.id} value={m.db_table_name}>{m.db_table_name}</option>
+                                    ))}
+                                  </select>
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   <span className="text-neutral-500 font-sans text-xs">Coluna Email:</span>
-                                  <input type="text" value={exportAuthEmailCol} onChange={(e) => setExportAuthEmailCol(e.target.value)} className="w-full px-2 py-1.5 bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded text-neutral-900 dark:text-white outline-none focus:border-indigo-500 font-mono" />
+                                  <select value={exportAuthEmailCol} onChange={(e) => setExportAuthEmailCol(e.target.value)} className="w-full px-2 py-1.5 bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded text-neutral-900 dark:text-white outline-none focus:border-indigo-500 font-mono">
+                                    <option value="">Selecione o campo...</option>
+                                    {exportModels.find(m => m.db_table_name === exportAuthTableName)?.fields?.map((f: any) => (
+                                      <option key={f.id || f.db_column_name} value={f.db_column_name}>{f.db_column_name}</option>
+                                    ))}
+                                  </select>
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   <span className="text-neutral-500 font-sans text-xs">Coluna Senha:</span>
-                                  <input type="text" value={exportAuthPassCol} onChange={(e) => setExportAuthPassCol(e.target.value)} className="w-full px-2 py-1.5 bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded text-neutral-900 dark:text-white outline-none focus:border-indigo-500 font-mono" />
+                                  <select value={exportAuthPassCol} onChange={(e) => setExportAuthPassCol(e.target.value)} className="w-full px-2 py-1.5 bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded text-neutral-900 dark:text-white outline-none focus:border-indigo-500 font-mono">
+                                    <option value="">Selecione o campo...</option>
+                                    {exportModels.find(m => m.db_table_name === exportAuthTableName)?.fields?.map((f: any) => (
+                                      <option key={f.id || f.db_column_name} value={f.db_column_name}>{f.db_column_name}</option>
+                                    ))}
+                                  </select>
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   <span className="text-neutral-500 font-sans text-xs">Formato Hash:</span>
