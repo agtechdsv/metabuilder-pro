@@ -251,18 +251,22 @@ export async function GET(request: Request) {
   // Build JOIN clauses for related tables needed by detailsItemTitles
   const joinClauses = joinsParam
     .filter(j => j.from?.toLowerCase() === '${modelName}'.toLowerCase())
-    .map(j => \`LEFT JOIN "\${j.to}" ON "\${j.from}"."\${j.localKey}" = "\${j.to}"."\${j.foreignKey}"\`)
+    .map((j, idx) => \`LEFT JOIN "\${j.to}" AS join_\${idx} ON "${modelName}"."\${j.localKey}" = join_\${idx}."\${j.foreignKey}"\`)
     .join(' ')
 
-  // Select columns: main table + any aliased columns from joined tables
-  const joinedSelectCols = joinsParam.map(j => \`"\${j.to}".*\`).join(', ')
-  const selectClause = joinedSelectCols
-    ? \`"\${'${modelName}'}".*, \${joinedSelectCols}\`
-    : \`"\${'${modelName}'}".*\`
+  // Select columns: main table + nested objects from joined tables
+  const joinedSelectCols = joinsParam
+    .filter(j => j.from?.toLowerCase() === '${modelName}'.toLowerCase())
+    .map((j, idx) => \`row_to_json(join_\${idx}) AS "\${j.to}"\`)
+    .join(', ')
 
-  let baseQuery = \`SELECT \${selectClause} FROM "\${'${modelName}'}"\`
+  const selectClause = joinedSelectCols
+    ? \`"${modelName}".*, \${joinedSelectCols}\`
+    : \`"${modelName}".*\`
+
+  let baseQuery = \`SELECT \${selectClause} FROM "${modelName}"\`
   if (joinClauses) baseQuery += \` \${joinClauses}\`
-  let countQuery = \`SELECT COUNT(*) as total FROM "\${'${modelName}'}"\`
+  let countQuery = \`SELECT COUNT(*) as total FROM "${modelName}"\`
   if (joinClauses) countQuery += \` \${joinClauses}\`
   
   const filters: string[] = []
@@ -271,7 +275,7 @@ export async function GET(request: Request) {
   searchParams.forEach((value, key) => {
     if (key.startsWith('filter_')) {
       const col = key.replace('filter_', '')
-      filters.push(\`"\${'${modelName}'}"."\${col}" = $\${filters.length + 1}\`)
+      filters.push(\`"${modelName}"."\${col}" = $\${filters.length + 1}\`)
       values.push(value)
     }
   })
@@ -282,7 +286,7 @@ export async function GET(request: Request) {
   }
   
   try {
-    const dataRes = await query(baseQuery + whereClause + \` ORDER BY "\${'${modelName}'}".id DESC LIMIT $\${values.length + 1} OFFSET $\${values.length + 2}\`, [...values, limit, offset])
+    const dataRes = await query(baseQuery + whereClause + \` ORDER BY "${modelName}".id DESC LIMIT $\${values.length + 1} OFFSET $\${values.length + 2}\`, [...values, limit, offset])
     const countRes = await query(countQuery + whereClause, values)
     
     return NextResponse.json({ data: dataRes.rows, count: parseInt(countRes.rows[0]?.total || '0') })
