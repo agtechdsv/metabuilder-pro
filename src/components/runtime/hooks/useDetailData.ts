@@ -144,8 +144,10 @@ export function useDetailData({
         const titleJoins: any[] = []
         if (titleField && titleField.includes('.')) {
           const relatedTable = titleField.split('.')[0]
-          const alreadyHasJoin = subDetailJoins.some((j: any) => j.to?.toLowerCase() === relatedTable.toLowerCase())
-          if (!alreadyHasJoin && detailModel) {
+          const existingJoin = subDetailJoins.find((j: any) => j.to?.toLowerCase() === relatedTable.toLowerCase())
+          if (existingJoin) {
+            titleJoins.push(existingJoin)
+          } else if (detailModel) {
             const linkField = detailModel.fields?.find((f: any) =>
               f.foreign_key_table === relatedTable ||
               f.db_column_name === `${relatedTable}_id` ||
