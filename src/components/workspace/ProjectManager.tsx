@@ -662,7 +662,7 @@ export function ProjectManager({
 
                               const { data: models, error: modelsError } = await supabase
                                 .from('models')
-                                .select('id, name, db_table_name')
+                                .select('id, db_table_name')
                                 .eq('project_id', project.id)
                                 .order('db_table_name')
                               
