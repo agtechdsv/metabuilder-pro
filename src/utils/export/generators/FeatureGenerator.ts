@@ -240,9 +240,30 @@ export async function GET(request: Request) {
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '50')
   const offset = (page - 1) * limit
-  
-  let baseQuery = \`SELECT * FROM "\${'${modelName}'}"\`
+
+  // Parse optional JOIN definitions: [{ from, localKey, to, foreignKey }]
+  let joinsParam: Array<{ from: string; localKey: string; to: string; foreignKey: string }> = []
+  try {
+    const raw = searchParams.get('joins')
+    if (raw) joinsParam = JSON.parse(raw)
+  } catch (_) {}
+
+  // Build JOIN clauses for related tables needed by detailsItemTitles
+  const joinClauses = joinsParam
+    .filter(j => j.from?.toLowerCase() === '${modelName}'.toLowerCase())
+    .map(j => \`LEFT JOIN "\${j.to}" ON "\${j.from}"."\${j.localKey}" = "\${j.to}"."\${j.foreignKey}"\`)
+    .join(' ')
+
+  // Select columns: main table + any aliased columns from joined tables
+  const joinedSelectCols = joinsParam.map(j => \`"\${j.to}".*\`).join(', ')
+  const selectClause = joinedSelectCols
+    ? \`"\${'${modelName}'}".*, \${joinedSelectCols}\`
+    : \`"\${'${modelName}'}".*\`
+
+  let baseQuery = \`SELECT \${selectClause} FROM "\${'${modelName}'}"\`
+  if (joinClauses) baseQuery += \` \${joinClauses}\`
   let countQuery = \`SELECT COUNT(*) as total FROM "\${'${modelName}'}"\`
+  if (joinClauses) countQuery += \` \${joinClauses}\`
   
   const filters: string[] = []
   const values: any[] = []
@@ -250,7 +271,7 @@ export async function GET(request: Request) {
   searchParams.forEach((value, key) => {
     if (key.startsWith('filter_')) {
       const col = key.replace('filter_', '')
-      filters.push(\`"\${col}" = $\${filters.length + 1}\`)
+      filters.push(\`"\${'${modelName}'}"."\${col}" = $\${filters.length + 1}\`)
       values.push(value)
     }
   })
@@ -261,7 +282,7 @@ export async function GET(request: Request) {
   }
   
   try {
-    const dataRes = await query(baseQuery + whereClause + \` ORDER BY id DESC LIMIT $\${values.length + 1} OFFSET $\${values.length + 2}\`, [...values, limit, offset])
+    const dataRes = await query(baseQuery + whereClause + \` ORDER BY "\${'${modelName}'}".id DESC LIMIT $\${values.length + 1} OFFSET $\${values.length + 2}\`, [...values, limit, offset])
     const countRes = await query(countQuery + whereClause, values)
     
     return NextResponse.json({ data: dataRes.rows, count: parseInt(countRes.rows[0]?.total || '0') })

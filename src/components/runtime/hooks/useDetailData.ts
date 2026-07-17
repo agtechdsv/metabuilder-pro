@@ -245,7 +245,12 @@ export function useDetailData({
         } else {
           try {
             if (project?.db_type === 'postgres') {
-               const res = await fetch(`/api/${join.to}?filter_${join.foreignKey}=${localValue}`)
+               const url = new URL(`/api/${join.to}`, window.location.origin)
+               url.searchParams.set(`filter_${join.foreignKey}`, String(localValue))
+               if (subDetailJoins.length > 0) {
+                 url.searchParams.set('joins', JSON.stringify(subDetailJoins))
+               }
+               const res = await fetch(url.toString())
                const json = await res.json()
                if (json.data) detailData = json.data
             } else {
