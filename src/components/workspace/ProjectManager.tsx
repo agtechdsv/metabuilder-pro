@@ -20,7 +20,8 @@ import {
   Download,
   CheckCircle,
   X,
-  FolderOpen
+  FolderOpen,
+  Copy
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -129,6 +130,10 @@ export function ProjectManager({
   const [exportDbName, setExportDbName] = useState('dataBase')
   const [exportSupaUrl, setExportSupaUrl] = useState('')
   const [exportSupaAnonKey, setExportSupaAnonKey] = useState('')
+  const [exportAuthTableName, setExportAuthTableName] = useState('usuarios')
+  const [exportAuthEmailCol, setExportAuthEmailCol] = useState('email')
+  const [exportAuthPassCol, setExportAuthPassCol] = useState('senha')
+  const [exportAuthHash, setExportAuthHash] = useState('Bcrypt')
 
   const handleOpenFolder = async (dir: string, fileFullPath: string) => {
     try {
@@ -148,7 +153,7 @@ export function ProjectManager({
     }
   }
 
-  const handleStartExport = async (projectId: string, fileName: string, dataMode: string, authStrategy: string, legacyDriver: string, dbConfig?: any) => {
+  const handleStartExport = async (projectId: string, fileName: string, dataMode: string, authStrategy: string, legacyDriver: string, dbConfig?: any, authConfig?: any) => {
     setDownloadModal({
       open: true,
       phase: 'downloading',
@@ -163,7 +168,7 @@ export function ProjectManager({
       const res = await fetch('/api/export-source', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, dataMode, authStrategy, legacyDriver, dbConfig })
+        body: JSON.stringify({ projectId, dataMode, authStrategy, legacyDriver, dbConfig, authConfig })
       })
       if (!res.ok) {
         const err = await res.json()
@@ -648,6 +653,11 @@ export function ProjectManager({
                                 authType === 'ldap' ? 'ldap' : 
                                 authType === 'legacy' ? 'legacy' : 'none'
                               )
+
+                              setExportAuthTableName(authConf?.auth_config?.legacy?.usersTable || authConf?.auth_config?.db_table_name || 'usuarios')
+                              setExportAuthEmailCol(authConf?.auth_config?.legacy?.emailColumn || authConf?.auth_config?.db_email_column || 'email')
+                              setExportAuthPassCol(authConf?.auth_config?.legacy?.passwordColumn || authConf?.auth_config?.db_password_column || 'senha')
+                              setExportAuthHash(authConf?.auth_config?.legacy?.passwordHash || authConf?.auth_config?.db_password_hash || 'Bcrypt')
 
                               setDownloadModal({
                                 open: true,
@@ -1289,17 +1299,31 @@ export function ProjectManager({
                                 </label>
                               </div>
                             </div>
-                            {downloadModal.authConfig?.legacy && (
-                              <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                                <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-2 uppercase">Mapeamento de Autenticação Identificado</p>
-                                <div className="grid grid-cols-2 gap-3 text-xs">
-                                  <div><span className="text-neutral-500 block">Tabela Usuários:</span><span className="font-mono text-indigo-500">{downloadModal.authConfig.legacy.usersTable}</span></div>
-                                  <div><span className="text-neutral-500 block">Coluna Email:</span><span className="font-mono text-indigo-500">{downloadModal.authConfig.legacy.emailColumn}</span></div>
-                                  <div><span className="text-neutral-500 block">Coluna Senha:</span><span className="font-mono text-indigo-500">{downloadModal.authConfig.legacy.passwordColumn}</span></div>
-                                  <div><span className="text-neutral-500 block">Hash:</span><span className="font-mono text-indigo-500">{downloadModal.authConfig.legacy.passwordHash || 'Bcrypt'}</span></div>
+                            <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                              <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-3 uppercase">Mapeamento de Autenticação</p>
+                              <div className="grid grid-cols-2 gap-4 text-xs">
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-neutral-500 font-sans text-xs">Tabela Usuários:</span>
+                                  <input type="text" value={exportAuthTableName} onChange={(e) => setExportAuthTableName(e.target.value)} className="w-full px-2 py-1.5 bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded text-neutral-900 dark:text-white outline-none focus:border-indigo-500 font-mono" />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-neutral-500 font-sans text-xs">Coluna Email:</span>
+                                  <input type="text" value={exportAuthEmailCol} onChange={(e) => setExportAuthEmailCol(e.target.value)} className="w-full px-2 py-1.5 bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded text-neutral-900 dark:text-white outline-none focus:border-indigo-500 font-mono" />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-neutral-500 font-sans text-xs">Coluna Senha:</span>
+                                  <input type="text" value={exportAuthPassCol} onChange={(e) => setExportAuthPassCol(e.target.value)} className="w-full px-2 py-1.5 bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded text-neutral-900 dark:text-white outline-none focus:border-indigo-500 font-mono" />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-neutral-500 font-sans text-xs">Formato Hash:</span>
+                                  <select value={exportAuthHash} onChange={(e) => setExportAuthHash(e.target.value)} className="w-full px-2 py-1.5 bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded text-neutral-900 dark:text-white outline-none focus:border-indigo-500 font-mono">
+                                    <option value="Bcrypt">Bcrypt</option>
+                                    <option value="Plain">Texto Puro</option>
+                                    <option value="MD5">MD5</option>
+                                  </select>
                                 </div>
                               </div>
-                            )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1324,18 +1348,24 @@ export function ProjectManager({
                           <div className="ml-7 mt-4 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
                             <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">
                               Por questões de segurança corporativa, você precisará configurar as variáveis do LDAP diretamente nas propriedades do projeto exportado.
-                              No fonte exportado, preencha o bloco <code>ldap</code> em suas configurações (ex: <code>project.json</code> ou <code>.env</code>) da seguinte forma:
+                              No fonte exportado, preencha as variáveis em seu arquivo <code className="bg-neutral-200 dark:bg-neutral-800 px-1 py-0.5 rounded">.env.local</code> da seguinte forma:
                             </p>
-                            <pre className="text-[10px] text-indigo-400 bg-neutral-950 p-2 rounded border border-neutral-800 overflow-x-auto font-mono leading-tight">
-{`"ldap": {
-  "enabled": false,
-  "url": "ldap://10.0.0.15:389",
-  "baseDn": "dc=empresa,dc=local",
-  "bindDn": "cn=metabuilder_service,ou=Services,dc=empresa,dc=local",
-  "bindPassword": "senha_secreta_do_bind",
-  "searchFilter": "(sAMAccountName={{username}})"
-}`}
-                            </pre>
+                            <div className="relative group">
+                              <button onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(`# Configurações do Active Directory (LDAP)\nLDAP_URL="ldap://10.0.0.15:389"\nLDAP_BASE_DN="dc=empresa,dc=local"\nLDAP_BIND_DN="cn=metabuilder_service,ou=Services,dc=empresa,dc=local"\nLDAP_BIND_PASSWORD="senha_secreta_do_bind"\nLDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`);
+                              }} className="absolute top-2 right-2 p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-white opacity-0 group-hover:opacity-100 transition-opacity" title="Copiar">
+                                <Copy className="w-3 h-3" />
+                              </button>
+                              <pre className="text-[10px] text-indigo-400 bg-neutral-950 p-3 rounded border border-neutral-800 overflow-x-auto font-mono leading-tight whitespace-pre">
+{`# Configurações do Active Directory (LDAP)
+LDAP_URL="ldap://10.0.0.15:389"
+LDAP_BASE_DN="dc=empresa,dc=local"
+LDAP_BIND_DN="cn=metabuilder_service,ou=Services,dc=empresa,dc=local"
+LDAP_BIND_PASSWORD="senha_secreta_do_bind"
+LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
+                              </pre>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1359,6 +1389,19 @@ export function ProjectManager({
                         } : exportDataMode === 'supabase' ? {
                           supabaseUrl: exportSupaUrl,
                           supabaseAnonKey: exportSupaAnonKey
+                        } : null,
+                        exportAuthStrategy === 'legacy' ? {
+                          legacy: {
+                            usersTable: exportAuthTableName,
+                            emailColumn: exportAuthEmailCol,
+                            passwordColumn: exportAuthPassCol,
+                            passwordHash: exportAuthHash
+                          },
+                          db_table_name: exportAuthTableName,
+                          db_email_column: exportAuthEmailCol,
+                          db_password_column: exportAuthPassCol,
+                          db_user_role_column: 'id',
+                          db_password_hash: exportAuthHash
                         } : null
                       )}
                       className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(79,70,229,0.2)]"

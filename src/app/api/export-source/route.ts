@@ -4,7 +4,7 @@ import { SourceCodeGenerator } from '@/utils/export/SourceCodeGenerator'
 
 export async function POST(request: Request) {
   try {
-    const { projectId, dataMode = 'supabase', authStrategy = 'managed', legacyDriver = 'supabase', dbConfig } = await request.json()
+    const { projectId, dataMode = 'supabase', authStrategy = 'managed', legacyDriver = 'supabase', dbConfig, authConfig } = await request.json()
     const supabase = await createClient()
 
     // 1. Authenticate
@@ -22,6 +22,10 @@ export async function POST(request: Request) {
 
     if (projError || !project) {
       return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })
+    }
+
+    if (authConfig) {
+      project.auth_config = { ...(project.auth_config || {}), ...authConfig }
     }
 
     // 3. Fetch Models to generate Features (including fields and views)
