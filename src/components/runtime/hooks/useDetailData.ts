@@ -138,6 +138,10 @@ export function useDetailData({
         })
         const detailModelId = detailModel?.id
         const titleField = detailsItemTitles?.[detailModelId || '']
+        // titleJoins: ONLY the join needed to resolve the dot-notation title field.
+        // We keep this separate from subDetailJoins (which are joins for fetching child records),
+        // so we never accidentally JOIN child tables when fetching the current detail level.
+        const titleJoins: any[] = []
         if (titleField && titleField.includes('.')) {
           const relatedTable = titleField.split('.')[0]
           const alreadyHasJoin = subDetailJoins.some((j: any) => j.to?.toLowerCase() === relatedTable.toLowerCase())
@@ -149,12 +153,14 @@ export function useDetailData({
               (relatedTable.endsWith('es') && f.db_column_name === `${relatedTable.slice(0, -2)}_id`)
             )
             if (linkField) {
-              subDetailJoins.push({
+              const titleJoin = {
                 from: join.to,
                 localKey: linkField.db_column_name,
                 to: relatedTable,
                 foreignKey: linkField.foreign_key_column || 'id'
-              })
+              }
+              subDetailJoins.push(titleJoin)  // keep for tunnel path
+              titleJoins.push(titleJoin)       // use only this for postgres path
             }
           }
         }
@@ -247,8 +253,9 @@ export function useDetailData({
             if (project?.db_type === 'postgres') {
                const url = new URL(`/api/${join.to}`, window.location.origin)
                url.searchParams.set(`filter_${join.foreignKey}`, String(localValue))
-               if (subDetailJoins.length > 0) {
-                 url.searchParams.set('joins', JSON.stringify(subDetailJoins))
+               // Only pass the title-resolution join, NOT subDetailJoins (those are for child records)
+               if (titleJoins.length > 0) {
+                 url.searchParams.set('joins', JSON.stringify(titleJoins))
                }
                const res = await fetch(url.toString())
                const json = await res.json()
