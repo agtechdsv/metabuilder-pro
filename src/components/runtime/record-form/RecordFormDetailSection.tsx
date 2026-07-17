@@ -293,12 +293,38 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                   console.error('Date formatting error:', e);
                                }
                             }
+                            // Resiliência de objeto aninhado:
+                            if ((val === undefined || val === null || val === '') && customField) {
+                               const targetProp = customField.includes('.') ? customField.split('.')[1] : customField;
+                               const targetLower = targetProp?.toLowerCase();
+                               if (targetLower) {
+                                 for (const key of Object.keys(detail)) {
+                                   if (detail[key] && typeof detail[key] === 'object') {
+                                     const nestedObj = detail[key];
+                                     const matchKey = Object.keys(nestedObj).find(k => k?.toLowerCase() === targetLower);
+                                     if (matchKey) {
+                                       val = nestedObj[matchKey];
+                                       break;
+                                     }
+                                   }
+                                 }
+                               }
+                            }
 
                             if (val !== undefined && val !== null && val !== '') {
                               if (typeof val === 'object') {
                                 return String(val.display_name || val.name || val.nome || val.titulo || val.title || val.id || JSON.stringify(val));
                               }
                               return String(val);
+                            }
+                          } else {
+                            // Se não há customField, procura em objetos aninhados se existe algo com cara de título
+                            for (const key of Object.keys(detail)) {
+                               if (detail[key] && typeof detail[key] === 'object' && !Array.isArray(detail[key])) {
+                                 const nested = detail[key];
+                                 const possibleVal = nested.display_name || nested.name || nested.nome || nested.titulo || nested.title || nested.label;
+                                 if (possibleVal) return String(possibleVal);
+                               }
                             }
                           }
                           return detail.display_name || detail.name || detail.nome || detail.titulo || detail.label || `Item #${idx + 1}`;
