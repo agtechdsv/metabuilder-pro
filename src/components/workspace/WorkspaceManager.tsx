@@ -22,7 +22,8 @@ import {
   RefreshCw,
   ArrowUpRight,
   Monitor,
-  Download
+  Download,
+  Network
 } from 'lucide-react'
 import Link from 'next/link'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
@@ -311,49 +312,60 @@ export function WorkspaceManager({
       </div>
 
       <section className="space-y-6">
+        {isTauri() && (
+          <div className="flex items-center gap-4 border-b border-neutral-200 dark:border-neutral-800 px-2 mt-4">
+            <button
+              onClick={() => setActiveTab('workspaces')}
+              className={cn(
+                "px-4 py-3 text-sm font-bold transition-all border-b-2",
+                activeTab === 'workspaces' 
+                  ? "border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400" 
+                  : "border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+              )}
+            >
+              Seus Workspaces
+            </button>
+            <button
+              onClick={() => setActiveTab('tunnel')}
+              className={cn(
+                "px-4 py-3 text-sm font-bold transition-all border-b-2",
+                activeTab === 'tunnel' 
+                  ? "border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400" 
+                  : "border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+              )}
+            >
+              Gerenciador do Túnel
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-bold flex items-center gap-3">
-            <Building2 className="w-6 h-6 text-indigo-500" />
-            {t('dashboard.your_workspaces')}
+            {activeTab === 'workspaces' ? (
+              <>
+                <Building2 className="w-6 h-6 text-indigo-500" />
+                {t('dashboard.your_workspaces')}
+              </>
+            ) : (
+              <>
+                <Network className="w-6 h-6 text-indigo-500" />
+                Gerenciador do Túnel
+              </>
+            )}
           </h3>
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors group"
-            title="Atualizar"
-          >
-            <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
-          </button>
+          {activeTab === 'workspaces' && (
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors group"
+              title="Atualizar"
+            >
+              <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
+            </button>
+          )}
         </div>
 
-      {isTauri() && (
-        <div className="flex items-center gap-4 border-b border-neutral-200 dark:border-neutral-800 px-2 mt-4">
-          <button
-            onClick={() => setActiveTab('workspaces')}
-            className={cn(
-              "px-4 py-3 text-sm font-bold transition-all border-b-2",
-              activeTab === 'workspaces' 
-                ? "border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400" 
-                : "border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-            )}
-          >
-            Seus Workspaces
-          </button>
-          <button
-            onClick={() => setActiveTab('tunnel')}
-            className={cn(
-              "px-4 py-3 text-sm font-bold transition-all border-b-2",
-              activeTab === 'tunnel' 
-                ? "border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400" 
-                : "border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-            )}
-          >
-            Gerenciador do Túnel
-          </button>
-        </div>
-      )}
-
-      {activeTab === 'tunnel' && isTauri() ? (
+        {activeTab === 'tunnel' && isTauri() ? (
         <WorkspaceTunnelControl workspaceSlug="global" />
       ) : (
         <>
