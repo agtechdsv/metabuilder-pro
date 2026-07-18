@@ -26,7 +26,9 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
+import { WorkspaceTunnelControl } from '@/components/workspace/WorkspaceTunnelControl'
 import { createClient } from '@/utils/supabase/client'
+import { isTauri } from '@/utils/tauriUtils'
 import { useToast } from '@/components/ui/Toast'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Drawer } from '@/components/ui/Drawer'
@@ -88,6 +90,7 @@ export function WorkspaceManager({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [navigatingSlug, setNavigatingSlug] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'workspaces' | 'tunnel'>('workspaces')
 
   // Team management states
   const [isTeamDrawerOpen, setIsTeamDrawerOpen] = useState(false)
@@ -323,7 +326,38 @@ export function WorkspaceManager({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      {isTauri() && (
+        <div className="flex items-center gap-4 border-b border-neutral-200 dark:border-neutral-800 px-2 mt-4">
+          <button
+            onClick={() => setActiveTab('workspaces')}
+            className={cn(
+              "px-4 py-3 text-sm font-bold transition-all border-b-2",
+              activeTab === 'workspaces' 
+                ? "border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400" 
+                : "border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+            )}
+          >
+            Seus Workspaces
+          </button>
+          <button
+            onClick={() => setActiveTab('tunnel')}
+            className={cn(
+              "px-4 py-3 text-sm font-bold transition-all border-b-2",
+              activeTab === 'tunnel' 
+                ? "border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400" 
+                : "border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+            )}
+          >
+            Gerenciador do Túnel
+          </button>
+        </div>
+      )}
+
+      {activeTab === 'tunnel' && isTauri() ? (
+        <WorkspaceTunnelControl workspaceSlug="global" />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {workspaces.map((workspace) => {
             const isNavigating = navigatingSlug === workspace.slug;
             return (
@@ -470,6 +504,8 @@ export function WorkspaceManager({
             </button>
           )}
         </div>
+        </>
+      )}
       </section>
 
       {/* Drawer para Criar/Editar */}

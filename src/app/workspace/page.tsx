@@ -149,8 +149,6 @@ export default async function GlobalDashboard() {
 
       <main className="w-full mx-auto px-10 pt-4 pb-4 space-y-6 flex-grow">
         
-        <WorkspaceTunnelControl workspaceSlug="global" />
-
         {/* Gerenciador de Workspaces (Lista + Drawers) */}
         <WorkspaceManager 
           initialWorkspaces={workspaces || []} 
