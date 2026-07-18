@@ -255,17 +255,25 @@ export function useDetailData({
             if (project?.db_type === 'postgres') {
                const url = new URL(`/api/${join.to}`, window.location.origin)
                url.searchParams.set(`filter_${join.foreignKey}`, String(localValue))
-               // Only pass the title-resolution join, NOT subDetailJoins (those are for child records)
-               if (titleJoins.length > 0) {
-                 url.searchParams.set('joins', JSON.stringify(titleJoins))
+               const allJoins = [...(titleJoins || []), ...(subDetailJoins || [])];
+               const uniqueJoins = Array.from(new Set(allJoins.map((j: any) => j.to))).map(to => allJoins.find((j: any) => j.to === to));
+               if (uniqueJoins.length > 0) {
+                 url.searchParams.set('joins', JSON.stringify(uniqueJoins))
                }
                const res = await fetch(url.toString())
                const json = await res.json()
                if (json.data) detailData = json.data
             } else {
+              let selectStr = '*'
+              const allJoins = [...(titleJoins || []), ...(subDetailJoins || [])];
+              const uniqueJoins = Array.from(new Set(allJoins.map((j: any) => j.to))).map(to => allJoins.find((j: any) => j.to === to));
+              console.log('[DEBUG useDetailData] uniqueJoins:', uniqueJoins);
+              if (uniqueJoins.length > 0) {
+                selectStr += ', ' + uniqueJoins.map((j: any) => `${j.to}(*)`).join(', ')
+              }
               const { data: directData } = await (supabase as any)
                 .from(join.to)
-                .select('*')
+                .select(selectStr)
                 .eq(join.foreignKey, String(localValue))
               if (directData) detailData = directData
             }

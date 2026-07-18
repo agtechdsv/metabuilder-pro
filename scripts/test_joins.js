@@ -13,7 +13,8 @@ envLocal.split('\n').forEach(line => {
 const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 async function run() {
-  const { data } = await supabase.from('models').select('id, db_table_name').eq('db_table_name', 'itens_pedido');
-  console.log(JSON.stringify(data, null, 2));
+  const { data } = await supabase.from('ui_views').select('slug, layout_config').eq('slug', 'pedidos').limit(1);
+  const layout = data[0].layout_config;
+  console.log('Joins:', JSON.stringify(layout.joins, null, 2));
 }
 run();

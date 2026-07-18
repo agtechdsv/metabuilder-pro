@@ -728,9 +728,9 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
     relationalOptions={relationalOptions}
     project={project}
     detailsInterfaceTypes={detailsInterfaceTypes}
+    detailsItemTitles={detailsItemTitles}
     detailsTabTitles={detailsTabTitles}
     dictionary={dictionary}
-    detailsItemTitles={detailsItemTitles}
     onAddDetail={onAddDetail}
     onEditDetail={onEditDetail}
     onDeleteDetail={onDeleteDetail}

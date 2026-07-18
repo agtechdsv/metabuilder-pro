@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
+
 const envLocal = fs.readFileSync(path.join(__dirname, '../.env.local'), 'utf-8');
 const env = {};
 envLocal.split('\n').forEach(line => {
@@ -10,10 +12,11 @@ envLocal.split('\n').forEach(line => {
     }
   }
 });
-const { createClient } = require('@supabase/supabase-js');
+
 const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 async function run() {
-  const { data } = await supabase.from('models').select('id, db_table_name').eq('db_table_name', 'itens_pedido');
-  console.log(JSON.stringify(data, null, 2));
+  const { data, error } = await supabase.from('itens_pedido').select('*, produtos(*)').limit(1);
+  console.log('Error:', error);
+  console.log('Data:', JSON.stringify(data, null, 2));
 }
 run();
