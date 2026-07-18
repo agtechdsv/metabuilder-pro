@@ -1,10 +1,12 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Settings, Play, Square, RefreshCw, AlertCircle, Network } from 'lucide-react'
+import { Settings, Play, Square, RefreshCw, AlertCircle, Network, FileJson, Save } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { isTauri } from '@/utils/tauriUtils'
 import Link from 'next/link'
+import { Modal } from '@/components/ui/Modal'
+import Editor from '@monaco-editor/react'
 
 export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: string }) {
   const { toast } = useToast()
@@ -12,6 +14,62 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
   const [tunnelStatus, setTunnelStatus] = useState<'stopped' | 'running' | 'loading'>('loading')
   const [tunnelPid, setTunnelPid] = useState<number | null>(null)
   const [isDesktopEnv, setIsDesktopEnv] = useState<boolean | null>(null)
+
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false)
+  const [configContent, setConfigContent] = useState('')
+  const [isSavingConfig, setIsSavingConfig] = useState(false)
+
+  const defaultTemplate = `{
+  "workspace_id": "",
+  "projects": [
+    {
+      "project_id": "",
+      "connection_string": "postgresql://postgres:password@localhost:5432/dbname"
+    }
+  ]
+}`
+
+  const handleOpenConfig = async () => {
+    setIsConfigModalOpen(true)
+    try {
+      const { appLocalDataDir, join } = await import('@tauri-apps/api/path')
+      const { readTextFile, exists } = await import('@tauri-apps/plugin-fs')
+      
+      const dir = await appLocalDataDir()
+      const configPath = await join(dir, 'metabuilder.config.json')
+      
+      const fileExists = await exists(configPath)
+      if (fileExists) {
+        const content = await readTextFile(configPath)
+        setConfigContent(content)
+      } else {
+        setConfigContent(defaultTemplate)
+      }
+    } catch (e) {
+      console.error(e)
+      toast('Erro ao carregar configuração.', 'error')
+    }
+  }
+
+  const handleSaveConfig = async () => {
+    setIsSavingConfig(true)
+    try {
+      const { appLocalDataDir, join } = await import('@tauri-apps/api/path')
+      const { writeTextFile } = await import('@tauri-apps/plugin-fs')
+      
+      const dir = await appLocalDataDir()
+      const configPath = await join(dir, 'metabuilder.config.json')
+      
+      await writeTextFile(configPath, configContent)
+      toast('Configuração salva com sucesso!', 'success')
+      setIsConfigModalOpen(false)
+    } catch (e) {
+      console.error(e)
+      toast('Erro ao salvar configuração.', 'error')
+    } finally {
+      setIsSavingConfig(false)
+    }
+  }
 
   const checkStatus = async () => {
     try {
@@ -149,6 +207,15 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
               <Square className="w-4 h-4" /> Parar Túnel
             </button>
           </div>
+          
+          <div className="mt-3">
+            <button
+              onClick={handleOpenConfig}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20"
+            >
+              <FileJson className="w-4 h-4" /> Configurar (metabuilder.config.json)
+            </button>
+          </div>
         </div>
 
         {/* Sincronização Global */}
@@ -170,6 +237,50 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
         </div>
 
       </div>
+
+      {/* Modal de Configuração JSON */}
+      <Modal 
+        isOpen={isConfigModalOpen} 
+        onClose={() => setIsConfigModalOpen(false)} 
+        title="Editar metabuilder.config.json"
+        description="Esta configuração será salva diretamente no AppData Local da IDE e será usada no próximo Início ou Sincronização."
+      >
+        <div className="h-[400px] border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden mb-6">
+          <Editor
+            height="100%"
+            defaultLanguage="json"
+            value={configContent}
+            onChange={(value) => setConfigContent(value || '')}
+            theme="vs-dark"
+            options={{
+              minimap: { enabled: false },
+              fontSize: 14,
+              formatOnPaste: true,
+              scrollBeyondLastLine: false,
+            }}
+          />
+        </div>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setIsConfigModalOpen(false)}
+            className="px-6 py-2.5 rounded-xl font-bold text-sm text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSaveConfig}
+            disabled={isSavingConfig}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all disabled:opacity-50"
+          >
+            {isSavingConfig ? 'Salvando...' : (
+              <>
+                <Save className="w-4 h-4" /> Salvar Configuração
+              </>
+            )}
+          </button>
+        </div>
+      </Modal>
+
     </div>
   )
 }
