@@ -65,7 +65,34 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
   // Busca sub-detalhes de um registro sob demanda (lazy loading)
   // chamado ao expandir a cortina de um detalhe pela primeira vez
   const fetchSubDetailsForRecord = async (detail: any, tableName: string, pkCol: string, pkValue: any) => {
-    const subJoins = joins.filter((j: any) => j.from?.toLowerCase() === tableName?.toLowerCase())
+    let subJoins = joins.filter((j: any) => j.from?.toLowerCase() === tableName?.toLowerCase())
+    
+    // Fallback if no explicit joins are defined for this sub-level
+    if (subJoins.length === 0 && project?.models) {
+      const parentModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase())
+      if (parentModelDef) {
+        const heuristicJoins: any[] = []
+        for (const childModel of project.models) {
+          if (childModel.id === parentModelDef.id) continue
+          const fkField = childModel.fields?.find((f: any) => 
+            f.foreign_key_table === parentModelDef.db_table_name ||
+            f.db_column_name === `${parentModelDef.db_table_name}_id` ||
+            (parentModelDef.db_table_name.endsWith('s') && f.db_column_name === `${parentModelDef.db_table_name.slice(0, -1)}_id`) ||
+            (parentModelDef.db_table_name.endsWith('es') && f.db_column_name === `${parentModelDef.db_table_name.slice(0, -2)}_id`)
+          )
+          if (fkField) {
+            heuristicJoins.push({
+              from: parentModelDef.db_table_name,
+              localKey: fkField.foreign_key_column || 'id',
+              to: childModel.db_table_name,
+              foreignKey: fkField.db_column_name
+            })
+          }
+        }
+        if (heuristicJoins.length > 0) subJoins = heuristicJoins
+      }
+    }
+
     if (subJoins.length === 0) return
 
     const supabaseClient = createClient()
@@ -197,14 +224,53 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       } else {
         // Fallback to direct fetch or supabase query
         try {
+             // Auto-join ALL foreign keys of the sub-model so the UI fallback can find titles!
+             const uniqueJoins: any[] = []
+             const detailModel = (project as any)?.models?.find((m: any) => {
+               const tbl = (m.db_table_name || m.table_name || '').toLowerCase();
+               return tbl === join.to?.toLowerCase();
+             })
+             
+             if (detailModel && detailModel.fields) {
+                detailModel.fields.forEach((f: any) => {
+                   let relatedTable = f.foreign_key_table || f.widget_options?.component?.rel_table || f.config?.component?.rel_table || f.config?.form_config?.component?.rel_table;
+                   if (!relatedTable && f.db_column_name?.endsWith('_id')) {
+                      const base = f.db_column_name.replace(/_id$/, '');
+                      if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base + 's')) relatedTable = base + 's';
+                      else if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base + 'es')) relatedTable = base + 'es';
+                      else if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base)) relatedTable = base;
+                   }
+                   const isValidModel = relatedTable ? (project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === relatedTable) : false;
+                   if (relatedTable && isValidModel && !uniqueJoins.find((j: any) => j.to === relatedTable)) {
+                      uniqueJoins.push({
+                         from: join.to,
+                         localKey: f.db_column_name,
+                         to: relatedTable,
+                         foreignKey: f.foreign_key_column || 'id'
+                      });
+                   }
+                });
+             }
+
+             console.log(`[DEBUG RecordFormLogic] Fetching sub-details for ${join.to} uniqueJoins:`, uniqueJoins)
+
           if (project?.db_type === 'postgres') {
-             const res = await fetch(`/api/${join.to}?filter_${join.foreignKey}=${pkValue}`)
+             const url = new URL(`${window.location.origin}/api/${join.to}`)
+             url.searchParams.set(`filter_${join.foreignKey}`, String(pkValue))
+             if (uniqueJoins.length > 0) {
+               url.searchParams.set('joins', JSON.stringify(uniqueJoins))
+             }
+             const res = await fetch(url.toString())
              const json = await res.json()
              if (json.data) data = json.data
           } else {
+            let selectStr = '*'
+            if (uniqueJoins.length > 0) {
+              selectStr = '*, ' + uniqueJoins.map((j: any) => `${j.to}(*)`).join(', ')
+            }
             const { data: directData } = await (supabaseClient as any)
               .from(join.to)
-              .select('*')
+              .select(selectStr)
               .eq(join.foreignKey, String(pkValue))
             if (directData) data = directData
           }

@@ -270,7 +270,11 @@ export function useDetailData({
                       else if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base + 'es')) relatedTable = base + 'es';
                       else if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base)) relatedTable = base;
                    }
-                   if (relatedTable && !uniqueJoins.find((j: any) => j.to === relatedTable)) {
+                   
+                   // Ensure the related table actually exists as a model to prevent UUIDs or invalid tables from breaking the query
+                   const isValidModel = relatedTable ? (project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === relatedTable) : false;
+                   
+                   if (relatedTable && isValidModel && !uniqueJoins.find((j: any) => j.to === relatedTable)) {
                       uniqueJoins.push({
                          from: join.to,
                          localKey: f.db_column_name,
