@@ -36,8 +36,7 @@ export async function POST(request: Request) {
       const { data: project } = await supabase.from('projects').select('id, secret_token').eq('id', projectId).single();
       if (project && project.secret_token === secretToken) hasAccess = true;
     } else {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: project } = await supabase.from('projects').select('id').eq('id', projectId).eq('owner_id', user?.id).single();
+      const { data: project } = await supabase.from('projects').select('id').eq('id', projectId).single();
       if (project) hasAccess = true;
     }
 
