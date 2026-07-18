@@ -604,6 +604,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
               type="text"
               value={newSchemaName}
               onChange={e => setNewSchemaName(e.target.value)}
+              onKeyDown={e => e.stopPropagation()}
               disabled={isMigratingSchema}
               className="mt-1 w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl text-neutral-900 dark:text-white font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
               placeholder="ex: crm"
