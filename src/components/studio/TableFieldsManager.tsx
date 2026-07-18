@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { Modal } from '@/components/ui/Modal'
 import { useI18n } from '@/i18n/I18nContext'
 import { 
   Database, 
@@ -54,6 +55,11 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
   const [modelCanUpdate, setModelCanUpdate] = useState(true)
   const [modelCanDelete, setModelCanDelete] = useState(true)
   const [fieldEdits, setFieldEdits] = useState<Record<string, FieldEdit>>({})
+
+  // Modal de Migração de Schema
+  const [schemaModalOpen, setSchemaModalOpen] = useState(false)
+  const [newSchemaName, setNewSchemaName] = useState('')
+  const [isMigratingSchema, setIsMigratingSchema] = useState(false)
 
   // Select first model by default if models list is available
   useEffect(() => {
@@ -305,28 +311,8 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                         <button 
                           type="button"
                           onClick={() => {
-                            const currentSchema = selectedModel.db_schema_name || 'public';
-                            const newSchema = window.prompt(`Renomear e Migrar Schema:\n\nDigite o NOVO nome do schema para migrar TODOS os modelos deste projeto que atualmente estão no schema '${currentSchema}':`, currentSchema);
-                            if (newSchema && newSchema !== currentSchema) {
-                              fetch('/api/metadata/rename-schema', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  projectId: project.id,
-                                  oldSchema: currentSchema,
-                                  newSchema: newSchema
-                                })
-                              }).then(res => res.json()).then(data => {
-                                if (data.success) {
-                                  toast(`Schema migrado para '${newSchema}' com sucesso! Rode o CLI novamente.`, 'success')
-                                  if (onSaveSuccess) onSaveSuccess();
-                                } else {
-                                  toast(data.error || 'Erro ao migrar schema', 'error')
-                                }
-                              }).catch(err => {
-                                toast('Erro na requisição', 'error')
-                              })
-                            }
+                            setNewSchemaName(selectedModel.db_schema_name || 'public')
+                            setSchemaModalOpen(true)
                           }}
                           className="px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-md text-[9px] font-bold uppercase tracking-wider transition-colors"
                           title="Migrar/Renomear Schema"
@@ -604,6 +590,72 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
           )}
         </div>
       </div>
+
+      <Modal
+        isOpen={schemaModalOpen}
+        onClose={() => !isMigratingSchema && setSchemaModalOpen(false)}
+        title="Renomear e Migrar Schema"
+        description={`Digite o NOVO nome do schema para migrar TODOS os modelos deste projeto que atualmente estão no schema '${selectedModel?.db_schema_name || 'public'}'.`}
+      >
+        <div className="space-y-4 pt-2">
+          <div>
+            <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">Novo Nome do Schema</label>
+            <input
+              type="text"
+              value={newSchemaName}
+              onChange={e => setNewSchemaName(e.target.value)}
+              disabled={isMigratingSchema}
+              className="mt-1 w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl text-neutral-900 dark:text-white font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
+              placeholder="ex: crm"
+            />
+          </div>
+          <div className="flex justify-end gap-3 mt-6">
+            <button
+              onClick={() => setSchemaModalOpen(false)}
+              disabled={isMigratingSchema}
+              className="px-4 py-2 text-sm font-bold text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => {
+                const currentSchema = selectedModel?.db_schema_name || 'public';
+                if (!newSchemaName || newSchemaName === currentSchema) {
+                  setSchemaModalOpen(false);
+                  return;
+                }
+                setIsMigratingSchema(true);
+                fetch('/api/metadata/rename-schema', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    projectId: project.id,
+                    oldSchema: currentSchema,
+                    newSchema: newSchemaName
+                  })
+                }).then(res => res.json()).then(data => {
+                  setIsMigratingSchema(false);
+                  if (data.success) {
+                    toast(`Schema migrado para '${newSchemaName}' com sucesso! Rode o CLI novamente.`, 'success')
+                    setSchemaModalOpen(false);
+                    if (onSaveSuccess) onSaveSuccess();
+                  } else {
+                    toast(data.error || 'Erro ao migrar schema', 'error')
+                  }
+                }).catch(err => {
+                  setIsMigratingSchema(false);
+                  toast('Erro na requisição', 'error')
+                })
+              }}
+              disabled={isMigratingSchema || !newSchemaName || newSchemaName === (selectedModel?.db_schema_name || 'public')}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/25 transition-all flex items-center gap-2"
+            >
+              {isMigratingSchema ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              {isMigratingSchema ? 'Migrando...' : 'Confirmar'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
