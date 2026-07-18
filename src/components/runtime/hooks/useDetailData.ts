@@ -252,11 +252,14 @@ export function useDetailData({
         }
         } else {
           try {
-            if (project?.db_type === 'postgres') {
-               const url = new URL(`/api/${join.to}`, window.location.origin)
+             const allJoins = [...(titleJoins || []), ...(subDetailJoins || [])];
+             const uniqueJoins = Array.from(new Set(allJoins.map((j: any) => j.to))).map(to => allJoins.find((j: any) => j.to === to));
+             console.log('[DEBUG useDetailData] Fetching sub-details for', join.to, 'uniqueJoins:', uniqueJoins);
+             
+             if (project?.db_type === 'postgres') {
+               const url = new URL(`${window.location.origin}/api/${join.to}`)
+               url.searchParams.set('limit', '1000')
                url.searchParams.set(`filter_${join.foreignKey}`, String(localValue))
-               const allJoins = [...(titleJoins || []), ...(subDetailJoins || [])];
-               const uniqueJoins = Array.from(new Set(allJoins.map((j: any) => j.to))).map(to => allJoins.find((j: any) => j.to === to));
                if (uniqueJoins.length > 0) {
                  url.searchParams.set('joins', JSON.stringify(uniqueJoins))
                }
@@ -265,9 +268,6 @@ export function useDetailData({
                if (json.data) detailData = json.data
             } else {
               let selectStr = '*'
-              const allJoins = [...(titleJoins || []), ...(subDetailJoins || [])];
-              const uniqueJoins = Array.from(new Set(allJoins.map((j: any) => j.to))).map(to => allJoins.find((j: any) => j.to === to));
-              console.log('[DEBUG useDetailData] uniqueJoins:', uniqueJoins);
               if (uniqueJoins.length > 0) {
                 selectStr += ', ' + uniqueJoins.map((j: any) => `${j.to}(*)`).join(', ')
               }
