@@ -49,12 +49,12 @@ export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps
       label: t('dashboard.projects.studio.sidebar.auth'),
       active: pathname.includes('/studio/auth')
     },
-    {
+    ...(isDesktop ? [{
       href: `/admin/${workspaceSlug}/${projectSlug}/studio/byoc`,
       icon: Code2,
       label: 'BYOC',
       active: pathname.includes('/studio/byoc')
-    },
+    }] : []),
     {
       href: `/admin/${workspaceSlug}/${projectSlug}/studio/settings`,
       icon: Settings2,

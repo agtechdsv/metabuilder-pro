@@ -196,25 +196,62 @@ export function ProjectManager({
       for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.length }
 
       if (isTauri()) {
-        const { downloadDir } = await import('@tauri-apps/api/path')
-        const { writeFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-        const dir = await downloadDir()
-        const isWindows = dir.includes('\\') || !dir.startsWith('/')
-        const separator = isWindows ? '\\' : '/'
-        let fullPath = `${dir}${separator}${fileName}`
-        if (isWindows) {
-          fullPath = fullPath.replace(/\//g, '\\')
+        const { open } = await import('@tauri-apps/plugin-dialog')
+        const { writeFile, mkdir } = await import('@tauri-apps/plugin-fs')
+        const { join, dirname } = await import('@tauri-apps/api/path')
+        const { Command } = await import('@tauri-apps/plugin-shell')
+        const JSZip = (await import('jszip')).default
+
+        const selectedDir = await open({ directory: true })
+        if (!selectedDir || typeof selectedDir !== 'string') {
+           setDownloadModal(null)
+           return
         }
-        await writeFile(fileName, merged, { baseDir: BaseDirectory.Download })
+
+        setDownloadModal(prev => prev ? { ...prev, phase: 'selecting', progress: 100 } : prev)
+        toast('Extraindo projeto...', 'info')
+
+        const zip = await JSZip.loadAsync(merged)
         
+        for (const relativePath of Object.keys(zip.files)) {
+          const zipEntry = zip.files[relativePath]
+          if (zipEntry.dir) continue
+          
+          const fullPath = await join(selectedDir, relativePath)
+          const dirPath = await dirname(fullPath)
+          
+          try {
+            await mkdir(dirPath, { recursive: true })
+          } catch (e) {}
+
+          const fileBytes = await zipEntry.async('uint8array')
+          await writeFile(fullPath, fileBytes)
+        }
+
+        toast('Instalando dependências (npm install)...', 'info')
+        const cmd = Command.create('npm', ['install'], { cwd: selectedDir })
+        const output = await cmd.execute()
+        if (output.code !== 0) {
+          console.error('NPM Install failed:', output.stderr)
+          toast('As dependências foram instaladas com erros, verifique o terminal.', 'error')
+        } else {
+          toast('Dependências instaladas com sucesso!', 'success')
+        }
+
         setDownloadModal({
           open: true,
           phase: 'done',
           fileName,
           progress: 100,
-          savedPath: fullPath,
-          savedDir: dir
+          savedPath: selectedDir,
+          savedDir: selectedDir
         })
+
+        if (confirm('Projeto ejetado e dependências instaladas! Deseja abrir no VS Code?')) {
+           const codeCmd = Command.create('code', ['.'], { cwd: selectedDir })
+           await codeCmd.execute()
+        }
+
       } else {
         const blob = new Blob([merged], { type: 'application/zip' })
         const url = window.URL.createObjectURL(blob)
@@ -625,79 +662,81 @@ export function ProjectManager({
                               <Monitor className="w-4 h-4" />
                             </button>
                           )}
-                          <button
-                            onClick={async (e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              
-                              setExportDbType('supabase')
-                              setExportDbUser('postgres')
-                              setExportDbPassword('senha')
-                              setExportDbUser('user')
-                              setExportDbPassword('password')
-                              setExportDbHost('localhost')
-                              setExportDbPort('5432')
-                              setExportDbName(`dataBase`)
-                              setExportSupaUrl('')
-                              setExportSupaAnonKey('')
-
-                              // Fetch auth config to pre-select
-                              const supabase = createClient()
-                              const { data: authConf } = await supabase
-                                .from('project_auth_config')
-                                .select('auth_type, auth_config')
-                                .eq('project_id', project.id)
-                                .maybeSingle()
-
-                              const authType = authConf?.auth_type || 'none'
-                              setExportAuthStrategy(
-                                authType === 'ldap' ? 'ldap' : 
-                                authType === 'legacy' ? 'legacy' : 'none'
-                              )
-
-                              setExportAuthTableName(authConf?.auth_config?.legacy?.usersTable || authConf?.auth_config?.db_table_name || 'usuarios')
-                              setExportAuthEmailCol(authConf?.auth_config?.legacy?.emailColumn || authConf?.auth_config?.db_email_column || 'email')
-                              setExportAuthPassCol(authConf?.auth_config?.legacy?.passwordColumn || authConf?.auth_config?.db_password_column || 'senha')
-                              setExportAuthHash(authConf?.auth_config?.legacy?.passwordHash || authConf?.auth_config?.db_password_hash || 'Bcrypt')
-
-                              const { data: models, error: modelsError } = await supabase
-                                .from('models')
-                                .select('id, db_table_name')
-                                .eq('project_id', project.id)
-                                .order('db_table_name')
-                              
-                              if (models && models.length > 0) {
-                                const { data: fields } = await supabase
-                                  .from('fields')
-                                  .select('id, db_column_name, model_id')
-                                  .in('model_id', models.map(m => m.id))
+                          {isTauri() && (
+                            <button
+                              onClick={async (e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
                                 
-                                const mappedModels = models.map(m => ({
-                                  ...m,
-                                  fields: fields?.filter(f => f.model_id === m.id) || []
-                                }))
-                                setExportModels(mappedModels)
-                              } else {
-                                console.error('Error fetching models:', modelsError)
-                                setExportModels([])
-                              }
+                                setExportDbType('supabase')
+                                setExportDbUser('postgres')
+                                setExportDbPassword('senha')
+                                setExportDbUser('user')
+                                setExportDbPassword('password')
+                                setExportDbHost('localhost')
+                                setExportDbPort('5432')
+                                setExportDbName(`dataBase`)
+                                setExportSupaUrl('')
+                                setExportSupaAnonKey('')
 
-                              setDownloadModal({
-                                open: true,
-                                phase: 'selecting',
-                                fileName: `${project.slug || 'app'}-source-code.zip`,
-                                progress: 0,
-                                savedPath: '',
-                                savedDir: '',
-                                projectId: project.id,
-                                authConfig: authConf?.auth_config
-                              })
-                            }}
-                            className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-                            title="Exportar Código Fonte (Next.js)"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
+                                // Fetch auth config to pre-select
+                                const supabase = createClient()
+                                const { data: authConf } = await supabase
+                                  .from('project_auth_config')
+                                  .select('auth_type, auth_config')
+                                  .eq('project_id', project.id)
+                                  .maybeSingle()
+
+                                const authType = authConf?.auth_type || 'none'
+                                setExportAuthStrategy(
+                                  authType === 'ldap' ? 'ldap' : 
+                                  authType === 'legacy' ? 'legacy' : 'none'
+                                )
+
+                                setExportAuthTableName(authConf?.auth_config?.legacy?.usersTable || authConf?.auth_config?.db_table_name || 'usuarios')
+                                setExportAuthEmailCol(authConf?.auth_config?.legacy?.emailColumn || authConf?.auth_config?.db_email_column || 'email')
+                                setExportAuthPassCol(authConf?.auth_config?.legacy?.passwordColumn || authConf?.auth_config?.db_password_column || 'senha')
+                                setExportAuthHash(authConf?.auth_config?.legacy?.passwordHash || authConf?.auth_config?.db_password_hash || 'Bcrypt')
+
+                                const { data: models, error: modelsError } = await supabase
+                                  .from('models')
+                                  .select('id, db_table_name')
+                                  .eq('project_id', project.id)
+                                  .order('db_table_name')
+                                
+                                if (models && models.length > 0) {
+                                  const { data: fields } = await supabase
+                                    .from('fields')
+                                    .select('id, db_column_name, model_id')
+                                    .in('model_id', models.map(m => m.id))
+                                  
+                                  const mappedModels = models.map(m => ({
+                                    ...m,
+                                    fields: fields?.filter(f => f.model_id === m.id) || []
+                                  }))
+                                  setExportModels(mappedModels)
+                                } else {
+                                  console.error('Error fetching models:', modelsError)
+                                  setExportModels([])
+                                }
+
+                                setDownloadModal({
+                                  open: true,
+                                  phase: 'selecting',
+                                  fileName: `${project.slug || 'app'}-source-code.zip`,
+                                  progress: 0,
+                                  savedPath: '',
+                                  savedDir: '',
+                                  projectId: project.id,
+                                  authConfig: authConf?.auth_config
+                                })
+                              }}
+                              className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                              title="Exportar Código Fonte (Next.js)"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                          )}
                           {portalEnabled && (
                             <button
                               onClick={(e) => { e.preventDefault(); toggleProjectPortal(project); }}

@@ -1,19 +1,31 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { Plus, Save, X, Code2, Trash2 } from 'lucide-react'
+import { Plus, Save, X, Code2, Trash2, FolderSync } from 'lucide-react'
 import { ByocEditor } from '@/components/studio/ByocEditor'
 import { useToast } from '@/components/ui/Toast'
+import { isTauri } from '@/utils/tauriUtils'
 
 export function ByocClient({ projectId }: { projectId: string }) {
   const [components, setComponents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activeComponent, setActiveComponent] = useState<any | null>(null)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
+  
+  const [localFilePath, setLocalFilePath] = useState<string | null>(null)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const isDesktop = isTauri()
+  
   const { toast } = useToast()
   
   const supabase = createClient()
+  
+  // Ref para garantir que o polling use sempre o valor mais atualizado de activeComponent e handleSave
+  const activeComponentRef = useRef(activeComponent)
+  useEffect(() => {
+    activeComponentRef.current = activeComponent
+  }, [activeComponent])
 
   useEffect(() => {
     fetchComponents()
@@ -69,25 +81,26 @@ export default function MeuNovoComponente(props: any) {
     }
   }
 
-  const handleSave = async () => {
-    if (!activeComponent) return
+  const handleSave = async (isAutoSave = false) => {
+    const currentActive = activeComponentRef.current
+    if (!currentActive) return
     
-    const isNew = !activeComponent.id
+    const isNew = !currentActive.id
     
     const payload = {
       project_id: projectId,
-      name: activeComponent.name,
-      description: activeComponent.description,
-      code: activeComponent.code,
+      name: currentActive.name,
+      description: currentActive.description,
+      code: currentActive.code,
       compiled_code: null as string | null
     }
 
     try {
-      toast('Compilando componente...', 'info')
+      if (!isAutoSave) toast('Compilando componente...', 'info')
       const compileRes = await fetch('/api/byoc/compile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: activeComponent.code })
+        body: JSON.stringify({ code: currentActive.code })
       })
       
       const compileData = await compileRes.json()
@@ -95,30 +108,82 @@ export default function MeuNovoComponente(props: any) {
       
       payload.compiled_code = compileData.compiled_code
     } catch (err: any) {
-      toast('Falha na compilação: ' + err.message, 'error')
+      if (!isAutoSave) toast('Falha na compilação: ' + err.message, 'error')
+      else console.error('BYOC Auto-Sync Error:', err.message)
       return
     }
 
     let error;
 
     if (isNew) {
-      const { error: insertError } = await supabase.from('ui_custom_components').insert([payload])
+      const { data, error: insertError } = await supabase.from('ui_custom_components').insert([payload]).select().single()
       error = insertError
+      if (!error && data) {
+         setActiveComponent(data)
+         activeComponentRef.current = data
+      }
     } else {
       const { error: updateError } = await supabase
         .from('ui_custom_components')
         .update(payload)
-        .eq('id', activeComponent.id)
+        .eq('id', currentActive.id)
       error = updateError
     }
 
     if (error) {
-      toast(error.message, 'error')
+      if (!isAutoSave) toast(error.message, 'error')
+      else console.error('BYOC Auto-Sync DB Error:', error.message)
     } else {
-      toast('Componente salvo com sucesso!', 'success')
-      setIsEditorOpen(false)
-      setActiveComponent(null)
+      if (!isAutoSave) {
+        toast('Componente salvo com sucesso!', 'success')
+        setIsEditorOpen(false)
+        setActiveComponent(null)
+      } else {
+        console.log('BYOC Auto-Sync salvo com sucesso.')
+      }
       fetchComponents()
+    }
+  }
+
+  // Efeito de Polling para o File Sync
+  useEffect(() => {
+    let interval: any;
+    if (isDesktop && isEditorOpen && isSyncing && localFilePath) {
+      interval = setInterval(async () => {
+        try {
+          const { readTextFile } = await import('@tauri-apps/plugin-fs')
+          const content = await readTextFile(localFilePath)
+          
+          if (activeComponentRef.current && activeComponentRef.current.code !== content) {
+            // Atualiza o estado
+            setActiveComponent((prev: any) => ({ ...prev, code: content }))
+            activeComponentRef.current = { ...activeComponentRef.current, code: content }
+            // Salva e compila automaticamente
+            handleSave(true)
+          }
+        } catch (e) {
+          console.error('Falha ao ler arquivo local para sync', e)
+        }
+      }, 2000)
+    }
+    return () => clearInterval(interval)
+  }, [isDesktop, isEditorOpen, isSyncing, localFilePath])
+
+  const handleLinkLocalFile = async () => {
+    try {
+      const { open } = await import('@tauri-apps/plugin-dialog')
+      const selected = await open({
+        multiple: false,
+        filters: [{ name: 'React', extensions: ['tsx', 'jsx', 'ts', 'js'] }]
+      })
+      if (selected && typeof selected === 'string') {
+        setLocalFilePath(selected)
+        setIsSyncing(true)
+        toast('Arquivo vinculado com sucesso! Sync ativado.', 'success')
+      }
+    } catch (e) {
+      console.error(e)
+      toast('Erro ao vincular arquivo.', 'error')
     }
   }
 
@@ -193,11 +258,25 @@ export default function MeuNovoComponente(props: any) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => setIsEditorOpen(false)} className="inline-flex items-center justify-center px-4 rounded-md text-sm font-medium border h-8 border-neutral-700 text-neutral-300 hover:bg-neutral-800 hover:text-white">
+              {isDesktop && (
+                <button 
+                  onClick={handleLinkLocalFile} 
+                  className={`inline-flex items-center justify-center px-4 rounded-md text-sm font-medium border h-8 transition-colors ${
+                    isSyncing 
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20' 
+                      : 'border-neutral-700 text-neutral-300 hover:bg-neutral-800 hover:text-white'
+                  }`}
+                  title={localFilePath || 'Vincular Arquivo Local'}
+                >
+                  <FolderSync className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-pulse' : ''}`} />
+                  {isSyncing ? 'Sync Ativo' : 'Vincular Arquivo'}
+                </button>
+              )}
+              <button onClick={() => { setIsEditorOpen(false); setIsSyncing(false); setLocalFilePath(null); }} className="inline-flex items-center justify-center px-4 rounded-md text-sm font-medium border h-8 border-neutral-700 text-neutral-300 hover:bg-neutral-800 hover:text-white">
                 <X className="w-4 h-4 mr-2" />
                 Cancelar
               </button>
-              <button onClick={handleSave} className="inline-flex items-center justify-center px-4 rounded-md text-sm font-medium h-8 bg-indigo-600 hover:bg-indigo-700 text-white">
+              <button onClick={() => handleSave(false)} className="inline-flex items-center justify-center px-4 rounded-md text-sm font-medium h-8 bg-indigo-600 hover:bg-indigo-700 text-white">
                 <Save className="w-4 h-4 mr-2" />
                 Salvar Componente
               </button>

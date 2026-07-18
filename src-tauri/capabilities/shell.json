@@ -1,0 +1,28 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "shell-cmds",
+  "description": "Shell commands for export and extraction",
+  "windows": ["main"],
+  "permissions": [
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "npm",
+          "cmd": "npm",
+          "args": ["install"]
+        },
+        {
+          "name": "code",
+          "cmd": "code",
+          "args": ["."]
+        },
+        {
+          "name": "cmd",
+          "cmd": "cmd",
+          "args": ["/c", "npm", "install"]
+        }
+      ]
+    }
+  ]
+}
