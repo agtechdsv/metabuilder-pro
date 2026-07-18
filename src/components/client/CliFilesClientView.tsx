@@ -504,14 +504,12 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
         >
           Workspaces & Projetos
         </button>
-        {!devOnly && (
-          <button
-            onClick={() => { setMainTab('utils'); setFilter('all'); }}
-            className={`px-6 py-3 font-bold text-sm border-b-2 whitespace-nowrap transition-colors ${mainTab === 'utils' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'}`}
-          >
-            Utilitários (CLI & JSON)
-          </button>
-        )}
+        <button
+          onClick={() => { setMainTab('utils'); setFilter('all'); }}
+          className={`px-6 py-3 font-bold text-sm border-b-2 whitespace-nowrap transition-colors ${mainTab === 'utils' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'}`}
+        >
+          Utilitários (CLI & JSON)
+        </button>
       </div>
 
       {/* Filters */}
