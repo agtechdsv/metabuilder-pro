@@ -21,7 +21,8 @@ import {
   PowerOff,
   RefreshCw,
   ArrowUpRight,
-  Monitor
+  Monitor,
+  Download
 } from 'lucide-react'
 import Link from 'next/link'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
@@ -94,6 +95,7 @@ export function WorkspaceManager({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showDesktopModal, setShowDesktopModal] = useState(false)
   const [selectedDesktopWorkspace, setSelectedDesktopWorkspace] = useState<Workspace | null>(null)
+  const [exportingWorkspaceId, setExportingWorkspaceId] = useState<string | null>(null)
 
   const supabase = createClient()
   const { toast } = useToast()
@@ -194,16 +196,50 @@ export function WorkspaceManager({
         .delete()
         .eq('id', selectedWorkspace.id)
 
-      if (error) throw error
-
+      toast(t('dashboard.toasts.workspace_deleted'), 'success')
       setWorkspaces(workspaces.filter(w => w.id !== selectedWorkspace.id))
       setIsDeleteModalOpen(false)
       setSelectedWorkspace(null)
-      router.refresh()
     } catch (err: any) {
-      toast(err.message, 'error')
+      toast(err.message || t('dashboard.toasts.delete_error'), 'error')
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  const handleExportWorkspace = async (e: React.MouseEvent, workspace: Workspace) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setExportingWorkspaceId(workspace.id)
+    
+    try {
+      const response = await fetch('/api/export-workspace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspaceId: workspace.id })
+      })
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData.error || 'Erro ao exportar workspace')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${workspace.slug || 'workspace'}-full-source.zip`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+      toast('Workspace exportado com sucesso!', 'success')
+    } catch (err: any) {
+      console.error(err)
+      toast(err.message || 'Erro ao exportar workspace', 'error')
+    } finally {
+      setExportingWorkspaceId(null)
     }
   }
 
@@ -356,13 +392,27 @@ export function WorkspaceManager({
                           </>
                         )}
                         {workspace.can_edit && (
-                          <button
-                            onClick={() => openDrawer(workspace)}
-                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
-                            title={t('dashboard.edit_workspace')}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
+                          <>
+                            <button
+                              onClick={(e) => handleExportWorkspace(e, workspace)}
+                              disabled={exportingWorkspaceId === workspace.id}
+                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-500 disabled:opacity-50"
+                              title="Exportar Código Fonte (Next.js)"
+                            >
+                              {exportingWorkspaceId === workspace.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                openDrawer(workspace)
+                              }}
+                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
+                              title={t('dashboard.edit_workspace')}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          </>
                         )}
                         {workspace.can_delete && (
                           <button
