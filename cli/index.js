@@ -1294,6 +1294,46 @@ async function run() {
             const schemaDefinition = dbType === 'oracle' 
               ? await introspectOracle(dbConfig.connectionString) 
               : await introspectPostgres(dbConfig.connectionString);
+
+            // --- INÍCIO DA HEURÍSTICA DE MIGRAÇÃO ---
+            try {
+              const infoUrl = apiUrl.replace('/sync', '/info') + `?projectId=${conn.projectId}`;
+              const infoResp = await axios.get(infoUrl, {
+                headers: { 'Authorization': `Bearer ${conn.secretToken}` }
+              });
+              const cloudSchemas = infoResp.data.schemas || [];
+              if (cloudSchemas.length > 0 && !cloudSchemas.includes(dbConfig.name)) {
+                 console.log(chalk.yellow(`\n⚠️  Detectamos que o schema atual ('${dbConfig.name}') não existe no projeto na nuvem.`));
+                 console.log(chalk.gray(`Schemas existentes no projeto: ${cloudSchemas.join(', ')}`));
+                 const { shouldRename } = await inquirer.prompt([{
+                    type: 'confirm',
+                    name: 'shouldRename',
+                    message: `Você renomeou um schema e deseja migrar os modelos existentes para '${dbConfig.name}'?`,
+                    default: true
+                 }]);
+                 
+                 if (shouldRename) {
+                    const { oldSchema } = await inquirer.prompt([{
+                       type: 'list',
+                       name: 'oldSchema',
+                       message: 'Qual schema antigo devemos migrar para o novo?',
+                       choices: cloudSchemas
+                    }]);
+                    
+                    console.log(chalk.blue(`Migrando schema '${oldSchema}' para '${dbConfig.name}'...`));
+                    await axios.post(apiUrl.replace('/sync', '/rename-schema'), {
+                       projectId: conn.projectId,
+                       oldSchema: oldSchema,
+                       newSchema: dbConfig.name
+                    }, { headers: { 'Authorization': `Bearer ${conn.secretToken}` } });
+                    console.log(chalk.green('✓ Schema migrado com sucesso no servidor! Continuando sincronização...\n'));
+                 }
+              }
+            } catch(e) {
+               // Ignora silenciosamente e segue
+            }
+            // --- FIM DA HEURÍSTICA ---
+
             console.log(chalk.blue(`\nEnviando metadados do projeto ${conn.projectId} (Schema: ${dbConfig.name})...`));
             try {
               const syncResp = await axios.post(apiUrl, {

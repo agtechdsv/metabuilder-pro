@@ -300,7 +300,40 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                     </div>
                     <div>
                       <h4 className="font-black text-sm uppercase tracking-wider">{selectedModel.db_table_name}</h4>
-                      <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-0.5">Schema: {selectedModel.db_schema_name || 'public'}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Schema: {selectedModel.db_schema_name || 'public'}</p>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const currentSchema = selectedModel.db_schema_name || 'public';
+                            const newSchema = window.prompt(`Renomear e Migrar Schema:\n\nDigite o NOVO nome do schema para migrar TODOS os modelos deste projeto que atualmente estão no schema '${currentSchema}':`, currentSchema);
+                            if (newSchema && newSchema !== currentSchema) {
+                              fetch('/api/metadata/rename-schema', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  projectId: project.id,
+                                  oldSchema: currentSchema,
+                                  newSchema: newSchema
+                                })
+                              }).then(res => res.json()).then(data => {
+                                if (data.success) {
+                                  toast(`Schema migrado para '${newSchema}' com sucesso! Rode o CLI novamente.`, 'success')
+                                  if (onSaveSuccess) onSaveSuccess();
+                                } else {
+                                  toast(data.error || 'Erro ao migrar schema', 'error')
+                                }
+                              }).catch(err => {
+                                toast('Erro na requisição', 'error')
+                              })
+                            }
+                          }}
+                          className="px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-md text-[9px] font-bold uppercase tracking-wider transition-colors"
+                          title="Migrar/Renomear Schema"
+                        >
+                          Migrar
+                        </button>
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
