@@ -53,13 +53,56 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
       const dir = await appLocalDataDir()
       const configPath = await join(dir, 'metabuilder.config.json')
       
+      let configText = ''
       const fileExists = await exists(configPath)
       if (fileExists) {
-        const content = await readTextFile(configPath)
-        setConfigContent(content)
+        configText = await readTextFile(configPath)
       } else {
-        setConfigContent(defaultTemplate)
+        configText = defaultTemplate
       }
+
+      try {
+        const { createClient } = await import('@/utils/supabase/client')
+        const supabase = createClient()
+        
+        const { data: projectsData } = await supabase.from('projects').select('id, name, secret_token')
+
+        if (projectsData && projectsData.length > 0) {
+          let currentConfig = JSON.parse(configText)
+          
+          if (currentConfig && Array.isArray(currentConfig.connections)) {
+            const existingProjectIds = new Set(currentConfig.connections.map((c: any) => c.projectId))
+            
+            // Remove o template vazio se for o único item
+            if (currentConfig.connections.length === 1 && currentConfig.connections[0].projectId === "") {
+              currentConfig.connections = []
+              existingProjectIds.clear()
+            }
+
+            for (const p of projectsData) {
+              if (!existingProjectIds.has(p.id)) {
+                const safeName = p.name ? p.name.toLowerCase().replace(/\s+/g, '') : "public"
+                currentConfig.connections.push({
+                  projectId: p.id,
+                  secretToken: p.secret_token || "",
+                  connectionsString: [
+                    {
+                      name: safeName || "public",
+                      type: "postgres",
+                      connectionString: "postgresql://postgres:password@localhost:5432/dbname"
+                    }
+                  ]
+                })
+              }
+            }
+            configText = JSON.stringify(currentConfig, null, 2)
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao buscar projetos para popular config:', err)
+      }
+
+      setConfigContent(configText)
     } catch (e) {
       console.error(e)
       toast('Erro ao carregar configuração.', 'error')
