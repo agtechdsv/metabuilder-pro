@@ -20,13 +20,28 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
   const [isSavingConfig, setIsSavingConfig] = useState(false)
 
   const defaultTemplate = `{
-  "workspace_id": "",
-  "projects": [
+  "connections": [
     {
-      "project_id": "",
-      "connection_string": "postgresql://postgres:password@localhost:5432/dbname"
+      "projectId": "",
+      "secretToken": "",
+      "connectionsString": [
+        {
+          "name": "public",
+          "type": "postgres",
+          "connectionString": "postgresql://postgres:password@localhost:5432/dbname"
+        }
+      ]
     }
-  ]
+  ],
+  "ldap": {
+    "enabled": false,
+    "url": "ldap://10.0.0.15:389",
+    "baseDn": "dc=empresa,dc=local",
+    "bindDn": "cn=metabuilder_service,ou=Services,dc=empresa,dc=local",
+    "bindPassword": "senha_secreta_do_bind",
+    "searchFilter": "(sAMAccountName={{username}})"
+  },
+  "downloadPath": "C:\\\\AgTech\\\\DownloadsMetaBuilder"
 }`
 
   const handleOpenConfig = async () => {

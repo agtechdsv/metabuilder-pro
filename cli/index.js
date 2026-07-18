@@ -1258,16 +1258,19 @@ async function run() {
     if (mode === 'tunnel') {
       console.log(chalk.gray(`Iniciando Túnel para ${configData.connections.length} projeto(s) simultaneamente...`));
       
+      const SUPABASE_URL = configData.supabaseUrl || 'https://chmstvtepzmjhpyxjjam.supabase.co';
+      const SUPABASE_ANON_KEY = configData.supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNobXN0dnRlcHptamhweXhqamFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMjk1ODgsImV4cCI6MjA5MzYwNTU4OH0.eMw33Jv7lco6uXWJnz0bdMSbHRAQFW0Ala7K6S_R8To';
+      
       const tunnelPromises = [];
       configData.connections.forEach(conn => {
         if (Array.isArray(conn.connectionsString)) {
           conn.connectionsString.forEach(dbConfig => {
             const dbType = dbConfig.type || 'postgres';
-            tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, dbConfig.name, dbConfig.connectionString, configData.supabaseUrl, configData.supabaseAnonKey, configData.ldap, dbType, configData));
+            tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, dbConfig.name, dbConfig.connectionString, SUPABASE_URL, SUPABASE_ANON_KEY, configData.ldap, dbType, configData));
           });
         } else if (conn.connectionString) {
           const dbType = conn.type || 'postgres';
-          tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, 'public', conn.connectionString, configData.supabaseUrl, configData.supabaseAnonKey, configData.ldap, dbType, configData));
+          tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, 'public', conn.connectionString, SUPABASE_URL, SUPABASE_ANON_KEY, configData.ldap, dbType, configData));
         }
       });
       await Promise.all(tunnelPromises);
@@ -1285,7 +1288,10 @@ async function run() {
     } 
     else if (mode === 'sync') {
       console.log(chalk.gray(`Sincronizando esquemas de ${configData.connections.length} projeto(s)...`));
-      const apiUrl = configData.apiUrl || 'http://localhost:3000/api/metadata/sync';
+      
+      const SUPABASE_URL = configData.supabaseUrl || 'https://chmstvtepzmjhpyxjjam.supabase.co';
+      const SUPABASE_ANON_KEY = configData.supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNobXN0dnRlcHptamhweXhqamFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMjk1ODgsImV4cCI6MjA5MzYwNTU4OH0.eMw33Jv7lco6uXWJnz0bdMSbHRAQFW0Ala7K6S_R8To';
+      const API_URL = configData.apiUrl || 'https://metabuilderpro.com/api/metadata/sync';
       
       for (const conn of configData.connections) {
         if (Array.isArray(conn.connectionsString)) {
@@ -1297,7 +1303,7 @@ async function run() {
 
             // --- INÍCIO DA HEURÍSTICA DE MIGRAÇÃO ---
             try {
-              const infoUrl = apiUrl.replace('/sync', '/info') + `?projectId=${conn.projectId}`;
+              const infoUrl = API_URL.replace('/sync', '/info') + `?projectId=${conn.projectId}`;
               const infoResp = await axios.get(infoUrl, {
                 headers: { 'Authorization': `Bearer ${conn.secretToken}` }
               });
@@ -1321,7 +1327,7 @@ async function run() {
                     }]);
                     
                     console.log(chalk.blue(`Migrando schema '${oldSchema}' para '${dbConfig.name}'...`));
-                    await axios.post(apiUrl.replace('/sync', '/rename-schema'), {
+                    await axios.post(API_URL.replace('/sync', '/rename-schema'), {
                        projectId: conn.projectId,
                        oldSchema: oldSchema,
                        newSchema: dbConfig.name
