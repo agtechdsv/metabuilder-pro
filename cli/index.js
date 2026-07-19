@@ -1258,7 +1258,12 @@ async function run() {
 
   let mode = configData?.mode;
 
-  // 2. Se o "mode" não existir no JSON, nós perguntamos na tela!
+  const actionArg = process.argv.find(arg => arg.startsWith('--action='));
+  if (actionArg) {
+    mode = actionArg.split('=')[1];
+  }
+
+  // 2. Se o "mode" não existir no JSON e nem via CLI, nós perguntamos na tela!
   if (!mode || mode === 'ask') {
     const initial = await inquirer.prompt([
       {
