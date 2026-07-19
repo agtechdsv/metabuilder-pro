@@ -1339,17 +1339,24 @@ async function run() {
                 headers: { 'Authorization': `Bearer ${conn.secretToken}` }
               });
               const cloudSchemas = infoResp.data.schemas || [];
+              const isHeadless = process.argv.includes('--headless');
+
               if (cloudSchemas.length > 0 && !cloudSchemas.includes(dbConfig.name)) {
-                 console.log(chalk.yellow(`\n⚠️  Detectamos que o schema atual ('${dbConfig.name}') não existe no projeto na nuvem.`));
-                 console.log(chalk.gray(`Schemas existentes no projeto: ${cloudSchemas.join(', ')}`));
-                 const { shouldRename } = await inquirer.prompt([{
-                    type: 'confirm',
-                    name: 'shouldRename',
-                    message: `Você renomeou um schema e deseja migrar os modelos existentes para '${dbConfig.name}'?`,
-                    default: true
-                 }]);
+                 let shouldRename = false;
                  
-                 if (shouldRename) {
+                 if (!isHeadless) {
+                   console.log(chalk.yellow(`\n⚠️  Detectamos que o schema atual ('${dbConfig.name}') não existe no projeto na nuvem.`));
+                   console.log(chalk.gray(`Schemas existentes no projeto: ${cloudSchemas.join(', ')}`));
+                   const promptRes = await inquirer.prompt([{
+                      type: 'confirm',
+                      name: 'shouldRename',
+                      message: `Você renomeou um schema e deseja migrar os modelos existentes para '${dbConfig.name}'?`,
+                      default: true
+                   }]);
+                   shouldRename = promptRes.shouldRename;
+                 }
+
+                 if (shouldRename && !isHeadless) {
                     const { oldSchema } = await inquirer.prompt([{
                        type: 'list',
                        name: 'oldSchema',
@@ -1364,6 +1371,8 @@ async function run() {
                        newSchema: dbConfig.name
                     }, { headers: { 'Authorization': `Bearer ${conn.secretToken}` } });
                     console.log(chalk.green('✓ Schema migrado com sucesso no servidor! Continuando sincronização...\n'));
+                 } else if (isHeadless) {
+                    console.log(chalk.gray(`\n[Headless] Schema '${dbConfig.name}' não existe na nuvem. Sincronizando como um novo schema.`));
                  }
               }
             } catch(e) {
@@ -1373,7 +1382,7 @@ async function run() {
 
             console.log(chalk.blue(`\nEnviando metadados do projeto ${conn.projectId} (Schema: ${dbConfig.name})...`));
             try {
-              const syncResp = await axios.post(apiUrl, {
+              const syncResp = await axios.post(API_URL, {
                 projectId: conn.projectId,
                 connectionName: dbConfig.name,
                 metadata: schemaDefinition
@@ -1403,7 +1412,7 @@ async function run() {
             : await introspectPostgres(conn.connectionString);
           console.log(chalk.blue(`\nEnviando metadados do projeto ${conn.projectId}...`));
           try {
-            const syncResp = await axios.post(apiUrl, {
+            const syncResp = await axios.post(API_URL, {
               projectId: conn.projectId,
               connectionName: 'public',
               metadata: schemaDefinition

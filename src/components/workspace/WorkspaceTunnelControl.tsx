@@ -1,12 +1,13 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Settings, Play, Square, RefreshCw, AlertCircle, Network, FileJson, Save } from 'lucide-react'
+import { Settings, Play, Square, RefreshCw, AlertCircle, Network, FileJson, Save, X } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { isTauri } from '@/utils/tauriUtils'
 import Link from 'next/link'
 import { Modal } from '@/components/ui/Modal'
 import Editor from '@monaco-editor/react'
+import { Rnd } from 'react-rnd'
 
 export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: string }) {
   const { toast } = useToast()
@@ -296,48 +297,80 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
 
       </div>
 
-      {/* Modal de Configuração JSON */}
-      <Modal 
-        isOpen={isConfigModalOpen} 
-        onClose={() => setIsConfigModalOpen(false)} 
-        title="Editar metabuilder.config.json"
-        description="Esta configuração será salva diretamente no AppData Local da IDE e será usada no próximo Início ou Sincronização."
-      >
-        <div className="h-[400px] border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden mb-6">
-          <Editor
-            height="100%"
-            defaultLanguage="json"
-            value={configContent}
-            onChange={(value) => setConfigContent(value || '')}
-            theme="vs-dark"
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              formatOnPaste: true,
-              scrollBeyondLastLine: false,
-            }}
+      {/* Modal de Configuração JSON com Rnd */}
+      {isConfigModalOpen && (
+        <div className="fixed inset-0 z-[200] pointer-events-none flex items-center justify-center">
+          <div 
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm pointer-events-auto transition-opacity" 
+            onClick={() => setIsConfigModalOpen(false)} 
           />
-        </div>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={() => setIsConfigModalOpen(false)}
-            className="px-6 py-2.5 rounded-xl font-bold text-sm text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+          <Rnd
+            default={{
+              x: (typeof window !== 'undefined' ? window.innerWidth - 800 : 0) / 2,
+              y: (typeof window !== 'undefined' ? window.innerHeight - 600 : 0) / 2,
+              width: 800,
+              height: 600,
+            }}
+            minWidth={400}
+            minHeight={300}
+            bounds="window"
+            dragHandleClassName="drag-handle"
+            className="pointer-events-auto bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300"
           >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSaveConfig}
-            disabled={isSavingConfig}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all disabled:opacity-50"
-          >
-            {isSavingConfig ? 'Salvando...' : (
-              <>
-                <Save className="w-4 h-4" /> Salvar Configuração
-              </>
-            )}
-          </button>
+            <div className="drag-handle p-5 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center cursor-move shrink-0 bg-white dark:bg-neutral-900">
+              <div className="space-y-1">
+                <h3 className="font-bold text-xl text-neutral-900 dark:text-white">Editar metabuilder.config.json</h3>
+                <p className="text-xs text-neutral-500 font-normal">
+                  Esta configuração será salva diretamente no AppData Local da IDE e será usada no próximo Início ou Sincronização.
+                </p>
+              </div>
+              <button 
+                onClick={() => setIsConfigModalOpen(false)} 
+                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-neutral-900 dark:hover:text-white shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 w-full bg-[#1e1e1e] border-y border-neutral-200 dark:border-neutral-800">
+              <Editor
+                height="100%"
+                defaultLanguage="json"
+                value={configContent}
+                onChange={(value) => setConfigContent(value || '')}
+                theme="vs-dark"
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 14,
+                  formatOnPaste: true,
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                }}
+              />
+            </div>
+            
+            <div className="p-4 bg-white dark:bg-neutral-900 flex justify-end gap-3 shrink-0">
+              <button
+                onClick={() => setIsConfigModalOpen(false)}
+                className="px-6 py-2.5 rounded-xl font-bold text-sm text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveConfig}
+                disabled={isSavingConfig}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all disabled:opacity-50"
+              >
+                {isSavingConfig ? 'Salvando...' : (
+                  <>
+                    <Save className="w-4 h-4" /> Salvar Configuração
+                  </>
+                )}
+              </button>
+            </div>
+          </Rnd>
         </div>
-      </Modal>
+      )}
 
     </div>
   )
