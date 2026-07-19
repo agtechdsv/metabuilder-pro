@@ -44,6 +44,13 @@ fn startcli(app: tauri::AppHandle, state: State<'_, CliState>, mode: Option<i32>
         args.push(format!("--config={}", cfg));
     }
 
+    if let Ok(local_data_dir) = app.path().app_local_data_dir() {
+        let logs_dir = local_data_dir.join("logs");
+        if let Some(logs_str) = logs_dir.to_str() {
+            args.push(format!("--log-dir={}", logs_str));
+        }
+    }
+
     let sidecar_command = app.shell().sidecar("cli").unwrap().args(args);
     let (mut rx, child) = sidecar_command.spawn().map_err(|e| e.to_string())?;
 

@@ -18,7 +18,10 @@ const BASE_DIR = process.pkg
   ? path.dirname(process.execPath)
   : __dirname;
 
-const LOGS_DIR = path.join(BASE_DIR, 'logs');
+const logDirArg = process.argv.find(arg => arg.startsWith('--log-dir='));
+const LOGS_DIR = logDirArg 
+  ? logDirArg.split('=')[1]
+  : path.join(BASE_DIR, 'logs');
 
 // Garante que a pasta logs/ existe
 if (!fs.existsSync(LOGS_DIR)) {
