@@ -6,8 +6,16 @@ use tauri_plugin_shell::process::CommandChild;
 #[cfg(all(debug_assertions, windows))]
 use tauri_plugin_deep_link::DeepLinkExt;
 
+use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem, MasterPty};
+use std::io::{Read, Write};
+
 struct CliState {
     child: Mutex<Option<CommandChild>>,
+}
+
+struct PtyState {
+    pty_master: Mutex<Option<Box<dyn MasterPty + Send>>>,
+    pty_writer: Mutex<Option<Box<dyn Write + Send>>>,
 }
 
 #[command]
@@ -96,6 +104,66 @@ fn runinstaller(path: String) -> Result<(), String> {
     Ok(())
 }
 
+#[command]
+fn spawn_pty(app: tauri::AppHandle, state: State<'_, PtyState>, rows: u16, cols: u16) -> Result<(), String> {
+    let pty_system = NativePtySystem::default();
+    let pair = pty_system.openpty(PtySize {
+        rows,
+        cols,
+        pixel_width: 0,
+        pixel_height: 0,
+    }).map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "windows")]
+    let cmd = CommandBuilder::new("powershell.exe");
+    #[cfg(not(target_os = "windows"))]
+    let cmd = CommandBuilder::new("bash");
+
+    let _child = pair.slave.spawn_command(cmd).map_err(|e| e.to_string())?;
+    
+    let writer = pair.master.take_writer().map_err(|e| e.to_string())?;
+    let mut reader = pair.master.try_clone_reader().map_err(|e| e.to_string())?;
+    
+    *state.pty_master.lock().unwrap() = Some(pair.master);
+    *state.pty_writer.lock().unwrap() = Some(writer);
+    
+    std::thread::spawn(move || {
+        let mut buf = [0u8; 1024];
+        loop {
+            match reader.read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => {
+                    let _ = app.emit("pty_output", buf[..n].to_vec());
+                }
+                Err(_) => break,
+            }
+        }
+    });
+
+    Ok(())
+}
+
+#[command]
+fn write_pty(state: State<'_, PtyState>, data: String) -> Result<(), String> {
+    if let Some(writer) = state.pty_writer.lock().unwrap().as_mut() {
+        let _ = writer.write_all(data.as_bytes());
+    }
+    Ok(())
+}
+
+#[command]
+fn resize_pty(state: State<'_, PtyState>, rows: u16, cols: u16) -> Result<(), String> {
+    if let Some(master) = state.pty_master.lock().unwrap().as_ref() {
+        let _ = master.resize(PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        });
+    }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -121,6 +189,11 @@ pub fn run() {
 
             app.manage(CliState {
                 child: Mutex::new(None),
+            });
+
+            app.manage(PtyState {
+                pty_master: Mutex::new(None),
+                pty_writer: Mutex::new(None),
             });
 
             if cfg!(debug_assertions) {
@@ -189,7 +262,10 @@ pub fn run() {
             stopcli,
             statuscli,
             openbrowser,
-            runinstaller
+            runinstaller,
+            spawn_pty,
+            write_pty,
+            resize_pty
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

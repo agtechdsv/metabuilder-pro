@@ -8,7 +8,8 @@ import {
   Settings2,
   ScrollText,
   Code2,
-  Network
+  Network,
+  Terminal
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -66,6 +67,12 @@ export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps
       icon: Network,
       label: 'Configurações de Bancos (JSON)',
       active: pathname.includes('/studio/tunnel')
+    }] : []),
+    ...(isDesktop ? [{
+      href: `/admin/${workspaceSlug}/${projectSlug}/studio/terminal`,
+      icon: Terminal,
+      label: 'Terminal (PTY)',
+      active: pathname.includes('/studio/terminal')
     }] : []),
     {
       href: `/admin/${workspaceSlug}/${projectSlug}/studio/logs`,
