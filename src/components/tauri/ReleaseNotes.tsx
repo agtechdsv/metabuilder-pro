@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { History, X, Download, ChevronDown, ChevronUp } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pill' }) {
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
@@ -199,9 +201,9 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
                                   className="overflow-hidden"
                                 >
                                   <div className="prose prose-sm dark:prose-invert max-w-none">
-                                    <pre className="whitespace-pre-wrap font-sans text-sm text-neutral-600 dark:text-neutral-300 bg-transparent border-0 p-0 m-0 leading-relaxed">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                       {finalBody}
-                                    </pre>
+                                    </ReactMarkdown>
                                   </div>
                                 </motion.div>
                               )}
