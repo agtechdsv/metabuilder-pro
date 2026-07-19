@@ -2246,5 +2246,23 @@
         "desc": "Enable and connect the client company's Active Directory with just one click."
       }
     }
+  },
+  "ide": {
+    "byoc": {
+      "sync_notif_title": "BYOC Synced 🔄",
+      "sync_notif_body": "Component synchronized and compiled successfully."
+    },
+    "terminal": {
+      "error_title": "Critical Terminal Error 🐛",
+      "error_body": "Failed to start Native PTY: "
+    },
+    "desktop_gen": {
+      "notif_title": "Build Started 🚀",
+      "notif_body": "The installer generation for {app} has started in the cloud."
+    },
+    "project": {
+      "eject_notif_title": "Project Ejected! 🎉",
+      "eject_notif_body": "Files and dependencies installed successfully."
+    }
   }
 }

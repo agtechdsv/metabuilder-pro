@@ -2321,5 +2321,23 @@
         "desc": "Habilite y conecte el Active Directory de la empresa cliente con un solo clic."
       }
     }
+  },
+  "ide": {
+    "byoc": {
+      "sync_notif_title": "BYOC Sincronizado 🔄",
+      "sync_notif_body": "El componente fue sincronizado y compilado con éxito."
+    },
+    "terminal": {
+      "error_title": "Error Crítico en el Terminal 🐛",
+      "error_body": "Error al iniciar el PTY Nativo: "
+    },
+    "desktop_gen": {
+      "notif_title": "Build Iniciado 🚀",
+      "notif_body": "La generación del instalador para {app} ha comenzado en la nube."
+    },
+    "project": {
+      "eject_notif_title": "¡Proyecto Expulsado! 🎉",
+      "eject_notif_body": "Archivos y dependencias instalados correctamente."
+    }
   }
 }

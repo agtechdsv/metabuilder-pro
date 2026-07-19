@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Monitor, Upload, Key, Link2, Download, CheckCircle2 } from 'lucide-react'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface DesktopAppGeneratorModalProps {
   isOpen: boolean
@@ -21,6 +22,7 @@ export function DesktopAppGeneratorModal({
   defaultDescription,
   defaultTunnelUrl
 }: DesktopAppGeneratorModalProps) {
+  const { t } = useI18n()
   const [appName, setAppName] = useState(defaultName || '')
   const [appDescription, setAppDescription] = useState(defaultDescription || '')
   const [iconBase64, setIconBase64] = useState<string | null>(null)
@@ -99,6 +101,16 @@ export function DesktopAppGeneratorModal({
       }
 
       setIsSuccess(true)
+      try {
+        const { isTauri } = await import('@/utils/tauriUtils')
+        if (isTauri()) {
+          const { sendNotification } = await import('@tauri-apps/plugin-notification')
+          sendNotification({ 
+            title: t('ide.desktop_gen.notif_title', 'Build Iniciado 🚀'), 
+            body: t('ide.desktop_gen.notif_body', 'A geração do instalador para {app} foi iniciada na nuvem.').replace('{app}', appName || 'o App') 
+          })
+        }
+      } catch {}
     } catch (error) {
       console.error(error)
       alert('Erro ao gerar aplicativo: ' + (error as Error).message)

@@ -7,12 +7,14 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import '@xterm/xterm/css/xterm.css'
 import { Terminal as TerminalIcon, Loader2 } from 'lucide-react'
+import { useI18n } from '@/i18n/I18nContext'
 
 export function TerminalView() {
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const [isInitializing, setIsInitializing] = useState(true)
+  const { t } = useI18n()
 
   useEffect(() => {
     let unlisten: (() => void) | null = null;
@@ -81,6 +83,13 @@ export function TerminalView() {
         term.writeln('\x1b[31mFailed to start terminal process.\x1b[0m')
         term.writeln(String(err))
         setIsInitializing(false)
+        try {
+          const { sendNotification } = await import('@tauri-apps/plugin-notification')
+          sendNotification({ 
+            title: t('ide.terminal.error_title', 'Erro Crítico no Terminal 🐛'), 
+            body: t('ide.terminal.error_body', 'Falha ao iniciar o PTY Nativo: ') + String(err) 
+          })
+        } catch {}
       }
     }
 

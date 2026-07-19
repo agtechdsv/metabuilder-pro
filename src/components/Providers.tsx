@@ -3,6 +3,7 @@ import { I18nProvider } from '@/i18n/I18nContext'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ProgressBarProvider } from './ProgressBarProvider'
 import { AutoUpdater } from '@/components/tauri/AutoUpdater'
+import { GlobalDesktopListener } from './layout/GlobalDesktopListener'
 
 export function Providers({ 
   children,
@@ -17,6 +18,7 @@ export function Providers({
         <ToastProvider>
           <ProgressBarProvider />
           <AutoUpdater />
+          <GlobalDesktopListener />
           {children}
         </ToastProvider>
       </I18nProvider>

@@ -8,6 +8,10 @@ use tauri_plugin_deep_link::DeepLinkExt;
 
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem, MasterPty};
 use std::io::{Read, Write};
+use std::str::FromStr;
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::tray::{TrayIconBuilder, MouseButton, MouseButtonState, TrayIconEvent};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 struct CliState {
     child: Mutex<Option<CommandChild>>,
@@ -183,6 +187,8 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             #[cfg(all(debug_assertions, windows))]
             app.deep_link().register_all()?;
@@ -195,6 +201,82 @@ pub fn run() {
                 pty_master: Mutex::new(None),
                 pty_writer: Mutex::new(None),
             });
+
+            // Set up Global Shortcut
+            let shortcut = Shortcut::from_str("ctrl+shift+m").unwrap();
+            let _ = app.global_shortcut().on_shortcut(shortcut, |app, _shortcut, event| {
+                if event.state == ShortcutState::Pressed {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                }
+            });
+
+            // Set up System Tray
+            let show_i = MenuItem::with_id(app, "show", "Mostrar IDE", true, None::<&str>)?;
+            let hide_i = MenuItem::with_id(app, "hide", "Esconder IDE", true, None::<&str>)?;
+            let quit_i = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;
+            let new_ws_i = MenuItem::with_id(app, "new_ws", "Novo Workspace", true, None::<&str>)?;
+            let new_proj_i = MenuItem::with_id(app, "new_proj", "Novo Projeto", true, None::<&str>)?;
+            let sync_byoc_i = MenuItem::with_id(app, "sync_byoc", "Sincronizar BYOC", true, None::<&str>)?;
+            let start_tunnel_i = MenuItem::with_id(app, "start_tunnel", "Iniciar Túnel", true, None::<&str>)?;
+            let stop_tunnel_i = MenuItem::with_id(app, "stop_tunnel", "Parar Túnel", true, None::<&str>)?;
+
+            let menu = Menu::with_items(
+                app,
+                &[
+                    &show_i,
+                    &hide_i,
+                    &PredefinedMenuItem::separator(app)?,
+                    &new_ws_i,
+                    &new_proj_i,
+                    &sync_byoc_i,
+                    &PredefinedMenuItem::separator(app)?,
+                    &start_tunnel_i,
+                    &stop_tunnel_i,
+                    &PredefinedMenuItem::separator(app)?,
+                    &quit_i,
+                ],
+            )?;
+
+            let _tray = TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .menu_on_left_click(false)
+                .on_menu_event(|app, event| {
+                    match event.id.as_ref() {
+                        "show" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        "hide" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.hide();
+                            }
+                        }
+                        "quit" => std::process::exit(0),
+                        "new_ws" => { let _ = app.emit("tray-event", "new_ws"); },
+                        "new_proj" => { let _ = app.emit("tray-event", "new_proj"); },
+                        "sync_byoc" => { let _ = app.emit("tray-event", "sync_byoc"); },
+                        "start_tunnel" => { let _ = app.emit("tray-event", "start_tunnel"); },
+                        "stop_tunnel" => { let _ = app.emit("tray-event", "stop_tunnel"); },
+                        _ => {}
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click { button, button_state, .. } = event {
+                        if button == MouseButton::Left && button_state == MouseButtonState::Up {
+                            if let Some(window) = tray.app_handle().get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                    }
+                })
+                .build(app)?;
 
             if cfg!(debug_assertions) {
                 app.handle().plugin(

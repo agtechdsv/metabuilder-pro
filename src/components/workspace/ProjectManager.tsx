@@ -236,6 +236,13 @@ export function ProjectManager({
           toast('As dependências foram instaladas com erros, verifique o terminal.', 'error')
         } else {
           toast('Dependências instaladas com sucesso!', 'success')
+          try {
+            const { sendNotification } = await import('@tauri-apps/plugin-notification')
+            sendNotification({ 
+              title: t('ide.project.eject_notif_title', 'Projeto Ejetado! 🎉'), 
+              body: t('ide.project.eject_notif_body', 'Os arquivos e dependências foram instalados com sucesso.') 
+            })
+          } catch (err) { console.error('Native notification error', err) }
         }
 
         setDownloadModal({

@@ -6,6 +6,7 @@ import { Plus, Save, X, Code2, Trash2, FolderSync } from 'lucide-react'
 import { ByocEditor } from '@/components/studio/ByocEditor'
 import { useToast } from '@/components/ui/Toast'
 import { isTauri } from '@/utils/tauriUtils'
+import { useI18n } from '@/i18n/I18nContext'
 
 export function ByocClient({ projectId }: { projectId: string }) {
   const [components, setComponents] = useState<any[]>([])
@@ -18,6 +19,7 @@ export function ByocClient({ projectId }: { projectId: string }) {
   const isDesktop = isTauri()
   
   const { toast } = useToast()
+  const { t } = useI18n()
   
   const supabase = createClient()
   
@@ -140,6 +142,14 @@ export default function MeuNovoComponente(props: any) {
         setActiveComponent(null)
       } else {
         console.log('BYOC Auto-Sync salvo com sucesso.')
+        if (isTauri()) {
+          import('@tauri-apps/plugin-notification').then(({ sendNotification }) => {
+            sendNotification({ 
+              title: t('ide.byoc.sync_notif_title', 'BYOC Sincronizado 🔄'), 
+              body: t('ide.byoc.sync_notif_body', 'O componente foi sincronizado e compilado com sucesso.') 
+            })
+          }).catch(console.error)
+        }
       }
       fetchComponents()
     }
