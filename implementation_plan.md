@@ -27,46 +27,30 @@ Este plano detalha as melhorias propostas para a tela de login do usuário final
 #### [MODIFY] [ProjectManager.tsx](file:///c:/AgTech/Apps/metabuilder-pro/src/components/workspace/ProjectManager.tsx)
 - Adicionar no Drawer de Criação/Edição de Projetos a aba/seção de "Branding & Portal", contendo:
   - Checkbox: "Exibir no Portal de Aplicações" (salvo em `theme_config.show_in_portal`).
-  - Input: URL da Logo (`theme_config.login_logo_url`).
-  - Input: URL do Banner (`theme_config.login_banner_url`).
-- (Opcional) Switch global de "Habilitar Portal" na área superior (header da workspace), atualizando a tabela `workspaces` no banco.
+### `cli/index.js` (CLI Agent / Tunnel)
+Extensão do motor de recepção de comandos do túnel local.
+- Adicionar suporte ao `action === 'raw_sql'`.
+- Executar a query SQL crua recebida e retornar todas as linhas de resultado e contagem afetada, sem limitação artificial imposta pelos `actions` como `select`.
 
----
+### Interface Frontend do SQL Studio (IDE)
 
-### Módulo: Tela de Login Personalizável
+#### [NEW] [SqlStudioClient.tsx](file:///c:/AgTech/Apps/metabuilder-pro/src/app/admin/%5Bworkspace_slug%5D/%5Bproject_slug%5D/studio/sql/SqlStudioClient.tsx)
+Um componente que funcionará como editor SQL:
+- Incorporação do `ByocEditor` ou `textarea` robusto configurado para a linguagem SQL.
+- Painel dividido para Editor no topo e Tabela de Resultados abaixo.
+- Botão "Executar Query (F5)" que envia via Supabase Realtime Tunnel (`broadcast` -> `sql_query`).
+- Ouve eventos de `query_result` na subscription para receber os dados do motor local.
 
-Vamos redesenhar o `LoginForm.tsx` ou o layout de `/[workspace]/[project]/login` para um visual moderno em tela dividida (Split-Screen / Half-Screen). O lado esquerdo conterá o formulário e a logo (branding), e o lado direito um banner visual dinâmico.
+#### [NEW] [page.tsx](file:///c:/AgTech/Apps/metabuilder-pro/src/app/admin/%5Bworkspace_slug%5D/%5Bproject_slug%5D/studio/sql/page.tsx)
+- Server Component da rota `/studio/sql`.
 
-#### [MODIFY] [LoginForm.tsx](file:///c:/AgTech/Apps/metabuilder-pro/src/components/auth/LoginForm.tsx)
-- Alterar o componente para aceitar novos parâmetros: `logoUrl` e `bannerUrl` (ou extrai-los das configurações do projeto).
-- Ocultar a logo e branding globais do "MetaBuilder" na tela do usuário final, injetando os dados do projeto atual.
-
-#### [MODIFY] [login/page.tsx](file:///c:/AgTech/Apps/metabuilder-pro/src/app/[workspace_slug]/[project_slug]/login/page.tsx)
-- Ajustar o container principal para não ser apenas centralizado, mas sim usar um grid de duas colunas em telas médias/grandes (`md:grid-cols-2`).
-- Buscar as configurações do Projeto (via metadados/banco) para repassar as variáveis de logo/banner para o `LoginForm`.
-
-#### [MODIFY] [Configurações do Projeto - Studio]
-- Adicionar no Builder (ou no `admin/[workspace_slug]/settings`) campos de input para "URL da Logo" e "URL do Banner de Login" para o projeto. Se estiver vazio, usaremos um padrão bonito.
-
----
-
-### Módulo: Portal de Aplicações (Workspace Hub)
-
-Criar a funcionalidade para listar os projetos publicados/ativos da Workspace.
-
-#### [NEW] [portal/page.tsx](file:///c:/AgTech/Apps/metabuilder-pro/src/app/[workspace_slug]/portal/page.tsx)
-- Uma página estilo vitrine, com cards atraentes e micro-animações (Glassmorphism e Glow).
-- Cada card representa um projeto publicado sob essa Workspace, listando:
-  - Título do Projeto
-  - Descrição
-  - Botão de "Acessar Aplicação" (redireciona para o `login` do respectivo projeto).
-
-#### [MODIFY] [page.tsx da Workspace Root](file:///c:/AgTech/Apps/metabuilder-pro/src/app/[workspace_slug]/page.tsx)
-- Se a raiz da workspace for acessada, redirecionar o usuário não-logado para o `/portal` ao invés de enviar para um login administrativo, caso esse seja o comportamento desejado.
+#### [MODIFY] [StudioDashboardClient.tsx](file:///c:/AgTech/Apps/metabuilder-pro/src/app/admin/%5Bworkspace_slug%5D/%5Bproject_slug%5D/studio/StudioDashboardClient.tsx)
+- Adicionar um novo "Card" no grid do dashboard direcionando para o SQL Studio.
 
 ## Verification Plan
 
 ### Manual Verification
-1. Acessar `/[workspace_slug]/[project_slug]/login` e confirmar que o novo design "Half-Screen" é ativado.
-2. Alterar o Logo e Banner via propriedades/settings do projeto e garantir que o login carrega essas novas imagens.
-3. Acessar `/[workspace_slug]/portal` (ou o root da workspace) para ver o grid de projetos listados e clicar em um deles, garantindo que o roteamento de login do projeto funciona corretamente.
+- Iniciar o `cli` local do Metabuilder.
+- Abrir o SQL Studio no browser (ou no app desktop).
+- Executar comandos DDL (`CREATE TABLE teste (id int)`) e DML (`INSERT`, `SELECT`).
+- Verificar se as mensagens de sucesso/erro retornam apropriadamente para a interface.

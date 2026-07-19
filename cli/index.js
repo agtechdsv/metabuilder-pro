@@ -1102,6 +1102,31 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             console.error(chalk.red(`[ ERRO ] Falha ao sincronizar configs de log:`), lcErr);
             throw lcErr;
           }
+        } else if (action === 'raw_sql') {
+          sql = payload.payload.query;
+          params = [];
+          if (!sql) {
+            throw new Error('Query SQL não fornecida.');
+          }
+
+          console.log(chalk.cyan(`[ SQL STUDIO ] Executando Raw SQL: ${sql}`));
+          let execResult;
+          if (dbType === 'oracle') {
+            const oraRes = await oracleConnection.execute(sql, params, { autoCommit: true, outFormat: oracledb.OUT_FORMAT_OBJECT });
+            execResult = { rows: oraRes.rows || [], rowsAffected: oraRes.rowsAffected };
+          } else {
+            execResult = await pgClient.query(sql, params);
+          }
+          result = execResult;
+          
+          if (result.command) { // Para insert/update/delete no pgClient
+             if (!result.rows) result.rows = [];
+             result.rowsAffected = result.rowCount;
+          }
+          console.log(chalk.green(`[ OK ] RAW SQL executado com sucesso.`));
+          try {
+            cliDbLogger.logCustom(connectionName || 'public', sql, null);
+          } catch(e) {}
         } else if (action === 'read_logs') {
           // Leitura de logs para o Studio (DB ou Arquivo Físico)
           const filters = payload.payload.filters || {};
@@ -1136,7 +1161,8 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           queryId,
           success: true,
           action: action,
-          data: result.rows
+          data: result.rows,
+          rowsAffected: result.rowsAffected
         };
         
         if (action === 'count_records') {
