@@ -1107,73 +1107,8 @@ export function StudioDashboardClient({
               </>
               )}
 
-              {/* 4. Card de Logs (Sistema) */}
-              {canCreate && (
-              <div className="group relative p-5 bg-gradient-to-br from-violet-600/5 to-purple-600/5 dark:from-violet-600/10 dark:to-purple-600/10 border border-violet-500/20 dark:border-violet-500/30 rounded-[1.5rem] hover:border-violet-500 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-1">
-                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-violet-600 text-white text-[9px] font-black rounded-full uppercase tracking-widest shadow-lg shadow-violet-500/20 z-10 border border-white/10 dark:border-black/10 min-w-[140px] text-center">
-                  {t('dashboard.projects.system_label')}
-                </div>
-                <div className="flex flex-col h-full gap-4">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-base font-black tracking-tight text-neutral-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
-                          Logs do Projeto
-                        </h4>
-                      </div>
-                      <p className="text-[10px] text-neutral-400 font-mono flex items-center gap-1.5 tracking-tight">
-                        Armazenados no banco do cliente
-                      </p>
-                    </div>
-                    <div className="p-2 bg-violet-500/10 rounded-2xl text-violet-600 dark:text-violet-400">
-                      <ScrollText className="w-5 h-5" />
-                    </div>
-                  </div>
-
-                  <div className="mt-auto flex gap-3">
-                    <button
-                      onClick={() => setIsLogsModalOpen(true)}
-                      className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-violet-600 text-white rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-violet-500/20"
-                    >
-                      <ScrollText className="w-4 h-4" /> Ver Logs
-                    </button>
-                  </div>
-                </div>
-              </div>
-              )}
-
-              {/* 5. Card do SQL Studio (Sistema) */}
-              <div className="group relative p-5 bg-gradient-to-br from-emerald-600/5 to-teal-600/5 dark:from-emerald-600/10 dark:to-teal-600/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-[1.5rem] hover:border-emerald-500 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-1">
-                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-emerald-600 text-white text-[9px] font-black rounded-full uppercase tracking-widest shadow-lg shadow-emerald-500/20 z-10 border border-white/10 dark:border-black/10 min-w-[140px] text-center">
-                  {t('dashboard.projects.system_label')}
-                </div>
-                <div className="flex flex-col h-full gap-4">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-base font-black tracking-tight text-neutral-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                          SQL Studio
-                        </h4>
-                      </div>
-                      <p className="text-[10px] text-neutral-400 font-mono flex items-center gap-1.5 tracking-tight">
-                        <span className="opacity-50">/</span>{workspace_slug}/{project_slug}/studio/sql
-                      </p>
-                    </div>
-                    <div className="p-2 bg-emerald-500/10 rounded-2xl text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                      <Database className="w-5 h-5" />
-                    </div>
-                  </div>
-
-                  <div className="mt-auto flex gap-3">
-                    <Link
-                      href={`/admin/${workspace_slug}/${project_slug}/studio/sql`}
-                      className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-emerald-600 text-white rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-emerald-500/20"
-                    >
-                      <Database className="w-4 h-4" /> Acessar SQL Studio
-                    </Link>
-                  </div>
-                </div>
-              </div>
+              {/* 4. Card de Logs (Sistema) removido */}
+              {/* 5. Card do SQL Studio (Sistema) removido */}
 
               {userViews.filter(view => {
                 if (!activeFilter) return true;

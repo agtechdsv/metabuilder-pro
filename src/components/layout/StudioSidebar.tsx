@@ -9,7 +9,8 @@ import {
   ScrollText,
   Code2,
   Network,
-  Terminal
+  Terminal,
+  Server
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -79,6 +80,12 @@ export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps
       icon: ScrollText,
       label: 'Logs',
       active: pathname.includes('/studio/logs')
+    },
+    {
+      href: `/admin/${workspaceSlug}/${projectSlug}/studio/sql`,
+      icon: Server,
+      label: 'SQL Studio',
+      active: pathname.includes('/studio/sql')
     }
   ]
 
