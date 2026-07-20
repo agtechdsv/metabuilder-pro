@@ -8,9 +8,12 @@ import Link from 'next/link'
 import { Modal } from '@/components/ui/Modal'
 import Editor from '@monaco-editor/react'
 import { Rnd } from 'react-rnd'
+import { createClient } from '@/utils/supabase/client'
+import { usePathname } from 'next/navigation'
 
 export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: string }) {
   const { toast } = useToast()
+  const pathname = usePathname()
   
   const [tunnelStatus, setTunnelStatus] = useState<'stopped' | 'running' | 'loading'>('loading')
   const [tunnelPid, setTunnelPid] = useState<number | null>(null)
@@ -170,6 +173,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
   const [syncStatus, setSyncStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle')
   const [syncLogs, setSyncLogs] = useState<string[]>([])
   const [syncError, setSyncError] = useState<string | null>(null)
+  const [pendingResolutionProject, setPendingResolutionProject] = useState<string | null>(null)
   
   const logsEndRef = React.useRef<HTMLDivElement>(null)
 
@@ -450,8 +454,24 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
         <div className="fixed inset-0 z-[200] pointer-events-none flex items-center justify-center">
           <div 
             className="absolute inset-0 bg-black/80 backdrop-blur-sm pointer-events-auto transition-opacity" 
-            onClick={() => {
-              if (syncStatus !== 'running') setIsSyncModalOpen(false)
+            onClick={async () => {
+              if (syncStatus !== 'running') {
+                setIsSyncModalOpen(false)
+                if (syncStatus === 'success') {
+                  const supabase = createClient()
+                  const { data: workspace } = await supabase.from('workspaces').select('id').eq('slug', workspaceSlug).single()
+                  if (workspace) {
+                    const { data: projects } = await supabase.from('projects')
+                      .select('slug')
+                      .eq('workspace_id', workspace.id)
+                      .eq('sync_status', 'draft_pending')
+                    
+                    if (projects && projects.length > 0) {
+                      setPendingResolutionProject(projects[0].slug)
+                    }
+                  }
+                }
+              }
             }} 
           />
           <div className="pointer-events-auto w-full max-w-4xl max-h-[80vh] bg-[#0c0c0c] border border-neutral-800 rounded-[1.5rem] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300 relative">
@@ -495,13 +515,56 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                   )}
                 </div>
                 <button
-                  onClick={() => setIsSyncModalOpen(false)}
+                  onClick={async () => {
+                    setIsSyncModalOpen(false)
+                    if (syncStatus === 'success') {
+                      const supabase = createClient()
+                      const { data: workspace } = await supabase.from('workspaces').select('id').eq('slug', workspaceSlug).single()
+                      if (workspace) {
+                        const { data: projects } = await supabase.from('projects')
+                          .select('slug')
+                          .eq('workspace_id', workspace.id)
+                          .eq('sync_status', 'draft_pending')
+                        
+                        if (projects && projects.length > 0) {
+                          setPendingResolutionProject(projects[0].slug)
+                        }
+                      }
+                    }
+                  }}
                   className="px-6 py-2 rounded-xl font-bold text-sm bg-white text-black hover:bg-neutral-200 transition-colors"
                 >
                   Fechar
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Aviso de Sincronização Pendente */}
+      {pendingResolutionProject && (
+        <div className="fixed inset-0 z-[200] pointer-events-none flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto" onClick={() => setPendingResolutionProject(null)} />
+          <div className="pointer-events-auto w-full max-w-md bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in duration-200">
+            <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">Sincronização Pendente</h3>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-6">
+              Foram detectadas alterações estruturais nos metadados que dependem da sua revisão. Deseja mapear essas alterações e finalizar a sincronização agora?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setPendingResolutionProject(null)}
+                className="px-4 py-2 rounded-xl text-sm font-bold text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              >
+                Agora não
+              </button>
+              <Link 
+                href={`/admin/${workspaceSlug}/${pendingResolutionProject}/sync-resolution?returnUrl=${encodeURIComponent(pathname)}`}
+                className="px-4 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-500 transition-colors"
+              >
+                Sim, revisar agora
+              </Link>
+            </div>
           </div>
         </div>
       )}

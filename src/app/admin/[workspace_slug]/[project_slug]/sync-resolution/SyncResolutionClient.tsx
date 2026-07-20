@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, CheckCircle, AlertTriangle } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 
@@ -25,6 +25,7 @@ export default function SyncResolutionClient({
   projectSlug: string
 }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { t } = useI18n()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -78,7 +79,12 @@ export default function SyncResolutionClient({
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || t('sync_resolution.apply_error', 'Erro ao aplicar sincronização'))
 
-      router.push(`/admin/${workspaceSlug}/${projectSlug}/studio`)
+      const returnUrl = searchParams?.get('returnUrl')
+      if (returnUrl) {
+        router.push(returnUrl)
+      } else {
+        router.push(`/admin/${workspaceSlug}/${projectSlug}/studio`)
+      }
       router.refresh()
     } catch (err: any) {
       setError(err.message)
