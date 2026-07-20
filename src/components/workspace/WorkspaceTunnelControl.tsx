@@ -195,6 +195,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
         const configPath = await join(dir, 'metabuilder.config.json')
 
         const unlisten = await listen<string>('sync-log', (event) => {
+          if (event.payload.includes('Node.js 18 and below are deprecated')) return;
           setSyncLogs(prev => [...prev, event.payload])
         })
 
