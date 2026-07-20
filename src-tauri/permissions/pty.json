@@ -1,0 +1,29 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "spawn-pty",
+      "description": "allow spawn_pty",
+      "commands": {
+        "allow": ["spawn_pty"],
+        "deny": []
+      }
+    },
+    {
+      "identifier": "write-pty",
+      "description": "allow write_pty",
+      "commands": {
+        "allow": ["write_pty"],
+        "deny": []
+      }
+    },
+    {
+      "identifier": "resize-pty",
+      "description": "allow resize_pty",
+      "commands": {
+        "allow": ["resize_pty"],
+        "deny": []
+      }
+    }
+  ]
+}
