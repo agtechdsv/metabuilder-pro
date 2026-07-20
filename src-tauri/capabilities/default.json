@@ -50,6 +50,7 @@
     "startcli",
     "stopcli",
     "statuscli",
+    "runsynccli",
     "openbrowser",
     "runinstaller",
     "core:window:allow-create",

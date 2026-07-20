@@ -96,6 +96,57 @@ fn statuscli(state: State<'_, CliState>) -> Result<bool, String> {
     Ok(child_guard.is_some())
 }
 
+#[command]
+async fn runsynccli(app: tauri::AppHandle, config_path: Option<String>) -> Result<String, String> {
+    let mut args = vec!["--headless".to_string(), "--action=sync".to_string()];
+
+    if let Some(cfg) = config_path {
+        args.push(format!("--config={}", cfg));
+    }
+
+    if let Ok(local_data_dir) = app.path().app_local_data_dir() {
+        let logs_dir = local_data_dir.join("logs");
+        if let Some(logs_str) = logs_dir.to_str() {
+            args.push(format!("--log-dir={}", logs_str));
+        }
+    }
+
+    let sidecar_command = app.shell().sidecar("cli").unwrap().args(args);
+    let (mut rx, _child) = sidecar_command.spawn().map_err(|e| e.to_string())?;
+
+    let app_clone = app.clone();
+    
+    // We wait for the process to finish by reading the events
+    let mut exit_code = None;
+    
+    while let Some(event) = rx.recv().await {
+        match event {
+            tauri_plugin_shell::process::CommandEvent::Stdout(line) => {
+                let text = String::from_utf8_lossy(&line).to_string();
+                let _ = app_clone.emit("sync-log", text);
+            }
+            tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
+                let text = String::from_utf8_lossy(&line).to_string();
+                let _ = app_clone.emit("sync-log", format!("ERROR: {}", text));
+            }
+            tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
+                exit_code = payload.code;
+            }
+            _ => {}
+        }
+    }
+
+    if let Some(code) = exit_code {
+        if code == 0 {
+            Ok("Sincronização finalizada com sucesso".to_string())
+        } else {
+            Err(format!("Processo finalizado com erro (código {})", code))
+        }
+    } else {
+        Err("Processo finalizado de forma inesperada".to_string())
+    }
+}
+
 /// Abre uma URL no navegador padrão do sistema.
 /// Executado do lado Rust para contornar restrições de ACL do plugin opener.
 #[command]
@@ -350,6 +401,7 @@ pub fn run() {
             startcli,
             stopcli,
             statuscli,
+            runsynccli,
             openbrowser,
             runinstaller,
             spawn_pty,

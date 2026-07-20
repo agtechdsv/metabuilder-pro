@@ -1,0 +1,15 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "runsynccli",
+      "description": "allow runsynccli",
+      "commands": {
+        "allow": [
+          "runsynccli"
+        ],
+        "deny": []
+      }
+    }
+  ]
+}

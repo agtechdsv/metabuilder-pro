@@ -166,7 +166,80 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
     }
   }, [])
 
-  const handleProcessControl = async (action: 'start' | 'stop' | 'sync', mode?: number) => {
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle')
+  const [syncLogs, setSyncLogs] = useState<string[]>([])
+  const [syncError, setSyncError] = useState<string | null>(null)
+  
+  const logsEndRef = React.useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [syncLogs])
+
+  const handleSync = async () => {
+    setIsSyncModalOpen(true)
+    setSyncStatus('running')
+    setSyncLogs(['Iniciando Sincronização Geral...'])
+    setSyncError(null)
+
+    if (isTauri()) {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core')
+        const { listen } = await import('@tauri-apps/api/event')
+        const { appLocalDataDir, join } = await import('@tauri-apps/api/path')
+
+        const dir = await appLocalDataDir()
+        const configPath = await join(dir, 'metabuilder.config.json')
+
+        const unlisten = await listen<string>('sync-log', (event) => {
+          setSyncLogs(prev => [...prev, event.payload])
+        })
+
+        try {
+          const result = await invoke<string>('runsynccli', { configPath })
+          setSyncLogs(prev => [...prev, result])
+          setSyncStatus('success')
+        } catch (error: any) {
+          setSyncLogs(prev => [...prev, `[FALHA] ${error}`])
+          setSyncError(String(error))
+          setSyncStatus('error')
+        } finally {
+          unlisten()
+        }
+      } catch (e: any) {
+        setSyncLogs(prev => [...prev, `[ERRO INTERNO] ${e.message || String(e)}`])
+        setSyncStatus('error')
+        setSyncError(String(e))
+      }
+    } else {
+      // Fallback para Web (não aplicável se o card inteiro não renderiza na web, mas deixamos por segurança)
+      try {
+        const res = await fetch('/api/tunnel/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'start', mode: 3 })
+        })
+        const data = await res.json()
+        if (data.success) {
+          setSyncLogs(prev => [...prev, data.message, 'Processo disparado na nuvem. Verifique os logs do servidor.'])
+          setSyncStatus('success')
+        } else {
+          setSyncLogs(prev => [...prev, `[ERRO] ${data.message}`])
+          setSyncStatus('error')
+          setSyncError(data.message)
+        }
+      } catch (e: any) {
+        setSyncLogs(prev => [...prev, `[ERRO] Falha de comunicação web: ${e.message}`])
+        setSyncStatus('error')
+        setSyncError(String(e))
+      }
+    }
+  }
+
+  const handleProcessControl = async (action: 'start' | 'stop', mode?: number) => {
     setTunnelStatus('loading')
     try {
       if (isTauri()) {
@@ -180,10 +253,10 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
           const configPath = await join(dir, 'metabuilder.config.json');
           
           await invoke('startcli', { 
-            mode: action === 'sync' ? 3 : (mode || 1), 
+            mode: (mode || 1), 
             configPath: configPath 
           });
-          toast(action === 'sync' ? 'Sincronização disparada.' : 'Túnel iniciado com sucesso.', 'success');
+          toast('Túnel iniciado com sucesso.', 'success');
         }
         checkStatus();
         return;
@@ -192,15 +265,12 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
       const res = await fetch('/api/tunnel/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: action === 'sync' ? 'start' : action, mode })
+        body: JSON.stringify({ action, mode })
       })
       const data = await res.json()
       
       if (data.success) {
         toast(data.message, 'success')
-        if (action === 'sync') {
-          toast('Processo disparado. Acompanhe pela aba de Logs do respectivo projeto.', 'info')
-        }
       } else {
         toast(data.message || 'Erro ao comunicar com o processo.', 'error')
       }
@@ -284,11 +354,11 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
               <RefreshCw className="w-4 h-4 text-indigo-500" /> Sincronização Global (Introspecção)
             </h4>
             <p className="text-xs text-neutral-500 mb-4">
-              Força a leitura de estrutura de todos os bancos de dados configurados no `metabuilder.config.json` ativo na máquina. O túnel será pausado brevemente.
+              Força a leitura de estrutura de todos os bancos de dados configurados no `metabuilder.config.json` ativo na máquina. Não afeta a execução do túnel.
             </p>
           </div>
           <button 
-            onClick={() => handleProcessControl('sync', 3)}
+            onClick={handleSync}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
           >
             <RefreshCw className="w-4 h-4" /> Disparar Sincronização Geral
@@ -371,6 +441,67 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
               </div>
             </div>
           </Rnd>
+        </div>
+      )}
+
+      {/* Modal de Sincronização */}
+      {isSyncModalOpen && (
+        <div className="fixed inset-0 z-[200] pointer-events-none flex items-center justify-center">
+          <div 
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm pointer-events-auto transition-opacity" 
+            onClick={() => {
+              if (syncStatus !== 'running') setIsSyncModalOpen(false)
+            }} 
+          />
+          <div className="pointer-events-auto w-full max-w-4xl max-h-[80vh] bg-[#0c0c0c] border border-neutral-800 rounded-[1.5rem] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300 relative">
+            <div className="p-5 border-b border-neutral-800 flex justify-between items-center bg-[#111]">
+              <div className="flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full ${syncStatus === 'running' ? 'bg-indigo-500 animate-pulse' : syncStatus === 'success' ? 'bg-green-500' : syncStatus === 'error' ? 'bg-red-500' : 'bg-neutral-500'}`} />
+                <div>
+                  <h3 className="font-bold text-lg text-white">Console de Sincronização</h3>
+                  <p className="text-xs text-neutral-400 font-mono">cli-win.exe --action=sync</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsSyncModalOpen(false)} 
+                disabled={syncStatus === 'running'}
+                className="p-2 hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 p-4 font-mono text-xs overflow-y-auto bg-[#0c0c0c] min-h-[300px]">
+              {syncLogs.map((log, i) => (
+                <div key={i} className={`mb-1 ${log.includes('ERROR') || log.includes('ERRO') || log.includes('FALHA') ? 'text-red-400' : log.includes('sucesso') ? 'text-green-400' : 'text-neutral-300'}`}>
+                  <span className="text-neutral-600 mr-2">[{new Date().toLocaleTimeString()}]</span>
+                  {log}
+                </div>
+              ))}
+              {syncStatus === 'running' && (
+                <div className="text-indigo-400 animate-pulse mt-4">Processando...</div>
+              )}
+              <div ref={logsEndRef} />
+            </div>
+            
+            {syncStatus !== 'running' && (
+              <div className={`p-4 border-t border-neutral-800 flex justify-between items-center ${syncStatus === 'success' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                <div className="flex items-center gap-2">
+                  {syncStatus === 'success' ? (
+                    <span className="font-bold text-sm text-green-500">✓ Sincronização concluída com sucesso!</span>
+                  ) : (
+                    <span className="font-bold text-sm text-red-500">⚠ Falha na sincronização. Verifique os logs acima.</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setIsSyncModalOpen(false)}
+                  className="px-6 py-2 rounded-xl font-bold text-sm bg-white text-black hover:bg-neutral-200 transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
