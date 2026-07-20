@@ -111,8 +111,6 @@ function CallbackHandler() {
     const code = searchParams.get('code')
     if (code && !exchangeAttempted.current) {
       exchangeAttempted.current = true
-      // Remove o código da URL para segurança visual, embora o Next.js possa restaurar depois
-      window.history.replaceState(null, '', window.location.pathname)
       
       supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
         if (error) {

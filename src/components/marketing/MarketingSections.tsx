@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy, Fingerprint, FileCode2, ScrollText, Network } from 'lucide-react'
+import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy, Fingerprint, FileCode2, ScrollText, Network, Terminal } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -156,6 +156,98 @@ export function MarketingSections() {
   return (
     <div className="w-full space-y-32 py-20 px-6">
 
+      {/* NOVO: DESTAQUE IDE PRO DEVELOPER */}
+      <section className="max-w-7xl mx-auto mb-32">
+        <div className="relative p-10 md:p-16 rounded-[3rem] bg-indigo-900/5 border border-indigo-500/20 overflow-hidden flex flex-col lg:flex-row items-center gap-12 group">
+          <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
+            <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/20 rounded-full blur-[120px] group-hover:bg-indigo-500/30 transition-colors duration-700"></div>
+            <div className="absolute bottom-[-20%] left-[-10%] w-[40%] h-[40%] bg-purple-500/20 rounded-full blur-[100px] group-hover:bg-purple-500/30 transition-colors duration-700"></div>
+          </div>
+          
+          <div className="flex-1 space-y-8 z-10">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-bold text-xs uppercase tracking-widest border border-indigo-500/20 shadow-sm">
+              <Terminal className="w-4 h-4" /> IDE Desktop Exclusiva
+            </div>
+            
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-neutral-900 dark:text-white leading-[1.1]">
+              O paraíso para <br />
+              <span className="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">Pro Developers.</span>
+            </h2>
+            
+            <p className="text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed max-w-xl font-medium">
+              Esqueça as limitações da nuvem. Nossa IDE nativa oferece controle absoluto com BYOC (Bring Your Own Code), Terminal Integrado, SQL Studio avançado local e Ejeção total do código fonte.
+            </p>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center shadow-sm">
+                  <FileCode2 className="w-5 h-5 text-indigo-500" />
+                </div>
+                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">Editor Monaco</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center shadow-sm">
+                  <Terminal className="w-5 h-5 text-emerald-500" />
+                </div>
+                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">Terminal Nativo</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center shadow-sm">
+                  <Database className="w-5 h-5 text-blue-500" />
+                </div>
+                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">SQL Studio Local</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center shadow-sm">
+                  <ScrollText className="w-5 h-5 text-orange-500" />
+                </div>
+                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">Acesso a Logs</span>
+              </div>
+            </div>
+
+            <div className="pt-4">
+              <Link 
+                href="/features/ide"
+                className="inline-flex items-center gap-3 px-8 py-4 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold rounded-2xl hover:scale-105 transition-transform shadow-xl shadow-black/10 dark:shadow-white/10"
+              >
+                Conheça a IDE <ArrowRight className="w-5 h-5" />
+              </Link>
+            </div>
+          </div>
+          
+          <div className="flex-1 w-full relative z-10 flex items-center justify-center">
+             <div className="w-full aspect-[4/3] max-w-lg bg-[#0d1117] rounded-3xl border border-neutral-800 shadow-2xl overflow-hidden relative group-hover:shadow-indigo-500/20 transition-all duration-500 flex flex-col">
+                <div className="h-10 bg-[#161b22] border-b border-neutral-800 flex items-center px-4 gap-2">
+                   <div className="w-3 h-3 rounded-full bg-red-500/50"></div>
+                   <div className="w-3 h-3 rounded-full bg-yellow-500/50"></div>
+                   <div className="w-3 h-3 rounded-full bg-green-500/50"></div>
+                   <div className="ml-auto flex items-center gap-3 text-neutral-600">
+                      <Terminal className="w-4 h-4" />
+                      <Database className="w-4 h-4" />
+                   </div>
+                </div>
+                <div className="flex-1 p-6 font-mono text-[11px] sm:text-xs text-indigo-300 leading-relaxed opacity-90 overflow-hidden">
+                   <p className="text-neutral-500 mb-2">// Conectado ao ambiente local via CLI</p>
+                   <p><span className="text-pink-400">import</span> { '{' } <span className="text-blue-300">useWorkspace</span> { '}' } <span className="text-pink-400">from</span> <span className="text-green-300">'@metabuilder/core'</span>;</p>
+                   <p className="mt-2"><span className="text-pink-400">const</span> <span className="text-blue-300">App</span> = () =&gt; { '{' }</p>
+                   <p className="ml-4"><span className="text-pink-400">await</span> mb.<span className="text-green-300">syncDatabase</span>();</p>
+                   <p>{ '}' }</p>
+                   
+                   <p className="text-neutral-500 mt-6 mb-2">-- Executando raw SQL no Postgres local (0ms delay)</p>
+                   <p className="text-orange-300">SELECT id, name, role FROM public.users;</p>
+                   <p className="text-emerald-400 mt-2">✓ 1.240 rows returned in 12ms</p>
+                   
+                   <div className="mt-6 flex items-center gap-2">
+                     <span className="text-green-400">C:\MetaBuilder\Projects&gt;</span>
+                     <span className="w-2 h-4 bg-neutral-400 animate-pulse"></span>
+                   </div>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0d1117] via-transparent to-transparent opacity-60 pointer-events-none"></div>
+             </div>
+          </div>
+        </div>
+      </section>
+
       {/* Feature Bento Grid */}
       <section className="max-w-7xl mx-auto">
         <div className="max-w-4xl mx-auto text-center mb-20 space-y-4">
@@ -215,26 +307,6 @@ export function MarketingSections() {
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* New IDE Native Card */}
-          <div className="col-span-1 md:col-span-2 lg:col-span-5 group p-8 rounded-[2.5rem] bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-200/50 dark:border-indigo-800/50 hover:border-indigo-500/50 transition-all duration-500 mt-2">
-             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                <div className="flex items-center gap-4">
-                   <div className="w-14 h-14 rounded-2xl bg-white dark:bg-neutral-950 flex items-center justify-center shadow-inner border border-indigo-200 dark:border-indigo-800 group-hover:scale-110 transition-transform duration-500">
-                      <Network className="w-7 h-7 text-indigo-500" />
-                   </div>
-                   <div>
-                      <h3 className="text-2xl font-black dark:text-white mb-1">{t('marketing_v2.navbar.ide')}</h3>
-                      <p className="text-sm text-neutral-600 dark:text-neutral-400 max-w-3xl leading-relaxed">
-                         {t('ide_landing.hero.subtitle')}
-                      </p>
-                   </div>
-                </div>
-                <Link href="/features/ide" className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all hover:scale-102 shadow-lg shadow-indigo-600/20 shrink-0 self-start lg:self-center">
-                   {t('marketing_v2.home.learn_more')} <ArrowRight className="w-4 h-4" />
-                </Link>
-             </div>
           </div>
 
           {/* New MFA/Passkey, Source Code and Logs Cards */}
