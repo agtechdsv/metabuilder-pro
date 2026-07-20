@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { HeaderActions } from '@/components/layout/HeaderActions'
 import { ReleaseNotes } from '@/components/tauri/ReleaseNotes'
 import { LoginForm } from '@/components/auth/LoginForm'
+import { isTauri } from '@/utils/tauriUtils'
 import { Zap, Code2 } from 'lucide-react'
 
 export function IDELanding({ user }: { user: any }) {
@@ -112,7 +113,7 @@ export function IDELanding({ user }: { user: any }) {
         >
           <div className="bg-white/80 dark:bg-neutral-900/50 backdrop-blur-xl border border-neutral-200 dark:border-white/10 p-8 rounded-[2rem] shadow-2xl">
             <h3 className="text-xl font-bold mb-6 text-center">Acesse sua conta</h3>
-            <LoginForm />
+            <LoginForm disableAutoRedirectOnMount={!isTauri()} />
           </div>
         </motion.div>
       </main>

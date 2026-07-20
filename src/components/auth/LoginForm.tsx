@@ -16,9 +16,10 @@ import { onOpenUrl } from '@tauri-apps/plugin-deep-link'
 interface LoginFormProps {
   error?: string
   className?: string
+  disableAutoRedirectOnMount?: boolean
 }
 
-export function LoginForm({ error: serverError, className }: LoginFormProps) {
+export function LoginForm({ error: serverError, className, disableAutoRedirectOnMount = false }: LoginFormProps) {
   const { t } = useI18n()
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [showPassword, setShowPassword] = useState(false)
@@ -196,27 +197,29 @@ export function LoginForm({ error: serverError, className }: LoginFormProps) {
     }
 
     // Verifica imediatamente se já tem sessão VÁLIDA (ex: refresh na página)
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        let isInviteOrRecovery = false
-        if (typeof window !== 'undefined') {
-          const hashParams = new URLSearchParams(window.location.hash.substring(1))
-          const type = hashParams.get('type')
-          if (type === 'invite' || type === 'recovery') {
+    if (!disableAutoRedirectOnMount) {
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          let isInviteOrRecovery = false
+          if (typeof window !== 'undefined') {
+            const hashParams = new URLSearchParams(window.location.hash.substring(1))
+            const type = hashParams.get('type')
+            if (type === 'invite' || type === 'recovery') {
+              isInviteOrRecovery = true
+            }
+          }
+          if (user.user_metadata?.need_password_setup === true) {
             isInviteOrRecovery = true
           }
-        }
-        if (user.user_metadata?.need_password_setup === true) {
-          isInviteOrRecovery = true
-        }
 
-        if (isInviteOrRecovery) {
-          setShowSetPasswordModal(true)
-        } else {
-          navigateToDashboard(user.id)
+          if (isInviteOrRecovery) {
+            setShowSetPasswordModal(true)
+          } else {
+            navigateToDashboard(user.id)
+          }
         }
-      }
-    })
+      })
+    }
 
     // Se o Supabase falhar em ler o Hash automaticamente, nós forçamos:
     if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
