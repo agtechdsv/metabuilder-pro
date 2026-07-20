@@ -174,6 +174,29 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
   const [syncLogs, setSyncLogs] = useState<string[]>([])
   const [syncError, setSyncError] = useState<string | null>(null)
   const [pendingResolutionProject, setPendingResolutionProject] = useState<string | null>(null)
+
+  const handleCloseSyncModal = async () => {
+    if (syncStatus === 'running') return
+    setIsSyncModalOpen(false)
+    if (syncStatus === 'success') {
+      try {
+        const supabase = createClient()
+        const { data: workspace } = await supabase.from('workspaces').select('id').eq('slug', workspaceSlug).single()
+        if (workspace) {
+          const { data: projects } = await supabase.from('projects')
+            .select('slug')
+            .eq('workspace_id', workspace.id)
+            .eq('sync_status', 'draft_pending')
+          
+          if (projects && projects.length > 0) {
+            setPendingResolutionProject(projects[0].slug)
+          }
+        }
+      } catch (e) {
+        console.error('Error checking sync status', e)
+      }
+    }
+  }
   
   const logsEndRef = React.useRef<HTMLDivElement>(null)
 
@@ -454,25 +477,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
         <div className="fixed inset-0 z-[200] pointer-events-none flex items-center justify-center">
           <div 
             className="absolute inset-0 bg-black/80 backdrop-blur-sm pointer-events-auto transition-opacity" 
-            onClick={async () => {
-              if (syncStatus !== 'running') {
-                setIsSyncModalOpen(false)
-                if (syncStatus === 'success') {
-                  const supabase = createClient()
-                  const { data: workspace } = await supabase.from('workspaces').select('id').eq('slug', workspaceSlug).single()
-                  if (workspace) {
-                    const { data: projects } = await supabase.from('projects')
-                      .select('slug')
-                      .eq('workspace_id', workspace.id)
-                      .eq('sync_status', 'draft_pending')
-                    
-                    if (projects && projects.length > 0) {
-                      setPendingResolutionProject(projects[0].slug)
-                    }
-                  }
-                }
-              }
-            }} 
+            onClick={handleCloseSyncModal} 
           />
           <div className="pointer-events-auto w-full max-w-4xl max-h-[80vh] bg-[#0c0c0c] border border-neutral-800 rounded-[1.5rem] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300 relative">
             <div className="p-5 border-b border-neutral-800 flex justify-between items-center bg-[#111]">
@@ -484,7 +489,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                 </div>
               </div>
               <button 
-                onClick={() => setIsSyncModalOpen(false)} 
+                onClick={handleCloseSyncModal} 
                 disabled={syncStatus === 'running'}
                 className="p-2 hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -515,23 +520,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                   )}
                 </div>
                 <button
-                  onClick={async () => {
-                    setIsSyncModalOpen(false)
-                    if (syncStatus === 'success') {
-                      const supabase = createClient()
-                      const { data: workspace } = await supabase.from('workspaces').select('id').eq('slug', workspaceSlug).single()
-                      if (workspace) {
-                        const { data: projects } = await supabase.from('projects')
-                          .select('slug')
-                          .eq('workspace_id', workspace.id)
-                          .eq('sync_status', 'draft_pending')
-                        
-                        if (projects && projects.length > 0) {
-                          setPendingResolutionProject(projects[0].slug)
-                        }
-                      }
-                    }
-                  }}
+                  onClick={handleCloseSyncModal}
                   className="px-6 py-2 rounded-xl font-bold text-sm bg-white text-black hover:bg-neutral-200 transition-colors"
                 >
                   Fechar
