@@ -81,12 +81,12 @@ export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps
       label: 'Logs',
       active: pathname.includes('/studio/logs')
     },
-    {
+    ...(isDesktop ? [{
       href: `/admin/${workspaceSlug}/${projectSlug}/studio/sql`,
       icon: Server,
       label: 'SQL Studio',
       active: pathname.includes('/studio/sql')
-    }
+    }] : [])
   ]
 
   return (

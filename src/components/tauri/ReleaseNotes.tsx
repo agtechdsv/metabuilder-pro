@@ -200,8 +200,22 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
                                   exit={{ height: 0, opacity: 0, marginTop: 0 }}
                                   className="overflow-hidden"
                                 >
-                                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                  <div className="text-[13px] leading-relaxed text-neutral-600 dark:text-neutral-300">
+                                    <ReactMarkdown 
+                                      remarkPlugins={[remarkGfm]}
+                                      components={{
+                                        p: ({node, ...props}) => <p className="mb-4 last:mb-0" {...props} />,
+                                        h1: ({node, ...props}) => <h1 className="text-xl font-bold mt-6 mb-4 text-neutral-900 dark:text-white" {...props} />,
+                                        h2: ({node, ...props}) => <h2 className="text-lg font-bold mt-5 mb-3 text-neutral-900 dark:text-white" {...props} />,
+                                        h3: ({node, ...props}) => <h3 className="text-base font-bold mt-4 mb-2 text-neutral-900 dark:text-white" {...props} />,
+                                        ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
+                                        ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-4 space-y-1" {...props} />,
+                                        li: ({node, ...props}) => <li className="pl-1" {...props} />,
+                                        strong: ({node, ...props}) => <strong className="font-bold text-neutral-900 dark:text-white" {...props} />,
+                                        a: ({node, ...props}) => <a className="text-indigo-600 dark:text-indigo-400 hover:underline" {...props} />,
+                                        code: ({node, ...props}) => <code className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-[11px] font-mono text-indigo-600 dark:text-indigo-400" {...props} />
+                                      }}
+                                    >
                                       {finalBody}
                                     </ReactMarkdown>
                                   </div>

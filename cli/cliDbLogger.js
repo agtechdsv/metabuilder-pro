@@ -251,7 +251,7 @@ class CliDbLogger {
    * @param {object} filters - { type?, table_name?, from?, to?, search?, limit?, offset? }
    */
   async readLogs(filters = {}) {
-    if (!this._pgClient || !this._ready) return { rows: [], total: 0 };
+    if (!this._pgClient) return { rows: [], total: 0 };
 
     const conditions = [];
     const params = [];
@@ -310,7 +310,7 @@ class CliDbLogger {
    * Limpa todos os logs (ação do Studio)
    */
   async clearLogs() {
-    if (!this._pgClient || !this._ready) return;
+    if (!this._pgClient) return;
     try {
       await this._pgClient.query('TRUNCATE __mb_logs RESTART IDENTITY');
     } catch (err) {
@@ -322,7 +322,7 @@ class CliDbLogger {
    * Retorna estatísticas rápidas (contagem por tipo)
    */
   async getStats() {
-    if (!this._pgClient || !this._ready) return {};
+    if (!this._pgClient) return {};
     try {
       const res = await this._pgClient.query(
         `SELECT type, COUNT(*) as count FROM __mb_logs GROUP BY type ORDER BY count DESC`
