@@ -20,26 +20,29 @@ const LOG_TYPES = {
   TUNNEL:     'TUNNEL',
 };
 
-// DDL da tabela de logs no banco do cliente
-const CREATE_TABLE_SQL = `
-  CREATE TABLE IF NOT EXISTS __mb_logs (
-    id          BIGSERIAL    PRIMARY KEY,
-    session_id  UUID,
-    type        TEXT         NOT NULL,
-    action      TEXT,
-    table_name  TEXT,
-    schema_name TEXT,
-    message     TEXT,
-    sql_text    TEXT,
-    duration_ms INTEGER,
-    row_count   INTEGER,
-    metadata    JSONB,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-  );
-  CREATE INDEX IF NOT EXISTS idx_mb_logs_type    ON __mb_logs (type, created_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_mb_logs_date    ON __mb_logs (created_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_mb_logs_table   ON __mb_logs (table_name, created_at DESC);
-`;
+// DDL table function returns the CREATE TABLE script for the correct schema
+function getCreateTableSql(schemaName) {
+  const safeSchema = (schemaName || 'public').replace(/"/g, '""');
+  return `
+    CREATE TABLE IF NOT EXISTS "${safeSchema}".__mb_logs (
+      id          BIGSERIAL    PRIMARY KEY,
+      session_id  UUID,
+      type        TEXT         NOT NULL,
+      action      TEXT,
+      table_name  TEXT,
+      schema_name TEXT,
+      message     TEXT,
+      sql_text    TEXT,
+      duration_ms INTEGER,
+      row_count   INTEGER,
+      metadata    JSONB,
+      created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_mb_logs_type    ON "${safeSchema}".__mb_logs (type, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_mb_logs_date    ON "${safeSchema}".__mb_logs (created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_mb_logs_table   ON "${safeSchema}".__mb_logs (table_name, created_at DESC);
+  `;
+}
 
 /** Retorna o timestamp local do CLI como ISO 8601 com offset correto (ex: 2026-06-28T09:15:00.000-03:00) */
 function localISOString() {
@@ -88,13 +91,14 @@ class CliDbLogger {
     }
 
     try {
-      // Cria a tabela se não existir (idempotente)
-      await pgClient.query(CREATE_TABLE_SQL);
+      // Cria a tabela se não existir (idempotente) no schema correto
+      await pgClient.query(getCreateTableSql(this._schemaName));
 
       // Limpa logs antigos baseado na retenção configurada
       const retentionDays = this._logConfig.retention_days || 7;
+      const safeSchema = this._schemaName.replace(/"/g, '""');
       await pgClient.query(
-        `DELETE FROM __mb_logs WHERE created_at < NOW() - INTERVAL '${parseInt(retentionDays, 10)} days'`
+        `DELETE FROM "${safeSchema}".__mb_logs WHERE created_at < NOW() - INTERVAL '${parseInt(retentionDays, 10)} days'`
       );
 
       this._ready = true;
@@ -122,7 +126,7 @@ class CliDbLogger {
       console.log(`\x1b[90m[MBLog] Log atualizado dinamicamente. Tipos: [${this._logConfig.types?.join(', ')}]. Retencao: ${this._logConfig.retention_days}d.\x1b[0m`);
       if (!wasReady && this._pgClient) {
         // Inicializa a tabela caso não estivesse ativo antes
-        this._pgClient.query(CREATE_TABLE_SQL).catch(err => {
+        this._pgClient.query(getCreateTableSql(this._schemaName)).catch(err => {
           console.error('\x1b[33m[MBLog] Falha ao inicializar tabela de logs no update:\x1b[0m', err.message);
         });
       }
@@ -138,8 +142,9 @@ class CliDbLogger {
   /** Insere um registro na tabela __mb_logs (fire-and-forget) */
   _insert(type, action, tableName, sqlText, message, durationMs, rowCount, schemaName, metadata) {
     if (!this._pgClient || !this._ready) return;
+    const safeSchema = (this._schemaName || 'public').replace(/"/g, '""');
     const sql = `
-      INSERT INTO __mb_logs
+      INSERT INTO "${safeSchema}".__mb_logs
         (session_id, type, action, table_name, schema_name, message, sql_text, duration_ms, row_count, metadata, created_at)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
     `;
@@ -284,14 +289,15 @@ class CliDbLogger {
     const offset = parseInt(filters.offset || 0);
 
     try {
+      const safeSchema = (this._schemaName || 'public').replace(/"/g, '""');
       const [dataRes, countRes] = await Promise.all([
         this._pgClient.query(
           `SELECT id, session_id, type, action, table_name, schema_name, message, sql_text, duration_ms, row_count, metadata, created_at
-           FROM __mb_logs ${where} ORDER BY created_at DESC LIMIT $${i} OFFSET $${i + 1}`,
+           FROM "${safeSchema}".__mb_logs ${where} ORDER BY created_at DESC LIMIT $${i} OFFSET $${i + 1}`,
           [...params, limit, offset]
         ),
         this._pgClient.query(
-          `SELECT COUNT(*) as total FROM __mb_logs ${where}`,
+          `SELECT COUNT(*) as total FROM "${safeSchema}".__mb_logs ${where}`,
           params
         ),
       ]);
@@ -312,7 +318,8 @@ class CliDbLogger {
   async clearLogs() {
     if (!this._pgClient) return;
     try {
-      await this._pgClient.query('TRUNCATE __mb_logs RESTART IDENTITY');
+      const safeSchema = (this._schemaName || 'public').replace(/"/g, '""');
+      await this._pgClient.query(`TRUNCATE "${safeSchema}".__mb_logs RESTART IDENTITY`);
     } catch (err) {
       console.error('[MBLog] Erro ao limpar logs:', err.message);
     }
@@ -324,8 +331,9 @@ class CliDbLogger {
   async getStats() {
     if (!this._pgClient) return {};
     try {
+      const safeSchema = (this._schemaName || 'public').replace(/"/g, '""');
       const res = await this._pgClient.query(
-        `SELECT type, COUNT(*) as count FROM __mb_logs GROUP BY type ORDER BY count DESC`
+        `SELECT type, COUNT(*) as count FROM "${safeSchema}".__mb_logs GROUP BY type ORDER BY count DESC`
       );
       const stats = {};
       res.rows.forEach(r => { stats[r.type] = parseInt(r.count); });
