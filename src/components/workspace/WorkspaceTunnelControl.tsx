@@ -173,7 +173,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
   const [syncStatus, setSyncStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle')
   const [syncLogs, setSyncLogs] = useState<string[]>([])
   const [syncError, setSyncError] = useState<string | null>(null)
-  const [pendingResolutionProject, setPendingResolutionProject] = useState<string | null>(null)
+  const [pendingResolution, setPendingResolution] = useState<{workspaceSlug: string, projectSlug: string} | null>(null)
 
   const handleCloseSyncModal = async () => {
     if (syncStatus === 'running') return
@@ -181,16 +181,25 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
     if (syncStatus === 'success') {
       try {
         const supabase = createClient()
-        const { data: workspace } = await supabase.from('workspaces').select('id').eq('slug', workspaceSlug).single()
-        if (workspace) {
-          const { data: projects } = await supabase.from('projects')
-            .select('slug')
-            .eq('workspace_id', workspace.id)
-            .eq('sync_status', 'draft_pending')
-          
-          if (projects && projects.length > 0) {
-            setPendingResolutionProject(projects[0].slug)
+        let query = supabase.from('projects')
+          .select('slug, workspaces!inner(slug)')
+          .eq('sync_status', 'draft_pending')
+        
+        if (workspaceSlug !== 'global') {
+          const { data: workspace } = await supabase.from('workspaces').select('id').eq('slug', workspaceSlug).single()
+          if (workspace) {
+            query = query.eq('workspace_id', workspace.id)
           }
+        }
+
+        const { data: projects } = await query
+        
+        if (projects && projects.length > 0) {
+          const wSlug = Array.isArray(projects[0].workspaces) ? projects[0].workspaces[0].slug : (projects[0].workspaces as any).slug
+          setPendingResolution({
+            workspaceSlug: wSlug,
+            projectSlug: projects[0].slug
+          })
         }
       } catch (e) {
         console.error('Error checking sync status', e)
@@ -532,9 +541,9 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
       )}
 
       {/* Modal de Aviso de Sincronização Pendente */}
-      {pendingResolutionProject && (
+      {pendingResolution && (
         <div className="fixed inset-0 z-[200] pointer-events-none flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto" onClick={() => setPendingResolutionProject(null)} />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto" onClick={() => setPendingResolution(null)} />
           <div className="pointer-events-auto w-full max-w-md bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in duration-200">
             <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">Sincronização Pendente</h3>
             <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-6">
@@ -542,13 +551,13 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
             </p>
             <div className="flex justify-end gap-3">
               <button 
-                onClick={() => setPendingResolutionProject(null)}
+                onClick={() => setPendingResolution(null)}
                 className="px-4 py-2 rounded-xl text-sm font-bold text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               >
                 Agora não
               </button>
               <Link 
-                href={`/admin/${workspaceSlug}/${pendingResolutionProject}/sync-resolution?returnUrl=${encodeURIComponent(pathname)}`}
+                href={`/admin/${pendingResolution.workspaceSlug}/${pendingResolution.projectSlug}/sync-resolution?returnUrl=${encodeURIComponent(pathname)}`}
                 className="px-4 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-500 transition-colors"
               >
                 Sim, revisar agora
