@@ -315,58 +315,60 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
             minHeight={300}
             bounds="window"
             dragHandleClassName="drag-handle"
-            className="pointer-events-auto bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300"
+            className="pointer-events-auto bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300"
           >
-            <div className="drag-handle p-5 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center cursor-move shrink-0 bg-white dark:bg-neutral-900">
-              <div className="space-y-1">
-                <h3 className="font-bold text-xl text-neutral-900 dark:text-white">Editar metabuilder.config.json</h3>
-                <p className="text-xs text-neutral-500 font-normal">
-                  Esta configuração será salva diretamente no AppData Local da IDE e será usada no próximo Início ou Sincronização.
-                </p>
+            <div className="flex flex-col w-full h-full">
+              <div className="drag-handle p-5 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center cursor-move shrink-0 bg-white dark:bg-neutral-900">
+                <div className="space-y-1">
+                  <h3 className="font-bold text-xl text-neutral-900 dark:text-white">Editar metabuilder.config.json</h3>
+                  <p className="text-xs text-neutral-500 font-normal">
+                    Esta configuração será salva diretamente no AppData Local da IDE e será usada no próximo Início ou Sincronização.
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setIsConfigModalOpen(false)} 
+                  className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-neutral-900 dark:hover:text-white shrink-0"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button 
-                onClick={() => setIsConfigModalOpen(false)} 
-                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-neutral-900 dark:hover:text-white shrink-0"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="flex-1 w-full bg-[#1e1e1e] border-y border-neutral-200 dark:border-neutral-800">
-              <Editor
-                height="100%"
-                defaultLanguage="json"
-                value={configContent}
-                onChange={(value) => setConfigContent(value || '')}
-                theme="vs-dark"
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  formatOnPaste: true,
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                }}
-              />
-            </div>
-            
-            <div className="p-4 bg-white dark:bg-neutral-900 flex justify-end gap-3 shrink-0">
-              <button
-                onClick={() => setIsConfigModalOpen(false)}
-                className="px-6 py-2.5 rounded-xl font-bold text-sm text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveConfig}
-                disabled={isSavingConfig}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all disabled:opacity-50"
-              >
-                {isSavingConfig ? 'Salvando...' : (
-                  <>
-                    <Save className="w-4 h-4" /> Salvar Configuração
-                  </>
-                )}
-              </button>
+              
+              <div className="flex-1 min-h-0 w-full bg-[#1e1e1e] border-y border-neutral-200 dark:border-neutral-800 relative">
+                <Editor
+                  height="100%"
+                  defaultLanguage="json"
+                  value={configContent}
+                  onChange={(value) => setConfigContent(value || '')}
+                  theme="vs-dark"
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    formatOnPaste: true,
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                  }}
+                />
+              </div>
+              
+              <div className="p-4 bg-white dark:bg-neutral-900 flex justify-end gap-3 shrink-0">
+                <button
+                  onClick={() => setIsConfigModalOpen(false)}
+                  className="px-6 py-2.5 rounded-xl font-bold text-sm text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveConfig}
+                  disabled={isSavingConfig}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all disabled:opacity-50"
+                >
+                  {isSavingConfig ? 'Salvando...' : (
+                    <>
+                      <Save className="w-4 h-4" /> Salvar Configuração
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </Rnd>
         </div>
