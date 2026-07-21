@@ -46,6 +46,14 @@ export default async function WorkspaceDashboard({ params }: WorkspaceDashboardP
     .eq('workspace_id', workspace.id)
     .order('created_at', { ascending: false })
 
+  // Fetch owner's subscription tier for gating
+  const { data: ownerProfile } = await supabase
+    .from('profiles')
+    .select('subscription_tier')
+    .eq('id', workspace.owner_id)
+    .single()
+  const tier = (ownerProfile?.subscription_tier as 'pro' | 'free') ?? 'free'
+
   // 3. Busca a role e permissões do usuário logado neste workspace
   const { data: memberData } = await supabase
     .from('workspace_members')
@@ -117,6 +125,7 @@ export default async function WorkspaceDashboard({ params }: WorkspaceDashboardP
           canCreate={canCreateProjects}
           canDelete={canDeleteProjects}
           showTeamSettings={showTeamSettings}
+          tier={tier}
         />
 
       </main>

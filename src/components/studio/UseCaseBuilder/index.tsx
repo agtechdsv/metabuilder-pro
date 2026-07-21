@@ -16,6 +16,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { cn } from '@/lib/utils'
 import { useTelemetry } from '@/hooks/useTelemetry'
+import { useUpgradeModal } from '@/context/UpgradeModalContext'
 
 // ── New modular hooks ──────────────────────────────────────────────────────────
 import { useWizardData }      from './hooks/useWizardData'
@@ -49,6 +50,7 @@ export function UseCaseBuilderWizard({
   const { workspace_slug, project_slug } = params as { workspace_slug: string; project_slug: string }
   const supabase = createClient()
   const { toast } = useToast()
+  const { openUpgrade } = useUpgradeModal()
 
   // ── Wizard navigation ───────────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState(initialData?.is_quick_add ? 2 : 1)
@@ -267,7 +269,11 @@ export function UseCaseBuilderWizard({
       onSaveSuccess()
     } catch (err: any) {
       console.error(err)
-      toast(t('wizard.buttons.error_save') + err.message, 'error')
+      if (!initialData?.id && err?.code === '42501') {
+        openUpgrade('Nova View')
+      } else {
+        toast(t('wizard.buttons.error_save') + err.message, 'error')
+      }
     } finally {
       setIsSaving(false)
     }

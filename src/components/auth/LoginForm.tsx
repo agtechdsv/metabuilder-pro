@@ -554,12 +554,12 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
         </div>
 
         <h2 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-2">
-          {mode === 'login' ? 'MetaBuilder' : t('auth.login.join_title', 'Junte-se ao')} <span className="text-indigo-600">PRO</span>
+          {mode === 'login' ? 'MetaBuilder' : t('auth.login.join_title', 'Comece')} <span className="text-indigo-600">{mode === 'login' ? 'PRO' : 'Gratuitamente'}</span>
         </h2>
         <p className="text-neutral-500 dark:text-neutral-400 text-sm font-medium px-4">
           {mode === 'login'
             ? t('auth.login.subtitle', 'Acesse seu ecossistema de dados de alta performance')
-            : t('auth.login.signup_subtitle', 'Comece a construir sua aplicação de nível empresarial hoje')}
+            : t('auth.login.signup_subtitle', 'Crie sua conta grátis e comece a construir agora mesmo')}
         </p>
       </div>
 
@@ -764,7 +764,7 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
             }}
             className="ml-2 text-indigo-500 hover:text-indigo-400 transition-colors"
           >
-            {mode === 'login' ? t('auth.login.create_account', 'Crie sua conta') : t('auth.login.do_login', 'Fazer Login')}
+            {mode === 'login' ? t('auth.login.create_account', 'Criar conta Grátis') : t('auth.login.do_login', 'Fazer Login')}
           </button>
         </p>
       </div>

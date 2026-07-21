@@ -114,18 +114,8 @@ export default async function GlobalDashboard() {
     })
   }
 
-  if (!isSuperAdmin && !isGuest) {
-    if (activeWorkspaces.length === 0) {
-      // Se não possui nenhum workspace ativo (nem como dono, nem como convidado),
-      // precisamos verificar se ele possui uma assinatura válida para poder criar um.
-      // Redireciona para o checkout se não tiver licenças ativas ou se estiver bloqueado/pendente.
-      const hasValidPlan = (profile?.subscription_licenses || 0) > 0 && profile?.subscription_status === 'active';
-      
-      if (!hasValidPlan) {
-        redirect('/checkout')
-      }
-    }
-  }
+  // Free tier users stay on /workspace — no redirect to /checkout
+
 
 
   // Busca regras de precificação ativas

@@ -410,11 +410,15 @@ export async function getPostLoginRedirectPath(userId: string): Promise<string> 
     if (profile?.subscription_licenses && profile.subscription_licenses > 0 && profile?.subscription_status === 'active') {
       return '/client/dashboard'
     }
+
+    // 4. Free tier user — goes to workspace dashboard (no checkout required)
+    return '/workspace'
+
   } catch (err) {
     console.error('Error determining post-login redirect path:', err)
   }
 
-  return '/checkout'
+  return '/workspace'
 }
 
 export async function removePasskeys() {

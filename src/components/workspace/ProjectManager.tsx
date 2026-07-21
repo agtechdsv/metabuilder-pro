@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 import { isTauri, openExternalUrl } from '@/utils/tauriUtils'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
+import { useUpgradeModal } from '@/context/UpgradeModalContext'
 
 
 interface Project {
@@ -64,6 +65,7 @@ interface ProjectManagerProps {
   showTeamSettings?: boolean
   workspaceThemeConfig?: any
   workspaceCustomDomain?: string
+  tier?: 'pro' | 'free' | string
 }
 
 export function ProjectManager({ 
@@ -75,7 +77,8 @@ export function ProjectManager({
   canDelete = true,
   showTeamSettings = true,
   workspaceThemeConfig = {},
-  workspaceCustomDomain = ''
+  workspaceCustomDomain = '',
+  tier = 'free'
 }: ProjectManagerProps) {
   const [projects, setProjects] = useState<Project[]>(initialProjects)
   
@@ -116,6 +119,16 @@ export function ProjectManager({
     projectId?: string
     authConfig?: any
   } | null>(null)
+
+  const { openUpgrade } = useUpgradeModal()
+
+  const handleNewProject = () => {
+    if (tier === 'free' && projects.length >= 1) {
+      openUpgrade('Novo Projeto')
+      return
+    }
+    openDrawer()
+  }
 
   const [exportTab, setExportTab] = useState<'database' | 'auth'>('database')
   const [exportDataMode, setExportDataMode] = useState<'tunnel' | 'supabase' | 'postgres'>('supabase')
@@ -391,7 +404,13 @@ export function ProjectManager({
       router.refresh()
     } catch (err: any) {
       console.error(err)
-      toast(err.message || 'Erro ao salvar o projeto', 'error')
+      // RLS blocked the insert — free tier limit reached
+      if (!selectedProject && err?.code === '42501') {
+        openUpgrade('Novo Projeto')
+        closeDrawer()
+      } else {
+        toast(err.message || 'Erro ao salvar o projeto', 'error')
+      }
     } finally {
       setIsSaving(false)
     }
@@ -540,7 +559,7 @@ export function ProjectManager({
           <div className="flex items-center gap-3">
             {canCreate && (
               <button
-                onClick={() => openDrawer()}
+                onClick={handleNewProject}
                 className="flex items-center gap-2 px-7 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)] whitespace-nowrap text-sm"
               >
                 <Plus className="w-5 h-5" /> {t('dashboard.projects.new_project')}
@@ -831,7 +850,7 @@ export function ProjectManager({
           {/* Add New Card */}
           {canCreate && (
             <button
-              onClick={() => openDrawer()}
+              onClick={handleNewProject}
               className="p-8 bg-neutral-50 dark:bg-neutral-950 border-2 border-dashed border-neutral-300 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-white dark:hover:bg-neutral-800 hover:border-indigo-500/30 transition-all group min-h-[250px] shadow-inner dark:shadow-none"
             >
               <div className="w-16 h-16 bg-white dark:bg-neutral-950 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm dark:shadow-none">

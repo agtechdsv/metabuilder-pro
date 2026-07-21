@@ -4,6 +4,7 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { ProgressBarProvider } from './ProgressBarProvider'
 import { AutoUpdater } from '@/components/tauri/AutoUpdater'
 import { GlobalDesktopListener } from './layout/GlobalDesktopListener'
+import { UpgradeModalProvider } from '@/context/UpgradeModalContext'
 
 export function Providers({ 
   children,
@@ -16,10 +17,12 @@ export function Providers({
     <CustomThemeProvider defaultTheme="dark" attribute="class">
       <I18nProvider initialLocale={initialLocale}>
         <ToastProvider>
-          <ProgressBarProvider />
-          <AutoUpdater />
-          <GlobalDesktopListener />
-          {children}
+          <UpgradeModalProvider>
+            <ProgressBarProvider />
+            <AutoUpdater />
+            <GlobalDesktopListener />
+            {children}
+          </UpgradeModalProvider>
         </ToastProvider>
       </I18nProvider>
     </CustomThemeProvider>

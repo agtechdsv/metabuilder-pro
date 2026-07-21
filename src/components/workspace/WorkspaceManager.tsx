@@ -36,6 +36,7 @@ import { Drawer } from '@/components/ui/Drawer'
 import { Modal } from '@/components/ui/Modal'
 import { useI18n } from '@/i18n/I18nContext'
 import { cn } from '@/lib/utils'
+import { useUpgradeModal } from '@/context/UpgradeModalContext'
 
 interface Workspace {
   id: string
@@ -109,6 +110,20 @@ export function WorkspaceManager({
   const { t } = useI18n()
 
   const canCreateWorkspace = !isGuest || initialGuestAccessLevel === 'global'
+  const { openUpgrade } = useUpgradeModal()
+
+  // Free tier: subscription_tier is computed column on profiles
+  const tier = profile?.subscription_tier as 'pro' | 'free' | undefined
+  const isFreeTier = !tier || tier === 'free'
+
+  const handleNewWorkspace = () => {
+    // If free tier and already has at least 1 workspace → show upgrade modal
+    if (isFreeTier && workspaces.length >= 1) {
+      openUpgrade('Novo Workspace')
+      return
+    }
+    openDrawer()
+  }
 
   useEffect(() => {
     if (searchParams.get('tab') === 'team') {
@@ -186,7 +201,13 @@ export function WorkspaceManager({
       closeDrawer()
       router.refresh()
     } catch (err: any) {
-      toast(err.message, 'error')
+      // RLS blocked the insert — free tier limit reached
+      if (!selectedWorkspace && err?.code === '42501') {
+        openUpgrade('Novo Workspace')
+        closeDrawer()
+      } else {
+        toast(err.message, 'error')
+      }
     } finally {
       setIsSaving(false)
     }
@@ -286,7 +307,7 @@ export function WorkspaceManager({
             )}
             {canCreateWorkspace && (
               <button
-                onClick={() => openDrawer()}
+                onClick={handleNewWorkspace}
                 className="flex items-center gap-2 px-7 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)] whitespace-nowrap text-sm active:scale-95"
               >
                 <Plus className="w-5 h-5" /> {t('dashboard.new_workspace')}
@@ -510,7 +531,7 @@ export function WorkspaceManager({
           {/* Add New Card */}
           {canCreateWorkspace && (
             <button
-              onClick={() => openDrawer()}
+              onClick={handleNewWorkspace}
               className="group p-8 bg-neutral-50 dark:bg-neutral-950 border border-dashed border-neutral-300 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-white dark:hover:bg-neutral-800 hover:border-indigo-500/30 transition-all min-h-[280px] shadow-inner dark:shadow-none"
             >
               <div className="w-16 h-16 bg-white dark:bg-neutral-950 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm dark:shadow-none">

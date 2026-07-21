@@ -94,6 +94,98 @@ export async function POST(request: Request) {
     tauriConf.version = version
     const newTauriConfStr = JSON.stringify(tauriConf, null, 2) + '\n'
 
+    // Step 3.5: Generate Changelog using Gemini (if key is present)
+    let newChangelogStr = ''
+    try {
+      if (process.env.GEMINI_API_KEY) {
+        // Obter a última release para ver os commits desde então
+        const latestRelease = await githubFetch(`releases/latest`).catch(() => null)
+        let commitMessages = ''
+        
+        if (latestRelease && latestRelease.tag_name) {
+          const compare = await githubFetch(`compare/${latestRelease.tag_name}...master`)
+          if (compare.commits && compare.commits.length > 0) {
+            commitMessages = compare.commits.map((c: any) => c.commit.message).join('\n')
+          }
+        } else {
+          // Fallback se não tiver release: pegar ultimos 10 commits
+          const commits = await githubFetch(`commits?per_page=10`)
+          commitMessages = commits.map((c: any) => c.commit.message).join('\n')
+        }
+
+        if (commitMessages) {
+          const prompt = `
+Você é um assistente responsável por criar um Histórico de Atualizações (Release Notes) para usuários finais.
+Abaixo estão as mensagens de commit.
+Sua tarefa é ler essas mensagens, remover jargões extremamente técnicos, agrupar o que faz sentido e gerar uma lista de tópicos curtos, diretos e amigáveis (bullet points).
+
+O resultado deve ser EXATAMENTE um objeto JSON válido no seguinte formato:
+{
+  "pt": ["Ponto 1", "Ponto 2"],
+  "en": ["Point 1", "Point 2"],
+  "es": ["Punto 1", "Punto 2"]
+}
+
+Commits:
+${commitMessages}
+`
+
+          const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              system_instruction: {
+                parts: { text: 'You are a helpful assistant that strictly outputs valid JSON without markdown.' }
+              },
+              contents: [
+                { parts: [{ text: prompt }] }
+              ],
+              generationConfig: {
+                temperature: 0.3,
+                responseMimeType: 'application/json'
+              }
+            })
+          })
+
+          const aiData = await aiResponse.json()
+          if (!aiData.error && aiData.candidates && aiData.candidates.length > 0) {
+            const aiContent = aiData.candidates[0].content.parts[0].text
+            const jsonMatch = aiContent.match(/\{[\s\S]*\}/)
+            if (jsonMatch) {
+              const parsedChangelog = JSON.parse(jsonMatch[0])
+              
+              // Pegar o changelog.json atual do repositório
+              let currentChangelog = {}
+              try {
+                const changelogRes = await githubFetch(`contents/public/changelog.json?ref=master`)
+                const changelogContent = Buffer.from(changelogRes.content, 'base64').toString('utf-8')
+                currentChangelog = JSON.parse(changelogContent)
+              } catch (e) {
+                console.warn('Não foi possível ler o changelog.json atual no repo, criando um novo.')
+              }
+
+              const today = new Date().toISOString().split('T')[0]
+              const updatedChangelog = {
+                [`v${version}`]: {
+                  date: today,
+                  pt: parsedChangelog.pt || [],
+                  en: parsedChangelog.en || [],
+                  es: parsedChangelog.es || []
+                },
+                ...currentChangelog
+              }
+
+              newChangelogStr = JSON.stringify(updatedChangelog, null, 2)
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao gerar changelog via Gemini na API:', err)
+    }
+
     // Step 4: Create Blobs for the new files
     const packageBlob = await githubFetch(`git/blobs`, {
       method: 'POST',
@@ -105,15 +197,28 @@ export async function POST(request: Request) {
       body: JSON.stringify({ content: newTauriConfStr, encoding: 'utf-8' })
     })
 
+    let changelogBlob: any = null
+    if (newChangelogStr) {
+      changelogBlob = await githubFetch(`git/blobs`, {
+        method: 'POST',
+        body: JSON.stringify({ content: newChangelogStr, encoding: 'utf-8' })
+      })
+    }
+
     // Step 5: Create a new Tree
+    const treePayload: any[] = [
+      { path: 'package.json', mode: '100644', type: 'blob', sha: packageBlob.sha },
+      { path: 'src-tauri/tauri.conf.json', mode: '100644', type: 'blob', sha: tauriBlob.sha }
+    ]
+    if (changelogBlob) {
+      treePayload.push({ path: 'public/changelog.json', mode: '100644', type: 'blob', sha: changelogBlob.sha })
+    }
+
     const newTree = await githubFetch(`git/trees`, {
       method: 'POST',
       body: JSON.stringify({
         base_tree: baseTreeSha,
-        tree: [
-          { path: 'package.json', mode: '100644', type: 'blob', sha: packageBlob.sha },
-          { path: 'src-tauri/tauri.conf.json', mode: '100644', type: 'blob', sha: tauriBlob.sha }
-        ]
+        tree: treePayload
       })
     })
 

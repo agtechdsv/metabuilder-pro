@@ -1,0 +1,35 @@
+{
+  "v1.1.11": {
+    "date": "2026-07-21",
+    "pt": [
+      "Implementado limite do plano Grátis (1 Workspace, 1 Projeto, 4 Telas)",
+      "Adicionado bloqueio premium na Sidebar do Studio",
+      "Novo botão de 'Baixar IDE' adicionado na Landing Page"
+    ],
+    "en": [
+      "Implemented Free tier limit (1 Workspace, 1 Project, 4 UI Views)",
+      "Added premium gate lock to Studio Sidebar",
+      "New 'Download IDE' button added to the Landing Page"
+    ],
+    "es": [
+      "Implementado el límite del plan Gratis (1 Espacio de trabajo, 1 Proyecto, 4 Vistas UI)",
+      "Añadido bloqueo premium en la barra lateral del Studio",
+      "Nuevo botón de 'Descargar IDE' añadido en la página de inicio"
+    ]
+  },
+  "v1.1.10": {
+    "date": "2026-07-20",
+    "pt": [
+      "Correção no sincronismo paralelo da IDE",
+      "Melhorias de desempenho na interface"
+    ],
+    "en": [
+      "Fix parallel sync in IDE",
+      "UI performance improvements"
+    ],
+    "es": [
+      "Corrección en la sincronización paralela del IDE",
+      "Mejoras de rendimiento en la interfaz"
+    ]
+  }
+}

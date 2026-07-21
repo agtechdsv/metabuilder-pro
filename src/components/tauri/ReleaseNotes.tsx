@@ -6,8 +6,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { History, X, Download, ChevronDown, ChevronUp } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { useI18n } from '@/i18n/I18nContext'
 
 export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pill' }) {
+  const { language } = useI18n()
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({})
   const [releaseNotesList, setReleaseNotesList] = useState<any[]>([])
@@ -42,16 +44,30 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
   useEffect(() => {
     if (showReleaseNotes) {
       setIsFetchingNotes(true)
-      fetch(`/api/releases?t=${Date.now()}`, { cache: 'no-store' })
+      fetch(`/changelog.json?t=${Date.now()}`, { cache: 'no-store' })
         .then(res => res.json())
         .then(data => {
-          if (Array.isArray(data)) {
+          if (data && typeof data === 'object' && !Array.isArray(data)) {
+            const mappedReleases = Object.entries(data)
+              .map(([version, info]: [string, any]) => {
+                const lines = info[language] || info.en || info.pt || []
+                const body = lines.map((l: string) => `- ${l}`).join('\n')
+                return {
+                  version,
+                  published_at: info.date,
+                  body
+                }
+              })
+              .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
+            setReleaseNotesList(mappedReleases)
+          } else if (Array.isArray(data)) {
+            // Fallback for old array format just in case
             setReleaseNotesList(data)
           }
         })
         .finally(() => setIsFetchingNotes(false))
     }
-  }, [showReleaseNotes])
+  }, [showReleaseNotes, language])
 
   const modalContent = (
     <AnimatePresence>
@@ -141,22 +157,8 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
                       const isExpanded = !!expandedNotes[release.version]
                       const isLatest = i === 0
 
-                      let filteredLines = release.body
-                        .replace(/\*\*Full Changelog\*\*:.*?(\n|$)/g, '')
-                        .split('\n')
-                        .filter((line: any) => {
-                          const cleanLine = line.replace(/^[^a-zA-Z0-9]+/, '').toLowerCase()
-                          return !cleanLine.startsWith('chore:') && !cleanLine.startsWith('merge')
-                        })
-                        
-                      const titleIndex = filteredLines.findIndex((l: string) => l.includes('### Nesta Atualização:'))
-                      if (titleIndex !== -1) {
-                        const hasContentAfter = filteredLines.slice(titleIndex + 1).some((l: string) => l.trim() !== '')
-                        if (!hasContentAfter) {
-                          filteredLines = filteredLines.slice(0, titleIndex)
-                        }
-                      }
-                      const finalBody = filteredLines.join('\n').trim() || 'Sem detalhes para esta versão.'
+                      let finalBody = release.body
+                      if (finalBody === '' || !finalBody) finalBody = 'Sem detalhes para esta versão.'
 
                       return (
                         <div key={release.version} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">

@@ -37,6 +37,14 @@ export function HeroActions({ user }: HeroActionsProps) {
               <span>{t('common.login')}</span>
             </button>
           )}
+          <a
+            href="https://metabuilderpro.com/downloads"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 shadow-2xl shadow-indigo-900/40 active:scale-95 border border-indigo-400/20 group w-full sm:w-auto text-sm uppercase tracking-widest"
+          >
+            <span>⬇ Baixar IDE Gratuitamente</span>
+          </a>
           <Link
             href="/agendamento"
             className="bg-neutral-800/40 hover:bg-neutral-800 text-neutral-200 px-8 py-4 rounded-2xl font-bold transition-all border border-neutral-700/50 backdrop-blur-md active:scale-95 hover:border-neutral-600 flex items-center justify-center w-full sm:w-auto text-sm uppercase tracking-widest"

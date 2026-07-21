@@ -17,13 +17,15 @@ import { usePathname } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
 import { isTauri } from '@/utils/tauriUtils'
 import { useState, useEffect } from 'react'
+import { ProGate } from '@/components/ui/ProGate'
 
 interface StudioSidebarProps {
   workspaceSlug: string
   projectSlug: string
+  tier?: 'pro' | 'free' | string
 }
 
-export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps) {
+export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSidebarProps) {
   const pathname = usePathname()
   const { t } = useI18n()
   const [isDesktop, setIsDesktop] = useState(false)
@@ -32,61 +34,72 @@ export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps
     setIsDesktop(isTauri())
   }, [])
 
-  const links = [
+  const base = `/admin/${workspaceSlug}/${projectSlug}/studio`
+
+  const freeLinks = [
     {
-      href: `/admin/${workspaceSlug}/${projectSlug}/studio`,
+      href: `${base}`,
       icon: LayoutDashboard,
       label: t('dashboard.projects.studio.sidebar.dashboard'),
-      active: pathname === `/admin/${workspaceSlug}/${projectSlug}/studio`
+      active: pathname === base,
+      gate: null
     },
     {
-      href: `/admin/${workspaceSlug}/${projectSlug}/studio/data`,
+      href: `${base}/data`,
       icon: Database,
       label: t('dashboard.projects.studio.sidebar.data'),
-      active: pathname.includes('/studio/data')
+      active: pathname.includes('/studio/data'),
+      gate: null
     },
     {
-      href: `/admin/${workspaceSlug}/${projectSlug}/studio/auth`,
+      href: `${base}/auth`,
       icon: ShieldCheck,
       label: t('dashboard.projects.studio.sidebar.auth'),
-      active: pathname.includes('/studio/auth')
+      active: pathname.includes('/studio/auth'),
+      gate: 'pro'
     },
-    ...(isDesktop ? [{
-      href: `/admin/${workspaceSlug}/${projectSlug}/studio/byoc`,
+    {
+      href: `${base}/byoc`,
       icon: Code2,
       label: 'BYOC',
-      active: pathname.includes('/studio/byoc')
-    }] : []),
+      active: pathname.includes('/studio/byoc'),
+      gate: 'desktop'
+    },
     {
-      href: `/admin/${workspaceSlug}/${projectSlug}/studio/settings`,
+      href: `${base}/settings`,
       icon: Settings2,
       label: t('dashboard.projects.studio.sidebar.settings'),
-      active: pathname.includes('/studio/settings')
+      active: pathname.includes('/studio/settings'),
+      gate: null
     },
-    ...(isDesktop ? [{
-      href: `/admin/${workspaceSlug}/${projectSlug}/studio/tunnel`,
+    {
+      href: `${base}/tunnel`,
       icon: Network,
       label: 'Configurações de Bancos (JSON)',
-      active: pathname.includes('/studio/tunnel')
-    }] : []),
-    ...(isDesktop ? [{
-      href: `/admin/${workspaceSlug}/${projectSlug}/studio/terminal`,
+      active: pathname.includes('/studio/tunnel'),
+      gate: 'desktop'
+    },
+    {
+      href: `${base}/terminal`,
       icon: Terminal,
       label: 'Terminal (PTY)',
-      active: pathname.includes('/studio/terminal')
-    }] : []),
+      active: pathname.includes('/studio/terminal'),
+      gate: 'desktop'
+    },
     {
-      href: `/admin/${workspaceSlug}/${projectSlug}/studio/logs`,
+      href: `${base}/logs`,
       icon: ScrollText,
       label: 'Logs',
-      active: pathname.includes('/studio/logs')
+      active: pathname.includes('/studio/logs'),
+      gate: 'pro'
     },
-    ...(isDesktop ? [{
-      href: `/admin/${workspaceSlug}/${projectSlug}/studio/sql`,
+    {
+      href: `${base}/sql`,
       icon: Server,
       label: 'SQL Studio',
-      active: pathname.includes('/studio/sql')
-    }] : [])
+      active: pathname.includes('/studio/sql'),
+      gate: 'desktop'
+    },
   ]
 
   return (
@@ -95,14 +108,15 @@ export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps
         <Box className="text-white w-6 h-6" />
       </div>
       <nav className="flex flex-col gap-4">
-        {links.map((link, idx) => {
+        {freeLinks.map((link, idx) => {
           const Icon = link.icon
           const isActive = link.active
-          
-          return (
+
+          const linkEl = (
             <Link 
               key={idx}
-              href={link.href} 
+              href={link.gate ? '#' : link.href}
+              onClick={link.gate ? (e) => e.preventDefault() : undefined}
               className={`p-3 rounded-xl transition-all border group relative flex justify-center ${
                 isActive 
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 border-indigo-500' 
@@ -115,6 +129,23 @@ export function StudioSidebar({ workspaceSlug, projectSlug }: StudioSidebarProps
               </span>
             </Link>
           )
+
+          if (link.gate === 'pro') {
+            return (
+              <ProGate key={idx} featureName={link.label} gateType="pro" tier={tier}>
+                {linkEl}
+              </ProGate>
+            )
+          }
+          if (link.gate === 'desktop') {
+            return (
+              <ProGate key={idx} featureName={link.label} gateType="desktop" tier={tier}>
+                {linkEl}
+              </ProGate>
+            )
+          }
+
+          return linkEl
         })}
       </nav>
     </aside>

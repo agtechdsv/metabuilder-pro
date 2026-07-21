@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "generate:changelog": "npx ts-node scripts/generate-changelog.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

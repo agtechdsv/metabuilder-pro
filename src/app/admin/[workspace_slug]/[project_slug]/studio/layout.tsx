@@ -50,6 +50,14 @@ export default async function StudioLayout({ children, params }: StudioLayoutPro
 
   if (projectError || !project) notFound()
 
+  // 4. Fetch owner's subscription tier for gating
+  const { data: ownerProfile } = await supabase
+    .from('profiles')
+    .select('subscription_tier')
+    .eq('id', workspace.owner_id)
+    .single()
+  const tier = (ownerProfile?.subscription_tier as 'pro' | 'free') ?? 'free'
+
   // 3. Guardian: Block UI if there are pending sync resolutions
   if (project.sync_status === 'draft_pending') {
     redirect(`/admin/${workspace_slug}/${project_slug}/sync-resolution`)
@@ -60,7 +68,8 @@ export default async function StudioLayout({ children, params }: StudioLayoutPro
       {/* Sidebar - Persists across studio pages */}
       <StudioSidebar 
         workspaceSlug={workspace_slug} 
-        projectSlug={project_slug} 
+        projectSlug={project_slug}
+        tier={tier}
       />
 
       <div className="pl-20 min-h-screen flex flex-col pt-16 bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300 w-full overflow-hidden">

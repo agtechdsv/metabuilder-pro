@@ -61,8 +61,8 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
     const isOwner = workspace.owner_id === user.id
 
     if (isOwner) {
-      // Owners get redirected to payment checkout
-      redirect(`/checkout?workspace_slug=${workspace.slug}`)
+      // Free tier owners: redirect to workspace (not checkout)
+      redirect('/workspace')
     } else {
       // Non-owner members see a premium paywall message
       return (
