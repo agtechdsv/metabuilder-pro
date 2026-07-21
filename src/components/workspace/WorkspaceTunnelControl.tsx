@@ -9,11 +9,13 @@ import { Modal } from '@/components/ui/Modal'
 import Editor from '@monaco-editor/react'
 import { Rnd } from 'react-rnd'
 import { createClient } from '@/utils/supabase/client'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams, useRouter } from 'next/navigation'
 
 export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: string }) {
   const { toast } = useToast()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const router = useRouter()
   
   const [tunnelStatus, setTunnelStatus] = useState<'stopped' | 'running' | 'loading'>('loading')
   const [tunnelPid, setTunnelPid] = useState<number | null>(null)
@@ -168,6 +170,22 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
       return () => clearInterval(interval)
     }
   }, [])
+
+  useEffect(() => {
+    const action = searchParams.get('action')
+    if (action === 'start_tunnel' || action === 'stop_tunnel') {
+      const mode = action === 'start_tunnel' ? 'start' : 'stop'
+      
+      // Call after a tiny delay to ensure everything is mounted
+      setTimeout(() => {
+        handleProcessControl(mode)
+      }, 500)
+
+      // Clear the query parameter so it doesn't run again on refresh
+      const newUrl = pathname + '?tab=tunnel'
+      window.history.replaceState({}, '', newUrl)
+    }
+  }, [searchParams, pathname])
 
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
   const [syncStatus, setSyncStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle')

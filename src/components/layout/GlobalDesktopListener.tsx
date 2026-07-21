@@ -18,7 +18,18 @@ export function GlobalDesktopListener() {
     const setupListener = async () => {
       try {
         const { listen } = await import('@tauri-apps/api/event');
-        unlisten = await listen<string>('tray-event', (event) => {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+
+        const bringToFront = async () => {
+          try {
+            const win = getCurrentWindow();
+            await win.show();
+            await win.unminimize();
+            await win.setFocus();
+          } catch(e) {}
+        };
+
+        unlisten = await listen<string>('tray-event', async (event) => {
           const payload = event.payload;
 
           const match = pathname?.match(/\/admin\/([^/]+)(?:\/([^/]+))?/);
@@ -26,6 +37,7 @@ export function GlobalDesktopListener() {
           const projectSlug = match ? match[2] : null;
 
           if (payload.startsWith('new_proj_')) {
+            await bringToFront();
             const targetSlug = payload.replace('new_proj_', '');
             router.push(`/admin/${targetSlug}?action=new`);
             return;
@@ -33,9 +45,11 @@ export function GlobalDesktopListener() {
 
           switch (payload) {
             case 'new_ws':
+              await bringToFront();
               router.push('/workspace?action=new');
               break;
             case 'new_proj':
+              await bringToFront();
               if (workspaceSlug) {
                 router.push(`/admin/${workspaceSlug}?action=new`);
               } else {
@@ -44,6 +58,7 @@ export function GlobalDesktopListener() {
               }
               break;
             case 'sync_byoc':
+              await bringToFront();
               if (workspaceSlug && projectSlug && projectSlug !== 'settings') {
                 router.push(`/admin/${workspaceSlug}/${projectSlug}/studio/byoc`);
                 toast('Página de Sincronização BYOC', 'info');
@@ -53,8 +68,9 @@ export function GlobalDesktopListener() {
               break;
             case 'start_tunnel':
             case 'stop_tunnel':
-              router.push('/workspace?tab=tunnel');
-              toast(payload === 'start_tunnel' ? 'Inicie o túnel por aqui' : 'Pare o túnel por aqui', 'info');
+              await bringToFront();
+              router.push(`/workspace?tab=tunnel&action=${payload}`);
+              toast(payload === 'start_tunnel' ? 'Iniciando túnel...' : 'Parando túnel...', 'info');
               break;
           }
         });
