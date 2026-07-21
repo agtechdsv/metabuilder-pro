@@ -7,14 +7,15 @@ import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 export default async function SqlStudioPage({
   params
 }: {
-  params: { workspace_slug: string, project_slug: string }
+  params: Promise<{ workspace_slug: string, project_slug: string }>
 }) {
+  const resolvedParams = await params;
   const supabase = await createClient();
   
   const { data: workspace } = await supabase
     .from('workspaces')
     .select('*')
-    .eq('slug', params.workspace_slug)
+    .eq('slug', resolvedParams.workspace_slug)
     .single();
 
   if (!workspace) return notFound();
@@ -22,7 +23,7 @@ export default async function SqlStudioPage({
   const { data: project } = await supabase
     .from('projects')
     .select('*')
-    .eq('slug', params.project_slug)
+    .eq('slug', resolvedParams.project_slug)
     .eq('workspace_id', workspace.id)
     .single();
 
@@ -32,14 +33,14 @@ export default async function SqlStudioPage({
     <div className="w-full h-full flex flex-col">
       <Breadcrumbs
         workspaceName={workspace.name}
-        workspaceSlug={params.workspace_slug}
+        workspaceSlug={resolvedParams.workspace_slug}
         projectName={project.name}
-        projectSlug={params.project_slug}
+        projectSlug={resolvedParams.project_slug}
       />
       <SqlStudioClient 
-        workspaceSlug={params.workspace_slug} 
-        projectSlug={params.project_slug} 
-        project={project}
+        workspaceSlug={resolvedParams.workspace_slug} 
+        projectSlug={resolvedParams.project_slug} 
+        projectId={project.id} 
       />
     </div>
   );

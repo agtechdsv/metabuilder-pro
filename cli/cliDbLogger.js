@@ -21,10 +21,9 @@ const LOG_TYPES = {
 };
 
 // DDL table function returns the CREATE TABLE script for the correct schema
-function getCreateTableSql(schemaName) {
-  const safeSchema = (schemaName || 'public').replace(/"/g, '""');
+function getCreateTableSql() {
   return `
-    CREATE TABLE IF NOT EXISTS "${safeSchema}".__mb_logs (
+    CREATE TABLE IF NOT EXISTS __mb_logs (
       id          BIGSERIAL    PRIMARY KEY,
       session_id  UUID,
       type        TEXT         NOT NULL,
@@ -38,9 +37,9 @@ function getCreateTableSql(schemaName) {
       metadata    JSONB,
       created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
     );
-    CREATE INDEX IF NOT EXISTS idx_mb_logs_type    ON "${safeSchema}".__mb_logs (type, created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_mb_logs_date    ON "${safeSchema}".__mb_logs (created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_mb_logs_table   ON "${safeSchema}".__mb_logs (table_name, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_mb_logs_type    ON __mb_logs (type, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_mb_logs_date    ON __mb_logs (created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_mb_logs_table   ON __mb_logs (table_name, created_at DESC);
   `;
 }
 
@@ -91,14 +90,13 @@ class CliDbLogger {
     }
 
     try {
-      // Cria a tabela se não existir (idempotente) no schema correto
-      await pgClient.query(getCreateTableSql(this._schemaName));
+      // Cria a tabela se não existir (idempotente) no schema correto (default da conexão)
+      await pgClient.query(getCreateTableSql());
 
       // Limpa logs antigos baseado na retenção configurada
       const retentionDays = this._logConfig.retention_days || 7;
-      const safeSchema = this._schemaName.replace(/"/g, '""');
       await pgClient.query(
-        `DELETE FROM "${safeSchema}".__mb_logs WHERE created_at < NOW() - INTERVAL '${parseInt(retentionDays, 10)} days'`
+        `DELETE FROM __mb_logs WHERE created_at < NOW() - INTERVAL '${parseInt(retentionDays, 10)} days'`
       );
 
       this._ready = true;
@@ -126,7 +124,7 @@ class CliDbLogger {
       console.log(`\x1b[90m[MBLog] Log atualizado dinamicamente. Tipos: [${this._logConfig.types?.join(', ')}]. Retencao: ${this._logConfig.retention_days}d.\x1b[0m`);
       if (!wasReady && this._pgClient) {
         // Inicializa a tabela caso não estivesse ativo antes
-        this._pgClient.query(getCreateTableSql(this._schemaName)).catch(err => {
+        this._pgClient.query(getCreateTableSql()).catch(err => {
           console.error('\x1b[33m[MBLog] Falha ao inicializar tabela de logs no update:\x1b[0m', err.message);
         });
       }
@@ -135,40 +133,38 @@ class CliDbLogger {
 
   /** Verifica se um tipo de log está habilitado */
   _isEnabled(type) {
-    if (this._logConfig.log_to_db === false) return false;
     return this._ready && this._logConfig.enabled && this._logConfig.types.includes(type);
   }
 
   /** Insere um registro na tabela __mb_logs (fire-and-forget) */
   _insert(type, action, tableName, sqlText, message, durationMs, rowCount, schemaName, metadata) {
-    if (!this._pgClient || !this._ready) return;
-    const safeSchema = (this._schemaName || 'public').replace(/"/g, '""');
-    const sql = `
-      INSERT INTO "${safeSchema}".__mb_logs
-        (session_id, type, action, table_name, schema_name, message, sql_text, duration_ms, row_count, metadata, created_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-    `;
-    const params = [
-      this._sessionId,
-      type,
-      action       || null,
-      tableName    || null,
-      schemaName   || this._schemaName,
-      message      || null,
-      sqlText      || null,
-      durationMs   != null ? parseInt(durationMs) : null,
-      rowCount     != null ? parseInt(rowCount)    : null,
-      metadata     ? JSON.stringify(metadata) : null,
-      localISOString(), // horário local do CLI, não UTC do PostgreSQL
-    ];
-    // Fire-and-forget: nunca bloqueia a query principal
-    try {
-      this._pgClient.query(sql, params).catch(e => {
-        // Silencia erros de log para não afetar o usuário
-        console.error('\x1b[33m[MBLog] Erro ao gravar log:\x1b[0m', e.message);
-      });
-    } catch (queryErr) {
-      console.error('\x1b[33m[MBLog] Erro síncrono ao gravar log:\x1b[0m', queryErr.message);
+    if (this._pgClient) {
+        const q = `
+          INSERT INTO __mb_logs 
+            (session_id, type, action, table_name, schema_name, message, sql_text, duration_ms, row_count, metadata, created_at)
+          VALUES 
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        `;
+        const params = [
+          this._sessionId,
+          type,
+          action       || null,
+          tableName    || null,
+          schemaName   || this._schemaName,
+          message      || null,
+          sqlText      || null,
+          durationMs   != null ? parseInt(durationMs) : null,
+          rowCount     != null ? parseInt(rowCount)    : null,
+          metadata     ? JSON.stringify(metadata) : null,
+          localISOString(),
+        ];
+        try {
+          this._pgClient.query(q, params).catch(e => {
+            console.error('\x1b[33m[MBLog] Erro ao gravar log:\x1b[0m', e.message);
+          });
+        } catch (queryErr) {
+          console.error('\x1b[33m[MBLog] Erro síncrono ao gravar log:\x1b[0m', queryErr.message);
+        }
     }
   }
 
@@ -289,15 +285,14 @@ class CliDbLogger {
     const offset = parseInt(filters.offset || 0);
 
     try {
-      const safeSchema = (this._schemaName || 'public').replace(/"/g, '""');
       const [dataRes, countRes] = await Promise.all([
         this._pgClient.query(
           `SELECT id, session_id, type, action, table_name, schema_name, message, sql_text, duration_ms, row_count, metadata, created_at
-           FROM "${safeSchema}".__mb_logs ${where} ORDER BY created_at DESC LIMIT $${i} OFFSET $${i + 1}`,
+           FROM __mb_logs ${where} ORDER BY created_at DESC LIMIT $${i} OFFSET $${i + 1}`,
           [...params, limit, offset]
         ),
         this._pgClient.query(
-          `SELECT COUNT(*) as total FROM "${safeSchema}".__mb_logs ${where}`,
+          `SELECT COUNT(*) as total FROM __mb_logs ${where}`,
           params
         ),
       ]);
@@ -316,10 +311,9 @@ class CliDbLogger {
    * Limpa todos os logs (ação do Studio)
    */
   async clearLogs() {
-    if (!this._pgClient) return;
+    if (!this._ready || !this._pgClient) return;
     try {
-      const safeSchema = (this._schemaName || 'public').replace(/"/g, '""');
-      await this._pgClient.query(`TRUNCATE "${safeSchema}".__mb_logs RESTART IDENTITY`);
+      await this._pgClient.query(`DELETE FROM __mb_logs`);
     } catch (err) {
       console.error('[MBLog] Erro ao limpar logs:', err.message);
     }
@@ -328,12 +322,11 @@ class CliDbLogger {
   /**
    * Retorna estatísticas rápidas (contagem por tipo)
    */
-  async getStats() {
-    if (!this._pgClient) return {};
+  async getLogStats() {
+    if (!this._ready || !this._pgClient) return {};
     try {
-      const safeSchema = (this._schemaName || 'public').replace(/"/g, '""');
       const res = await this._pgClient.query(
-        `SELECT type, COUNT(*) as count FROM "${safeSchema}".__mb_logs GROUP BY type ORDER BY count DESC`
+        `SELECT type, COUNT(*) as count FROM __mb_logs GROUP BY type ORDER BY count DESC`
       );
       const stats = {};
       res.rows.forEach(r => { stats[r.type] = parseInt(r.count); });

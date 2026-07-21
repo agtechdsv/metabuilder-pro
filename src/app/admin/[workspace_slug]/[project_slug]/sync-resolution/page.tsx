@@ -6,7 +6,7 @@ import { StudioSidebar } from '@/components/layout/StudioSidebar'
 import { Footer } from '@/components/layout/Footer'
 
 export default async function SyncResolutionPage(props: { params: Promise<{ workspace_slug: string, project_slug: string }> }) {
-  const params = await props.params
+  const resolvedParams = await props.params
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -22,7 +22,7 @@ export default async function SyncResolutionPage(props: { params: Promise<{ work
   const { data: workspace } = await supabase
     .from('workspaces')
     .select('id')
-    .eq('slug', params.workspace_slug)
+    .eq('slug', resolvedParams.workspace_slug)
     .single()
 
   if (!workspace) redirect('/admin')
@@ -31,13 +31,13 @@ export default async function SyncResolutionPage(props: { params: Promise<{ work
   const { data: project } = await supabase
     .from('projects')
     .select('*')
-    .eq('slug', params.project_slug)
+    .eq('slug', resolvedParams.project_slug)
     .eq('workspace_id', workspace.id)
     .single()
 
   if (!project || project.sync_status !== 'draft_pending' || !project.last_sync_payload) {
     // Se não estiver em draft pending, manda de volta pro painel do projeto
-    redirect(`/admin/${params.workspace_slug}/${params.project_slug}/studio`)
+    redirect(`/admin/${resolvedParams.workspace_slug}/${resolvedParams.project_slug}/studio`)
   }
 
   // 3. Fetch Missing Models
@@ -73,7 +73,7 @@ export default async function SyncResolutionPage(props: { params: Promise<{ work
 
   return (
     <div className="flex bg-white dark:bg-[#050505]">
-      <StudioSidebar workspaceSlug={params.workspace_slug} projectSlug={params.project_slug} />
+      <StudioSidebar workspaceSlug={resolvedParams.workspace_slug} projectSlug={resolvedParams.project_slug} />
       
       <div className="pl-20 min-h-screen flex flex-col pt-16 bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300 w-full overflow-hidden">
         <Navbar user={user} profile={profile} isStudio={true} />
@@ -86,8 +86,8 @@ export default async function SyncResolutionPage(props: { params: Promise<{ work
             allModels={allModels || []}
             incomingPayload={incomingPayload}
             newTables={newTables}
-            workspaceSlug={params.workspace_slug}
-            projectSlug={params.project_slug}
+            workspaceSlug={resolvedParams.workspace_slug}
+            projectSlug={resolvedParams.project_slug}
           />
         </div>
 
