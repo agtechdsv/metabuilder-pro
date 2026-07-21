@@ -142,8 +142,9 @@ export function GlobalDesktopListener() {
         });
 
         console.log('[TraySync] update_tray_menu succeeded');
-      } catch (e) {
+      } catch (e: any) {
         console.error('[TraySync] Failed to sync tray menu:', e);
+        toast('Erro no Tray: ' + (e.message || String(e)), 'error');
       }
     };
 
