@@ -79,6 +79,7 @@ export function GlobalDesktopListener() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
+        // Verifica se é convidado e qual nível de acesso
         const { data: guestRecord } = await supabase
           .from('owner_guests')
           .select('access_level')
@@ -90,20 +91,51 @@ export function GlobalDesktopListener() {
         const guestAccessLevel = guestRecord?.access_level || null;
         const canCreateWorkspace = !isGuest || guestAccessLevel === 'global';
 
-        const { data: workspaces } = await supabase
+        // Busca somente workspaces onde o usuário tem permissão de criar projetos:
+        // → workspaces que o usuário é owner
+        // → workspaces onde é member com can_create = true
+        // → workspaces de owners cujo guestRecord tem acesso global
+        const { data: ownedWs } = await supabase
           .from('workspaces')
           .select('name, slug')
+          .eq('owner_id', user.id)
           .order('created_at', { ascending: false });
 
+        const { data: memberWs } = await supabase
+          .from('workspace_members')
+          .select('workspace:workspaces(name, slug)')
+          .eq('user_id', user.id)
+          .eq('can_create', true);
+
+        // Unifica os workspaces sem duplicatas
+        const memberWorkspaces = (memberWs || [])
+          .map((m: any) => m.workspace)
+          .filter(Boolean);
+
+        const allWorkspaces = [...(ownedWs || [])];
+        for (const ws of memberWorkspaces) {
+          if (!allWorkspaces.find((w: any) => w.slug === ws.slug)) {
+            allWorkspaces.push(ws);
+          }
+        }
+
         const tunnelActive = await invoke<boolean>('statuscli').catch(() => false);
+
+        console.log('[TraySync] Calling update_tray_menu', {
+          isAdmin: canCreateWorkspace,
+          tunnelActive,
+          workspaceCount: allWorkspaces.length
+        });
 
         await invoke('update_tray_menu', {
           isAdmin: canCreateWorkspace,
           tunnelActive,
-          workspaces: workspaces || []
+          workspaces: allWorkspaces
         });
+
+        console.log('[TraySync] update_tray_menu succeeded');
       } catch (e) {
-        console.error('Failed to sync tray menu:', e);
+        console.error('[TraySync] Failed to sync tray menu:', e);
       }
     };
 

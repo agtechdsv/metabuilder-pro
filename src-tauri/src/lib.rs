@@ -32,7 +32,11 @@ struct TrayState {
     sync_byoc_i: tauri::menu::MenuItem<tauri::Wry>,
     start_tunnel_i: tauri::menu::MenuItem<tauri::Wry>,
     stop_tunnel_i: tauri::menu::MenuItem<tauri::Wry>,
-    ws_items: Mutex<std::collections::HashMap<String, tauri::menu::MenuItem<tauri::Wry>>>,
+    // Workspaces armazenados para reconstruir submenu
+    workspaces: Mutex<Vec<WorkspaceInfo>>,
+    // Controle de estado para enable/disable
+    is_admin: Mutex<bool>,
+    tunnel_active: Mutex<bool>,
 }
 
 struct PtyState {
@@ -254,62 +258,76 @@ fn update_tray_menu(
     use tauri::menu::{Menu, PredefinedMenuItem, Submenu};
 
     let state = app.state::<TrayState>();
+
+    // 1. Atualiza estados internos
+    *state.is_admin.lock().unwrap() = is_admin;
+    *state.tunnel_active.lock().unwrap() = tunnel_active;
+    *state.workspaces.lock().unwrap() = workspaces;
+
+    // 2. Aplica enable/disable nos itens estáticos (mais confiável que reconstruir)
+    let _ = state.new_ws_i.set_enabled(is_admin);
+    let _ = state.start_tunnel_i.set_enabled(!tunnel_active);
+    let _ = state.stop_tunnel_i.set_enabled(tunnel_active);
+
+    // 3. Reconstrói o menu completo com o submenu de workspaces atualizado
+    let workspaces_snap = state.workspaces.lock().unwrap();
     
-    let mut items: Vec<&dyn tauri::menu::IsMenuItem<_>> = vec![&state.show_i, &state.hide_i];
-
-    let sep1 = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
-    items.push(&sep1);
-
-    if is_admin {
-        items.push(&state.new_ws_i);
-    }
-
-    let mut new_proj_submenu_items = Vec::new();
-    let mut submenu = None;
-    
-    if workspaces.is_empty() {
-        items.push(&state.new_proj_i);
-    } else {
-        let mut items_to_add = Vec::new();
-        {
-            let mut ws_map = state.ws_items.lock().unwrap();
-            for ws in &workspaces {
-                let id = format!("new_proj_{}", ws.slug);
-                if !ws_map.contains_key(&id) {
-                    let item = tauri::menu::MenuItem::with_id(&app, &id, &ws.name, true, None::<&str>).map_err(|e| e.to_string())?;
-                    ws_map.insert(id.clone(), item);
-                }
-                if let Some(item) = ws_map.get(&id) {
-                    items_to_add.push(item.clone());
+    let mut ws_menu_items: Vec<tauri::menu::MenuItem<tauri::Wry>> = Vec::new();
+    for ws in workspaces_snap.iter() {
+        let id = format!("new_proj_{}", ws.slug);
+        match tauri::menu::MenuItem::with_id(&app, &id, &ws.name, true, None::<&str>) {
+            Ok(item) => ws_menu_items.push(item),
+            Err(_) => {
+                // ID já existe — cria com sufixo único para evitar conflito
+                let fallback_id = format!("new_proj_{}_t{}", ws.slug, std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
+                if let Ok(item) = tauri::menu::MenuItem::with_id(&app, &fallback_id, &ws.name, true, None::<&str>) {
+                    ws_menu_items.push(item);
                 }
             }
         }
+    }
+    drop(workspaces_snap);
 
-        for item in &items_to_add {
-            new_proj_submenu_items.push(item as &dyn tauri::menu::IsMenuItem<_>);
-        }
+    let proj_refs: Vec<&dyn tauri::menu::IsMenuItem<tauri::Wry>> = ws_menu_items
+        .iter()
+        .map(|i| i as &dyn tauri::menu::IsMenuItem<tauri::Wry>)
+        .collect();
 
-        let sub = Submenu::with_items(&app, "Novo Projeto", true, &new_proj_submenu_items).map_err(|e| e.to_string())?;
-        submenu = Some(sub);
-        items.push(submenu.as_ref().unwrap() as &dyn tauri::menu::IsMenuItem<_>);
+    let mut menu_items: Vec<&dyn tauri::menu::IsMenuItem<tauri::Wry>> = Vec::new();
+
+    menu_items.push(&state.show_i);
+    menu_items.push(&state.hide_i);
+
+    let sep1 = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
+    menu_items.push(&sep1);
+
+    if is_admin {
+        menu_items.push(&state.new_ws_i);
     }
 
-    items.push(&state.sync_byoc_i);
+    if proj_refs.is_empty() {
+        menu_items.push(&state.new_proj_i);
+    } else {
+        let submenu = Submenu::with_items(&app, "Novo Projeto", true, &proj_refs)
+            .map_err(|e| e.to_string())?;
+        menu_items.push(&submenu as &dyn tauri::menu::IsMenuItem<tauri::Wry>);
+    }
+
+    menu_items.push(&state.sync_byoc_i);
 
     let sep2 = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
-    items.push(&sep2);
+    menu_items.push(&sep2);
 
-    if tunnel_active {
-        items.push(&state.stop_tunnel_i);
-    } else {
-        items.push(&state.start_tunnel_i);
-    }
+    // Ambos os itens de túnel ficam visíveis; apenas um habilitado por vez
+    menu_items.push(&state.start_tunnel_i);
+    menu_items.push(&state.stop_tunnel_i);
 
     let sep3 = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
-    items.push(&sep3);
-    items.push(&state.quit_i);
+    menu_items.push(&sep3);
+    menu_items.push(&state.quit_i);
 
-    let menu = Menu::with_items(&app, &items).map_err(|e| e.to_string())?;
+    let menu = Menu::with_items(&app, &menu_items).map_err(|e| e.to_string())?;
 
     if let Some(tray) = app.tray_by_id("main_tray") {
         tray.set_menu(Some(menu)).map_err(|e| e.to_string())?;
@@ -373,6 +391,10 @@ pub fn run() {
             let start_tunnel_i = MenuItem::with_id(app, "start_tunnel", "Iniciar Túnel", true, None::<&str>)?;
             let stop_tunnel_i = MenuItem::with_id(app, "stop_tunnel", "Parar Túnel", true, None::<&str>)?;
 
+            // Menu inicial estático (será atualizado dinamicamente após o login)
+            // Ambos os itens de túnel visíveis; start habilitado, stop desabilitado por padrão
+            let _ = stop_tunnel_i.set_enabled(false);
+
             let menu = Menu::with_items(
                 app,
                 &[
@@ -399,7 +421,9 @@ pub fn run() {
                 sync_byoc_i,
                 start_tunnel_i,
                 stop_tunnel_i,
-                ws_items: Mutex::new(std::collections::HashMap::new()),
+                workspaces: Mutex::new(Vec::new()),
+                is_admin: Mutex::new(false),
+                tunnel_active: Mutex::new(false),
             });
 
             let _tray = TrayIconBuilder::with_id("main_tray")
