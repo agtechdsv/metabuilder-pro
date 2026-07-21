@@ -61,10 +61,9 @@
     },
     "windows": {
       "nsis": {
-        "installMode": "currentUser",
-        "displayLanguageSelector": true,
-        "license": "license.txt"
+        "sidebarImage": "icons/sidebar.bmp"
       }
-    }
+    },
+    "license": "license.txt"
   }
 }
