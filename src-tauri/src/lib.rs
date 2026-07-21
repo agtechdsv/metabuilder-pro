@@ -23,6 +23,18 @@ struct WorkspaceInfo {
     slug: String,
 }
 
+struct TrayState {
+    show_i: tauri::menu::MenuItem<tauri::Wry>,
+    hide_i: tauri::menu::MenuItem<tauri::Wry>,
+    quit_i: tauri::menu::MenuItem<tauri::Wry>,
+    new_ws_i: tauri::menu::MenuItem<tauri::Wry>,
+    new_proj_i: tauri::menu::MenuItem<tauri::Wry>,
+    sync_byoc_i: tauri::menu::MenuItem<tauri::Wry>,
+    start_tunnel_i: tauri::menu::MenuItem<tauri::Wry>,
+    stop_tunnel_i: tauri::menu::MenuItem<tauri::Wry>,
+    ws_items: Mutex<std::collections::HashMap<String, tauri::menu::MenuItem<tauri::Wry>>>,
+}
+
 struct PtyState {
     pty_master: Mutex<Option<Box<dyn MasterPty + Send>>>,
     pty_writer: Mutex<Option<Box<dyn Write + Send>>>,
@@ -239,61 +251,63 @@ fn update_tray_menu(
     tunnel_active: bool,
     workspaces: Vec<WorkspaceInfo>
 ) -> Result<(), String> {
-    use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+    use tauri::menu::{Menu, PredefinedMenuItem, Submenu};
 
-    let show_i = MenuItem::with_id(&app, "show", "Mostrar IDE", true, None::<&str>).map_err(|e| e.to_string())?;
-    let hide_i = MenuItem::with_id(&app, "hide", "Esconder IDE", true, None::<&str>).map_err(|e| e.to_string())?;
-    let quit_i = MenuItem::with_id(&app, "quit", "Sair", true, None::<&str>).map_err(|e| e.to_string())?;
+    let state = app.state::<TrayState>();
     
-    let mut items: Vec<&dyn tauri::menu::IsMenuItem<_>> = vec![&show_i, &hide_i];
+    let mut items: Vec<&dyn tauri::menu::IsMenuItem<_>> = vec![&state.show_i, &state.hide_i];
 
     let sep1 = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
     items.push(&sep1);
 
-    let new_ws_i = MenuItem::with_id(&app, "new_ws", "Novo Workspace", true, None::<&str>).map_err(|e| e.to_string())?;
     if is_admin {
-        items.push(&new_ws_i);
+        items.push(&state.new_ws_i);
     }
 
     let mut new_proj_submenu_items = Vec::new();
-    let mut ws_menu_items = Vec::new();
-    let new_proj_i = MenuItem::with_id(&app, "new_proj", "Novo Projeto", true, None::<&str>).map_err(|e| e.to_string())?;
     let mut submenu = None;
     
     if workspaces.is_empty() {
-        items.push(&new_proj_i);
+        items.push(&state.new_proj_i);
     } else {
-        for ws in &workspaces {
-            let id = format!("new_proj_{}", ws.slug);
-            let item = MenuItem::with_id(&app, &id, &ws.name, true, None::<&str>).map_err(|e| e.to_string())?;
-            ws_menu_items.push(item);
+        let mut items_to_add = Vec::new();
+        {
+            let mut ws_map = state.ws_items.lock().unwrap();
+            for ws in &workspaces {
+                let id = format!("new_proj_{}", ws.slug);
+                if !ws_map.contains_key(&id) {
+                    let item = tauri::menu::MenuItem::with_id(&app, &id, &ws.name, true, None::<&str>).map_err(|e| e.to_string())?;
+                    ws_map.insert(id.clone(), item);
+                }
+                if let Some(item) = ws_map.get(&id) {
+                    items_to_add.push(item.clone());
+                }
+            }
         }
-        for item in &ws_menu_items {
+
+        for item in &items_to_add {
             new_proj_submenu_items.push(item as &dyn tauri::menu::IsMenuItem<_>);
         }
+
         let sub = Submenu::with_items(&app, "Novo Projeto", true, &new_proj_submenu_items).map_err(|e| e.to_string())?;
         submenu = Some(sub);
         items.push(submenu.as_ref().unwrap() as &dyn tauri::menu::IsMenuItem<_>);
     }
 
-    let sync_byoc_i = MenuItem::with_id(&app, "sync_byoc", "Sincronizar BYOC", true, None::<&str>).map_err(|e| e.to_string())?;
-    items.push(&sync_byoc_i);
+    items.push(&state.sync_byoc_i);
 
     let sep2 = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
     items.push(&sep2);
 
-    let start_tunnel_i = MenuItem::with_id(&app, "start_tunnel", "Iniciar Túnel", true, None::<&str>).map_err(|e| e.to_string())?;
-    let stop_tunnel_i = MenuItem::with_id(&app, "stop_tunnel", "Parar Túnel", true, None::<&str>).map_err(|e| e.to_string())?;
-
     if tunnel_active {
-        items.push(&stop_tunnel_i);
+        items.push(&state.stop_tunnel_i);
     } else {
-        items.push(&start_tunnel_i);
+        items.push(&state.start_tunnel_i);
     }
 
     let sep3 = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
     items.push(&sep3);
-    items.push(&quit_i);
+    items.push(&state.quit_i);
 
     let menu = Menu::with_items(&app, &items).map_err(|e| e.to_string())?;
 
@@ -375,6 +389,18 @@ pub fn run() {
                     &quit_i,
                 ],
             )?;
+
+            app.manage(TrayState {
+                show_i,
+                hide_i,
+                quit_i,
+                new_ws_i,
+                new_proj_i,
+                sync_byoc_i,
+                start_tunnel_i,
+                stop_tunnel_i,
+                ws_items: Mutex::new(std::collections::HashMap::new()),
+            });
 
             let _tray = TrayIconBuilder::with_id("main_tray")
                 .icon(app.default_window_icon().unwrap().clone())
