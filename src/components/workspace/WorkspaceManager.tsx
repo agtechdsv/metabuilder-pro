@@ -113,6 +113,8 @@ export function WorkspaceManager({
   useEffect(() => {
     if (searchParams.get('tab') === 'team') {
       setIsTeamDrawerOpen(true)
+    } else if (searchParams.get('tab') === 'tunnel') {
+      setActiveTab('tunnel')
     }
     if (searchParams.get('action') === 'new' && canCreateWorkspace) {
       openDrawer()
