@@ -294,7 +294,12 @@ export function ProjectManager({
 
   useEffect(() => {
     setNavigatingSlug(null)
-  }, [searchParams, pathname])
+    if (searchParams.get('action') === 'new' && canCreate) {
+      openDrawer()
+      const newUrl = pathname
+      window.history.replaceState({}, '', newUrl)
+    }
+  }, [searchParams, pathname, canCreate])
   const openDrawer = (project: Project | null = null) => {
     setSelectedProject(project)
     setFormData(project

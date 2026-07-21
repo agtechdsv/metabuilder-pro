@@ -114,9 +114,14 @@ export function WorkspaceManager({
     if (searchParams.get('tab') === 'team') {
       setIsTeamDrawerOpen(true)
     }
+    if (searchParams.get('action') === 'new' && canCreateWorkspace) {
+      openDrawer()
+      const newUrl = pathname
+      window.history.replaceState({}, '', newUrl)
+    }
     // Reset loading state when page has loaded (in case we come back)
     setNavigatingSlug(null)
-  }, [searchParams, pathname])
+  }, [searchParams, pathname, canCreateWorkspace])
 
 
 

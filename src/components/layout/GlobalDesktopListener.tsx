@@ -21,28 +21,25 @@ export function GlobalDesktopListener() {
         unlisten = await listen<string>('tray-event', (event) => {
           const payload = event.payload;
 
-          const match = pathname?.match(/\/admin\/([^/]+)\/([^/]+)/);
+          const match = pathname?.match(/\/admin\/([^/]+)(?:\/([^/]+))?/);
           const workspaceSlug = match ? match[1] : null;
           const projectSlug = match ? match[2] : null;
 
           if (payload.startsWith('new_proj_')) {
             const targetSlug = payload.replace('new_proj_', '');
-            router.push(`/admin/${targetSlug}`);
-            toast('Crie seu novo projeto aqui.', 'info');
+            router.push(`/admin/${targetSlug}?action=new`);
             return;
           }
 
           switch (payload) {
             case 'new_ws':
-              router.push('/admin/platform');
-              toast('Crie seu novo workspace por aqui.', 'info');
+              router.push('/workspace?action=new');
               break;
             case 'new_proj':
               if (workspaceSlug) {
-                router.push(`/admin/${workspaceSlug}`);
-                toast('Crie seu novo projeto aqui.', 'info');
+                router.push(`/admin/${workspaceSlug}?action=new`);
               } else {
-                router.push('/admin/platform');
+                router.push('/workspace');
                 toast('Selecione um workspace primeiro para criar o projeto.', 'info');
               }
               break;
@@ -56,12 +53,8 @@ export function GlobalDesktopListener() {
               break;
             case 'start_tunnel':
             case 'stop_tunnel':
-              if (workspaceSlug && projectSlug && projectSlug !== 'settings') {
-                router.push(`/admin/${workspaceSlug}/${projectSlug}/studio/tunnel`);
-                toast(payload === 'start_tunnel' ? 'Inicie o túnel por aqui' : 'Pare o túnel por aqui', 'info');
-              } else {
-                toast('Nenhum projeto ativo. Abra um projeto primeiro.', 'error');
-              }
+              router.push('/workspace?tab=tunnel');
+              toast(payload === 'start_tunnel' ? 'Inicie o túnel por aqui' : 'Pare o túnel por aqui', 'info');
               break;
           }
         });
