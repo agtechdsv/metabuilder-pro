@@ -68,9 +68,33 @@ export function GlobalDesktopListener() {
               break;
             case 'start_tunnel':
             case 'stop_tunnel':
-              await bringToFront();
-              router.push(`/workspace?tab=tunnel&action=${payload}`);
-              toast(payload === 'start_tunnel' ? 'Iniciando túnel...' : 'Parando túnel...', 'info');
+              try {
+                const { getCurrentWindow } = await import('@tauri-apps/api/window');
+                const win = getCurrentWindow();
+                const isVisible = await win.isVisible();
+                
+                toast(payload === 'start_tunnel' ? 'Iniciando túnel...' : 'Parando túnel...', 'info');
+
+                if (!isVisible) {
+                  await bringToFront();
+                  router.push('/workspace?tab=tunnel');
+                }
+                
+                const { invoke } = await import('@tauri-apps/api/core');
+                if (payload === 'stop_tunnel') {
+                  await invoke('stopcli');
+                  toast('Túnel parado com sucesso', 'success');
+                } else {
+                  const { appLocalDataDir, join } = await import('@tauri-apps/api/path');
+                  const dir = await appLocalDataDir();
+                  const configPath = await join(dir, 'metabuilder.config.json');
+                  
+                  await invoke('startcli', { mode: 1, configPath });
+                  toast('Túnel iniciado com sucesso.', 'success');
+                }
+              } catch (e) {
+                toast('Falha ao executar processo do túnel.', 'error');
+              }
               break;
           }
         });
