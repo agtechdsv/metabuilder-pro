@@ -251,11 +251,12 @@ fn resize_pty(state: State<'_, PtyState>, rows: u16, cols: u16) -> Result<(), St
 #[command]
 fn update_tray_menu(
     app: tauri::AppHandle,
+    is_logged_in: bool,
     is_admin: bool,
     tunnel_active: bool,
     workspaces: Vec<WorkspaceInfo>
 ) -> Result<(), String> {
-    use tauri::menu::{Menu, PredefinedMenuItem, Submenu};
+    use tauri::menu::{Menu, PredefinedMenuItem};
 
     let state = app.state::<TrayState>();
 
@@ -264,8 +265,20 @@ fn update_tray_menu(
     *state.tunnel_active.lock().unwrap() = tunnel_active;
     *state.workspaces.lock().unwrap() = workspaces;
 
-    // 2. Aplica enable/disable nos itens estáticos (mais confiável que reconstruir)
+    // 2. Se não estiver logado, desabilita todos os itens de ação
+    if !is_logged_in {
+        let _ = state.new_ws_i.set_enabled(false);
+        let _ = state.new_proj_i.set_enabled(false);
+        let _ = state.sync_byoc_i.set_enabled(false);
+        let _ = state.start_tunnel_i.set_enabled(false);
+        let _ = state.stop_tunnel_i.set_enabled(false);
+        return Ok(());
+    }
+
+    // 3. Logado: aplica enable/disable conforme permissões e estado
     let _ = state.new_ws_i.set_enabled(is_admin);
+    let _ = state.new_proj_i.set_enabled(true);
+    let _ = state.sync_byoc_i.set_enabled(true);
     let _ = state.start_tunnel_i.set_enabled(!tunnel_active);
     let _ = state.stop_tunnel_i.set_enabled(tunnel_active);
 
@@ -306,12 +319,14 @@ fn update_tray_menu(
         menu_items.push(&state.new_ws_i);
     }
 
+    let submenu_holder;
     if proj_refs.is_empty() {
         menu_items.push(&state.new_proj_i);
     } else {
-        let submenu = Submenu::with_items(&app, "Novo Projeto", true, &proj_refs)
+        let sub = tauri::menu::Submenu::with_items(&app, "Novo Projeto", true, &proj_refs)
             .map_err(|e| e.to_string())?;
-        menu_items.push(&submenu as &dyn tauri::menu::IsMenuItem<tauri::Wry>);
+        submenu_holder = Some(sub);
+        menu_items.push(submenu_holder.as_ref().unwrap() as &dyn tauri::menu::IsMenuItem<tauri::Wry>);
     }
 
     menu_items.push(&state.sync_byoc_i);
@@ -391,8 +406,12 @@ pub fn run() {
             let start_tunnel_i = MenuItem::with_id(app, "start_tunnel", "Iniciar Túnel", true, None::<&str>)?;
             let stop_tunnel_i = MenuItem::with_id(app, "stop_tunnel", "Parar Túnel", true, None::<&str>)?;
 
-            // Menu inicial estático (será atualizado dinamicamente após o login)
-            // Ambos os itens de túnel visíveis; start habilitado, stop desabilitado por padrão
+            // Estado inicial: usuário não está logado — desabilita todos os itens de ação
+            // Serão habilitados dinamicamente após o login via update_tray_menu
+            let _ = new_ws_i.set_enabled(false);
+            let _ = new_proj_i.set_enabled(false);
+            let _ = sync_byoc_i.set_enabled(false);
+            let _ = start_tunnel_i.set_enabled(false);
             let _ = stop_tunnel_i.set_enabled(false);
 
             let menu = Menu::with_items(

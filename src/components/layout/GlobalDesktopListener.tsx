@@ -77,9 +77,19 @@ export function GlobalDesktopListener() {
         const supabase = createClient();
 
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
 
-        // Verifica se é convidado e qual nível de acesso
+        // Não logado: desabilita todos os itens de ação e retorna
+        if (!user) {
+          await invoke('update_tray_menu', {
+            isLoggedIn: false,
+            isAdmin: false,
+            tunnelActive: false,
+            workspaces: []
+          });
+          return;
+        }
+
+        // Logado: busca permissões e estado real
         const { data: guestRecord } = await supabase
           .from('owner_guests')
           .select('access_level')
@@ -91,10 +101,7 @@ export function GlobalDesktopListener() {
         const guestAccessLevel = guestRecord?.access_level || null;
         const canCreateWorkspace = !isGuest || guestAccessLevel === 'global';
 
-        // Busca somente workspaces onde o usuário tem permissão de criar projetos:
-        // → workspaces que o usuário é owner
-        // → workspaces onde é member com can_create = true
-        // → workspaces de owners cujo guestRecord tem acesso global
+        // Workspaces onde o usuário pode criar projetos
         const { data: ownedWs } = await supabase
           .from('workspaces')
           .select('name, slug')
@@ -107,7 +114,6 @@ export function GlobalDesktopListener() {
           .eq('user_id', user.id)
           .eq('can_create', true);
 
-        // Unifica os workspaces sem duplicatas
         const memberWorkspaces = (memberWs || [])
           .map((m: any) => m.workspace)
           .filter(Boolean);
@@ -122,12 +128,14 @@ export function GlobalDesktopListener() {
         const tunnelActive = await invoke<boolean>('statuscli').catch(() => false);
 
         console.log('[TraySync] Calling update_tray_menu', {
+          isLoggedIn: true,
           isAdmin: canCreateWorkspace,
           tunnelActive,
           workspaceCount: allWorkspaces.length
         });
 
         await invoke('update_tray_menu', {
+          isLoggedIn: true,
           isAdmin: canCreateWorkspace,
           tunnelActive,
           workspaces: allWorkspaces
