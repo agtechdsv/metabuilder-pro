@@ -304,7 +304,7 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
 
               <div className="flex flex-wrap gap-3">
                 {[
-                  { id: 'windows', label: 'Windows (.msi)', state: buildWindows, setter: setBuildWindows },
+                  { id: 'windows', label: 'Windows (.exe)', state: buildWindows, setter: setBuildWindows },
                   { id: 'macos', label: 'macOS (.dmg)', state: buildMacOs, setter: setBuildMacOs },
                   { id: 'linux', label: 'Linux (.deb)', state: buildLinux, setter: setBuildLinux },
                 ].map((os) => (

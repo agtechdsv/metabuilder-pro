@@ -44,7 +44,7 @@ jobs:
           fi
           
           if [ "${{ github.event.inputs.build_windows }}" == "true" ]; then
-            echo '{"platform":"windows-latest","args":"--bundles msi,updater","pkg_target":"node18-win-x64","tauri_triple":"x86_64-pc-windows-msvc","os":"windows"},' >> matrix.json
+            echo '{"platform":"windows-latest","args":"--bundles nsis,updater","pkg_target":"node18-win-x64","tauri_triple":"x86_64-pc-windows-msvc","os":"windows"},' >> matrix.json
           fi
           
           # Remove trailing comma
@@ -142,24 +142,24 @@ jobs:
           
           if [ "$HAS_JSON" != "True" ]; then
             echo "[INFO] No updater JSON found - generating manually with tauri signer..."
-            # Find the MSI file
-            MSI_PATH=$(find src-tauri/target -name '*.msi' | head -1)
-            if [ -z "$MSI_PATH" ]; then
-              echo "[ERROR] No MSI file found!"
+            # Find the EXE file
+            EXE_PATH=$(find src-tauri/target -name '*-setup.exe' | head -1)
+            if [ -z "$EXE_PATH" ]; then
+              echo "[ERROR] No NSIS EXE file found!"
               exit 1
             fi
-            echo "[INFO] Found MSI: $MSI_PATH"
+            echo "[INFO] Found EXE: $EXE_PATH"
             
-            # Sign the MSI using tauri signer
-            npx tauri signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" "$MSI_PATH"
-            SIG_FILE="${MSI_PATH}.sig"
+            # Sign the EXE using tauri signer
+            npx tauri signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" "$EXE_PATH"
+            SIG_FILE="${EXE_PATH}.sig"
             
-            # Build public download URL - FIXED: quote "$MSI_PATH" to handle spaces in filename
-            MSI_BASENAME=$(basename "$MSI_PATH")
+            # Build public download URL
+            EXE_BASENAME=$(basename "$EXE_PATH")
             GITHUB_REPO="$GITHUB_REPOSITORY"
-            DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v${VERSION}/${MSI_BASENAME}"
+            DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v${VERSION}/${EXE_BASENAME}"
             
-            echo "[INFO] MSI basename: $MSI_BASENAME"
+            echo "[INFO] EXE basename: $EXE_BASENAME"
             echo "[INFO] Download URL: $DOWNLOAD_URL"
             
             # Generate latest.json using python3 to safely handle special chars in signature
