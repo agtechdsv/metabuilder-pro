@@ -25,6 +25,13 @@ export function GlobalDesktopListener() {
           const workspaceSlug = match ? match[1] : null;
           const projectSlug = match ? match[2] : null;
 
+          if (payload.startsWith('new_proj_')) {
+            const targetSlug = payload.replace('new_proj_', '');
+            router.push(`/admin/${targetSlug}`);
+            toast('Crie seu novo projeto aqui.', 'info');
+            return;
+          }
+
           switch (payload) {
             case 'new_ws':
               router.push('/admin/platform');
@@ -63,10 +70,52 @@ export function GlobalDesktopListener() {
       }
     };
 
+    const syncTrayMenu = async () => {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const { createClient } = await import('@/utils/supabase/client');
+        const supabase = createClient();
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: guestRecord } = await supabase
+          .from('owner_guests')
+          .select('access_level')
+          .eq('user_id', user.id)
+          .limit(1)
+          .maybeSingle();
+
+        const isGuest = !!guestRecord;
+        const guestAccessLevel = guestRecord?.access_level || null;
+        const canCreateWorkspace = !isGuest || guestAccessLevel === 'global';
+
+        const { data: workspaces } = await supabase
+          .from('workspaces')
+          .select('name, slug')
+          .order('created_at', { ascending: false });
+
+        const tunnelActive = await invoke<boolean>('statuscli').catch(() => false);
+
+        await invoke('update_tray_menu', {
+          isAdmin: canCreateWorkspace,
+          tunnelActive,
+          workspaces: workspaces || []
+        });
+      } catch (e) {
+        console.error('Failed to sync tray menu:', e);
+      }
+    };
+
     setupListener();
+    syncTrayMenu();
+
+    // Re-sync on regular intervals to catch tunnel status changes
+    const interval = setInterval(syncTrayMenu, 10000);
 
     return () => {
       if (unlisten) unlisten();
+      clearInterval(interval);
     };
   }, [pathname, router, toast]);
 
