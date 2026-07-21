@@ -40,7 +40,7 @@ export default async function SqlStudioPage({
       <SqlStudioClient 
         workspaceSlug={resolvedParams.workspace_slug} 
         projectSlug={resolvedParams.project_slug} 
-        projectId={project.id} 
+        project={project} 
       />
     </div>
   );
