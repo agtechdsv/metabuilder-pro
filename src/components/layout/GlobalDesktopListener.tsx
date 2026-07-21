@@ -77,7 +77,6 @@ export function GlobalDesktopListener() {
 
                 if (!isVisible) {
                   await bringToFront();
-                  router.push('/workspace?tab=tunnel');
                 }
                 
                 const { invoke } = await import('@tauri-apps/api/core');
