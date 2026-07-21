@@ -1,0 +1,15 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "update-tray-menu",
+      "description": "allow update_tray_menu",
+      "commands": {
+        "allow": [
+          "update_tray_menu"
+        ],
+        "deny": []
+      }
+    }
+  ]
+}
