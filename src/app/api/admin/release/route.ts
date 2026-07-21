@@ -98,26 +98,31 @@ export async function POST(request: Request) {
     let newChangelogStr = ''
     try {
       if (process.env.GEMINI_API_KEY) {
-        // Obter a última release para ver os commits desde então
-        const latestRelease = await githubFetch(`releases/latest`).catch(() => null)
-        let commitMessages = ''
+        let contentToTranslate = ''
         
-        if (latestRelease && latestRelease.tag_name) {
-          const compare = await githubFetch(`compare/${latestRelease.tag_name}...master`)
-          if (compare.commits && compare.commits.length > 0) {
-            commitMessages = compare.commits.map((c: any) => c.commit.message).join('\n')
+        if (generateReleaseNotes) {
+          // Obter a última release para ver os commits desde então
+          const latestRelease = await githubFetch(`releases/latest`).catch(() => null)
+          
+          if (latestRelease && latestRelease.tag_name) {
+            const compare = await githubFetch(`compare/${latestRelease.tag_name}...master`)
+            if (compare.commits && compare.commits.length > 0) {
+              contentToTranslate = compare.commits.map((c: any) => c.commit.message).join('\n')
+            }
+          } else {
+            // Fallback se não tiver release: pegar ultimos 10 commits
+            const commits = await githubFetch(`commits?per_page=10`)
+            contentToTranslate = commits.map((c: any) => c.commit.message).join('\n')
           }
-        } else {
-          // Fallback se não tiver release: pegar ultimos 10 commits
-          const commits = await githubFetch(`commits?per_page=10`)
-          commitMessages = commits.map((c: any) => c.commit.message).join('\n')
+        } else if (releaseNotes) {
+          contentToTranslate = releaseNotes
         }
 
-        if (commitMessages) {
+        if (contentToTranslate) {
           const prompt = `
 Você é um assistente responsável por criar um Histórico de Atualizações (Release Notes) para usuários finais.
-Abaixo estão as mensagens de commit.
-Sua tarefa é ler essas mensagens, remover jargões extremamente técnicos, agrupar o que faz sentido e gerar uma lista de tópicos curtos, diretos e amigáveis (bullet points).
+Abaixo estão as informações da nova versão (podem ser mensagens de commit ou um texto de lançamento oficial).
+Sua tarefa é ler esse conteúdo, remover jargões extremamente técnicos, agrupar o que faz sentido e gerar uma lista de tópicos curtos, diretos e amigáveis (bullet points).
 
 O resultado deve ser EXATAMENTE um objeto JSON válido no seguinte formato:
 {
@@ -126,8 +131,8 @@ O resultado deve ser EXATAMENTE um objeto JSON válido no seguinte formato:
   "es": ["Punto 1", "Punto 2"]
 }
 
-Commits:
-${commitMessages}
+Conteúdo:
+${contentToTranslate}
 `
 
           const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
