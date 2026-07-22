@@ -313,9 +313,9 @@ export default function AuthSettingsPage() {
       setTimeout(() => {
         if (!isFinished) {
           cleanup()
-          reject(new Error('Túnel CLI offline. Ligue o MetaBuilder CLI.'))
+          reject(new Error('Túnel CLI offline ou banco de dados lento. Ligue o MetaBuilder CLI e verifique a conexão.'))
         }
-      }, 5000)
+      }, 15000)
     })
   }, [project, supabase])
 
