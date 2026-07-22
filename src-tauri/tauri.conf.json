@@ -61,7 +61,9 @@
     },
     "windows": {
       "nsis": {
-        "sidebarImage": "icons/sidebar.bmp"
+        "sidebarImage": "icons/sidebar.bmp",
+        "installerIcon": "icons/icon.ico",
+        "displayLanguageSelector": true
       }
     },
     "license": "license.txt"
