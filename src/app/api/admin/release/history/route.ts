@@ -137,7 +137,7 @@ export async function DELETE(request: Request) {
       const changelogContent = Buffer.from(changelogRes.content, 'base64').toString('utf-8')
       let currentChangelog = JSON.parse(changelogContent)
 
-      if (currentChangelog[versionStr]) {
+      if (currentChangelog[versionStr] && versionStr !== 'v1.0.0' && versionStr !== '1.0.0') {
         delete currentChangelog[versionStr]
         const newChangelogStr = JSON.stringify(currentChangelog, null, 2)
 

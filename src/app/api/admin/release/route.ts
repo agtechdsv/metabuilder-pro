@@ -118,8 +118,19 @@ export async function POST(request: Request) {
           contentToTranslate = releaseNotes
         }
 
-        if (contentToTranslate) {
-          const prompt = `
+          if (contentToTranslate && version !== '1.0.0') {
+          // Fallback variable in case AI fails
+          let parsedChangelog = {
+            pt: ["Atualização de versão e melhorias gerais."],
+            en: ["Version update and general improvements."],
+            es: ["Actualización de versión y mejoras generales."]
+          };
+
+          try {
+            // Limitar o texto para não estourar o limite de tokens/timeout
+            const safeContent = contentToTranslate.substring(0, 3000)
+
+            const prompt = `
 Você é um assistente responsável por criar um Histórico de Atualizações (Release Notes) para usuários finais.
 Abaixo estão as informações da nova versão (podem ser mensagens de commit ou um texto de lançamento oficial).
 Sua tarefa é ler esse conteúdo, remover jargões extremamente técnicos, agrupar o que faz sentido e gerar uma lista de tópicos curtos, diretos e amigáveis (bullet points).
@@ -132,34 +143,45 @@ O resultado deve ser EXATAMENTE um objeto JSON válido no seguinte formato:
 }
 
 Conteúdo:
-${contentToTranslate}
+${safeContent}
 `
 
-          const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              system_instruction: {
-                parts: { text: 'You are a helpful assistant that strictly outputs valid JSON without markdown.' }
+            const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
               },
-              contents: [
-                { parts: [{ text: prompt }] }
-              ],
-              generationConfig: {
-                temperature: 0.3,
-                responseMimeType: 'application/json'
-              }
+              body: JSON.stringify({
+                system_instruction: {
+                  parts: { text: 'You are a helpful assistant that strictly outputs valid JSON without markdown.' }
+                },
+                contents: [
+                  { parts: [{ text: prompt }] }
+                ],
+                generationConfig: {
+                  temperature: 0.3,
+                  responseMimeType: 'application/json'
+                }
+              })
             })
-          })
 
-          const aiData = await aiResponse.json()
-          if (!aiData.error && aiData.candidates && aiData.candidates.length > 0) {
-            const aiContent = aiData.candidates[0].content.parts[0].text
-            const jsonMatch = aiContent.match(/\{[\s\S]*\}/)
-            if (jsonMatch) {
-              const parsedChangelog = JSON.parse(jsonMatch[0])
+            const aiData = await aiResponse.json()
+            if (!aiData.error && aiData.candidates && aiData.candidates.length > 0) {
+              const aiContent = aiData.candidates[0].content.parts[0].text
+              const jsonMatch = aiContent.match(/\{[\s\S]*\}/)
+              if (jsonMatch) {
+                parsedChangelog = JSON.parse(jsonMatch[0])
+              }
+            }
+          } catch (aiErr) {
+            console.error('Erro na chamada do Gemini. Usando fallback.', aiErr)
+            // Se falhar e tiver texto manual, usamos as primeiras linhas
+            if (!generateReleaseNotes && releaseNotes) {
+              parsedChangelog.pt = releaseNotes.split('\n').filter((l: string) => l.trim().length > 0).slice(0, 5)
+            }
+          }
+
+          // A partir daqui, GARANTIMOS que parsedChangelog existe (seja do Gemini ou Fallback)
               
               // Pegar o changelog.json atual do repositório
               let currentChangelog = {}
@@ -185,8 +207,6 @@ ${contentToTranslate}
               newChangelogStr = JSON.stringify(updatedChangelog, null, 2)
             }
           }
-        }
-      }
     } catch (err) {
       console.error('Erro ao gerar changelog via Gemini na API:', err)
     }

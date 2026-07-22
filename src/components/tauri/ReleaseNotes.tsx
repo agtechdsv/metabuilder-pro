@@ -51,7 +51,13 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
             const mappedReleases = Object.entries(data)
               .map(([version, info]: [string, any]) => {
                 const lines = info[language] || info.en || info.pt || []
-                const body = lines.map((l: string) => `- ${l}`).join('\n')
+                const body = lines.map((l: string) => {
+                  const trimmed = l.trim()
+                  if (trimmed.startsWith('#') || trimmed.startsWith('-') || trimmed.startsWith('*') || trimmed === '') {
+                    return l
+                  }
+                  return `- ${l}`
+                }).join('\n')
                 return {
                   version,
                   published_at: info.date,
