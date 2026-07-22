@@ -11,7 +11,7 @@ import { useI18n } from '@/i18n/I18nContext'
 export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pill' }) {
   const { language } = useI18n()
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
-  const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({})
+  const [expandedNote, setExpandedNote] = useState<string | null>(null)
   const [releaseNotesList, setReleaseNotesList] = useState<any[]>([])
   const [isFetchingNotes, setIsFetchingNotes] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -160,19 +160,21 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
                   <div className="space-y-8 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-neutral-200 dark:before:via-neutral-800 before:to-transparent">
                     {releaseNotesList.map((release, i) => {
                       const isCurrent = localVersion ? localVersion.includes(release.version.replace('v', '')) : false
-                      const isExpanded = !!expandedNotes[release.version]
+                      const isExpanded = expandedNote === release.version
                       const isLatest = i === 0
 
                       let finalBody = release.body
                       if (finalBody === '' || !finalBody) finalBody = 'Sem detalhes para esta versão.'
 
                       return (
-                        <div key={release.version} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                          <div className="flex items-center justify-center w-6 h-6 rounded-full border-4 border-white dark:border-neutral-900 bg-indigo-500 text-white shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow z-10">
-                            <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                          </div>
+                        <div key={release.version} className={`relative flex items-center group is-active ${isExpanded ? 'justify-center' : 'justify-between md:justify-normal md:odd:flex-row-reverse'}`}>
+                          {!isExpanded && (
+                            <div className="flex items-center justify-center w-6 h-6 rounded-full border-4 border-white dark:border-neutral-900 bg-indigo-500 text-white shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow z-10">
+                              <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                            </div>
+                          )}
 
-                          <div className="w-[calc(100%-2.5rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl bg-white dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 shadow-sm transition-all hover:shadow-md">
+                          <div className={`p-4 rounded-2xl bg-white dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 shadow-sm transition-all hover:shadow-md ${isExpanded ? 'w-full z-20' : 'w-[calc(100%-2.5rem)] md:w-[calc(50%-2.5rem)]'}`}>
                             <div className="flex items-center justify-between mb-2">
                               <span className="font-bold text-lg text-indigo-600 dark:text-indigo-400">{release.version}</span>
                               <time className="text-xs text-neutral-400">
@@ -193,7 +195,7 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
                             </div>
 
                             <button 
-                              onClick={() => setExpandedNotes(prev => ({ ...prev, [release.version]: !prev[release.version] }))}
+                              onClick={() => setExpandedNote(isExpanded ? null : release.version)}
                               className="flex items-center gap-1 text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                             >
                               Release Notes
