@@ -64,7 +64,11 @@
         "sidebarImage": "icons/sidebar.bmp",
         "installerIcon": "icons/icon.ico",
         "displayLanguageSelector": true,
-        "languages": ["PortugueseBR", "English", "SpanishInternational"]
+        "languages": [
+          "PortugueseBR",
+          "English",
+          "SpanishInternational"
+        ]
       }
     },
     "license": "license.rtf"
