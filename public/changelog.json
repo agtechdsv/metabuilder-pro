@@ -1,35 +1,38 @@
 {
-  "v1.1.11": {
+  "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
-      "Implementado limite do plano Grátis (1 Workspace, 1 Projeto, 4 Telas)",
-      "Adicionado bloqueio premium na Sidebar do Studio",
-      "Novo botão de 'Baixar IDE' adicionado na Landing Page"
+      "Lançamento Oficial v1.0.0! A plataforma completa de desenvolvimento de software está no ar.",
+      "BYOC (Bring Your Own Code): Editor Monaco integrado para criar e injetar componentes React.",
+      "Terminal, CLI Integrados e SQL Studio Avançado Local.",
+      "Ejeção e Exportação de Código Fonte com 1-clique.",
+      "Instalador Nativo Windows (.exe) interativo, notificações do S.O e atalhos globais.",
+      "Túnel Seguro Bidirecional para conexão segura aos bancos de dados locais.",
+      "Studio de Modelagem visual, Construtor de Menus, Casos de Uso e Modelagem BPM.",
+      "Formulários Dinâmicos, Dashboards Analíticos e Múltiplos Widgets (Kanban, Gantt, Mapa, etc).",
+      "Gestão completa de Workspaces e Times, Autenticação LDAP e Deep Links."
     ],
     "en": [
-      "Implemented Free tier limit (1 Workspace, 1 Project, 4 UI Views)",
-      "Added premium gate lock to Studio Sidebar",
-      "New 'Download IDE' button added to the Landing Page"
+      "Official Release v1.0.0! The complete software development platform is live.",
+      "BYOC (Bring Your Own Code): Integrated Monaco editor to create and inject React components.",
+      "Integrated Terminal, CLI, and Local Advanced SQL Studio.",
+      "Source Code Ejection and Export with 1-click.",
+      "Native Windows Installer (.exe) with interactive UI, OS notifications, and global shortcuts.",
+      "Secure Bidirectional Tunnel for secure connection to local databases.",
+      "Visual Modeling Studio, Menu Builder, Use Cases, and BPM Modeling.",
+      "Dynamic Forms, Analytical Dashboards, and Multiple Widgets (Kanban, Gantt, Map, etc).",
+      "Complete Workspace & Team management, LDAP Authentication, and Deep Links."
     ],
     "es": [
-      "Implementado el límite del plan Gratis (1 Espacio de trabajo, 1 Proyecto, 4 Vistas UI)",
-      "Añadido bloqueo premium en la barra lateral del Studio",
-      "Nuevo botón de 'Descargar IDE' añadido en la página de inicio"
-    ]
-  },
-  "v1.1.10": {
-    "date": "2026-07-20",
-    "pt": [
-      "Correção no sincronismo paralelo da IDE",
-      "Melhorias de desempenho na interface"
-    ],
-    "en": [
-      "Fix parallel sync in IDE",
-      "UI performance improvements"
-    ],
-    "es": [
-      "Corrección en la sincronización paralela del IDE",
-      "Mejoras de rendimiento en la interfaz"
+      "¡Lanzamiento Oficial v1.0.0! La plataforma completa de desarrollo de software está en vivo.",
+      "BYOC (Bring Your Own Code): Editor Monaco integrado para crear e inyectar componentes React.",
+      "Terminal, CLI Integrados y SQL Studio Avanzado Local.",
+      "Eyección y Exportación de Código Fuente con 1 clic.",
+      "Instalador Nativo de Windows (.exe) interactivo, notificaciones del S.O. y atajos globales.",
+      "Túnel Seguro Bidireccional para conexión segura a bases de datos locales.",
+      "Studio de Modelado visual, Constructor de Menús, Casos de Uso y Modelado BPM.",
+      "Formularios Dinámicos, Dashboards Analíticos y Múltiples Widgets (Kanban, Gantt, Mapa, etc).",
+      "Gestión completa de Espacios de Trabajo y Equipos, Autenticación LDAP y Deep Links."
     ]
   }
 }

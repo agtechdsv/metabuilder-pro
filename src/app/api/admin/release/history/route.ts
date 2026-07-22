@@ -124,6 +124,56 @@ export async function DELETE(request: Request) {
       console.warn(`GitHub Tag ${versionStr} not found or error:`, e)
     }
 
+    // 5. Remover a versão do changelog.json no repositório
+    try {
+      const branchRef = 'heads/master'
+      const refData = await githubFetch(`git/ref/${branchRef}`)
+      const latestCommitSha = refData.object.sha
+
+      const commitData = await githubFetch(`git/commits/${latestCommitSha}`)
+      const baseTreeSha = commitData.tree.sha
+
+      const changelogRes = await githubFetch(`contents/public/changelog.json?ref=master`)
+      const changelogContent = Buffer.from(changelogRes.content, 'base64').toString('utf-8')
+      let currentChangelog = JSON.parse(changelogContent)
+
+      if (currentChangelog[versionStr]) {
+        delete currentChangelog[versionStr]
+        const newChangelogStr = JSON.stringify(currentChangelog, null, 2)
+
+        const changelogBlob = await githubFetch(`git/blobs`, {
+          method: 'POST',
+          body: JSON.stringify({ content: newChangelogStr, encoding: 'utf-8' })
+        })
+
+        const newTree = await githubFetch(`git/trees`, {
+          method: 'POST',
+          body: JSON.stringify({
+            base_tree: baseTreeSha,
+            tree: [
+              { path: 'public/changelog.json', mode: '100644', type: 'blob', sha: changelogBlob.sha }
+            ]
+          })
+        })
+
+        const newCommit = await githubFetch(`git/commits`, {
+          method: 'POST',
+          body: JSON.stringify({
+            message: `chore: remove release notes for ${versionStr}`,
+            tree: newTree.sha,
+            parents: [latestCommitSha]
+          })
+        })
+
+        await githubFetch(`git/refs/${branchRef}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ sha: newCommit.sha })
+        })
+      }
+    } catch (e: any) {
+      console.warn(`Erro ao deletar versão ${versionStr} do changelog.json:`, e)
+    }
+
     return NextResponse.json({ success: true, message: `Release ${versionStr} e seus arquivos foram excluídos com sucesso.` })
   } catch (error: any) {
     console.error('History API DELETE error:', error)
