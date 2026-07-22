@@ -259,7 +259,7 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
     <>
       <button
         onClick={() => {
-          setExpandedNotes({})
+          setExpandedNote(null)
           setShowReleaseNotes(true)
         }}
         title="Ver Histórico de Atualizações"
