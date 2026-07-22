@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
+import { usePreview } from '@/contexts/PreviewContext'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Drawer } from '@/components/ui/Drawer'
 import { Modal } from '@/components/ui/Modal'
@@ -301,6 +302,7 @@ export function ProjectManager({
   const supabase = createClient()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { openPreview } = usePreview()
   const pathname = usePathname()
   const { t } = useI18n()
   const { toast } = useToast()
@@ -674,7 +676,7 @@ export function ProjectManager({
                             title="Acessar versão publicada"
                             onClick={(e) => {
                               e.stopPropagation()
-                              openExternalUrl(`${window.location.origin}/${workspaceSlug}/${project.slug}`)
+                              openPreview(`${window.location.origin}/${workspaceSlug}/${project.slug}`, `Projeto: ${project.name}`)
                             }}
                           >
                             <ArrowUpRight className="w-4 h-4" />

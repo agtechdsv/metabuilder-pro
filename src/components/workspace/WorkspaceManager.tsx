@@ -25,6 +25,7 @@ import {
   Download,
   Network
 } from 'lucide-react'
+import { usePreview } from '@/contexts/PreviewContext'
 import Link from 'next/link'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
 import { WorkspaceTunnelControl } from '@/components/workspace/WorkspaceTunnelControl'
@@ -101,6 +102,7 @@ export function WorkspaceManager({
   const [showDesktopModal, setShowDesktopModal] = useState(false)
   const [selectedDesktopWorkspace, setSelectedDesktopWorkspace] = useState<Workspace | null>(null)
   const [exportingWorkspaceId, setExportingWorkspaceId] = useState<string | null>(null)
+  const { openPreview } = usePreview()
 
   const supabase = createClient()
   const { toast } = useToast()
@@ -443,15 +445,16 @@ export function WorkspaceManager({
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         {workspace.theme_config?.portal_enabled && (
                           <>
-                            <Link
-                              href={`/${workspace.slug}`}
-                              target="_blank"
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openPreview(`${window.location.origin}/${workspace.slug}`, `Portal: ${workspace.name}`)
+                              }}
                               className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
                               title="Acessar Portal"
-                              onClick={(e) => e.stopPropagation()}
                             >
                               <ArrowUpRight className="w-4 h-4" />
-                            </Link>
+                            </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();

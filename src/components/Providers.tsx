@@ -5,6 +5,7 @@ import { ProgressBarProvider } from './ProgressBarProvider'
 import { AutoUpdater } from '@/components/tauri/AutoUpdater'
 import { GlobalDesktopListener } from './layout/GlobalDesktopListener'
 import { UpgradeModalProvider } from '@/context/UpgradeModalContext'
+import { PreviewProvider } from '@/contexts/PreviewContext'
 
 export function Providers({ 
   children,
@@ -18,10 +19,12 @@ export function Providers({
       <I18nProvider initialLocale={initialLocale}>
         <ToastProvider>
           <UpgradeModalProvider>
-            <ProgressBarProvider />
-            <AutoUpdater />
-            <GlobalDesktopListener />
-            {children}
+            <PreviewProvider>
+              <ProgressBarProvider />
+              <AutoUpdater />
+              <GlobalDesktopListener />
+              {children}
+            </PreviewProvider>
           </UpgradeModalProvider>
         </ToastProvider>
       </I18nProvider>

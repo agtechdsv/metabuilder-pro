@@ -48,6 +48,7 @@ import {
   ScrollText,
   Monitor
 } from 'lucide-react'
+import { usePreview } from '@/contexts/PreviewContext'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -208,6 +209,7 @@ export function StudioDashboardClient({
   const supabase = createClient()
   const { toast } = useToast()
   const [isPending, startTransition] = useTransition()
+  const { openPreview } = usePreview()
 
   const [retention, setRetention] = useState<string>(
     project.download_retention_hours !== null && project.download_retention_hours !== undefined
@@ -1229,7 +1231,7 @@ export function StudioDashboardClient({
                               <>
                                 {view.draft_config && (
                                   <button
-                                    onClick={() => openExternalUrl(`${window.location.origin}/${workspace_slug}/${project_slug}/${view.slug}?preview=draft`)}
+                                    onClick={() => openPreview(`${window.location.origin}/${workspace_slug}/${project_slug}/${view.slug}?preview=draft`, `Rascunho: ${view.name}`)}
                                     className="w-14 flex items-center justify-center bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 rounded-2xl border border-amber-200 dark:border-amber-500/30 transition-all text-amber-600 dark:text-amber-500 shadow-sm group/preview animate-pulse"
                                     title="Visualizar Rascunho"
                                   >
@@ -1240,7 +1242,7 @@ export function StudioDashboardClient({
                             )}
                             {(view.layout_config && Object.keys(view.layout_config).length > 0) && (
                               <button
-                                onClick={() => openExternalUrl(`${window.location.origin}/${workspace_slug}/${project_slug}/${view.slug}`)}
+                                onClick={() => openPreview(`${window.location.origin}/${workspace_slug}/${project_slug}/${view.slug}`, `Publicado: ${view.name}`)}
                                 className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-indigo-600 dark:hover:text-white shadow-sm group/publish"
                                 title="Acessar versão publicada"
                               >
@@ -1252,7 +1254,7 @@ export function StudioDashboardClient({
                       ) : (
                         (view.layout_config && Object.keys(view.layout_config).length > 0) && (
                           <button
-                            onClick={() => openExternalUrl(`${window.location.origin}/${workspace_slug}/${project_slug}/${view.slug}`)}
+                            onClick={() => openPreview(`${window.location.origin}/${workspace_slug}/${project_slug}/${view.slug}`, `Acessar: ${view.name}`)}
                             className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
                           >
                             <ArrowRight className="w-4 h-4" /> {t('dashboard.projects.studio.access_use_case')}
