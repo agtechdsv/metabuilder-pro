@@ -63,9 +63,10 @@
       "nsis": {
         "sidebarImage": "icons/sidebar.bmp",
         "installerIcon": "icons/icon.ico",
-        "displayLanguageSelector": true
+        "displayLanguageSelector": true,
+        "languages": ["PortugueseBR", "English", "SpanishInternational"]
       }
     },
-    "license": "license.txt"
+    "license": "license.rtf"
   }
 }
