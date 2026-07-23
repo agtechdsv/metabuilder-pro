@@ -214,7 +214,7 @@
     "stats": {
       "active_workspaces": "Workspaces Ativos",
       "total_projects": "Total de Projetos",
-      "bandwidth": "Uso de Banda"
+      "active_members": "Membros Ativos"
     },
     "active_environment": "Ambiente de Trabalho Ativo",
     "projects": {
