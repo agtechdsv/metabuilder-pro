@@ -1,0 +1,15 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "open-devtools",
+      "description": "allow open_devtools",
+      "commands": {
+        "allow": [
+          "open_devtools"
+        ],
+        "deny": []
+      }
+    }
+  ]
+}
