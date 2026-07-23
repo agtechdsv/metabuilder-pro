@@ -74,6 +74,7 @@ interface WorkspaceManagerProps {
   isGuest?: boolean
   initialGuestAccessLevel?: 'global' | 'granular' | null
   totalActiveMembers?: number
+  totalPendingMembers?: number
 }
 
 export function WorkspaceManager({
@@ -85,7 +86,8 @@ export function WorkspaceManager({
   profile,
   isGuest = false,
   initialGuestAccessLevel = null,
-  totalActiveMembers
+  totalActiveMembers,
+  totalPendingMembers
 }: WorkspaceManagerProps) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>(initialWorkspaces)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
@@ -326,12 +328,25 @@ export function WorkspaceManager({
         {[
           { label: t('dashboard.stats.active_workspaces'), value: workspaces.length, icon: Building2, color: 'blue' },
           { label: t('dashboard.stats.total_projects'), value: workspaces.reduce((acc, w) => acc + (w.projects?.[0]?.count || 0), 0), icon: Activity, color: 'indigo' },
-          { label: t('dashboard.stats.active_members'), value: totalActiveMembers ?? (teamData ? (teamData.guests?.length || 0) + 1 : 1), icon: Users, color: 'green' }
+          { 
+            label: t('dashboard.stats.active_members'), 
+            value: totalActiveMembers ?? (teamData ? (teamData.activeGuests || 0) + 1 : 1), 
+            subtitle: (totalPendingMembers ?? (teamData?.pendingGuests || 0)) > 0 
+              ? `${totalPendingMembers ?? teamData?.pendingGuests} pendente(s)` 
+              : undefined,
+            icon: Users, 
+            color: 'green' 
+          }
         ].map((stat, i) => (
           <div key={i} className="p-4 bg-white dark:bg-neutral-950/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex items-center justify-between shadow-sm dark:shadow-none">
             <div>
-              <p className="text-neutral-500 text-[11px] font-medium uppercase tracking-widest">{stat.label}</p>
-              <p className="text-2xl font-black mt-0.5 text-neutral-900 dark:text-white">{stat.value}</p>
+              <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{stat.label}</p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <p className="text-2xl font-bold text-neutral-900 dark:text-white">{stat.value}</p>
+                {stat.subtitle && (
+                  <span className="text-xs text-amber-500 font-medium bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-full">{stat.subtitle}</span>
+                )}
+              </div>
             </div>
             <div className={`p-3.5 rounded-xl border ${stat.color === 'blue' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
               stat.color === 'indigo' ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20' :

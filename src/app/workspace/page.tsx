@@ -128,7 +128,8 @@ export default async function GlobalDashboard() {
   const teamDataResult = await getStudioTeamData()
   const teamData = teamDataResult.success ? teamDataResult.data : null
 
-  let totalActiveMembers = teamData ? (teamData.guests?.length || 0) + 1 : 1;
+  let totalActiveMembers = teamData ? (teamData.activeGuests || 0) + 1 : 1; // +1 for the owner
+  let totalPendingMembers = teamData ? (teamData.pendingGuests || 0) : 0;
   
   if (isGuest) {
     const { createClient: createAdminClient } = await import('@/utils/supabase/server')
@@ -146,10 +147,20 @@ export default async function GlobalDashboard() {
       // Conta o total de convidados de todos os donos que o usuário faz parte
       const { data: ownersGuests } = await supabaseAdmin
         .from('owner_guests')
-        .select('id')
+        .select('id, user_id')
         .in('owner_id', ownerIds);
+
+      let pendingCount = 0;
+      if (ownersGuests && ownersGuests.length > 0) {
+        const guestUserIds = ownersGuests.map(g => g.user_id);
+        const authUsers = await Promise.all(
+          guestUserIds.map((id: string) => supabaseAdmin.auth.admin.getUserById(id).then((res: any) => res.data?.user).catch(() => null))
+        );
+        pendingCount = authUsers.filter(u => u && !u.last_sign_in_at).length;
+      }
         
-      totalActiveMembers = ownerIds.length + (ownersGuests?.length || 0);
+      totalActiveMembers = ownerIds.length + ((ownersGuests?.length || 0) - pendingCount);
+      totalPendingMembers = pendingCount;
     }
   }
 
@@ -170,6 +181,7 @@ export default async function GlobalDashboard() {
           userName={capitalizedUserName} 
           teamData={teamData}
           totalActiveMembers={totalActiveMembers}
+          totalPendingMembers={totalPendingMembers}
           rules={pricingRules}
           user={user}
           profile={profile}

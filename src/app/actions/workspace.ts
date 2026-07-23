@@ -408,8 +408,15 @@ export async function getStudioTeamData() {
         projectAssignments = projAssigns || []
       }
 
+      const authUsers = await Promise.all(
+        guestUserIds.map((id: string) => supabaseAdmin.auth.admin.getUserById(id).then((res: any) => res.data?.user).catch(() => null))
+      );
+
       guestDetails = guests.map((g: any) => {
         const profileInfo = profiles?.find((p: any) => p.id === g.user_id) || { full_name: 'Desconhecido', email: '' }
+        const authUser = authUsers.find((u: any) => u?.id === g.user_id)
+        const isPending = !authUser?.last_sign_in_at
+        
         return {
           id: g.id,
           user_id: g.user_id,
@@ -417,6 +424,7 @@ export async function getStudioTeamData() {
           created_at: g.created_at,
           full_name: profileInfo.full_name,
           email: profileInfo.email,
+          is_pending: isPending,
           workspaces: workspaceMemberships.filter((m: any) => m.user_id === g.user_id),
           projects: projectAssignments.filter((p: any) => p.user_id === g.user_id)
         }
@@ -433,6 +441,9 @@ export async function getStudioTeamData() {
       allowedGuests = Math.max(0, totalLicenses - 1);
     }
 
+    const activeGuests = guestDetails.filter(g => !g.is_pending).length;
+    const pendingGuests = guestDetails.filter(g => g.is_pending).length;
+
     return {
       success: true,
       data: {
@@ -440,7 +451,9 @@ export async function getStudioTeamData() {
         workspaces: workspaces || [],
         projects,
         allowedGuests,
-        usedGuests: guests?.length || 0
+        usedGuests: guests?.length || 0,
+        activeGuests,
+        pendingGuests
       }
     }
   } catch (err: any) {
