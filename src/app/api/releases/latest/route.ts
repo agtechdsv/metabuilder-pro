@@ -68,7 +68,13 @@ export async function GET() {
       version: data.tag_name,
       name: data.name,
       body: body,
-      published_at: data.published_at
+      published_at: data.published_at,
+      assets: data.assets?.map((a: any) => ({
+        name: a.name,
+        browser_download_url: a.browser_download_url,
+        size: a.size,
+        created_at: a.created_at
+      })) || []
     })
   } catch (error: any) {
     console.error('Error fetching latest release:', error)

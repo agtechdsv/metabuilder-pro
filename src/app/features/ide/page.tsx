@@ -87,7 +87,7 @@ export default function IDEFeaturePage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link 
-              href="/login" 
+              href="/downloads" 
               className="group relative px-10 py-5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm uppercase tracking-widest rounded-full shadow-2xl hover:shadow-indigo-500/40 transition-all flex items-center gap-3 overflow-hidden hover:scale-105"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
