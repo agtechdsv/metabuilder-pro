@@ -264,7 +264,7 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
                       ref={el => { iframeRefs.current[tab.id] = el }}
                       src={tab.url}
                       onLoad={() => handleIframeLoad(tab.id)}
-                      className={`w-full h-full border-none absolute inset-0 ${activeTabId === tab.id ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
+                      className={`w-full h-full border-none absolute inset-0 ${activeTabId === tab.id ? `opacity-100 z-10 ${isMinimized ? 'pointer-events-none' : 'pointer-events-auto'}` : 'opacity-0 z-0 pointer-events-none'}`}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     />
