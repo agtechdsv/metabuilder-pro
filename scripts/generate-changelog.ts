@@ -49,9 +49,9 @@ async function generateChangelog() {
   console.log('Gerando traduções via Gemini (Google AI Studio)...')
   
   const prompt = `
-Você é um assistente responsável por criar um Histórico de Atualizações (Release Notes) para usuários finais.
-Abaixo estão as mensagens de commit.
-Sua tarefa é ler essas mensagens, remover jargões extremamente técnicos, agrupar o que faz sentido e gerar uma lista de tópicos curtos, diretos e amigáveis (bullet points).
+Você é um Product Manager experiente escrevendo um Histórico de Atualizações (Release Notes) atraente para os usuários finais da plataforma.
+Abaixo estão as mensagens de commit dos desenvolvedores. Sua tarefa é analisar o que foi feito e traduzir esses termos técnicos em NOVAS FUNCIONALIDADES e MELHORIAS (bullet points) focadas no valor de negócio e experiência do usuário. 
+Não omita features importantes. Transforme coisas como "implement checkout client" em "Novo fluxo de pagamento inteligente e checkout multi-etapas integrado".
 
 O resultado deve ser EXATAMENTE um objeto JSON válido no seguinte formato:
 {
@@ -60,12 +60,12 @@ O resultado deve ser EXATAMENTE um objeto JSON válido no seguinte formato:
   "es": ["Punto 1", "Punto 2"]
 }
 
-Commits:
+Commits da Versão:
 ${commits}
 `
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
