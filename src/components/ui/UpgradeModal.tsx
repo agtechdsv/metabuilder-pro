@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { X, Lock, Zap, Check, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 
 interface UpgradeModalProps {
@@ -26,11 +27,6 @@ const PRO_BENEFITS = [
 
 export function UpgradeModal({ isOpen, featureName, onClose }: UpgradeModalProps) {
   const [mounted, setMounted] = useState(false)
-  const [showCheckout, setShowCheckout] = useState(false)
-  const [rules, setRules] = useState<any>(null)
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
-  const [loadingCheckout, setLoadingCheckout] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -39,29 +35,17 @@ export function UpgradeModal({ isOpen, featureName, onClose }: UpgradeModalProps
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
-      setShowCheckout(false)
     } else {
       document.body.style.overflow = 'unset'
     }
     return () => { document.body.style.overflow = 'unset' }
   }, [isOpen])
 
+  const router = useRouter()
+
   const handleUpgrade = async () => {
-    setLoadingCheckout(true)
-    try {
-      const supabase = createClient()
-      const { data: { user: u } } = await supabase.auth.getUser()
-      const { data: p } = await supabase.from('profiles').select('*').eq('id', u!.id).single()
-      const { data: r } = await supabase.from('pricing_rules').select('*').single()
-      setUser(u)
-      setProfile(p)
-      setRules(r)
-      setShowCheckout(true)
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoadingCheckout(false)
-    }
+    onClose()
+    router.push('/checkout')
   }
 
   if (!mounted || !isOpen) return null
@@ -121,17 +105,13 @@ export function UpgradeModal({ isOpen, featureName, onClose }: UpgradeModalProps
         <div className="px-6 pb-6 flex flex-col gap-2">
           <button
             onClick={handleUpgrade}
-            disabled={loadingCheckout}
             className={cn(
               "w-full h-11 rounded-xl font-black text-sm uppercase tracking-widest transition-all",
               "bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-500/25",
-              "disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              "flex items-center justify-center gap-2"
             )}
           >
-            {loadingCheckout
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Carregando...</>
-              : 'Fazer Upgrade para o PRO'
-            }
+            Fazer Upgrade para o PRO
           </button>
           <button
             onClick={onClose}
@@ -140,15 +120,6 @@ export function UpgradeModal({ isOpen, featureName, onClose }: UpgradeModalProps
             Agora não
           </button>
         </div>
-
-        {/* Inline checkout */}
-        {showCheckout && rules && user && (
-          <div className="border-t border-neutral-200 dark:border-neutral-800 px-6 pb-6">
-            <React.Suspense fallback={<div className="py-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>}>
-              <CheckoutClientWrapper rules={rules} user={user} profile={profile} onClose={onClose} />
-            </React.Suspense>
-          </div>
-        )}
       </div>
     </div>
   )
