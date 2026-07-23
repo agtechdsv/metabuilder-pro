@@ -285,6 +285,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
       else if (action === 'get_log_stats') actionDesc = 'Buscar Estatísticas de Logs';
       else if (action === 'clear_logs') actionDesc = 'Limpar Logs';
       else if (action === 'sync_log_config') actionDesc = 'Sincronizar Configuração de Logs';
+      else if (action === 'raw_sql') actionDesc = 'Comando SQL Nativo (RAW)';
       else if (action === 'select' || action === 'insert' || action === 'update' || action === 'delete') {
         actionDesc = `${action.toUpperCase()} na tabela '${table || 'desconhecida'}'`;
       }
@@ -640,6 +641,24 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           cliDbLogger.logCount(safeTable, sql, totalRows, null);
           
           result.totalRows = totalRows; // We will extract this at the end
+        } else if (action === 'raw_sql') {
+          sql = payload.payload.query;
+          console.log(chalk.cyan(`[ SQL ] Executando RAW SQL: ${sql}`));
+          
+          if (dbType === 'oracle') {
+            const oraRes = await oracleConnection.execute(sql, [], { outFormat: oracledb.OUT_FORMAT_OBJECT, autoCommit: true });
+            result = { rows: oraRes.rows || [], rowsAffected: oraRes.rowsAffected };
+          } else {
+            result = await pgClient.query(sql);
+            if (result && !result.rows && Array.isArray(result)) {
+               result = { rows: result };
+            } else if (result && result.rowCount !== undefined) {
+               result.rowsAffected = result.rowCount;
+               if (!result.rows) result.rows = [];
+            }
+          }
+          console.log(chalk.green(`[ OK ] RAW SQL: Sucesso.`));
+          cliDbLogger.logSelect('raw_sql', sql, result.rows ? result.rows.length : 0, null);
         } else if (action === 'validate_login') {
           const { config, credentials } = payload.payload;
           if (!config) {
