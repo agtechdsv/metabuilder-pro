@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { X, RefreshCw, ExternalLink, Terminal, Minimize2, Maximize2, LayoutDashboard, Globe, AppWindow, Plus } from 'lucide-react'
+import { X, RefreshCw, ExternalLink, Terminal, Minimize2, Maximize2, LayoutDashboard, Globe, AppWindow, Plus, ArrowLeft } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 
 export interface PreviewTab {
@@ -170,14 +170,32 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
       let finalUrl = urlInput.trim()
       if (!finalUrl) return
       
-      // Basic URL formatting
-      if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
-        finalUrl = 'https://' + finalUrl
+      // Basic URL formatting / Search logic
+      const isUrl = /^((https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?|localhost(:\d+)?(\/.*)?)$/i.test(finalUrl)
+      
+      if (isUrl) {
+        if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://') && !finalUrl.startsWith('localhost')) {
+          finalUrl = 'https://' + finalUrl
+        } else if (finalUrl.startsWith('localhost')) {
+          finalUrl = 'http://' + finalUrl
+        }
+      } else {
+        // Search in Google
+        finalUrl = `https://www.google.com/search?q=${encodeURIComponent(finalUrl)}`
       }
 
       setTabs(prev => prev.map(t => 
         t.id === activeTabId ? { ...t, url: finalUrl, displayUrl: finalUrl, title: finalUrl } : t
       ))
+    }
+  }
+
+  const handleBack = () => {
+    if (activeTabId && iframeRefs.current[activeTabId]) {
+      const iframe = iframeRefs.current[activeTabId]
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.history.back()
+      }
     }
   }
 
@@ -362,6 +380,13 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
                 {/* Navbar da Aba Ativa (Browser Style) */}
                 <div className="h-12 bg-neutral-900 border-b border-neutral-800 flex items-center px-4 shrink-0 gap-4">
                   <div className="flex items-center gap-1">
+                    <button 
+                      onClick={handleBack} 
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all" 
+                      title="Voltar"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                    </button>
                     <button 
                       onClick={handleRefresh} 
                       className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all" 
