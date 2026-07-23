@@ -114,7 +114,6 @@ fn stopcli(state: State<'_, CliState>) -> Result<String, String> {
 
 #[command]
 fn open_devtools(window: tauri::WebviewWindow) {
-    #[cfg(feature = "devtools")]
     window.open_devtools();
 }
 
@@ -572,7 +571,8 @@ pub fn run() {
     app.run(|app_handle, event| {
         if let tauri::RunEvent::ExitRequested { .. } = event {
             let state = app_handle.state::<CliState>();
-            if let Some(child) = state.child.lock().unwrap().take() {
+            let mut guard = state.child.lock().unwrap();
+            if let Some(child) = guard.take() {
                 let _ = child.kill();
             }
         }
