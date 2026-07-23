@@ -122,11 +122,6 @@ export function IDELanding({ user }: { user: any }) {
       <footer className="w-full text-center py-6 text-xs text-neutral-500 dark:text-neutral-600 relative z-10">
         &copy; {new Date().getFullYear()} AgTech Development. Todos os direitos reservados.
       </footer>
-
-      {/* Footer */}
-      <footer className="w-full text-center py-6 text-xs text-neutral-500 dark:text-neutral-600 relative z-10">
-        &copy; {new Date().getFullYear()} AgTech Development. Todos os direitos reservados.
-      </footer>
     </div>
   )
 }

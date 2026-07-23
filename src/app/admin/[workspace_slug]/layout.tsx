@@ -54,7 +54,11 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
 
   let isBlocked = false;
   if (ownerProfile) {
-    isBlocked = ownerProfile.is_blocked || ownerProfile.subscription_status === 'blocked'
+    if (ownerProfile.subscription_status === 'pending') {
+      isBlocked = false; // Freemium users get is_blocked=true by default in DB, ignore it
+    } else {
+      isBlocked = ownerProfile.is_blocked || ownerProfile.subscription_status === 'blocked'
+    }
   }
 
   if (isBlocked && !isSuperAdmin) {

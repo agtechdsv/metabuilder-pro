@@ -46,7 +46,13 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
 
       {/* Close Button */}
       <button 
-        onClick={() => router.push(isUpgrade ? '/client/dashboard' : '/')}
+        onClick={() => {
+          if (window.history.length > 2) {
+            router.back()
+          } else {
+            router.push('/workspace')
+          }
+        }}
         className="absolute top-6 right-6 p-2 rounded-2xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-750 text-neutral-400 hover:text-neutral-950 dark:text-neutral-400 dark:hover:text-white transition-all active:scale-90 z-20"
         title="Fechar checkout"
       >
