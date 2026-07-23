@@ -115,8 +115,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
           const linkEl = (
             <Link 
               key={idx}
-              href={link.gate ? '#' : link.href}
-              onClick={link.gate ? (e) => e.preventDefault() : undefined}
+              href={link.href}
               className={`p-3 rounded-xl transition-all border group relative flex justify-center ${
                 isActive 
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 border-indigo-500' 
