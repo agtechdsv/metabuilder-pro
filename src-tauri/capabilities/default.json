@@ -57,6 +57,7 @@
     "spawn-pty",
     "write-pty",
     "resize-pty",
-    "update-tray-menu"
+    "update-tray-menu",
+    "open_devtools"
   ]
 }

@@ -22,7 +22,8 @@ export function usePreview() {
 export function PreviewProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
-  const [url, setUrl] = useState('')
+  const [url, setUrl] = useState('') // URL inicial/atual do src
+  const [displayUrl, setDisplayUrl] = useState('') // URL mostrada na barra superior
   const [title, setTitle] = useState('')
   const [isTauri, setIsTauri] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -53,6 +54,7 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
   const openPreview = (targetUrl: string, targetTitle: string) => {
     if (isTauri) {
       setUrl(targetUrl)
+      setDisplayUrl(targetUrl)
       setTitle(targetTitle)
       setIsOpen(true)
       setIsMinimized(false)
@@ -75,8 +77,8 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
     if (iframeRef.current) {
       try {
         const currentUrl = iframeRef.current.contentWindow?.location.href
-        if (currentUrl && currentUrl !== 'about:blank' && currentUrl !== url) {
-          setUrl(currentUrl)
+        if (currentUrl && currentUrl !== 'about:blank' && currentUrl !== displayUrl) {
+          setDisplayUrl(currentUrl)
         }
       } catch (e) {
         // Ignora erro cross-origin se a navegação sair do escopo local
@@ -86,9 +88,9 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
 
   const handleOpenExternal = () => {
     import('@tauri-apps/plugin-shell').then(({ open }) => {
-      open(url)
+      open(displayUrl)
     }).catch(() => {
-      window.open(url, '_blank')
+      window.open(displayUrl, '_blank')
     })
   }
 
@@ -134,7 +136,7 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
                     </button>
                     <div className="flex flex-col min-w-0">
                       <span className="text-neutral-200 font-semibold text-sm truncate">{title}</span>
-                      <span className="text-neutral-500 font-mono text-[10px] truncate max-w-[300px]">{url}</span>
+                      <span className="text-neutral-500 font-mono text-[10px] truncate max-w-[300px]">{displayUrl}</span>
                     </div>
                   </div>
 
