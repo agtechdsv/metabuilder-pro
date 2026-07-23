@@ -1,4 +1,22 @@
 {
+  "v1.0.1": {
+    "date": "2026-07-23",
+    "pt": [
+      "Novo fluxo de pagamento inteligente e checkout multi-etapas integrado, proporcionando uma experiência de compra mais fluida e segura.",
+      "Novo layout para a área de trabalho (workspace) e novos componentes visuais para páginas de captura (landing pages), facilitando a criação e navegação.",
+      "Gestão de atualizações e histórico de novidades automatizado com Inteligência Artificial, garantindo transparência contínua sobre a evolução da plataforma."
+    ],
+    "en": [
+      "New smart multi-step checkout and payment workflow, delivering a seamless and secure purchasing experience.",
+      "Upgraded workspace layout and new visual landing page components, improving navigation and page creation.",
+      "Automated release management and AI-powered changelog generation, keeping you seamlessly updated on platform enhancements."
+    ],
+    "es": [
+      "Nuevo flujo de pago inteligente y checkout paso a paso integrado, ofreciendo una experiencia de compra más fluida y segura.",
+      "Diseño renovado del espacio de trabajo (workspace) y nuevos componentes para páginas de destino (landing pages), facilitando la creación y navegación.",
+      "Gestión de lanzamientos y generación de historial de cambios automatizada con Inteligencia Artificial, manteniéndote informado sobre las mejoras de la plataforma."
+    ]
+  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
