@@ -32,7 +32,6 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
   const [tabs, setTabs] = useState<PreviewTab[]>([])
   const [activeTabId, setActiveTabId] = useState<string | null>(null)
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, tabId: string } | null>(null)
-  const [urlInput, setUrlInput] = useState('')
   
   const [isTauri, setIsTauri] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -157,39 +156,6 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
 
   const activeTab = tabs.find(t => t.id === activeTabId)
 
-  useEffect(() => {
-    if (activeTab) {
-      setUrlInput(activeTab.displayUrl === 'about:blank' ? '' : activeTab.displayUrl)
-    } else {
-      setUrlInput('')
-    }
-  }, [activeTab?.displayUrl, activeTab?.id])
-
-  const handleUrlSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && activeTabId) {
-      let finalUrl = urlInput.trim()
-      if (!finalUrl) return
-      
-      // Basic URL formatting / Search logic
-      const isUrl = /^((https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?|localhost(:\d+)?(\/.*)?)$/i.test(finalUrl)
-      
-      if (isUrl) {
-        if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://') && !finalUrl.startsWith('localhost')) {
-          finalUrl = 'https://' + finalUrl
-        } else if (finalUrl.startsWith('localhost')) {
-          finalUrl = 'http://' + finalUrl
-        }
-      } else {
-        // Search in Google
-        finalUrl = `https://www.google.com/search?q=${encodeURIComponent(finalUrl)}`
-      }
-
-      setTabs(prev => prev.map(t => 
-        t.id === activeTabId ? { ...t, url: finalUrl, displayUrl: finalUrl, title: finalUrl } : t
-      ))
-    }
-  }
-
   const handleBack = () => {
     if (activeTabId && iframeRefs.current[activeTabId]) {
       const iframe = iframeRefs.current[activeTabId]
@@ -301,23 +267,6 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
                         </div>
                       </button>
                     ))}
-                    
-                    <button
-                      onClick={() => {
-                        const newTabId = Math.random().toString(36).substring(7)
-                        setTabs(prev => [...prev, {
-                          id: newTabId,
-                          url: 'about:blank',
-                          displayUrl: '',
-                          title: 'Nova Aba'
-                        }])
-                        setActiveTabId(newTabId)
-                      }}
-                      className="w-8 h-8 ml-1 shrink-0 flex items-center justify-center rounded hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
-                      title="Nova Aba"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
                   </div>
 
                   {/* Top Right Actions */}
@@ -355,18 +304,6 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
                       className="fixed z-[9999999] w-56 py-1.5 bg-[#2a2b2f] border border-neutral-700 rounded-lg shadow-2xl flex flex-col text-sm text-neutral-300"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <button 
-                        onClick={() => { 
-                          const newTabId = Math.random().toString(36).substring(7)
-                          setTabs(prev => [...prev, { id: newTabId, url: 'about:blank', displayUrl: '', title: 'Nova Aba' }])
-                          setActiveTabId(newTabId)
-                          setContextMenu(null) 
-                        }} 
-                        className="px-4 py-2 text-left hover:bg-neutral-700 hover:text-white transition-colors w-full"
-                      >
-                        Nova Guia
-                      </button>
-                      <div className="h-px bg-neutral-700 my-1 mx-2" />
                       <button onClick={() => { closeTab(null, contextMenu.tabId); setContextMenu(null) }} className="px-4 py-2 text-left hover:bg-neutral-700 hover:text-white transition-colors w-full">Fechar Guia Atual</button>
                       <button onClick={() => { closeOtherTabs(contextMenu.tabId); setContextMenu(null) }} className="px-4 py-2 text-left hover:bg-neutral-700 hover:text-white transition-colors w-full">Fechar Outras Guias</button>
                       <button onClick={() => { closeTabsToRight(contextMenu.tabId); setContextMenu(null) }} className="px-4 py-2 text-left hover:bg-neutral-700 hover:text-white transition-colors w-full">Fechar Guias à Direita</button>
@@ -397,15 +334,9 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
                   </div>
                   
                   <div className="flex-1 flex justify-center">
-                    <div className="flex items-center gap-2 bg-[#1a1b1e] border border-neutral-800 px-4 py-1.5 rounded-full w-full max-w-2xl text-xs text-neutral-400 font-mono focus-within:border-indigo-500/50 transition-colors">
+                    <div className="flex items-center gap-2 bg-[#1a1b1e] border border-neutral-800 px-4 py-1.5 rounded-full w-full max-w-2xl text-xs text-neutral-400 font-mono transition-colors">
                       <Globe className="w-3.5 h-3.5" />
-                      <input 
-                        value={urlInput}
-                        onChange={(e) => setUrlInput(e.target.value)}
-                        onKeyDown={handleUrlSubmit}
-                        className="flex-1 bg-transparent border-none outline-none truncate"
-                        placeholder="Digite uma URL (ex: metavoice.com) e aperte Enter"
-                      />
+                      <span className="truncate">{activeTab?.displayUrl}</span>
                     </div>
                   </div>
 
