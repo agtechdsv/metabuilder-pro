@@ -130,17 +130,25 @@ export default async function GlobalDashboard() {
 
   let totalActiveMembers = teamData ? (teamData.guests?.length || 0) + 1 : 1;
   
-  if (isGuest && workspaces && workspaces.length > 0) {
-    // Para convidados, calcula o tamanho da equipe baseada nos donos dos workspaces
-    const ownerIds = Array.from(new Set(workspaces.map(w => w.owner_id)));
-    if (ownerIds.length > 0) {
-      const { createClient: createAdminClient } = await import('@/utils/supabase/server')
-      const supabaseAdmin = await createAdminClient()
+  if (isGuest) {
+    const { createClient: createAdminClient } = await import('@/utils/supabase/server')
+    const supabaseAdmin = await createAdminClient()
+    
+    // Descobre de quem este usuário é convidado
+    const { data: myGuestRecords } = await supabaseAdmin
+      .from('owner_guests')
+      .select('owner_id')
+      .eq('user_id', user.id);
+      
+    if (myGuestRecords && myGuestRecords.length > 0) {
+      const ownerIds = Array.from(new Set(myGuestRecords.map(r => r.owner_id)));
+      
+      // Conta o total de convidados de todos os donos que o usuário faz parte
       const { data: ownersGuests } = await supabaseAdmin
         .from('owner_guests')
         .select('id')
         .in('owner_id', ownerIds);
-      
+        
       totalActiveMembers = ownerIds.length + (ownersGuests?.length || 0);
     }
   }
