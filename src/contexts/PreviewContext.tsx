@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { X, RefreshCw, ExternalLink, Terminal, Minimize2, Maximize2, LayoutDashboard, Globe, AppWindow } from 'lucide-react'
+import { X, RefreshCw, ExternalLink, Terminal, Minimize2, Maximize2, LayoutDashboard, Globe, AppWindow, Plus } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 
 export interface PreviewTab {
@@ -31,6 +31,8 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
   const [isMinimized, setIsMinimized] = useState(false)
   const [tabs, setTabs] = useState<PreviewTab[]>([])
   const [activeTabId, setActiveTabId] = useState<string | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, tabId: string } | null>(null)
+  const [urlInput, setUrlInput] = useState('')
   
   const [isTauri, setIsTauri] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -50,6 +52,12 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
       }
     }
     checkTauri()
+  }, [])
+
+  useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null)
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
   }, [])
 
   const openPreview = (targetUrl: string, targetTitle: string) => {
@@ -77,8 +85,7 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const closeTab = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation()
+  const closeTabById = (id: string) => {
     setTabs(prev => {
       const newTabs = prev.filter(t => t.id !== id)
       if (newTabs.length === 0) {
@@ -89,14 +96,90 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
       }
       return newTabs
     })
-    
-    // Clean up ref
     if (iframeRefs.current[id]) {
       delete iframeRefs.current[id]
     }
   }
 
+  const closeTab = (e: React.MouseEvent | null, id: string) => {
+    if (e) e.stopPropagation()
+    closeTabById(id)
+  }
+
+  const closeOtherTabs = (id: string) => {
+    setTabs(prev => {
+      const remaining = prev.filter(t => t.id === id)
+      prev.forEach(t => {
+        if (t.id !== id && iframeRefs.current[t.id]) delete iframeRefs.current[t.id]
+      })
+      setActiveTabId(id)
+      return remaining
+    })
+  }
+
+  const closeTabsToRight = (id: string) => {
+    setTabs(prev => {
+      const idx = prev.findIndex(t => t.id === id)
+      if (idx === -1) return prev
+      const newTabs = prev.slice(0, idx + 1)
+      prev.slice(idx + 1).forEach(t => {
+        if (iframeRefs.current[t.id]) delete iframeRefs.current[t.id]
+      })
+      if (!newTabs.find(t => t.id === activeTabId)) {
+        setActiveTabId(newTabs[newTabs.length - 1].id)
+      }
+      return newTabs
+    })
+  }
+
+  const closeTabsToLeft = (id: string) => {
+    setTabs(prev => {
+      const idx = prev.findIndex(t => t.id === id)
+      if (idx === -1) return prev
+      const newTabs = prev.slice(idx)
+      prev.slice(0, idx).forEach(t => {
+        if (iframeRefs.current[t.id]) delete iframeRefs.current[t.id]
+      })
+      if (!newTabs.find(t => t.id === activeTabId)) {
+        setActiveTabId(newTabs[0].id)
+      }
+      return newTabs
+    })
+  }
+
+  const closeAllTabs = () => {
+    setIsOpen(false)
+    setIsMinimized(false)
+    setTabs([])
+    setActiveTabId(null)
+    iframeRefs.current = {}
+  }
+
   const activeTab = tabs.find(t => t.id === activeTabId)
+
+  useEffect(() => {
+    if (activeTab) {
+      setUrlInput(activeTab.displayUrl === 'about:blank' ? '' : activeTab.displayUrl)
+    } else {
+      setUrlInput('')
+    }
+  }, [activeTab?.displayUrl, activeTab?.id])
+
+  const handleUrlSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && activeTabId) {
+      let finalUrl = urlInput.trim()
+      if (!finalUrl) return
+      
+      // Basic URL formatting
+      if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+        finalUrl = 'https://' + finalUrl
+      }
+
+      setTabs(prev => prev.map(t => 
+        t.id === activeTabId ? { ...t, url: finalUrl, displayUrl: finalUrl, title: finalUrl } : t
+      ))
+    }
+  }
 
   const handleRefresh = () => {
     if (activeTabId && iframeRefs.current[activeTabId]) {
@@ -164,12 +247,22 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
                 className={`fixed inset-0 z-[99999] flex flex-col bg-neutral-900 ${isMinimized ? 'pointer-events-none' : 'pointer-events-auto'}`}
               >
                 {/* Header Superior com as Abas */}
-                <div className="bg-[#1a1b1e] border-b border-neutral-800 flex items-end pt-2 px-2 shrink-0 shadow-lg">
+                <div className="bg-[#1a1b1e] border-b border-neutral-800 flex items-end pt-2 px-2 shrink-0 shadow-lg relative">
                   <div className="flex items-center gap-1 overflow-x-auto no-scrollbar w-[calc(100%-250px)]">
                     {tabs.map(tab => (
                       <button
                         key={tab.id}
                         onClick={() => setActiveTabId(tab.id)}
+                        onMouseDown={(e) => {
+                          if (e.button === 1) {
+                            e.preventDefault()
+                            closeTab(e, tab.id)
+                          }
+                        }}
+                        onContextMenu={(e) => {
+                          e.preventDefault()
+                          setContextMenu({ x: e.clientX, y: e.clientY, tabId: tab.id })
+                        }}
                         className={`
                           group relative flex items-center gap-2 min-w-[140px] max-w-[200px] h-9 px-3 rounded-t-lg transition-colors border border-b-0
                           ${activeTabId === tab.id 
@@ -190,6 +283,23 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
                         </div>
                       </button>
                     ))}
+                    
+                    <button
+                      onClick={() => {
+                        const newTabId = Math.random().toString(36).substring(7)
+                        setTabs(prev => [...prev, {
+                          id: newTabId,
+                          url: 'about:blank',
+                          displayUrl: '',
+                          title: 'Nova Aba'
+                        }])
+                        setActiveTabId(newTabId)
+                      }}
+                      className="w-8 h-8 ml-1 shrink-0 flex items-center justify-center rounded hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
+                      title="Nova Aba"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
                   </div>
 
                   {/* Top Right Actions */}
@@ -206,11 +316,7 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
                     </div>
 
                     <button 
-                      onClick={() => {
-                        setIsOpen(false)
-                        setTabs([])
-                        setActiveTabId(null)
-                      }} 
+                      onClick={closeAllTabs} 
                       className="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-800 hover:bg-red-500/80 text-neutral-300 hover:text-white transition-colors" 
                       title="Fechar Todas as Abas"
                     >
@@ -218,6 +324,40 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
                     </button>
                   </div>
                 </div>
+
+                {/* Context Menu das Abas */}
+                <AnimatePresence>
+                  {contextMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.1 }}
+                      style={{ top: contextMenu.y, left: contextMenu.x }}
+                      className="fixed z-[9999999] w-56 py-1.5 bg-[#2a2b2f] border border-neutral-700 rounded-lg shadow-2xl flex flex-col text-sm text-neutral-300"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button 
+                        onClick={() => { 
+                          const newTabId = Math.random().toString(36).substring(7)
+                          setTabs(prev => [...prev, { id: newTabId, url: 'about:blank', displayUrl: '', title: 'Nova Aba' }])
+                          setActiveTabId(newTabId)
+                          setContextMenu(null) 
+                        }} 
+                        className="px-4 py-2 text-left hover:bg-neutral-700 hover:text-white transition-colors w-full"
+                      >
+                        Nova Guia
+                      </button>
+                      <div className="h-px bg-neutral-700 my-1 mx-2" />
+                      <button onClick={() => { closeTab(null, contextMenu.tabId); setContextMenu(null) }} className="px-4 py-2 text-left hover:bg-neutral-700 hover:text-white transition-colors w-full">Fechar Guia Atual</button>
+                      <button onClick={() => { closeOtherTabs(contextMenu.tabId); setContextMenu(null) }} className="px-4 py-2 text-left hover:bg-neutral-700 hover:text-white transition-colors w-full">Fechar Outras Guias</button>
+                      <button onClick={() => { closeTabsToRight(contextMenu.tabId); setContextMenu(null) }} className="px-4 py-2 text-left hover:bg-neutral-700 hover:text-white transition-colors w-full">Fechar Guias à Direita</button>
+                      <button onClick={() => { closeTabsToLeft(contextMenu.tabId); setContextMenu(null) }} className="px-4 py-2 text-left hover:bg-neutral-700 hover:text-white transition-colors w-full">Fechar Guias à Esquerda</button>
+                      <div className="h-px bg-neutral-700 my-1 mx-2" />
+                      <button onClick={() => { closeAllTabs(); setContextMenu(null) }} className="px-4 py-2 text-left hover:bg-red-500/20 hover:text-red-400 transition-colors w-full">Fechar Todas as Guias</button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* Navbar da Aba Ativa (Browser Style) */}
                 <div className="h-12 bg-neutral-900 border-b border-neutral-800 flex items-center px-4 shrink-0 gap-4">
@@ -232,9 +372,15 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
                   </div>
                   
                   <div className="flex-1 flex justify-center">
-                    <div className="flex items-center gap-2 bg-[#1a1b1e] border border-neutral-800 px-4 py-1.5 rounded-full w-full max-w-2xl text-xs text-neutral-400 font-mono">
+                    <div className="flex items-center gap-2 bg-[#1a1b1e] border border-neutral-800 px-4 py-1.5 rounded-full w-full max-w-2xl text-xs text-neutral-400 font-mono focus-within:border-indigo-500/50 transition-colors">
                       <Globe className="w-3.5 h-3.5" />
-                      <span className="truncate">{activeTab?.displayUrl}</span>
+                      <input 
+                        value={urlInput}
+                        onChange={(e) => setUrlInput(e.target.value)}
+                        onKeyDown={handleUrlSubmit}
+                        className="flex-1 bg-transparent border-none outline-none truncate"
+                        placeholder="Digite uma URL (ex: metavoice.com) e aperte Enter"
+                      />
                     </div>
                   </div>
 
@@ -264,7 +410,7 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
                       ref={el => { iframeRefs.current[tab.id] = el }}
                       src={tab.url}
                       onLoad={() => handleIframeLoad(tab.id)}
-                      className={`w-full h-full border-none absolute inset-0 ${activeTabId === tab.id ? `opacity-100 z-10 ${isMinimized ? 'pointer-events-none' : 'pointer-events-auto'}` : 'opacity-0 z-0 pointer-events-none'}`}
+                      className={`w-full h-full border-none absolute inset-0 bg-white ${activeTabId === tab.id ? `opacity-100 z-10 ${isMinimized ? 'pointer-events-none' : 'pointer-events-auto'}` : 'opacity-0 z-0 pointer-events-none'}`}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     />
@@ -294,12 +440,7 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
                         Retornar
                       </button>
                       <button 
-                        onClick={() => {
-                          setIsOpen(false)
-                          setIsMinimized(false)
-                          setTabs([])
-                          setActiveTabId(null)
-                        }}
+                        onClick={closeAllTabs}
                         className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-500/20 text-neutral-400 hover:text-red-400 transition-colors"
                         title="Fechar Todas as Abas"
                       >
