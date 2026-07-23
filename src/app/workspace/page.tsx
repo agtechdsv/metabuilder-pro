@@ -128,6 +128,23 @@ export default async function GlobalDashboard() {
   const teamDataResult = await getStudioTeamData()
   const teamData = teamDataResult.success ? teamDataResult.data : null
 
+  let totalActiveMembers = teamData ? (teamData.guests?.length || 0) + 1 : 1;
+  
+  if (isGuest && workspaces && workspaces.length > 0) {
+    // Para convidados, calcula o tamanho da equipe baseada nos donos dos workspaces
+    const ownerIds = Array.from(new Set(workspaces.map(w => w.owner_id)));
+    if (ownerIds.length > 0) {
+      const { createClient: createAdminClient } = await import('@/utils/supabase/server')
+      const supabaseAdmin = await createAdminClient()
+      const { data: ownersGuests } = await supabaseAdmin
+        .from('owner_guests')
+        .select('id')
+        .in('owner_id', ownerIds);
+      
+      totalActiveMembers = ownerIds.length + (ownersGuests?.length || 0);
+    }
+  }
+
   const emailPrefix = user.email?.split('@')[0] || 'Usuário'
   const capitalizedUserName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)
 
@@ -144,6 +161,7 @@ export default async function GlobalDashboard() {
           initialWorkspaces={workspaces || []} 
           userName={capitalizedUserName} 
           teamData={teamData}
+          totalActiveMembers={totalActiveMembers}
           rules={pricingRules}
           user={user}
           profile={profile}

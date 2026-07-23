@@ -73,6 +73,7 @@ interface WorkspaceManagerProps {
   profile?: any
   isGuest?: boolean
   initialGuestAccessLevel?: 'global' | 'granular' | null
+  totalActiveMembers?: number
 }
 
 export function WorkspaceManager({
@@ -83,7 +84,8 @@ export function WorkspaceManager({
   user,
   profile,
   isGuest = false,
-  initialGuestAccessLevel = null
+  initialGuestAccessLevel = null,
+  totalActiveMembers
 }: WorkspaceManagerProps) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>(initialWorkspaces)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
@@ -324,7 +326,7 @@ export function WorkspaceManager({
         {[
           { label: t('dashboard.stats.active_workspaces'), value: workspaces.length, icon: Building2, color: 'blue' },
           { label: t('dashboard.stats.total_projects'), value: workspaces.reduce((acc, w) => acc + (w.projects?.[0]?.count || 0), 0), icon: Activity, color: 'indigo' },
-          { label: t('dashboard.stats.active_members'), value: teamData ? (teamData.guests?.length || 0) + 1 : 1, icon: Users, color: 'green' }
+          { label: t('dashboard.stats.active_members'), value: totalActiveMembers ?? (teamData ? (teamData.guests?.length || 0) + 1 : 1), icon: Users, color: 'green' }
         ].map((stat, i) => (
           <div key={i} className="p-4 bg-white dark:bg-neutral-950/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex items-center justify-between shadow-sm dark:shadow-none">
             <div>
