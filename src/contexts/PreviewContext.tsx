@@ -94,21 +94,8 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
 
   const handleOpenDevTools = async () => {
     try {
-      // No Tauri v2 o getCurrentWebview() expõe openDevTools() se compilado em modo dev
-      const { getCurrentWebview } = await import('@tauri-apps/api/webview')
-      const webview = getCurrentWebview() as any
-      if (typeof webview.openDevTools === 'function') {
-        webview.openDevTools()
-      } else {
-        // Fallback for some Tauri versions where it's on the window instead
-        const { getCurrentWindow } = await import('@tauri-apps/api/window')
-        const win = getCurrentWindow() as any
-        if (typeof win.openDevTools === 'function') {
-          win.openDevTools()
-        } else {
-          toast('O DevTools nativo requer que o aplicativo seja compilado em modo Dev (ou com a flag devtools ativa).', 'info')
-        }
-      }
+      const { invoke } = await import('@tauri-apps/api/core')
+      await invoke('open_devtools')
     } catch (e) {
       toast('Não foi possível abrir o DevTools: ' + String(e), 'error')
     }

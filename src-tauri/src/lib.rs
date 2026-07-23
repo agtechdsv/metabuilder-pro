@@ -113,6 +113,12 @@ fn stopcli(state: State<'_, CliState>) -> Result<String, String> {
 }
 
 #[command]
+fn open_devtools(window: tauri::WebviewWindow) {
+    #[cfg(feature = "devtools")]
+    window.open_devtools();
+}
+
+#[command]
 fn statuscli(state: State<'_, CliState>) -> Result<bool, String> {
     let child_guard = state.child.lock().unwrap();
     Ok(child_guard.is_some())
@@ -557,7 +563,8 @@ pub fn run() {
             spawn_pty,
             write_pty,
             resize_pty,
-            update_tray_menu
+            update_tray_menu,
+            open_devtools
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
