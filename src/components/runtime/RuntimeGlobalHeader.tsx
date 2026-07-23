@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, usePathname } from 'next/navigation'
-import { PanelLeftClose, PanelLeftOpen, Box, Home, ChevronRight } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen, Box, Home, ChevronRight, LayoutGrid } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { RuntimeHeaderActions } from '@/components/runtime/RuntimeHeaderActions'
 import { useI18n } from '@/i18n/I18nContext'
@@ -54,6 +54,18 @@ export function RuntimeGlobalHeader({
       >
         {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
       </button>
+
+      {/* Return to Portal (Only if accessed via Workspace Dash) */}
+      {baseUrl === `/${workspaceSlug}/${projectSlug}` && (
+        <Link 
+          href={`/${workspaceSlug}`}
+          className="group flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-100/50 hover:bg-indigo-50 dark:bg-neutral-800/30 dark:hover:bg-indigo-500/10 text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 border border-transparent hover:border-indigo-200/50 dark:hover:border-indigo-500/30 transition-all text-[10px] font-black uppercase tracking-widest"
+          title="Voltar ao Portal de Aplicações"
+        >
+          <LayoutGrid className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+          <span className="hidden sm:inline">Portal</span>
+        </Link>
+      )}
 
       <div className="h-6 w-px bg-neutral-200 dark:bg-neutral-800 mx-2" />
 
