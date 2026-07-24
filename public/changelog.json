@@ -1,4 +1,22 @@
 {
+  "v1.0.2": {
+    "date": "2026-07-24",
+    "pt": [
+      "Novo Gerenciamento de Workspace: organize e gerencie seus ambientes de trabalho com mais facilidade e eficiência.",
+      "Nova Experiência Pro: interface aprimorada e intuitiva para acesso e navegação pelos recursos exclusivos do plano Pro.",
+      "Construtor de Casos de Uso Mais Rápido: melhorias estruturais que garantem maior fluidez, estabilidade e velocidade ao criar seus fluxos."
+    ],
+    "en": [
+      "New Workspace Management: Effortlessly organize and manage your workspaces with enhanced management tools.",
+      "Upgraded Pro Experience: A revamped, intuitive UI for seamless discovery and access to exclusive Pro features.",
+      "Faster Use Case Builder: Performance and interface enhancements delivering a smoother experience when building workflows."
+    ],
+    "es": [
+      "Nueva Gestión de Espacios de Trabajo: organice y administre sus entornos de trabajo con mayor facilidad y eficiencia.",
+      "Experiencia Pro Mejorada: interfaz renovada e intuitiva para descubrir y acceder fácilmente a las funciones exclusivas Pro.",
+      "Creador de Casos de Uso Más Rápido: optimizaciones de rendimiento y diseño para una experiencia más fluida al crear sus flujos."
+    ]
+  },
   "v1.0.1": {
     "date": "2026-07-23",
     "pt": [
