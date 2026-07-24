@@ -1,4 +1,19 @@
 {
+  "v1.0.7": {
+    "date": "2026-07-24",
+    "pt": [
+      "Novo layout de projetos com controle de permissões personalizado (RBAC), validação automática de assinaturas e geração dinâmica de metadados para otimizar o gerenciamento do seu espaço de trabalho.",
+      "Lançamento do SQL Studio: uma nova interface visual e intuitiva para execução e gestão de consultas a bancos de dados, acompanhada por um módulo CLI seguro via conexão tunelada."
+    ],
+    "en": [
+      "Redesigned project interface featuring advanced Role-Based Access Control (RBAC), automated subscription verification, and dynamic metadata generation to enhance workspace management.",
+      "Introducing SQL Studio: an intuitive visual environment for database management and query execution, paired with a secure tunnel-based CLI module for high-performance operations."
+    ],
+    "es": [
+      "Nuevo diseño de interfaz de proyectos con control de acceso basado en roles (RBAC), validación automática de suscripciones y generación dinámica de metadatos para optimizar la gestión de su espacio de trabajo.",
+      "Lanzamiento de SQL Studio: un nuevo entorno visual e intuitivo para la gestión y ejecución de consultas a bases de datos, acompañado de un módulo CLI seguro mediante conexiones tunelizadas."
+    ]
+  },
   "v1.0.6": {
     "date": "2026-07-24",
     "pt": [
