@@ -116,16 +116,20 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   // Buscar perfil do owner separadamente
   const { data: ownerProfile } = await supabase
     .from('profiles')
-    .select('subscription_status, is_blocked')
+    .select('subscription_status, is_blocked, subscription_tier')
     .eq('id', workspace.owner_id)
     .single()
 
   // Verificação de assinatura para o runtime (end-users/visitors)
 
+  const isFreeTier = !ownerProfile?.subscription_tier || ownerProfile?.subscription_tier === 'free'
+
   const isSuspended = ownerProfile?.is_blocked || 
-                      ownerProfile?.subscription_status === 'blocked' || 
-                      ownerProfile?.subscription_status === 'pending' ||
-                      ownerProfile?.subscription_status === 'canceled'
+                      (!isFreeTier && (
+                        ownerProfile?.subscription_status === 'blocked' || 
+                        ownerProfile?.subscription_status === 'pending' ||
+                        ownerProfile?.subscription_status === 'canceled'
+                      ))
 
   if (isSuspended) {
     return (
