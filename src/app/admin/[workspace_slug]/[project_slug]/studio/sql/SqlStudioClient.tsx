@@ -82,7 +82,7 @@ export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStud
             action: 'raw_sql',
             query: query,
             token: project.secret_token,
-            schemaName: 'public'
+            schemaName: project.db_schema || 'public'
           }
         })
       }
