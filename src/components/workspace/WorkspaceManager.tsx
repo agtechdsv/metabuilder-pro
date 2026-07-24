@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Building2,
   Plus,
@@ -38,6 +38,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useI18n } from '@/i18n/I18nContext'
 import { cn } from '@/lib/utils'
 import { useUpgradeModal } from '@/context/UpgradeModalContext'
+import { ProGate } from '@/components/ui/ProGate'
 
 interface Workspace {
   id: string
@@ -115,13 +116,18 @@ export function WorkspaceManager({
   const pathname = usePathname()
   const { t } = useI18n()
 
-  const canCreateWorkspace = !isGuest || initialGuestAccessLevel === 'global'
+  const profileData = useMemo(() => {
+    return teamData?.members?.find((m: any) => m.role === 'owner') || profile
+  }, [teamData, profile])
+
   const { openUpgrade } = useUpgradeModal()
 
   // Free tier: subscription_tier is computed column on profiles
-  const tier = profile?.subscription_tier as 'pro' | 'free' | undefined
+  const tier = profileData?.subscription_tier as 'pro' | 'free' | undefined
   const isFreeTier = !tier || tier === 'free'
 
+  const canCreateWorkspace = !isGuest || initialGuestAccessLevel === 'global' || profile?.is_super_admin === true
+  
   const handleNewWorkspace = () => {
     // If free tier and already has at least 1 workspace → show upgrade modal
     if (isFreeTier && workspaces.length >= 1) {
@@ -487,14 +493,16 @@ export function WorkspaceManager({
                         )}
                         {workspace.can_edit && (
                           <>
-                            <button
-                              onClick={(e) => handleExportWorkspace(e, workspace)}
-                              disabled={exportingWorkspaceId === workspace.id}
-                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-500 disabled:opacity-50"
-                              title="Exportar Código Fonte (Next.js)"
-                            >
-                              {exportingWorkspaceId === workspace.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                            </button>
+                            <ProGate gateType="desktop" tier={tier} featureName="Exportar Código Fonte">
+                              <button
+                                onClick={(e) => handleExportWorkspace(e, workspace)}
+                                disabled={exportingWorkspaceId === workspace.id}
+                                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-500 disabled:opacity-50"
+                                title="Exportar Código Fonte (Next.js)"
+                              >
+                                {exportingWorkspaceId === workspace.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                              </button>
+                            </ProGate>
                             <button
                               onClick={(e) => {
                                 e.preventDefault()

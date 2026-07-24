@@ -37,6 +37,7 @@ import { useToast } from '@/components/ui/Toast'
 import { isTauri, openExternalUrl } from '@/utils/tauriUtils'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
 import { useUpgradeModal } from '@/context/UpgradeModalContext'
+import { ProGate } from '@/components/ui/ProGate'
 
 
 interface Project {
@@ -695,9 +696,10 @@ export function ProjectManager({
                               <Monitor className="w-4 h-4" />
                             </button>
                           )}
-                          {isTauri() && (
-                            <button
-                              onClick={async (e) => {
+                          {project.can_edit && (
+                            <ProGate gateType="desktop" tier={tier || 'free'} featureName="Exportar Código Fonte">
+                              <button
+                                onClick={async (e) => {
                                 e.preventDefault()
                                 e.stopPropagation()
                                 
@@ -768,7 +770,8 @@ export function ProjectManager({
                               title="Exportar Código Fonte (Next.js)"
                             >
                               <Download className="w-4 h-4" />
-                            </button>
+                              </button>
+                            </ProGate>
                           )}
                           {portalEnabled && (
                             <button

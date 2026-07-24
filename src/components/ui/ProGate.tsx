@@ -78,7 +78,7 @@ export function ProGate({ tier, featureName, gateType, children, className }: Pr
         e.stopPropagation()
         handleClick()
       }}
-      title={gateType === 'desktop' ? `${featureName} — Exclusivo da IDE Desktop` : `${featureName} — Disponível no plano PRO`}
+      title={icon === 'monitor' ? `${featureName} — Exclusivo da IDE Desktop` : `${featureName} — Disponível no plano PRO`}
     >
       {/* Conteúdo acinzentado */}
       <div className="opacity-40 pointer-events-none select-none">

@@ -213,14 +213,14 @@ export function UseCaseBuilderWizard({
         layout_config: { ...cleanLayoutConfig, fields_metadata: populatedFieldsMeta, is_active: true },
         buttons_config: config.buttons_config,
         model_id: config.selected_models[0] || null,
-        project_id: projectData?.id,
+        project_id: currentProjectId,
         view_type: 'advanced_use_case'
       }
 
       // Check for slug conflict
       const { data: existingBySlug } = await supabase
         .from('ui_views').select('id')
-        .eq('project_id', projectData?.id)
+        .eq('project_id', currentProjectId)
         .eq('slug', config.slug)
         .maybeSingle()
 
@@ -228,6 +228,23 @@ export function UseCaseBuilderWizard({
         toast('Já existe um caso de uso com este slug neste projeto.', 'error')
         setIsSaving(false)
         return
+      }
+
+      // Check Freemium Use Case Limit (4)
+      if (!initialData?.id && currentWorkspaceId) {
+        const { data: workspace } = await supabase.from('workspaces').select('owner_id').eq('id', currentWorkspaceId).single()
+        if (workspace) {
+          const { data: profile } = await supabase.from('workspace_profiles').select('subscription_status').eq('user_id', workspace.owner_id).single()
+          
+          if (profile && (profile.subscription_status === 'pending' || profile.subscription_status === 'blocked')) {
+            const { count } = await supabase.from('ui_views').select('*', { count: 'exact', head: true }).eq('project_id', currentProjectId)
+            if (count !== null && count >= 4) {
+              openUpgrade('Novo Caso de Uso')
+              setIsSaving(false)
+              return
+            }
+          }
+        }
       }
 
       let view: any
@@ -270,7 +287,7 @@ export function UseCaseBuilderWizard({
     } catch (err: any) {
       console.error(err)
       if (!initialData?.id && err?.code === '42501') {
-        openUpgrade('Nova View')
+        openUpgrade('Novo Caso de Uso')
       } else {
         toast(t('wizard.buttons.error_save') + err.message, 'error')
       }
