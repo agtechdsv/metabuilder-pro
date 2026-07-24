@@ -1,4 +1,22 @@
 {
+  "v1.0.4": {
+    "date": "2026-07-24",
+    "pt": [
+      "Novo Painel do Studio: Hub centralizado para gerenciar configurações de projetos, personalização de visualizações e criação rápida de lógicas de funcionamento.",
+      "Experiência Pro Simplificada: Descubra recursos premium integrados ao seu fluxo de trabalho e faça o upgrade da sua assinatura com facilidade através do novo modal interativo.",
+      "Melhorias contínuas de estabilidade e sincronização da plataforma."
+    ],
+    "en": [
+      "New Studio Dashboard: A centralized hub to effortlessly manage project configurations, customized views, and quick-start logic setups.",
+      "Seamless Pro Upgrades: Discover premium features directly in your workflow and upgrade your subscription easily with our new interactive prompt.",
+      "Continuous platform stability and synchronization improvements."
+    ],
+    "es": [
+      "Nuevo Panel de Studio: Centro unificado para gestionar configuraciones de proyectos, vistas personalizadas y creación rápida de lógica de funcionamiento.",
+      "Experiencia Pro Simplificada: Descubre funciones premium integradas en tu flujo de trabajo y actualiza tu suscripción fácilmente mediante la nueva ventana interactiva.",
+      "Mejoras continuas en la estabilidad y sincronización de la plataforma."
+    ]
+  },
   "v1.0.3": {
     "date": "2026-07-24",
     "pt": [
