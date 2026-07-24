@@ -46,7 +46,8 @@ import {
   PieChart,
   Image as ImageIcon,
   ScrollText,
-  Monitor
+  Monitor,
+  Sparkles
 } from 'lucide-react'
 import { usePreview } from '@/contexts/PreviewContext'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
@@ -725,6 +726,15 @@ export function StudioDashboardClient({
                 >
                   <Plus className="w-4 h-4" /> {t('dashboard.projects.studio.new_use_case')}
                 </button>
+
+                {tier === 'pro' && (
+                  <a
+                    href={`/admin/${workspace_slug}/${project_slug}/studio/ai-builder`}
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-violet-500/20 active:scale-95"
+                  >
+                    <Sparkles className="w-4 h-4" /> Gerar com IA
+                  </a>
+                )}
               </div>
             )}
           </div>
@@ -1150,9 +1160,16 @@ export function StudioDashboardClient({
                   <div className="flex flex-col gap-4 h-full">
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
-                        <h4 className={`text-base font-bold tracking-tight transition-colors ${view.layout_config?.is_active !== false ? 'text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400' : 'text-neutral-400 italic'}`}>
-                          {view.draft_config?.name || view.name}
-                        </h4>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className={`text-base font-bold tracking-tight transition-colors ${view.layout_config?.is_active !== false ? 'text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400' : 'text-neutral-400 italic'}`}>
+                            {view.draft_config?.name || view.name}
+                          </h4>
+                          {view.layout_config?.generated_by_ai && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0">
+                              <Sparkles className="w-2.5 h-2.5" /> IA
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-neutral-400 font-mono flex items-center gap-1.5 tracking-tight">
                           <span className="opacity-50">/</span>{view.draft_config?.slug || view.slug}
                         </p>

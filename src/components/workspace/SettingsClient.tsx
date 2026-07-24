@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, UserPlus, Shield, X, Mail, RefreshCw, FolderLock, CreditCard, Lock, ShieldAlert } from 'lucide-react'
+import { Users, UserPlus, Shield, X, Mail, RefreshCw, FolderLock, CreditCard, Lock, ShieldAlert, Bot } from 'lucide-react'
 import { inviteWorkspaceMember, removeWorkspaceMember, toggleMemberProject } from '@/app/actions/workspace'
 import { resetMemberMfa } from '@/app/auth/actions'
 import { useToast } from '@/components/ui/Toast'
@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useRouter } from 'next/navigation'
 import BillingSettings from './BillingSettings'
 import SecuritySettings from './SecuritySettings'
+import { AIBuilderSettings } from './AIBuilderSettings'
 import { useI18n } from '@/i18n/I18nContext'
 
 interface Member {
@@ -45,6 +46,7 @@ interface SettingsClientProps {
   initialMemberProjects?: { user_id: string; project_id: string }[]
   payments: any[]
   rules?: any
+  isPro?: boolean
 }
 
 function getMemberDisplayName(member: Member) {
@@ -69,10 +71,11 @@ export function SettingsClient({
   workspaceProjects, 
   initialMemberProjects,
   payments,
-  rules
+  rules,
+  isPro = false
 }: SettingsClientProps) {
   const { t } = useI18n()
-  const [activeTab, setActiveTab] = useState<'team' | 'billing' | 'security'>('team')
+  const [activeTab, setActiveTab] = useState<'team' | 'billing' | 'security' | 'ai'>('team')
   const [members, setMembers] = useState<Member[]>(initialMembers)
   const [memberProjects, setMemberProjects] = useState(initialMemberProjects || [])
 
@@ -191,6 +194,14 @@ export function SettingsClient({
         >
           <Lock className="w-4 h-4" />
           Segurança
+        </button>
+        <button 
+          onClick={() => setActiveTab('ai')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'ai' ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-600' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}
+        >
+          <Bot className="w-4 h-4" />
+          IA Builder
+          {isPro && <span className="px-1.5 py-0.5 bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 rounded text-xs">PRO</span>}
         </button>
       </div>
 
@@ -463,6 +474,10 @@ export function SettingsClient({
           </div>
         </div>
       </Modal>
+
+      {activeTab === 'ai' && (
+        <AIBuilderSettings workspaceId={workspace.id} isPro={isPro} />
+      )}
     </div>
   )
 }

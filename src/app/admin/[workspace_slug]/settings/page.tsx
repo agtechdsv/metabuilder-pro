@@ -20,7 +20,7 @@ export default async function SettingsPage({ params }: SettingsPageProps) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*')
+    .select('*, subscription_tier')
     .eq('id', user.id)
     .single()
 
@@ -175,6 +175,7 @@ export default async function SettingsPage({ params }: SettingsPageProps) {
           initialMemberProjects={memberProjects || []}
           payments={payments || []}
           rules={rules}
+          isPro={profile?.subscription_tier === 'pro'}
         />
       </main>
       <Footer />
