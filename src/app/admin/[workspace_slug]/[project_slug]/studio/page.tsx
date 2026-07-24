@@ -61,6 +61,14 @@ export default async function StudioDashboard({ params }: StudioDashboardProps) 
   const isOwner = user.id === workspace.owner_id
   const userRole = isOwner ? 'owner' : (memberData?.role || 'guest')
 
+  // Fetch owner's subscription tier for gating
+  const { data: ownerProfile } = await supabase
+    .from('profiles')
+    .select('subscription_tier')
+    .eq('id', workspace.owner_id)
+    .single()
+  const tier = (ownerProfile?.subscription_tier as 'pro' | 'free') ?? 'free'
+
   // Para convidados, verifica o nível de acesso global
   let guestAccessLevel: string | null = null
   if (!isOwner) {
@@ -150,6 +158,7 @@ export default async function StudioDashboard({ params }: StudioDashboardProps) 
       canCreate={canCreate}
       canDelete={canDelete}
       projectRelations={projectRelations || []}
+      tier={tier}
     />
   )
 }

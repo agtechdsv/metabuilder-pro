@@ -62,6 +62,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
+import { useUpgradeModal } from '@/context/UpgradeModalContext'
 import { MenuBuilder } from '@/components/studio/MenuBuilder'
 import { EnumerationsClient } from '../enumerations/EnumerationsClient'
 import { TableFieldsManager } from '@/components/studio/TableFieldsManager'
@@ -189,6 +190,7 @@ interface StudioDashboardClientProps {
   canCreate: boolean
   canDelete: boolean
   projectRelations?: any[]
+  tier?: 'pro' | 'free'
 }
 
 export function StudioDashboardClient({
@@ -202,12 +204,14 @@ export function StudioDashboardClient({
   profile,
   canCreate,
   canDelete,
-  projectRelations = []
+  projectRelations = [],
+  tier = 'free'
 }: StudioDashboardClientProps) {
   const { t } = useI18n()
   const router = useRouter()
   const supabase = createClient()
   const { toast } = useToast()
+  const { openUpgrade } = useUpgradeModal()
   const [isPending, startTransition] = useTransition()
   const { openPreview } = usePreview()
 
@@ -696,6 +700,10 @@ export function StudioDashboardClient({
 
                 <button
                   onClick={() => {
+                    if (tier === 'free' && userViews.length >= 4) {
+                      openUpgrade('Novo Caso de Uso')
+                      return
+                    }
                     setViewToEdit(null)
                     setViewMode('builder')
                   }}
