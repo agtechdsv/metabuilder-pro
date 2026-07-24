@@ -1,4 +1,25 @@
 {
+  "v1.0.5": {
+    "date": "2026-07-24",
+    "pt": [
+      "Nova interface de projetos com layout otimizado para uma navegação mais fluida e intuitiva.",
+      "Sistema avançado de controle de acesso por perfis (RBAC), garantindo maior segurança e controle de permissões para sua equipe.",
+      "Suporte a metadados dinâmicos, oferecendo maior flexibilidade e personalização na gestão dos seus projetos.",
+      "Gestão transparente e em tempo real para alertas e tratativa de contas ou projetos suspensos."
+    ],
+    "en": [
+      "New project interface with an optimized layout for smoother and more intuitive navigation.",
+      "Advanced Role-Based Access Control (RBAC) system, ensuring enhanced security and granular permission management for your team.",
+      "Dynamic metadata support, offering greater flexibility and customization for project management.",
+      "Transparent, real-time handling and notifications for suspended accounts or projects."
+    ],
+    "es": [
+      "Nueva interfaz de proyectos con un diseño optimizado para una navegación más fluida e intuitiva.",
+      "Sistema avanzado de control de acceso basado en roles (RBAC), que garantiza mayor seguridad y gestión de permisos para su equipo.",
+      "Soporte para metadatos dinámicos, ofreciendo mayor flexibilidad y personalización en la gestión de sus proyectos.",
+      "Gestión transparente y en tiempo real con notificaciones para la atención de cuentas o proyectos suspendidos."
+    ]
+  },
   "v1.0.4": {
     "date": "2026-07-24",
     "pt": [
