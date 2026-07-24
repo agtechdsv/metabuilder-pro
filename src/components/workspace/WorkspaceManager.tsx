@@ -23,8 +23,10 @@ import {
   ArrowUpRight,
   Monitor,
   Download,
-  Network
+  Network,
+  Bot
 } from 'lucide-react'
+import { AIBuilderSettings } from './AIBuilderSettings'
 import { usePreview } from '@/contexts/PreviewContext'
 import Link from 'next/link'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
@@ -98,6 +100,9 @@ export function WorkspaceManager({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [navigatingSlug, setNavigatingSlug] = useState<string | null>(null)
+  
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false)
+  const [selectedWorkspaceForAI, setSelectedWorkspaceForAI] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'workspaces' | 'tunnel'>('workspaces')
 
   // Team management states
@@ -491,6 +496,19 @@ export function WorkspaceManager({
                             </button>
                           </>
                         )}
+                        {workspace.can_edit && profile?.subscription_tier === 'pro' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedWorkspaceForAI(workspace.id);
+                              setIsAIModalOpen(true);
+                            }}
+                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-violet-500 hover:text-violet-400"
+                            title="Configurações AI Builder"
+                          >
+                            <Bot className="w-4 h-4" />
+                          </button>
+                        )}
                         {workspace.can_edit && (
                           <>
                             <ProGate gateType="desktop" tier={tier} featureName="Exportar Código Fonte">
@@ -697,6 +715,19 @@ export function WorkspaceManager({
           defaultTunnelUrl={typeof window !== 'undefined' ? `${window.location.origin}/${selectedDesktopWorkspace.slug}` : ''}
         />
       )}
+
+      {/* Modal AI Builder */}
+      <Modal
+        isOpen={isAIModalOpen}
+        onClose={() => setIsAIModalOpen(false)}
+        title="Configurações IA"
+      >
+        <div className="p-2">
+          {selectedWorkspaceForAI && (
+            <AIBuilderSettings workspaceId={selectedWorkspaceForAI} isPro={profile?.subscription_tier === 'pro'} />
+          )}
+        </div>
+      </Modal>
     </div>
   )
 }

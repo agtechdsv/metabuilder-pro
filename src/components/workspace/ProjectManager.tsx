@@ -21,8 +21,10 @@ import {
   CheckCircle,
   X,
   FolderOpen,
-  Copy
+  Copy,
+  Bot
 } from 'lucide-react'
+import { AIBuilderSettings } from './AIBuilderSettings'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { usePreview } from '@/contexts/PreviewContext'
@@ -98,6 +100,7 @@ export function ProjectManager({
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [navigatingSlug, setNavigatingSlug] = useState<string | null>(null)
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false)
   
   const [showDesktopModal, setShowDesktopModal] = useState(false)
   const [selectedDesktopProject, setSelectedDesktopProject] = useState<Project | null>(null)
@@ -560,6 +563,15 @@ export function ProjectManager({
           </div>
 
           <div className="flex items-center gap-3">
+            {tier === 'pro' && (
+              <button
+                onClick={() => setIsAIModalOpen(true)}
+                className="flex items-center justify-center w-12 h-12 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-500/10 rounded-2xl transition-all shadow-sm group relative"
+                title="Configurações AI Builder"
+              >
+                <Bot className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              </button>
+            )}
             {canCreate && (
               <button
                 onClick={handleNewProject}
@@ -1606,6 +1618,17 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
           </div>
         </div>
       )}
+
+      {/* AI Builder Modal */}
+      <Modal
+        isOpen={isAIModalOpen}
+        onClose={() => setIsAIModalOpen(false)}
+        title="Configurações IA"
+      >
+        <div className="p-2">
+          <AIBuilderSettings workspaceId={workspaceId} isPro={tier === 'pro'} />
+        </div>
+      </Modal>
 
     </div>
   )
