@@ -1,6 +1,7 @@
 'use client'
 
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { UpgradeModal } from '@/components/ui/UpgradeModal'
 import { DesktopOnlyModal } from '@/components/ui/DesktopOnlyModal'
 
@@ -21,6 +22,12 @@ export function useUpgradeModal() {
 export function UpgradeModalProvider({ children }: { children: React.ReactNode }) {
   const [upgradeFeature, setUpgradeFeature] = useState<string | null>(null)
   const [desktopFeature, setDesktopFeature] = useState<string | null>(null)
+  const pathname = usePathname()
+
+  useEffect(() => {
+    setUpgradeFeature(null)
+    setDesktopFeature(null)
+  }, [pathname])
 
   const openUpgrade = useCallback((featureName: string) => {
     setUpgradeFeature(featureName)

@@ -36,8 +36,10 @@ export function UpgradeModal({ isOpen, featureName, onClose }: UpgradeModalProps
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
+      setIsLoading(false)
     } else {
       document.body.style.overflow = 'unset'
+      setIsLoading(false)
     }
     return () => { document.body.style.overflow = 'unset' }
   }, [isOpen])
