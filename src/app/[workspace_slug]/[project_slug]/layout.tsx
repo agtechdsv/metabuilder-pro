@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ project_s
       },
     }
   )
-  
+
   const { data: workspaces } = await supabase.from('workspaces').select('id').eq('slug', workspace_slug).limit(1)
   const workspace = workspaces?.[0]
   if (!workspace) return {}
@@ -124,12 +124,20 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
 
   const isFreeTier = !ownerProfile?.subscription_tier || ownerProfile?.subscription_tier === 'free'
 
-  const isSuspended = ownerProfile?.is_blocked || 
-                      (!isFreeTier && (
-                        ownerProfile?.subscription_status === 'blocked' || 
-                        ownerProfile?.subscription_status === 'pending' ||
-                        ownerProfile?.subscription_status === 'canceled'
-                      ))
+  let isSuspended = false
+  if (ownerProfile) {
+    if (ownerProfile.subscription_status === 'pending' && isFreeTier) {
+      // Freemium users get is_blocked=true by default in DB, ignore it for runtime suspension
+      isSuspended = false
+    } else {
+      isSuspended = ownerProfile.is_blocked || 
+                    ownerProfile.subscription_status === 'blocked' || 
+                    (!isFreeTier && (
+                      ownerProfile.subscription_status === 'pending' ||
+                      ownerProfile.subscription_status === 'canceled'
+                    ))
+    }
+  }
 
   if (isSuspended) {
     return (
@@ -212,13 +220,13 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   } else if (sessionCookie) {
     try {
       const clientUser = JSON.parse(decodeURIComponent(sessionCookie))
-      
+
       let roleId = null
       if (authConfig?.sync_legacy_groups) {
         const roleKey = authConfig.db_user_role_column || 'role_id'
         roleId = clientUser[roleKey]
       }
-      
+
       if (!roleId) {
         // 1. Busca o papel do usuário no projeto
         const { data: userRole } = await supabase
@@ -229,7 +237,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
           .maybeSingle()
         roleId = userRole?.role_id
       }
-      
+
       if (roleId) {
         // 2. Busca as permissões explicitamente desabilitadas deste papel (can_read = false)
         const { data: deniedPermissions } = await supabase
@@ -237,7 +245,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
           .select('view_id')
           .eq('role_id', roleId)
           .eq('can_read', false)
-        
+
         const deniedViewIds = deniedPermissions ? deniedPermissions.map(p => p.view_id) : []
         const allViewIds = getAllViewIds(rawNavigation, viewSlugToIdMap)
         allowedViewIds = allViewIds.filter(id => !deniedViewIds.includes(id))
@@ -256,7 +264,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   // Filtra itens de navegação com base no RBAC (blacklist-based / default allow)
   const filterNavigation = (items: any[]): any[] => {
     if (!allowedViewIds) return items
-    
+
     return items.map(item => {
       // Se for pasta, filtra os filhos recursivamente
       if (item.type === 'folder' && item.children) {
@@ -279,8 +287,8 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   const headersList = await headers()
   const isCustomDomain = headersList.get('x-custom-domain') === 'true'
   const customDomainType = headersList.get('x-custom-domain-type')
-  const baseNavUrl = isCustomDomain 
-    ? (customDomainType === 'workspace' ? `/${project_slug}` : '') 
+  const baseNavUrl = isCustomDomain
+    ? (customDomainType === 'workspace' ? `/${project_slug}` : '')
     : `/${workspace_slug}/${project_slug}`
 
   return (
