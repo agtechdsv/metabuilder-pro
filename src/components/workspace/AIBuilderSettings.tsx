@@ -35,16 +35,6 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
     fetchConfig()
   }, [workspaceId])
 
-  useEffect(() => {
-    // Auto-seleciona o primeiro modelo do provider quando mudar
-    const p = PROVIDERS.find((p) => p.value === provider)
-    if (p && p.models.length > 0) {
-      setModel(p.models[0])
-    } else {
-      setModel('')
-    }
-    setTestResult(null)
-  }, [provider])
 
   const fetchConfig = async () => {
     setIsLoading(true)
@@ -193,7 +183,17 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
           </label>
           <select
             value={provider}
-            onChange={(e) => setProvider(e.target.value)}
+            onChange={(e) => {
+              const newProvider = e.target.value
+              setProvider(newProvider)
+              const p = PROVIDERS.find((prov) => prov.value === newProvider)
+              if (p && p.models.length > 0) {
+                setModel(p.models[0])
+              } else {
+                setModel('')
+              }
+              setTestResult(null)
+            }}
             className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50"
           >
             {PROVIDERS.map((p) => (
