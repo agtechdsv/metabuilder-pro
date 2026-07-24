@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { AIBuilderChat } from '@/components/studio/AIBuilder/AIBuilderChat'
+import { AIBuilderConfigTrigger } from '@/components/studio/AIBuilder/AIBuilderConfigTrigger'
 
 export default async function AIBuilderPage({
   params,
@@ -81,12 +82,7 @@ export default async function AIBuilderPage({
           <p className="text-neutral-500 dark:text-neutral-400 text-sm max-w-sm mb-6">
             Para usar o AI Builder, configure sua chave de API de IA nas Configurações do Workspace.
           </p>
-          <a
-            href={`/admin/${workspace_slug}/settings`}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-2xl font-bold shadow-lg shadow-violet-600/20 transition-all"
-          >
-            Ir para Configurações →
-          </a>
+          <AIBuilderConfigTrigger workspaceId={workspace.id} isPro={isPro} />
         </div>
       ) : (
         <div className="flex-grow min-h-0 overflow-hidden">
