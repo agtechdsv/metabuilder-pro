@@ -102,6 +102,20 @@ export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStud
     }, 15000)
   }
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault()
+        e.stopPropagation()
+        if (!loading) {
+          handleExecute()
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown, true)
+    return () => window.removeEventListener('keydown', handleKeyDown, true)
+  }, [handleExecute, loading])
+
   return (
     <main className="w-full px-10 pt-4 pb-4 flex flex-col flex-grow h-full overflow-hidden">
       {/* Cabeçalho */}
@@ -136,7 +150,7 @@ export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStud
             ) : (
               <Play className="w-4 h-4 fill-current" />
             )}
-            EXECUTAR (F5)
+            EXECUTAR (CTRL + ENTER)
           </button>
         </div>
       </div>
