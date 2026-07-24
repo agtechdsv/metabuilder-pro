@@ -246,6 +246,7 @@ export function StudioDashboardClient({
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false)
   const [viewToPublish, setViewToPublish] = useState<any>(null)
   const [isPublishing, setIsPublishing] = useState(false)
+  const [isCheckingLimit, setIsCheckingLimit] = useState(false)
   const userViews = views?.filter(view => view.slug !== 'downloads' && view.slug !== 'automations') || []
   const downloadsView = views?.find(view => view.slug === 'downloads')
   const isDownloadsActive = downloadsView ? (downloadsView.layout_config?.is_active !== false) : true
@@ -699,15 +700,28 @@ export function StudioDashboardClient({
 
 
                 <button
-                  onClick={() => {
-                    if (tier === 'free' && userViews.length >= 4) {
-                      openUpgrade('Novo Caso de Uso')
-                      return
+                  disabled={isCheckingLimit}
+                  onClick={async () => {
+                    if (tier === 'free') {
+                      setIsCheckingLimit(true)
+                      const { count } = await supabase
+                        .from('ui_views')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('project_id', project.id)
+                        .neq('slug', 'downloads')
+                        .neq('slug', 'automations')
+                        
+                      setIsCheckingLimit(false)
+
+                      if (count !== null && count >= 4) {
+                        openUpgrade('Novo Caso de Uso')
+                        return
+                      }
                     }
                     setViewToEdit(null)
                     setViewMode('builder')
                   }}
-                  className="flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95"
+                  className="flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-4 h-4" /> {t('dashboard.projects.studio.new_use_case')}
                 </button>
