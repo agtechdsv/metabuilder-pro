@@ -27,6 +27,7 @@ const PRO_BENEFITS = [
 
 export function UpgradeModal({ isOpen, featureName, onClose }: UpgradeModalProps) {
   const [mounted, setMounted] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -44,8 +45,10 @@ export function UpgradeModal({ isOpen, featureName, onClose }: UpgradeModalProps
   const router = useRouter()
 
   const handleUpgrade = async () => {
-    onClose()
+    setIsLoading(true)
     router.push('/checkout')
+    // Safety timeout in case navigation fails or is aborted
+    setTimeout(() => setIsLoading(false), 8000)
   }
 
   if (!mounted || !isOpen) return null
@@ -105,13 +108,19 @@ export function UpgradeModal({ isOpen, featureName, onClose }: UpgradeModalProps
         <div className="px-6 pb-6 flex flex-col gap-2">
           <button
             onClick={handleUpgrade}
+            disabled={isLoading}
             className={cn(
               "w-full h-11 rounded-xl font-black text-sm uppercase tracking-widest transition-all",
               "bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-500/25",
-              "flex items-center justify-center gap-2"
+              "flex items-center justify-center gap-2",
+              isLoading && "opacity-80 cursor-wait"
             )}
           >
-            Fazer Upgrade para o PRO
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              "Fazer Upgrade para o PRO"
+            )}
           </button>
           <button
             onClick={onClose}
