@@ -1,4 +1,25 @@
 {
+  "v1.0.8": {
+    "date": "2026-07-25",
+    "pt": [
+      "Atalho de Execução no SQL Studio: Execute suas consultas SQL rapidamente utilizando o atalho Ctrl + Enter.",
+      "Novo Módulo AI Builder: Crie e aprimore projetos com auxílio de Inteligência Artificial, contando com chat em tempo real, seletor interativo de tabelas, painel de revisão e fácil gerenciamento de provedores de LLM.",
+      "Integração Aprimorada com Google Gemini: Atualização e estabilização dos modelos Gemini 1.5 para garantir maior confiabilidade e respostas sem falhas.",
+      "Controle de Acesso e Segurança Reforçados: Gerenciamento refinado de permissões para configurações de IA e workspace, garantindo acesso seguro com base na função do usuário."
+    ],
+    "en": [
+      "SQL Studio Execution Shortcut: Run your SQL queries instantly using the Ctrl + Enter keyboard shortcut.",
+      "New AI Builder Module: Build and refine projects powered by AI, featuring real-time streaming chat, an interactive table selector, review panel, and seamless LLM provider settings.",
+      "Enhanced Google Gemini Integration: Upgraded and stabilized Gemini 1.5 models ensuring smooth, uninterrupted performance and reliability.",
+      "Advanced Access Control & Security: Refined role-based permissions for AI configurations and workspace settings, ensuring secure management for owners and developers."
+    ],
+    "es": [
+      "Atajo de Ejecución en SQL Studio: Ejecuta tus consultas SQL de forma instantánea utilizando el atajo de teclado Ctrl + Enter.",
+      "Nuevo Módulo AI Builder: Crea y perfecciona proyectos con ayuda de Inteligencia Artificial, con chat en tiempo real, selector interactivo de tablas, panel de revisión y configuración sencilla de proveedores de LLM.",
+      "Integración Mejorada con Google Gemini: Actualización y estabilización de los modelos Gemini 1.5 para garantizar un rendimiento fluido y sin interrupciones.",
+      "Control de Acceso y Seguridad Reforzados: Gestión optimizada de permisos basados en roles para la configuración de IA y del espacio de trabajo."
+    ]
+  },
   "v1.0.7": {
     "date": "2026-07-24",
     "pt": [
