@@ -52,7 +52,7 @@ export function AIBuilderReviewPanel({
   const [code, setCode] = useState(reviewData.component_code)
   const [useCaseName, setUseCaseName] = useState(reviewData.use_case_name)
   const [useCaseSlug, setUseCaseSlug] = useState(reviewData.use_case_slug)
-  const [navigationConfig, setNavigationConfig] = useState(reviewData.suggested_navigation || 'menu_item')
+  const [navigationConfig, setNavigationConfig] = useState(isEditMode ? (reviewData.suggested_navigation || 'menu_item') : 'menu_item')
   const [approvedMigrations, setApprovedMigrations] = useState<Set<number>>(
     new Set(reviewData.approved_migrations || reviewData.new_migrations?.map((_, i) => i) || [])
   )
