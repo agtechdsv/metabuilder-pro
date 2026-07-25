@@ -155,14 +155,24 @@ export function AIBuilderChat({
         }
       }
 
-      // Verifica se a resposta é um JSON de geração de caso de uso
       let parsedJson: any = null
       try {
-        const trimmed = fullContent.trim()
-        if (trimmed.startsWith('{')) {
-          parsedJson = JSON.parse(trimmed)
+        let jsonStr = fullContent.trim()
+        if (jsonStr.startsWith('```json')) jsonStr = jsonStr.replace(/^```json\n?/, '').replace(/\n?```$/, '')
+        else if (jsonStr.startsWith('```')) jsonStr = jsonStr.replace(/^```\n?/, '').replace(/\n?```$/, '')
+        
+        const firstBrace = jsonStr.indexOf('{')
+        const lastBrace = jsonStr.lastIndexOf('}')
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+          jsonStr = jsonStr.substring(firstBrace, lastBrace + 1)
         }
-      } catch { /* não é JSON */ }
+        
+        if (jsonStr.startsWith('{')) {
+          parsedJson = JSON.parse(jsonStr)
+        }
+      } catch (e) { 
+        console.error('Falha ao fazer parse do JSON da IA:', e)
+      }
 
       setMessages((prev) =>
         prev.map((m) =>

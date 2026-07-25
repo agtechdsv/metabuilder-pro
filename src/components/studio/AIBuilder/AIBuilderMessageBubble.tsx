@@ -77,8 +77,13 @@ function InlineText({ text }: { text: string }) {
 
 export function AIBuilderMessageBubble({ message }: AIBuilderMessageBubbleProps) {
   const isUser = message.role === 'user'
-  const isJson = message.content.trim().startsWith('{') && !message.isStreaming
-
+  const trimmed = message.content.trim()
+  const isJson = (
+    trimmed.startsWith('{') || 
+    trimmed.startsWith('```json\n{') || 
+    trimmed.startsWith('```\n{') ||
+    trimmed.includes('{\n  "component_code":')
+  ) && !message.isStreaming
   return (
     <div className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
       {/* Avatar */}
