@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
     ai_session_id: session_id || null,
     description: description || null,
     navigation_type: suggested_navigation || 'menu_item',
+    component_code,
   }
 
   // Insere na ui_views (o trigger enforce_freemium_use_cases_limit age aqui automaticamente)
@@ -64,7 +65,6 @@ export async function POST(req: NextRequest) {
       slug: finalSlug,
       logic_type: 'personalizado',
       view_type: 'advanced_use_case',
-      component_code,
       layout_config,
     })
     .select()
