@@ -168,7 +168,39 @@ export function AIBuilderChat({
         }
         
         if (jsonStr.startsWith('{')) {
-          parsedJson = JSON.parse(jsonStr)
+          // Função para sanitizar o JSON (corrige quebras de linha não escapadas dentro de strings, problema comum em IAs)
+          const sanitizeJsonString = (str: string) => {
+            let isInsideString = false;
+            let isEscaped = false;
+            let result = '';
+            for (let i = 0; i < str.length; i++) {
+              const char = str[i];
+              if (char === '\\' && !isEscaped) {
+                isEscaped = true;
+                result += char;
+                continue;
+              }
+              if (char === '"' && !isEscaped) {
+                isInsideString = !isInsideString;
+                result += char;
+                continue;
+              }
+              isEscaped = false;
+              if (isInsideString && char === '\n') {
+                result += '\\n';
+              } else if (isInsideString && char === '\r') {
+                result += '\\r';
+              } else if (isInsideString && char === '\t') {
+                result += '\\t';
+              } else {
+                result += char;
+              }
+            }
+            return result;
+          }
+
+          const sanitizedJson = sanitizeJsonString(jsonStr)
+          parsedJson = JSON.parse(sanitizedJson)
         }
       } catch (e) { 
         console.error('Falha ao fazer parse do JSON da IA:', e)
