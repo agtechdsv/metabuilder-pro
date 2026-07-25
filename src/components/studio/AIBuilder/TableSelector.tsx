@@ -33,7 +33,15 @@ export function TableSelector({
     try {
       const res = await fetch(`/api/ai-builder/tables?project_id=${projectId}`, { cache: 'no-store' })
       const data = await res.json()
-      setModels(data.models || [])
+      if (data.error) {
+        setModels([{ id: 'error', display_name: `API Error: ${data.error}` }])
+      } else if (!data.models || data.models.length === 0) {
+        setModels([{ id: 'empty', display_name: `Empty response from API (Status: ${res.status})` }])
+      } else {
+        setModels(data.models)
+      }
+    } catch (e: any) {
+      setModels([{ id: 'error', display_name: `Catch Error: ${e.message}` }])
     } finally {
       setIsLoading(false)
     }

@@ -51,6 +51,7 @@ export async function GET(req: NextRequest) {
 
   if (modelsError) {
     console.error('Erro ao buscar models:', modelsError)
+    return NextResponse.json({ error: `DB Error: ${modelsError.message}` }, { status: 500 })
   }
 
   return NextResponse.json({ models: models || [] })
