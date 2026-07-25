@@ -10,13 +10,7 @@ export async function GET(req: NextRequest) {
   const workspaceId = req.nextUrl.searchParams.get('workspace_id')
   if (!workspaceId) return NextResponse.json({ error: 'workspace_id required' }, { status: 400 })
 
-  const { createClient: createAdmin } = await import('@supabase/supabase-js')
-  const admin = createAdmin(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('ai_builder_configs')
     .select('id, provider, model, base_url, created_at, updated_at')
     .eq('workspace_id', workspaceId)

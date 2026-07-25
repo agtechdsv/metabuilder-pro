@@ -39,14 +39,21 @@ export default async function AIBuilderPage({
 
   if (!project) return notFound()
 
-  // Verifica se a chave de IA está configurada para este workspace
-  const { data: aiConfig } = await supabase
+  // Usa admin para bypassar RLS e verificar se a chave existe (mesmo para devs)
+  const { createClient: createAdmin } = await import('@supabase/supabase-js')
+  const admin = createAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { data: aiConfig } = await admin
     .from('ai_builder_configs')
     .select('id, provider, model')
     .eq('workspace_id', workspace.id)
     .maybeSingle()
 
   const isPro = profile?.subscription_tier === 'pro'
+  const isOwner = user.id === workspace.owner_id
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -78,11 +85,15 @@ export default async function AIBuilderPage({
           <div className="w-20 h-20 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-3xl flex items-center justify-center mb-6">
             <span className="text-4xl">🔑</span>
           </div>
-          <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-2">Configure sua Chave de IA</h2>
+          <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-2">
+            {isOwner ? 'Configure sua Chave de IA' : 'IA Não Configurada'}
+          </h2>
           <p className="text-neutral-500 dark:text-neutral-400 text-sm max-w-sm mb-6">
-            Para usar o AI Builder, configure sua chave de API de IA nas Configurações do Workspace.
+            {isOwner 
+              ? 'Para usar o AI Builder, configure sua chave de API de IA nas Configurações do Workspace.'
+              : 'A chave de API para a geração de casos do AI Builder ainda não foi configurada. Favor entrar em contato com o owner do projeto e solicite a realização da configuração.'}
           </p>
-          <AIBuilderConfigTrigger workspaceId={workspace.id} isPro={isPro} />
+          {isOwner && <AIBuilderConfigTrigger workspaceId={workspace.id} isPro={isPro} />}
         </div>
       ) : (
         <div className="flex-grow min-h-0 overflow-hidden">

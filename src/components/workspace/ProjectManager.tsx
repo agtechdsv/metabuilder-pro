@@ -70,6 +70,7 @@ interface ProjectManagerProps {
   workspaceThemeConfig?: any
   workspaceCustomDomain?: string
   tier?: 'pro' | 'free' | string
+  isOwner?: boolean
 }
 
 export function ProjectManager({ 
@@ -82,7 +83,8 @@ export function ProjectManager({
   showTeamSettings = true,
   workspaceThemeConfig = {},
   workspaceCustomDomain = '',
-  tier = 'free'
+  tier = 'free',
+  isOwner = false
 }: ProjectManagerProps) {
   const [projects, setProjects] = useState<Project[]>(initialProjects)
   
@@ -563,7 +565,7 @@ export function ProjectManager({
           </div>
 
           <div className="flex items-center gap-3">
-            {tier === 'pro' && (
+            {isOwner && tier === 'pro' && (
               <button
                 onClick={() => setIsAIModalOpen(true)}
                 className="flex items-center justify-center w-12 h-12 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-500/10 rounded-2xl transition-all shadow-sm group relative"

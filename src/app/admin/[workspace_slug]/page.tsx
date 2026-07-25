@@ -126,6 +126,7 @@ export default async function WorkspaceDashboard({ params }: WorkspaceDashboardP
           canDelete={canDeleteProjects}
           showTeamSettings={showTeamSettings}
           tier={tier}
+          isOwner={isOwner}
         />
 
       </main>

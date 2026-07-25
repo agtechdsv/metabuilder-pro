@@ -496,7 +496,7 @@ export function WorkspaceManager({
                             </button>
                           </>
                         )}
-                        {workspace.can_edit && profile?.subscription_tier === 'pro' && (
+                        {workspace.role === 'owner' && profile?.subscription_tier === 'pro' && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
