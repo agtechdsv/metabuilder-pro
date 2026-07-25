@@ -11,6 +11,7 @@ import ViewContainer from '@/components/runtime/ViewContainer'
 import { RuntimeHeader } from '@/components/runtime/RuntimeHeader'
 import { findBreadcrumbPath, findNavigationItem } from '@/lib/navigation-utils'
 import { RuntimeBreadcrumbs } from '@/components/runtime/RuntimeBreadcrumbs'
+import { AIGeneratedViewRenderer } from '@/components/runtime/AIGeneratedViewRenderer'
 
 interface PageProps {
   params: Promise<{
@@ -285,6 +286,38 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
       }
     }
   }
+
+  // ─── AI Builder: Advanced Use Case (renderiza component_code diretamente) ───
+  if (view && !viewError && view.view_type === 'advanced_use_case') {
+    const componentCode = view.layout_config?.component_code as string | undefined
+
+    return (
+      <TranslationProvider locale={locale}>
+        <div className="min-h-screen bg-neutral-50 dark:bg-[#050505] text-neutral-900 dark:text-neutral-200 transition-colors duration-300">
+          <RuntimeHeader
+            viewName={view.name || view_slug}
+            icon="Sparkles"
+          />
+          <main className="max-w-7xl mx-auto px-6 py-4">
+            <RuntimeBreadcrumbs breadcrumbs={breadcrumbs} baseUrl={`${baseUrl}/dashboard`} />
+            {componentCode ? (
+              <AIGeneratedViewRenderer
+                componentCode={componentCode}
+                viewName={view.name || view_slug}
+              />
+            ) : (
+              <div className="p-8 text-center rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/20 mt-4">
+                <p className="text-amber-700 dark:text-amber-400 font-medium text-sm">
+                  ⚠️ Este caso de uso foi gerado pela IA mas o código do componente não foi encontrado.
+                </p>
+              </div>
+            )}
+          </main>
+        </div>
+      </TranslationProvider>
+    )
+  }
+  // ──────────────────────────────────────────────────────────────────────────────
 
   if (view && !viewError && view.layout_config?.is_active !== false) {
     const { data: allModels } = await supabase.from('models').select('id, display_name, db_table_name, db_schema_name, fields(*)').eq('project_id', project.id)
