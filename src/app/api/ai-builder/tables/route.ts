@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 
+export const dynamic = 'force-dynamic'
+
 // GET — Lista tabelas do banco do projeto via túnel (information_schema)
 // O frontend usa o túnel Realtime para buscar as tabelas diretamente do banco do cliente
 // Esta rota apenas valida o acesso e retorna metadados básicos do projeto

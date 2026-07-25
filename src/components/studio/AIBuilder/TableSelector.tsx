@@ -31,7 +31,7 @@ export function TableSelector({
   const fetchModels = async () => {
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/ai-builder/tables?project_id=${projectId}`)
+      const res = await fetch(`/api/ai-builder/tables?project_id=${projectId}`, { cache: 'no-store' })
       const data = await res.json()
       setModels(data.models || [])
     } finally {
