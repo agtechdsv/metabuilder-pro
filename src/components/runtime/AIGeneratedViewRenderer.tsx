@@ -40,7 +40,7 @@ export function AIGeneratedViewRenderer({ componentCode, viewName }: AIGenerated
       // Use sucrase to transpile TypeScript and JSX to standard JavaScript
       try {
         code = transform(code, {
-          transforms: ['typescript', 'jsx'],
+          transforms: ['typescript', 'jsx', 'imports'],
           jsxRuntime: 'classic' // Uses React.createElement
         }).code
       } catch (transpileErr: any) {
@@ -56,78 +56,36 @@ export function AIGeneratedViewRenderer({ componentCode, viewName }: AIGenerated
         // We'll do a best-effort dynamic import approach below
       } catch {}
 
-      // Build a module sandbox
-      // We replace import statements with variable assignments from our injected scope
-      let transformedCode = code
-        // Remove all import statements (we inject deps ourselves)
-        .replace(/^\s*import\s+(?:.|\n)*?from\s+['"][^'"]+['"];?\s*/gm, '')
-        // Remove side-effect imports like import 'style.css'
-        .replace(/^\s*import\s+['"][^'"]+['"];?\s*/gm, '')
-        // Replace export default function → just the function
-        .replace(/export\s+default\s+function\s+(\w+)/, 'var __DefaultExport = function $1')
-        // Replace export default → __DefaultExport
-        .replace(/export\s+default\s+/, 'var __DefaultExport = ')
-        // Remove named exports
-        .replace(/^export\s+/gm, '')
-
-      transformedCode += '\n; return __DefaultExport;'
-
-      // Create the Function with all deps injected
+      // Create the Function with require and exports
       // eslint-disable-next-line no-new-func
       const factory = new Function(
-        'React',
-        'useState',
-        'useEffect',
-        'useRef',
-        'useCallback',
-        'useMemo',
-        'supabase',
-        'createClient',
-        'toast',
-        'useToast',
-        'useI18n',
-        // Lucide icons (common ones)
-        'Search', 'Plus', 'Trash2', 'Tag', 'ShoppingBag', 'DollarSign',
-        'Package', 'Loader2', 'FolderPlus', 'Info', 'Edit', 'Save',
-        'X', 'Check', 'ChevronDown', 'ChevronUp', 'ChevronLeft', 'ChevronRight',
-        'Filter', 'RefreshCw', 'Download', 'Upload', 'Settings', 'User',
-        'Users', 'Mail', 'Phone', 'MapPin', 'Calendar', 'Clock',
-        'Star', 'Heart', 'Bell', 'Lock', 'Unlock', 'Eye', 'EyeOff',
-        'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
-        'Home', 'Grid', 'List', 'Table', 'LayoutGrid', 'Layers',
-        'FileText', 'File', 'Folder', 'Image', 'Link', 'Archive',
-        'Percent', 'DollarSign', 'TrendingUp', 'TrendingDown', 'BarChart',
-        'AlertCircle', 'AlertTriangle', 'CheckCircle', 'XCircle',
-        transformedCode
+        'require',
+        'exports',
+        code
       )
 
       // Dynamic import lucide for icons
       import('lucide-react').then((lucide: any) => {
-        const Component = factory(
-          React,
-          React.useState,
-          React.useEffect,
-          React.useRef,
-          React.useCallback,
-          React.useMemo,
-          supabase,
-          () => supabase, // mock createClient
-          (msg: string, type?: string) => toast(msg, (type as any) || 'success'),
-          () => ({ toast: (msg: string, type?: string) => toast(msg, (type as any) || 'success') }), // mock useToast
-          () => ({ t: (key: string) => key }), // mock useI18n
-          // Lucide icons
-          lucide.Search, lucide.Plus, lucide.Trash2, lucide.Tag, lucide.ShoppingBag, lucide.DollarSign,
-          lucide.Package, lucide.Loader2, lucide.FolderPlus, lucide.Info, lucide.Edit, lucide.Save,
-          lucide.X, lucide.Check, lucide.ChevronDown, lucide.ChevronUp, lucide.ChevronLeft, lucide.ChevronRight,
-          lucide.Filter, lucide.RefreshCw, lucide.Download, lucide.Upload, lucide.Settings, lucide.User,
-          lucide.Users, lucide.Mail, lucide.Phone, lucide.MapPin, lucide.Calendar, lucide.Clock,
-          lucide.Star, lucide.Heart, lucide.Bell, lucide.Lock, lucide.Unlock, lucide.Eye, lucide.EyeOff,
-          lucide.ArrowLeft, lucide.ArrowRight, lucide.ArrowUp, lucide.ArrowDown,
-          lucide.Home, lucide.Grid, lucide.List, lucide.Table2, lucide.LayoutGrid, lucide.Layers,
-          lucide.FileText, lucide.File, lucide.Folder, lucide.Image, lucide.Link, lucide.Archive,
-          lucide.Percent, lucide.DollarSign, lucide.TrendingUp, lucide.TrendingDown, lucide.BarChart2,
-          lucide.AlertCircle, lucide.AlertTriangle, lucide.CheckCircle, lucide.XCircle,
-        )
+        const customRequire = (modName: string) => {
+          if (modName === 'react') return React
+          if (modName === 'lucide-react') return lucide
+          if (modName === '@/utils/supabase/client') return { createClient: () => supabase }
+          if (modName === '@/components/ui/Toast') return { useToast: () => ({ toast: (msg: string, type?: string) => toast(msg, (type as any) || 'success') }) }
+          if (modName.includes('i18n')) return { useI18n: () => ({ t: (key: string) => key }) }
+          return {}
+        }
+
+        const exportsObj: any = {}
+        
+        try {
+          factory(customRequire, exportsObj)
+        } catch (execErr: any) {
+          setError(`Erro na execução do código gerado: ${execErr.message}`)
+          setIsLoading(false)
+          return
+        }
+
+        const Component = exportsObj.default || exportsObj.Component || exportsObj[Object.keys(exportsObj)[0]]
 
         if (typeof Component === 'function') {
           setRenderedComponent(() => Component)
