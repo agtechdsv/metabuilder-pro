@@ -69,7 +69,7 @@ STACK DO PROJETO:
 - Framework: Next.js 16.2 com App Router e TypeScript
 - Banco de dados: Supabase (PostgreSQL) com RLS habilitado
 - Estilo: Vanilla CSS + CSS Variables (SEM TailwindCSS, SEM Tailwind classes)
-- Contextos disponíveis: useI18n(), useToast(), createClient() do '@/utils/supabase/client'
+- Contextos disponíveis: useI18n(), useToast(), createClient() do '@/utils/supabase/client', e a constante global PROJECT_ID (string)
 - Ícones: Lucide React
 - Componentes UI disponíveis: Modal de '@/components/ui/Modal', Toast de '@/components/ui/Toast'
 - O componente deve ser um 'use client' React funcional exportado como default
@@ -85,6 +85,8 @@ Quando o usuário pedir para GERAR o caso de uso (e não apenas conversar), voc�
   "suggested_navigation": "menu_item",
   "description": "Breve descrição do que foi gerado"
 }
+
+IMPORTANTE SOBRE RLS: Todas as tabelas do usuário possuem a coluna 'project_id'. Para que o componente consiga ler ou gravar dados, você DEVE incluir o filtro .eq('project_id', PROJECT_ID) em todas as consultas SELECT, UPDATE e DELETE, e incluir { project_id: PROJECT_ID } nos INSERTs. A constante PROJECT_ID é injetada globalmente no sandbox.
 
 Se o usuário estiver apenas conversando, fazendo perguntas ou refinando requisitos, responda normalmente em texto, sem JSON.
 

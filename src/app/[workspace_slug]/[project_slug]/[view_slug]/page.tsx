@@ -304,6 +304,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
               <AIGeneratedViewRenderer
                 componentCode={componentCode}
                 viewName={view.name || view_slug}
+                projectId={project.id}
               />
             ) : (
               <div className="p-8 text-center rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/20 mt-4">

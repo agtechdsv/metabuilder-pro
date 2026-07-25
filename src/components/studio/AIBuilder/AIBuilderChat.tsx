@@ -67,7 +67,8 @@ export function AIBuilderChat({
         const parsed = typeof initialView.tables_config === 'string'
           ? JSON.parse(initialView.tables_config)
           : (initialView.tables_config || [])
-        tablesConfig = Array.isArray(parsed) ? parsed : []
+        const rawArray = Array.isArray(parsed) ? parsed : []
+        tablesConfig = rawArray.map((t: any) => typeof t === 'string' ? t : (t.db_table_name || t.name || ''))
       } catch { tablesConfig = [] }
 
       // Fetch and set selected tables for edit mode
