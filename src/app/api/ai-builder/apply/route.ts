@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
       description: description || null,
       navigation_type: suggested_navigation || 'menu_item',
       component_code,
+      applied_migrations: new_migrations || [],
     }
 
     const { data: updatedView, error: updateError } = await supabase
@@ -152,6 +153,7 @@ export async function POST(req: NextRequest) {
     description: description || null,
     navigation_type: suggested_navigation || 'menu_item',
     component_code,
+    applied_migrations: new_migrations || [],
   }
 
   // Insere na ui_views (o trigger enforce_freemium_use_cases_limit age aqui automaticamente)

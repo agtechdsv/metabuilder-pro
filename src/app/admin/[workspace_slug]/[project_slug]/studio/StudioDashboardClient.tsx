@@ -833,8 +833,8 @@ export function StudioDashboardClient({
         )}
 
         {viewMode === 'ai-editor' && viewToEdit ? (
-          <div className="h-full min-h-0" style={{ height: 'calc(100vh - 220px)' }}>
-            <div className="flex items-center gap-3 mb-4 px-1">
+          <div className="flex flex-col h-full min-h-0" style={{ height: 'calc(100vh - 220px)' }}>
+            <div className="flex items-center gap-3 mb-4 px-1 shrink-0">
               <button
                 onClick={() => { setViewMode('list'); setViewToEdit(null) }}
                 className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors font-medium"

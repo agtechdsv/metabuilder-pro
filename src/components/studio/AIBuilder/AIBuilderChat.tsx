@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Bot, Send, Paperclip, Loader2, X, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Bot, Send, Paperclip, Loader2, X, Sparkles, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react'
 import { AIBuilderMessageBubble } from './AIBuilderMessageBubble'
 import { TableSelector } from './TableSelector'
 import { AIBuilderReviewPanel } from './AIBuilderReviewPanel'
@@ -72,29 +72,59 @@ export function AIBuilderChat({
         use_case_name: initialView.name,
         use_case_slug: initialView.slug,
         component_code: lc.component_code || '',
-        new_migrations: [],
+        new_migrations: lc.applied_migrations || [],
         suggested_navigation: lc.navigation_type || 'menu_item',
         description: lc.description || '',
         selected_tables: tablesConfig,
         new_tables: [],
       })
       setShowReview(true)
-      setMessages([{
-        id: 'edit-welcome',
-        role: 'assistant',
-        content: `✏️ **Modo Edição** — Você está editando **"${initialView.name}"**.\n\nO código atual foi carregado na aba **Componente**. Você pode:\n- Editar o código diretamente\n- Enviar uma mensagem pedindo que eu faça alterações\n- Ajustar as Configurações na aba correspondente\n\nQuando estiver pronto, clique em **Atualizar Projeto**.`,
-      }])
-      // Cria uma sessão de edição
-      supabase.auth.getUser().then(async ({ data: { user } }) => {
-        if (!user) return
-        const { data: session } = await supabase.from('ai_builder_sessions').insert({
-          project_id: projectId,
-          user_id: user.id,
-          title: `Edição: ${initialView.name}`,
-          status: 'draft',
-        }).select().single()
-        if (session) setSessionId(session.id)
-      })
+
+      const existingSessionId = lc.ai_session_id
+      if (existingSessionId) {
+        setSessionId(existingSessionId)
+        // Fetch chat history
+        supabase.from('ai_builder_messages').select('id, role, content').eq('session_id', existingSessionId).order('created_at', { ascending: true }).then(({ data: history }) => {
+          if (history && history.length > 0) {
+            const mappedHistory = history.map((m: any) => ({
+              id: m.id,
+              role: m.role as 'user' | 'assistant' | 'system',
+              content: m.content,
+            }))
+            setMessages([
+              {
+                id: 'edit-welcome',
+                role: 'assistant',
+                content: `✏️ **Modo Edição** — Você está editando **"${initialView.name}"**.\n\nSeu histórico de conversas anterior foi restaurado. Você pode continuar enviando mensagens para que eu faça alterações, ou editar o código manualmente na aba **Componente**.\n\nQuando estiver pronto, clique em **Atualizar Projeto**.`,
+              },
+              ...mappedHistory
+            ])
+          } else {
+            setMessages([{
+              id: 'edit-welcome',
+              role: 'assistant',
+              content: `✏️ **Modo Edição** — Você está editando **"${initialView.name}"**.\n\nO código atual foi carregado na aba **Componente**. Você pode:\n- Editar o código diretamente\n- Enviar uma mensagem pedindo que eu faça alterações\n- Ajustar as Configurações na aba correspondente\n\nQuando estiver pronto, clique em **Atualizar Projeto**.`,
+            }])
+          }
+        })
+      } else {
+        setMessages([{
+          id: 'edit-welcome',
+          role: 'assistant',
+          content: `✏️ **Modo Edição** — Você está editando **"${initialView.name}"**.\n\nO código atual foi carregado na aba **Componente**. Você pode:\n- Editar o código diretamente\n- Enviar uma mensagem pedindo que eu faça alterações\n- Ajustar as Configurações na aba correspondente\n\nQuando estiver pronto, clique em **Atualizar Projeto**.`,
+        }])
+        // Cria uma sessão de edição se não tinha uma anterior
+        supabase.auth.getUser().then(async ({ data: { user } }) => {
+          if (!user) return
+          const { data: session } = await supabase.from('ai_builder_sessions').insert({
+            project_id: projectId,
+            user_id: user.id,
+            title: `Edição: ${initialView.name}`,
+            status: 'draft',
+          }).select().single()
+          if (session) setSessionId(session.id)
+        })
+      }
     } else {
       initSession()
     }
@@ -362,6 +392,20 @@ export function AIBuilderChat({
                 ✨ {t} (nova)
               </span>
             ))}
+          </div>
+        )}
+
+        {/* Banner Ir para Revisão */}
+        {reviewData && !showReview && (
+          <div className="bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-100 dark:border-emerald-800/50 p-3 flex items-center justify-between shrink-0">
+            <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Você tem um código gerado pronto para revisão.</span>
+            <button
+              onClick={() => setShowReview(true)}
+              className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-2"
+            >
+              Ir para Revisão
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
 
