@@ -6,6 +6,7 @@ interface MigrationReviewProps {
   migrations: string[]
   approvedIndices: Set<number>
   onToggleApproval: (index: number) => void
+  onToggleAll: (selectAll: boolean) => void
 }
 
 function classifyRisk(sql: string): { level: 'safe' | 'warning' | 'danger'; label: string } {
@@ -19,7 +20,7 @@ function classifyRisk(sql: string): { level: 'safe' | 'warning' | 'danger'; labe
   return { level: 'safe', label: '✅ Seguro — Cria nova tabela' }
 }
 
-export function MigrationReview({ migrations, approvedIndices, onToggleApproval }: MigrationReviewProps) {
+export function MigrationReview({ migrations, approvedIndices, onToggleApproval, onToggleAll }: MigrationReviewProps) {
   if (!migrations || migrations.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center text-neutral-400 p-8">
@@ -39,6 +40,17 @@ export function MigrationReview({ migrations, approvedIndices, onToggleApproval 
           <p className="text-xs text-amber-600 dark:text-amber-400/80 mt-0.5">
             Essas queries serão executadas diretamente no seu banco. Confirme individualmente quais deseja aprovar.
           </p>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <label className="flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-300 cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={approvedIndices.size === migrations.length}
+              onChange={(e) => onToggleAll(e.target.checked)}
+              className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 bg-amber-100 border-amber-300 dark:bg-amber-900 dark:border-amber-700"
+            />
+            Selecionar todas
+          </label>
         </div>
       </div>
 

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { transform } from 'sucrase'
 
 interface AIGeneratedViewRendererProps {
   componentCode: string
@@ -36,30 +37,15 @@ export function AIGeneratedViewRenderer({ componentCode, viewName }: AIGenerated
         .replace(/^['"]use client['"];?\s*/m, '')
         .trim()
 
-      // Strip TS-specific syntax that breaks the Function constructor
-      // Remove type annotations inline: : TypeName  | : { ... }  | <TypeParam>
-      // We use a simple approach: transform common patterns
-      code = code
-        // Remove TypeScript type assertions: (x as Type) -> x
-        .replace(/\s+as\s+[A-Z][A-Za-z<>\[\]|&, ]*(?=[,)\s;])/g, '')
-        // Remove generic type params on function calls: foo<Type>( -> foo(
-        .replace(/<[A-Z][A-Za-z<>\[\]|&, ]*>\s*\(/g, '(')
-        // Remove interface declarations
-        .replace(/^interface\s+\w+\s*\{[^}]*\}/gm, '')
-        // Remove type alias declarations
-        .replace(/^type\s+\w+\s*=\s*[^;]+;/gm, '')
-        // Remove TypeScript parameter type annotations: (x: Type) -> (x)
-        .replace(/(\w+)\s*:\s*[A-Z][A-Za-z<>\[\]|&, .]*(?=[,)=\s])/g, '$1')
-        // Remove return type annotations: ): ReturnType { -> ) {
-        .replace(/\)\s*:\s*[A-Z][A-Za-z<>\[\]|&, .]*\s*\{/g, ') {')
-        // Remove useState<Type> generics: useState<Foo>( -> useState(
-        .replace(/useState<[^>]+>/g, 'useState')
-        // Remove useRef<Type> generics
-        .replace(/useRef<[^>]+>/g, 'useRef')
-        // Remove React.FC<Props> type
-        .replace(/:\s*React\.FC<[^>]+>/g, '')
-        // Remove simple : string, : number, : boolean, : any in params
-        .replace(/:\s*(string|number|boolean|any|void|null|undefined)(?=[,);\s=])/g, '')
+      // Use sucrase to transpile TypeScript and JSX to standard JavaScript
+      try {
+        code = transform(code, {
+          transforms: ['typescript', 'jsx'],
+          jsxRuntime: 'classic' // Uses React.createElement
+        }).code
+      } catch (transpileErr: any) {
+        throw new Error(`Erro na transpilação TypeScript/JSX: ${transpileErr.message}`)
+      }
 
       // Build require-like shim for known imports
       const lucideIcons: Record<string, React.FC<any>> = {}

@@ -7,6 +7,7 @@ import { MigrationReview } from './MigrationReview'
 import { NavigationConfigurator } from './NavigationConfigurator'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/Toast'
+import { usePreview } from '@/contexts/PreviewContext'
 
 interface ReviewData {
   use_case_name: string
@@ -54,6 +55,7 @@ export function AIBuilderReviewPanel({
 
   const router = useRouter()
   const { toast } = useToast()
+  const { openPreview } = usePreview()
 
   const hasMigrations = reviewData.new_migrations && reviewData.new_migrations.length > 0
 
@@ -121,15 +123,13 @@ export function AIBuilderReviewPanel({
             Ver no Studio
           </button>
           {appliedSlug && (
-            <a
-              href={`/${workspaceSlug}/${projectSlug}/${appliedSlug}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => openPreview(`${window.location.origin}/${workspaceSlug}/${projectSlug}/${appliedSlug}`, `Publicado: ${useCaseName}`)}
               className="flex items-center gap-2 px-6 py-3 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-2xl font-bold transition-all"
             >
               <ExternalLink className="w-4 h-4" />
               Visualizar
-            </a>
+            </button>
           )}
         </div>
       </div>
@@ -232,6 +232,13 @@ export function AIBuilderReviewPanel({
               if (next.has(i)) next.delete(i)
               else next.add(i)
               setApprovedMigrations(next)
+            }}
+            onToggleAll={(selectAll) => {
+              if (selectAll) {
+                setApprovedMigrations(new Set(reviewData.new_migrations?.map((_, i) => i) || []))
+              } else {
+                setApprovedMigrations(new Set())
+              }
             }}
           />
         )}

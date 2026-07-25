@@ -288,7 +288,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
   }
 
   // ─── AI Builder: Advanced Use Case (renderiza component_code diretamente) ───
-  if (view && !viewError && view.view_type === 'advanced_use_case') {
+  if (view && !viewError && view.view_type === 'advanced_use_case' && view.layout_config?.generated_by_ai === true) {
     const componentCode = view.layout_config?.component_code as string | undefined
 
     return (
