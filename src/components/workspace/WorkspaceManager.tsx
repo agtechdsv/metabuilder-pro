@@ -50,6 +50,7 @@ interface Workspace {
   projects?: { count: number }[]
   can_edit?: boolean
   can_delete?: boolean
+  role?: string
   theme_config?: any
 }
 
