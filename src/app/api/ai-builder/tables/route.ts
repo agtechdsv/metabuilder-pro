@@ -43,7 +43,6 @@ export async function GET(req: NextRequest) {
         fields (
           id,
           display_name,
-          field_type,
           db_column_name
         )
       `)
