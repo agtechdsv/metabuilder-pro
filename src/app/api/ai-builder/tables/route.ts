@@ -12,17 +12,26 @@ export async function GET(req: NextRequest) {
   const projectId = req.nextUrl.searchParams.get('project_id')
   if (!projectId) return NextResponse.json({ error: 'project_id required' }, { status: 400 })
 
-  // Busca o projeto e verifica acesso
-  const { data: project } = await supabase
+  // Busca o projeto e verifica acesso (garante segurança RLS via cliente normal)
+  const { data: project, error: projectError } = await supabase
     .from('projects')
-    .select('id, secret_token, db_schema, workspace_id')
+    .select('id')
     .eq('id', projectId)
     .single()
 
-  if (!project) return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })
+  if (projectError || !project) {
+    return NextResponse.json({ error: 'Projeto não encontrado ou sem permissão' }, { status: 404 })
+  }
+
+  const { createClient: createAdmin } = await import('@supabase/supabase-js')
+  const admin = createAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
   // Busca os models já sincronizados no MetaBuilder (forma mais confiável)
-  const { data: models } = await supabase
+  // Usamos o admin aqui para garantir que todas as colunas de fields sejam retornadas sem esbarrar em restrições de RLS aninhadas
+  const { data: models, error: modelsError } = await admin
     .from('models')
     .select(`
       id,
@@ -38,6 +47,10 @@ export async function GET(req: NextRequest) {
     `)
     .eq('project_id', projectId)
     .order('db_table_name', { ascending: true })
+
+  if (modelsError) {
+    console.error('Erro ao buscar models:', modelsError)
+  }
 
   return NextResponse.json({ models: models || [] })
 }
