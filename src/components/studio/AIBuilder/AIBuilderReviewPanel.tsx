@@ -18,6 +18,7 @@ interface ReviewData {
   description: string
   selected_tables?: string[]
   new_tables?: string[]
+  approved_migrations?: number[]
 }
 
 interface AIBuilderReviewPanelProps {
@@ -53,7 +54,7 @@ export function AIBuilderReviewPanel({
   const [useCaseSlug, setUseCaseSlug] = useState(reviewData.use_case_slug)
   const [navigationConfig, setNavigationConfig] = useState(reviewData.suggested_navigation || 'menu_item')
   const [approvedMigrations, setApprovedMigrations] = useState<Set<number>>(
-    new Set(reviewData.new_migrations?.map((_, i) => i) || [])
+    new Set(reviewData.approved_migrations || reviewData.new_migrations?.map((_, i) => i) || [])
   )
   const [isApplying, setIsApplying] = useState(false)
   const [applied, setApplied] = useState(false)
@@ -84,9 +85,8 @@ export function AIBuilderReviewPanel({
           use_case_name: useCaseName,
           use_case_slug: useCaseSlug,
           component_code: code,
-          new_migrations: hasMigrations
-            ? reviewData.new_migrations.filter((_, i) => approvedMigrations.has(i))
-            : [],
+          new_migrations: hasMigrations ? reviewData.new_migrations : [],
+          approved_migrations: hasMigrations ? Array.from(approvedMigrations) : [],
           suggested_navigation: navigationConfig,
           description: reviewData.description,
           selected_tables: reviewData.selected_tables || selectedTables.map((t: any) => t.db_table_name || t),

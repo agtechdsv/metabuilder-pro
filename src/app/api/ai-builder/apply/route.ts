@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
     use_case_slug,
     component_code,
     new_migrations,
+    approved_migrations,
     suggested_navigation,
     description,
     selected_tables,
@@ -61,7 +62,11 @@ export async function POST(req: NextRequest) {
       description: description || null,
       navigation_type: suggested_navigation || 'menu_item',
       component_code,
-      applied_migrations: new_migrations || [],
+      suggested_migrations: new_migrations || [],
+      approved_migrations: approved_migrations || [],
+      applied_migrations: new_migrations && approved_migrations 
+        ? new_migrations.filter((_: any, i: number) => approved_migrations.includes(i)) 
+        : (new_migrations || []),
     }
 
     const { data: updatedView, error: updateError } = await supabase
@@ -153,7 +158,11 @@ export async function POST(req: NextRequest) {
     description: description || null,
     navigation_type: suggested_navigation || 'menu_item',
     component_code,
-    applied_migrations: new_migrations || [],
+    suggested_migrations: new_migrations || [],
+    approved_migrations: approved_migrations || [],
+    applied_migrations: new_migrations && approved_migrations 
+      ? new_migrations.filter((_: any, i: number) => approved_migrations.includes(i)) 
+      : (new_migrations || []),
   }
 
   // Insere na ui_views (o trigger enforce_freemium_use_cases_limit age aqui automaticamente)

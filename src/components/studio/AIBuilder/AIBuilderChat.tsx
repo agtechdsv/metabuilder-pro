@@ -70,11 +70,23 @@ export function AIBuilderChat({
         tablesConfig = Array.isArray(parsed) ? parsed : []
       } catch { tablesConfig = [] }
 
+      // Fetch and set selected tables for edit mode
+      fetch(`/api/ai-builder/tables?project_id=${projectId}`, { cache: 'no-store' })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.models) {
+            const matchedTables = data.models.filter((m: any) => tablesConfig.includes(m.db_table_name) || tablesConfig.includes(m.name))
+            setSelectedTables(matchedTables)
+          }
+        })
+        .catch(console.error)
+
       setReviewData({
         use_case_name: initialView.name,
         use_case_slug: initialView.slug,
         component_code: lc.component_code || '',
-        new_migrations: lc.applied_migrations || [],
+        new_migrations: lc.suggested_migrations || lc.applied_migrations || [],
+        approved_migrations: lc.approved_migrations || (lc.applied_migrations ? lc.applied_migrations.map((_: any, i: number) => i) : []),
         suggested_navigation: lc.navigation_type || 'menu_item',
         description: lc.description || '',
         selected_tables: tablesConfig,
