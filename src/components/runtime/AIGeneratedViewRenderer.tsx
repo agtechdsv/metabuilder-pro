@@ -60,7 +60,9 @@ export function AIGeneratedViewRenderer({ componentCode, viewName }: AIGenerated
       // We replace import statements with variable assignments from our injected scope
       let transformedCode = code
         // Remove all import statements (we inject deps ourselves)
-        .replace(/^import\s+.*?from\s+['"][^'"]+['"];?\s*/gm, '')
+        .replace(/^\s*import\s+(?:.|\n)*?from\s+['"][^'"]+['"];?\s*/gm, '')
+        // Remove side-effect imports like import 'style.css'
+        .replace(/^\s*import\s+['"][^'"]+['"];?\s*/gm, '')
         // Replace export default function → just the function
         .replace(/export\s+default\s+function\s+(\w+)/, 'var __DefaultExport = function $1')
         // Replace export default → __DefaultExport
@@ -80,7 +82,10 @@ export function AIGeneratedViewRenderer({ componentCode, viewName }: AIGenerated
         'useCallback',
         'useMemo',
         'supabase',
+        'createClient',
         'toast',
+        'useToast',
+        'useI18n',
         // Lucide icons (common ones)
         'Search', 'Plus', 'Trash2', 'Tag', 'ShoppingBag', 'DollarSign',
         'Package', 'Loader2', 'FolderPlus', 'Info', 'Edit', 'Save',
@@ -106,7 +111,10 @@ export function AIGeneratedViewRenderer({ componentCode, viewName }: AIGenerated
           React.useCallback,
           React.useMemo,
           supabase,
+          () => supabase, // mock createClient
           (msg: string, type?: string) => toast(msg, (type as any) || 'success'),
+          () => ({ toast: (msg: string, type?: string) => toast(msg, (type as any) || 'success') }), // mock useToast
+          () => ({ t: (key: string) => key }), // mock useI18n
           // Lucide icons
           lucide.Search, lucide.Plus, lucide.Trash2, lucide.Tag, lucide.ShoppingBag, lucide.DollarSign,
           lucide.Package, lucide.Loader2, lucide.FolderPlus, lucide.Info, lucide.Edit, lucide.Save,
