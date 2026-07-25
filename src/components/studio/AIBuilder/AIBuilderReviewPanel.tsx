@@ -15,6 +15,8 @@ interface ReviewData {
   new_migrations: string[]
   suggested_navigation: string
   description: string
+  selected_tables?: string[]
+  new_tables?: string[]
 }
 
 interface AIBuilderReviewPanelProps {
@@ -23,6 +25,8 @@ interface AIBuilderReviewPanelProps {
   projectId: string
   workspaceSlug: string
   projectSlug: string
+  selectedTables?: any[]
+  newTables?: string[]
   onBack: () => void
 }
 
@@ -32,6 +36,8 @@ export function AIBuilderReviewPanel({
   projectId,
   workspaceSlug,
   projectSlug,
+  selectedTables = [],
+  newTables = [],
   onBack,
 }: AIBuilderReviewPanelProps) {
   const [activeTab, setActiveTab] = useState<'component' | 'migrations' | 'settings'>('component')
@@ -74,6 +80,8 @@ export function AIBuilderReviewPanel({
             : [],
           suggested_navigation: navigationConfig,
           description: reviewData.description,
+          selected_tables: reviewData.selected_tables || selectedTables.map((t: any) => t.db_table_name || t),
+          new_tables: reviewData.new_tables || newTables,
         }),
       })
 

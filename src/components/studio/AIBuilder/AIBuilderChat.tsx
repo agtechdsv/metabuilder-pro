@@ -183,7 +183,11 @@ export function AIBuilderChat({
       )
 
       if (parsedJson?.component_code) {
-        setReviewData(parsedJson)
+        setReviewData({
+          ...parsedJson,
+          selected_tables: selectedTables.map((t: any) => t.db_table_name),
+          new_tables: newTables,
+        })
         setShowReview(true)
       }
     } catch (err: any) {
@@ -225,6 +229,8 @@ export function AIBuilderChat({
         projectId={projectId}
         workspaceSlug={workspaceSlug}
         projectSlug={projectSlug}
+        selectedTables={selectedTables}
+        newTables={newTables}
         onBack={() => setShowReview(false)}
       />
     )

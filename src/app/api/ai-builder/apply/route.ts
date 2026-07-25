@@ -16,6 +16,8 @@ export async function POST(req: NextRequest) {
     new_migrations,
     suggested_navigation,
     description,
+    selected_tables,
+    new_tables,
   } = await req.json()
 
   if (!project_id || !use_case_name || !use_case_slug || !component_code) {
@@ -65,6 +67,7 @@ export async function POST(req: NextRequest) {
       slug: finalSlug,
       logic_type: 'personalizado',
       view_type: 'advanced_use_case',
+      tables_config: JSON.stringify([...(selected_tables || []), ...(new_tables || [])]),
       layout_config,
     })
     .select()
