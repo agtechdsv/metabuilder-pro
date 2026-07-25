@@ -39,7 +39,6 @@ export async function GET(req: NextRequest) {
       display_name,
       fields (
         id,
-        name,
         display_name,
         field_type,
         db_column_name
