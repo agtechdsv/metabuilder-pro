@@ -56,7 +56,7 @@ export default async function AIBuilderPage({
   const isOwner = user.id === workspace.owner_id
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full flex flex-col" style={{ height: 'calc(100vh - 150px)' }}>
       <Breadcrumbs
         workspaceName={workspace.name}
         workspaceSlug={workspace_slug}
