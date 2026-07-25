@@ -137,6 +137,14 @@ export function TableSelector({
               const expanded = expandedModels.has(model.id)
               const fieldCount = model.fields?.length || 0
 
+              if (model.id === 'error' || model.id === 'empty') {
+                return (
+                  <div key={model.id} className="rounded-xl overflow-hidden border border-red-200 bg-red-50 p-3">
+                    <p className="text-xs font-bold text-red-700">{model.display_name}</p>
+                  </div>
+                )
+              }
+
               return (
                 <div key={model.id} className="rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800">
                   <div
