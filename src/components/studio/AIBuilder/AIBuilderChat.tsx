@@ -29,6 +29,7 @@ interface AIBuilderChatProps {
     layout_config: any
     tables_config: any
   }
+  onClose?: () => void
 }
 
 export function AIBuilderChat({
@@ -38,6 +39,7 @@ export function AIBuilderChat({
   projectSlug,
   projectSecretToken,
   initialView,
+  onClose,
 }: AIBuilderChatProps) {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -378,6 +380,22 @@ export function AIBuilderChat({
 
       {/* Chat Area */}
       <div className="flex-grow flex flex-col min-w-0">
+        {/* Header no modo Chat */}
+        {onClose && (
+          <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950/50">
+            <button
+              onClick={onClose}
+              className="flex items-center gap-1.5 text-neutral-500 hover:text-neutral-900 dark:hover:text-white text-sm font-bold transition-colors"
+            >
+              ← Voltar ao Studio
+            </button>
+            <span className="text-neutral-300 dark:text-neutral-700">/</span>
+            <span className="flex items-center gap-1.5 text-sm font-bold text-violet-600 dark:text-violet-400">
+              <Sparkles className="w-3.5 h-3.5" /> Editando: {initialView?.name}
+            </span>
+          </div>
+        )}
+
         {/* Context pills */}
         {(selectedTables.length > 0 || newTables.length > 0) && (
           <div className="flex items-center gap-2 px-4 py-2 border-b border-neutral-200 dark:border-neutral-800 bg-violet-50 dark:bg-violet-500/5 shrink-0 flex-wrap">

@@ -29,6 +29,7 @@ interface AIBuilderReviewPanelProps {
   selectedTables?: any[]
   newTables?: string[]
   onBack: () => void
+  onClose?: () => void
   // Modo edição: se fornecido, faz update em vez de insert
   viewId?: string
 }
@@ -42,6 +43,7 @@ export function AIBuilderReviewPanel({
   selectedTables = [],
   newTables = [],
   onBack,
+  onClose,
   viewId,
 }: AIBuilderReviewPanelProps) {
   const isEditMode = !!viewId
@@ -149,11 +151,22 @@ export function AIBuilderReviewPanel({
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950/50">
         <div className="flex items-center gap-3">
+          {onClose && (
+            <>
+              <button
+                onClick={onClose}
+                className="flex items-center gap-1.5 text-neutral-500 hover:text-neutral-900 dark:hover:text-white text-sm font-bold transition-colors"
+              >
+                ← Voltar ao Studio
+              </button>
+              <span className="text-neutral-300 dark:text-neutral-700">/</span>
+            </>
+          )}
           <button
             onClick={onBack}
             className="flex items-center gap-1.5 text-neutral-500 hover:text-neutral-900 dark:hover:text-white text-sm font-bold transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" /> Voltar ao Chat
+            {!onClose && <ArrowLeft className="w-4 h-4" />} Voltar ao Chat
           </button>
           <span className="text-neutral-300 dark:text-neutral-700">/</span>
           <div className="flex items-center gap-2">

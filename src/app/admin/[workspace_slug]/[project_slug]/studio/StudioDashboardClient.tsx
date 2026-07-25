@@ -649,7 +649,7 @@ export function StudioDashboardClient({
 
       <main className="w-full px-10 pt-4 pb-4 space-y-4 flex-grow">
 
-        {viewMode !== 'builder' && (
+        {viewMode !== 'builder' && viewMode !== 'ai-editor' && (
           <div className="flex items-center justify-between mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 rotate-3">
@@ -833,19 +833,7 @@ export function StudioDashboardClient({
         )}
 
         {viewMode === 'ai-editor' && viewToEdit ? (
-          <div className="flex flex-col h-full min-h-0" style={{ height: 'calc(100vh - 220px)' }}>
-            <div className="flex items-center gap-3 mb-4 px-1 shrink-0">
-              <button
-                onClick={() => { setViewMode('list'); setViewToEdit(null) }}
-                className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors font-medium"
-              >
-                ← Voltar ao Studio
-              </button>
-              <span className="text-neutral-300 dark:text-neutral-700">/</span>
-              <span className="flex items-center gap-1.5 text-sm font-bold text-violet-600 dark:text-violet-400">
-                <Sparkles className="w-3.5 h-3.5" /> Editando: {viewToEdit.name}
-              </span>
-            </div>
+          <div className="flex flex-col h-full min-h-0 bg-white dark:bg-neutral-950 rounded-2xl shadow-xl overflow-hidden border border-neutral-200 dark:border-neutral-800">
             <AIBuilderChat
               workspaceId={workspace.id}
               workspaceSlug={workspace_slug}
@@ -853,6 +841,7 @@ export function StudioDashboardClient({
               projectSlug={project_slug}
               projectSecretToken={project.secret_token}
               initialView={viewToEdit}
+              onClose={() => { setViewMode('list'); setViewToEdit(null) }}
             />
           </div>
         ) : viewMode === 'builder' ? (
