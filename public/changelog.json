@@ -1,4 +1,25 @@
 {
+  "v1.0.9": {
+    "date": "2026-07-25",
+    "pt": [
+      "Novo Construtor de IA com suporte a renderização de visualizações avançadas e layouts personalizados.",
+      "Maior estabilidade e robustez no processamento de respostas e manipulação de dados do Construtor de IA.",
+      "Melhorias na interface do usuário, incluindo ajuste no layout do chat e exibição correta do ícone do Construtor de IA para proprietários do workspace.",
+      "Tratamento de erros aprimorado e navegação mais fluida ao selecionar tabelas e aplicar casos de uso com IA."
+    ],
+    "en": [
+      "New AI Builder capability featuring advanced view rendering and custom layout configurations.",
+      "Enhanced stability and resilience in AI response processing and data management.",
+      "UI improvements including optimized chat layout dimensions and proper AI Builder icon visibility for workspace owners.",
+      "Improved error handling and smoother navigation when selecting tables and applying AI-generated use cases."
+    ],
+    "es": [
+      "Nuevo AI Builder con soporte para renderizado de vistas avanzadas y configuraciones de diseño personalizadas.",
+      "Mayor estabilidad y resiliencia en el procesamiento de respuestas de IA y gestión de datos.",
+      "Mejoras en la interfaz de usuario, incluyendo ajuste en la altura del chat y visibilidad correcta del ícono de AI Builder para propietarios del espacio de trabajo.",
+      "Gestión de errores mejorada y navegación más fluida al seleccionar tablas y aplicar casos de uso generados por IA."
+    ]
+  },
   "v1.0.8": {
     "date": "2026-07-25",
     "pt": [
