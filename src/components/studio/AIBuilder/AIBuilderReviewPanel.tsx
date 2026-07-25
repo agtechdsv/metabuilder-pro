@@ -29,6 +29,8 @@ interface AIBuilderReviewPanelProps {
   selectedTables?: any[]
   newTables?: string[]
   onBack: () => void
+  // Modo edição: se fornecido, faz update em vez de insert
+  viewId?: string
 }
 
 export function AIBuilderReviewPanel({
@@ -40,7 +42,9 @@ export function AIBuilderReviewPanel({
   selectedTables = [],
   newTables = [],
   onBack,
+  viewId,
 }: AIBuilderReviewPanelProps) {
+  const isEditMode = !!viewId
   const [activeTab, setActiveTab] = useState<'component' | 'migrations' | 'settings'>('component')
   const [code, setCode] = useState(reviewData.component_code)
   const [useCaseName, setUseCaseName] = useState(reviewData.use_case_name)
@@ -74,6 +78,7 @@ export function AIBuilderReviewPanel({
         body: JSON.stringify({
           session_id: sessionId,
           project_id: projectId,
+          ...(viewId ? { view_id: viewId } : {}),
           use_case_name: useCaseName,
           use_case_slug: useCaseSlug,
           component_code: code,
@@ -109,10 +114,13 @@ export function AIBuilderReviewPanel({
           <Sparkles className="w-10 h-10 text-white" />
         </div>
         <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-2">
-          Caso de Uso Criado!
+          {isEditMode ? 'Caso de Uso Atualizado!' : 'Caso de Uso Criado!'}
         </h2>
         <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-8 max-w-sm">
-          <strong>"{useCaseName}"</strong> foi gerado e inserido no seu projeto com sucesso. Você pode editá-lo no Builder a qualquer momento.
+          {isEditMode
+            ? <><strong>"{useCaseName}"</strong> foi atualizado com sucesso. As alterações já estão disponíveis no projeto.</>
+            : <><strong>"{useCaseName}"</strong> foi gerado e inserido no seu projeto com sucesso. Você pode editá-lo no Builder a qualquer momento.</>
+          }
         </p>
         <div className="flex items-center gap-3">
           <button
@@ -166,7 +174,7 @@ export function AIBuilderReviewPanel({
           ) : (
             <Check className="w-4 h-4" />
           )}
-          Aplicar ao Projeto
+          {isEditMode ? 'Atualizar Projeto' : 'Aplicar ao Projeto'}
         </button>
       </div>
 

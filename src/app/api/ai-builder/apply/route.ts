@@ -10,6 +10,7 @@ export async function POST(req: NextRequest) {
   const {
     session_id,
     project_id,
+    view_id,          // opcional — se presente, edita em vez de criar
     use_case_name,
     use_case_slug,
     component_code,
@@ -35,15 +36,111 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Este recurso é exclusivo do plano PRO.' }, { status: 403 })
   }
 
+  // ── MODO EDIÇÃO: atualiza view existente ────────────────────────────────────
+  if (view_id) {
+    // Busca a view existente para verificar o slug atual
+    const { data: existingView } = await supabase
+      .from('ui_views')
+      .select('id, slug, layout_config')
+      .eq('id', view_id)
+      .eq('project_id', project_id)
+      .single()
+
+    if (!existingView) {
+      return NextResponse.json({ error: 'Caso de uso não encontrado.' }, { status: 404 })
+    }
+
+    const oldSlug = existingView.slug
+    const finalSlug = use_case_slug
+
+    // Monta layout_config preservando campos existentes
+    const layout_config: Record<string, any> = {
+      ...(existingView.layout_config || {}),
+      is_active: true,
+      generated_by_ai: true,
+      description: description || null,
+      navigation_type: suggested_navigation || 'menu_item',
+      component_code,
+    }
+
+    const { data: updatedView, error: updateError } = await supabase
+      .from('ui_views')
+      .update({
+        name: use_case_name,
+        slug: finalSlug,
+        tables_config: JSON.stringify([...(selected_tables || []), ...(new_tables || [])]),
+        layout_config,
+      })
+      .eq('id', view_id)
+      .select()
+      .single()
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 })
+    }
+
+    // Atualiza o menu de navegação se o slug mudou
+    if (oldSlug !== finalSlug) {
+      const { data: proj } = await supabase
+        .from('projects').select('navigation').eq('id', project_id).single()
+      if (proj?.navigation) {
+        const updatedNav = proj.navigation.map((item: any) =>
+          item.type === 'view' && item.target === oldSlug
+            ? { ...item, target: finalSlug, label: use_case_name }
+            : item
+        )
+        await supabase.from('projects').update({ navigation: updatedNav }).eq('id', project_id)
+      }
+    } else {
+      // Mesmo slug — apenas atualiza o label no menu se existir
+      const { data: proj } = await supabase
+        .from('projects').select('navigation').eq('id', project_id).single()
+      if (proj?.navigation) {
+        const updatedNav = proj.navigation.map((item: any) =>
+          item.type === 'view' && item.target === finalSlug
+            ? { ...item, label: use_case_name }
+            : item
+        )
+        await supabase.from('projects').update({ navigation: updatedNav }).eq('id', project_id)
+      }
+    }
+
+    // Garante que o item está no menu se solicitado
+    if (suggested_navigation === 'menu_item') {
+      const { data: proj } = await supabase
+        .from('projects').select('navigation').eq('id', project_id).single()
+      if (proj) {
+        const currentMenu = proj.navigation || []
+        if (!currentMenu.some((item: any) => item.type === 'view' && item.target === finalSlug)) {
+          const newItem = {
+            id: crypto.randomUUID(), label: use_case_name, description: '',
+            icon: 'Layout', type: 'view', target: finalSlug, show_dashboard: true
+          }
+          await supabase.from('projects')
+            .update({ navigation: [...currentMenu, newItem] }).eq('id', project_id)
+        }
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      view: updatedView,
+      slug: finalSlug,
+      message: `Caso de uso "${use_case_name}" atualizado com sucesso!`
+    })
+  }
+
+  // ── MODO CRIAÇÃO: insere nova view ──────────────────────────────────────────
+
   // Garante slug único dentro do projeto
-  const { data: existingView } = await supabase
+  const { data: existingBySlug } = await supabase
     .from('ui_views')
     .select('id')
     .eq('project_id', project_id)
     .eq('slug', use_case_slug)
     .maybeSingle()
 
-  const finalSlug = existingView
+  const finalSlug = existingBySlug
     ? `${use_case_slug}-${Date.now().toString(36)}`
     : use_case_slug
 
@@ -90,6 +187,35 @@ export async function POST(req: NextRequest) {
       .from('ai_builder_sessions')
       .update({ status: 'applied' })
       .eq('id', session_id)
+  }
+
+  // Se o usuário selecionou 'Item de Menu Lateral', adiciona à navegação do projeto
+  if (suggested_navigation === 'menu_item') {
+    const { data: project } = await supabase
+      .from('projects')
+      .select('navigation')
+      .eq('id', project_id)
+      .single()
+      
+    if (project) {
+      const currentMenu = project.navigation || []
+      // Verifica se já não existe no menu
+      if (!currentMenu.some((item: any) => item.type === 'view' && item.target === finalSlug)) {
+        const newItem = {
+          id: crypto.randomUUID(),
+          label: use_case_name,
+          description: '',
+          icon: 'Layout',
+          type: 'view',
+          target: finalSlug,
+          show_dashboard: true
+        }
+        await supabase
+          .from('projects')
+          .update({ navigation: [...currentMenu, newItem] })
+          .eq('id', project_id)
+      }
+    }
   }
 
   return NextResponse.json({

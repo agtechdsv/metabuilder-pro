@@ -70,6 +70,7 @@ import { TableFieldsManager } from '@/components/studio/TableFieldsManager'
 import { RelationsManager } from '@/components/studio/RelationsManager'
 import { ProjectSecuritySettings } from '@/components/studio/ProjectSecuritySettings'
 import ProjectLogsTab from '@/components/studio/ProjectLogs/ProjectLogsTab'
+import { AIBuilderChat } from '@/components/studio/AIBuilder/AIBuilderChat'
 
 const RETENTION_OPTIONS = [
   { value: '', labelKey: 'dashboard.projects.studio.stats.retention.forever' },
@@ -239,7 +240,7 @@ export function StudioDashboardClient({
     setIsUpdatingRetention(false)
   }
 
-  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'navigation' | 'enumerations' | 'metadata' | 'relations' | 'security'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'ai-editor' | 'navigation' | 'enumerations' | 'metadata' | 'relations' | 'security'>('list')
   const [showDesktopModal, setShowDesktopModal] = useState(false)
   const [viewToEdit, setViewToEdit] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -831,7 +832,30 @@ export function StudioDashboardClient({
           </div>
         )}
 
-        {viewMode === 'builder' ? (
+        {viewMode === 'ai-editor' && viewToEdit ? (
+          <div className="h-full min-h-0" style={{ height: 'calc(100vh - 220px)' }}>
+            <div className="flex items-center gap-3 mb-4 px-1">
+              <button
+                onClick={() => { setViewMode('list'); setViewToEdit(null) }}
+                className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors font-medium"
+              >
+                ← Voltar ao Studio
+              </button>
+              <span className="text-neutral-300 dark:text-neutral-700">/</span>
+              <span className="flex items-center gap-1.5 text-sm font-bold text-violet-600 dark:text-violet-400">
+                <Sparkles className="w-3.5 h-3.5" /> Editando: {viewToEdit.name}
+              </span>
+            </div>
+            <AIBuilderChat
+              workspaceId={workspace.id}
+              workspaceSlug={workspace_slug}
+              projectId={project.id}
+              projectSlug={project_slug}
+              projectSecretToken={project.secret_token}
+              initialView={viewToEdit}
+            />
+          </div>
+        ) : viewMode === 'builder' ? (
           <UseCaseBuilderWizard
             initialData={viewToEdit}
             onClose={() => {
@@ -1260,11 +1284,19 @@ export function StudioDashboardClient({
                             <button
                               onClick={() => {
                                 setViewToEdit(view)
-                                setViewMode('builder')
+                                // Views geradas pela IA vão para o AI Builder, não para o Studio
+                                if (view.layout_config?.generated_by_ai === true) {
+                                  setViewMode('ai-editor')
+                                } else {
+                                  setViewMode('builder')
+                                }
                               }}
                               className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
                             >
-                              <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure')}
+                              {view.layout_config?.generated_by_ai === true
+                                ? <><Sparkles className="w-4 h-4" /> Editar no AI Builder</>
+                                : <><Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure')}</>
+                              }
                             </button>
                             {(view.draft_config || !view.layout_config || Object.keys(view.layout_config).length === 0 || view.status === 'draft') && (
                               <>

@@ -21,6 +21,14 @@ interface AIBuilderChatProps {
   projectId: string
   projectSlug: string
   projectSecretToken: string
+  // Modo edição: caso de uso existente a ser editado
+  initialView?: {
+    id: string
+    name: string
+    slug: string
+    layout_config: any
+    tables_config: any
+  }
 }
 
 export function AIBuilderChat({
@@ -29,6 +37,7 @@ export function AIBuilderChat({
   projectId,
   projectSlug,
   projectSecretToken,
+  initialView,
 }: AIBuilderChatProps) {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -48,8 +57,48 @@ export function AIBuilderChat({
   const { toast } = useToast()
 
   useEffect(() => {
-    initSession()
-  }, [projectId])
+    if (initialView) {
+      // Modo edição: popula reviewData a partir da view existente e abre painel de revisão
+      const lc = initialView.layout_config || {}
+      let tablesConfig: string[] = []
+      try {
+        const parsed = typeof initialView.tables_config === 'string'
+          ? JSON.parse(initialView.tables_config)
+          : (initialView.tables_config || [])
+        tablesConfig = Array.isArray(parsed) ? parsed : []
+      } catch { tablesConfig = [] }
+
+      setReviewData({
+        use_case_name: initialView.name,
+        use_case_slug: initialView.slug,
+        component_code: lc.component_code || '',
+        new_migrations: [],
+        suggested_navigation: lc.navigation_type || 'menu_item',
+        description: lc.description || '',
+        selected_tables: tablesConfig,
+        new_tables: [],
+      })
+      setShowReview(true)
+      setMessages([{
+        id: 'edit-welcome',
+        role: 'assistant',
+        content: `✏️ **Modo Edição** — Você está editando **"${initialView.name}"**.\n\nO código atual foi carregado na aba **Componente**. Você pode:\n- Editar o código diretamente\n- Enviar uma mensagem pedindo que eu faça alterações\n- Ajustar as Configurações na aba correspondente\n\nQuando estiver pronto, clique em **Atualizar Projeto**.`,
+      }])
+      // Cria uma sessão de edição
+      supabase.auth.getUser().then(async ({ data: { user } }) => {
+        if (!user) return
+        const { data: session } = await supabase.from('ai_builder_sessions').insert({
+          project_id: projectId,
+          user_id: user.id,
+          title: `Edição: ${initialView.name}`,
+          status: 'draft',
+        }).select().single()
+        if (session) setSessionId(session.id)
+      })
+    } else {
+      initSession()
+    }
+  }, [projectId, initialView?.id])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -264,6 +313,7 @@ export function AIBuilderChat({
         selectedTables={selectedTables}
         newTables={newTables}
         onBack={() => setShowReview(false)}
+        viewId={initialView?.id}
       />
     )
   }
