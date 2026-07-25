@@ -68,7 +68,7 @@ export default async function GlobalDashboard() {
   // Busca a role e permissões do convidado nos workspaces
   const { data: memberships } = await supabase
     .from('workspace_members')
-    .select('workspace_id, can_create, can_edit, can_delete')
+    .select('workspace_id, role, can_create, can_edit, can_delete')
     .eq('user_id', user.id)
 
   const isGlobalGuest = guestAccessLevel === 'global'
@@ -83,6 +83,7 @@ export default async function GlobalDashboard() {
     workspaces.forEach(w => {
       const isOwner = user.id === w.owner_id
       const mem = memberships?.find(m => m.workspace_id === w.id)
+      w.role = isOwner ? 'owner' : (mem?.role || 'guest')
       w.can_edit = isOwner || isGlobalGuest || mem?.can_edit === true
       w.can_delete = isOwner || isGlobalGuest || mem?.can_delete === true
     })
