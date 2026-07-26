@@ -60,6 +60,7 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
 
           const handleResult = (payload: any) => {
             if (payload.payload?.queryId === queryId) {
+               console.log(`[MetaBuilder Proxy] 📥 Received result for ${queryId}:`, payload.payload);
                try {
                  if (tunnelChannel.removeListener) {
                    tunnelChannel.removeListener(`query_result_${queryId}`, handleResult)
@@ -71,6 +72,7 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
                  }
                } catch (e) {}
 
+               clearTimeout(timeout);
                if (payload.payload?.success) {
                  let resultData = payload.payload.data || [];
                  if (currentQuery.isSingle) {
@@ -86,6 +88,7 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
           tunnelChannel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
           tunnelChannel.on('broadcast', { event: 'sql_result' }, handleResult)
 
+          console.log(`[MetaBuilder Proxy] 📨 Sending query to tunnel:`, { queryId, table, action: currentQuery.action, sql, token: projectToken || 'ai-generated' });
           tunnelChannel.send({
             type: 'broadcast',
             event: 'sql_query',
@@ -96,12 +99,14 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
               action: currentQuery.action,
               query: sql,
               sql: sql,
-              token: projectToken || 'ai-generated'
+              token: projectToken || 'ai-generated',
+              joins: []
             }
           });
           
           // Timeout to prevent hanging
-          setTimeout(() => {
+          const timeout = setTimeout(() => {
+             console.error(`[MetaBuilder Proxy] ⏱️ Timeout for queryId ${queryId}`);
              resolve({ data: null, error: { message: 'Timeout na resposta do banco local' } });
           }, 15000);
         });
