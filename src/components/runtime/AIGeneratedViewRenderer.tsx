@@ -42,6 +42,8 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { transform } from 'sucrase'
+import { createTunnelSupabaseClient } from './TunnelSupabaseProxy'
+import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
 
 interface AIGeneratedViewRendererProps {
   componentCode: string
@@ -61,10 +63,39 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, tu
   const [RenderedComponent, setRenderedComponent] = useState<React.ComponentType | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [internalTunnel, setInternalTunnel] = useState<any>(null)
+  const [isConnectingTunnel, setIsConnectingTunnel] = useState(true)
   const supabase = createClient()
   const { toast } = useToast()
 
   useEffect(() => {
+    if (tunnelChannel || !projectId) {
+      setIsConnectingTunnel(false)
+      return
+    }
+
+    const channelName = `tunnel:${projectId}`
+    const channel = wrapChannelWithChunking(supabase.channel(channelName))
+    
+    channel.subscribe((status: string) => {
+      if (status === 'SUBSCRIBED') {
+        console.log(`[AI Renderer] ✅ Túnel conectado: ${channelName}`)
+        setInternalTunnel(channel)
+        setIsConnectingTunnel(false)
+      }
+    })
+
+    return () => {
+      try {
+        channel.unsubscribe()
+        supabase.removeChannel(channel._channel || channel)
+      } catch (e) {}
+    }
+  }, [projectId, tunnelChannel, supabase])
+
+  useEffect(() => {
+    if (isConnectingTunnel) return
+
     if (!componentCode) {
       setError('Nenhum código de componente encontrado.')
       setIsLoading(false)
@@ -108,10 +139,11 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, tu
 
       // Dynamic import lucide for icons
       import('lucide-react').then((lucide: any) => {
+        const activeTunnel = tunnelChannel || internalTunnel
         const customRequire = (modName: string) => {
           if (modName === 'react') return React
           if (modName === 'lucide-react') return lucide
-          if (modName === '@/utils/supabase/client') return { createClient: () => supabase }
+          if (modName === '@/utils/supabase/client') return { createClient: () => createTunnelSupabaseClient(activeTunnel, supabase) }
           if (modName === '@/components/ui/Toast') return { 
             useToast: () => ({ 
               toast: (msg: any, type?: string) => {
@@ -132,7 +164,7 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, tu
         const exportsObj: any = {}
         
         try {
-          factory(customRequire, exportsObj, projectId, tunnelChannel)
+          factory(customRequire, exportsObj, projectId, activeTunnel)
         } catch (execErr: any) {
           setError(`Erro na execução do código gerado: ${execErr.message}`)
           setIsLoading(false)
@@ -157,9 +189,9 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, tu
       setError(`Erro ao compilar o componente: ${err.message}`)
       setIsLoading(false)
     }
-  }, [componentCode])
+  }, [componentCode, isConnectingTunnel, internalTunnel, tunnelChannel, projectId])
 
-  if (isLoading) {
+  if (isLoading || isConnectingTunnel) {
     return (
       <div className="flex items-center justify-center p-16 text-neutral-400">
         <div className="flex flex-col items-center gap-3">
