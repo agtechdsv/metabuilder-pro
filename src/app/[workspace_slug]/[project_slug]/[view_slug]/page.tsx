@@ -305,6 +305,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
                 componentCode={componentCode}
                 viewName={view.name || view_slug}
                 projectId={project.id}
+                projectSlug={project.slug}
                 projectToken={project.secret_token}
               />
             ) : (

@@ -1,4 +1,4 @@
-export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase: any, projectToken: string) {
+export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase: any, projectToken: string, projectSlug?: string) {
   if (!tunnelChannel) return originalSupabase;
 
   return {
@@ -98,7 +98,8 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
             payload: {
               queryId,
               table,
-              schemaName: 'public',
+              tableName: table,
+              schemaName: projectSlug || 'public',
               action: currentQuery.action,
               query: sql,
               sql: sql,
