@@ -1,19 +1,4 @@
 {
-  "v1.0.6": {
-    "date": "2026-07-24",
-    "pt": [
-      "Novo modal global de upgrade: agora você pode explorar e assinar os recursos PRO de forma simples, rápida e integrada em qualquer tela da plataforma.",
-      "Melhorias contínuas de estabilidade e desempenho no sistema."
-    ],
-    "en": [
-      "New global upgrade modal: seamlessly explore and unlock PRO features from anywhere within the platform.",
-      "Continuous stability and performance improvements across the system."
-    ],
-    "es": [
-      "Nuevo modal global de actualización: explora y desbloquea funciones PRO de forma rápida y sencilla desde cualquier lugar de la plataforma.",
-      "Mejoras continuas de estabilidad y rendimiento en el sistema."
-    ]
-  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
