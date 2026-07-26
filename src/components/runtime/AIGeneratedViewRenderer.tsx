@@ -48,7 +48,8 @@ import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
 interface AIGeneratedViewRendererProps {
   componentCode: string
   viewName: string
-  projectId?: string
+  projectId: string
+  projectToken?: string
   tunnelChannel?: any
 }
 
@@ -59,7 +60,7 @@ interface AIGeneratedViewRendererProps {
  * Estratégia: Executa o código via Function constructor em um sandbox controlado,
  * injetando as dependências necessárias (React, supabase, toast, lucide-react).
  */
-export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, tunnelChannel }: AIGeneratedViewRendererProps) {
+export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, projectToken, tunnelChannel }: AIGeneratedViewRendererProps) {
   const [RenderedComponent, setRenderedComponent] = useState<React.ComponentType | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -143,7 +144,7 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, tu
         const customRequire = (modName: string) => {
           if (modName === 'react') return React
           if (modName === 'lucide-react') return lucide
-          if (modName === '@/utils/supabase/client') return { createClient: () => createTunnelSupabaseClient(activeTunnel, supabase) }
+          if (modName === '@/utils/supabase/client') return { createClient: () => createTunnelSupabaseClient(activeTunnel, supabase, projectToken || '') }
           if (modName === '@/components/ui/Toast') return { 
             useToast: () => ({ 
               toast: (msg: any, type?: string) => {

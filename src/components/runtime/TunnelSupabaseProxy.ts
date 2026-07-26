@@ -1,4 +1,4 @@
-export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase: any) {
+export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase: any, projectToken: string) {
   if (!tunnelChannel) return originalSupabase;
 
   return {
@@ -96,7 +96,7 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
               action: currentQuery.action,
               query: sql,
               sql: sql,
-              token: 'ai-generated'
+              token: projectToken || 'ai-generated'
             }
           });
           
