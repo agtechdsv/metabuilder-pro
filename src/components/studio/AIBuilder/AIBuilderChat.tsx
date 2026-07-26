@@ -222,15 +222,20 @@ export function AIBuilderChat({
       const reader = res.body!.getReader()
       const decoder = new TextDecoder()
       let fullContent = ''
+      let buffer = ''
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n').filter((l) => l.startsWith('data: '))
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        
+        // A última linha pode estar incompleta (cortada no meio do chunk), então guardamos no buffer
+        buffer = lines.pop() || ''
 
         for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
           const data = line.replace('data: ', '').trim()
           if (data === '[DONE]') continue
           try {
@@ -245,7 +250,7 @@ export function AIBuilderChat({
                 )
               )
             }
-          } catch { /* ignora */ }
+          } catch { /* ignora erros de parse de chunks malformados (raro com buffer) */ }
         }
       }
 
