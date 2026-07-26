@@ -57,8 +57,6 @@ export function AIBuilderReviewPanel({
     new Set(reviewData.approved_migrations || reviewData.new_migrations?.map((_, i) => i) || [])
   )
   const [isApplying, setIsApplying] = useState(false)
-  const [applied, setApplied] = useState(false)
-  const [appliedSlug, setAppliedSlug] = useState<string | null>(null)
 
   const router = useRouter()
   const { toast } = useToast()
@@ -96,9 +94,8 @@ export function AIBuilderReviewPanel({
 
       const data = await res.json()
       if (data.success) {
-        setApplied(true)
-        setAppliedSlug(data.slug)
-        toast(`"${useCaseName}" criado com sucesso! 🎉`, 'success')
+        toast(`"${useCaseName}" ${isEditMode ? 'atualizado' : 'criado'} com sucesso! 🎉`, 'success')
+        router.push(`/admin/${workspaceSlug}/${projectSlug}/studio`)
       } else if (data.code === 'FREEMIUM_LIMIT') {
         toast('Limite do plano Freemium atingido. Faça upgrade para PRO.', 'error')
       } else {
@@ -109,42 +106,6 @@ export function AIBuilderReviewPanel({
     }
   }
 
-  if (applied) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-        <div className="w-20 h-20 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-emerald-500/30">
-          <Sparkles className="w-10 h-10 text-white" />
-        </div>
-        <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-2">
-          {isEditMode ? 'Caso de Uso Atualizado!' : 'Caso de Uso Criado!'}
-        </h2>
-        <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-8 max-w-sm">
-          {isEditMode
-            ? <><strong>"{useCaseName}"</strong> foi atualizado com sucesso. As alterações já estão disponíveis no projeto.</>
-            : <><strong>"{useCaseName}"</strong> foi gerado e inserido no seu projeto com sucesso. Você pode editá-lo no Builder a qualquer momento.</>
-          }
-        </p>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push(`/admin/${workspaceSlug}/${projectSlug}/studio`)}
-            className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold shadow-lg shadow-emerald-600/20 transition-all"
-          >
-            <Check className="w-4 h-4" />
-            Ver no Studio
-          </button>
-          {appliedSlug && (
-            <button
-              onClick={() => openPreview(`${window.location.origin}/${workspaceSlug}/${projectSlug}/${appliedSlug}`, `Publicado: ${useCaseName}`)}
-              className="flex items-center gap-2 px-6 py-3 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-2xl font-bold transition-all"
-            >
-              <ExternalLink className="w-4 h-4" />
-              Visualizar
-            </button>
-          )}
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="flex flex-col h-full min-h-0">

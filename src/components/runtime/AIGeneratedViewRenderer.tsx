@@ -9,6 +9,7 @@ interface AIGeneratedViewRendererProps {
   componentCode: string
   viewName: string
   projectId?: string
+  tunnelChannel?: any
 }
 
 /**
@@ -18,7 +19,7 @@ interface AIGeneratedViewRendererProps {
  * Estratégia: Executa o código via Function constructor em um sandbox controlado,
  * injetando as dependências necessárias (React, supabase, toast, lucide-react).
  */
-export function AIGeneratedViewRenderer({ componentCode, viewName, projectId }: AIGeneratedViewRendererProps) {
+export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, tunnelChannel }: AIGeneratedViewRendererProps) {
   const [RenderedComponent, setRenderedComponent] = useState<React.ComponentType | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -63,6 +64,7 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId }: 
         'require',
         'exports',
         'PROJECT_ID',
+        'TUNNEL_CHANNEL',
         code
       )
 
@@ -80,7 +82,7 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId }: 
         const exportsObj: any = {}
         
         try {
-          factory(customRequire, exportsObj, projectId)
+          factory(customRequire, exportsObj, projectId, tunnelChannel)
         } catch (execErr: any) {
           setError(`Erro na execução do código gerado: ${execErr.message}`)
           setIsLoading(false)
