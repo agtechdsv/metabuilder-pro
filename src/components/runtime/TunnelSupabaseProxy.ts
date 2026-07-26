@@ -20,8 +20,9 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
           
           const escapeStr = (str: any) => String(str).replace(/'/g, "''");
           const formatWhere = () => {
-            if (currentQuery.filters.length === 0) return '';
-            return ' WHERE ' + currentQuery.filters.map(f => {
+            const validFilters = currentQuery.filters.filter(f => f.col !== 'project_id');
+            if (validFilters.length === 0) return '';
+            return ' WHERE ' + validFilters.map(f => {
               if (f.val === null) return `"${f.col}" IS NULL`;
               return `"${f.col}" ${f.op} '${escapeStr(f.val)}'`;
             }).join(' AND ');
@@ -39,14 +40,16 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
                sql += ' LIMIT 1';
              }
           } else if (currentQuery.action === 'insert') {
-             const data = Array.isArray(currentQuery.mutationPayload) ? currentQuery.mutationPayload[0] : currentQuery.mutationPayload;
-             if (!data) return resolve({ data: null, error: { message: 'No data to insert' } });
+             const data = Array.isArray(currentQuery.mutationPayload) ? { ...currentQuery.mutationPayload[0] } : { ...currentQuery.mutationPayload };
+             if (data.project_id) delete data.project_id;
+             if (Object.keys(data).length === 0) return resolve({ data: null, error: { message: 'No data to insert' } });
              const keys = Object.keys(data);
              const vals = Object.values(data);
              sql = `INSERT INTO "${table}" (${keys.map(k => `"${k}"`).join(', ')}) VALUES (${vals.map(v => v === null ? 'NULL' : `'${escapeStr(v)}'`).join(', ')})`;
           } else if (currentQuery.action === 'update') {
-             const data = currentQuery.mutationPayload;
-             if (!data) return resolve({ data: null, error: { message: 'No data to update' } });
+             const data = { ...currentQuery.mutationPayload };
+             if (data.project_id) delete data.project_id;
+             if (Object.keys(data).length === 0) return resolve({ data: null, error: { message: 'No data to update' } });
              const updates = Object.keys(data).map(k => {
                const v = data[k];
                return `"${k}" = ${v === null ? 'NULL' : `'${escapeStr(v)}'`}`;
