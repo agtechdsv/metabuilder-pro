@@ -14,7 +14,7 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
       };
 
       const execute = async () => {
-        const queryId = Math.random().toString(36).substring(7);
+        const queryId = crypto.randomUUID();
         return new Promise((resolve) => {
           let sql = '';
           
@@ -103,7 +103,9 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
               query: sql,
               sql: sql,
               token: projectToken || 'ai-generated',
-              joins: []
+              joins: [],
+              limit: 1000,
+              offset: 0
             }
           });
           
