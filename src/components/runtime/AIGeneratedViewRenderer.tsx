@@ -112,7 +112,19 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, tu
           if (modName === 'react') return React
           if (modName === 'lucide-react') return lucide
           if (modName === '@/utils/supabase/client') return { createClient: () => supabase }
-          if (modName === '@/components/ui/Toast') return { useToast: () => ({ toast: (msg: string, type?: string) => toast(msg, (type as any) || 'success') }) }
+          if (modName === '@/components/ui/Toast') return { 
+            useToast: () => ({ 
+              toast: (msg: any, type?: string) => {
+                if (typeof msg === 'object' && msg !== null) {
+                  const message = msg.description || msg.title || JSON.stringify(msg)
+                  const toastType = msg.variant === 'destructive' ? 'error' : (msg.variant === 'default' ? 'info' : 'success')
+                  toast(message, toastType)
+                } else {
+                  toast(msg, (type as any) || 'success')
+                }
+              } 
+            }) 
+          }
           if (modName.includes('i18n')) return { useI18n: () => ({ t: (key: string) => key }) }
           return {}
         }
