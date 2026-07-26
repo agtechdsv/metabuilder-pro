@@ -175,16 +175,21 @@ NUNCA retorne texto fora do JSON quando for gerar. NUNCA use markdown fences (\`
     async start(controller) {
       const reader = aiResponse.body!.getReader()
       const decoder = new TextDecoder()
+      let buffer = ''
 
       try {
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
 
-          const chunk = decoder.decode(value)
-          const lines = chunk.split('\n').filter((l) => l.startsWith('data: '))
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          
+          // Guarda a última linha (que pode estar incompleta) no buffer
+          buffer = lines.pop() || ''
 
           for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
             const data = line.replace('data: ', '').trim()
             if (data === '[DONE]') continue
             if (!data) continue
