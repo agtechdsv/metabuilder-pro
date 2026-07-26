@@ -1,6 +1,44 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
+import { AlertCircle } from 'lucide-react'
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('ErrorBoundary capturou um erro no componente da IA:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 m-4 rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20">
+          <h3 className="text-red-700 dark:text-red-400 font-bold text-sm mb-2 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" />
+            Erro de execução no componente
+          </h3>
+          <pre className="text-red-600 dark:text-red-400 text-xs whitespace-pre-wrap font-mono bg-red-100 dark:bg-red-950/40 p-3 rounded-lg overflow-auto max-h-64">
+            {this.state.error?.message || 'Erro desconhecido.'}
+          </pre>
+          <p className="text-red-500 dark:text-red-500 text-xs mt-3">
+            O componente gerado pela IA tentou executar uma operação inválida (ex: acessar dados vazios devido à falta da tabela).
+          </p>
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
+}
+
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { transform } from 'sucrase'
@@ -145,8 +183,10 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, tu
   }
 
   return (
-    <div className="w-full">
-      <RenderedComponent />
+    <div className="w-full h-full">
+      <ErrorBoundary>
+        <RenderedComponent />
+      </ErrorBoundary>
     </div>
   )
 }
