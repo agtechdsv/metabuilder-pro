@@ -248,6 +248,82 @@ export function MarketingSections() {
         </div>
       </section>
 
+      {/* NOVO: AI STUDIO */}
+      <section className="max-w-7xl mx-auto mb-32">
+        <div className="relative p-10 md:p-16 rounded-[3rem] bg-violet-900/5 border border-violet-500/20 overflow-hidden flex flex-col lg:flex-row items-center gap-12 group">
+          <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
+            <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-violet-500/20 rounded-full blur-[120px] group-hover:bg-violet-500/30 transition-colors duration-700"></div>
+            <div className="absolute bottom-[-20%] right-[-10%] w-[40%] h-[40%] bg-fuchsia-500/20 rounded-full blur-[100px] group-hover:bg-fuchsia-500/30 transition-colors duration-700"></div>
+          </div>
+          
+          <div className="flex-1 space-y-8 z-10 order-2 lg:order-1">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-400 font-bold text-xs uppercase tracking-widest border border-violet-500/20 shadow-sm">
+              <Sparkles className="w-4 h-4" /> AI Builder
+            </div>
+            
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-neutral-900 dark:text-white leading-[1.1]">
+              Casos de Uso com <br />
+              <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 dark:from-violet-400 dark:to-fuchsia-400 bg-clip-text text-transparent">Inteligência Artificial.</span>
+            </h2>
+            
+            <p className="text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed max-w-xl font-medium">
+              Acelere seu desenvolvimento em 100x. Basta descrever o que você precisa em linguagem natural e nossa IA geradora escreve todo o código React pronto para produção, com formulários, grids e painéis interativos.
+            </p>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center shadow-sm">
+                  <Bot className="w-5 h-5 text-violet-500" />
+                </div>
+                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">Geração Inteligente</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center shadow-sm">
+                  <Code2 className="w-5 h-5 text-fuchsia-500" />
+                </div>
+                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">Código Nativo React</span>
+              </div>
+            </div>
+
+            <div className="pt-4">
+              <Link 
+                href="/features/ai-studio"
+                className="inline-flex items-center gap-3 px-8 py-4 bg-violet-600 text-white font-bold rounded-2xl hover:bg-violet-700 hover:scale-105 transition-all shadow-xl shadow-violet-500/20"
+              >
+                Conheça o AI Studio <ArrowRight className="w-5 h-5" />
+              </Link>
+            </div>
+          </div>
+          
+          <div className="flex-1 w-full relative z-10 flex items-center justify-center order-1 lg:order-2">
+             <div className="w-full aspect-[4/3] max-w-lg bg-[#0d1117] rounded-3xl border border-neutral-800 shadow-2xl overflow-hidden relative group-hover:shadow-violet-500/20 transition-all duration-500 flex flex-col">
+                <div className="h-10 bg-[#161b22] border-b border-neutral-800 flex items-center px-4 gap-2">
+                   <div className="w-3 h-3 rounded-full bg-red-500/50"></div>
+                   <div className="w-3 h-3 rounded-full bg-yellow-500/50"></div>
+                   <div className="w-3 h-3 rounded-full bg-green-500/50"></div>
+                   <div className="ml-auto flex items-center gap-3 text-neutral-600">
+                      <Sparkles className="w-4 h-4 text-violet-500" />
+                   </div>
+                </div>
+                <div className="flex-1 p-6 font-mono text-[11px] sm:text-xs text-neutral-300 leading-relaxed overflow-hidden">
+                   <p className="text-neutral-500 mb-2">// Prompt da IA para geração do código</p>
+                   <p><span className="text-violet-400">User:</span> Crie uma tela de gerenciamento de produtos com grid filtrável por status e form de edição...</p>
+                   <p className="mt-4 text-neutral-500 mb-2">// Resposta da IA - Gerando componente React</p>
+                   <p><span className="text-pink-400">export default function</span> <span className="text-blue-300">ProductManager</span>() {'{'}</p>
+                   <p className="ml-4"><span className="text-pink-400">const</span> [products, setProducts] = <span className="text-blue-300">useState</span>([]);</p>
+                   <p className="ml-4"><span className="text-pink-400">return</span> (</p>
+                   <p className="ml-8 text-neutral-400">&lt;div className="p-6"&gt;</p>
+                   <p className="ml-12 text-neutral-400">&lt;DataGrid data={'{'}products{'}'} /&gt;</p>
+                   <p className="ml-8 text-neutral-400">&lt;/div&gt;</p>
+                   <p className="ml-4">)</p>
+                   <p>{'}'}</p>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0d1117] via-transparent to-transparent opacity-60 pointer-events-none"></div>
+             </div>
+          </div>
+        </div>
+      </section>
+
       {/* Feature Bento Grid */}
       <section className="max-w-7xl mx-auto">
         <div className="max-w-4xl mx-auto text-center mb-20 space-y-4">
