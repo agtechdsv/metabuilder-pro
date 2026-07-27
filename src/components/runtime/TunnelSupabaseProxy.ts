@@ -91,6 +91,20 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
           tunnelChannel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
           tunnelChannel.on('broadcast', { event: 'sql_result' }, handleResult)
 
+          let extPayload: any = {};
+          if (currentQuery.action === 'update' || currentQuery.action === 'delete') {
+             const idFilter = currentQuery.filters.find(f => f.col === 'id' || f.col.endsWith('_id') || f.col.toLowerCase() === 'id');
+             extPayload.idColumn = idFilter ? idFilter.col : (currentQuery.filters.length > 0 ? currentQuery.filters[0].col : 'id');
+             extPayload.idValue = idFilter ? idFilter.val : (currentQuery.filters.length > 0 ? currentQuery.filters[0].val : null);
+          }
+          if (currentQuery.action === 'insert' || currentQuery.action === 'update') {
+             let payloadData = currentQuery.action === 'insert' 
+               ? (Array.isArray(currentQuery.mutationPayload) ? { ...currentQuery.mutationPayload[0] } : { ...currentQuery.mutationPayload })
+               : { ...currentQuery.mutationPayload };
+             if (payloadData.project_id) delete payloadData.project_id;
+             extPayload.data = payloadData;
+          }
+
           console.log(`[MetaBuilder Proxy] 📨 Sending query to tunnel:`, { queryId, table, action: currentQuery.action, sql, token: projectToken || 'ai-generated' });
           tunnelChannel.send({
             type: 'broadcast',
@@ -106,7 +120,8 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
               token: projectToken || 'ai-generated',
               joins: [],
               limit: 1000,
-              offset: 0
+              offset: 0,
+              ...extPayload
             }
           });
           
