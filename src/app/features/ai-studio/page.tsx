@@ -141,7 +141,7 @@ export default function AIStudioFeaturePage() {
                     key={src}
                     src={src}
                     alt={`AI Studio Demo ${idx + 1}`}
-                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${idx === currentImg ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                    className={`absolute inset-0 w-full h-full object-cover object-left-top transition-opacity duration-500 ${idx === currentImg ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
                   />
                ))}
 
