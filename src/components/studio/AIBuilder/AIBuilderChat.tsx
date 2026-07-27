@@ -61,7 +61,7 @@ export function AIBuilderChat({
   useEffect(() => {
     if (initialView) {
       // Modo edição: popula reviewData a partir da view existente e abre painel de revisão
-      const lc = initialView.layout_config || {}
+      const lc = initialView.draft_config || initialView.layout_config || {}
       let tablesConfig: string[] = []
       try {
         const parsed = typeof initialView.tables_config === 'string'

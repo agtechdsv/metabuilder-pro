@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     // Busca a view existente para verificar o slug atual
     const { data: existingView } = await supabase
       .from('ui_views')
-      .select('id, slug, layout_config')
+      .select('id, slug, layout_config, draft_config')
       .eq('id', view_id)
       .eq('project_id', project_id)
       .single()
@@ -54,9 +54,9 @@ export async function POST(req: NextRequest) {
     const oldSlug = existingView.slug
     const finalSlug = use_case_slug
 
-    // Monta layout_config preservando campos existentes
+    // Monta draft_config preservando campos existentes
     const layout_config: Record<string, any> = {
-      ...(existingView.layout_config || {}),
+      ...(existingView.draft_config || existingView.layout_config || {}),
       is_active: true,
       generated_by_ai: true,
       description: description || null,
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
         name: use_case_name,
         slug: finalSlug,
         tables_config: JSON.stringify([...(selected_tables || []), ...(new_tables || [])]),
-        layout_config,
+        draft_config: layout_config,
       })
       .eq('id', view_id)
       .select()
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
       logic_type: 'personalizado',
       view_type: 'advanced_use_case',
       tables_config: JSON.stringify([...(selected_tables || []), ...(new_tables || [])]),
-      layout_config,
+      draft_config: layout_config,
     })
     .select()
     .single()

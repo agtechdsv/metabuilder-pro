@@ -1303,7 +1303,7 @@ export function StudioDashboardClient({
                               onClick={() => {
                                 setViewToEdit(view)
                                 // Views geradas pela IA vão para o AI Builder, não para o Studio
-                                if (view.layout_config?.generated_by_ai === true) {
+                                if (view.layout_config?.generated_by_ai === true || view.draft_config?.generated_by_ai === true) {
                                   setViewMode('ai-editor')
                                 } else {
                                   setViewMode('builder')
@@ -1311,8 +1311,8 @@ export function StudioDashboardClient({
                               }}
                               className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
                             >
-                              {view.layout_config?.generated_by_ai === true
-                                ? <><Sparkles className="w-4 h-4" /> Editar no AI Builder</>
+                              {(view.layout_config?.generated_by_ai === true || view.draft_config?.generated_by_ai === true)
+                                ? <><Sparkles className="w-4 h-4" /> Configurar</>
                                 : <><Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure')}</>
                               }
                             </button>
