@@ -13,6 +13,7 @@ interface Message {
   role: 'user' | 'assistant' | 'system'
   content: string
   isStreaming?: boolean
+  parsedSuccessfully?: boolean
 }
 
 interface AIBuilderChatProps {
@@ -257,6 +258,7 @@ export function AIBuilderChat({
       }
 
       let parsedJson: any = null
+      let parseSuccess = false
       try {
         let jsonStr = fullContent.trim()
         if (jsonStr.startsWith('```json')) jsonStr = jsonStr.replace(/^```json\n?/, '').replace(/\n?```$/, '')
@@ -302,20 +304,23 @@ export function AIBuilderChat({
 
           const sanitizedJson = sanitizeJsonString(jsonStr)
           parsedJson = JSON.parse(sanitizedJson)
+          parseSuccess = true
         }
       } catch (e) { 
         console.error('Falha ao fazer parse do JSON da IA:', e)
       }
 
+      const isValidOutput = parseSuccess && parsedJson?.component_code
+
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMessageId
-            ? { ...m, content: fullContent, isStreaming: false }
+            ? { ...m, content: fullContent, isStreaming: false, parsedSuccessfully: isValidOutput }
             : m
         )
       )
 
-      if (parsedJson?.component_code) {
+      if (isValidOutput) {
         setReviewData((prev: any) => ({
           ...(prev || {}),
           ...parsedJson,
@@ -330,6 +335,16 @@ export function AIBuilderChat({
           new_tables: newTables,
         }))
         setShowReview(true)
+      } else {
+        // Se falhou, adiciona uma mensagem do sistema informando o usuário
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            role: 'system',
+            content: '⚠️ **Aviso:** Ocorreu um erro ao interpretar o código gerado pela IA (o formato retornou corrompido ou incompleto). Você pode tentar copiar o código manualmente da resposta acima, ou pedir para a IA gerar novamente com a mensagem "Tente novamente".',
+          }
+        ])
       }
     } catch (err: any) {
       toast(err.message || 'Erro ao comunicar com a IA', 'error')
