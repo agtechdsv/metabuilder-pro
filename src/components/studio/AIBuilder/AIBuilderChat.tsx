@@ -378,6 +378,7 @@ export function AIBuilderChat({
           setShowReview(false)
         }}
         viewId={initialView?.id}
+        onClose={onClose}
       />
     )
   }

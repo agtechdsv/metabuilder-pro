@@ -95,7 +95,7 @@ export function AIBuilderReviewPanel({
       const data = await res.json()
       if (data.success) {
         toast(`"${useCaseName}" ${isEditMode ? 'atualizado' : 'criado'} com sucesso! 🎉`, 'success')
-        router.push(`/admin/${workspaceSlug}/${projectSlug}/studio`)
+        window.location.href = `/admin/${workspaceSlug}/${projectSlug}/studio`
       } else if (data.code === 'FREEMIUM_LIMIT') {
         toast('Limite do plano Freemium atingido. Faça upgrade para PRO.', 'error')
       } else {
