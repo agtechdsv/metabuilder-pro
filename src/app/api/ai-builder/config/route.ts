@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { createClient, createAdminClient } from '@/utils/supabase/server'
 
 // GET — Busca a config de IA do workspace (sem retornar a chave)
 export async function GET(req: NextRequest) {
@@ -10,7 +10,20 @@ export async function GET(req: NextRequest) {
   const workspaceId = req.nextUrl.searchParams.get('workspace_id')
   if (!workspaceId) return NextResponse.json({ error: 'workspace_id required' }, { status: 400 })
 
-  const { data, error } = await supabase
+  // Verify that the user has access to the workspace via normal RLS
+  const { data: workspaceAccess } = await supabase
+    .from('workspaces')
+    .select('id')
+    .eq('id', workspaceId)
+    .maybeSingle()
+
+  if (!workspaceAccess) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  // Use admin client to bypass ai_builder_configs RLS which might restrict non-owners from reading
+  const adminClient = createAdminClient()
+  const { data, error } = await adminClient
     .from('ai_builder_configs')
     .select('id, provider, model, base_url, created_at, updated_at')
     .eq('workspace_id', workspaceId)
