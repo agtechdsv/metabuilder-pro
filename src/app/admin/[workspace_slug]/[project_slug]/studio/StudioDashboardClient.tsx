@@ -71,6 +71,7 @@ import { RelationsManager } from '@/components/studio/RelationsManager'
 import { ProjectSecuritySettings } from '@/components/studio/ProjectSecuritySettings'
 import ProjectLogsTab from '@/components/studio/ProjectLogs/ProjectLogsTab'
 import { AIBuilderChat } from '@/components/studio/AIBuilder/AIBuilderChat'
+import { AIBuilderSettings } from '@/components/workspace/AIBuilderSettings'
 
 const RETENTION_OPTIONS = [
   { value: '', labelKey: 'dashboard.projects.studio.stats.retention.forever' },
@@ -249,6 +250,7 @@ export function StudioDashboardClient({
   const [viewToPublish, setViewToPublish] = useState<any>(null)
   const [isPublishing, setIsPublishing] = useState(false)
   const [isCheckingAI, setIsCheckingAI] = useState(false)
+  const [isAISettingsModalOpen, setIsAISettingsModalOpen] = useState(false)
   const [isCheckingLimit, setIsCheckingLimit] = useState(false)
   const userViews = views?.filter(view => view.slug !== 'downloads' && view.slug !== 'automations') || []
   const downloadsView = views?.find(view => view.slug === 'downloads')
@@ -369,7 +371,7 @@ export function StudioDashboardClient({
       
       if (!data.config) {
         if (workspace.owner_id === user.id) {
-          toast('A IA não está configurada! Acesse as configurações do Workspace para adicionar sua Chave de API da IA antes de gerar casos de uso.', 'error')
+          setIsAISettingsModalOpen(true)
         } else {
           toast('A IA não está configurada! Por favor, solicite ao administrador/owner do workspace que adicione a Chave de API da IA nas configurações.', 'error')
         }
@@ -1590,6 +1592,15 @@ export function StudioDashboardClient({
           defaultDescription={project.description || ''}
           defaultTunnelUrl={typeof window !== 'undefined' ? `${window.location.origin}/${project.workspace?.slug || 'workspace'}/${project.slug}` : ''}
         />
+
+        <Modal
+          isOpen={isAISettingsModalOpen}
+          onClose={() => setIsAISettingsModalOpen(false)}
+          title="Configurações IA"
+          className="max-w-2xl"
+        >
+          <AIBuilderSettings workspaceId={workspace.id} isPro={tier === 'pro'} />
+        </Modal>
       </main>
     </>
   )
