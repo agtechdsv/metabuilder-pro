@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { LayoutDashboard, Plus, LogIn, ChevronDown, Terminal, Briefcase, Server } from 'lucide-react'
+import { LayoutDashboard, Plus, LogIn, ChevronDown, Terminal, Briefcase, Server, Sparkles } from 'lucide-react'
 import { signOut } from '@/app/auth/actions'
 import { LoginForm } from '@/components/auth/LoginForm'
 import { AuthModal } from '@/components/auth/AuthModal'
