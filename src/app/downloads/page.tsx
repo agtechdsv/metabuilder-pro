@@ -45,7 +45,7 @@ export default async function DownloadsPage() {
 
   const winAsset = assets.find((a: any) => a.name.endsWith('.exe'))
   const macAsset = assets.find((a: any) => a.name.endsWith('.dmg'))
-  const linuxAsset = assets.find((a: any) => a.name.endsWith('.AppImage'))
+  const linuxAsset = assets.find((a: any) => a.name.endsWith('.AppImage') || a.name.endsWith('.deb'))
 
   const formatSize = (bytes: number) => {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
@@ -131,7 +131,7 @@ export default async function DownloadsPage() {
                 <Terminal className="w-8 h-8" />
               </div>
               <h3 className="text-2xl font-bold mb-2">Linux</h3>
-              <p className="text-sm text-neutral-500 mb-8">Ubuntu, Debian, Fedora (AppImage)</p>
+              <p className="text-sm text-neutral-500 mb-8">Ubuntu, Debian, Linux Mint (.deb)</p>
               
               {linuxAsset ? (
                 <a href={linuxAsset.browser_download_url} className="mt-auto w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95 text-sm uppercase tracking-widest">
