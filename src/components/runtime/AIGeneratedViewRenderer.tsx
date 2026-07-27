@@ -147,8 +147,8 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, pr
           if (modName === 'lucide-react') return lucide
           if (modName === '@/utils/supabase/client') return { createClient: () => createTunnelSupabaseClient(activeTunnel, supabase, projectToken || '', projectSlug) }
           if (modName === '@/components/ui/Toast') return { 
-            useToast: () => ({ 
-              toast: (msg: any, type?: string) => {
+            useToast: () => {
+              const toastFn = (msg: any, type?: string) => {
                 if (typeof msg === 'object' && msg !== null) {
                   const message = msg.description || msg.title || JSON.stringify(msg)
                   const toastType = msg.variant === 'destructive' ? 'error' : (msg.variant === 'default' ? 'info' : 'success')
@@ -156,8 +156,12 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, pr
                 } else {
                   toast(msg, (type as any) || 'success')
                 }
-              } 
-            }) 
+              }
+              return { 
+                toast: toastFn,
+                addToast: toastFn 
+              }
+            } 
           }
           if (modName.includes('i18n')) return { useI18n: () => ({ t: (key: string) => key }) }
           return {}
