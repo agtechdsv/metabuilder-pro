@@ -4,6 +4,29 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
   return {
     ...originalSupabase,
     from: (table: string) => {
+      if (!table) {
+        // Prevent zero-length delimited identifier error for empty table names
+        const mockChain: any = {
+          select: () => mockChain,
+          insert: () => mockChain,
+          update: () => mockChain,
+          delete: () => mockChain,
+          eq: () => mockChain,
+          neq: () => mockChain,
+          gt: () => mockChain,
+          gte: () => mockChain,
+          lt: () => mockChain,
+          lte: () => mockChain,
+          in: () => mockChain,
+          order: () => mockChain,
+          single: () => mockChain,
+          maybeSingle: () => mockChain,
+          limit: () => mockChain,
+          then: (cb: any) => cb({ data: null, error: { message: 'Nome da tabela inválido ou vazio.' } })
+        }
+        return mockChain
+      }
+
       let currentQuery = { 
         action: '', 
         selectCols: '*', 

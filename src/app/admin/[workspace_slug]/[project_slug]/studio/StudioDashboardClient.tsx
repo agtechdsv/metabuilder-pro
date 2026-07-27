@@ -441,17 +441,18 @@ export function StudioDashboardClient({
           layout_config: viewToPublish.layout_config && Object.keys(viewToPublish.layout_config).length > 0 ? viewToPublish.layout_config : { is_active: true }
         }
       } else {
+        const isAiGenerated = draft.generated_by_ai === true;
         payloadToUpdate = {
-          name: draft.name,
-          slug: draft.slug,
-          logic_type: draft.logic_type,
-          has_arguments: draft.has_arguments,
-          tables_config: draft.tables_config,
-          query_type: draft.query_type,
-          custom_query: draft.custom_query,
-          layout_config: draft.layout_config,
-          buttons_config: draft.buttons_config,
-          model_id: draft.model_id,
+          name: draft.name || viewToPublish.name,
+          slug: draft.slug || viewToPublish.slug,
+          logic_type: draft.logic_type || viewToPublish.logic_type,
+          has_arguments: draft.has_arguments ?? viewToPublish.has_arguments,
+          tables_config: draft.tables_config || viewToPublish.tables_config,
+          query_type: draft.query_type || viewToPublish.query_type,
+          custom_query: draft.custom_query || viewToPublish.custom_query,
+          layout_config: isAiGenerated ? draft : draft.layout_config,
+          buttons_config: draft.buttons_config || viewToPublish.buttons_config,
+          model_id: draft.model_id || viewToPublish.model_id,
           status: 'delivered',
           draft_config: null,
         }
@@ -862,7 +863,7 @@ export function StudioDashboardClient({
         )}
 
         {viewMode === 'ai-editor' && viewToEdit ? (
-          <div className="flex flex-col h-full min-h-0 bg-white dark:bg-neutral-950 rounded-2xl shadow-xl overflow-hidden border border-neutral-200 dark:border-neutral-800">
+          <div className="flex flex-col h-[calc(100vh-200px)] min-h-0 bg-white dark:bg-neutral-950 rounded-2xl shadow-xl overflow-hidden border border-neutral-200 dark:border-neutral-800">
             <AIBuilderChat
               workspaceId={workspace.id}
               workspaceSlug={workspace_slug}
