@@ -27,6 +27,7 @@ interface AIBuilderChatProps {
     name: string
     slug: string
     layout_config: any
+    draft_config?: any
     tables_config: any
   }
   onClose?: () => void
