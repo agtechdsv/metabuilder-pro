@@ -47,7 +47,8 @@ import {
   Image as ImageIcon,
   ScrollText,
   Monitor,
-  Sparkles
+  Sparkles,
+  Loader2
 } from 'lucide-react'
 import { usePreview } from '@/contexts/PreviewContext'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
