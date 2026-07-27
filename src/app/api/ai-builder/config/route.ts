@@ -75,3 +75,32 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ success: true, config: data })
 }
+
+// DELETE — Exclui a config de IA do workspace
+export async function DELETE(req: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const workspaceId = req.nextUrl.searchParams.get('workspace_id')
+  if (!workspaceId) return NextResponse.json({ error: 'workspace_id required' }, { status: 400 })
+
+  // Verifica que o usuário é owner do workspace
+  const { data: workspace } = await supabase
+    .from('workspaces')
+    .select('id')
+    .eq('id', workspaceId)
+    .eq('owner_id', user.id)
+    .maybeSingle()
+
+  if (!workspace) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { error } = await supabase
+    .from('ai_builder_configs')
+    .delete()
+    .eq('workspace_id', workspaceId)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ success: true })
+}

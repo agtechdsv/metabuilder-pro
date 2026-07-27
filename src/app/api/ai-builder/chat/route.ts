@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { session_id, message, workspace_id, project_id, tables_context, new_tables } = await req.json()
+  const { session_id, message, workspace_id, project_id, tables_context, new_tables, current_code } = await req.json()
   if (!session_id || !message || !workspace_id) {
     return NextResponse.json({ error: 'session_id, message e workspace_id são obrigatórios' }, { status: 400 })
   }
@@ -63,6 +63,11 @@ export async function POST(req: NextRequest) {
     newTablesStr += new_tables.map((t: string) => `- ${t}`).join('\n')
   }
 
+  let currentCodeStr = ''
+  if (current_code) {
+    currentCodeStr = `\n\nATENÇÃO MODO DE EDIÇÃO:\nO usuário já possui um componente em andamento e quer fazer alterações. USE O CÓDIGO ABAIXO COMO BASE ABSOLUTA. Mantenha as funcionalidades existentes, aplique as modificações solicitadas pelo usuário e devolva o componente completo atualizado.\n\nCÓDIGO ATUAL:\n\`\`\`tsx\n${current_code}\n\`\`\`\n`
+  }
+
   const systemPrompt = `Você é um gerador especializado de casos de uso para o MetaBuilder PRO.
 
 STACK DO PROJETO:
@@ -73,7 +78,7 @@ STACK DO PROJETO:
 - Ícones: Lucide React
 - Componentes UI disponíveis: Modal de '@/components/ui/Modal', Toast de '@/components/ui/Toast'
 - O componente deve ser um 'use client' React funcional exportado como default
-${tablesContextStr}${newTablesStr}
+${tablesContextStr}${newTablesStr}${currentCodeStr}
 
 REGRAS OBRIGATÓRIAS DE RESPOSTA:
 Quando o usuário pedir para GERAR o caso de uso (e não apenas conversar), você DEVE retornar APENAS o seguinte JSON válido (sem markdown, sem explicações fora do JSON):

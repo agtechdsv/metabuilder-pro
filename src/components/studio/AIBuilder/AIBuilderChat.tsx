@@ -211,6 +211,7 @@ export function AIBuilderChat({
             })) || [],
           })),
           new_tables: newTables,
+          current_code: reviewData?.component_code || undefined,
         }),
       })
 
@@ -362,7 +363,12 @@ export function AIBuilderChat({
         projectSlug={projectSlug}
         selectedTables={selectedTables}
         newTables={newTables}
-        onBack={() => setShowReview(false)}
+        onBack={(updatedCode?: string) => {
+          if (updatedCode) {
+            setReviewData((prev: any) => ({ ...prev, component_code: updatedCode }))
+          }
+          setShowReview(false)
+        }}
         viewId={initialView?.id}
       />
     )

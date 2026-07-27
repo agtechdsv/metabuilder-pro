@@ -81,6 +81,30 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
       } else {
         toast(data.error || 'Erro ao salvar.', 'error')
       }
+    } catch (e: any) {
+      toast(e.message || 'Erro ao salvar', 'error')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    setIsSaving(true)
+    try {
+      const res = await fetch(`/api/ai-builder/config?workspace_id=${workspaceId}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast('Configurações excluídas com sucesso.', 'success')
+        setConfig(null)
+        setApiKey('')
+        setBaseUrl('')
+      } else {
+        toast(data.error || 'Erro ao excluir configurações', 'error')
+      }
+    } catch (e: any) {
+      toast(e.message || 'Erro ao excluir', 'error')
     } finally {
       setIsSaving(false)
     }
@@ -292,6 +316,16 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
             >
               {isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
               Testar Conexão
+            </button>
+          )}
+          {config && (
+            <button
+              onClick={handleDelete}
+              disabled={isSaving}
+              className="flex items-center gap-2 px-5 py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-xl text-sm font-bold transition-all disabled:opacity-50 ml-auto"
+            >
+              <X className="w-4 h-4" />
+              Excluir Configurações
             </button>
           )}
         </div>

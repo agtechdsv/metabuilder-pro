@@ -29,7 +29,7 @@ interface AIBuilderReviewPanelProps {
   projectSlug: string
   selectedTables?: any[]
   newTables?: string[]
-  onBack: () => void
+  onBack: (updatedCode?: string) => void
   onClose?: () => void
   // Modo edição: se fornecido, faz update em vez de insert
   viewId?: string
@@ -124,7 +124,7 @@ export function AIBuilderReviewPanel({
             </>
           )}
           <button
-            onClick={onBack}
+            onClick={() => onBack(code)}
             className="flex items-center gap-1.5 text-neutral-500 hover:text-neutral-900 dark:hover:text-white text-sm font-bold transition-colors"
           >
             {!onClose && <ArrowLeft className="w-4 h-4" />} Voltar ao Chat

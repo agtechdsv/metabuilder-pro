@@ -248,6 +248,7 @@ export function StudioDashboardClient({
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false)
   const [viewToPublish, setViewToPublish] = useState<any>(null)
   const [isPublishing, setIsPublishing] = useState(false)
+  const [isCheckingAI, setIsCheckingAI] = useState(false)
   const [isCheckingLimit, setIsCheckingLimit] = useState(false)
   const userViews = views?.filter(view => view.slug !== 'downloads' && view.slug !== 'automations') || []
   const downloadsView = views?.find(view => view.slug === 'downloads')
@@ -357,6 +358,29 @@ export function StudioDashboardClient({
       router.refresh()
     } catch (err: any) {
       toast(t('dashboard.projects.studio.toasts.bpm_config_error') + err.message, 'error')
+    }
+  }
+
+  const handleGenerateWithAI = async () => {
+    setIsCheckingAI(true)
+    try {
+      const res = await fetch(`/api/ai-builder/config?workspace_id=${workspace.id}`)
+      const data = await res.json()
+      
+      if (!data.config) {
+        if (workspace.owner_id === user.id) {
+          toast('A IA não está configurada! Acesse as configurações do Workspace para adicionar sua Chave de API da IA antes de gerar casos de uso.', 'error')
+        } else {
+          toast('A IA não está configurada! Por favor, solicite ao administrador/owner do workspace que adicione a Chave de API da IA nas configurações.', 'error')
+        }
+        return
+      }
+      
+      router.push(`/admin/${workspace_slug}/${project_slug}/studio/ai-builder`)
+    } catch (e: any) {
+      toast('Erro ao verificar configurações da IA.', 'error')
+    } finally {
+      setIsCheckingAI(false)
     }
   }
 
@@ -729,12 +753,14 @@ export function StudioDashboardClient({
                 </button>
 
                 {tier === 'pro' && (
-                  <a
-                    href={`/admin/${workspace_slug}/${project_slug}/studio/ai-builder`}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-violet-500/20 active:scale-95"
+                  <button
+                    onClick={handleGenerateWithAI}
+                    disabled={isCheckingAI}
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-violet-500/20 active:scale-95 disabled:opacity-50"
                   >
-                    <Sparkles className="w-4 h-4" /> Gerar com IA
-                  </a>
+                    {isCheckingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    Gerar com IA
+                  </button>
                 )}
               </div>
             )}
