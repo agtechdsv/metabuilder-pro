@@ -11,7 +11,7 @@ export default function AIStudioFeaturePage() {
   const aiFeatures = [
     {
       title: "Geração Inteligente",
-      desc: "Descreva a regra de negócio em linguagem natural e nossa IA interpretará o contexto do banco de dados, modelos e relacionamentos para criar a tela perfeita.",
+      desc: "Descreva a regra de negócio em linguagem natural e a IA configurada interpretará o contexto do banco de dados, modelos e relacionamentos para criar a tela perfeita.",
       icon: <Bot className="w-8 h-8 text-violet-500" />,
       color: "from-violet-500/20 to-fuchsia-500/5",
       borderColor: "border-violet-500/20"
@@ -64,7 +64,7 @@ export default function AIStudioFeaturePage() {
           </h1>
           
           <p className="text-xl md:text-2xl text-neutral-600 dark:text-neutral-400 max-w-3xl mx-auto mb-12 leading-relaxed font-medium">
-            Desenvolva interfaces e fluxos de negócio em segundos. Descreva a tela que você precisa e nossa Inteligência Artificial vai gerar código React perfeitamente integrado ao seu banco de dados.
+            Desenvolva interfaces e fluxos de negócio em segundos. Descreva a tela que você precisa e a Inteligência Artificial configurada vai gerar código React perfeitamente integrado ao seu banco de dados.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

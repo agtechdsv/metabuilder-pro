@@ -267,7 +267,7 @@ export function MarketingSections() {
             </h2>
             
             <p className="text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed max-w-xl font-medium">
-              Acelere seu desenvolvimento em 100x. Basta descrever o que você precisa em linguagem natural e nossa IA geradora escreve todo o código React pronto para produção, com formulários, grids e painéis interativos.
+              Acelere seu desenvolvimento em 100x. Basta descrever o que você precisa em linguagem natural e a IA geradora configurada escreve todo o código React pronto para produção, com formulários, grids e painéis interativos.
             </p>
             
             <div className="grid grid-cols-2 gap-4">
