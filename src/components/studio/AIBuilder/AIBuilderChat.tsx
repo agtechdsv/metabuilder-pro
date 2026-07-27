@@ -315,11 +315,19 @@ export function AIBuilderChat({
       )
 
       if (parsedJson?.component_code) {
-        setReviewData({
+        setReviewData((prev: any) => ({
+          ...(prev || {}),
           ...parsedJson,
+          new_migrations: (parsedJson.new_migrations && parsedJson.new_migrations.length > 0)
+            ? parsedJson.new_migrations
+            : (prev?.new_migrations || []),
+          use_case_name: parsedJson.use_case_name || prev?.use_case_name || '',
+          use_case_slug: parsedJson.use_case_slug || prev?.use_case_slug || '',
+          description: parsedJson.description || prev?.description || '',
+          suggested_navigation: parsedJson.suggested_navigation || prev?.suggested_navigation || 'menu_item',
           selected_tables: selectedTables.map((t: any) => t.db_table_name),
           new_tables: newTables,
-        })
+        }))
         setShowReview(true)
       }
     } catch (err: any) {
