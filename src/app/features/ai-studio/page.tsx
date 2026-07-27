@@ -1,12 +1,24 @@
 'use client'
 
-import { Bot, Sparkles, Code2, ArrowRight, Layers, FileJson, Cpu } from 'lucide-react'
+import { useState } from 'react'
+import { Bot, Sparkles, Code2, ArrowRight, Layers, FileJson, Cpu, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useI18n } from '@/i18n/I18nContext'
 
 export default function AIStudioFeaturePage() {
   const { t } = useI18n()
+  
+  const images = [
+    '/images/ai-studio/1.png',
+    '/images/ai-studio/2.png',
+    '/images/ai-studio/3.png',
+    '/images/ai-studio/4.png',
+  ]
+  const [currentImg, setCurrentImg] = useState(0)
+
+  const nextImg = () => setCurrentImg((prev) => (prev + 1) % images.length)
+  const prevImg = () => setCurrentImg((prev) => (prev - 1 + images.length) % images.length)
 
   const aiFeatures = [
     {
@@ -108,11 +120,11 @@ export default function AIStudioFeaturePage() {
           </div>
         </div>
 
-        {/* Product Preview Mockup */}
+        {/* Product Preview Gallery */}
         <div className="w-full flex flex-col items-center">
           <div className="w-full max-w-6xl aspect-[16/10] bg-neutral-100 dark:bg-[#0d1117] border border-neutral-200 dark:border-neutral-800 rounded-[2rem] shadow-2xl relative overflow-hidden flex flex-col group">
             {/* Fake Window Header */}
-            <div className="h-12 bg-white dark:bg-[#161b22] border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between px-4 shrink-0">
+            <div className="h-12 bg-white dark:bg-[#161b22] border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between px-4 shrink-0 z-20 relative">
                <div className="flex items-center gap-2">
                  <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
                  <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
@@ -122,43 +134,40 @@ export default function AIStudioFeaturePage() {
                <div className="w-12"></div>
             </div>
             
-            {/* Fake Content area simulating chat and code preview */}
-            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-               {/* Chat Sidebar */}
-               <div className="w-72 border-r border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-black/50 hidden md:flex flex-col p-4">
-                  <div className="flex-1 overflow-y-auto space-y-4">
-                     <div className="bg-violet-100 dark:bg-violet-900/20 p-3 rounded-xl border border-violet-200 dark:border-violet-800/30">
-                        <p className="text-xs text-neutral-800 dark:text-violet-200 leading-relaxed font-mono">
-                           "Crie uma tela de faturamento com duas abas: faturas pendentes e clientes atrasados."
-                        </p>
-                     </div>
-                     <div className="bg-neutral-200 dark:bg-neutral-800/50 p-3 rounded-xl">
-                        <div className="flex items-center gap-2 mb-2">
-                           <Bot className="w-4 h-4 text-violet-500" />
-                           <span className="text-[10px] font-bold text-neutral-500 uppercase">System</span>
-                        </div>
-                        <p className="text-xs text-neutral-600 dark:text-neutral-400">Analisando schemas (faturas, clientes). Gerando componentes UI...</p>
-                     </div>
-                  </div>
-               </div>
+            {/* Carousel Content */}
+            <div className="flex-1 relative overflow-hidden bg-black flex items-center justify-center">
+               {images.map((src, idx) => (
+                  <img
+                    key={src}
+                    src={src}
+                    alt={`AI Studio Demo ${idx + 1}`}
+                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${idx === currentImg ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                  />
+               ))}
+
+               {/* Navigation Controls */}
+               <button 
+                 onClick={prevImg}
+                 className="absolute left-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center backdrop-blur transition-all"
+               >
+                 <ChevronLeft className="w-6 h-6" />
+               </button>
+               <button 
+                 onClick={nextImg}
+                 className="absolute right-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center backdrop-blur transition-all"
+               >
+                 <ChevronRight className="w-6 h-6" />
+               </button>
                
-               {/* Editor Panel */}
-               <div className="flex-1 flex flex-col relative overflow-hidden bg-white dark:bg-[#0d1117]">
-                  <div className="flex-1 p-6 font-mono text-[13px] leading-loose text-neutral-800 dark:text-indigo-200 opacity-90 overflow-hidden">
-                     <p><span className="text-pink-500 dark:text-pink-400">import</span> { '{' } Tabs, Table { '}' } <span className="text-pink-500 dark:text-pink-400">from</span> <span className="text-green-600 dark:text-green-300">'@metabuilder/ui'</span>;</p>
-                     <p className="mt-4"><span className="text-pink-500 dark:text-pink-400">export default function</span> <span className="text-blue-600 dark:text-blue-300">FaturamentoView</span>() { '{' }</p>
-                     <p className="ml-4"><span className="text-pink-500 dark:text-pink-400">const</span> [activeTab, setActiveTab] = <span className="text-blue-600 dark:text-blue-300">useState</span>(<span className="text-green-600 dark:text-green-300">'pendentes'</span>);</p>
-                     <p className="ml-4 mt-2"><span className="text-pink-500 dark:text-pink-400">return</span> (</p>
-                     <p className="ml-8">&lt;<span className="text-blue-600 dark:text-blue-300">div</span> className=<span className="text-green-600 dark:text-green-300">"p-6"</span>&gt;</p>
-                     <p className="ml-12">&lt;<span className="text-blue-600 dark:text-blue-300">Tabs</span> active={'{'}activeTab{'}'}&gt;</p>
-                     <p className="ml-16">&lt;<span className="text-blue-600 dark:text-blue-300">Tab</span> name=<span className="text-green-600 dark:text-green-300">"Faturas Pendentes"</span>&gt;</p>
-                     <p className="ml-20">&lt;<span className="text-blue-600 dark:text-blue-300">Table</span> table=<span className="text-green-600 dark:text-green-300">"faturas"</span> filter=<span className="text-green-600 dark:text-green-300">"status=pendente"</span> /&gt;</p>
-                     <p className="ml-16">&lt;/<span className="text-blue-600 dark:text-blue-300">Tab</span>&gt;</p>
-                     <p className="ml-12">&lt;/<span className="text-blue-600 dark:text-blue-300">Tabs</span>&gt;</p>
-                     <p className="ml-8">&lt;/<span className="text-blue-600 dark:text-blue-300">div</span>&gt;</p>
-                     <p className="ml-4">);</p>
-                     <p>{ '}' }</p>
-                  </div>
+               {/* Indicators */}
+               <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-2 bg-black/50 rounded-full backdrop-blur">
+                 {images.map((_, idx) => (
+                   <button
+                     key={idx}
+                     onClick={() => setCurrentImg(idx)}
+                     className={`w-2.5 h-2.5 rounded-full transition-all ${idx === currentImg ? 'bg-violet-500 w-8' : 'bg-white/50 hover:bg-white'}`}
+                   />
+                 ))}
                </div>
             </div>
           </div>
