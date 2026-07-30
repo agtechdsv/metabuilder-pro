@@ -1,4 +1,19 @@
 {
+  "v1.0.2": {
+    "date": "2026-07-30",
+    "pt": [
+      "Gerenciamento Centralizado de Listas e Categorias: Novo painel intuitivo para criar, importar e personalizar valores de enumeração e status dos seus projetos de forma simples e integrada.",
+      "Ferramentas Avançadas de Conexão e Integração: Nova linha de comando (CLI) com mapeamento automático de estrutura de banco de dados e túnel remoto ultra-seguro para simplificar suas integrações."
+    ],
+    "en": [
+      "Centralized List & Category Management: New intuitive panel to easily create, import, and customize project enumeration values and statuses in an integrated way.",
+      "Advanced Integration & Connection Tools: New CLI featuring automated database structure mapping and ultra-secure remote tunneling to streamline your integrations."
+    ],
+    "es": [
+      "Gestión Centralizada de Listas y Categorías: Nuevo panel intuitivo para crear, importar y personalizar valores de enumeración y estados de sus proyectos de forma sencilla e integrada.",
+      "Herramientas Avanzadas de Conexión e Integración: Nueva CLI con mapeo automático de estructura de bases de datos y túnel remoto ultra seguro para simplificar sus integraciones."
+    ]
+  },
   "v1.0.1": {
     "date": "2026-07-30",
     "pt": [
