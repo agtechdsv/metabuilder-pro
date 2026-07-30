@@ -92,6 +92,11 @@ export default async function PlatformAdminPage() {
     .from('owner_guests')
     .select('owner_id, user_id, access_level')
 
+  // Fetch all projects for accurate project count per client
+  const { data: projects } = await adminSupabase
+    .from('projects')
+    .select('id, name, slug, workspace_id')
+
   return (
     <div className="min-h-screen flex flex-col pt-16 bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300">
       <Navbar user={user} profile={profile} />
@@ -105,6 +110,7 @@ export default async function PlatformAdminPage() {
           payments={payments || []}
           workspaceMembers={workspaceMembers || []}
           ownerGuests={ownerGuests || []}
+          projects={projects || []}
         />
       </main>
 

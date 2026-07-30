@@ -122,6 +122,7 @@ export function ClientsTab({ hook }: ClientsTabProps) {
                   <th className="px-6 py-4">Dono / Email</th>
                   <th className="px-6 py-4">Licenças</th>
                   <th className="px-6 py-4">Workspaces</th>
+                  <th className="px-6 py-4">Projetos</th>
                   <th className="px-6 py-4">Criação</th>
                   <th className="px-6 py-4 text-center">Status</th>
                   <th className="px-6 py-4 text-right">Ação</th>
@@ -171,6 +172,18 @@ export function ClientsTab({ hook }: ClientsTabProps) {
                             ))}
                           </div>
                         </td>
+                        <td className="px-6 py-4.5 group relative">
+                          <span className="font-bold cursor-default px-3 py-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
+                            {client.projects.length}
+                          </span>
+                          <div className="absolute left-6 bottom-full mb-2 hidden group-hover:flex flex-col bg-neutral-900 text-white text-[10px] p-2 rounded z-10 w-max shadow-xl border border-neutral-800">
+                            {client.projects.length > 0 ? client.projects.map((p: any) => (
+                              <span key={p.id} className="whitespace-nowrap px-1 py-0.5">{p.name} (/{p.slug})</span>
+                            )) : (
+                              <span className="whitespace-nowrap px-1 py-0.5 text-neutral-400">Nenhum projeto</span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-6 py-4.5 text-neutral-400">
                           {new Date(client.created_at).toLocaleDateString('pt-BR')}
                         </td>
@@ -218,7 +231,7 @@ export function ClientsTab({ hook }: ClientsTabProps) {
                       </tr>
                       {expandedOwners.has(client.ownerId) && client.teamMembers && (
                         <tr className="bg-neutral-50/30 dark:bg-neutral-900/20 border-b border-neutral-100 dark:border-neutral-850">
-                          <td colSpan={6} className="px-0 py-0">
+                          <td colSpan={7} className="px-0 py-0">
                             <div className="pl-14 pr-6 py-3">
                               <table className="w-full text-left">
                                 <tbody className="divide-y divide-neutral-100/50 dark:divide-neutral-850/50">
@@ -238,6 +251,7 @@ export function ClientsTab({ hook }: ClientsTabProps) {
                                           Guest
                                         </span>
                                       </td>
+                                      <td className="py-2.5 text-neutral-400 text-center">-</td>
                                       <td className="py-2.5 text-center">
                                         <span className={cn(
                                           "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
@@ -291,7 +305,7 @@ export function ClientsTab({ hook }: ClientsTabProps) {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-neutral-400 italic">
+                    <td colSpan={8} className="px-6 py-12 text-center text-neutral-400 italic">
                       Nenhum cliente/workspace encontrado.
                     </td>
                   </tr>

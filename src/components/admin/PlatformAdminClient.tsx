@@ -90,6 +90,7 @@ interface PlatformAdminClientProps {
   payments: Payment[]
   workspaceMembers: WorkspaceMember[]
   ownerGuests: any[]
+  projects: any[]
 }
 
 export default function PlatformAdminClient({
@@ -98,7 +99,8 @@ export default function PlatformAdminClient({
   currentUserEmail,
   payments,
   workspaceMembers,
-  ownerGuests = []
+  ownerGuests = [],
+  projects
 }: PlatformAdminClientProps) {
   const router = useRouter()
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -168,10 +170,10 @@ export default function PlatformAdminClient({
         guestCount
       } as any
     })
-  }, [workspaces, clientProfiles, payments, workspaceMembers, ownerGuests])
+  }, [workspaces, clientProfiles, payments, workspaceMembers, ownerGuests, projects])
 
   const dashboardHook = useDashboardAdmin(mappedWorkspaces, payments, clientProfiles, workspaceMembers, ownerGuests)
-  const clientsHook = useClientsAdmin(mappedWorkspaces, clientProfiles, workspaceMembers, ownerGuests, setWorkspaces, setClientProfiles)
+  const clientsHook = useClientsAdmin(mappedWorkspaces, clientProfiles, workspaceMembers, ownerGuests, projects, setWorkspaces, setClientProfiles)
   const agendaHook = useAgendaAdmin(activeTab)
   const iclubHook = useIClubAdmin(activeTab)
 

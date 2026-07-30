@@ -7,6 +7,7 @@ export function useClientsAdmin(
   clientProfiles: any[],
   workspaceMembers: any[],
   ownerGuests: any[],
+  projects: any[],
   setWorkspaces: React.Dispatch<React.SetStateAction<any[]>>,
   setClientProfiles: React.Dispatch<React.SetStateAction<any[]>>
 ) {
@@ -40,7 +41,8 @@ export function useClientsAdmin(
         guestCount: 0,
         created_at: p.created_at || new Date().toISOString(), // Fallback if missing
         is_blocked: p.is_blocked || false,
-        workspaces: []
+        workspaces: [],
+        projects: []
       })
     })
 
@@ -59,7 +61,8 @@ export function useClientsAdmin(
             guestCount: 0,
             created_at: w.created_at,
             is_blocked: w.is_blocked,
-            workspaces: []
+            workspaces: [],
+            projects: []
          }
          clientsMap.set(w.owner_id, client)
       }
@@ -110,6 +113,17 @@ export function useClientsAdmin(
       }
     })
 
+    // Attach projects to their owners
+    projects.forEach(project => {
+      const workspace = mappedWorkspaces.find(w => w.id === project.workspace_id)
+      if (workspace && !workspace.ownerIsSuperAdmin) {
+        const client = clientsMap.get(workspace.owner_id)
+        if (client) {
+          client.projects.push(project)
+        }
+      }
+    })
+
     const result: any[] = []
     
     clientsMap.forEach(client => {
@@ -141,7 +155,7 @@ export function useClientsAdmin(
     })
     
     return result
-  }, [mappedWorkspaces, clientProfiles, workspaceMembers, ownerGuests, searchQuery, statusFilter, clientTypeFilter])
+  }, [mappedWorkspaces, clientProfiles, workspaceMembers, ownerGuests, projects, searchQuery, statusFilter, clientTypeFilter])
 
   const handleToggleBlock = (ownerId: string, isBlocked: boolean, clientName: string) => {
     setWorkspaceToBlock({ id: ownerId, isBlocked, name: clientName })
