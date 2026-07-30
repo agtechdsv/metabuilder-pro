@@ -124,7 +124,24 @@ async function introspectOracle(connectionString) {
   let connection;
   try {
     console.log(chalk.blue('\nConectando ao banco de dados Oracle...'));
-    connection = await oracledb.getConnection({ connectString: connectionString });
+
+    let user, password, connectString = connectionString;
+    if (connectionString.startsWith('oracle://')) {
+      try {
+        const url = new URL(connectionString);
+        user = decodeURIComponent(url.username);
+        password = decodeURIComponent(url.password);
+        connectString = `${url.hostname}${url.port ? ':' + url.port : ''}${url.pathname}`;
+      } catch (err) {
+        console.warn(chalk.yellow('Aviso: Não foi possível fazer o parse da string de conexão Oracle como URL.'));
+      }
+    }
+
+    const connectConfig = { connectString };
+    if (user) connectConfig.user = user;
+    if (password) connectConfig.password = password;
+
+    connection = await oracledb.getConnection(connectConfig);
     console.log(chalk.green('✓ Conexão Oracle local estabelecida com sucesso!\n'));
 
     console.log(chalk.gray('Lendo tabelas...'));
