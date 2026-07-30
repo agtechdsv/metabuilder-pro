@@ -1013,12 +1013,21 @@ export function StudioDashboardClient({
                   <div className="mt-auto flex gap-3">
                     {canCreate ? (
                       <>
-                        <Link
-                          href={`/admin/${workspace_slug}/${project_slug}/studio/auth`}
-                          className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-indigo-600 text-white rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-indigo-500/20"
-                        >
-                          <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure_login')}
-                        </Link>
+                        {tier === 'pro' ? (
+                          <Link
+                            href={`/admin/${workspace_slug}/${project_slug}/studio/auth`}
+                            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-indigo-600 text-white rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-indigo-500/20"
+                          >
+                            <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure_login')}
+                          </Link>
+                        ) : (
+                          <button
+                            onClick={() => openUpgrade('Segurança e Acesso')}
+                            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-indigo-600 text-white rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-indigo-500/20"
+                          >
+                            <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure_login')}
+                          </button>
+                        )}
                         <Link
                           href={`/${workspace_slug}/${project_slug}/login`}
                           target="_blank"
