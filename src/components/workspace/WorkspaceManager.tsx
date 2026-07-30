@@ -24,13 +24,15 @@ import {
   Monitor,
   Download,
   Network,
-  Bot
+  Bot,
+  Database
 } from 'lucide-react'
 import { AIBuilderSettings } from './AIBuilderSettings'
 import { usePreview } from '@/contexts/PreviewContext'
 import Link from 'next/link'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
 import { WorkspaceTunnelControl } from '@/components/workspace/WorkspaceTunnelControl'
+import { WorkspaceSyncedDatabases } from '@/components/workspace/WorkspaceSyncedDatabases'
 import { createClient } from '@/utils/supabase/client'
 import { isTauri } from '@/utils/tauriUtils'
 import { useToast } from '@/components/ui/Toast'
@@ -104,7 +106,7 @@ export function WorkspaceManager({
   
   const [isAIModalOpen, setIsAIModalOpen] = useState(false)
   const [selectedWorkspaceForAI, setSelectedWorkspaceForAI] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'workspaces' | 'tunnel'>('workspaces')
+  const [activeTab, setActiveTab] = useState<'workspaces' | 'tunnel' | 'synced-dbs'>('workspaces')
 
   // Team management states
   const [isTeamDrawerOpen, setIsTeamDrawerOpen] = useState(false)
@@ -395,6 +397,17 @@ export function WorkspaceManager({
             >
               Gerenciador do Túnel
             </button>
+            <button
+              onClick={() => setActiveTab('synced-dbs')}
+              className={cn(
+                "px-4 py-3 text-sm font-bold transition-all border-b-2",
+                activeTab === 'synced-dbs' 
+                  ? "border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400" 
+                  : "border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+              )}
+            >
+              Bancos Sincronizados
+            </button>
           </div>
         )}
 
@@ -405,10 +418,15 @@ export function WorkspaceManager({
                 <Building2 className="w-6 h-6 text-indigo-500" />
                 {t('dashboard.your_workspaces')}
               </>
-            ) : (
+            ) : activeTab === 'tunnel' ? (
               <>
                 <Network className="w-6 h-6 text-indigo-500" />
                 Gerenciador do Túnel
+              </>
+            ) : (
+              <>
+                <Database className="w-6 h-6 text-indigo-500" />
+                Bancos Sincronizados
               </>
             )}
           </h3>
@@ -426,6 +444,8 @@ export function WorkspaceManager({
 
         {activeTab === 'tunnel' && isTauri() ? (
         <WorkspaceTunnelControl workspaceSlug="global" />
+      ) : activeTab === 'synced-dbs' ? (
+        <WorkspaceSyncedDatabases />
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">

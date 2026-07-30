@@ -41,6 +41,7 @@ import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGener
 import { useUpgradeModal } from '@/context/UpgradeModalContext'
 import { ProGate } from '@/components/ui/ProGate'
 import { WorkspaceTunnelControl } from '@/components/workspace/WorkspaceTunnelControl'
+import { WorkspaceSyncedDatabases } from '@/components/workspace/WorkspaceSyncedDatabases'
 interface Project {
   id: string
   name: string
@@ -114,7 +115,7 @@ export function ProjectManager({
     portal_banner_url: workspaceThemeConfig?.portal_banner_url || ''
   })
   const [isSavingWorkspaceSettings, setIsSavingWorkspaceSettings] = useState(false)
-  const [activeTab, setActiveTab] = useState<'projects' | 'tunnel'>('projects')
+  const [activeTab, setActiveTab] = useState<'projects' | 'tunnel' | 'synced-dbs'>('projects')
 
   const [downloadModal, setDownloadModal] = useState<{
     open: boolean
@@ -616,6 +617,20 @@ export function ProjectManager({
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full shadow-[0_-2px_10px_rgba(79,70,229,0.5)]"></div>
           )}
         </button>
+        <button
+          onClick={() => setActiveTab('synced-dbs')}
+          className={cn(
+            "pb-3 text-sm font-bold transition-all relative",
+            activeTab === 'synced-dbs'
+              ? "text-indigo-600 dark:text-indigo-400"
+              : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+          )}
+        >
+          Bancos Sincronizados
+          {activeTab === 'synced-dbs' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full shadow-[0_-2px_10px_rgba(79,70,229,0.5)]"></div>
+          )}
+        </button>
       </div>
 
       {/* Grade de Projetos */}
@@ -922,6 +937,13 @@ export function ProjectManager({
       {activeTab === 'tunnel' && (
         <section className="space-y-6 pt-4">
           <WorkspaceTunnelControl workspaceSlug={workspaceSlug} />
+        </section>
+      )}
+
+      {/* Bancos Sincronizados */}
+      {activeTab === 'synced-dbs' && (
+        <section className="space-y-6 pt-4">
+          <WorkspaceSyncedDatabases workspaceId={workspaceId} />
         </section>
       )}
 
