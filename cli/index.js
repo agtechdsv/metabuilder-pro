@@ -233,7 +233,20 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
   console.log(chalk.blue(`\nConectando ao banco de dados local para o túnel (${dbType})...`));
 
   if (dbType === 'oracle') {
-    oracleConnection = await oracledb.getConnection({ connectString: connectionString });
+    let user, password, connectStr = connectionString;
+    if (connectionString.startsWith('oracle://')) {
+      try {
+        const url = new URL(connectionString);
+        user = decodeURIComponent(url.username);
+        password = decodeURIComponent(url.password);
+        connectStr = `${url.hostname}${url.port ? ':' + url.port : ''}${url.pathname}`;
+      } catch (err) {}
+    }
+    const connectConfig = { connectString: connectStr };
+    if (user) connectConfig.user = user;
+    if (password) connectConfig.password = password;
+    
+    oracleConnection = await oracledb.getConnection(connectConfig);
   } else {
     pgClient = new Pool({ connectionString, max: 20 });
     await pgClient.query('SELECT 1'); // Testa a conexão
