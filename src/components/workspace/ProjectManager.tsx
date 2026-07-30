@@ -40,8 +40,7 @@ import { isTauri, openExternalUrl } from '@/utils/tauriUtils'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
 import { useUpgradeModal } from '@/context/UpgradeModalContext'
 import { ProGate } from '@/components/ui/ProGate'
-
-
+import { WorkspaceTunnelControl } from '@/components/workspace/WorkspaceTunnelControl'
 interface Project {
   id: string
   name: string
@@ -115,6 +114,7 @@ export function ProjectManager({
     portal_banner_url: workspaceThemeConfig?.portal_banner_url || ''
   })
   const [isSavingWorkspaceSettings, setIsSavingWorkspaceSettings] = useState(false)
+  const [activeTab, setActiveTab] = useState<'projects' | 'tunnel'>('projects')
 
   const [downloadModal, setDownloadModal] = useState<{
     open: boolean
@@ -586,7 +586,40 @@ export function ProjectManager({
         </div>
       </div>
 
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-6 border-b border-neutral-200 dark:border-neutral-800 px-2 pt-2">
+        <button
+          onClick={() => setActiveTab('projects')}
+          className={cn(
+            "pb-3 text-sm font-bold transition-all relative",
+            activeTab === 'projects'
+              ? "text-indigo-600 dark:text-indigo-400"
+              : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+          )}
+        >
+          Projetos do Ecossistema
+          {activeTab === 'projects' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full shadow-[0_-2px_10px_rgba(79,70,229,0.5)]"></div>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('tunnel')}
+          className={cn(
+            "pb-3 text-sm font-bold transition-all relative",
+            activeTab === 'tunnel'
+              ? "text-indigo-600 dark:text-indigo-400"
+              : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+          )}
+        >
+          Gerenciador do Túnel
+          {activeTab === 'tunnel' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full shadow-[0_-2px_10px_rgba(79,70,229,0.5)]"></div>
+          )}
+        </button>
+      </div>
+
       {/* Grade de Projetos */}
+      {activeTab === 'projects' && (
       <section className="space-y-6">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-bold flex items-center gap-3">
@@ -883,6 +916,14 @@ export function ProjectManager({
           )}
         </div>
       </section>
+      )}
+
+      {/* Gerenciador do Túnel */}
+      {activeTab === 'tunnel' && (
+        <section className="space-y-6 pt-4">
+          <WorkspaceTunnelControl workspaceSlug={workspaceSlug} />
+        </section>
+      )}
 
       {/* Drawer para Criar/Editar */}
       <Drawer
