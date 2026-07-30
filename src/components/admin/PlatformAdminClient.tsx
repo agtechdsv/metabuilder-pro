@@ -169,7 +169,7 @@ export default function PlatformAdminClient({
   }, [workspaces, clientProfiles, payments, workspaceMembers, ownerGuests])
 
   const dashboardHook = useDashboardAdmin(mappedWorkspaces, payments, clientProfiles, workspaceMembers, ownerGuests)
-  const clientsHook = useClientsAdmin(mappedWorkspaces, setWorkspaces, setClientProfiles)
+  const clientsHook = useClientsAdmin(mappedWorkspaces, clientProfiles, setWorkspaces, setClientProfiles)
   const agendaHook = useAgendaAdmin(activeTab)
   const iclubHook = useIClubAdmin(activeTab)
 

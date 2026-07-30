@@ -4,6 +4,7 @@ import { toggleClientBlock, deleteClientAdmin } from '@/app/actions/admin'
 
 export function useClientsAdmin(
   mappedWorkspaces: any[],
+  clientProfiles: any[],
   setWorkspaces: React.Dispatch<React.SetStateAction<any[]>>,
   setClientProfiles: React.Dispatch<React.SetStateAction<any[]>>
 ) {
@@ -23,42 +24,76 @@ export function useClientsAdmin(
 
   const filteredClients = useMemo(() => {
     const clientsMap = new Map<string, any>()
+    
+    // First, initialize all clients from profiles
+    clientProfiles.forEach(p => {
+      if (p.is_super_admin) return
+
+      clientsMap.set(p.id, {
+        ownerId: p.id,
+        ownerName: p.full_name || 'Sem nome',
+        ownerEmail: p.email || 'Sem e-mail',
+        ownerLicenses: p.subscription_licenses || 0,
+        guestCount: 0,
+        created_at: p.created_at || new Date().toISOString(), // Fallback if missing
+        is_blocked: p.is_blocked || false,
+        workspaces: []
+      })
+    })
+
+    // Then, attach workspaces and sum guest count
     mappedWorkspaces.forEach(w => {
       if (w.ownerIsSuperAdmin) return
-
-      const matchesSearch =
-        w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        w.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        w.ownerEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        w.slug.toLowerCase().includes(searchQuery.toLowerCase())
-
-      const matchesStatus =
-        statusFilter === 'all' ||
-        (statusFilter === 'active' && !w.is_blocked) ||
-        (statusFilter === 'blocked' && w.is_blocked) ||
-        (statusFilter === 'registered' && w.ownerLicenses === 0)
-
-      const matchesType = 
-        clientTypeFilter === 'PRO' ? w.ownerLicenses > 0 : w.ownerLicenses === 0
-
-      if (matchesSearch && matchesStatus && matchesType) {
-        if (!clientsMap.has(w.owner_id)) {
-          clientsMap.set(w.owner_id, {
+      
+      let client = clientsMap.get(w.owner_id)
+      if (!client) {
+         client = {
             ownerId: w.owner_id,
             ownerName: w.ownerName,
             ownerEmail: w.ownerEmail,
             ownerLicenses: w.ownerLicenses,
-            guestCount: w.guestCount,
+            guestCount: 0,
             created_at: w.created_at,
             is_blocked: w.is_blocked,
             workspaces: []
-          })
-        }
-        clientsMap.get(w.owner_id).workspaces.push(w)
+         }
+         clientsMap.set(w.owner_id, client)
+      }
+      
+      client.workspaces.push(w)
+      client.guestCount += (w.guestCount || 0)
+      if (w.created_at && (!client.created_at || client.created_at === new Date().toISOString())) {
+        client.created_at = w.created_at // Use oldest workspace date or profile date
       }
     })
-    return Array.from(clientsMap.values())
-  }, [mappedWorkspaces, searchQuery, statusFilter, clientTypeFilter])
+
+    const result: any[] = []
+    
+    clientsMap.forEach(client => {
+      const matchesSearch =
+        client.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        client.ownerEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        client.workspaces.some((w: any) => 
+          w.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+          w.slug.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'active' && !client.is_blocked) ||
+        (statusFilter === 'blocked' && client.is_blocked) ||
+        (statusFilter === 'registered' && client.ownerLicenses === 0)
+
+      const matchesType = 
+        clientTypeFilter === 'PRO' ? client.ownerLicenses > 0 : client.ownerLicenses === 0
+
+      if (matchesSearch && matchesStatus && matchesType) {
+        result.push(client)
+      }
+    })
+    
+    return result
+  }, [mappedWorkspaces, clientProfiles, searchQuery, statusFilter, clientTypeFilter])
 
   const handleToggleBlock = (ownerId: string, isBlocked: boolean, clientName: string) => {
     setWorkspaceToBlock({ id: ownerId, isBlocked, name: clientName })
