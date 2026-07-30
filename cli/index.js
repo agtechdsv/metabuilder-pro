@@ -527,6 +527,8 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           
           if (dbType === 'oracle') {
             sql = sql.replace(/\$(\d+)/g, ':$1');
+            // Converte identificadores entre aspas para UPPERCASE, comportamento padrão do Oracle
+            sql = sql.replace(/"([a-zA-Z0-9_]+)"/g, (m, p1) => `"${p1.toUpperCase()}"`);
           }
 
           console.log(chalk.gray(`[ SQL ] Executando: ${sql}`));
@@ -657,6 +659,11 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             if (whereClause) sql += whereClause;
           }
 
+          if (dbType === 'oracle') {
+            sql = sql.replace(/\$(\d+)/g, ':$1');
+            sql = sql.replace(/"([a-zA-Z0-9_]+)"/g, (m, p1) => `"${p1.toUpperCase()}"`);
+          }
+
           console.log(chalk.cyan(`[ SQL ] Executando COUNT: ${sql}`));
           
           if (dbType === 'oracle') {
@@ -673,6 +680,10 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           result.totalRows = totalRows; // We will extract this at the end
         } else if (action === 'raw_sql') {
           sql = payload.payload.query;
+          if (dbType === 'oracle') {
+            sql = sql.replace(/\$(\d+)/g, ':$1');
+            sql = sql.replace(/"([a-zA-Z0-9_]+)"/g, (m, p1) => `"${p1.toUpperCase()}"`);
+          }
           console.log(chalk.cyan(`[ SQL ] Executando RAW SQL: ${sql}`));
           
           if (dbType === 'oracle') {
