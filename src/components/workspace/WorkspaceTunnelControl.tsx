@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Settings, Play, Square, RefreshCw, AlertCircle, Network, FileJson, Save, X } from 'lucide-react'
+import { Settings, Play, Square, RefreshCw, AlertCircle, Network, FileJson, Save, X, AlertTriangle } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { isTauri } from '@/utils/tauriUtils'
 import Link from 'next/link'
@@ -24,6 +24,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false)
   const [configContent, setConfigContent] = useState('')
   const [isSavingConfig, setIsSavingConfig] = useState(false)
+  const [hasProjects, setHasProjects] = useState<boolean | null>(null)
 
   const defaultTemplate = `{
   "connections": [
@@ -72,6 +73,8 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
         const supabase = createClient()
         
         const { data: projectsData } = await supabase.from('projects').select('id, name, secret_token')
+        
+        setHasProjects(projectsData && projectsData.length > 0)
 
         if (projectsData && projectsData.length > 0) {
           let currentConfig = JSON.parse(configText)
@@ -461,7 +464,16 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                 />
               </div>
               
-              <div className="p-4 bg-white dark:bg-neutral-900 flex justify-end gap-3 shrink-0">
+              {hasProjects === false && (
+                <div className="px-5 py-3 bg-amber-500/10 border-t border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs flex items-start gap-2 shrink-0">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <p>
+                    <strong>Dica:</strong> Se você gerar um projeto antes de editar esta configuração, algumas propriedades como o <code>projectId</code> e o <code>secretToken</code> já virão preenchidas automaticamente para você, facilitando bastante o processo!
+                  </p>
+                </div>
+              )}
+
+              <div className="p-4 bg-white dark:bg-neutral-900 flex justify-end gap-3 shrink-0 border-t border-neutral-200 dark:border-neutral-800">
                 <button
                   onClick={() => setIsConfigModalOpen(false)}
                   className="px-6 py-2.5 rounded-xl font-bold text-sm text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
