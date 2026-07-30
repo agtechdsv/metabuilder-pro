@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Unlock, Lock, Trash2, AlertTriangle, Loader2 } from 'lucide-react'
+import { Search, Unlock, Lock, Trash2, AlertTriangle, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Modal } from '@/components/ui/Modal'
 import { useClientsAdmin } from '../hooks/useClientsAdmin'
@@ -33,6 +33,17 @@ export function ClientsTab({ hook }: ClientsTabProps) {
     handleDeleteClient,
     handleConfirmDeleteClient
   } = hook
+
+  const [expandedOwners, setExpandedOwners] = useState<Set<string>>(new Set())
+
+  const toggleExpand = (ownerId: string) => {
+    setExpandedOwners(prev => {
+      const next = new Set(prev)
+      if (next.has(ownerId)) next.delete(ownerId)
+      else next.add(ownerId)
+      return next
+    })
+  }
 
   return (
     <>
@@ -119,79 +130,164 @@ export function ClientsTab({ hook }: ClientsTabProps) {
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-850/60">
                 {filteredClients.length > 0 ? (
                   filteredClients.map(client => (
-                    <tr key={client.ownerId} className="text-xs text-neutral-700 dark:text-neutral-350 hover:bg-neutral-50/50 dark:hover:bg-neutral-950/20 transition-all">
-                      <td className="px-6 py-4.5">
-                        <div>
-                          <span className="font-bold text-neutral-800 dark:text-neutral-200">{client.ownerName}</span>
-                          <span className="block text-[10px] text-neutral-400 mt-0.5">{client.ownerEmail}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4.5 font-mono font-bold text-xs">
-                        {client.ownerLicenses > 0 ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400">
-                            {client.ownerLicenses} Contratada(s) / {1 + client.guestCount} Consumida(s)
-                          </span>
-                        ) : (
-                          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-neutral-100 text-neutral-500 dark:bg-neutral-800">
-                            Gratuito
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4.5 group relative">
-                        <span className="font-bold cursor-default px-3 py-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
-                          {client.workspaces.length}
-                        </span>
-                        <div className="absolute left-6 bottom-full mb-2 hidden group-hover:flex flex-col bg-neutral-900 text-white text-[10px] p-2 rounded z-10 w-max shadow-xl border border-neutral-800">
-                          {client.workspaces.map((w: any) => (
-                            <span key={w.id} className="whitespace-nowrap px-1 py-0.5">{w.name} (/{w.slug})</span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4.5 text-neutral-400">
-                        {new Date(client.created_at).toLocaleDateString('pt-BR')}
-                      </td>
-                      <td className="px-6 py-4.5 text-center">
-                        <span className={cn(
-                          "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
-                          client.is_blocked
-                            ? "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400"
-                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-450"
-                        )}>
-                          {client.is_blocked ? 'Bloqueado' : 'Ativo'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4.5 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {client.is_blocked ? (
-                            <button
-                              type="button"
-                              onClick={() => handleToggleBlock(client.ownerId, false, client.ownerName)}
-                              className="px-3 py-1.5 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 shrink-0"
-                            >
-                              <Unlock className="w-3.5 h-3.5" />
-                              <span>Ativar</span>
-                            </button>
+                    <React.Fragment key={client.ownerId}>
+                      <tr className="text-xs text-neutral-700 dark:text-neutral-350 hover:bg-neutral-50/50 dark:hover:bg-neutral-950/20 transition-all">
+                        <td className="px-6 py-4.5">
+                          <div className="flex items-center gap-2">
+                            {client.teamMembers && client.teamMembers.length > 0 ? (
+                              <button 
+                                onClick={() => toggleExpand(client.ownerId)}
+                                className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded transition-colors text-neutral-400"
+                              >
+                                {expandedOwners.has(client.ownerId) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                              </button>
+                            ) : (
+                              <div className="w-6" /> // Placeholder to align texts
+                            )}
+                            <div>
+                              <span className="font-bold text-neutral-800 dark:text-neutral-200">{client.ownerName}</span>
+                              <span className="block text-[10px] text-neutral-400 mt-0.5">{client.ownerEmail}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4.5 font-mono font-bold text-xs">
+                          {client.ownerLicenses > 0 ? (
+                            <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400">
+                              {client.ownerLicenses} Contratada(s) / {1 + client.guestCount} Consumida(s)
+                            </span>
                           ) : (
+                            <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-neutral-100 text-neutral-500 dark:bg-neutral-800">
+                              Gratuito
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4.5 group relative">
+                          <span className="font-bold cursor-default px-3 py-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
+                            {client.workspaces.length}
+                          </span>
+                          <div className="absolute left-6 bottom-full mb-2 hidden group-hover:flex flex-col bg-neutral-900 text-white text-[10px] p-2 rounded z-10 w-max shadow-xl border border-neutral-800">
+                            {client.workspaces.map((w: any) => (
+                              <span key={w.id} className="whitespace-nowrap px-1 py-0.5">{w.name} (/{w.slug})</span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4.5 text-neutral-400">
+                          {new Date(client.created_at).toLocaleDateString('pt-BR')}
+                        </td>
+                        <td className="px-6 py-4.5 text-center">
+                          <span className={cn(
+                            "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
+                            client.is_blocked
+                              ? "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400"
+                              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-450"
+                          )}>
+                            {client.is_blocked ? 'Bloqueado' : 'Ativo'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4.5 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {client.is_blocked ? (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleBlock(client.ownerId, false, client.ownerName)}
+                                className="px-3 py-1.5 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 shrink-0"
+                              >
+                                <Unlock className="w-3.5 h-3.5" />
+                                <span>Ativar</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleBlock(client.ownerId, true, client.ownerName)}
+                                className="px-3 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 shrink-0"
+                              >
+                                <Lock className="w-3.5 h-3.5" />
+                                <span>Bloquear</span>
+                              </button>
+                            )}
                             <button
                               type="button"
-                              onClick={() => handleToggleBlock(client.ownerId, true, client.ownerName)}
-                              className="px-3 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 shrink-0"
+                              onClick={() => handleDeleteClient(client.ownerName, client.ownerId, client.ownerEmail)}
+                              className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 text-neutral-500 rounded-lg transition-all flex items-center gap-1.5 font-black text-[9px] uppercase tracking-wider shrink-0"
                             >
-                              <Lock className="w-3.5 h-3.5" />
-                              <span>Bloquear</span>
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Excluir</span>
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteClient(client.ownerName, client.ownerId, client.ownerEmail)}
-                            className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 text-neutral-500 rounded-lg transition-all flex items-center gap-1.5 font-black text-[9px] uppercase tracking-wider shrink-0"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Excluir</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedOwners.has(client.ownerId) && client.teamMembers && (
+                        <tr className="bg-neutral-50/30 dark:bg-neutral-900/20 border-b border-neutral-100 dark:border-neutral-850">
+                          <td colSpan={6} className="px-0 py-0">
+                            <div className="pl-14 pr-6 py-3">
+                              <table className="w-full text-left">
+                                <tbody className="divide-y divide-neutral-100/50 dark:divide-neutral-850/50">
+                                  {client.teamMembers.map((guest: any) => (
+                                    <tr key={guest.ownerId} className="text-xs text-neutral-600 dark:text-neutral-400">
+                                      <td className="py-2.5 w-1/3">
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-700" />
+                                          <div>
+                                            <span className="font-bold text-neutral-700 dark:text-neutral-300">{guest.ownerName}</span>
+                                            <span className="block text-[10px] text-neutral-400">{guest.ownerEmail}</span>
+                                          </div>
+                                        </div>
+                                      </td>
+                                      <td className="py-2.5">
+                                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-neutral-100 text-neutral-500 dark:bg-neutral-800">
+                                          Guest
+                                        </span>
+                                      </td>
+                                      <td className="py-2.5 text-center">
+                                        <span className={cn(
+                                          "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
+                                          guest.is_blocked
+                                            ? "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400"
+                                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-450"
+                                        )}>
+                                          {guest.is_blocked ? 'Bloqueado' : 'Ativo'}
+                                        </span>
+                                      </td>
+                                      <td className="py-2.5 text-right">
+                                        <div className="flex items-center justify-end gap-2">
+                                          {guest.is_blocked ? (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleToggleBlock(guest.ownerId, false, guest.ownerName)}
+                                              className="px-2 py-1 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1 shrink-0"
+                                            >
+                                              <Unlock className="w-3 h-3" />
+                                              <span>Ativar</span>
+                                            </button>
+                                          ) : (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleToggleBlock(guest.ownerId, true, guest.ownerName)}
+                                              className="px-2 py-1 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1 shrink-0"
+                                            >
+                                              <Lock className="w-3 h-3" />
+                                              <span>Bloquear</span>
+                                            </button>
+                                          )}
+                                          <button
+                                            type="button"
+                                            onClick={() => handleDeleteClient(guest.ownerName, guest.ownerId, guest.ownerEmail)}
+                                            className="px-2 py-1 bg-neutral-100 dark:bg-neutral-800 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 text-neutral-500 rounded transition-all flex items-center gap-1 font-black text-[9px] uppercase tracking-wider shrink-0"
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                            <span>Excluir</span>
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))
                 ) : (
                   <tr>

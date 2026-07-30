@@ -5,6 +5,8 @@ import { toggleClientBlock, deleteClientAdmin } from '@/app/actions/admin'
 export function useClientsAdmin(
   mappedWorkspaces: any[],
   clientProfiles: any[],
+  workspaceMembers: any[],
+  ownerGuests: any[],
   setWorkspaces: React.Dispatch<React.SetStateAction<any[]>>,
   setClientProfiles: React.Dispatch<React.SetStateAction<any[]>>
 ) {
@@ -69,9 +71,53 @@ export function useClientsAdmin(
       }
     })
 
+    // Now identify guests and nest them under their respective owners
+    const guestUserIds = new Set<string>()
+    const ownerToGuestsMap = new Map<string, Set<string>>() // ownerId -> Set of guest userIds
+
+    // Process workspaceMembers
+    workspaceMembers.forEach(m => {
+      const workspace = mappedWorkspaces.find(w => w.id === m.workspace_id)
+      if (workspace && workspace.owner_id !== m.user_id) {
+        guestUserIds.add(m.user_id)
+        if (!ownerToGuestsMap.has(workspace.owner_id)) {
+          ownerToGuestsMap.set(workspace.owner_id, new Set())
+        }
+        ownerToGuestsMap.get(workspace.owner_id)!.add(m.user_id)
+      }
+    })
+
+    // Process ownerGuests
+    ownerGuests.forEach(g => {
+      guestUserIds.add(g.user_id)
+      if (!ownerToGuestsMap.has(g.owner_id)) {
+        ownerToGuestsMap.set(g.owner_id, new Set())
+      }
+      ownerToGuestsMap.get(g.owner_id)!.add(g.user_id)
+    })
+
+    // Attach guests to their owners
+    clientsMap.forEach(client => {
+      client.teamMembers = []
+      const guestIds = ownerToGuestsMap.get(client.ownerId)
+      if (guestIds) {
+        guestIds.forEach(guestId => {
+          const guestProfile = clientsMap.get(guestId)
+          if (guestProfile && guestProfile.workspaces.length === 0) {
+            client.teamMembers.push(guestProfile)
+          }
+        })
+      }
+    })
+
     const result: any[] = []
     
     clientsMap.forEach(client => {
+      // Skip top-level rendering for guests who don't own any workspace
+      if (client.workspaces.length === 0 && guestUserIds.has(client.ownerId)) {
+        return
+      }
+
       const matchesSearch =
         client.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         client.ownerEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -95,7 +141,7 @@ export function useClientsAdmin(
     })
     
     return result
-  }, [mappedWorkspaces, clientProfiles, searchQuery, statusFilter, clientTypeFilter])
+  }, [mappedWorkspaces, clientProfiles, workspaceMembers, ownerGuests, searchQuery, statusFilter, clientTypeFilter])
 
   const handleToggleBlock = (ownerId: string, isBlocked: boolean, clientName: string) => {
     setWorkspaceToBlock({ id: ownerId, isBlocked, name: clientName })
