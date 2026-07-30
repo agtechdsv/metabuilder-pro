@@ -418,12 +418,21 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
                   } else {
                     if (Array.isArray(value)) {
                       const placeholders = value.map((_, idx) => `$${i + idx}`);
-                      conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) IN (${placeholders.join(', ')})`);
+                      if (dbType === 'oracle') {
+                        conditions.push(`TO_CHAR("${tablePart}"."${columnPart}") IN (${placeholders.join(', ')})`);
+                      } else {
+                        conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) IN (${placeholders.join(', ')})`);
+                      }
                       params.push(...value);
                       i += value.length;
                     } else {
-                      conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) ILIKE $${i}`);
-                      params.push(`%${value}%`);
+                      if (dbType === 'oracle') {
+                        conditions.push(`UPPER(TO_CHAR("${tablePart}"."${columnPart}")) LIKE UPPER(:${i})`);
+                        params.push(`%${value}%`);
+                      } else {
+                        conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) ILIKE $${i}`);
+                        params.push(`%${value}%`);
+                      }
                       i++;
                     }
                   }
@@ -626,7 +635,11 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
                       i++;
                     }
                   } else {
-                    conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) ILIKE $${i}`);
+                    if (dbType === 'oracle') {
+                      conditions.push(`UPPER(TO_CHAR("${tablePart}"."${columnPart}")) LIKE UPPER(:${i})`);
+                    } else {
+                      conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) ILIKE $${i}`);
+                    }
                     params.push(`%${value}%`);
                     i++;
                   }
