@@ -67,10 +67,13 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
       if (payload.payload?.queryId === 'fetch_distinct_enum') {
         const results = payload.payload.data || []
         if (results.length > 0) {
-          const newValues = results.map((r: any) => ({
-            value: String(r.value),
-            description: String(r.value)
-          }))
+          const newValues = results.map((r: any) => {
+            const val = r.value !== undefined ? r.value : (r.VALUE !== undefined ? r.VALUE : r.Value);
+            return {
+              value: String(val),
+              description: String(val)
+            };
+          })
           setEditingEnum(prev => prev ? { ...prev, values: newValues } : null)
           toast(t('dashboard.projects.studio.enums.import_success').replace('{count}', String(results.length)), 'success')
         } else {
@@ -108,7 +111,7 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
       event: 'sql_query',
       payload: {
         queryId: 'fetch_distinct_enum',
-        action: 'select',
+        action: 'raw_sql',
         query: query,
         token: project.secret_token,
         schemaName: model.db_schema_name || 'public'
