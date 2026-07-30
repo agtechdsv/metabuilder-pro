@@ -11,6 +11,7 @@ export function useClientsAdmin(
 
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'blocked' | 'registered'>('all')
+  const [clientTypeFilter, setClientTypeFilter] = useState<'PRO' | 'FREE'>('PRO')
 
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false)
   const [workspaceToBlock, setWorkspaceToBlock] = useState<{ id: string, isBlocked: boolean, name: string } | null>(null)
@@ -33,11 +34,14 @@ export function useClientsAdmin(
 
       const matchesStatus =
         statusFilter === 'all' ||
-        (statusFilter === 'active' && !w.is_blocked && w.ownerLicenses > 0) ||
+        (statusFilter === 'active' && !w.is_blocked) ||
         (statusFilter === 'blocked' && w.is_blocked) ||
         (statusFilter === 'registered' && w.ownerLicenses === 0)
 
-      if (matchesSearch && matchesStatus) {
+      const matchesType = 
+        clientTypeFilter === 'PRO' ? w.ownerLicenses > 0 : w.ownerLicenses === 0
+
+      if (matchesSearch && matchesStatus && matchesType) {
         if (!clientsMap.has(w.owner_id)) {
           clientsMap.set(w.owner_id, {
             ownerId: w.owner_id,
@@ -54,7 +58,7 @@ export function useClientsAdmin(
       }
     })
     return Array.from(clientsMap.values())
-  }, [mappedWorkspaces, searchQuery, statusFilter])
+  }, [mappedWorkspaces, searchQuery, statusFilter, clientTypeFilter])
 
   const handleToggleBlock = (ownerId: string, isBlocked: boolean, clientName: string) => {
     setWorkspaceToBlock({ id: ownerId, isBlocked, name: clientName })
@@ -117,6 +121,8 @@ export function useClientsAdmin(
     setClientToDelete,
     isDeletingClient,
     filteredClients,
+    clientTypeFilter,
+    setClientTypeFilter,
     handleToggleBlock,
     handleConfirmToggleBlock,
     handleDeleteClient,

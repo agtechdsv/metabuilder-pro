@@ -26,6 +26,8 @@ export function ClientsTab({ hook }: ClientsTabProps) {
     setClientToDelete,
     isDeletingClient,
     filteredClients,
+    clientTypeFilter,
+    setClientTypeFilter,
     handleToggleBlock,
     handleConfirmToggleBlock,
     handleDeleteClient,
@@ -55,7 +57,26 @@ export function ClientsTab({ hook }: ClientsTabProps) {
             />
           </div>
 
-          <div className="flex gap-1 bg-neutral-100 dark:bg-neutral-950 p-1 rounded-xl w-full sm:w-auto justify-center">
+          <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap justify-end">
+            <div className="flex gap-1 bg-neutral-100 dark:bg-neutral-950 p-1 rounded-xl">
+              {(['PRO', 'FREE'] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setClientTypeFilter(type)}
+                  className={cn(
+                    "px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all capitalize",
+                    clientTypeFilter === type
+                      ? 'bg-white dark:bg-neutral-850 text-indigo-500 dark:text-indigo-400 shadow-sm'
+                      : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'
+                  )}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-1 bg-neutral-100 dark:bg-neutral-950 p-1 rounded-xl">
             {(['all', 'active', 'blocked', 'registered'] as const).map((filter) => (
               <button
                 key={filter}
@@ -77,6 +98,7 @@ export function ClientsTab({ hook }: ClientsTabProps) {
                       : 'Cadastrados'}
               </button>
             ))}
+            </div>
           </div>
         </div>
 
