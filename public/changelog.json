@@ -1,4 +1,19 @@
 {
+  "v1.0.4": {
+    "date": "2026-07-30",
+    "pt": [
+      "Melhoria de desempenho e estabilidade nas buscas e filtros da plataforma, garantindo resultados mais ágeis e precisos.",
+      "Otimização na compatibilidade do sistema, assegurando maior confiabilidade e fluidez na consulta de dados em ambientes corporativos."
+    ],
+    "en": [
+      "Performance and stability enhancements for platform searches and filters, delivering faster and more accurate results.",
+      "System compatibility optimizations, ensuring greater reliability and seamless data querying across enterprise environments."
+    ],
+    "es": [
+      "Mejora de rendimiento y estabilidad en las búsquedas y filtros de la plataforma, garantizando resultados más rápidos y precisos.",
+      "Optimización en la compatibilidad del sistema, asegurando mayor confiabilidad y fluidez en la consulta de datos para entornos corporativos."
+    ]
+  },
   "v1.0.3": {
     "date": "2026-07-30",
     "pt": [
