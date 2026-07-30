@@ -328,9 +328,16 @@ export function useDetailData({
     
     const seen = new Set()
     return allDetails.filter(d => {
-      const duplicate = seen.has(d.id || d.ID)
-      if (d.id || d.ID) seen.add(d.id || d.ID)
-      return !duplicate
+      // Use model_name + id as composite key to avoid false duplicates
+      // when different tables share the same numeric ID (common in Oracle/SQL Server)
+      const rawId = d.id ?? d.ID
+      const compositeKey = rawId !== undefined && rawId !== null
+        ? `${d.model_name || ''}:${rawId}`
+        : null
+      if (!compositeKey) return true
+      if (seen.has(compositeKey)) return false
+      seen.add(compositeKey)
+      return true
     })
   }
 
