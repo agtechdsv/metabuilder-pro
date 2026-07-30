@@ -34,6 +34,7 @@ export function useClientsAdmin(
         ownerName: p.full_name || 'Sem nome',
         ownerEmail: p.email || 'Sem e-mail',
         ownerLicenses: p.subscription_licenses || 0,
+        subscription_tier: p.subscription_tier || 'free',
         guestCount: 0,
         created_at: p.created_at || new Date().toISOString(), // Fallback if missing
         is_blocked: p.is_blocked || false,
@@ -52,6 +53,7 @@ export function useClientsAdmin(
             ownerName: w.ownerName,
             ownerEmail: w.ownerEmail,
             ownerLicenses: w.ownerLicenses,
+            subscription_tier: w.subscription_tier || 'free',
             guestCount: 0,
             created_at: w.created_at,
             is_blocked: w.is_blocked,
@@ -82,10 +84,10 @@ export function useClientsAdmin(
         statusFilter === 'all' ||
         (statusFilter === 'active' && !client.is_blocked) ||
         (statusFilter === 'blocked' && client.is_blocked) ||
-        (statusFilter === 'registered' && client.ownerLicenses === 0)
+        (statusFilter === 'registered' && client.subscription_tier !== 'pro')
 
       const matchesType = 
-        clientTypeFilter === 'PRO' ? client.ownerLicenses > 0 : client.ownerLicenses === 0
+        clientTypeFilter === 'PRO' ? client.subscription_tier === 'pro' : client.subscription_tier !== 'pro'
 
       if (matchesSearch && matchesStatus && matchesType) {
         result.push(client)

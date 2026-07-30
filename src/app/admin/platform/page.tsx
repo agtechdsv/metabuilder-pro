@@ -72,7 +72,7 @@ export default async function PlatformAdminPage() {
   // Active Profiles
   const { data: profiles } = await adminSupabase
     .from('profiles')
-    .select('id, email, full_name, is_super_admin, subscription_licenses, is_blocked')
+    .select('id, email, full_name, is_super_admin, subscription_licenses, is_blocked, subscription_tier')
 
 
 

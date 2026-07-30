@@ -50,6 +50,7 @@ interface Profile {
   full_name: string | null
   is_super_admin?: boolean | null
   subscription_licenses?: number | null
+  subscription_tier?: string | null
 }
 
 interface Payment {
@@ -161,6 +162,7 @@ export default function PlatformAdminClient({
         ownerEmail: ownerProfile?.email || 'Sem e-mail',
         ownerIsSuperAdmin: ownerProfile?.is_super_admin || false,
         ownerLicenses: ownerProfile?.subscription_licenses || 0,
+        subscription_tier: ownerProfile?.subscription_tier || 'free',
         is_blocked: ownerProfile?.is_blocked || false,
         planPrice,
         guestCount
