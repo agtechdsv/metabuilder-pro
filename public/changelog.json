@@ -1,4 +1,19 @@
 {
+  "v1.0.7": {
+    "date": "2026-07-31",
+    "pt": [
+      "Melhoria na compatibilidade com bancos de dados Oracle, garantindo maior estabilidade e precisão ao realizar consultas e filtragens de dados nos túneis de integração.",
+      "Aprimoramentos de desempenho e estabilidade geral na plataforma para uma experiência mais fluida."
+    ],
+    "en": [
+      "Enhanced compatibility with Oracle databases, ensuring greater stability and accuracy when querying and filtering data through integration tunnels.",
+      "General performance and stability enhancements across the platform for a smoother user experience."
+    ],
+    "es": [
+      "Compatibilidad mejorada con bases de datos Oracle, garantizando mayor estabilidad y precisión al consultar y filtrar datos a través de los túneles de integración.",
+      "Mejoras generales de rendimiento y estabilidad en toda la plataforma para una experiencia más fluida."
+    ]
+  },
   "v1.0.6": {
     "date": "2026-07-31",
     "pt": [
