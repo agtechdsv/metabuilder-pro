@@ -130,6 +130,7 @@ export function FileUploaderInput({
 
   // For 'any' type, we dynamically check if the value is an image to render the preview
   const renderAsImage = isImageMode || (isAnyMode && (value?.startsWith('data:image/') || !!value?.match(/\.(jpeg|jpg|gif|png|webp)($|\?)/i)))
+  const isPdf = value?.startsWith('data:application/pdf') || !!value?.match(/\.pdf($|\?)/i)
 
   return (
     <div className="w-full space-y-2">
@@ -181,10 +182,24 @@ export function FileUploaderInput({
             placeholder={isImageMode ? "https://exemplo.com/imagem.jpg" : isAnyMode ? "https://exemplo.com/arquivo" : "https://exemplo.com/documento.pdf"}
             className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
           />
-          {hasValue && isUrl && renderAsImage && (
+          {hasValue && isUrl && (
             <div className="relative w-full h-40 bg-neutral-100 dark:bg-neutral-900 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={value} alt="Preview" className="w-full h-full object-contain" />
+              {renderAsImage ? (
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={value} alt="Preview" className="w-full h-full object-contain" />
+              ) : (
+                <div className={cn("flex flex-col items-center justify-center p-8 w-full h-full", isPdf ? "bg-red-50/50 dark:bg-red-950/20" : "")}>
+                  <div className={cn(
+                    "w-12 h-12 rounded-full flex items-center justify-center mb-3",
+                    isPdf ? "bg-red-100 dark:bg-red-900/30 text-red-500" : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600"
+                  )}>
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-bold text-neutral-700 dark:text-neutral-300 truncate w-full text-center px-4">
+                    {isPdf ? 'Documento PDF' : 'Documento Externo'} (URL)
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -230,12 +245,15 @@ export function FileUploaderInput({
                   <img src={value} alt="Preview Base64" className="max-w-full max-h-full object-contain rounded-lg shadow-sm" />
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center p-8">
-                  <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full flex items-center justify-center mb-3">
+                <div className={cn("flex flex-col items-center justify-center p-8 w-full h-full", isPdf ? "bg-red-50/50 dark:bg-red-950/20" : "")}>
+                  <div className={cn(
+                    "w-12 h-12 rounded-full flex items-center justify-center mb-3",
+                    isPdf ? "bg-red-100 dark:bg-red-900/30 text-red-500" : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600"
+                  )}>
                     <FileText className="w-6 h-6" />
                   </div>
                   <p className="text-sm font-bold text-neutral-700 dark:text-neutral-300 truncate w-full text-center px-4">
-                    Documento Anexado (Base64)
+                    {isPdf ? 'Documento PDF Anexado' : 'Documento Anexado'} (Base64)
                   </p>
                   <p className="text-[10px] font-mono text-neutral-500 mt-2 bg-white dark:bg-neutral-800 px-2 py-1 rounded">
                     {(value.length / 1024).toFixed(1)} KB

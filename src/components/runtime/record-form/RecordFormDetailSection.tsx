@@ -653,7 +653,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                       <FileUploaderInput
                                         value={rawValue || ''}
                                         onChange={handleInlineChange}
-                                        type={type as any}
+                                        type={type === 'image_uploader' ? 'image' : type === 'document_uploader' ? 'document' : 'any'}
                                         disabled={isInlineDisabled}
                                       />
                                     </div>
