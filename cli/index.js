@@ -548,7 +548,20 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             sql = sql.replace(/"([a-zA-Z0-9_]+)"/g, (m, p1) => `"${p1.toUpperCase()}"`);
           }
 
-          console.log(chalk.gray(`[ SQL ] Executando: ${sql}`));
+          // ── DIAGNOSTIC: log SQL + params + DBeaver-ready version ──────────────
+          console.log(`[ SQL ] Executando: ${sql}`);
+          console.log(`[ SQL ] Params: ${JSON.stringify(params)}`);
+          if (dbType === 'oracle' && params && params.length > 0) {
+            // Monta SQL pronto para colar no DBeaver/SQL*Plus (valores inline)
+            let debugSql = sql;
+            params.forEach((val, idx) => {
+              const placeholder = `:${idx + 1}`;
+              const inlineVal = typeof val === 'string' ? `'${val}'` : (val === null || val === undefined ? 'NULL' : String(val));
+              debugSql = debugSql.replace(placeholder, inlineVal);
+            });
+            console.log(`[ DBeaver SQL ] Copie e cole no DBeaver: ${debugSql}`);
+          }
+          // ─────────────────────────────────────────────────────────────────────
           if (dbType === 'oracle') {
             const oraRes = await oracleConnection.execute(sql, params, { outFormat: oracledb.OUT_FORMAT_OBJECT });
             result = { rows: oraRes.rows };
