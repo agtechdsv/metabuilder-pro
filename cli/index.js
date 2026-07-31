@@ -1254,12 +1254,25 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           throw new Error('Ação não suportada');
         }
 
+        // Função segura para remover referências circulares de LOBs e objetos complexos do Oracle
+        const getSafeData = (data) => {
+          if (!data) return data;
+          const cache = new Set();
+          return JSON.parse(JSON.stringify(data, (key, value) => {
+            if (typeof value === 'object' && value !== null) {
+              if (cache.has(value)) return '[Objeto Complexo/LOB]';
+              cache.add(value);
+            }
+            return value;
+          }));
+        };
+
         // Envia o resultado de volta para o cliente (Next.js)
         const responsePayload = {
           queryId,
           success: true,
           action: action,
-          data: result.rows,
+          data: getSafeData(result.rows),
           rowsAffected: result.rowsAffected
         };
         
