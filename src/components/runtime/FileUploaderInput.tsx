@@ -24,6 +24,7 @@ export function FileUploaderInput({
   const [activeTab, setActiveTab] = useState<'upload' | 'url'>('upload')
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [imageError, setImageError] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isImageMode = type === 'image'
@@ -32,6 +33,7 @@ export function FileUploaderInput({
 
   const handleFile = (file: File) => {
     setError(null)
+    setImageError(false)
     
     // Check size
     if (file.size > maxSizeMB * 1024 * 1024) {
@@ -121,6 +123,7 @@ export function FileUploaderInput({
   const clearValue = () => {
     onChange('')
     setError(null)
+    setImageError(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -184,10 +187,10 @@ export function FileUploaderInput({
           />
           {hasValue && isUrl && (
             <div className="relative w-full h-40 bg-neutral-100 dark:bg-neutral-900 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800">
-              {renderAsImage ? (
+              {renderAsImage && !imageError ? (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={value} alt="Preview" className="w-full h-full object-contain" />
+                  <img src={value} alt="Preview" className="w-full h-full object-contain" onError={() => setImageError(true)} />
                 </>
               ) : (
                 <div className={cn("flex flex-col items-center justify-center p-8 w-full h-full", isPdf ? "bg-red-50/50 dark:bg-red-950/20" : "")}>
@@ -241,10 +244,10 @@ export function FileUploaderInput({
             </div>
           ) : (
             <div className="relative w-full border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden bg-neutral-50 dark:bg-neutral-900">
-              {renderAsImage && isBase64 ? (
+              {renderAsImage && isBase64 && !imageError ? (
                 <div className="relative h-40 w-full flex items-center justify-center bg-black/5 p-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={value} alt="Preview Base64" className="max-w-full max-h-full object-contain rounded-lg shadow-sm" />
+                  <img src={value} alt="Preview Base64" className="max-w-full max-h-full object-contain rounded-lg shadow-sm" onError={() => setImageError(true)} />
                 </div>
               ) : (
                 <div className={cn("flex flex-col items-center justify-center p-8 w-full h-full", isPdf ? "bg-red-50/50 dark:bg-red-950/20" : "")}>
