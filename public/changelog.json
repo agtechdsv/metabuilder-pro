@@ -1,4 +1,19 @@
 {
+  "v1.0.5": {
+    "date": "2026-07-31",
+    "pt": [
+      "Aumento da precisão de dados: correção na identificação de itens detalhados para evitar a exibição incorreta de registros duplicados.",
+      "Melhoria na estabilidade da plataforma: otimização no carregamento de informações para eliminar erros de consulta e garantir uma navegação mais fluida."
+    ],
+    "en": [
+      "Enhanced Data Accuracy: Fixed detail view tracking to prevent unique items from being incorrectly identified as duplicates.",
+      "Improved System Stability: Optimized data query processing to eliminate unexpected errors and ensure seamless information rendering."
+    ],
+    "es": [
+      "Mayor precisión de datos: corrección en la identificación de detalles para evitar que registros únicos se muestren como duplicados.",
+      "Mejora en la estabilidad de la plataforma: optimización en las consultas para eliminar errores inesperados y garantizar una navegación más fluida."
+    ]
+  },
   "v1.0.4": {
     "date": "2026-07-30",
     "pt": [
