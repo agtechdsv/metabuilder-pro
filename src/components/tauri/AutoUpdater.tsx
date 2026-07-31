@@ -67,6 +67,7 @@ export function AutoUpdater() {
 
     try {
       await import('@tauri-apps/api/core').then(m => m.invoke('stopcli')).catch(() => {});
+                                    await new Promise(r => setTimeout(r, 1500)); // Aguarda o SO liberar o arquivo
                                     await updateInfo.downloadAndInstall((event) => {
         switch (event.event) {
           case 'Started':

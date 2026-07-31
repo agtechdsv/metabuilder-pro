@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import FormulaBuilder from '../../../FormulaBuilder'
 import {
@@ -89,9 +89,9 @@ export function StepActions({ config, setConfig, models, useCases, isDownloadsAc
         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.action_interface_label')}</label>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
+            { id: 'page', title: t('wizard.actions.interface_options.page_title'), desc: t('wizard.actions.interface_options.page_desc'), icon: Layout },
             { id: 'drawer', title: t('wizard.actions.interface_options.drawer_title'), desc: t('wizard.actions.interface_options.drawer_desc'), icon: Layout },
-            { id: 'modal', title: t('wizard.actions.interface_options.modal_title'), desc: t('wizard.actions.interface_options.modal_desc'), icon: Maximize2 },
-            { id: 'page', title: t('wizard.actions.interface_options.page_title'), desc: t('wizard.actions.interface_options.page_desc'), icon: Layout }
+            { id: 'modal', title: t('wizard.actions.interface_options.modal_title'), desc: t('wizard.actions.interface_options.modal_desc'), icon: Maximize2 }
           ].map(opt => (
             <button
               key={opt.id}
@@ -101,7 +101,7 @@ export function StepActions({ config, setConfig, models, useCases, isDownloadsAc
               })}
               className={cn(
                 "p-6 rounded-[2rem] border-2 text-left transition-all relative group overflow-hidden",
-                (config.layout_config.action_interface_type || 'drawer') === opt.id
+                (config.layout_config.action_interface_type || 'page') === opt.id
                   ? 'border-indigo-600 bg-indigo-600/5 shadow-xl shadow-indigo-500/10'
                   : 'border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/30'
               )}
@@ -109,11 +109,11 @@ export function StepActions({ config, setConfig, models, useCases, isDownloadsAc
               <div className="flex items-center gap-4 mb-4">
                 <div className={cn(
                   "p-3 rounded-2xl transition-all",
-                  (config.layout_config.action_interface_type || 'drawer') === opt.id ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
+                  (config.layout_config.action_interface_type || 'page') === opt.id ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
                 )}>
                   <opt.icon className="w-5 h-5" />
                 </div>
-                {(config.layout_config.action_interface_type || 'drawer') === opt.id && <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center text-white"><CheckCircle2 className="w-4 h-4" /></div>}
+                {(config.layout_config.action_interface_type || 'page') === opt.id && <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center text-white"><CheckCircle2 className="w-4 h-4" /></div>}
               </div>
               <h4 className="font-bold text-base text-neutral-900 dark:text-white">{opt.title}</h4>
               <p className="text-[10px] text-neutral-400 mt-2 leading-relaxed">{opt.desc}</p>

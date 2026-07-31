@@ -208,6 +208,7 @@ export function CliFilesAdminView() {
                         const update = await check()
                         if (update) {
                           await import('@tauri-apps/api/core').then(m => m.invoke('stopcli')).catch(() => {});
+                                    await new Promise(r => setTimeout(r, 1500)); // Aguarda o SO liberar o arquivo
                                     await update.downloadAndInstall()
                         }
                       } catch (e) {
