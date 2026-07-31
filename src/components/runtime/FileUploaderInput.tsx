@@ -185,8 +185,10 @@ export function FileUploaderInput({
           {hasValue && isUrl && (
             <div className="relative w-full h-40 bg-neutral-100 dark:bg-neutral-900 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800">
               {renderAsImage ? (
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={value} alt="Preview" className="w-full h-full object-contain" />
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={value} alt="Preview" className="w-full h-full object-contain" />
+                </>
               ) : (
                 <div className={cn("flex flex-col items-center justify-center p-8 w-full h-full", isPdf ? "bg-red-50/50 dark:bg-red-950/20" : "")}>
                   <div className={cn(
