@@ -1,4 +1,19 @@
 {
+  "v1.0.9": {
+    "date": "2026-07-31",
+    "pt": [
+      "Rastreamento avançado e diagnóstico aprimorado para fluxos de integração e conexões via tunelamento com bancos de dados Oracle.",
+      "Logs de consultas SQL no CLI otimizados e prontos para execução direta no DBeaver, agilizando a depuração e a validação de dados."
+    ],
+    "en": [
+      "Advanced tracing and enhanced diagnostics for integration flows and tunneling connections with Oracle databases.",
+      "CLI SQL query logs optimized and formatted for direct execution in DBeaver, accelerating debugging and data validation."
+    ],
+    "es": [
+      "Rastreo avanzado y diagnóstico mejorado para flujos de integración y conexiones por túnel con bases de datos Oracle.",
+      "Registros de consultas SQL en CLI optimizados y listos para ejecución directa en DBeaver, agilizando la depuración y validación de datos."
+    ]
+  },
   "v1.0.8": {
     "date": "2026-07-31",
     "pt": [
