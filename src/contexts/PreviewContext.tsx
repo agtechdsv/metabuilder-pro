@@ -324,19 +324,19 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
                     >
                       <ArrowLeft className="w-4 h-4" />
                     </button>
-                    <button 
-                      onClick={handleRefresh} 
-                      className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all" 
-                      title="Atualizar Aba"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                    </button>
                   </div>
                   
                   <div className="flex-1 flex justify-center">
-                    <div className="flex items-center gap-2 bg-[#1a1b1e] border border-neutral-800 px-4 py-1.5 rounded-full w-full max-w-2xl text-xs text-neutral-400 font-mono transition-colors">
+                    <div className="flex items-center gap-2 bg-[#1a1b1e] border border-neutral-800 pl-4 pr-1 py-1 rounded-full w-full max-w-2xl text-xs text-neutral-400 font-mono transition-colors">
                       <Globe className="w-3.5 h-3.5" />
-                      <span className="truncate">{activeTab?.displayUrl}</span>
+                      <span className="truncate flex-1">{activeTab?.displayUrl}</span>
+                      <button 
+                        onClick={handleRefresh} 
+                        className="w-7 h-7 flex items-center justify-center rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all shrink-0" 
+                        title="Atualizar Aba"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
 

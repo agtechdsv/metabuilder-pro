@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { getActionContexts } from '@/lib/customActionsHelper';
 import { getActionIcon, getActionColorClasses, getFontFamily, getFontSize, applyMask, parseMaskedNumber, parseFixedOptions } from './RecordFormUtils';
 import { RecordFormField } from './RecordFormField';
+import { FileUploaderInput } from '@/components/runtime/FileUploaderInput';
 import { useI18n } from '@/i18n/I18nContext';
 
 interface RecordFormDetailSectionProps {
@@ -642,6 +643,19 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                           </label>
                                         );
                                       })}
+                                    </div>
+                                  );
+                                }
+
+                                if (['image_uploader', 'document_uploader', 'file_uploader'].includes(type)) {
+                                  return (
+                                    <div className="pt-1">
+                                      <FileUploaderInput
+                                        value={rawValue || ''}
+                                        onChange={handleInlineChange}
+                                        type={type as any}
+                                        disabled={isInlineDisabled}
+                                      />
                                     </div>
                                   );
                                 }
