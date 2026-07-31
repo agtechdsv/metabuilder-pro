@@ -531,15 +531,38 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
   })
 
   // FILTRAGEM HIERÁRQUICA: 
-  // Só mostramos como aba as tabelas que são FILHAS DIRETAS do mestre atual no array de JOINS
+  // Só mostramos como aba as tabelas que são FILHAS DIRETAS do mestre atual no array de JOINS ou via heurística
+  const effectiveJoins = Array.isArray(joins) && joins.length > 0 ? joins : (() => {
+    if (!project?.models || !masterModelName) return [];
+    const parentModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === masterModelName?.toLowerCase());
+    if (!parentModelDef) return [];
+    const heuristicJoins: any[] = [];
+    for (const childModel of project.models) {
+      if (childModel.id === parentModelDef.id) continue;
+      const fkField = childModel.fields?.find((f: any) => 
+        f.foreign_key_table === parentModelDef.db_table_name ||
+        f.db_column_name === `${parentModelDef.db_table_name}_id` ||
+        (parentModelDef.db_table_name.endsWith('s') && f.db_column_name === `${parentModelDef.db_table_name.slice(0, -1)}_id`) ||
+        (parentModelDef.db_table_name.endsWith('es') && f.db_column_name === `${parentModelDef.db_table_name.slice(0, -2)}_id`)
+      );
+      if (fkField) {
+        heuristicJoins.push({
+          from: parentModelDef.db_table_name,
+          to: childModel.db_table_name
+        });
+      }
+    }
+    return heuristicJoins;
+  })();
+
   const detailTables = Array.from(new Set(
     detailFields
       .filter((f: any) => {
         if (masterModelName && f.model_name?.toLowerCase().trim() === masterModelName?.toLowerCase().trim()) return false;
-        // Se não houver joins, mostra tudo (fallback)
-        if (!joins || joins.length === 0) return true
+        // Se não houver joins nem mesmo na heurística, mostra tudo (fallback antigo)
+        if (effectiveJoins.length === 0) return true;
         // Verifica se existe um join de masterModelName -> f.model_name
-        return joins.some((j: any) => (j.from?.toLowerCase() === masterModelName?.toLowerCase()) && j.to?.toLowerCase() === f.model_name?.toLowerCase())
+        return effectiveJoins.some((j: any) => (j.from?.toLowerCase() === masterModelName?.toLowerCase()) && j.to?.toLowerCase() === f.model_name?.toLowerCase())
       })
       .map((f: any) => f.model_name || 'Details')
   ))
