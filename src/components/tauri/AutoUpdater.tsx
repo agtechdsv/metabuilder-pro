@@ -66,7 +66,8 @@ export function AutoUpdater() {
     let contentLength = 0
 
     try {
-      await updateInfo.downloadAndInstall((event) => {
+      await import('@tauri-apps/api/core').then(m => m.invoke('stopcli')).catch(() => {});
+                                    await updateInfo.downloadAndInstall((event) => {
         switch (event.event) {
           case 'Started':
             contentLength = event.data.contentLength || 0

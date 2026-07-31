@@ -127,6 +127,7 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
                                   const { check } = await import('@tauri-apps/plugin-updater')
                                   const update = await check()
                                   if (update) {
+                                    await import('@tauri-apps/api/core').then(m => m.invoke('stopcli')).catch(() => {});
                                     await update.downloadAndInstall()
                                   }
                                 } catch (e) {

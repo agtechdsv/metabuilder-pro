@@ -52,7 +52,8 @@ export function IdeUpdaterButton() {
               const { check } = await import('@tauri-apps/plugin-updater')
               const update = await check()
               if (update?.available) {
-                await update.downloadAndInstall((event: any) => {
+                await import('@tauri-apps/api/core').then(m => m.invoke('stopcli')).catch(() => {});
+                                    await update.downloadAndInstall((event: any) => {
                   if (event.event === 'Finished') {
                     // done
                   }
