@@ -75,12 +75,17 @@ export function useDetailData({
     // 1. Fallback via Santo Graal (Banco de Dados)
     if (effectiveJoins.length === 0 && projectRelations && project.models) {
       const parentModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === parentModel?.toLowerCase())
+      console.log('[🔍 fetchDetails] Santo Graal - parentModelDef found:', !!parentModelDef, 'projectRelations count:', projectRelations.length)
       if (parentModelDef) {
         const related = projectRelations.filter((rel: any) => rel.referenced_table_id === parentModelDef.id)
+        console.log('[🔍 fetchDetails] Santo Graal - related relations:', related.length)
         const auto = related.map((rel: any) => {
           const childModel = project.models.find((m: any) => m.id === rel.foreign_table_id)
           const childField = childModel?.fields?.find((f: any) => f.id === rel.foreign_column_id)
           const parentField = parentModelDef.fields?.find((f: any) => f.id === rel.referenced_column_id)
+          if (!childModel || !childField || !parentField) {
+            console.log(`[🔍 fetchDetails] Santo Graal - missing mapping for rel ${rel.id}:`, { childModel: !!childModel, childField: !!childField, parentField: !!parentField })
+          }
           if (childModel && childField && parentField) {
             return {
               from: parentModelDef.db_table_name,
@@ -107,10 +112,17 @@ export function useDetailData({
             const fName = (f.db_column_name || '').toLowerCase();
             const pName = (parentModelDef.db_table_name || '').toLowerCase();
             const fTbl = (f.foreign_key_table || '').toLowerCase();
-            return fTbl === pName ||
-              fName === `${pName}_id` ||
-              (pName.endsWith('s') && fName === `${pName.slice(0, -1)}_id`) ||
-              (pName.endsWith('es') && fName === `${pName.slice(0, -2)}_id`);
+            const isFkTblMatch = fTbl === pName;
+            const isFNameExact = fName === `${pName}_id`;
+            const isFNameS = (pName.endsWith('s') && fName === `${pName.slice(0, -1)}_id`);
+            const isFNameEs = (pName.endsWith('es') && fName === `${pName.slice(0, -2)}_id`);
+            
+            // Log if we suspect this might be the field
+            if (fName.includes('id') && childModel.db_table_name.toLowerCase() === 'produtos') {
+               console.log(`[🔍 fetchDetails] Heuristic candidate - child: ${childModel.db_table_name}, field: ${fName}, fTbl: ${fTbl}, pName: ${pName}. Matches:`, { isFkTblMatch, isFNameExact, isFNameS, isFNameEs })
+            }
+
+            return isFkTblMatch || isFNameExact || isFNameS || isFNameEs;
           })
           const pkField = parentModelDef.fields?.find((f: any) => (f.db_column_name || '').toLowerCase() === 'id') || parentModelDef.fields?.[0]
           if (fkField && pkField) {
@@ -122,11 +134,15 @@ export function useDetailData({
             })
           }
         }
+        console.log('[🔍 fetchDetails] Heuristic joins found:', heuristicJoins.length)
         if (heuristicJoins.length > 0) effectiveJoins = heuristicJoins
       }
     }
 
-    if (!effectiveJoins || effectiveJoins.length === 0) return []
+    if (!effectiveJoins || effectiveJoins.length === 0) {
+       console.log('[🔍 fetchDetails] NO JOINS RESOLVED! effectiveJoins is empty. Returning [] early.')
+       return []
+    }
 
     const allDetails: any[] = []
     

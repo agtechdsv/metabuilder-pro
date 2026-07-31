@@ -62,7 +62,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
   // 2. Resolve o Projeto pelo Slug e Workspace ID (Defensivo com limit(1))
   const { data: projects, error: projectError } = await supabase
     .from('projects')
-    .select('id, name, slug, navigation, secret_token, db_type')
+    .select('id, name, slug, navigation, secret_token')
     .eq('slug', project_slug)
     .eq('workspace_id', workspace.id)
     .limit(1)
