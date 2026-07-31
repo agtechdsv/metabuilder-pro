@@ -74,12 +74,15 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         const heuristicJoins: any[] = []
         for (const childModel of project.models) {
           if (childModel.id === parentModelDef.id) continue
-          const fkField = childModel.fields?.find((f: any) => 
-            f.foreign_key_table === parentModelDef.db_table_name ||
-            f.db_column_name === `${parentModelDef.db_table_name}_id` ||
-            (parentModelDef.db_table_name.endsWith('s') && f.db_column_name === `${parentModelDef.db_table_name.slice(0, -1)}_id`) ||
-            (parentModelDef.db_table_name.endsWith('es') && f.db_column_name === `${parentModelDef.db_table_name.slice(0, -2)}_id`)
-          )
+          const fkField = childModel.fields?.find((f: any) => {
+            const fName = (f.db_column_name || '').toLowerCase();
+            const pName = (parentModelDef.db_table_name || '').toLowerCase();
+            const fTbl = (f.foreign_key_table || '').toLowerCase();
+            return fTbl === pName ||
+              fName === `${pName}_id` ||
+              (pName.endsWith('s') && fName === `${pName.slice(0, -1)}_id`) ||
+              (pName.endsWith('es') && fName === `${pName.slice(0, -2)}_id`);
+          });
           if (fkField) {
             heuristicJoins.push({
               from: parentModelDef.db_table_name,
@@ -234,8 +237,8 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
              if (detailModel && detailModel.fields) {
                 detailModel.fields.forEach((f: any) => {
                    let relatedTable = f.foreign_key_table || f.widget_options?.component?.rel_table || f.config?.component?.rel_table || f.config?.form_config?.component?.rel_table;
-                   if (!relatedTable && f.db_column_name?.endsWith('_id')) {
-                      const base = f.db_column_name.replace(/_id$/, '');
+                   if (!relatedTable && f.db_column_name?.toLowerCase().endsWith('_id')) {
+                      const base = f.db_column_name.toLowerCase().replace(/_id$/, '');
                       if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base + 's')) relatedTable = base + 's';
                       else if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base + 'es')) relatedTable = base + 'es';
                       else if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base)) relatedTable = base;
@@ -539,12 +542,15 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
     const heuristicJoins: any[] = [];
     for (const childModel of project.models) {
       if (childModel.id === parentModelDef.id) continue;
-      const fkField = childModel.fields?.find((f: any) => 
-        f.foreign_key_table === parentModelDef.db_table_name ||
-        f.db_column_name === `${parentModelDef.db_table_name}_id` ||
-        (parentModelDef.db_table_name.endsWith('s') && f.db_column_name === `${parentModelDef.db_table_name.slice(0, -1)}_id`) ||
-        (parentModelDef.db_table_name.endsWith('es') && f.db_column_name === `${parentModelDef.db_table_name.slice(0, -2)}_id`)
-      );
+      const fkField = childModel.fields?.find((f: any) => {
+            const fName = (f.db_column_name || '').toLowerCase();
+            const pName = (parentModelDef.db_table_name || '').toLowerCase();
+            const fTbl = (f.foreign_key_table || '').toLowerCase();
+            return fTbl === pName ||
+              fName === `${pName}_id` ||
+              (pName.endsWith('s') && fName === `${pName.slice(0, -1)}_id`) ||
+              (pName.endsWith('es') && fName === `${pName.slice(0, -2)}_id`);
+          });
       if (fkField) {
         heuristicJoins.push({
           from: parentModelDef.db_table_name,

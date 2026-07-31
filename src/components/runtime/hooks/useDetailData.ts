@@ -94,11 +94,11 @@ export function useDetailData({
         for (const childModel of project.models) {
           if (childModel.id === parentModelDef.id) continue
           const expectedKeys = [
-            `${parentModelDef.db_table_name}_id`,
-            `${parentModelDef.db_table_name.replace(/s$/, '')}_id`
-          ]
-          const fkField = childModel.fields?.find((f: any) => expectedKeys.includes(f.db_column_name))
-          const pkField = parentModelDef.fields?.find((f: any) => f.db_column_name === 'id') || parentModelDef.fields?.[0]
+              `${(parentModelDef.db_table_name || '').toLowerCase()}_id`,
+              `${(parentModelDef.db_table_name || '').toLowerCase().replace(/s$/, '')}_id`
+            ]
+            const fkField = childModel.fields?.find((f: any) => expectedKeys.includes((f.db_column_name || '').toLowerCase()))
+          const pkField = parentModelDef.fields?.find((f: any) => (f.db_column_name || '').toLowerCase() === 'id') || parentModelDef.fields?.[0]
           if (fkField && pkField) {
             heuristicJoins.push({
               from: parentModelDef.db_table_name,
@@ -148,12 +148,15 @@ export function useDetailData({
           if (existingJoin) {
             titleJoins.push(existingJoin)
           } else if (detailModel) {
-            const linkField = detailModel.fields?.find((f: any) =>
-              f.foreign_key_table === relatedTable ||
-              f.db_column_name === `${relatedTable}_id` ||
-              (relatedTable.endsWith('s') && f.db_column_name === `${relatedTable.slice(0, -1)}_id`) ||
-              (relatedTable.endsWith('es') && f.db_column_name === `${relatedTable.slice(0, -2)}_id`)
-            )
+            const linkField = detailModel.fields?.find((f: any) => {
+              const fName = (f.db_column_name || '').toLowerCase();
+              const pName = (relatedTable || '').toLowerCase();
+              const fTbl = (f.foreign_key_table || '').toLowerCase();
+              return fTbl === pName ||
+                fName === `${pName}_id` ||
+                (pName.endsWith('s') && fName === `${pName.slice(0, -1)}_id`) ||
+                (pName.endsWith('es') && fName === `${pName.slice(0, -2)}_id`);
+            })
             if (linkField) {
               const titleJoin = {
                 from: join.to,
@@ -264,8 +267,8 @@ export function useDetailData({
              if (detailModel && detailModel.fields) {
                 detailModel.fields.forEach((f: any) => {
                    let relatedTable = f.foreign_key_table || f.widget_options?.component?.rel_table || f.config?.component?.rel_table || f.config?.form_config?.component?.rel_table;
-                   if (!relatedTable && f.db_column_name?.endsWith('_id')) {
-                      const base = f.db_column_name.replace(/_id$/, '');
+                   if (!relatedTable && f.db_column_name?.toLowerCase().endsWith('_id')) {
+                      const base = f.db_column_name.toLowerCase().replace(/_id$/, '');
                       if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base + 's')) relatedTable = base + 's';
                       else if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base + 'es')) relatedTable = base + 'es';
                       else if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base)) relatedTable = base;
