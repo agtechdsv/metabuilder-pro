@@ -361,15 +361,17 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
               });
 
               if (tablePart === safeTable || isJoinedStr || isJoinedCli) {
+                  let sqlTable = dbType === 'oracle' ? tablePart.toUpperCase() : tablePart;
+                  let sqlColumn = dbType === 'oracle' ? columnPart.toUpperCase() : columnPart;
                 const logicOp = advClauses.length > 0 ? (f.logic === 'OR' ? ' OR ' : ' AND ') : '';
                 const op = f.operator || '=';
                 
                 if (op === 'between') {
-                  advClauses.push(`${logicOp}("${tablePart}"."${columnPart}" BETWEEN $${i} AND $${i+1})`);
+                  advClauses.push(`${logicOp}("${sqlTable}"."${sqlColumn}" BETWEEN $${i} AND $${i+1})`);
                   params.push(f.value, f.value2);
                   i += 2;
                 } else if (['=', '>', '<', '>=', '<='].includes(op)) {
-                  advClauses.push(`${logicOp}("${tablePart}"."${columnPart}" ${op} $${i})`);
+                  advClauses.push(`${logicOp}("${sqlTable}"."${sqlColumn}" ${op} $${i})`);
                   params.push(f.value);
                   i++;
                 }
@@ -400,18 +402,20 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
                 });
                 
                 if (tablePart === safeTable || isJoinedStr || isJoinedCli) {
+                  let sqlTable = dbType === 'oracle' ? tablePart.toUpperCase() : tablePart;
+                  let sqlColumn = dbType === 'oracle' ? columnPart.toUpperCase() : columnPart;
                   if (columnPart === 'id' || columnPart.endsWith('_id') || columnPart.endsWith('ID') || columnPart.endsWith('Id')) {
                     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value));
                     const isNumeric = /^\d+$/.test(String(value));
                     if (Array.isArray(value)) {
                       const placeholders = value.map((_, idx) => `$${i + idx}`);
-                      conditions.push(`"${tablePart}"."${columnPart}" IN (${placeholders.join(', ')})`);
+                      conditions.push(`"${sqlTable}"."${sqlColumn}" IN (${placeholders.join(', ')})`);
                       params.push(...value);
                       i += value.length;
                     } else if (isUUID || isNumeric) {
-                      conditions.push(`"${tablePart}"."${columnPart}" = '${value}'`);
+                      conditions.push(`"${sqlTable}"."${sqlColumn}" = '${value}'`);
                     } else {
-                      conditions.push(`"${tablePart}"."${columnPart}" = $${i}`);
+                      conditions.push(`"${sqlTable}"."${sqlColumn}" = $${i}`);
                       params.push(value);
                       i++;
                     }
@@ -419,18 +423,18 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
                     if (Array.isArray(value)) {
                       const placeholders = value.map((_, idx) => `$${i + idx}`);
                       if (dbType === 'oracle') {
-                        conditions.push(`TO_CHAR("${tablePart}"."${columnPart}") IN (${placeholders.join(', ')})`);
+                        conditions.push(`TO_CHAR("${sqlTable}"."${sqlColumn}") IN (${placeholders.join(', ')})`);
                       } else {
-                        conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) IN (${placeholders.join(', ')})`);
+                        conditions.push(`CAST("${sqlTable}"."${sqlColumn}" AS text) IN (${placeholders.join(', ')})`);
                       }
                       params.push(...value);
                       i += value.length;
                     } else {
                       if (dbType === 'oracle') {
-                        conditions.push(`UPPER(TO_CHAR("${tablePart}"."${columnPart}")) LIKE UPPER(:${i})`);
+                        conditions.push(`UPPER(TO_CHAR("${sqlTable}"."${sqlColumn}")) LIKE UPPER(:${i})`);
                         params.push(`%${value}%`);
                       } else {
-                        conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) ILIKE $${i}`);
+                        conditions.push(`CAST("${sqlTable}"."${sqlColumn}" AS text) ILIKE $${i}`);
                         params.push(`%${value}%`);
                       }
                       i++;
@@ -590,15 +594,17 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
               });
 
               if (tablePart === safeTable || isJoinedStr || isJoinedCli) {
+                  let sqlTable = dbType === 'oracle' ? tablePart.toUpperCase() : tablePart;
+                  let sqlColumn = dbType === 'oracle' ? columnPart.toUpperCase() : columnPart;
                 const logicOp = advClauses.length > 0 ? (f.logic === 'OR' ? ' OR ' : ' AND ') : '';
                 const op = f.operator || '=';
                 
                 if (op === 'between') {
-                  advClauses.push(`${logicOp}("${tablePart}"."${columnPart}" BETWEEN $${i} AND $${i+1})`);
+                  advClauses.push(`${logicOp}("${sqlTable}"."${sqlColumn}" BETWEEN $${i} AND $${i+1})`);
                   params.push(f.value, f.value2);
                   i += 2;
                 } else if (['=', '>', '<', '>=', '<='].includes(op)) {
-                  advClauses.push(`${logicOp}("${tablePart}"."${columnPart}" ${op} $${i})`);
+                  advClauses.push(`${logicOp}("${sqlTable}"."${sqlColumn}" ${op} $${i})`);
                   params.push(f.value);
                   i++;
                 }
@@ -628,21 +634,23 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
                 });
                 
                 if (tablePart === safeTable || isJoinedStr || isJoinedCli) {
+                  let sqlTable = dbType === 'oracle' ? tablePart.toUpperCase() : tablePart;
+                  let sqlColumn = dbType === 'oracle' ? columnPart.toUpperCase() : columnPart;
                   if (columnPart === 'id' || columnPart.endsWith('_id') || columnPart.endsWith('ID') || columnPart.endsWith('Id')) {
                     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
                     const isNumeric = /^\d+$/.test(value);
                     if (isUUID || isNumeric) {
-                      conditions.push(`"${tablePart}"."${columnPart}" = '${value}'`);
+                      conditions.push(`"${sqlTable}"."${sqlColumn}" = '${value}'`);
                     } else {
-                      conditions.push(`"${tablePart}"."${columnPart}" = $${i}`);
+                      conditions.push(`"${sqlTable}"."${sqlColumn}" = $${i}`);
                       params.push(value);
                       i++;
                     }
                   } else {
                     if (dbType === 'oracle') {
-                      conditions.push(`UPPER(TO_CHAR("${tablePart}"."${columnPart}")) LIKE UPPER(:${i})`);
+                      conditions.push(`UPPER(TO_CHAR("${sqlTable}"."${sqlColumn}")) LIKE UPPER(:${i})`);
                     } else {
-                      conditions.push(`CAST("${tablePart}"."${columnPart}" AS text) ILIKE $${i}`);
+                      conditions.push(`CAST("${sqlTable}"."${sqlColumn}" AS text) ILIKE $${i}`);
                     }
                     params.push(`%${value}%`);
                     i++;
