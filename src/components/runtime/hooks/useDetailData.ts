@@ -223,7 +223,7 @@ export function useDetailData({
                 schemaName: project?.models?.find((m: any) => m.db_table_name === join.to)?.db_schema_name || project?.slug || 'public',
                 slug: project?.slug,
                 filters: { [join.foreignKey]: String(localValue) },
-                joins: subDetailJoins,
+                joins: titleJoins,
                 limit: 100,
                 offset: 0
               }
