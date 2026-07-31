@@ -63,6 +63,15 @@ export function useDetailData({
   const fetchDetails = async (parentRow: any, parentModel: string) => {
     let effectiveJoins = joins || []
     
+    // ── DIAGNOSTIC ──────────────────────────────────────────────────────────────
+    console.log('[🔍 fetchDetails] START')
+    console.log('[🔍 fetchDetails] parentModel:', parentModel, '| db_type:', project?.db_type)
+    console.log('[🔍 fetchDetails] parentRow keys:', Object.keys(parentRow || {}))
+    console.log('[🔍 fetchDetails] parentRow (first 300):', JSON.stringify(parentRow).slice(0, 300))
+    console.log('[🔍 fetchDetails] joins prop:', JSON.stringify(joins))
+    console.log('[🔍 fetchDetails] projectRelations count:', projectRelations?.length)
+    // ────────────────────────────────────────────────────────────────────────────
+
     // 1. Fallback via Santo Graal (Banco de Dados)
     if (effectiveJoins.length === 0 && projectRelations && project.models) {
       const parentModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === parentModel?.toLowerCase())
@@ -85,6 +94,7 @@ export function useDetailData({
         if (auto.length > 0) effectiveJoins = auto
       }
     }
+    console.log('[🔍 fetchDetails] effectiveJoins after Santo Graal:', JSON.stringify(effectiveJoins))
 
     // 2. Fallback via Heurística (Nomenclatura)
     if (effectiveJoins.length === 0 && project.models) {
@@ -126,7 +136,11 @@ export function useDetailData({
       if (isMatch) {
         const localValue = parentRow[join.localKey] || parentRow[join.localKey.toUpperCase()] || parentRow.id || parentRow.ID
         
+        console.log('[🔍 fetchDetails] ▶ join:', JSON.stringify(join))
+        console.log('[🔍 fetchDetails]   localKey:', join.localKey, '→ raw:', parentRow[join.localKey], '| UC:', parentRow[join.localKey?.toUpperCase?.()], '| resolved:', localValue)
+
         if (localValue === undefined || localValue === null) {
+          console.warn('[🔍 fetchDetails] ⚠️ localValue is NULL — skipping join! This is likely the bug.')
           continue
         }
 
@@ -188,8 +202,10 @@ export function useDetailData({
                 resolved = true
                 cleanup()
                 if (payload.payload.success) {
+                  console.log('[🔍 fetchDetails] ✅ Tunnel response. Rows:', (payload.payload.data || []).length)
                   resolve(payload.payload.data || [])
                 } else {
+                  console.error('[🔍 fetchDetails] ❌ Tunnel error:', payload.payload.error)
                   reject(new Error(payload.payload.error || 'Error fetching details'))
                 }
               }
@@ -236,6 +252,13 @@ export function useDetailData({
               }
             }
 
+            console.log('[🔍 fetchDetails] 📡 Sending tunnel payload:', JSON.stringify({
+              table: join.to,
+              filter: { [join.foreignKey]: String(localValue) },
+              schemaName: project?.models?.find((m: any) => m.db_table_name === join.to)?.db_schema_name || project?.slug || 'public',
+              joins: titleJoins
+            }))
+
             if (isTemporary) {
               channel.subscribe((status: string) => {
                 if (status === 'SUBSCRIBED') {
@@ -250,6 +273,7 @@ export function useDetailData({
               if (!resolved) {
                 resolved = true
                 cleanup()
+                console.warn('[🔍 fetchDetails] ⏱️ TIMEOUT (8s) — no response for join:', JSON.stringify(join))
                 resolve([])
               }
             }, 8000)
