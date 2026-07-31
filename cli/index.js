@@ -503,20 +503,24 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
 
                     if (joinedTables.has(safeFrom)) {
                       if (dbType === 'oracle') {
-                        selectCols += `, (SELECT JSON_OBJECT(*) FROM "${safeTo}" WHERE "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}") AS "${safeTo}"`;
+                        // Oracle: use scalar subquery ONLY (no LEFT JOIN - it causes duplicate rows
+                        // when child table has multiple records, and combined with JSON_OBJECT(*)
+                        // triggers ORA-01427: single-row subquery returns more than one row)
+                        selectCols += `, (SELECT JSON_OBJECT(*) FROM "${safeTo}" WHERE "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}" AND ROWNUM = 1) AS "${safeTo}"`;
                       } else {
                         selectCols += `, row_to_json("${safeTo}".*) AS "${safeTo}"`;
+                        joinClause += ` LEFT JOIN "${safeTo}" ON "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}"`;
                       }
-                      joinClause += ` LEFT JOIN "${safeTo}" ON "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}"`;
                       joinedTables.add(safeTo);
                       progress = true;
                     } else if (joinedTables.has(safeTo)) {
                       if (dbType === 'oracle') {
-                        selectCols += `, (SELECT JSON_OBJECT(*) FROM "${safeFrom}" WHERE "${safeTo}"."${safeForeign}" = "${safeFrom}"."${safeLocal}") AS "${safeFrom}"`;
+                        // Oracle: same - use scalar subquery ONLY, no LEFT JOIN
+                        selectCols += `, (SELECT JSON_OBJECT(*) FROM "${safeFrom}" WHERE "${safeTo}"."${safeForeign}" = "${safeFrom}"."${safeLocal}" AND ROWNUM = 1) AS "${safeFrom}"`;
                       } else {
                         selectCols += `, row_to_json("${safeFrom}".*) AS "${safeFrom}"`;
+                        joinClause += ` LEFT JOIN "${safeFrom}" ON "${safeTo}"."${safeForeign}" = "${safeFrom}"."${safeLocal}"`;
                       }
-                      joinClause += ` LEFT JOIN "${safeFrom}" ON "${safeTo}"."${safeForeign}" = "${safeFrom}"."${safeLocal}"`;
                       joinedTables.add(safeFrom);
                       progress = true;
                     } else {
