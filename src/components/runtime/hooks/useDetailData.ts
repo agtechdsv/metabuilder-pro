@@ -93,11 +93,15 @@ export function useDetailData({
         const heuristicJoins: any[] = []
         for (const childModel of project.models) {
           if (childModel.id === parentModelDef.id) continue
-          const expectedKeys = [
-              `${(parentModelDef.db_table_name || '').toLowerCase()}_id`,
-              `${(parentModelDef.db_table_name || '').toLowerCase().replace(/s$/, '')}_id`
-            ]
-            const fkField = childModel.fields?.find((f: any) => expectedKeys.includes((f.db_column_name || '').toLowerCase()))
+          const fkField = childModel.fields?.find((f: any) => {
+            const fName = (f.db_column_name || '').toLowerCase();
+            const pName = (parentModelDef.db_table_name || '').toLowerCase();
+            const fTbl = (f.foreign_key_table || '').toLowerCase();
+            return fTbl === pName ||
+              fName === `${pName}_id` ||
+              (pName.endsWith('s') && fName === `${pName.slice(0, -1)}_id`) ||
+              (pName.endsWith('es') && fName === `${pName.slice(0, -2)}_id`);
+          })
           const pkField = parentModelDef.fields?.find((f: any) => (f.db_column_name || '').toLowerCase() === 'id') || parentModelDef.fields?.[0]
           if (fkField && pkField) {
             heuristicJoins.push({
