@@ -1,4 +1,19 @@
 {
+  "v1.0.6": {
+    "date": "2026-07-31",
+    "pt": [
+      "Maior estabilidade e precisão no carregamento de dados vinculados e relatórios em bancos de dados Oracle, prevenindo erros inesperados de consulta.",
+      "Melhoria na organização visual das abas e tabelas de detalhes, garantindo que informações aninhadas sejam exibidas no contexto correto sem poluir a visualização principal."
+    ],
+    "en": [
+      "Enhanced stability and accuracy when loading linked data and reports on Oracle databases, preventing unexpected query errors.",
+      "Improved visual organization in detail tabs and tables, ensuring nested sub-data is displayed strictly in its correct context without cluttering the main view."
+    ],
+    "es": [
+      "Mayor estabilidad y precisión al cargar datos vinculados y reportes en bases de datos Oracle, evitando errores de consulta inesperados.",
+      "Mejora en la organización visual de las pestañas y tablas de detalles, garantizando que la información anidada se muestre en su contexto correcto sin saturar la vista principal."
+    ]
+  },
   "v1.0.5": {
     "date": "2026-07-31",
     "pt": [
