@@ -77,12 +77,18 @@ export function useDetailData({
       const parentModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === parentModel?.toLowerCase())
       console.log('[🔍 fetchDetails] Santo Graal - parentModelDef found:', !!parentModelDef, 'projectRelations count:', projectRelations.length)
       if (parentModelDef) {
-        const related = projectRelations.filter((rel: any) => rel.referenced_table_id === parentModelDef.id)
+        const related = projectRelations.filter((rel: any) => rel.to_model_id === parentModelDef.id || rel.master_model_id === parentModelDef.id)
         console.log('[🔍 fetchDetails] Santo Graal - related relations:', related.length)
         const auto = related.map((rel: any) => {
-          const childModel = project.models.find((m: any) => m.id === rel.foreign_table_id)
-          const childField = childModel?.fields?.find((f: any) => f.id === rel.foreign_column_id)
-          const parentField = parentModelDef.fields?.find((f: any) => f.id === rel.referenced_column_id)
+          const fromModelId = rel.from_model_id || rel.detail_model_id
+          const toModelId = rel.to_model_id || rel.master_model_id
+          const fromFieldId = rel.from_field_id || rel.foreign_column_id // Fallback in case of old mapping
+          const toFieldId = rel.to_field_id || rel.referenced_column_id
+
+          const childModel = project.models.find((m: any) => m.id === fromModelId)
+          const childField = childModel?.fields?.find((f: any) => f.id === fromFieldId)
+          const parentField = parentModelDef.fields?.find((f: any) => f.id === toFieldId)
+          
           if (!childModel || !childField || !parentField) {
             console.log(`[🔍 fetchDetails] Santo Graal - missing mapping for rel ${rel.id}:`, { childModel: !!childModel, childField: !!childField, parentField: !!parentField })
           }
