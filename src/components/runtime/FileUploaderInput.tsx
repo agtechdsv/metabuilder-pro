@@ -127,13 +127,13 @@ export function FileUploaderInput({
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const isBase64 = value?.startsWith('data:')
-  const isUrl = value?.startsWith('http')
+  const isBase64 = typeof value === 'string' && value.startsWith('data:')
+  const isUrl = typeof value === 'string' && value.startsWith('http')
   const hasValue = !!value
 
   // For 'any' type, we dynamically check if the value is an image to render the preview
-  const renderAsImage = isImageMode || (isAnyMode && (value?.startsWith('data:image/') || !!value?.match(/\.(jpeg|jpg|gif|png|webp)($|\?)/i)))
-  const isPdf = value?.startsWith('data:application/pdf') || !!value?.match(/\.pdf($|\?)/i)
+  const renderAsImage = isImageMode || (isAnyMode && typeof value === 'string' && (value.startsWith('data:image/') || !!value.match(/\.(jpeg|jpg|gif|png|webp)($|\?)/i)))
+  const isPdf = typeof value === 'string' && (value.startsWith('data:application/pdf') || !!value.match(/\.pdf($|\?)/i))
 
   return (
     <div className="w-full space-y-2">

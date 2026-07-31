@@ -30,6 +30,7 @@ const crypto = require('crypto');
 const ldap = require('ldapjs');
 const oracledb = require('oracledb');
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
+oracledb.fetchAsString = [ oracledb.CLOB ];
 const { BpmEngine } = require('./bpmEngine');
 const logger = require('./logger');
 const { cliDbLogger } = require('./cliDbLogger');
