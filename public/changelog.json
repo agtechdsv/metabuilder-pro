@@ -1,22 +1,4 @@
 {
-  "v1.1.4": {
-    "date": "2026-07-31",
-    "pt": [
-      "Melhorias na Gestão de Arquivos e Documentos: suporte a upload de imagens e arquivos diretamente em grades de detalhes, pré-visualização estilizada de PDFs e imagens, e tratamento inteligente para imagens corrompidas.",
-      "Navegação Otimizada no Ambiente de Desenvolvimento (IDE): o botão de atualizar foi movido para dentro da barra de URL do navegador interno, tornando a navegação mais intuitiva.",
-      "Maior Estabilidade e Desempenho de Dados: otimização na leitura de grandes volumes de texto no banco de dados Oracle e validações mais robustas nos campos de upload."
-    ],
-    "en": [
-      "Enhanced File and Document Management: Support for direct file and image uploads within detail section grids, stylized PDF and image previews, and graceful fallback handling for broken images.",
-      "Streamlined IDE Navigation: The refresh button is now conveniently located inside the internal browser's URL bar for an easier workflow.",
-      "Improved Data Performance & Stability: Optimized processing for large text fields (Oracle database integration) and more robust type validation for file uploads."
-    ],
-    "es": [
-      "Gestión Mejorada de Archivos y Documentos: soporte para la carga directa de imágenes y archivos en grillas de detalle, vista previa optimizada para PDFs e imágenes, y manejo inteligente ante archivos corruptos.",
-      "Navegación Fluida en el Entorno de Desarrollo (IDE): el botón de recarga se movió dentro de la barra de URL del navegador interno para facilitar el flujo de trabajo.",
-      "Mayor Rendimiento y Estabilidad de Datos: optimización en el procesamiento de grandes volúmenes de texto (integración con Oracle) y validaciones más robustas en la carga de archivos."
-    ]
-  },
   "v1.1.3": {
     "date": "2026-07-31",
     "pt": [
