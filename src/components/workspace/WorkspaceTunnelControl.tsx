@@ -407,14 +407,22 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
 
   return (
     <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm mb-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-          <Network className="w-5 h-5 text-indigo-500" />
+      <div className="flex items-start justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center shrink-0">
+            <Network className="w-5 h-5 text-indigo-500" />
+          </div>
+          <div>
+            <h3 className="font-bold text-lg text-neutral-800 dark:text-neutral-100">Gerenciador do Túnel Local</h3>
+            <p className="text-sm text-neutral-500">Controle o daemon central que atende às conexões de todos os seus projetos deste ambiente.</p>
+          </div>
         </div>
-        <div>
-          <h3 className="font-bold text-lg text-neutral-800 dark:text-neutral-100">Gerenciador do Túnel Local</h3>
-          <p className="text-sm text-neutral-500">Controle o daemon central que atende às conexões de todos os seus projetos deste ambiente.</p>
-        </div>
+        <button
+          onClick={handleOpenConfig}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 shrink-0"
+        >
+          <FileJson className="w-4 h-4" /> Configurar (metabuilder.config.json)
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -456,14 +464,6 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
             </button>
           </div>
           
-          <div className="mt-3">
-            <button
-              onClick={handleOpenConfig}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20"
-            >
-              <FileJson className="w-4 h-4" /> Configurar (metabuilder.config.json)
-            </button>
-          </div>
         </div>
 
         {/* Sincronização Global */}
