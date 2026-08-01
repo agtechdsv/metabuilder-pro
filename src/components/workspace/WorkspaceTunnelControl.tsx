@@ -26,6 +26,21 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
   const [isSavingConfig, setIsSavingConfig] = useState(false)
   const [hasProjects, setHasProjects] = useState<boolean | null>(null)
 
+  const [activeConfigTab, setActiveConfigTab] = useState<'form' | 'json'>('form')
+  const [availableProjects, setAvailableProjects] = useState<any[]>([])
+
+  const parsedConfig = React.useMemo(() => {
+    try {
+      return JSON.parse(configContent)
+    } catch {
+      return null
+    }
+  }, [configContent])
+
+  const updateParsedConfig = (newConfig: any) => {
+    setConfigContent(JSON.stringify(newConfig, null, 2))
+  }
+
   const defaultTemplate = `{
   "connections": [
     {
@@ -75,6 +90,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
         const { data: projectsData } = await supabase.from('projects').select('id, name, secret_token')
         
         setHasProjects(projectsData && projectsData.length > 0)
+        setAvailableProjects(projectsData || [])
 
         if (projectsData && projectsData.length > 0) {
           let currentConfig = JSON.parse(configText)
@@ -433,35 +449,331 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
           >
             <div className="flex flex-col w-full h-full">
               <div className="drag-handle p-5 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center cursor-move shrink-0 bg-white dark:bg-neutral-900">
-                <div className="space-y-1">
-                  <h3 className="font-bold text-xl text-neutral-900 dark:text-white">Editar metabuilder.config.json</h3>
-                  <p className="text-xs text-neutral-500 font-normal">
-                    Esta configuração será salva diretamente no AppData Local da IDE e será usada no próximo Início ou Sincronização.
-                  </p>
+                <div className="space-y-3 w-full">
+                  <div>
+                    <h3 className="font-bold text-xl text-neutral-900 dark:text-white">Editar metabuilder.config.json</h3>
+                    <p className="text-xs text-neutral-500 font-normal">
+                      Esta configuração será salva diretamente no AppData Local da IDE e será usada no próximo Início ou Sincronização.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                       className={`text-sm font-bold px-4 py-1.5 rounded-lg transition-colors ${activeConfigTab === 'form' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
+                       onClick={(e) => { e.stopPropagation(); setActiveConfigTab('form'); }}
+                    >
+                       Formulário
+                    </button>
+                    <button 
+                       className={`text-sm font-bold px-4 py-1.5 rounded-lg transition-colors ${activeConfigTab === 'json' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
+                       onClick={(e) => { e.stopPropagation(); setActiveConfigTab('json'); }}
+                    >
+                       Editor JSON
+                    </button>
+                  </div>
                 </div>
                 <button 
                   onClick={() => setIsConfigModalOpen(false)} 
-                  className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-neutral-900 dark:hover:text-white shrink-0"
+                  className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-neutral-900 dark:hover:text-white shrink-0 self-start ml-4"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
               
-              <div className="flex-1 min-h-0 w-full bg-[#1e1e1e] border-y border-neutral-200 dark:border-neutral-800 relative">
-                <Editor
-                  height="100%"
-                  defaultLanguage="json"
-                  value={configContent}
-                  onChange={(value) => setConfigContent(value || '')}
-                  theme="vs-dark"
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 14,
-                    formatOnPaste: true,
-                    scrollBeyondLastLine: false,
-                    automaticLayout: true,
-                  }}
-                />
+              <div className="flex-1 min-h-0 w-full bg-white dark:bg-[#1e1e1e] border-y border-neutral-200 dark:border-neutral-800 relative overflow-hidden flex flex-col">
+                {activeConfigTab === 'json' && (
+                  <Editor
+                    height="100%"
+                    defaultLanguage="json"
+                    value={configContent}
+                    onChange={(value) => setConfigContent(value || '')}
+                    theme="vs-dark"
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      formatOnPaste: true,
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                    }}
+                  />
+                )}
+                {activeConfigTab === 'form' && (
+                  !parsedConfig ? (
+                    <div className="p-8 text-center flex flex-col items-center justify-center h-full text-red-500">
+                      <AlertTriangle className="w-12 h-12 mb-4 opacity-50" />
+                      <h4 className="font-bold text-lg mb-2">JSON Inválido</h4>
+                      <p className="text-sm opacity-80">Não foi possível processar o arquivo de configuração atual.<br/>Corrija-o na aba "Editor JSON" para usar o formulário.</p>
+                    </div>
+                  ) : (
+                    <div className="p-6 overflow-y-auto h-full space-y-8 bg-neutral-50 dark:bg-neutral-900/50">
+                      {/* Projetos / Conexões */}
+                      <div>
+                        <h4 className="font-bold text-lg text-neutral-800 dark:text-neutral-200 mb-4 flex items-center gap-2">
+                          <Network className="w-5 h-5 text-indigo-500" /> Projetos
+                        </h4>
+                        
+                        {parsedConfig.connections?.map((projConfig: any, idx: number) => (
+                          <div key={idx} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-5 rounded-2xl mb-4 shadow-sm">
+                            <div className="flex gap-4 items-end mb-4">
+                                <div className="flex-1">
+                                  <label className="block text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">Selecionar Projeto Existente</label>
+                                  <select 
+                                    className="w-full bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 font-medium outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                    value={projConfig.projectId || ''}
+                                    onChange={(e) => {
+                                      const newProjectId = e.target.value;
+                                      const project = availableProjects.find(p => p.id === newProjectId);
+                                      const newConfig = {...parsedConfig};
+                                      newConfig.connections[idx].projectId = newProjectId;
+                                      if (project) {
+                                          newConfig.connections[idx].secretToken = project.secret_token || '';
+                                      }
+                                      updateParsedConfig(newConfig);
+                                    }}
+                                  >
+                                      <option value="">Selecione um projeto para preencher os IDs...</option>
+                                      {availableProjects.map(p => (
+                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                      ))}
+                                  </select>
+                                </div>
+                                <button 
+                                  onClick={() => {
+                                      const newConfig = {...parsedConfig};
+                                      newConfig.connections.splice(idx, 1);
+                                      updateParsedConfig(newConfig);
+                                  }}
+                                  className="p-2.5 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
+                                  title="Remover Projeto"
+                                >
+                                  <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 mb-6">
+                                <div>
+                                  <label className="block text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">Project ID</label>
+                                  <input 
+                                    value={projConfig.projectId || ''} 
+                                    onChange={(e) => {
+                                      const newConfig = {...parsedConfig};
+                                      newConfig.connections[idx].projectId = e.target.value;
+                                      updateParsedConfig(newConfig);
+                                    }}
+                                    className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 font-mono text-neutral-600 dark:text-neutral-400 focus:ring-2 focus:ring-indigo-500/50 outline-none" 
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">Secret Token</label>
+                                  <input 
+                                    value={projConfig.secretToken || ''} 
+                                    onChange={(e) => {
+                                      const newConfig = {...parsedConfig};
+                                      newConfig.connections[idx].secretToken = e.target.value;
+                                      updateParsedConfig(newConfig);
+                                    }}
+                                    className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 font-mono text-neutral-600 dark:text-neutral-400 focus:ring-2 focus:ring-indigo-500/50 outline-none" 
+                                  />
+                                </div>
+                            </div>
+
+                            <div className="pl-4 border-l-2 border-indigo-100 dark:border-indigo-500/20">
+                                <h5 className="font-bold text-sm text-neutral-700 dark:text-neutral-300 mb-3">Strings de Conexão</h5>
+                                {projConfig.connectionsString?.map((connStr: any, connIdx: number) => (
+                                  <div key={connIdx} className="flex gap-3 items-end mb-3">
+                                      <div className="w-1/4">
+                                        <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Nome</label>
+                                        <input 
+                                          value={connStr.name || ''} 
+                                          onChange={(e) => {
+                                            const newConfig = {...parsedConfig};
+                                            newConfig.connections[idx].connectionsString[connIdx].name = e.target.value;
+                                            updateParsedConfig(newConfig);
+                                          }}
+                                          className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500" 
+                                        />
+                                      </div>
+                                      <div className="w-1/4">
+                                        <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Tipo</label>
+                                        <select 
+                                          value={connStr.type || ''} 
+                                          onChange={(e) => {
+                                            const newConfig = {...parsedConfig};
+                                            newConfig.connections[idx].connectionsString[connIdx].type = e.target.value;
+                                            updateParsedConfig(newConfig);
+                                          }}
+                                          className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500"
+                                        >
+                                          <option value="postgres">Postgres</option>
+                                          <option value="mysql">MySQL</option>
+                                          <option value="oracle">Oracle</option>
+                                          <option value="sqlserver">SQL Server</option>
+                                        </select>
+                                      </div>
+                                      <div className="flex-1">
+                                        <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">String</label>
+                                        <input 
+                                          value={connStr.connectionString || ''} 
+                                          onChange={(e) => {
+                                            const newConfig = {...parsedConfig};
+                                            newConfig.connections[idx].connectionsString[connIdx].connectionString = e.target.value;
+                                            updateParsedConfig(newConfig);
+                                          }}
+                                          className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500" 
+                                        />
+                                      </div>
+                                      <button 
+                                        onClick={() => {
+                                            const newConfig = {...parsedConfig};
+                                            newConfig.connections[idx].connectionsString.splice(connIdx, 1);
+                                            updateParsedConfig(newConfig);
+                                        }}
+                                        className="p-2 mb-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </button>
+                                  </div>
+                                ))}
+                                <button 
+                                  onClick={() => {
+                                      const newConfig = {...parsedConfig};
+                                      if (!newConfig.connections[idx].connectionsString) newConfig.connections[idx].connectionsString = [];
+                                      newConfig.connections[idx].connectionsString.push({ name: '', type: 'postgres', connectionString: '' });
+                                      updateParsedConfig(newConfig);
+                                  }}
+                                  className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 mt-2 flex items-center gap-1 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1.5 rounded-lg transition-colors w-fit"
+                                >
+                                  + Nova Conexão para {availableProjects.find(p => p.id === projConfig.projectId)?.name || 'este projeto'}
+                                </button>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        <button 
+                          onClick={() => {
+                              const newConfig = {...parsedConfig};
+                              if (!newConfig.connections) newConfig.connections = [];
+                              newConfig.connections.push({ projectId: '', secretToken: '', connectionsString: [] });
+                              updateParsedConfig(newConfig);
+                          }}
+                          className="w-full py-4 border-2 border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500 font-bold text-sm rounded-2xl hover:border-indigo-500 hover:text-indigo-500 dark:hover:border-indigo-400 dark:hover:text-indigo-400 transition-colors"
+                        >
+                          + Adicionar Projeto
+                        </button>
+                      </div>
+
+                      {/* LDAP */}
+                      <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800">
+                        <h4 className="font-bold text-lg text-neutral-800 dark:text-neutral-200 mb-4 flex items-center gap-2">
+                          <Network className="w-5 h-5 text-indigo-500" /> LDAP
+                        </h4>
+                        
+                        {parsedConfig.ldap ? (
+                          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-5 rounded-2xl shadow-sm">
+                              <label className="flex items-center gap-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-6 bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-xl cursor-pointer">
+                                <input 
+                                  type="checkbox" 
+                                  checked={parsedConfig.ldap.enabled || false}
+                                  onChange={(e) => {
+                                    const newConfig = {...parsedConfig};
+                                    newConfig.ldap.enabled = e.target.checked;
+                                    updateParsedConfig(newConfig);
+                                  }}
+                                  className="w-5 h-5 rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                Habilitar Autenticação LDAP
+                              </label>
+                              
+                              <div className={`grid grid-cols-2 gap-4 transition-opacity duration-200 ${!parsedConfig.ldap.enabled ? 'opacity-40 pointer-events-none' : ''}`}>
+                                <div>
+                                    <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">URL do Servidor</label>
+                                    <input 
+                                      value={parsedConfig.ldap.url || ''}
+                                      onChange={(e) => {
+                                        const newConfig = {...parsedConfig};
+                                        newConfig.ldap.url = e.target.value;
+                                        updateParsedConfig(newConfig);
+                                      }}
+                                      placeholder="Ex: ldap://10.0.0.15:389"
+                                      className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50" 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Base DN</label>
+                                    <input 
+                                      value={parsedConfig.ldap.baseDn || ''}
+                                      onChange={(e) => {
+                                        const newConfig = {...parsedConfig};
+                                        newConfig.ldap.baseDn = e.target.value;
+                                        updateParsedConfig(newConfig);
+                                      }}
+                                      placeholder="Ex: dc=empresa,dc=local"
+                                      className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50" 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Bind DN (Usuário Serviço)</label>
+                                    <input 
+                                      value={parsedConfig.ldap.bindDn || ''}
+                                      onChange={(e) => {
+                                        const newConfig = {...parsedConfig};
+                                        newConfig.ldap.bindDn = e.target.value;
+                                        updateParsedConfig(newConfig);
+                                      }}
+                                      placeholder="Ex: cn=servico,ou=Services,dc=empresa,dc=local"
+                                      className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50" 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Senha (Bind Password)</label>
+                                    <input 
+                                      type="password"
+                                      value={parsedConfig.ldap.bindPassword || ''}
+                                      onChange={(e) => {
+                                        const newConfig = {...parsedConfig};
+                                        newConfig.ldap.bindPassword = e.target.value;
+                                        updateParsedConfig(newConfig);
+                                      }}
+                                      className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50" 
+                                    />
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Search Filter</label>
+                                    <input 
+                                      value={parsedConfig.ldap.searchFilter || ''}
+                                      onChange={(e) => {
+                                        const newConfig = {...parsedConfig};
+                                        newConfig.ldap.searchFilter = e.target.value;
+                                        updateParsedConfig(newConfig);
+                                      }}
+                                      placeholder="Ex: (sAMAccountName={{username}})"
+                                      className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50" 
+                                    />
+                                </div>
+                              </div>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => {
+                                const newConfig = {...parsedConfig};
+                                newConfig.ldap = {
+                                  enabled: true,
+                                  url: "ldap://10.0.0.15:389",
+                                  baseDn: "dc=empresa,dc=local",
+                                  bindDn: "cn=metabuilder_service,ou=Services,dc=empresa,dc=local",
+                                  bindPassword: "senha",
+                                  searchFilter: "(sAMAccountName={{username}})"
+                                };
+                                updateParsedConfig(newConfig);
+                            }}
+                            className="w-full py-4 border-2 border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500 font-bold text-sm rounded-2xl hover:border-indigo-500 hover:text-indigo-500 dark:hover:border-indigo-400 dark:hover:text-indigo-400 transition-colors"
+                          >
+                            + Adicionar Configuração LDAP
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                )}
               </div>
               
               {hasProjects === false && (
