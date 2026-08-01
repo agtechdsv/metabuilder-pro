@@ -587,25 +587,17 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                 <div>
                                   <label className="block text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">Project ID</label>
                                   <input 
+                                    readOnly
                                     value={projConfig.projectId || ''} 
-                                    onChange={(e) => {
-                                      const newConfig = {...parsedConfig};
-                                      newConfig.connections[originalIdx].projectId = e.target.value;
-                                      updateParsedConfig(newConfig);
-                                    }}
-                                    className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 font-mono text-neutral-600 dark:text-neutral-400 focus:ring-2 focus:ring-indigo-500/50 outline-none" 
+                                    className="w-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 font-mono text-neutral-500 dark:text-neutral-500 outline-none cursor-not-allowed" 
                                   />
                                 </div>
                                 <div>
                                   <label className="block text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">Secret Token</label>
                                   <input 
+                                    readOnly
                                     value={projConfig.secretToken || ''} 
-                                    onChange={(e) => {
-                                      const newConfig = {...parsedConfig};
-                                      newConfig.connections[originalIdx].secretToken = e.target.value;
-                                      updateParsedConfig(newConfig);
-                                    }}
-                                    className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 font-mono text-neutral-600 dark:text-neutral-400 focus:ring-2 focus:ring-indigo-500/50 outline-none" 
+                                    className="w-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 font-mono text-neutral-500 dark:text-neutral-500 outline-none cursor-not-allowed" 
                                   />
                                 </div>
                             </div>
