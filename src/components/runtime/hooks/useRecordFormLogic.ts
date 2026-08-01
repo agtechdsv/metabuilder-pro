@@ -66,35 +66,6 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
   // chamado ao expandir a cortina de um detalhe pela primeira vez
   const fetchSubDetailsForRecord = async (detail: any, tableName: string, pkCol: string, pkValue: any) => {
     let subJoins = joins.filter((j: any) => j.from?.toLowerCase() === tableName?.toLowerCase())
-    
-    // Fallback if no explicit joins are defined for this sub-level
-    if (subJoins.length === 0 && project?.models) {
-      const parentModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase())
-      if (parentModelDef) {
-        const heuristicJoins: any[] = []
-        for (const childModel of project.models) {
-          if (childModel.id === parentModelDef.id) continue
-          const fkField = childModel.fields?.find((f: any) => {
-            const fName = (f.db_column_name || '').toLowerCase();
-            const pName = (parentModelDef.db_table_name || '').toLowerCase();
-            const fTbl = (f.foreign_key_table || '').toLowerCase();
-            return fTbl === pName ||
-              fName === `${pName}_id` ||
-              (pName.endsWith('s') && fName === `${pName.slice(0, -1)}_id`) ||
-              (pName.endsWith('es') && fName === `${pName.slice(0, -2)}_id`);
-          });
-          if (fkField) {
-            heuristicJoins.push({
-              from: parentModelDef.db_table_name,
-              localKey: fkField.foreign_key_column || 'id',
-              to: childModel.db_table_name,
-              foreignKey: fkField.db_column_name
-            })
-          }
-        }
-        if (heuristicJoins.length > 0) subJoins = heuristicJoins
-      }
-    }
 
     if (subJoins.length === 0) return
 
