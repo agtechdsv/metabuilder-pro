@@ -1,19 +1,4 @@
 {
-  "v1.0.3": {
-    "date": "2026-07-30",
-    "pt": [
-      "Nova Interface de Linha de Comando (CLI) para introspecção automatizada da estrutura de banco de dados.",
-      "Criação simplificada de túneis seguros para conexão direta e protegida com a infraestrutura de dados da sua empresa."
-    ],
-    "en": [
-      "New Command Line Interface (CLI) for automated database structure introspection.",
-      "Simplified creation of secure tunnels for direct and protected connection with your company's data infrastructure."
-    ],
-    "es": [
-      "Nueva Interfaz de Línea de Comandos (CLI) para introspección automatizada de la estructura de bases de datos.",
-      "Creación simplificada de túneles seguros para una conexión directa y protegida con la infraestructura de datos de su empresa."
-    ]
-  },
   "v1.0.2": {
     "date": "2026-07-30",
     "pt": [
