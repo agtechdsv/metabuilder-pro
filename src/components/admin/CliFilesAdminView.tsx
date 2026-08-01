@@ -283,9 +283,10 @@ export function CliFilesAdminView() {
       </div>
 
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden shadow-sm">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
+        <div className="overflow-y-auto max-h-[60vh]">
+          <table className="w-full text-left border-collapse relative">
+            <thead className="sticky top-0 z-10 bg-neutral-50/95 dark:bg-neutral-800/95 backdrop-blur-sm shadow-sm border-b border-neutral-200 dark:border-neutral-700">
+              <tr>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Arquivo</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Categoria</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Versão</th>
@@ -351,7 +352,8 @@ export function CliFilesAdminView() {
               </tr>
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
 
       {/* Upload Modal */}
