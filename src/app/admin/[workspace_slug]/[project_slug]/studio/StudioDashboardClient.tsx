@@ -509,6 +509,30 @@ export function StudioDashboardClient({
         }
       }
 
+      // Auto-insert into navigation menu if it doesn't exist
+      const finalSlug = payloadToUpdate.slug || viewToPublish.slug
+      const finalName = payloadToUpdate.name || viewToPublish.name
+      const currentMenu = project.navigation || []
+      
+      const existsInMenu = currentMenu.some((item: any) => item.type === 'view' && item.target === finalSlug)
+      if (!existsInMenu) {
+        const newId = Math.random().toString(36).substr(2, 9)
+        const newItem = {
+          id: `view_${newId}`,
+          label: finalName,
+          description: '',
+          icon: 'Layout',
+          type: 'view',
+          target: finalSlug,
+          show_dashboard: true
+        }
+        const updatedMenu = [...currentMenu, newItem]
+        const { error: navError } = await supabase.from('projects').update({ navigation: updatedMenu }).eq('id', project.id)
+        if (!navError) {
+          project.navigation = updatedMenu
+        }
+      }
+
       toast('Caso de Uso publicado com sucesso! Os usuários já podem acessar.', 'success')
       setIsPublishModalOpen(false)
       setViewToPublish(null)
