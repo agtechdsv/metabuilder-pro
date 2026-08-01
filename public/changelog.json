@@ -1,19 +1,4 @@
 {
-  "v1.1.1": {
-    "date": "2026-07-31",
-    "pt": [
-      "Maior flexibilidade na seleção de projetos, permitindo conexões mais fluidas sem restrições rígidas de tipo de banco de dados.",
-      "Aprimoramento do sistema de diagnóstico interno para garantir maior estabilidade e rápida resolução na geração de relacionamentos (joins) de dados."
-    ],
-    "en": [
-      "Increased flexibility in project selection, enabling smoother connections without rigid database type restrictions.",
-      "Enhanced internal diagnostic system to ensure greater stability and faster issue resolution during data relationship (join) generation."
-    ],
-    "es": [
-      "Mayor flexibilidad en la selección de proyectos, permitiendo conexiones más fluidas sin restricciones rígidas de tipo de base de datos.",
-      "Mejora en el sistema de diagnóstico interno para garantizar mayor estabilidad y rápida resolución en la generación de relaciones (joins) de datos."
-    ]
-  },
   "v1.1.0": {
     "date": "2026-07-31",
     "pt": [
