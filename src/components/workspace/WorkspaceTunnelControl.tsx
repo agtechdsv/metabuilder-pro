@@ -11,6 +11,37 @@ import { Rnd } from 'react-rnd'
 import { createClient } from '@/utils/supabase/client'
 import { usePathname, useSearchParams, useRouter } from 'next/navigation'
 
+function parseConnString(type: string, str: string) {
+  let user = '', pass = '', host = '', port = '', db = '';
+  if (!str) return { user, pass, host, port, db };
+  try {
+    let urlStr = str;
+    if (!urlStr.includes('://')) urlStr = `${type === 'postgres' ? 'postgresql' : type}://${urlStr}`;
+    const url = new URL(urlStr);
+    user = decodeURIComponent(url.username);
+    pass = decodeURIComponent(url.password);
+    host = url.hostname;
+    port = url.port;
+    db = decodeURIComponent(url.pathname.replace(/^\//, ''));
+  } catch (e) {
+    const match = str.match(/(?:.*?:\/\/)?([^:]*):([^@]*)@([^:]+):(\d+)\/(.+)/);
+    if (match) {
+      user = match[1]; pass = match[2]; host = match[3]; port = match[4]; db = match[5];
+    }
+  }
+  return { user, pass, host, port, db };
+}
+
+function buildConnString(type: string, parsed: {user: string, pass: string, host: string, port: string, db: string}) {
+  const protocol = type === 'postgres' ? 'postgresql' : type || 'postgresql';
+  const u = encodeURIComponent(parsed.user);
+  const p = encodeURIComponent(parsed.pass);
+  const auth = (u || p) ? `${u}:${p}@` : '';
+  const port = parsed.port ? `:${parsed.port}` : '';
+  const db = parsed.db ? `/${encodeURIComponent(parsed.db)}` : '';
+  return `${protocol}://${auth}${parsed.host}${port}${db}`;
+}
+
 export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: string }) {
   const { toast } = useToast()
   const pathname = usePathname()
@@ -511,8 +542,11 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                           <Network className="w-5 h-5 text-indigo-500" /> Projetos
                         </h4>
                         
-                        {parsedConfig.connections?.map((projConfig: any, idx: number) => (
-                          <div key={idx} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-5 rounded-2xl mb-4 shadow-sm">
+                        {parsedConfig.connections?.map((projConfig: any, originalIdx: number) => {
+                          const isRelated = !projConfig.projectId || availableProjects.some(p => p.id === projConfig.projectId);
+                          if (!isRelated) return null;
+                          return (
+                          <div key={originalIdx} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-5 rounded-2xl mb-4 shadow-sm">
                             <div className="flex gap-4 items-end mb-4">
                                 <div className="flex-1">
                                   <label className="block text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">Selecionar Projeto Existente</label>
@@ -523,9 +557,9 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                       const newProjectId = e.target.value;
                                       const project = availableProjects.find(p => p.id === newProjectId);
                                       const newConfig = {...parsedConfig};
-                                      newConfig.connections[idx].projectId = newProjectId;
+                                      newConfig.connections[originalIdx].projectId = newProjectId;
                                       if (project) {
-                                          newConfig.connections[idx].secretToken = project.secret_token || '';
+                                          newConfig.connections[originalIdx].secretToken = project.secret_token || '';
                                       }
                                       updateParsedConfig(newConfig);
                                     }}
@@ -539,7 +573,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                 <button 
                                   onClick={() => {
                                       const newConfig = {...parsedConfig};
-                                      newConfig.connections.splice(idx, 1);
+                                      newConfig.connections.splice(originalIdx, 1);
                                       updateParsedConfig(newConfig);
                                   }}
                                   className="p-2.5 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
@@ -556,7 +590,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                     value={projConfig.projectId || ''} 
                                     onChange={(e) => {
                                       const newConfig = {...parsedConfig};
-                                      newConfig.connections[idx].projectId = e.target.value;
+                                      newConfig.connections[originalIdx].projectId = e.target.value;
                                       updateParsedConfig(newConfig);
                                     }}
                                     className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 font-mono text-neutral-600 dark:text-neutral-400 focus:ring-2 focus:ring-indigo-500/50 outline-none" 
@@ -568,7 +602,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                     value={projConfig.secretToken || ''} 
                                     onChange={(e) => {
                                       const newConfig = {...parsedConfig};
-                                      newConfig.connections[idx].secretToken = e.target.value;
+                                      newConfig.connections[originalIdx].secretToken = e.target.value;
                                       updateParsedConfig(newConfig);
                                     }}
                                     className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 font-mono text-neutral-600 dark:text-neutral-400 focus:ring-2 focus:ring-indigo-500/50 outline-none" 
@@ -578,66 +612,94 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
 
                             <div className="pl-4 border-l-2 border-indigo-100 dark:border-indigo-500/20">
                                 <h5 className="font-bold text-sm text-neutral-700 dark:text-neutral-300 mb-3">Strings de Conexão</h5>
-                                {projConfig.connectionsString?.map((connStr: any, connIdx: number) => (
-                                  <div key={connIdx} className="flex gap-3 items-end mb-3">
-                                      <div className="w-1/4">
-                                        <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Nome</label>
-                                        <input 
-                                          value={connStr.name || ''} 
-                                          onChange={(e) => {
-                                            const newConfig = {...parsedConfig};
-                                            newConfig.connections[idx].connectionsString[connIdx].name = e.target.value;
-                                            updateParsedConfig(newConfig);
-                                          }}
-                                          className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500" 
-                                        />
-                                      </div>
-                                      <div className="w-1/4">
-                                        <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Tipo</label>
-                                        <select 
-                                          value={connStr.type || ''} 
-                                          onChange={(e) => {
-                                            const newConfig = {...parsedConfig};
-                                            newConfig.connections[idx].connectionsString[connIdx].type = e.target.value;
-                                            updateParsedConfig(newConfig);
-                                          }}
-                                          className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500"
-                                        >
-                                          <option value="postgres">Postgres</option>
-                                          <option value="mysql">MySQL</option>
-                                          <option value="oracle">Oracle</option>
-                                          <option value="sqlserver">SQL Server</option>
-                                        </select>
-                                      </div>
-                                      <div className="flex-1">
-                                        <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">String</label>
-                                        <input 
-                                          value={connStr.connectionString || ''} 
-                                          onChange={(e) => {
-                                            const newConfig = {...parsedConfig};
-                                            newConfig.connections[idx].connectionsString[connIdx].connectionString = e.target.value;
-                                            updateParsedConfig(newConfig);
-                                          }}
-                                          className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500" 
-                                        />
-                                      </div>
+                                {projConfig.connectionsString?.map((connStr: any, connIdx: number) => {
+                                  const parsedStr = parseConnString(connStr.type || 'postgres', connStr.connectionString || '');
+                                  
+                                  const handlePartChange = (field: keyof typeof parsedStr, val: string) => {
+                                    const newParsed = { ...parsedStr, [field]: val };
+                                    const newStr = buildConnString(connStr.type || 'postgres', newParsed);
+                                    const newConfig = {...parsedConfig};
+                                    newConfig.connections[originalIdx].connectionsString[connIdx].connectionString = newStr;
+                                    updateParsedConfig(newConfig);
+                                  };
+
+                                  return (
+                                  <div key={connIdx} className="bg-neutral-50 dark:bg-neutral-800/30 p-4 rounded-xl border border-neutral-100 dark:border-neutral-800 mb-3 relative">
                                       <button 
                                         onClick={() => {
                                             const newConfig = {...parsedConfig};
-                                            newConfig.connections[idx].connectionsString.splice(connIdx, 1);
+                                            newConfig.connections[originalIdx].connectionsString.splice(connIdx, 1);
                                             updateParsedConfig(newConfig);
                                         }}
-                                        className="p-2 mb-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                                        className="absolute top-4 right-4 p-1.5 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-lg hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
                                       >
                                         <X className="w-4 h-4" />
                                       </button>
+                                      
+                                      <div className="grid grid-cols-2 gap-3 pr-10 mb-4">
+                                        <div>
+                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Nome</label>
+                                          <input 
+                                            value={connStr.name || ''} 
+                                            onChange={(e) => {
+                                              const newConfig = {...parsedConfig};
+                                              newConfig.connections[originalIdx].connectionsString[connIdx].name = e.target.value;
+                                              updateParsedConfig(newConfig);
+                                            }}
+                                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500" 
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Tipo</label>
+                                          <select 
+                                            value={connStr.type || ''} 
+                                            onChange={(e) => {
+                                              const newConfig = {...parsedConfig};
+                                              newConfig.connections[originalIdx].connectionsString[connIdx].type = e.target.value;
+                                              const newStr = buildConnString(e.target.value, parsedStr);
+                                              newConfig.connections[originalIdx].connectionsString[connIdx].connectionString = newStr;
+                                              updateParsedConfig(newConfig);
+                                            }}
+                                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500"
+                                          >
+                                            <option value="postgres">Postgres</option>
+                                            <option value="mysql">MySQL</option>
+                                            <option value="oracle">Oracle</option>
+                                            <option value="sqlserver">SQL Server</option>
+                                          </select>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="grid grid-cols-5 gap-3">
+                                        <div className="col-span-1">
+                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Usuário</label>
+                                          <input value={parsedStr.user} onChange={e => handlePartChange('user', e.target.value)} className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500" />
+                                        </div>
+                                        <div className="col-span-1">
+                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Senha</label>
+                                          <input type="password" value={parsedStr.pass} onChange={e => handlePartChange('pass', e.target.value)} className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500" />
+                                        </div>
+                                        <div className="col-span-1">
+                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Host/IP</label>
+                                          <input value={parsedStr.host} onChange={e => handlePartChange('host', e.target.value)} className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500" />
+                                        </div>
+                                        <div className="col-span-1">
+                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Porta</label>
+                                          <input value={parsedStr.port} onChange={e => handlePartChange('port', e.target.value)} className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500" />
+                                        </div>
+                                        <div className="col-span-1">
+                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Database/SID</label>
+                                          <input value={parsedStr.db} onChange={e => handlePartChange('db', e.target.value)} className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500" />
+                                        </div>
+                                      </div>
                                   </div>
-                                ))}
+                                  );
+                                })}
                                 <button 
                                   onClick={() => {
                                       const newConfig = {...parsedConfig};
-                                      if (!newConfig.connections[idx].connectionsString) newConfig.connections[idx].connectionsString = [];
-                                      newConfig.connections[idx].connectionsString.push({ name: '', type: 'postgres', connectionString: '' });
+                                      if (!newConfig.connections[originalIdx].connectionsString) newConfig.connections[originalIdx].connectionsString = [];
+                                      newConfig.connections[originalIdx].connectionsString.push({ name: '', type: 'postgres', connectionString: '' });
                                       updateParsedConfig(newConfig);
                                   }}
                                   className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 mt-2 flex items-center gap-1 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1.5 rounded-lg transition-colors w-fit"
@@ -646,7 +708,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                 </button>
                             </div>
                           </div>
-                        ))}
+                        );})}
                         
                         <button 
                           onClick={() => {
