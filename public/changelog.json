@@ -1,19 +1,4 @@
 {
-  "v1.1.3": {
-    "date": "2026-07-31",
-    "pt": [
-      "Maior estabilidade no processamento e exibição de dados: otimizamos a exportação e transmissão de resultados de consultas SQL para bancos de dados Oracle, eliminando falhas em dados complexos.",
-      "Melhorias gerais de estabilidade e sincronização contínua na plataforma para uma navegação mais fluida e confiável."
-    ],
-    "en": [
-      "Enhanced stability in data processing and display: optimized the exporting and broadcasting of SQL query results for Oracle databases, preventing errors with complex data structures.",
-      "General stability and synchronization improvements to ensure a smoother, more reliable platform experience."
-    ],
-    "es": [
-      "Mayor estabilidad en el procesamiento y visualización de datos: optimizamos la exportación y transmisión de resultados de consultas SQL para bases de datos Oracle, eliminando errores en datos complejos.",
-      "Mejoras generales de estabilidad y sincronización continua en la plataforma para una experiencia más fluida y confiable."
-    ]
-  },
   "v1.1.2": {
     "date": "2026-07-31",
     "pt": [
