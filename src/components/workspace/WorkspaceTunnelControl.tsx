@@ -14,21 +14,49 @@ import { usePathname, useSearchParams, useRouter } from 'next/navigation'
 function parseConnString(type: string, str: string) {
   let user = '', pass = '', host = '', port = '', db = '';
   if (!str) return { user, pass, host, port, db };
+
   try {
-    let urlStr = str;
-    if (!urlStr.includes('://')) urlStr = `${type === 'postgres' ? 'postgresql' : type}://${urlStr}`;
-    const url = new URL(urlStr);
-    user = decodeURIComponent(url.username);
-    pass = decodeURIComponent(url.password);
-    host = url.hostname;
-    port = url.port;
-    db = decodeURIComponent(url.pathname.replace(/^\//, ''));
-  } catch (e) {
-    const match = str.match(/(?:.*?:\/\/)?([^:]*):([^@]*)@([^:]+):(\d+)\/(.+)/);
-    if (match) {
-      user = match[1]; pass = match[2]; host = match[3]; port = match[4]; db = match[5];
+    let withoutProtocol = str;
+    const protoIndex = str.indexOf('://');
+    if (protoIndex !== -1) {
+      withoutProtocol = str.substring(protoIndex + 3);
     }
+
+    const atIndex = withoutProtocol.lastIndexOf('@');
+    let authPart = '';
+    let hostPathPart = withoutProtocol;
+    
+    if (atIndex !== -1) {
+      authPart = withoutProtocol.substring(0, atIndex);
+      hostPathPart = withoutProtocol.substring(atIndex + 1);
+      
+      const colonAuthIndex = authPart.indexOf(':');
+      if (colonAuthIndex !== -1) {
+        user = decodeURIComponent(authPart.substring(0, colonAuthIndex));
+        pass = decodeURIComponent(authPart.substring(colonAuthIndex + 1));
+      } else {
+        user = decodeURIComponent(authPart);
+      }
+    }
+
+    const slashIndex = hostPathPart.indexOf('/');
+    let hostPortPart = hostPathPart;
+    if (slashIndex !== -1) {
+      hostPortPart = hostPathPart.substring(0, slashIndex);
+      db = decodeURIComponent(hostPathPart.substring(slashIndex + 1));
+    }
+
+    const colonHostIndex = hostPortPart.indexOf(':');
+    if (colonHostIndex !== -1) {
+      host = hostPortPart.substring(0, colonHostIndex);
+      port = hostPortPart.substring(colonHostIndex + 1);
+    } else {
+      host = hostPortPart;
+    }
+  } catch (e) {
+    console.error("Error parsing conn string", e);
   }
+
   return { user, pass, host, port, db };
 }
 
