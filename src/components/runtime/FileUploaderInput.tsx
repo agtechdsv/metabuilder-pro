@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { UploadCloud, Link as LinkIcon, Image as ImageIcon, FileText, X, AlertCircle } from 'lucide-react'
+import { UploadCloud, Link as LinkIcon, Image as ImageIcon, FileText, X, AlertCircle, Maximize2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 
@@ -25,6 +25,7 @@ export function FileUploaderInput({
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [imageError, setImageError] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isImageMode = type === 'image'
@@ -191,6 +192,16 @@ export function FileUploaderInput({
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={value} alt="Preview" className="w-full h-full object-contain" onError={() => setImageError(true)} />
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsFullscreen(true)}
+                      className="p-1.5 bg-black/50 text-white rounded-md shadow-md hover:bg-black/70 transition-colors backdrop-blur-sm"
+                      title="Ampliar Imagem"
+                    >
+                      <Maximize2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </>
               ) : (
                 <div className={cn("flex flex-col items-center justify-center p-8 w-full h-full", isPdf ? "bg-red-50/50 dark:bg-red-950/20" : "")}>
@@ -266,9 +277,18 @@ export function FileUploaderInput({
                 </div>
               )}
               
-              {!disabled && (
-                <div className="absolute top-2 right-2 flex gap-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+              <div className="absolute top-2 right-2 flex gap-2">
+                {renderAsImage && isBase64 && !imageError && (
+                  <button
+                    type="button"
+                    onClick={() => setIsFullscreen(true)}
+                    className="p-1.5 bg-black/50 text-white rounded-md shadow-md hover:bg-black/70 transition-colors backdrop-blur-sm"
+                    title="Ampliar Imagem"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </button>
+                )}
+                {!disabled && (
                   <button
                     type="button"
                     onClick={clearValue}
@@ -277,10 +297,28 @@ export function FileUploaderInput({
                   >
                     <X className="w-4 h-4" />
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
+        </div>
+      )}
+
+      {isFullscreen && renderAsImage && !imageError && (
+        <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 md:p-10 backdrop-blur-sm" onClick={() => setIsFullscreen(false)}>
+          <button 
+            className="absolute top-4 right-4 md:top-8 md:right-8 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors backdrop-blur-md"
+            onClick={() => setIsFullscreen(false)}
+          >
+            <X className="w-6 h-6" />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img 
+            src={value} 
+            alt="Fullscreen Preview" 
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl ring-1 ring-white/10"
+            onClick={(e) => e.stopPropagation()} 
+          />
         </div>
       )}
     </div>
