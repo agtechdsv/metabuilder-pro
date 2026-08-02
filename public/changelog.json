@@ -1,4 +1,31 @@
 {
+  "v1.0.1": {
+    "date": "2026-08-02",
+    "pt": [
+      "Nova Central de Downloads integrada para acesso rápido às últimas versões e atualizações da plataforma.",
+      "Painel Administrativo de Plataforma completo com análises estratégicas (analytics) e controle centralizado para Super Admins.",
+      "Gestão de clientes aprimorada com abas interativas, filtros avançados e ferramentas simplificadas de administração.",
+      "Suporte aprimorado para migração de bancos de dados Oracle e nova ferramenta CLI para introspecção e conexões seguras via túnel com Supabase.",
+      "Novo Gerenciador de Projetos completo com criação, exportação intuitiva, integração desktop nativa e sincronização automática de workspaces e bancos de dados.",
+      "Painel Studio Dashboard para governança total de configurações e controle de túneis locais de desenvolvimento em tempo real."
+    ],
+    "en": [
+      "New integrated Downloads Hub for seamless access to the latest platform releases and updates.",
+      "Comprehensive Platform Admin Dashboard featuring advanced analytics and centralized management for Super Admins.",
+      "Enhanced client management tools with interactive tabs, advanced filtering, and streamlined account governance.",
+      "Expanded database capabilities with Oracle migration support and a powerful CLI tool for introspection and secure Supabase tunneling.",
+      "New Project Manager offering creation, seamless exports, native desktop integration, and automated workspace/database synchronization.",
+      "Studio Dashboard Client for end-to-end project configuration and real-time local workspace tunnel management."
+    ],
+    "es": [
+      "Nueva Central de Descargas integrada para un acceso rápido a las últimas versiones y actualizaciones de la plataforma.",
+      "Panel de Administración de Plataforma completo con analíticas estratégicas y control centralizado para Super Admins.",
+      "Gestión de clientes mejorada con pestañas interactivas, filtrado avanzado y herramientas simplificadas de administración.",
+      "Capacidades de bases de datos ampliadas con soporte de migración para Oracle y una potente herramienta CLI para introspección y túneles seguros con Supabase.",
+      "Nuevo Administrador de Proyectos con creación, exportación fluida, integración de escritorio nativa y sincronización automatizada de espacios de trabajo y bases de datos.",
+      "Panel Studio Dashboard para gobernanza integral de configuraciones y control de túneles locales de desarrollo en tiempo real."
+    ]
+  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
