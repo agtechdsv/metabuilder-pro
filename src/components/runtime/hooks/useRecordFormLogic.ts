@@ -281,7 +281,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         Object.entries(detailsItemTitles).forEach(([mId, fieldName]) => {
           const baseName = fieldName.includes('.') ? fieldName.split('.')[0] : fieldName
           const safeBase = baseName?.toLowerCase()?.trim() || ''
-          const model = project.models.find((m: any) => m.id === mId)
+          const model = project.models.find((m: any) => String(m.id) === String(mId))
           if (model && model.fields) {
             const field = model.fields.find((f: any) => {
               const fName = f.db_column_name?.toLowerCase()?.trim() || ''
