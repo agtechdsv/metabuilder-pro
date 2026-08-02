@@ -290,8 +290,8 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                             let titleFieldDef = detailFields.find(checkMatch) || fields.find(checkMatch);
                             if (!titleFieldDef && project?.models && detailModelId) {
                                const model = project.models.find((m: any) => m.id === detailModelId);
-                               if (model && model.ui_fields) {
-                                  titleFieldDef = model.ui_fields.find(checkMatch);
+                               if (model && model.fields) {
+                                  titleFieldDef = model.fields.find(checkMatch);
                                }
                             }
                             

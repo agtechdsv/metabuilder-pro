@@ -282,10 +282,21 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
           const baseName = fieldName.includes('.') ? fieldName.split('.')[0] : fieldName
           const safeBase = baseName?.toLowerCase()?.trim() || ''
           const model = project.models.find((m: any) => m.id === mId)
-          if (model && model.ui_fields) {
-            const field = model.ui_fields.find((f: any) => {
+          if (model && model.fields) {
+            const field = model.fields.find((f: any) => {
               const fName = f.db_column_name?.toLowerCase()?.trim() || ''
-              return fName === safeBase || fName.endsWith(`.${safeBase}`) || fName.endsWith(`_${safeBase}`)
+              const fLabel = f.display_name?.toLowerCase()?.trim() || f.label?.toLowerCase()?.trim() || ''
+              if (fName === safeBase || fName.endsWith(`.${safeBase}`) || fName.endsWith(`_${safeBase}`)) return true;
+              if (fLabel && (fLabel === safeBase || fLabel.includes(safeBase) || safeBase.includes(fLabel))) return true;
+              const comp = f.config?.form_config?.component || f.config?.component || f.widget_options?.component;
+              if (comp && comp.options_type === 'relational') {
+                  const relLabel = comp.rel_label?.toLowerCase() || '';
+                  const relTable = comp.rel_table?.toLowerCase() || '';
+                  if (relLabel && (relLabel === safeBase || safeBase.includes(relLabel))) return true;
+                  const singularRelTable = relTable.endsWith('s') ? relTable.slice(0, -1) : relTable;
+                  if (singularRelTable && safeBase.includes(singularRelTable) && (safeBase.includes('nome') || safeBase.includes('titulo'))) return true;
+              }
+              return false;
             })
             if (field && !fieldsToFetch.find(f => f.id === field.id)) {
               fieldsToFetch.push({ ...field, model_id: model.id, model_name: model.db_table_name || model.table_name })
