@@ -511,7 +511,8 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
                         // Oracle: use scalar subquery ONLY (no LEFT JOIN - it causes duplicate rows
                         // when child table has multiple records, and combined with JSON_OBJECT(*)
                         // triggers ORA-01427: single-row subquery returns more than one row)
-                        selectCols += `, (SELECT JSON_OBJECT(*) FROM "${safeTo}" WHERE "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}" AND ROWNUM = 1) AS "${safeTo}"`;
+                        // Use RETURNING CLOB to avoid ORA-40478 (output value too large, max 4000)
+                        selectCols += `, (SELECT JSON_OBJECT(* RETURNING CLOB) FROM "${safeTo}" WHERE "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}" AND ROWNUM = 1) AS "${safeTo}"`;
                       } else {
                         selectCols += `, row_to_json("${safeTo}".*) AS "${safeTo}"`;
                         joinClause += ` LEFT JOIN "${safeTo}" ON "${safeFrom}"."${safeLocal}" = "${safeTo}"."${safeForeign}"`;
@@ -521,7 +522,8 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
                     } else if (joinedTables.has(safeTo)) {
                       if (dbType === 'oracle') {
                         // Oracle: same - use scalar subquery ONLY, no LEFT JOIN
-                        selectCols += `, (SELECT JSON_OBJECT(*) FROM "${safeFrom}" WHERE "${safeTo}"."${safeForeign}" = "${safeFrom}"."${safeLocal}" AND ROWNUM = 1) AS "${safeFrom}"`;
+                        // Use RETURNING CLOB to avoid ORA-40478 (output value too large, max 4000)
+                        selectCols += `, (SELECT JSON_OBJECT(* RETURNING CLOB) FROM "${safeFrom}" WHERE "${safeTo}"."${safeForeign}" = "${safeFrom}"."${safeLocal}" AND ROWNUM = 1) AS "${safeFrom}"`;
                       } else {
                         selectCols += `, row_to_json("${safeFrom}".*) AS "${safeFrom}"`;
                         joinClause += ` LEFT JOIN "${safeFrom}" ON "${safeTo}"."${safeForeign}" = "${safeFrom}"."${safeLocal}"`;
@@ -565,7 +567,20 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           // ─────────────────────────────────────────────────────────────────────
           if (dbType === 'oracle') {
             const oraRes = await oracleConnection.execute(sql, params, { outFormat: oracledb.OUT_FORMAT_OBJECT });
-            result = { rows: oraRes.rows };
+            // Parse any string columns produced by JSON_OBJECT(* RETURNING CLOB) subqueries
+            // so the front-end receives proper objects instead of raw JSON strings.
+            const parsedRows = (oraRes.rows || []).map(row => {
+              const normalizedRow = {};
+              for (const [k, v] of Object.entries(row)) {
+                if (typeof v === 'string' && v.trimStart().startsWith('{') && v.trimEnd().endsWith('}')) {
+                  try { normalizedRow[k] = JSON.parse(v); } catch (_) { normalizedRow[k] = v; }
+                } else {
+                  normalizedRow[k] = v;
+                }
+              }
+              return normalizedRow;
+            });
+            result = { rows: parsedRows };
           } else {
             result = await pgClient.query(sql, params);
           }
@@ -707,7 +722,20 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           
           if (dbType === 'oracle') {
             const oraRes = await oracleConnection.execute(sql, params, { outFormat: oracledb.OUT_FORMAT_OBJECT });
-            result = { rows: oraRes.rows };
+            // Parse any string columns produced by JSON_OBJECT(* RETURNING CLOB) subqueries
+            // so the front-end receives proper objects instead of raw JSON strings.
+            const parsedRows = (oraRes.rows || []).map(row => {
+              const normalizedRow = {};
+              for (const [k, v] of Object.entries(row)) {
+                if (typeof v === 'string' && v.trimStart().startsWith('{') && v.trimEnd().endsWith('}')) {
+                  try { normalizedRow[k] = JSON.parse(v); } catch (_) { normalizedRow[k] = v; }
+                } else {
+                  normalizedRow[k] = v;
+                }
+              }
+              return normalizedRow;
+            });
+            result = { rows: parsedRows };
           } else {
             result = await pgClient.query(sql, params);
           }
