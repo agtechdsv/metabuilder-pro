@@ -22,7 +22,8 @@ import {
   parseMaskedNumber, 
   getActionColorClasses, 
   getBulkActionClasses,
-  parseFixedOptions
+  parseFixedOptions,
+  calculateEffectiveJoins
 } from './record-form/RecordFormUtils';
 
 
@@ -108,6 +109,14 @@ export default function RecordForm({
   projectRelations = []
 }: RecordFormProps) {
   const { t } = useI18n()
+  
+  // Calculate effective joins in case view_config.joins is empty or missing (e.g., dynamically created views)
+  const effectiveJoins = Array.isArray(joins) && joins.length > 0 
+    ? joins 
+    : (typeof calculateEffectiveJoins === 'function' && project && masterModelName 
+        ? calculateEffectiveJoins(joins, projectRelations, project, masterModelName) 
+        : joins);
+
   const {
     formData, setFormData,
     activeTab, setActiveTab,
@@ -124,7 +133,7 @@ export default function RecordForm({
     handleCancel
   } = useRecordFormLogic({
     mode, fields, initialData, onSave, onCancel, logicType, masterModelId, masterModelName,
-    joins, initialTab, detailsItemTitles, projectId, secretToken,
+    joins: effectiveJoins, initialTab, detailsItemTitles, projectId, secretToken,
     tunnelChannel, isTunnelReady, project, refreshTrigger, isPageMode
   });
 
@@ -487,7 +496,7 @@ export default function RecordForm({
     formData={formData}
     setFormData={setFormData}
     fields={fields}
-    joins={joins}
+    joins={effectiveJoins}
     detailFields={detailFields}
     customActions={customActions}
     onCustomAction={onCustomAction}
@@ -523,7 +532,7 @@ export default function RecordForm({
     formData={formData}
     setFormData={setFormData}
     fields={fields}
-    joins={joins}
+    joins={effectiveJoins}
     detailFields={detailFields}
     customActions={customActions}
     onCustomAction={onCustomAction}
@@ -555,7 +564,7 @@ export default function RecordForm({
     formData={formData}
     setFormData={setFormData}
     fields={fields}
-    joins={joins}
+    joins={effectiveJoins}
     detailFields={detailFields}
     customActions={customActions}
     onCustomAction={onCustomAction}

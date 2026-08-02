@@ -207,9 +207,6 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
         )}
 
         <div className="space-y-1.5 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-          <div className="bg-orange-500 text-white p-2 text-xs mb-2">
-            DEBUG_ROWS: tableName={tableName}, detailsToRender={(parentData?._details || []).filter((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase())?.length || 0}
-          </div>
           {(() => {
             const seenIds = new Set();
             const detailsToRender = (parentData?._details || [])
@@ -702,13 +699,10 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                             .map(f => f.model_name)
                         ));
 
-                        if (true) {
+                        if (subTables.length > 0) {
                           return (
                             <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800 space-y-6">
-                              <div className="bg-red-500 text-white p-2 text-xs">
-                                DEBUG: tableName={tableName}, fields={fields.length}, joins={joins.length}, subTables={subTables.join(', ')}
-                              </div>
-                              {subTables.length > 0 && subTables.map(st => {
+                              {subTables.map(st => {
                                 const stTargetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === st?.toLowerCase());
                                 const stModelId = stTargetModel?.id || fields.find(f => f.model_name?.toLowerCase() === st?.toLowerCase())?.model_id;
                                 const stTitle = detailsTabTitles?.[stModelId || ''] || dictionary?.[stModelId || ''] || stTargetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === st?.toLowerCase())?.display_model_name || st;
