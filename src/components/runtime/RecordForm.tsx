@@ -113,8 +113,8 @@ export default function RecordForm({
   // Calculate effective joins in case view_config.joins is empty or missing (e.g., dynamically created views)
   const effectiveJoins = Array.isArray(joins) && joins.length > 0 
     ? joins 
-    : (typeof calculateEffectiveJoins === 'function' && project && masterModelName 
-        ? calculateEffectiveJoins(joins, projectRelations, project, masterModelName) 
+    : (typeof calculateEffectiveJoins === 'function' && project
+        ? calculateEffectiveJoins(joins, projectRelations, project) 
         : joins);
 
   const {

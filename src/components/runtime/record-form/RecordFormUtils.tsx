@@ -203,23 +203,26 @@ export const parseFixedOptions = (str: string) => {
   });
 };
 
-export const calculateEffectiveJoins = (joins: any[], projectRelations: any[], project: any, parentModel: string) => {
-  let effectiveJoins = joins || [];
-  if (effectiveJoins.length === 0 && projectRelations && project?.models) {
-    const parentModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === parentModel?.toLowerCase());
-    if (parentModelDef) {
-      const related = projectRelations.filter((rel: any) => rel.to_model_id === parentModelDef.id || rel.master_model_id === parentModelDef.id);
-      const auto = related.map((rel: any) => {
+export const calculateEffectiveJoins = (joins: any[], projectRelations: any[], project: any) => {
+  let effectiveJoins = [...(joins || [])];
+  
+  if (effectiveJoins.length === 0 && project?.models) {
+    // 1. Fallback via Santo Graal (Banco de Dados)
+    if (projectRelations && projectRelations.length > 0) {
+      const auto = projectRelations.map((rel: any) => {
         const fromModelId = rel.from_model_id || rel.detail_model_id;
         const toModelId = rel.to_model_id || rel.master_model_id;
         const fromFieldId = rel.from_field_id || rel.foreign_column_id;
         const toFieldId = rel.to_field_id || rel.referenced_column_id;
+        
         const childModel = project.models.find((m: any) => m.id === fromModelId);
         const childField = childModel?.fields?.find((f: any) => f.id === fromFieldId);
-        const parentField = parentModelDef.fields?.find((f: any) => f.id === toFieldId);
-        if (childModel && childField && parentField) {
+        const parentModel = project.models.find((m: any) => m.id === toModelId);
+        const parentField = parentModel?.fields?.find((f: any) => f.id === toFieldId);
+        
+        if (childModel && childField && parentModel && parentField) {
           return {
-            from: parentModelDef.db_table_name,
+            from: parentModel.db_table_name,
             localKey: parentField.db_column_name,
             to: childModel.db_table_name,
             foreignKey: childField.db_column_name
@@ -227,37 +230,49 @@ export const calculateEffectiveJoins = (joins: any[], projectRelations: any[], p
         }
         return null;
       }).filter(Boolean);
-      if (auto.length > 0) effectiveJoins = auto;
+      
+      if (auto.length > 0) {
+        effectiveJoins = auto;
+      }
     }
-  }
-  if (effectiveJoins.length === 0 && project?.models) {
-    const parentModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === parentModel?.toLowerCase());
-    if (parentModelDef) {
+
+    // 2. Fallback via Heurística (Nomenclatura)
+    if (effectiveJoins.length === 0) {
       const heuristicJoins: any[] = [];
-      for (const childModel of project.models) {
-        if (childModel.id === parentModelDef.id) continue;
-        const fkField = childModel.fields?.find((f: any) => {
-          const fName = (f.db_column_name || '').toLowerCase();
-          const pName = (parentModelDef.db_table_name || '').toLowerCase();
-          const fTbl = (f.foreign_key_table || '').toLowerCase();
-          const isFkTblMatch = fTbl === pName;
-          const isFNameExact = fName === `_id`;
-          const isFNameS = (pName.endsWith('s') && fName === `_id`);
-          const isFNameEs = (pName.endsWith('es') && fName === `_id`);
-          return isFkTblMatch || isFNameExact || isFNameS || isFNameEs;
-        });
-        const pkField = parentModelDef.fields?.find((f: any) => (f.db_column_name || '').toLowerCase() === 'id') || parentModelDef.fields?.[0];
-        if (fkField && pkField) {
-          heuristicJoins.push({
-            from: parentModelDef.db_table_name,
-            localKey: pkField.db_column_name,
-            to: childModel.db_table_name,
-            foreignKey: fkField.db_column_name
+      for (const parentModelDef of project.models) {
+        for (const childModel of project.models) {
+          if (childModel.id === parentModelDef.id) continue;
+          
+          const fkField = childModel.fields?.find((f: any) => {
+            const fName = (f.db_column_name || '').toLowerCase();
+            const pName = (parentModelDef.db_table_name || '').toLowerCase();
+            const fTbl = (f.foreign_key_table || '').toLowerCase();
+            
+            const isFkTblMatch = fTbl === pName;
+            const isFNameExact = fName === `${pName}_id`;
+            const isFNameS = (pName.endsWith('s') && fName === `${pName.slice(0, -1)}_id`);
+            const isFNameEs = (pName.endsWith('es') && fName === `${pName.slice(0, -2)}_id`);
+            
+            return isFkTblMatch || isFNameExact || isFNameS || isFNameEs;
           });
+          
+          const pkField = parentModelDef.fields?.find((f: any) => (f.db_column_name || '').toLowerCase() === 'id') || parentModelDef.fields?.[0];
+          
+          if (fkField && pkField) {
+            heuristicJoins.push({
+              from: parentModelDef.db_table_name,
+              localKey: pkField.db_column_name,
+              to: childModel.db_table_name,
+              foreignKey: fkField.db_column_name
+            });
+          }
         }
       }
-      if (heuristicJoins.length > 0) effectiveJoins = heuristicJoins;
+      if (heuristicJoins.length > 0) {
+        effectiveJoins = heuristicJoins;
+      }
     }
   }
+  
   return effectiveJoins;
 };
