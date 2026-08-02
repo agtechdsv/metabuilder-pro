@@ -258,10 +258,21 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                             // Tradução Automática: Se o campo for um relacionamento (Combo), troca o ID pelo Label
                             const baseField = customField.includes('.') ? customField.split('.')[0] : customField;
                             const safeBase = baseField?.toLowerCase()?.trim() || '';
+                            let matchedByRelLabel = false;
+                            
                             const checkMatch = (f: any) => {
                                const fName = f.db_column_name?.toLowerCase()?.trim() || '';
-                               return fName === safeBase || fName.endsWith(`.${safeBase}`) || fName.endsWith(`_${safeBase}`);
+                               if (fName === safeBase || fName.endsWith(`.${safeBase}`) || fName.endsWith(`_${safeBase}`)) return true;
+                               
+                               // Check if it's a relational field whose label matches the requested title field
+                               const comp = f.config?.form_config?.component || f.config?.component || f.widget_options?.component;
+                               if (comp && comp.options_type === 'relational' && comp.rel_label?.toLowerCase() === safeBase) {
+                                  matchedByRelLabel = true;
+                                  return true;
+                               }
+                               return false;
                             };
+                            
                             let titleFieldDef = detailFields.find(checkMatch) || fields.find(checkMatch);
                             if (!titleFieldDef && project?.models && detailModelId) {
                                const model = project.models.find((m: any) => m.id === detailModelId);
@@ -270,11 +281,18 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                }
                             }
                             
-                            if (titleFieldDef && val !== undefined && val !== null) {
-                               const opts = relationalOptions[titleFieldDef.id] || [];
-                               const matchedOpt = opts.find(o => String(o.value) === String(val));
-                               if (matchedOpt && matchedOpt.label) {
-                                  val = matchedOpt.label;
+                            if (titleFieldDef) {
+                               // If matched by rel_label, we need to extract the foreign key ID first
+                               if (matchedByRelLabel || val === undefined) {
+                                  val = detail[titleFieldDef.db_column_name];
+                               }
+                               
+                               if (val !== undefined && val !== null) {
+                                  const opts = relationalOptions[titleFieldDef.id] || [];
+                                  const matchedOpt = opts.find(o => String(o.value) === String(val));
+                                  if (matchedOpt && matchedOpt.label) {
+                                     val = matchedOpt.label;
+                                  }
                                }
                             }
                             

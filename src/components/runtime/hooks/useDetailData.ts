@@ -308,35 +308,6 @@ export function useDetailData({
              const allJoins = [...(titleJoins || []), ...(subDetailJoins || [])];
              const uniqueJoins = Array.from(new Set(allJoins.map((j: any) => j.to))).map(to => allJoins.find((j: any) => j.to === to));
              
-             // Auto-join ALL foreign keys of the sub-model so the UI fallback can find titles!
-             const detailModel = (project as any)?.models?.find((m: any) => {
-               const tbl = (m.db_table_name || m.table_name || '').toLowerCase();
-               return tbl === join.to?.toLowerCase();
-             })
-             
-             if (detailModel && detailModel.fields) {
-                detailModel.fields.forEach((f: any) => {
-                   let relatedTable = f.foreign_key_table || f.widget_options?.component?.rel_table || f.config?.component?.rel_table || f.config?.form_config?.component?.rel_table;
-                   if (!relatedTable && f.db_column_name?.toLowerCase().endsWith('_id')) {
-                      const base = f.db_column_name.toLowerCase().replace(/_id$/, '');
-                      if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base + 's')) relatedTable = base + 's';
-                      else if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base + 'es')) relatedTable = base + 'es';
-                      else if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base)) relatedTable = base;
-                   }
-                   
-                   // Ensure the related table actually exists as a model to prevent UUIDs or invalid tables from breaking the query
-                   const isValidModel = relatedTable ? (project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === relatedTable) : false;
-                   
-                   if (relatedTable && isValidModel && !uniqueJoins.find((j: any) => j.to === relatedTable)) {
-                      uniqueJoins.push({
-                         from: join.to,
-                         localKey: f.db_column_name,
-                         to: relatedTable,
-                         foreignKey: f.foreign_key_column || 'id'
-                      });
-                   }
-                });
-             }
              
              console.log('[DEBUG useDetailData] Fetching sub-details for', join.to, 'uniqueJoins:', uniqueJoins);
              
