@@ -315,7 +315,6 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         if (isRelationalComp && comp.options_type === 'relational' && comp.rel_table) {
           try {
             if (projectId && project?.db_type !== 'postgres') {
-              if (!tunnelChannel || !isTunnelReady) continue;
               const queryId = crypto.randomUUID()
               const filterCol = comp.filter_column ? `, "${comp.filter_column}"` : ''
               const rawQuery = `SELECT "${comp.rel_label}", "${comp.rel_value}"${filterCol} FROM "${comp.rel_table}"`
@@ -325,19 +324,26 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
               console.log(`[MetaBuilder:RecordForm] Query:`, rawQuery)
 
               const data = await new Promise<any[]>((resolve, reject) => {
+                const isTemporary = !tunnelChannel || !isTunnelReady
+                const channelName = `tunnel:${projectId}`
+                const channel = isTemporary ? supabase.channel(channelName) : tunnelChannel
                 let resolved = false
                 const cleanup = () => {
                   try {
-                    const bindings = tunnelChannel.bindings?.broadcast
+                    const bindings = channel.bindings?.broadcast
                     if (Array.isArray(bindings)) {
                       const cleanBindings = bindings.filter((b: any) => {
                         const match = b.callback === handleResult
-                        if (match && tunnelChannel.channelAdapter) {
-                          tunnelChannel.channelAdapter.off('broadcast', b.ref)
+                        if (match && channel.channelAdapter) {
+                          channel.channelAdapter.off('broadcast', b.ref)
                         }
                         return !match
                       })
-                      tunnelChannel.bindings.broadcast = cleanBindings
+                      channel.bindings.broadcast = cleanBindings
+                    }
+                    if (isTemporary) {
+                       channel.unsubscribe()
+                       supabase.removeChannel(channel)
                     }
                   } catch (e) { }
                 }
@@ -351,10 +357,10 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                     else reject(new Error(payload.payload.error || 'Error fetching relational options'))
                   }
                 }
-                tunnelChannel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
-                tunnelChannel.on('broadcast', { event: 'sql_result' }, handleResult)
+                channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
+                channel.on('broadcast', { event: 'sql_result' }, handleResult)
 
-                tunnelChannel.send({
+                const sendPayload = {
                   type: 'broadcast',
                   event: 'sql_query',
                   payload: {
@@ -369,7 +375,17 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                     limit: 1000,
                     offset: 0
                   }
-                })
+                }
+
+                if (isTemporary) {
+                  channel.subscribe((status: string) => {
+                    if (status === 'SUBSCRIBED') {
+                      channel.send(sendPayload)
+                    }
+                  })
+                } else {
+                  channel.send(sendPayload)
+                }
 
                 setTimeout(() => {
                   if (!resolved) {
