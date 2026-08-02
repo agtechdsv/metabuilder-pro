@@ -211,7 +211,7 @@ export function useDetailData({
         }
         
         let detailData: any[] = []
-        if (project?.id && tunnelChannel && isTunnelReady && project.db_type !== 'postgres') {
+        if (project?.id && project.db_type !== 'postgres') {
           try {
             detailData = await new Promise<any[]>((resolve, reject) => {
             const isTemporary = !tunnelChannel || !isTunnelReady

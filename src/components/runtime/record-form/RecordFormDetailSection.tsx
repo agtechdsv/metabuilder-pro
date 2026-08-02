@@ -262,13 +262,27 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                             
                             const checkMatch = (f: any) => {
                                const fName = f.db_column_name?.toLowerCase()?.trim() || '';
+                               const fLabel = f.display_name?.toLowerCase()?.trim() || f.label?.toLowerCase()?.trim() || '';
+                               
                                if (fName === safeBase || fName.endsWith(`.${safeBase}`) || fName.endsWith(`_${safeBase}`)) return true;
+                               if (fLabel && (fLabel === safeBase || fLabel.includes(safeBase) || safeBase.includes(fLabel))) return true;
                                
                                // Check if it's a relational field whose label matches the requested title field
                                const comp = f.config?.form_config?.component || f.config?.component || f.widget_options?.component;
-                               if (comp && comp.options_type === 'relational' && comp.rel_label?.toLowerCase() === safeBase) {
-                                  matchedByRelLabel = true;
-                                  return true;
+                               if (comp && comp.options_type === 'relational') {
+                                  const relLabel = comp.rel_label?.toLowerCase() || '';
+                                  const relTable = comp.rel_table?.toLowerCase() || '';
+                                  
+                                  if (relLabel && (relLabel === safeBase || safeBase.includes(relLabel))) {
+                                     matchedByRelLabel = true;
+                                     return true;
+                                  }
+                                  
+                                  const singularRelTable = relTable.endsWith('s') ? relTable.slice(0, -1) : relTable;
+                                  if (singularRelTable && safeBase.includes(singularRelTable) && (safeBase.includes('nome') || safeBase.includes('titulo'))) {
+                                     matchedByRelLabel = true;
+                                     return true;
+                                  }
                                }
                                return false;
                             };
