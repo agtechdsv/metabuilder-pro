@@ -306,10 +306,12 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       }
 
       for (const field of fieldsToFetch) {
-        // Tenta pegar a config específica de formulário, senão usa a global
-        const config = field.config?.form_config || field.config
-        const comp = config?.component
-        const isRelationalComp = comp?.type && (['select', 'radio', 'checkbox', 'Combo (Select)', 'Radio Buttons', 'Checkbox Group'].includes(comp.type) || comp.options_type === 'relational' || comp.options_type === 'enumeration')
+        const comp = field.config?.form_config?.component || field.config?.component || field.widget_options?.component;
+        const isRelationalComp = comp && (
+           (['select', 'radio', 'checkbox', 'Combo (Select)', 'Radio Buttons', 'Checkbox Group'].includes(comp.type)) || 
+           comp.options_type === 'relational' || 
+           comp.options_type === 'enumeration'
+        );
         if (isRelationalComp && comp.options_type === 'relational' && comp.rel_table) {
           try {
             if (projectId && project?.db_type !== 'postgres') {
@@ -433,8 +435,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         const nextData = { ...prev };
         
         for (const field of fields) {
-          const config = field.config?.form_config || field.config;
-          const comp = config?.component;
+          const comp = field.config?.form_config?.component || field.config?.component || field.widget_options?.component;
           if (comp?.depends_on && comp?.filter_column && newOptions[field.id]) {
             const depName = comp.depends_on;
             const depBase = depName.split('.').pop() || depName;
