@@ -311,52 +311,33 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                   titleFieldDef = model.fields.find(checkMatch);
                                }
                             }
-                             const isTargetTable = tableName?.toLowerCase().includes('itens');
-                             if (isTargetTable) {
-                                console.log(`[🔎 DebugTitle] tableName="${tableName}" customField="${customField}" safeBase="${safeBase}" matchedByRelLabel=${matchedByRelLabel}`);
-                             }
                              
                              if (titleFieldDef) {
-                                if (isTargetTable) {
-                                   console.log(`[🔎 DebugTitle] Found field: ${titleFieldDef.db_column_name} (id: ${titleFieldDef.id})`);
-                                }
                                 // If matched by rel_label, we need to extract the foreign key ID first
                                 if (matchedByRelLabel || val === undefined) {
                                    const rawColName = titleFieldDef.db_column_name;
                                    const colName = rawColName.includes('.') ? rawColName.split('.').pop() || rawColName : rawColName;
                                    val = detail[colName] ?? detail[colName.toUpperCase()] ?? detail[colName.toLowerCase()];
-                                   if (isTargetTable) console.log(`[🔎 DebugTitle] Extracted val via FK:`, val, 'using colName:', colName, 'from raw:', rawColName);
                                 }
                                 
                                 if (val !== undefined && val !== null) {
                                    let matchedOpt = null;
                                    // Primeiro tenta buscar na opção exata
                                    const opts = relationalOptions[titleFieldDef.id] || [];
-                                   if (isTargetTable) {
-                                      console.log(`[🔎 DebugTitle] Lookup in relationalOptions[${titleFieldDef.id}], has ${opts.length} opts.`);
-                                   }
                                    matchedOpt = opts.find(o => String(o.value) === String(val));
                                    
                                    // Se não encontrou, procura em TODAS as opções relacionais (fallback global)
                                    if (!matchedOpt) {
                                       for (const key of Object.keys(relationalOptions)) {
                                          matchedOpt = relationalOptions[key]?.find((o: any) => String(o.value) === String(val));
-                                         if (matchedOpt) {
-                                            if (isTargetTable) console.log(`[🔎 DebugTitle] Found via global fallback in key ${key}`);
-                                            break;
-                                         }
+                                         if (matchedOpt) break;
                                       }
                                    }
                                    
                                    if (matchedOpt && matchedOpt.label) {
                                       val = matchedOpt.label;
-                                      if (isTargetTable) console.log(`[🔎 DebugTitle] 🎯 Resolved label:`, val);
-                                   } else if (isTargetTable) {
-                                      console.log(`[🔎 DebugTitle] ❌ No match found in options for val=${val}`);
                                    }
                                 }
-                             } else if (isTargetTable) {
-                                console.log(`[🔎 DebugTitle] ❌ titleFieldDef NOT FOUND for customField="${customField}"`);
                              }
                             
                             // Tentar inferir se a string parece uma ISO date de qualquer forma (fallback robusto)
