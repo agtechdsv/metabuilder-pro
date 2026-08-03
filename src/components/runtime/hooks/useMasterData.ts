@@ -72,12 +72,20 @@ export function useMasterData({
       const pkName = primaryKeyName
       const cleanPkName = pkName.split('.').pop() || 'id'
       
-      // Case-insensitive PK value resolution
-      const pkValue = formData[pkName] ?? formData[cleanPkName] ?? formData[pkName.toUpperCase()] ?? formData[pkName.toLowerCase()] ?? formData.id ?? formData.ID
+      let actualPkKey = pkName
+      if (formData[pkName] !== undefined) actualPkKey = pkName
+      else if (formData[cleanPkName] !== undefined) actualPkKey = cleanPkName
+      else if (formData[pkName.toUpperCase()] !== undefined) actualPkKey = pkName.toUpperCase()
+      else if (formData[pkName.toLowerCase()] !== undefined) actualPkKey = pkName.toLowerCase()
+      else if (formData.ID !== undefined) actualPkKey = 'ID'
+      else if (formData.id !== undefined) actualPkKey = 'id'
+      else actualPkKey = cleanPkName
+
+      const pkValue = formData[actualPkKey]
       
       const filters: any = {}
       if (action === 'update' && pkValue !== undefined && pkValue !== null) {
-        filters[cleanPkName] = String(pkValue)
+        filters[actualPkKey] = String(pkValue)
       }
 
       // Blacklist: exclude internal keys, system columns, PK, objects, and arrays.
@@ -91,6 +99,7 @@ export function useMasterData({
           k.includes('.') ||             // skip table-prefixed duplicates
           lowKey === pkName.toLowerCase() ||
           lowKey === cleanPkName.toLowerCase() ||
+          lowKey === actualPkKey.toLowerCase() ||
           lowKey === 'created_at' ||
           lowKey === 'updated_at' ||
           v === undefined ||
@@ -128,7 +137,7 @@ export function useMasterData({
             const setClause = Object.entries(currentData)
               .map(([k, v]) => (v === null || v === '' || String(v).trim() === '') ? `${k} = NULL` : `${k} = '${String(v).replace(/'/g, "''")}'`)
               .join(', ')
-            currentQuery = `UPDATE ${modelName} SET ${setClause} WHERE ${cleanPkName} = '${String(pkValue).replace(/'/g, "''")}' RETURNING *`
+            currentQuery = `UPDATE ${modelName} SET ${setClause} WHERE ${actualPkKey} = '${String(pkValue).replace(/'/g, "''")}' RETURNING *`
           } else if (action === 'insert' && Object.keys(currentData).length > 0) {
             const keys = Object.keys(currentData).join(', ')
             const values = Object.values(currentData)
@@ -179,7 +188,7 @@ export function useMasterData({
                 record: currentData, 
                 query: currentQuery, 
                 sql: currentQuery, 
-                idColumn: cleanPkName,
+                idColumn: actualPkKey,
                 idValue: pkValue,
                 token: project?.secret_token || 'test-token',
                 schemaName: project?.models?.find((m: any) => m.db_table_name === modelName)?.db_schema_name || project?.slug || 'public',
@@ -225,7 +234,7 @@ export function useMasterData({
                  const { data, error } = await (supabase as any)
                    .from(modelName)
                    .update(currentData)
-                   .eq(cleanPkName, String(pkValue))
+                   .eq(actualPkKey, String(pkValue))
                    .select('*')
                  if (error) throw error
                  directData = data
@@ -292,7 +301,15 @@ export function useMasterData({
             detailFields.find(f => f.model_name?.toLowerCase() === rowTable?.toLowerCase() && f.is_primary_key) ||
             { db_column_name: 'id' }
           const rowPkName = rowPkField.db_column_name.split('.').pop() || 'id'
-          const rowPkVal = row[rowPkName] ?? row[rowPkName.toUpperCase()] ?? row.id ?? row.ID
+          
+          let actualRowPkName = rowPkName
+          if (row[rowPkName] !== undefined) actualRowPkName = rowPkName
+          else if (row[rowPkName.toUpperCase()] !== undefined) actualRowPkName = rowPkName.toUpperCase()
+          else if (row[rowPkName.toLowerCase()] !== undefined) actualRowPkName = rowPkName.toLowerCase()
+          else if (row.ID !== undefined) actualRowPkName = 'ID'
+          else if (row.id !== undefined) actualRowPkName = 'id'
+
+          const rowPkVal = row[actualRowPkName]
 
           const SKIP = new Set(['_details', 'model_name', 'display_model_name', '_isNew'])
           const sanitized: any = {}
@@ -300,21 +317,22 @@ export function useMasterData({
             const lk = k.toLowerCase()
             if (
               SKIP.has(lk) || k.startsWith('_') || k.startsWith('virt_') ||
-              k.includes('.') || lk === rowPkName.toLowerCase() ||
+              k.includes('.') || lk === rowPkName.toLowerCase() || lk === actualRowPkName.toLowerCase() ||
               lk === 'created_at' || lk === 'updated_at' ||
               v === undefined || typeof v === 'object'
             ) continue
 
             const newVal = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
 
+            // Dirty tracking
             if (!isNew && origParentRow?._details) {
               const origRow = origParentRow._details.find(
-                (d: any) => d[rowPkName] === rowPkVal || d[rowPkName.toUpperCase()] === rowPkVal || d.id === rowPkVal || d.ID === rowPkVal
+                (d: any) => d[actualRowPkName] === rowPkVal || d[rowPkName.toUpperCase()] === rowPkVal || d.id === rowPkVal || d.ID === rowPkVal
               )
               if (origRow) {
                 const origRaw = origRow[k] ?? origRow[lk] ?? origRow[k.toUpperCase()]
                 const origVal = (origRaw === null || origRaw === '' || String(origRaw).trim() === '') ? null : String(origRaw)
-                if (newVal === origVal) continue
+                if (newVal === origVal) continue // Se for igual, pula
               }
             }
 
@@ -364,11 +382,15 @@ export function useMasterData({
             }
 
             if (fkCol) {
+              // Ajustar o Case da fkCol para bater com o banco, especialmente Oracle
+              const lowerFk = fkCol.toLowerCase()
+              const actualFkCol = Object.keys(row).find(k => k.toLowerCase() === lowerFk) 
+                || (project?.db_type !== 'postgres' ? fkCol.toUpperCase() : fkCol)
+
               if (isNew) {
-                sanitized[fkCol] = String(parentPkVal)
+                sanitized[actualFkCol] = String(parentPkVal)
               } else if (Object.keys(sanitized).length > 0) {
-                // For updates, only add fk if we are already updating other fields
-                sanitized[fkCol] = String(parentPkVal)
+                sanitized[actualFkCol] = String(parentPkVal)
               }
             }
           }
@@ -378,7 +400,7 @@ export function useMasterData({
             const set = Object.entries(sanitized)
               .map(([k, v]) => (v === null || v === '') ? `${k} = NULL` : `${k} = '${String(v).replace(/'/g, "''")}'`)
               .join(', ')
-            sql = `UPDATE ${rowTable} SET ${set} WHERE ${rowPkName} = '${String(rowPkVal).replace(/'/g, "''")}'`
+            sql = `UPDATE ${rowTable} SET ${set} WHERE ${actualRowPkName} = '${String(rowPkVal).replace(/'/g, "''")}'`
           } else if (isNew && Object.keys(sanitized).length > 0) {
             const keys = Object.keys(sanitized).join(', ')
             const vals = Object.values(sanitized)
@@ -411,7 +433,7 @@ export function useMasterData({
                   action: isNew ? 'insert' : 'update',
                   data: sanitized, record: sanitized,
                   query: sql, sql,
-                  idColumn: rowPkName, idValue: rowPkVal,
+                  idColumn: actualRowPkName, idValue: rowPkVal,
                   token: project?.secret_token || 'test-token',
                   schemaName: project?.models?.find((m: any) => m.db_table_name === rowTable)?.db_schema_name || project?.slug || 'public',
                   slug: project?.slug
@@ -495,12 +517,22 @@ export function useMasterData({
     setIsProcessing(true)
 
     const cleanPk = (primaryKeyName || 'id').split('.').pop() || 'id'
-    const pkValue = selectedRow[primaryKeyName] || selectedRow[cleanPk] || selectedRow[primaryKeyName?.toUpperCase()] || selectedRow.id || selectedRow.ID
+    
+    let actualPkKey = primaryKeyName || cleanPk
+    if (selectedRow[primaryKeyName]) actualPkKey = primaryKeyName
+    else if (selectedRow[cleanPk]) actualPkKey = cleanPk
+    else if (selectedRow[primaryKeyName?.toUpperCase()]) actualPkKey = primaryKeyName.toUpperCase()
+    else if (selectedRow[primaryKeyName?.toLowerCase()]) actualPkKey = primaryKeyName.toLowerCase()
+    else if (selectedRow.ID) actualPkKey = 'ID'
+    else if (selectedRow.id) actualPkKey = 'id'
+    else actualPkKey = cleanPk
+
+    const pkValue = selectedRow[actualPkKey]
 
     try {
       const queryId = crypto.randomUUID()
       const actualModelName = selectedRow.__model_name || modelName
-      const rawQuery = `DELETE FROM ${actualModelName} WHERE ${cleanPk} = '${String(pkValue).replace(/'/g, "''")}'`
+      const rawQuery = `DELETE FROM ${actualModelName} WHERE ${actualPkKey} = '${String(pkValue).replace(/'/g, "''")}'`
 
       const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
         const isTemp = !tunnelChannel || !isTunnelReady
@@ -545,7 +577,7 @@ export function useMasterData({
               token: project?.secret_token || 'test-token',
               schemaName: project?.models?.find((m: any) => m.db_table_name === actualModelName)?.db_schema_name || project?.slug || 'public',
               slug: project?.slug,
-              idColumn: cleanPk,
+              idColumn: actualPkKey,
               idValue: pkValue
             }
           })

@@ -296,7 +296,8 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                   const toModel = project.models.find((m: any) => m.id === toId);
                   if (!toModel) return false;
                   const toModelName = (toModel.db_table_name || toModel.table_name || '').toLowerCase();
-                  return toModelName === safeBase || safeBase.includes(toModelName) || toModelName.includes(safeBase);
+                  return toModelName === safeBase || safeBase.includes(toModelName) || toModelName.includes(safeBase) || 
+                         toModelName.replace(/s$/, '') === safeBase.replace(/s$/, '');
                 });
                 if (rel) return true;
               }
@@ -304,8 +305,12 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
               // ── 2. Fallback: name heuristics only when Santo Graal has nothing ──
               const fName = f.db_column_name?.toLowerCase()?.trim() || ''
               const fLabel = f.display_name?.toLowerCase()?.trim() || f.label?.toLowerCase()?.trim() || ''
+              const safeSingular = safeBase.endsWith('s') ? safeBase.slice(0, -1) : safeBase;
+
               if (fName === safeBase || fName.endsWith(`.${safeBase}`) || fName.endsWith(`_${safeBase}`)) return true;
+              if (fName === `${safeSingular}_id` || fName === `${safeBase}_id`) return true;
               if (fLabel && (fLabel === safeBase || fLabel.includes(safeBase) || safeBase.includes(fLabel))) return true;
+              
               const comp = f.config?.form_config?.component || f.config?.component || f.widget_options?.component;
               if (comp && comp.rel_table) {
                   const relLabel = comp.rel_label?.toLowerCase() || '';
@@ -313,6 +318,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                   if (relLabel && (relLabel === safeBase || safeBase.includes(relLabel))) return true;
                   const singularRelTable = relTable.endsWith('s') ? relTable.slice(0, -1) : relTable;
                   if (singularRelTable && safeBase.includes(singularRelTable)) return true;
+                  if (relTable === safeBase || relTable.includes(safeBase) || safeBase.includes(relTable)) return true;
               }
               return false;
             })

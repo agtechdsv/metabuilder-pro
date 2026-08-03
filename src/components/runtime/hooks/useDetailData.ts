@@ -486,8 +486,16 @@ export function useDetailData({
     const tableName = itemToDelete.model_name
     const fields = detailFields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())
     const pkField = fields.find(f => f.is_primary_key) || { db_column_name: 'id' }
-    const pkName = pkField.db_column_name.split('.').pop() || 'id'
-    const pkValue = itemToDelete[pkName] || itemToDelete[pkName.toUpperCase()] || itemToDelete.id || itemToDelete.ID
+    const basePkName = pkField.db_column_name.split('.').pop() || 'id'
+    
+    let actualPkKey = basePkName
+    if (itemToDelete[basePkName] !== undefined) actualPkKey = basePkName
+    else if (itemToDelete[basePkName.toUpperCase()] !== undefined) actualPkKey = basePkName.toUpperCase()
+    else if (itemToDelete[basePkName.toLowerCase()] !== undefined) actualPkKey = basePkName.toLowerCase()
+    else if (itemToDelete.ID !== undefined) actualPkKey = 'ID'
+    else if (itemToDelete.id !== undefined) actualPkKey = 'id'
+
+    const pkValue = itemToDelete[actualPkKey]
 
     try {
       let result: { success: boolean; error?: string } = { success: false }
@@ -502,7 +510,7 @@ export function useDetailData({
         }
       } else {
         const queryId = crypto.randomUUID()
-        const rawQuery = `DELETE FROM ${tableName} WHERE ${pkName} = '${String(pkValue).replace(/'/g, "''")}'`
+        const rawQuery = `DELETE FROM ${tableName} WHERE ${actualPkKey} = '${String(pkValue).replace(/'/g, "''")}'`
 
         result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
           const isTemp = !tunnelChannel || !isTunnelReady
@@ -547,7 +555,7 @@ export function useDetailData({
                 token: project?.secret_token || 'test-token',
                 schemaName: project?.models?.find((m: any) => m.db_table_name === tableName)?.db_schema_name || project?.slug || 'public',
                 slug: project?.slug,
-                idColumn: pkName,
+                idColumn: actualPkKey,
                 idValue: pkValue
               }
             })
@@ -623,13 +631,16 @@ export function useDetailData({
       const tableName = currentDetailTable
       const fields = detailFields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())
       const pkField = fields.find(f => f.is_primary_key) || { db_column_name: 'id' }
-      const detailPkName = pkField.db_column_name.split('.').pop() || 'id'
+      const basePkName = pkField.db_column_name.split('.').pop() || 'id'
+      
+      let actualPkKey = basePkName
+      if (selectedDetail?.[basePkName] !== undefined) actualPkKey = basePkName
+      else if (selectedDetail?.[basePkName.toUpperCase()] !== undefined) actualPkKey = basePkName.toUpperCase()
+      else if (selectedDetail?.[basePkName.toLowerCase()] !== undefined) actualPkKey = basePkName.toLowerCase()
+      else if (selectedDetail?.ID !== undefined) actualPkKey = 'ID'
+      else if (selectedDetail?.id !== undefined) actualPkKey = 'id'
 
-      const dPkValue = selectedDetail?.[detailPkName] 
-        ?? selectedDetail?.[detailPkName.toUpperCase()] 
-        ?? selectedDetail?.['id'] 
-        ?? selectedDetail?.['ID']
-        ?? Object.entries(selectedDetail || {}).find(([k]) => k.toLowerCase() === detailPkName.toLowerCase())?.[1]
+      const dPkValue = selectedDetail?.[actualPkKey]
 
       const INTERNAL_KEYS = new Set(['_details', 'model_name', 'display_model_name'])
 
@@ -642,7 +653,7 @@ export function useDetailData({
           k.startsWith('_') ||
           k.startsWith('virt_') ||
           k.includes('.') ||
-          lowKey === detailPkName.toLowerCase() ||
+          lowKey === actualPkKey.toLowerCase() ||
           lowKey === 'created_at' ||
           lowKey === 'updated_at' ||
           v === undefined ||
@@ -676,7 +687,7 @@ export function useDetailData({
           const setClause = Object.entries(sanitizedData)
             .map(([k, v]) => (v === null || v === '' || String(v).trim() === '') ? `${k} = NULL` : `${k} = '${String(v).replace(/'/g, "''")}'`)
             .join(', ')
-          rawQuery = `UPDATE ${tableName} SET ${setClause} WHERE ${detailPkName} = '${String(dPkValue).replace(/'/g, "''")}'`
+          rawQuery = `UPDATE ${tableName} SET ${setClause} WHERE ${actualPkKey} = '${String(dPkValue).replace(/'/g, "''")}'`
         }
       } else {
         const keys = Object.keys(sanitizedData).join(', ')
@@ -736,7 +747,7 @@ export function useDetailData({
             .map(([k, v]) => (v === null || v === '' || String(v).trim() === '') ? `${k} = NULL` : `${k} = '${String(v).replace(/'/g, "''")}'`)
             .join(', ')
           const currentQuery = action === 'edit'
-            ? `UPDATE ${tableName} SET ${setClause} WHERE ${detailPkName} = '${String(dPkValue).replace(/'/g, "''")}'`
+            ? `UPDATE ${tableName} SET ${setClause} WHERE ${actualPkKey} = '${String(dPkValue).replace(/'/g, "''")}'`
             : rawQuery
 
           const attemptQueryId = attempts === 1 ? queryId : crypto.randomUUID()
@@ -777,7 +788,7 @@ export function useDetailData({
                   action: action === 'edit' ? 'update' : 'insert',
                   data: currentData,
                   sql: currentQuery,
-                  idColumn: detailPkName,
+                  idColumn: actualPkKey,
                   idValue: dPkValue,
                   token: project?.secret_token || 'test-token',
                   schemaName: project?.models?.find((m: any) => m.db_table_name === tableName)?.db_schema_name || project?.slug || 'public',

@@ -327,7 +327,7 @@ export default function RecordForm({
                             )
                           })}
 
-                          {(formData?._details || []).some((d: any) => d.model_name?.toLowerCase() === String(activeTab)?.toLowerCase()) && (
+                          {(detailsInlineTypes?.[activeModelId || ''] !== false) && (formData?._details || []).some((d: any) => d.model_name?.toLowerCase() === String(activeTab)?.toLowerCase()) && (
                             <div className="flex items-center gap-0.5 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
                               <button
                                 type="button"
@@ -503,6 +503,7 @@ export default function RecordForm({
     relationalOptions={relationalOptions}
     project={project}
     detailsInterfaceTypes={detailsInterfaceTypes || {}}
+    detailsInlineTypes={detailsInlineTypes || {}}
     detailsTabTitles={detailsTabTitles}
     dictionary={dictionary}
     detailsItemTitles={detailsItemTitles}
@@ -539,6 +540,7 @@ export default function RecordForm({
     relationalOptions={relationalOptions}
     project={project}
     detailsInterfaceTypes={detailsInterfaceTypes || {}}
+    detailsInlineTypes={detailsInlineTypes || {}}
     detailsTabTitles={detailsTabTitles}
     dictionary={dictionary}
     detailsItemTitles={detailsItemTitles}
@@ -571,6 +573,7 @@ export default function RecordForm({
     relationalOptions={relationalOptions}
     project={project}
     detailsInterfaceTypes={detailsInterfaceTypes || {}}
+    detailsInlineTypes={detailsInlineTypes || {}}
     detailsTabTitles={detailsTabTitles}
     dictionary={dictionary}
     detailsItemTitles={detailsItemTitles}

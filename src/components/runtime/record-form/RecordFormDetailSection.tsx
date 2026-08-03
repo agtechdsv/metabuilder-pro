@@ -27,6 +27,7 @@ interface RecordFormDetailSectionProps {
   relationalOptions: Record<string, any[]>;
   project?: any;
   detailsInterfaceTypes?: Record<string, string>;
+  detailsInlineTypes?: Record<string, boolean>;
   detailsTabTitles?: Record<string, string>;
   dictionary?: Record<string, string>;
   detailsItemTitles?: Record<string, string>;
@@ -64,6 +65,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
     relationalOptions,
     project,
     detailsInterfaceTypes = {},
+    detailsInlineTypes = {},
     detailsTabTitles,
     dictionary = {},
     detailsItemTitles,
@@ -111,7 +113,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
             })}
 
             {/* Expande/Recolhe Tudo */}
-            {(parentData?._details || []).some((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase()) && (
+            {(detailsInlineTypes?.[modelId || ''] !== false) && (parentData?._details || []).some((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase()) && (
               <div className="flex items-center gap-0.5 bg-neutral-100 dark:bg-neutral-950 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-800">
                 <button
                   type="button"
@@ -245,18 +247,21 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                             return tbl === tableName?.toLowerCase();
                           })?.id;
                           const customField = detailsItemTitles?.[detailModelId || ''];
-                          if (customField) {
-                            let val: any;
-                            
-                            // Helper: case-insensitive key lookup (Oracle returns UPPERCASE columns)
-                            const getVal = (row: any, key: string) =>
-                              row[key] ?? row[key.toUpperCase()] ?? row[key.toLowerCase()];
-                            if (customField.includes('.')) {
-                              const parts = customField.split('.');
-                              val = getVal(detail, customField) ?? detail[parts[0]]?.[parts[1]] ?? getVal(detail, parts[1]);
-                            } else {
-                              val = getVal(detail, customField);
-                            }
+                            if (customField) {
+                              let val: any;
+                              
+                              const getVal = (row: any, key: string) => {
+                                if (!row) return undefined;
+                                const lowerKey = key.toLowerCase();
+                                return row[key] ?? row[key.toUpperCase()] ?? row[key.toLowerCase()] ?? Object.entries(row).find(([k]) => k.toLowerCase() === lowerKey)?.[1];
+                              };
+                              
+                              if (customField.includes('.')) {
+                                const parts = customField.split('.');
+                                val = getVal(detail, customField) ?? (getVal(detail, parts[0]) ? getVal(getVal(detail, parts[0]), parts[1]) : undefined) ?? getVal(detail, parts[1]);
+                              } else {
+                                val = getVal(detail, customField);
+                              }
                             
                             // Tradução Automática: Se o campo for um relacionamento (Combo), troca o ID pelo Label
                             const baseField = customField.includes('.') ? customField.split('.')[0] : customField;
@@ -362,7 +367,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                const targetLower = targetProp?.toLowerCase();
                                if (targetLower) {
                                  for (const key of Object.keys(detail)) {
-                                   if (detail[key] && typeof detail[key] === 'object') {
+                                   if (detail[key] && typeof detail[key] === 'object' && !Array.isArray(detail[key])) {
                                      const nestedObj = detail[key];
                                      const matchKey = Object.keys(nestedObj).find(k => k?.toLowerCase() === targetLower);
                                      if (matchKey) {
@@ -396,7 +401,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                     </div>
                     <div className="flex items-center gap-2 transition-all">
                       {/* Botão de Cortina (Na Lista) */}
-                      {true && (
+                      {(detailsInlineTypes?.[modelId || ''] !== false) && (
                         <button
                           type="button"
                           onClick={async (e) => {
@@ -561,10 +566,21 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
 
                                     // Agora precisamos atualizar este parentData dentro do formData._details original
                                     const updatedParentData = { ...parentData, _details: newParentDetails };
+                                    
+                                    const matchRecords = (r1: any, r2: any) => {
+                                      if (r1 === r2) return true;
+                                      for (const k of Object.keys(r1)) {
+                                        const lk = k.toLowerCase();
+                                        if (lk === 'id' || lk.endsWith('_id') || lk.endsWith('id')) {
+                                          if (r1[k] && r2[k] && String(r1[k]) === String(r2[k])) return true;
+                                        }
+                                      }
+                                      return false;
+                                    };
+
                                     const newTopDetails = (formData._details || []).map((td: any) => {
-                                      // Encontrar o parentData original. Precisamos do seu PK.
-                                      // Como não temos o nome da tabela do pai aqui, assumimos que id/ID resolvem ou comparamos o objeto todo
-                                      if (td === parentData || (td.id && td.id === parentData.id) || (td.ID && td.ID === parentData.ID)) {
+                                      // Encontrar o parentData original buscando pela PK que pode estar em uppercase ou ser composta
+                                      if (matchRecords(td, parentData)) {
                                         return updatedParentData;
                                       }
                                       return td;
@@ -803,8 +819,8 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
     onCustomAction={onCustomAction}
     relationalOptions={relationalOptions}
     project={project}
-    detailsInterfaceTypes={detailsInterfaceTypes}
-    detailsItemTitles={detailsItemTitles}
+    detailsInterfaceTypes={detailsInterfaceTypes || {}}
+    detailsInlineTypes={detailsInlineTypes || {}}
     detailsTabTitles={detailsTabTitles}
     dictionary={dictionary}
     onAddDetail={onAddDetail}

@@ -377,7 +377,7 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
                 </button>
               </div>
 
-              {((config.layout_config as any).details_inline_types?.[model.id] !== false) && (
+              {true && (
                 <div className="flex items-center ml-2 border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden h-6 bg-white dark:bg-neutral-900">
                   <select
                     value={(config.layout_config as any).details_item_titles?.[model.id] || ''}
