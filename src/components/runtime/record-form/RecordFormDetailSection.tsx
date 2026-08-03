@@ -274,7 +274,8 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                      const toModel = project.models.find((m: any) => m.id === toId);
                                      if (!toModel) return false;
                                      const toModelName = (toModel.db_table_name || toModel.table_name || '').toLowerCase();
-                                     return toModelName === safeBase || safeBase.includes(toModelName) || toModelName.includes(safeBase);
+                                     // Comparação estrita para evitar falso positivo (ex: "id" em "pedidos")
+                                     return toModelName === safeBase || toModelName === safeBase + 's' || safeBase === toModelName + 's';
                                   });
                                   if (rel) return true;
                                }
@@ -295,7 +296,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                      return true;
                                   }
                                   const singularRelTable = relTable.endsWith('s') ? relTable.slice(0, -1) : relTable;
-                                  if (singularRelTable && safeBase.includes(singularRelTable)) {
+                                  if (singularRelTable && (safeBase === singularRelTable || safeBase === relTable)) {
                                      matchedByRelLabel = true;
                                      return true;
                                   }
@@ -310,30 +311,52 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                   titleFieldDef = model.fields.find(checkMatch);
                                }
                             }
-                                        console.log(`[🔎 ItemTitle] customField="${customField}" safeBase="${safeBase}" detailKeys=`, Object.keys(detail));
+                             const isTargetTable = tableName?.toLowerCase().includes('itens');
+                             if (isTargetTable) {
+                                console.log(`[🔎 DebugTitle] tableName="${tableName}" customField="${customField}" safeBase="${safeBase}" matchedByRelLabel=${matchedByRelLabel}`);
+                             }
                              
                              if (titleFieldDef) {
-                                console.log(`[🔎 ItemTitle] titleFieldDef found: id=${titleFieldDef.id} col=${titleFieldDef.db_column_name} matchedByRelLabel=${matchedByRelLabel}`);
+                                if (isTargetTable) {
+                                   console.log(`[🔎 DebugTitle] Found field: ${titleFieldDef.db_column_name} (id: ${titleFieldDef.id})`);
+                                }
                                 // If matched by rel_label, we need to extract the foreign key ID first
                                 if (matchedByRelLabel || val === undefined) {
-                                   const colName = titleFieldDef.db_column_name;
+                                   const rawColName = titleFieldDef.db_column_name;
+                                   const colName = rawColName.includes('.') ? rawColName.split('.').pop() || rawColName : rawColName;
                                    val = detail[colName] ?? detail[colName.toUpperCase()] ?? detail[colName.toLowerCase()];
-                                   console.log(`[🔎 ItemTitle] val after FK extraction: "${val}" (colName="${colName}")`);
+                                   if (isTargetTable) console.log(`[🔎 DebugTitle] Extracted val via FK:`, val, 'using colName:', colName, 'from raw:', rawColName);
                                 }
                                 
                                 if (val !== undefined && val !== null) {
+                                   let matchedOpt = null;
+                                   // Primeiro tenta buscar na opção exata
                                    const opts = relationalOptions[titleFieldDef.id] || [];
-                                   console.log(`[🔎 ItemTitle] relationalOptions[${titleFieldDef.id}] has ${opts.length} items, val="${val}"`);
-                                   const matchedOpt = opts.find(o => String(o.value) === String(val));
+                                   if (isTargetTable) {
+                                      console.log(`[🔎 DebugTitle] Lookup in relationalOptions[${titleFieldDef.id}], has ${opts.length} opts.`);
+                                   }
+                                   matchedOpt = opts.find(o => String(o.value) === String(val));
+                                   
+                                   // Se não encontrou, procura em TODAS as opções relacionais (fallback global)
+                                   if (!matchedOpt) {
+                                      for (const key of Object.keys(relationalOptions)) {
+                                         matchedOpt = relationalOptions[key]?.find((o: any) => String(o.value) === String(val));
+                                         if (matchedOpt) {
+                                            if (isTargetTable) console.log(`[🔎 DebugTitle] Found via global fallback in key ${key}`);
+                                            break;
+                                         }
+                                      }
+                                   }
+                                   
                                    if (matchedOpt && matchedOpt.label) {
                                       val = matchedOpt.label;
-                                      console.log(`[🔎 ItemTitle] ✅ Resolved to: "${val}"`);
-                                   } else {
-                                      console.log(`[🔎 ItemTitle] ❌ No match in opts. Sample opt values:`, opts.slice(0, 3).map(o => o.value));
+                                      if (isTargetTable) console.log(`[🔎 DebugTitle] 🎯 Resolved label:`, val);
+                                   } else if (isTargetTable) {
+                                      console.log(`[🔎 DebugTitle] ❌ No match found in options for val=${val}`);
                                    }
                                 }
-                             } else {
-                                console.log(`[🔎 ItemTitle] ❌ titleFieldDef NOT found. detailFields count=${detailFields?.length} fields count=${fields?.length}`);
+                             } else if (isTargetTable) {
+                                console.log(`[🔎 DebugTitle] ❌ titleFieldDef NOT FOUND for customField="${customField}"`);
                              }
                             
                             // Tentar inferir se a string parece uma ISO date de qualquer forma (fallback robusto)
