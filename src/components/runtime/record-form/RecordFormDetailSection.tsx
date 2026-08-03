@@ -248,11 +248,14 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                           if (customField) {
                             let val: any;
                             
+                            // Helper: case-insensitive key lookup (Oracle returns UPPERCASE columns)
+                            const getVal = (row: any, key: string) =>
+                              row[key] ?? row[key.toUpperCase()] ?? row[key.toLowerCase()];
                             if (customField.includes('.')) {
                               const parts = customField.split('.');
-                              val = detail[customField] ?? detail[parts[0]]?.[parts[1]] ?? detail[parts[1]];
+                              val = getVal(detail, customField) ?? detail[parts[0]]?.[parts[1]] ?? getVal(detail, parts[1]);
                             } else {
-                              val = detail[customField];
+                              val = getVal(detail, customField);
                             }
                             
                             // Tradução Automática: Se o campo for um relacionamento (Combo), troca o ID pelo Label
@@ -261,46 +264,38 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                             let matchedByRelLabel = false;
                             
                             const checkMatch = (f: any) => {
-                                 if (project?.relations?.length > 0 && project?.models) {
-                                    const explicitRel = project.relations.find((r: any) => {
-                                       const fromId = r.from_model_id || r.detail_model_id;
-                                       const toId = r.to_model_id || r.master_model_id;
-                                       const fromFieldId = r.from_field_id || r.foreign_column_id;
-                                       
-                                       if (fromId === detailModelId && fromFieldId === f.id) {
-                                          const toModel = project.models.find((m: any) => m.id === toId);
-                                          if (toModel) {
-                                             const toModelSafeName = (toModel.db_table_name || toModel.table_name || '').toLowerCase();
-                                             if (toModelSafeName === safeBase || safeBase.includes(toModelSafeName) || toModelSafeName.includes(safeBase)) return true;
-                                          }
-                                       }
-                                       return false;
-                                    });
-                                    if (explicitRel) return true;
-                                 }
+                               // ── 1. Santo Graal: explicit relation lookup (field ID, not name) ──
+                               if (project?.relations?.length > 0 && project?.models) {
+                                  const rel = project.relations.find((r: any) => {
+                                     const fromId      = r.from_model_id || r.detail_model_id;
+                                     const toId        = r.to_model_id   || r.master_model_id;
+                                     const fromFieldId = r.from_field_id || r.foreign_column_id;
+                                     if (fromId !== detailModelId || fromFieldId !== f.id) return false;
+                                     const toModel = project.models.find((m: any) => m.id === toId);
+                                     if (!toModel) return false;
+                                     const toModelName = (toModel.db_table_name || toModel.table_name || '').toLowerCase();
+                                     return toModelName === safeBase || safeBase.includes(toModelName) || toModelName.includes(safeBase);
+                                  });
+                                  if (rel) return true;
+                               }
 
+                               // ── 2. Fallback: name heuristics (only when Santo Graal has no match) ──
                                const fName = f.db_column_name?.toLowerCase()?.trim() || '';
                                const fLabel = f.display_name?.toLowerCase()?.trim() || f.label?.toLowerCase()?.trim() || '';
-                               
+
                                if (fName === safeBase || fName.endsWith(`.${safeBase}`) || fName.endsWith(`_${safeBase}`)) return true;
                                if (fLabel && (fLabel === safeBase || fLabel.includes(safeBase) || safeBase.includes(fLabel))) return true;
 
-                               const strippedName = fName.replace(/_id$/, '');
-                               if (strippedName === safeBase || safeBase.includes(strippedName) || strippedName.includes(safeBase.replace(/s$/, ''))) return true;
-                               
-                               // Check if it's a relational field whose label matches the requested title field
                                const comp = f.config?.form_config?.component || f.config?.component || f.widget_options?.component;
-                               if (comp && comp.rel_table && comp.options_type !== 'enumeration') {
+                               if (comp && comp.rel_table) {
                                   const relLabel = comp.rel_label?.toLowerCase() || '';
                                   const relTable = comp.rel_table?.toLowerCase() || '';
-                                  
                                   if (relLabel && (relLabel === safeBase || safeBase.includes(relLabel))) {
                                      matchedByRelLabel = true;
                                      return true;
                                   }
-                                  
                                   const singularRelTable = relTable.endsWith('s') ? relTable.slice(0, -1) : relTable;
-                                  if (singularRelTable && safeBase.includes(singularRelTable) && (safeBase.includes('nome') || safeBase.includes('titulo'))) {
+                                  if (singularRelTable && safeBase.includes(singularRelTable)) {
                                      matchedByRelLabel = true;
                                      return true;
                                   }

@@ -188,15 +188,34 @@ export function useDetailData({
           if (existingJoin) {
             titleJoins.push(existingJoin)
           } else if (detailModel) {
-            const linkField = detailModel.fields?.find((f: any) => {
-              const fName = (f.db_column_name || '').toLowerCase();
-              const pName = (relatedTable || '').toLowerCase();
-              const fTbl = (f.foreign_key_table || '').toLowerCase();
-              return fTbl === pName ||
-                fName === `${pName}_id` ||
-                (pName.endsWith('s') && fName === `${pName.slice(0, -1)}_id`) ||
-                (pName.endsWith('es') && fName === `${pName.slice(0, -2)}_id`);
-            })
+            // ── Santo Graal first: find the relation explicitly defined in project.relations ──
+            let linkField: any = null
+            const projectRelations = (project as any)?.relations
+            if (projectRelations?.length > 0 && (project as any)?.models) {
+              const rel = projectRelations.find((r: any) => {
+                const fromId = r.from_model_id || r.detail_model_id
+                const toId   = r.to_model_id   || r.master_model_id
+                if (fromId !== detailModel.id) return false
+                const toModel = (project as any).models.find((m: any) => m.id === toId)
+                return toModel && (toModel.db_table_name || toModel.table_name || '').toLowerCase() === relatedTable.toLowerCase()
+              })
+              if (rel) {
+                const fromFieldId = rel.from_field_id || rel.foreign_column_id
+                linkField = detailModel.fields?.find((f: any) => f.id === fromFieldId)
+              }
+            }
+            // ── Fallback: name heuristic only if Santo Graal has nothing ──
+            if (!linkField) {
+              const pName = (relatedTable || '').toLowerCase()
+              linkField = detailModel.fields?.find((f: any) => {
+                const fName = (f.db_column_name || '').toLowerCase()
+                const fTbl  = (f.foreign_key_table || '').toLowerCase()
+                return fTbl === pName ||
+                  fName === `${pName}_id` ||
+                  (pName.endsWith('s')  && fName === `${pName.slice(0, -1)}_id`) ||
+                  (pName.endsWith('es') && fName === `${pName.slice(0, -2)}_id`)
+              })
+            }
             if (linkField) {
               const titleJoin = {
                 from: join.to,

@@ -286,37 +286,33 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
           console.log(`[MetaBuilder:RecordForm] Checking detailsItemTitles for mId: ${mId}, safeBase: ${safeBase}, modelFound: ${!!model}`);
           if (model && model.fields) {
             const field = model.fields.find((f: any) => {
+              // ── 1. Santo Graal: match by field ID from explicit relations ──
               if (project?.relations?.length > 0) {
-                 const explicitRel = project.relations.find((r: any) => {
-                    const fromId = r.from_model_id || r.detail_model_id;
-                    const toId = r.to_model_id || r.master_model_id;
-                    const fromFieldId = r.from_field_id || r.foreign_column_id;
-                    
-                    if (fromId === model.id && fromFieldId === f.id) {
-                       const toModel = project.models.find((m: any) => m.id === toId);
-                       if (toModel) {
-                          const toModelSafeName = (toModel.db_table_name || toModel.table_name || '').toLowerCase();
-                          if (toModelSafeName === safeBase || safeBase.includes(toModelSafeName) || toModelSafeName.includes(safeBase)) return true;
-                       }
-                    }
-                    return false;
-                 });
-                 if (explicitRel) return true;
+                const rel = project.relations.find((r: any) => {
+                  const fromId      = r.from_model_id || r.detail_model_id;
+                  const toId        = r.to_model_id   || r.master_model_id;
+                  const fromFieldId = r.from_field_id || r.foreign_column_id;
+                  if (fromId !== model.id || fromFieldId !== f.id) return false;
+                  const toModel = project.models.find((m: any) => m.id === toId);
+                  if (!toModel) return false;
+                  const toModelName = (toModel.db_table_name || toModel.table_name || '').toLowerCase();
+                  return toModelName === safeBase || safeBase.includes(toModelName) || toModelName.includes(safeBase);
+                });
+                if (rel) return true;
               }
 
+              // ── 2. Fallback: name heuristics only when Santo Graal has nothing ──
               const fName = f.db_column_name?.toLowerCase()?.trim() || ''
               const fLabel = f.display_name?.toLowerCase()?.trim() || f.label?.toLowerCase()?.trim() || ''
               if (fName === safeBase || fName.endsWith(`.${safeBase}`) || fName.endsWith(`_${safeBase}`)) return true;
               if (fLabel && (fLabel === safeBase || fLabel.includes(safeBase) || safeBase.includes(fLabel))) return true;
-              const strippedName = fName.replace(/_id$/, '');
-              if (strippedName === safeBase || safeBase.includes(strippedName) || strippedName.includes(safeBase.replace(/s$/, ''))) return true;
               const comp = f.config?.form_config?.component || f.config?.component || f.widget_options?.component;
-              if (comp && comp.rel_table && comp.options_type !== 'enumeration') {
+              if (comp && comp.rel_table) {
                   const relLabel = comp.rel_label?.toLowerCase() || '';
                   const relTable = comp.rel_table?.toLowerCase() || '';
                   if (relLabel && (relLabel === safeBase || safeBase.includes(relLabel))) return true;
                   const singularRelTable = relTable.endsWith('s') ? relTable.slice(0, -1) : relTable;
-                  if (singularRelTable && safeBase.includes(singularRelTable) && (safeBase.includes('nome') || safeBase.includes('titulo'))) return true;
+                  if (singularRelTable && safeBase.includes(singularRelTable)) return true;
               }
               return false;
             })
@@ -443,9 +439,9 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
               
               if (relData) {
                 newOptions[field.id] = relData.map((item: any) => ({
-                  label: item[comp.rel_label],
-                  value: item[comp.rel_value],
-                  filter_value: comp.filter_column ? item[comp.filter_column] : undefined
+                  label: item[comp.rel_label] || item[comp.rel_label?.toUpperCase()] || item[comp.rel_label?.toLowerCase()],
+                  value: item[comp.rel_value] || item[comp.rel_value?.toUpperCase()] || item[comp.rel_value?.toLowerCase()],
+                  filter_value: comp.filter_column ? (item[comp.filter_column] || item[comp.filter_column?.toUpperCase()] || item[comp.filter_column?.toLowerCase()]) : undefined
                 }))
               }
             }
