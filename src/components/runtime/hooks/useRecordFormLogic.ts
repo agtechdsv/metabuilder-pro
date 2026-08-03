@@ -290,8 +290,10 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
               const fLabel = f.display_name?.toLowerCase()?.trim() || f.label?.toLowerCase()?.trim() || ''
               if (fName === safeBase || fName.endsWith(`.${safeBase}`) || fName.endsWith(`_${safeBase}`)) return true;
               if (fLabel && (fLabel === safeBase || fLabel.includes(safeBase) || safeBase.includes(fLabel))) return true;
+              const strippedName = fName.replace(/_id$/, '');
+              if (strippedName === safeBase || safeBase.includes(strippedName) || strippedName.includes(safeBase.replace(/s$/, ''))) return true;
               const comp = f.config?.form_config?.component || f.config?.component || f.widget_options?.component;
-              if (comp && comp.options_type === 'relational') {
+              if (comp && comp.rel_table && comp.options_type !== 'enumeration') {
                   const relLabel = comp.rel_label?.toLowerCase() || '';
                   const relTable = comp.rel_table?.toLowerCase() || '';
                   if (relLabel && (relLabel === safeBase || safeBase.includes(relLabel))) return true;
