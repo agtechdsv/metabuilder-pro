@@ -279,52 +279,57 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       const fieldsToFetch = [...fields]
       console.log(`[MetaBuilder:RecordForm] detailsItemTitles:`, detailsItemTitles);
       if (detailsItemTitles && project?.models) {
-        Object.entries(detailsItemTitles).forEach(([mId, fieldName]) => {
-          const baseName = fieldName.includes('.') ? fieldName.split('.')[0] : fieldName
-          const safeBase = baseName?.toLowerCase()?.trim() || ''
+        Object.entries(detailsItemTitles).forEach(([mId, fieldConfig]) => {
           const model = project.models.find((m: any) => String(m.id) === String(mId))
-          console.log(`[MetaBuilder:RecordForm] Checking detailsItemTitles for mId: ${mId}, safeBase: ${safeBase}, modelFound: ${!!model}`);
-          if (model && model.fields) {
-            const field = model.fields.find((f: any) => {
-              // ── 1. Santo Graal: match by field ID from explicit relations ──
-              if (project?.relations?.length > 0) {
-                const rel = project.relations.find((r: any) => {
-                  const fromId      = r.from_model_id || r.detail_model_id;
-                  const toId        = r.to_model_id   || r.master_model_id;
-                  const fromFieldId = r.from_field_id || r.foreign_column_id;
-                  if (fromId !== model.id || fromFieldId !== f.id) return false;
-                  const toModel = project.models.find((m: any) => m.id === toId);
-                  if (!toModel) return false;
-                  const toModelName = (toModel.db_table_name || toModel.table_name || '').toLowerCase();
-                  return toModelName === safeBase || safeBase.includes(toModelName) || toModelName.includes(safeBase) || 
-                         toModelName.replace(/s$/, '') === safeBase.replace(/s$/, '');
-                });
-                if (rel) return true;
+          if (model && model.fields && typeof fieldConfig === 'string') {
+            let localFieldId = null;
+            let targetModelId = null;
+            let targetFieldId = null;
+            try {
+              if (fieldConfig.startsWith('{')) {
+                 const parsed = JSON.parse(fieldConfig);
+                 if (parsed.relation_path && parsed.relation_path.length > 0) {
+                     localFieldId = parsed.relation_path[0].foreign_column_id;
+                     targetModelId = parsed.relation_path[0].to_model_id;
+                 } else if (parsed.target_field_id) {
+                     localFieldId = parsed.target_field_id;
+                 }
+                 targetFieldId = parsed.target_field_id;
               }
-
-              // ── 2. Fallback: name heuristics only when Santo Graal has nothing ──
-              const fName = f.db_column_name?.toLowerCase()?.trim() || ''
-              const fLabel = f.display_name?.toLowerCase()?.trim() || f.label?.toLowerCase()?.trim() || ''
-              const safeSingular = safeBase.endsWith('s') ? safeBase.slice(0, -1) : safeBase;
-
-              if (fName === safeBase || fName.endsWith(`.${safeBase}`) || fName.endsWith(`_${safeBase}`)) return true;
-              if (fName === `${safeSingular}_id` || fName === `${safeBase}_id`) return true;
-              if (fLabel && (fLabel === safeBase || fLabel.includes(safeBase) || safeBase.includes(fLabel))) return true;
-              
-              const comp = f.config?.form_config?.component || f.config?.component || f.widget_options?.component;
-              if (comp && comp.rel_table) {
-                  const relLabel = comp.rel_label?.toLowerCase() || '';
-                  const relTable = comp.rel_table?.toLowerCase() || '';
-                  if (relLabel && (relLabel === safeBase || safeBase.includes(relLabel))) return true;
-                  const singularRelTable = relTable.endsWith('s') ? relTable.slice(0, -1) : relTable;
-                  if (singularRelTable && safeBase.includes(singularRelTable)) return true;
-                  if (relTable === safeBase || relTable.includes(safeBase) || safeBase.includes(relTable)) return true;
-              }
-              return false;
-            })
-            console.log(`[MetaBuilder:RecordForm] Field found for ${mId}:`, field?.db_column_name);
-            if (field && !fieldsToFetch.find(f => f.id === field.id)) {
-              fieldsToFetch.push({ ...field, model_id: model.id, model_name: model.db_table_name || model.table_name })
+            } catch(e) {}
+            
+            if (localFieldId) {
+               const field = model.fields.find((f: any) => f.id === localFieldId);
+               if (field) {
+                  let existingIndex = fieldsToFetch.findIndex(f => f.id === field.id);
+                  let fieldToPush = existingIndex !== -1 ? { ...fieldsToFetch[existingIndex] } : { ...field, model_id: model.id, model_name: model.db_table_name || model.table_name };
+                  
+                  if (targetModelId && targetFieldId && project?.models) {
+                      const targetModel = project.models.find((m: any) => String(m.id) === String(targetModelId));
+                      if (targetModel) {
+                          const targetField = targetModel.fields?.find((f: any) => String(f.id) === String(targetFieldId));
+                          const targetPk = targetModel.fields?.find((f: any) => f.is_primary_key) || { db_column_name: 'id' };
+                          if (targetField && targetPk) {
+                              const cleanVal = targetPk.db_column_name.includes('.') ? targetPk.db_column_name.split('.').pop() : targetPk.db_column_name;
+                              const cleanLbl = targetField.db_column_name.includes('.') ? targetField.db_column_name.split('.').pop() : targetField.db_column_name;
+                              fieldToPush._injected_rel = {
+                                  rel_table: targetModel.db_table_name,
+                                  rel_value: cleanVal,
+                                  rel_label: cleanLbl,
+                                  type: 'select',
+                                  options_type: 'relational'
+                              };
+                              console.log(`[MetaBuilder:RecordForm] Injected relation into field ${field.id}: ${targetModel.db_table_name} (${cleanVal}, ${cleanLbl})`);
+                          }
+                      }
+                  }
+                  
+                  if (existingIndex !== -1) {
+                      fieldsToFetch[existingIndex] = fieldToPush;
+                  } else {
+                      fieldsToFetch.push(fieldToPush);
+                  }
+               }
             }
           }
         })
@@ -333,7 +338,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       console.log(`[MetaBuilder:RecordForm] fetchAllRelational trigger. fieldsToFetch mapped count: ${fieldsToFetch.length} | project db_type: ${project?.db_type}`);
 
       for (const field of fieldsToFetch) {
-        const comp = field.config?.form_config?.component || field.config?.component || field.widget_options?.component;
+        const comp = field._injected_rel || field.config?.form_config?.component || field.config?.component || field.widget_options?.component;
         const isRelationalComp = comp && (
            comp.rel_table || 
            (['select', 'radio', 'checkbox', 'Combo (Select)', 'Radio Buttons', 'Checkbox Group'].includes(comp.type)) || 
@@ -344,8 +349,8 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
           try {
             if (projectId && project?.db_type !== 'postgres') {
               const queryId = crypto.randomUUID()
-              const filterCol = comp.filter_column ? `, "${comp.filter_column}"` : ''
-              const rawQuery = `SELECT "${comp.rel_label}", "${comp.rel_value}"${filterCol} FROM "${comp.rel_table}"`
+              const filterCol = comp.filter_column ? `, ${comp.filter_column}` : ''
+              const rawQuery = `SELECT ${comp.rel_label}, ${comp.rel_value}${filterCol} FROM ${comp.rel_table}`
 
               const schemaToUse = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === comp.rel_table?.toLowerCase())?.db_schema_name || project?.slug || 'public'
               console.log(`[MetaBuilder:RecordForm] Fetching relational options for ${comp.rel_table} with schemaName:`, schemaToUse)
@@ -418,19 +423,30 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                 setTimeout(() => {
                   if (!resolved) {
                     resolved = true
-                    console.warn(`[MetaBuilder:RecordForm] Timeout fetching relational options for ${comp.rel_table}`)
+                    console.warn(`[MetaBuilder:RecordForm] Timeout fetching relational options for ${comp.rel_table} (25s)`)
                     resolve([])
                   }
-                }, 8000)
+                }, 25000)
               })
 
               // Guard: only store if we actually got data (timeout resolves with [])
               if (data && data.length > 0) {
-                newOptions[field.id] = data.map(item => ({
-                  label: item[comp.rel_label] || item[comp.rel_label.toLowerCase()] || item[comp.rel_label.toUpperCase()],
-                  value: item[comp.rel_value] || item[comp.rel_value.toLowerCase()] || item[comp.rel_value.toUpperCase()],
-                  filter_value: comp.filter_column ? (item[comp.filter_column] || item[comp.filter_column.toLowerCase()] || item[comp.filter_column.toUpperCase()]) : undefined
-                }))
+                console.log(`[MetaBuilder:RecordForm] Raw data from tunnel for ${comp.rel_table}:`, data[0])
+                newOptions[field.id] = data.map(item => {
+                  const getVal = (key: string) => {
+                     if (!key) return undefined;
+                     const searchKey = key.includes('.') ? key.split('.').pop()! : key;
+                     const foundKey = Object.keys(item).find(k => k.toLowerCase() === searchKey.toLowerCase());
+                     return foundKey ? item[foundKey] : undefined;
+                  }
+                  return {
+                    label: getVal(comp.rel_label) || item.display_label || Object.values(item)[1] || Object.values(item)[0],
+                    value: getVal(comp.rel_value) || item.id || item.ID || Object.values(item)[0],
+                    filter_value: comp.filter_column ? getVal(comp.filter_column) : undefined,
+                    ...item
+                  }
+                })
+                console.log(`[MetaBuilder:RecordForm] Mapped opts for ${comp.rel_table}:`, newOptions[field.id][0])
               }
             } else {
               // Direct query or Postgres API fallback

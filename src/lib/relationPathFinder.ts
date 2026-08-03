@@ -303,7 +303,8 @@ export function getModelsWithRelations(
       model: baseModel,
       depth: 0,
       path: baseModel.db_table_name,
-      prefix: ''
+      prefix: '',
+      relation_path: [] as any[]
     }];
 
     const visitedIds = new Set<string>();
@@ -324,7 +325,8 @@ export function getModelsWithRelations(
         result.push({
           model: current.model,
           prefix: `${current.model.db_table_name}.`,
-          label: `Relação: ${current.path}`
+          label: `Relação: ${current.path}`,
+          relation_path: current.relation_path
         });
       }
 
@@ -333,15 +335,27 @@ export function getModelsWithRelations(
           r.from_model_id === current.model.id || r.to_model_id === current.model.id
         );
 
-        const relatedModelIds = explicitRels.map((r: any) => {
-          if (r.from_model_id === current.model.id) return r.to_model_id;
-          if (r.to_model_id === current.model.id) return r.from_model_id;
-          return null;
+        const relatedModelsInfo = explicitRels.map((r: any) => {
+          let toModelId = null;
+          if (r.from_model_id === current.model.id) toModelId = r.to_model_id;
+          if (r.to_model_id === current.model.id) toModelId = r.from_model_id;
+          if (!toModelId) return null;
+          return { toModelId, relation: r };
         }).filter(Boolean);
 
-        const uniqueRelatedIds = Array.from(new Set(relatedModelIds));
+        const uniqueRelatedInfos: any[] = [];
+        const seenIds = new Set();
+        relatedModelsInfo.forEach((info: any) => {
+           if (!seenIds.has(info.toModelId)) {
+               seenIds.add(info.toModelId);
+               uniqueRelatedInfos.push(info);
+           }
+        });
 
-        uniqueRelatedIds.forEach((relatedId: any) => {
+        uniqueRelatedInfos.forEach((info: any) => {
+          const relatedId = info.toModelId;
+          const relation = info.relation;
+          
           if (!visitedIds.has(relatedId) && !baseModelIds.includes(relatedId)) {
             const relatedModel = models.find((m: any) => m.id === relatedId);
             if (relatedModel) {
@@ -349,7 +363,17 @@ export function getModelsWithRelations(
                 model: relatedModel,
                 depth: current.depth + 1,
                 path: `${current.path} > ${relatedModel.db_table_name}`,
-                prefix: `${relatedModel.db_table_name}.`
+                prefix: `${relatedModel.db_table_name}.`,
+                relation_path: [
+                   ...(current.relation_path || []),
+                   {
+                      step: current.depth + 1,
+                      relation_id: relation.id,
+                      from_model_id: relation.from_model_id || relation.detail_model_id,
+                      to_model_id: relation.to_model_id || relation.master_model_id,
+                      foreign_column_id: relation.from_field_id || relation.foreign_column_id
+                   }
+                ]
               });
             }
           }

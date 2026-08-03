@@ -401,7 +401,13 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
                     {getModelsWithRelations([model], relations, models, config.layout_config?.max_relation_depth || 2).map((g: any, i: number) => (
                       <optgroup key={i} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
                         {g.model.fields?.map((f: any) => {
-                          const val = g.prefix ? `${g.prefix}${f.db_column_name}` : f.db_column_name;
+                          const displayLabel = g.prefix ? `${g.prefix}${f.db_column_name}` : f.db_column_name;
+                          const richConfig = {
+                              display_label: displayLabel,
+                              target_field_id: f.id,
+                              relation_path: g.relation_path || []
+                          };
+                          const val = JSON.stringify(richConfig);
                           return (
                             <option key={f.id} value={val} className="text-neutral-800 dark:text-neutral-200 normal-case">
                               {String(f.db_column_name).toLowerCase()}

@@ -79,16 +79,16 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
     isPageMode
   } = props;
 
-    const targetModel = project?.models?.find((m: any) => {
-      const tbl = (m.db_table_name || m.table_name || '').toLowerCase();
-      return tbl === tableName?.toLowerCase();
-    })
-    const modelId = targetModel?.id || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
-    const displayLabel = detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || targetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.display_model_name || tableName
+  const targetModel = project?.models?.find((m: any) => {
+    const tbl = (m.db_table_name || m.table_name || '').toLowerCase();
+    return tbl === tableName?.toLowerCase();
+  })
+  const modelId = targetModel?.id || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
+  const displayLabel = detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || targetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.display_model_name || tableName
 
-    return (
-      <div className="space-y-2">
-        {!hideToolbar && (
+  return (
+    <div className="space-y-2">
+      {!hideToolbar && (
         <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
           {titleNode ?? <div />}
           {/* lado direito: todos os controles */}
@@ -176,7 +176,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                   const newRecord = { id: newTempId, model_name: tableName, _isNew: true }
                   setFormData((prev: any) => ({ ...prev, _details: [...(prev._details || []), newRecord] }))
                   setExpandedDetails((prev: any) => ({ ...prev, [`detail-${tableName}-${newTempId}`]: true }))
-                  
+
                   // Foco no primeiro campo do novo item
                   setTimeout(() => {
                     const container = document.getElementById(`detail-container-detail-${tableName}-${newTempId}`)
@@ -206,312 +206,292 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
             )}
           </div>
         </div>
-        )}
+      )}
 
-        <div className="space-y-1.5 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-          {(() => {
-            const seenIds = new Set();
-            const detailsToRender = (parentData?._details || [])
-              .filter((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase());
-            
-            console.log('[RecordForm Render] detailsToRender for', tableName, 'is', detailsToRender.length, 'items', { detailsToRender, parentDetails: parentData?._details });
+      <div className="space-y-1.5 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+        {(() => {
+          const seenIds = new Set();
+          const detailsToRender = (parentData?._details || [])
+            .filter((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase());
 
-            return detailsToRender.map((detail: any, idx: number) => {
-              const pkField = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase()).find(f => f.is_primary_key) || { db_column_name: 'id' };
-              const pkCol = pkField.db_column_name.split('.').pop() || 'id';
-              const detailIdValue = detail[pkCol] || detail[pkCol.toUpperCase()] || detail.id || detail.ID || `idx-${idx}`;
-              const uniqueKey = `detail-${tableName}-${detailIdValue}`;
+          console.log('[RecordForm Render] detailsToRender for', tableName, 'is', detailsToRender.length, 'items', { detailsToRender, parentDetails: parentData?._details });
 
-              if (seenIds.has(uniqueKey)) return null;
-              seenIds.add(uniqueKey);
+          return detailsToRender.map((detail: any, idx: number) => {
+            const pkField = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase()).find(f => f.is_primary_key) || { db_column_name: 'id' };
+            const pkCol = pkField.db_column_name.split('.').pop() || 'id';
+            const detailIdValue = detail[pkCol] || detail[pkCol.toUpperCase()] || detail.id || detail.ID || `idx-${idx}`;
+            const uniqueKey = `detail-${tableName}-${detailIdValue}`;
 
-              return (
-                <div key={uniqueKey} id={`detail-container-${uniqueKey}`} className={cn("flex flex-col gap-1 rounded-2xl transition-all duration-300", expandedDetails[uniqueKey] ? "bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-500/20 p-0.5" : "")}>
-                  <div className={cn(
-                    "py-2.5 px-3 border rounded-xl flex items-center justify-between group animate-in fade-in slide-in-from-top-2 duration-300 transition-all",
-                    expandedDetails[uniqueKey]
-                      ? "bg-white dark:bg-neutral-900 border-indigo-200 dark:border-indigo-800 shadow-lg shadow-indigo-500/5"
-                      : "bg-neutral-50 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-800"
-                  )}>
-                    <div className="flex flex-col gap-1">
-                      <span className={cn(
-                        "text-xs font-bold transition-colors",
-                        expandedDetails[uniqueKey] ? "text-indigo-600 dark:text-indigo-400" : "text-neutral-700 dark:text-neutral-200"
-                      )}>
-                        {(() => {
-                          if (detail._isNew || String(detailIdValue).startsWith('temp-')) {
-                            return t('common.new_record', 'Novo Registro');
-                          }
-                          const detailModelId = project?.models?.find((m: any) => {
-                            const tbl = (m.db_table_name || m.table_name || '').toLowerCase();
-                            return tbl === tableName?.toLowerCase();
+            if (seenIds.has(uniqueKey)) return null;
+            seenIds.add(uniqueKey);
+
+            return (
+              <div key={uniqueKey} id={`detail-container-${uniqueKey}`} className={cn("flex flex-col gap-1 rounded-2xl transition-all duration-300", expandedDetails[uniqueKey] ? "bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-500/20 p-0.5" : "")}>
+                <div className={cn(
+                  "py-2.5 px-3 border rounded-xl flex items-center justify-between group animate-in fade-in slide-in-from-top-2 duration-300 transition-all",
+                  expandedDetails[uniqueKey]
+                    ? "bg-white dark:bg-neutral-900 border-indigo-200 dark:border-indigo-800 shadow-lg shadow-indigo-500/5"
+                    : "bg-neutral-50 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-800"
+                )}>
+                  <div className="flex flex-col gap-1">
+                    <span className={cn(
+                      "text-xs font-bold transition-colors",
+                      expandedDetails[uniqueKey] ? "text-indigo-600 dark:text-indigo-400" : "text-neutral-700 dark:text-neutral-200"
+                    )}>
+                      {(() => {
+                        if (detail._isNew || String(detailIdValue).startsWith('temp-')) {
+                          return t('common.new_record', 'Novo Registro');
+                        }
+                        let detailModelId = project?.models?.find((m: any) => {
+                          const tbl = (m.db_table_name || m.table_name || '').toLowerCase();
+                          return tbl === tableName?.toLowerCase();
+                        })?.id;
+
+                        if (!detailModelId) {
+                          detailModelId = project?.models?.find((m: any) => {
+                            const tbl = (m.db_table_name || m.table_name || '').toLowerCase().replace(/["']/g, '').split('.').pop();
+                            const tName = (tableName || '').toLowerCase().replace(/["']/g, '').split('.').pop();
+                            return tbl === tName;
                           })?.id;
-                          const customField = detailsItemTitles?.[detailModelId || ''];
-                            if (customField) {
-                              let val: any;
-                              
-                              const getVal = (row: any, key: string) => {
-                                if (!row) return undefined;
-                                const lowerKey = key.toLowerCase();
-                                return row[key] ?? row[key.toUpperCase()] ?? row[key.toLowerCase()] ?? Object.entries(row).find(([k]) => k.toLowerCase() === lowerKey)?.[1];
-                              };
-                              
-                              if (customField.includes('.')) {
-                                const parts = customField.split('.');
-                                val = getVal(detail, customField) ?? (getVal(detail, parts[0]) ? getVal(getVal(detail, parts[0]), parts[1]) : undefined) ?? getVal(detail, parts[1]);
-                              } else {
-                                val = getVal(detail, customField);
+                        }
+
+                        let customField = detailsItemTitles?.[detailModelId || ''];
+
+                        if (customField) {
+                          let val: any;
+                          let parsedConfig: any = null;
+                          let titleFieldDef: any = null;
+
+                          try {
+                            if (typeof customField === 'string' && customField.startsWith('{')) {
+                              parsedConfig = JSON.parse(customField);
+                            }
+                          } catch (e) { }
+
+                          if (parsedConfig && (parsedConfig.target_field_id || parsedConfig.relation_path)) {
+                            let localFieldId = parsedConfig.target_field_id;
+                            if (parsedConfig.relation_path && parsedConfig.relation_path.length > 0) {
+                              localFieldId = parsedConfig.relation_path[0].foreign_column_id;
+                            }
+
+                            console.log(`[RecordForm Debug Title] Parsing customField para model: ${detailModelId}. localFieldId = ${localFieldId}`);
+
+                            if (project?.models) {
+                              const model = project.models.find((m: any) => m.id === detailModelId);
+                              if (model && model.fields) {
+                                titleFieldDef = model.fields.find((f: any) => f.id === localFieldId);
                               }
-                            
-                            // Tradução Automática: Se o campo for um relacionamento (Combo), troca o ID pelo Label
-                            const baseField = customField.includes('.') ? customField.split('.')[0] : customField;
-                            const safeBase = baseField?.toLowerCase()?.trim() || '';
-                            let matchedByRelLabel = false;
-                            
-                            const checkMatch = (f: any) => {
-                               // ── 1. Santo Graal: explicit relation lookup (field ID, not name) ──
-                               if (project?.relations?.length > 0 && project?.models) {
-                                  const rel = project.relations.find((r: any) => {
-                                     const fromId      = r.from_model_id || r.detail_model_id;
-                                     const toId        = r.to_model_id   || r.master_model_id;
-                                     const fromFieldId = r.from_field_id || r.foreign_column_id;
-                                     if (fromId !== detailModelId || fromFieldId !== f.id) return false;
-                                     const toModel = project.models.find((m: any) => m.id === toId);
-                                     if (!toModel) return false;
-                                     const toModelName = (toModel.db_table_name || toModel.table_name || '').toLowerCase();
-                                     // Comparação estrita para evitar falso positivo (ex: "id" em "pedidos")
-                                     return toModelName === safeBase || toModelName === safeBase + 's' || safeBase === toModelName + 's';
-                                  });
-                                  if (rel) return true;
-                               }
+                            }
 
-                               // ── 2. Fallback: name heuristics (only when Santo Graal has no match) ──
-                               const fName = f.db_column_name?.toLowerCase()?.trim() || '';
-                               const fLabel = f.display_name?.toLowerCase()?.trim() || f.label?.toLowerCase()?.trim() || '';
+                            if (!titleFieldDef && fields) {
+                              titleFieldDef = fields.find((f: any) => String(f.id) === String(localFieldId));
+                            }
 
-                               if (fName === safeBase || fName.endsWith(`.${safeBase}`) || fName.endsWith(`_${safeBase}`)) return true;
-                               if (fLabel && (fLabel === safeBase || fLabel.includes(safeBase) || safeBase.includes(fLabel))) return true;
+                            if (titleFieldDef) {
+                              const rawColName = titleFieldDef.db_column_name;
+                              const colName = rawColName.includes('.') ? rawColName.split('.').pop() || rawColName : rawColName;
+                              val = detail[colName] ?? detail[colName.toUpperCase()] ?? detail[colName.toLowerCase()];
 
-                               const comp = f.config?.form_config?.component || f.config?.component || f.widget_options?.component;
-                               if (comp && comp.rel_table) {
-                                  const relLabel = comp.rel_label?.toLowerCase() || '';
-                                  const relTable = comp.rel_table?.toLowerCase() || '';
-                                  if (relLabel && (relLabel === safeBase || safeBase.includes(relLabel))) {
-                                     matchedByRelLabel = true;
-                                     return true;
+                              console.log(`[RecordForm Debug Title] Render Título para ${detailModelId}. colName: ${colName}, val: ${val}`, { detail, optsForField: relationalOptions[titleFieldDef.id], allOptsKeys: Object.keys(relationalOptions) });
+
+                              if (val !== undefined && val !== null) {
+                                let matchedOpt = null;
+                                const opts = relationalOptions[titleFieldDef.id] || [];
+                                matchedOpt = opts.find(o => String(o.value).toLowerCase() === String(val).toLowerCase());
+
+                                if (!matchedOpt) {
+                                  for (const key of Object.keys(relationalOptions)) {
+                                    matchedOpt = relationalOptions[key]?.find((o: any) => String(o.value).toLowerCase() === String(val).toLowerCase());
+                                    if (matchedOpt) break;
                                   }
-                                  const singularRelTable = relTable.endsWith('s') ? relTable.slice(0, -1) : relTable;
-                                  if (singularRelTable && (safeBase === singularRelTable || safeBase === relTable)) {
-                                     matchedByRelLabel = true;
-                                     return true;
-                                  }
-                               }
-                               return false;
+                                }
+
+                                if (matchedOpt && matchedOpt.label) {
+                                  val = matchedOpt.label;
+                                }
+                              }
+                            }
+                          } else if (typeof customField === 'string' && !customField.startsWith('{')) {
+                            const getVal = (row: any, key: string) => {
+                              if (!row) return undefined;
+                              const lowerKey = key.toLowerCase();
+                              return row[key] ?? row[key.toUpperCase()] ?? row[key.toLowerCase()] ?? Object.entries(row).find(([k]) => k.toLowerCase() === lowerKey)?.[1];
                             };
-                            
-                            let titleFieldDef = detailFields.find(checkMatch) || fields.find(checkMatch);
-                            if (!titleFieldDef && project?.models && detailModelId) {
-                               const model = project.models.find((m: any) => m.id === detailModelId);
-                               if (model && model.fields) {
-                                  titleFieldDef = model.fields.find(checkMatch);
-                               }
+                            if (customField.includes('.')) {
+                              const parts = customField.split('.');
+                              val = getVal(detail, customField) ?? getVal(detail, parts[1]);
+                            } else {
+                              val = getVal(detail, customField);
                             }
-                             
-                             if (titleFieldDef) {
-                                // If matched by rel_label, we need to extract the foreign key ID first
-                                if (matchedByRelLabel || val === undefined) {
-                                   const rawColName = titleFieldDef.db_column_name;
-                                   const colName = rawColName.includes('.') ? rawColName.split('.').pop() || rawColName : rawColName;
-                                   val = detail[colName] ?? detail[colName.toUpperCase()] ?? detail[colName.toLowerCase()];
-                                }
-                                
-                                if (val !== undefined && val !== null) {
-                                   let matchedOpt = null;
-                                   // Primeiro tenta buscar na opção exata
-                                   const opts = relationalOptions[titleFieldDef.id] || [];
-                                   matchedOpt = opts.find(o => String(o.value) === String(val));
-                                   
-                                   // Se não encontrou, procura em TODAS as opções relacionais (fallback global)
-                                   if (!matchedOpt) {
-                                      for (const key of Object.keys(relationalOptions)) {
-                                         matchedOpt = relationalOptions[key]?.find((o: any) => String(o.value) === String(val));
-                                         if (matchedOpt) break;
-                                      }
-                                   }
-                                   
-                                   if (matchedOpt && matchedOpt.label) {
-                                      val = matchedOpt.label;
-                                   }
-                                }
-                             }
-                            
-                            // Tentar inferir se a string parece uma ISO date de qualquer forma (fallback robusto)
-                            if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val)) {
-                               try {
-                                  const d = new Date(val);
-                                  if (!isNaN(d.getTime())) {
-                                     const tType = titleFieldDef?.config?.form_config?.component?.type || titleFieldDef?.config?.component?.type;
-                                     if (tType === 'date' || val.endsWith('T00:00:00.000Z')) {
-                                       val = new Intl.DateTimeFormat(dateLocale, { timeZone: 'UTC' }).format(d);
-                                     } else {
-                                       val = new Intl.DateTimeFormat(dateLocale, { dateStyle: 'short', timeStyle: 'short' }).format(d);
-                                     }
-                                  }
-                               } catch (e) {
-                                  console.error('Date formatting error:', e);
-                               }
-                            }
-                            // Resiliência de objeto aninhado:
-                            if ((val === undefined || val === null || val === '') && customField) {
-                               const targetProp = customField.includes('.') ? customField.split('.')[1] : customField;
-                               const targetLower = targetProp?.toLowerCase();
-                               if (targetLower) {
-                                 for (const key of Object.keys(detail)) {
-                                   if (detail[key] && typeof detail[key] === 'object' && !Array.isArray(detail[key])) {
-                                     const nestedObj = detail[key];
-                                     const matchKey = Object.keys(nestedObj).find(k => k?.toLowerCase() === targetLower);
-                                     if (matchKey) {
-                                       val = nestedObj[matchKey];
-                                       break;
-                                     }
-                                   }
-                                 }
-                               }
-                            }
+                          }
 
-                            if (val !== undefined && val !== null && val !== '') {
-                              if (typeof val === 'object') {
-                                return String(val.display_name || val.name || val.nome || val.titulo || val.title || val.id || JSON.stringify(val));
+                          // Tentar inferir se a string parece uma ISO date de qualquer forma (fallback robusto)
+                          if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val)) {
+                            try {
+                              const d = new Date(val);
+                              if (!isNaN(d.getTime())) {
+                                const tType = titleFieldDef?.config?.form_config?.component?.type || titleFieldDef?.config?.component?.type;
+                                if (tType === 'date' || val.endsWith('T00:00:00.000Z')) {
+                                  val = new Intl.DateTimeFormat(dateLocale, { timeZone: 'UTC' }).format(d);
+                                } else {
+                                  val = new Intl.DateTimeFormat(dateLocale, { dateStyle: 'short', timeStyle: 'short' }).format(d);
+                                }
                               }
-                              return String(val);
-                            }
-                          } else {
-                            // Se não há customField, procura em objetos aninhados se existe algo com cara de título
-                            for (const key of Object.keys(detail)) {
-                               if (detail[key] && typeof detail[key] === 'object' && !Array.isArray(detail[key])) {
-                                 const nested = detail[key];
-                                 const possibleVal = nested.display_name || nested.name || nested.nome || nested.titulo || nested.title || nested.label;
-                                 if (possibleVal) return String(possibleVal);
-                               }
+                            } catch (e) {
+                              console.error('Date formatting error:', e);
                             }
                           }
-                          return detail.display_name || detail.name || detail.nome || detail.titulo || detail.label || `Item #${idx + 1}`;
-                        })()}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 transition-all">
-                      {/* Botão de Cortina (Na Lista) */}
-                      {(detailsInlineTypes?.[modelId || ''] !== false) && (
-                        <button
-                          type="button"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            const willExpand = !expandedDetails[uniqueKey]
-                            setExpandedDetails((prev: any) => ({
-                              ...prev,
-                              [uniqueKey]: willExpand
-                            }));
-                            // Lazy load sub-detalhes ao expandir pela primeira vez
-                            if (willExpand && !loadingSubDetails[uniqueKey] && (!detail._details || detail._details.length === 0)) {
-                              setLoadingSubDetails((prev: any) => ({ ...prev, [uniqueKey]: true }))
-                              await fetchSubDetailsForRecord(detail, tableName, pkCol, detailIdValue)
-                              setLoadingSubDetails((prev: any) => ({ ...prev, [uniqueKey]: false }))
+                          // Resiliência de objeto aninhado:
+                          if ((val === undefined || val === null || val === '') && customField) {
+                            const targetProp = customField.includes('.') ? customField.split('.')[1] : customField;
+                            const targetLower = targetProp?.toLowerCase();
+                            if (targetLower) {
+                              for (const key of Object.keys(detail)) {
+                                if (detail[key] && typeof detail[key] === 'object' && !Array.isArray(detail[key])) {
+                                  const nestedObj = detail[key];
+                                  const matchKey = Object.keys(nestedObj).find(k => k?.toLowerCase() === targetLower);
+                                  if (matchKey) {
+                                    val = nestedObj[matchKey];
+                                    break;
+                                  }
+                                }
+                              }
                             }
-                          }}
-                          className={cn(
-                            "p-1.5 rounded-lg shadow-sm transition-all",
-                            loadingSubDetails[uniqueKey]
-                              ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 animate-pulse cursor-wait"
-                              : expandedDetails[uniqueKey]
-                                ? "bg-indigo-600 text-white"
-                                : "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
-                          )}
-                        >
-                          {loadingSubDetails[uniqueKey]
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            : <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-300", expandedDetails[uniqueKey] && "rotate-180")} />
                           }
-                        </button>
-                      )}
-                      {customActions.filter(a => getActionContexts(a, 'detail:' + modelId).includes('row')).map(action => {
-                        const colors = getActionColorClasses(action.color)
-                        return (
-                          <button
-                            key={action.id}
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, buildActionContext(formData, parentData !== formData ? parentData : undefined, parentData !== formData ? parentData.model_name : undefined, detail, tableName)); }}
-                            className={cn(
-                              "p-1.5 rounded-lg border transition-all shadow-sm bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700",
-                              colors.text,
-                              colors.hover
-                            )}
-                            title={action.label}
-                          >
-                            {getActionIcon(action.icon, "w-3.5 h-3.5")}
-                          </button>
-                        )
-                      })}
+
+                          if (val !== undefined && val !== null && val !== '') {
+                            if (typeof val === 'object') {
+                              return String(val.display_name || val.name || val.nome || val.titulo || val.title || val.id || JSON.stringify(val));
+                            }
+                            return String(val);
+                          }
+                        } else {
+                          // Se não há customField, procura em objetos aninhados se existe algo com cara de título
+                          for (const key of Object.keys(detail)) {
+                            if (detail[key] && typeof detail[key] === 'object' && !Array.isArray(detail[key])) {
+                              const nested = detail[key];
+                              const possibleVal = nested.display_name || nested.name || nested.nome || nested.titulo || nested.title || nested.label;
+                              if (possibleVal) return String(possibleVal);
+                            }
+                          }
+                        }
+                        return detail.display_name || detail.name || detail.nome || detail.titulo || detail.label || `Item #${idx + 1}`;
+                      })()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 transition-all">
+                    {/* Botão de Cortina (Na Lista) */}
+                    {(detailsInlineTypes?.[modelId || ''] !== false) && (
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); onEditDetail?.(detail); }}
-                        className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-500 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/40 shadow-sm transition-all"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation();
-                          // Se o registro é novo (ainda não salvo no banco), apenas remove da lista local
-                          if (detail._isNew || String(detailIdValue).startsWith('temp-')) {
-                            setFormData((prev: any) => ({
-                              ...prev,
-                              _details: (prev._details || []).filter((_d: any, _i: number) => {
-                                const _pk = pkField.db_column_name.split('.').pop() || 'id';
-                                const _dPk = _d[_pk] || _d[_pk.toUpperCase()] || _d.id || _d.ID || `idx-${_i}`;
-                                return String(_dPk) !== String(detailIdValue);
-                              })
-                            }));
-                          } else {
-                            // Registro persistido: chama o fluxo normal de exclusão
-                            onDeleteDetail?.(detail);
+                          const willExpand = !expandedDetails[uniqueKey]
+                          setExpandedDetails((prev: any) => ({
+                            ...prev,
+                            [uniqueKey]: willExpand
+                          }));
+                          // Lazy load sub-detalhes ao expandir pela primeira vez
+                          if (willExpand && !loadingSubDetails[uniqueKey] && (!detail._details || detail._details.length === 0)) {
+                            setLoadingSubDetails((prev: any) => ({ ...prev, [uniqueKey]: true }))
+                            await fetchSubDetailsForRecord(detail, tableName, pkCol, detailIdValue)
+                            setLoadingSubDetails((prev: any) => ({ ...prev, [uniqueKey]: false }))
                           }
                         }}
-                        className="p-1.5 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40 shadow-sm transition-all"
+                        className={cn(
+                          "p-1.5 rounded-lg shadow-sm transition-all",
+                          loadingSubDetails[uniqueKey]
+                            ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 animate-pulse cursor-wait"
+                            : expandedDetails[uniqueKey]
+                              ? "bg-indigo-600 text-white"
+                              : "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                        )}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        {loadingSubDetails[uniqueKey]
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-300", expandedDetails[uniqueKey] && "rotate-180")} />
+                        }
                       </button>
-                    </div>
+                    )}
+                    {customActions.filter(a => getActionContexts(a, 'detail:' + modelId).includes('row')).map(action => {
+                      const colors = getActionColorClasses(action.color)
+                      return (
+                        <button
+                          key={action.id}
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onCustomAction?.(action, buildActionContext(formData, parentData !== formData ? parentData : undefined, parentData !== formData ? parentData.model_name : undefined, detail, tableName)); }}
+                          className={cn(
+                            "p-1.5 rounded-lg border transition-all shadow-sm bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700",
+                            colors.text,
+                            colors.hover
+                          )}
+                          title={action.label}
+                        >
+                          {getActionIcon(action.icon, "w-3.5 h-3.5")}
+                        </button>
+                      )
+                    })}
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onEditDetail?.(detail); }}
+                      className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-500 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/40 shadow-sm transition-all"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Se o registro é novo (ainda não salvo no banco), apenas remove da lista local
+                        if (detail._isNew || String(detailIdValue).startsWith('temp-')) {
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            _details: (prev._details || []).filter((_d: any, _i: number) => {
+                              const _pk = pkField.db_column_name.split('.').pop() || 'id';
+                              const _dPk = _d[_pk] || _d[_pk.toUpperCase()] || _d.id || _d.ID || `idx-${_i}`;
+                              return String(_dPk) !== String(detailIdValue);
+                            })
+                          }));
+                        } else {
+                          // Registro persistido: chama o fluxo normal de exclusão
+                          onDeleteDetail?.(detail);
+                        }
+                      }}
+                      className="p-1.5 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40 shadow-sm transition-all"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
+                </div>
 
-                  {/* Efeito Cortina (Edição In-place) */}
-                  {expandedDetails[uniqueKey] && (
-                    <div className="p-6 bg-white dark:bg-neutral-950 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 animate-in slide-in-from-top-2 duration-300 space-y-8 shadow-inner">
-                      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                        {(() => {
-                          const detailFieldsForThisModel = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase());
-                          return detailFieldsForThisModel.map(field => {
-                            const fieldConfig = field.config?.form_config || field.config || {};
-                            const gridSpan = parseInt(isPageMode ? (fieldConfig.component?.gridSpan || 12) : (fieldConfig.component?.modalGridSpan || fieldConfig.component?.gridSpan || 12)) || 12;
-                            const colSpanClass = {
-                              1: 'md:col-span-1', 2: 'md:col-span-2', 3: 'md:col-span-3', 4: 'md:col-span-4',
-                              5: 'md:col-span-5', 6: 'md:col-span-6', 7: 'md:col-span-7', 8: 'md:col-span-8',
-                              9: 'md:col-span-9', 10: 'md:col-span-10', 11: 'md:col-span-11', 12: 'md:col-span-12'
-                            }[gridSpan] || 'md:col-span-12';
-                            let width = fieldConfig.component?.width || '100%';
-                            
-                            if (typeof width === 'string' && width.endsWith('col')) {
-                              const colWidth = parseFloat(width.replace('col', ''));
-                              if (!isNaN(colWidth) && gridSpan > 0) {
-                                width = `${(colWidth / gridSpan) * 100}%`;
-                              } else {
-                                width = '100%';
-                              }
+                {/* Efeito Cortina (Edição In-place) */}
+                {expandedDetails[uniqueKey] && (
+                  <div className="p-6 bg-white dark:bg-neutral-950 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 animate-in slide-in-from-top-2 duration-300 space-y-8 shadow-inner">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                      {(() => {
+                        const detailFieldsForThisModel = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase());
+                        return detailFieldsForThisModel.map(field => {
+                          const fieldConfig = field.config?.form_config || field.config || {};
+                          const gridSpan = parseInt(isPageMode ? (fieldConfig.component?.gridSpan || 12) : (fieldConfig.component?.modalGridSpan || fieldConfig.component?.gridSpan || 12)) || 12;
+                          const colSpanClass = {
+                            1: 'md:col-span-1', 2: 'md:col-span-2', 3: 'md:col-span-3', 4: 'md:col-span-4',
+                            5: 'md:col-span-5', 6: 'md:col-span-6', 7: 'md:col-span-7', 8: 'md:col-span-8',
+                            9: 'md:col-span-9', 10: 'md:col-span-10', 11: 'md:col-span-11', 12: 'md:col-span-12'
+                          }[gridSpan] || 'md:col-span-12';
+                          let width = fieldConfig.component?.width || '100%';
+
+                          if (typeof width === 'string' && width.endsWith('col')) {
+                            const colWidth = parseFloat(width.replace('col', ''));
+                            if (!isNaN(colWidth) && gridSpan > 0) {
+                              width = `${(colWidth / gridSpan) * 100}%`;
+                            } else {
+                              width = '100%';
                             }
+                          }
 
-                            return (
+                          return (
                             <div key={field.id} className={cn("space-y-1.5 col-span-1", colSpanClass)} style={{ width: width }}>
-                              <label 
+                              <label
                                 style={{
                                   fontFamily: getFontFamily(field.config?.label?.font),
                                   fontSize: getFontSize(field.config?.label?.size),
@@ -566,7 +546,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
 
                                     // Agora precisamos atualizar este parentData dentro do formData._details original
                                     const updatedParentData = { ...parentData, _details: newParentDetails };
-                                    
+
                                     const matchRecords = (r1: any, r2: any) => {
                                       if (r1 === r2) return true;
                                       for (const k of Object.keys(r1)) {
@@ -603,14 +583,14 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                       />
                                       {field.db_column_name.startsWith('virt_') && (
                                         <div className="text-[10px] text-orange-500">
-                                          DEBUG VIRT: val={rawValue}, detail_keys={Object.keys(detail).filter(k=>k.startsWith('virt_')).join(',')}
+                                          DEBUG VIRT: val={rawValue}, detail_keys={Object.keys(detail).filter(k => k.startsWith('virt_')).join(',')}
                                         </div>
                                       )}
                                     </div>
                                   );
                                 }
 
-                                if (['select', 'Combo (Select)'].includes(type)) {
+                                if (['select', 'Combo (Select)'].includes(type) || (relationalOptions[field.id] && relationalOptions[field.id].length > 0)) {
                                   let options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
                                   if (fieldConfig.component?.depends_on && fieldConfig.component?.filter_column) {
                                     const depName = fieldConfig.component.depends_on;
@@ -677,7 +657,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                     </div>
                                   );
                                 }
-                                
+
                                 if (['checkbox', 'Checkbox Group'].includes(type)) {
                                   let options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
                                   if (fieldConfig.component?.depends_on && fieldConfig.component?.filter_column) {
@@ -765,32 +745,32 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                               })()}
                             </div>
                           );
-                          });
-                        })()}
-                      </div>
+                        });
+                      })()}
+                    </div>
 
-                      {/* SUB-DETALHES RECURSIVOS NA CORTINA */}
-                      {(() => {
-                        const subTables = Array.from(new Set(
-                          fields
-                            .filter(f => joins.some(j => j.from?.toLowerCase() === tableName.toLowerCase() && j.to?.toLowerCase() === f.model_name?.toLowerCase()))
-                            .map(f => f.model_name)
-                        ));
+                    {/* SUB-DETALHES RECURSIVOS NA CORTINA */}
+                    {(() => {
+                      const subTables = Array.from(new Set(
+                        fields
+                          .filter(f => joins.some(j => j.from?.toLowerCase() === tableName.toLowerCase() && j.to?.toLowerCase() === f.model_name?.toLowerCase()))
+                          .map(f => f.model_name)
+                      ));
 
-                        if (subTables.length > 0) {
-                          return (
-                            <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800 space-y-6">
-                              {subTables.map(st => {
-                                const stTargetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === st?.toLowerCase());
-                                const stModelId = stTargetModel?.id || fields.find(f => f.model_name?.toLowerCase() === st?.toLowerCase())?.model_id;
-                                const stTitle = detailsTabTitles?.[stModelId || ''] || dictionary?.[stModelId || ''] || stTargetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === st?.toLowerCase())?.display_model_name || st;
-                                
-                                return (
-                                  <div key={st} className="pl-4 border-l-2 border-indigo-100 dark:border-indigo-900/30">
-                                    {<RecordFormDetailSection 
-    tableName={st} 
-    parentData={detail} 
-    titleNode={(
+                      if (subTables.length > 0) {
+                        return (
+                          <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800 space-y-6">
+                            {subTables.map(st => {
+                              const stTargetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === st?.toLowerCase());
+                              const stModelId = stTargetModel?.id || fields.find(f => f.model_name?.toLowerCase() === st?.toLowerCase())?.model_id;
+                              const stTitle = detailsTabTitles?.[stModelId || ''] || dictionary?.[stModelId || ''] || stTargetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === st?.toLowerCase())?.display_model_name || st;
+
+                              return (
+                                <div key={st} className="pl-4 border-l-2 border-indigo-100 dark:border-indigo-900/30">
+                                  {<RecordFormDetailSection
+                                    tableName={st}
+                                    parentData={detail}
+                                    titleNode={(
                                       <div className="flex items-center gap-2 mb-4">
                                         <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
                                         <h3
@@ -804,57 +784,57 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                           {stTitle}
                                         </h3>
                                       </div>
-                                    )} 
-    expandedDetails={expandedDetails}
-    setExpandedDetails={setExpandedDetails}
-    loadingSubDetails={loadingSubDetails}
-    setLoadingSubDetails={setLoadingSubDetails}
-    fetchSubDetailsForRecord={fetchSubDetailsForRecord}
-    formData={formData}
-    setFormData={setFormData}
-    fields={fields}
-    joins={joins}
-    detailFields={detailFields}
-    customActions={customActions}
-    onCustomAction={onCustomAction}
-    relationalOptions={relationalOptions}
-    project={project}
-    detailsInterfaceTypes={detailsInterfaceTypes || {}}
-    detailsInlineTypes={detailsInlineTypes || {}}
-    detailsTabTitles={detailsTabTitles}
-    dictionary={dictionary}
-    onAddDetail={onAddDetail}
-    onEditDetail={onEditDetail}
-    onDeleteDetail={onDeleteDetail}
-    buildActionContext={buildActionContext}
-    tabsStyleConfig={tabsStyleConfig}
-    t={t}
-    mode={mode}
-  />}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
-                    </div>
-                  )}
-                </div>
-              );
-            });
-          })()}
-          {(!(parentData?._details || []).some((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase())) && (
-            <div className="py-12 text-center border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-3xl">
-              <p className="text-xs text-neutral-400 italic">Nenhum registro de {(() => {
-                const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase());
-                const modelId = targetModel?.id || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
-                return detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || targetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.display_model_name || tableName
-              })()} encontrado.</p>
-            </div>
-          )}
-        </div>
+                                    )}
+                                    expandedDetails={expandedDetails}
+                                    setExpandedDetails={setExpandedDetails}
+                                    loadingSubDetails={loadingSubDetails}
+                                    setLoadingSubDetails={setLoadingSubDetails}
+                                    fetchSubDetailsForRecord={fetchSubDetailsForRecord}
+                                    formData={formData}
+                                    setFormData={setFormData}
+                                    fields={fields}
+                                    joins={joins}
+                                    detailFields={detailFields}
+                                    customActions={customActions}
+                                    onCustomAction={onCustomAction}
+                                    relationalOptions={relationalOptions}
+                                    project={project}
+                                    detailsInterfaceTypes={detailsInterfaceTypes || {}}
+                                    detailsInlineTypes={detailsInlineTypes || {}}
+                                    detailsTabTitles={detailsTabTitles}
+                                    dictionary={dictionary}
+                                    onAddDetail={onAddDetail}
+                                    onEditDetail={onEditDetail}
+                                    onDeleteDetail={onDeleteDetail}
+                                    buildActionContext={buildActionContext}
+                                    tabsStyleConfig={tabsStyleConfig}
+                                    t={t}
+                                    mode={mode}
+                                  />}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                )}
+              </div>
+            );
+          });
+        })()}
+        {(!(parentData?._details || []).some((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase())) && (
+          <div className="py-12 text-center border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-3xl">
+            <p className="text-xs text-neutral-400 italic">Nenhum registro de {(() => {
+              const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase());
+              const modelId = targetModel?.id || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
+              return detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || targetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.display_model_name || tableName
+            })()} encontrado.</p>
+          </div>
+        )}
       </div>
-    )
+    </div>
+  )
 }
