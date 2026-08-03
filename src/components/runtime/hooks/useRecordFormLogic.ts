@@ -277,11 +277,13 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       const newOptions: Record<string, any[]> = {}
 
       const fieldsToFetch = [...fields]
+      console.log(`[MetaBuilder:RecordForm] detailsItemTitles:`, detailsItemTitles);
       if (detailsItemTitles && project?.models) {
         Object.entries(detailsItemTitles).forEach(([mId, fieldName]) => {
           const baseName = fieldName.includes('.') ? fieldName.split('.')[0] : fieldName
           const safeBase = baseName?.toLowerCase()?.trim() || ''
           const model = project.models.find((m: any) => String(m.id) === String(mId))
+          console.log(`[MetaBuilder:RecordForm] Checking detailsItemTitles for mId: ${mId}, safeBase: ${safeBase}, modelFound: ${!!model}`);
           if (model && model.fields) {
             const field = model.fields.find((f: any) => {
               const fName = f.db_column_name?.toLowerCase()?.trim() || ''
@@ -298,6 +300,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
               }
               return false;
             })
+            console.log(`[MetaBuilder:RecordForm] Field found for ${mId}:`, field?.db_column_name);
             if (field && !fieldsToFetch.find(f => f.id === field.id)) {
               fieldsToFetch.push({ ...field, model_id: model.id, model_name: model.db_table_name || model.table_name })
             }
@@ -305,14 +308,17 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         })
       }
 
+      console.log(`[MetaBuilder:RecordForm] fetchAllRelational trigger. fieldsToFetch mapped count: ${fieldsToFetch.length} | project db_type: ${project?.db_type}`);
+
       for (const field of fieldsToFetch) {
         const comp = field.config?.form_config?.component || field.config?.component || field.widget_options?.component;
         const isRelationalComp = comp && (
+           comp.rel_table || 
            (['select', 'radio', 'checkbox', 'Combo (Select)', 'Radio Buttons', 'Checkbox Group'].includes(comp.type)) || 
            comp.options_type === 'relational' || 
            comp.options_type === 'enumeration'
         );
-        if (isRelationalComp && comp.options_type === 'relational' && comp.rel_table) {
+        if (isRelationalComp && comp.rel_table && comp.options_type !== 'enumeration') {
           try {
             if (projectId && project?.db_type !== 'postgres') {
               const queryId = crypto.randomUUID()
