@@ -418,7 +418,8 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                 }, 8000)
               })
 
-              if (data) {
+              // Guard: only store if we actually got data (timeout resolves with [])
+              if (data && data.length > 0) {
                 newOptions[field.id] = data.map(item => ({
                   label: item[comp.rel_label] || item[comp.rel_label.toLowerCase()] || item[comp.rel_label.toUpperCase()],
                   value: item[comp.rel_value] || item[comp.rel_value.toLowerCase()] || item[comp.rel_value.toUpperCase()],
@@ -465,7 +466,17 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
           }
         }
       }
-      setRelationalOptions(newOptions)
+      // Merge into existing options: never let a stale/timed-out call wipe out good data
+      setRelationalOptions(prev => {
+        const merged: Record<string, any[]> = { ...prev }
+        for (const [key, vals] of Object.entries(newOptions)) {
+          // Only overwrite if the new data is non-empty, or no prior data existed
+          if (vals.length > 0 || !merged[key] || merged[key].length === 0) {
+            merged[key] = vals
+          }
+        }
+        return merged
+      })
       
       // Auto-fill reverse dependencies (e.g. virtual category fields based on loaded product ID)
       setFormData((prev: any) => {
