@@ -310,22 +310,31 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                   titleFieldDef = model.fields.find(checkMatch);
                                }
                             }
-                            
-                            if (titleFieldDef) {
-                               // If matched by rel_label, we need to extract the foreign key ID first
-                               if (matchedByRelLabel || val === undefined) {
-                                  const colName = titleFieldDef.db_column_name;
-                                  val = detail[colName] ?? detail[colName.toUpperCase()] ?? detail[colName.toLowerCase()];
-                               }
-                               
-                               if (val !== undefined && val !== null) {
-                                  const opts = relationalOptions[titleFieldDef.id] || [];
-                                  const matchedOpt = opts.find(o => String(o.value) === String(val));
-                                  if (matchedOpt && matchedOpt.label) {
-                                     val = matchedOpt.label;
-                                  }
-                               }
-                            }
+                                        console.log(`[🔎 ItemTitle] customField="${customField}" safeBase="${safeBase}" detailKeys=`, Object.keys(detail));
+                             
+                             if (titleFieldDef) {
+                                console.log(`[🔎 ItemTitle] titleFieldDef found: id=${titleFieldDef.id} col=${titleFieldDef.db_column_name} matchedByRelLabel=${matchedByRelLabel}`);
+                                // If matched by rel_label, we need to extract the foreign key ID first
+                                if (matchedByRelLabel || val === undefined) {
+                                   const colName = titleFieldDef.db_column_name;
+                                   val = detail[colName] ?? detail[colName.toUpperCase()] ?? detail[colName.toLowerCase()];
+                                   console.log(`[🔎 ItemTitle] val after FK extraction: "${val}" (colName="${colName}")`);
+                                }
+                                
+                                if (val !== undefined && val !== null) {
+                                   const opts = relationalOptions[titleFieldDef.id] || [];
+                                   console.log(`[🔎 ItemTitle] relationalOptions[${titleFieldDef.id}] has ${opts.length} items, val="${val}"`);
+                                   const matchedOpt = opts.find(o => String(o.value) === String(val));
+                                   if (matchedOpt && matchedOpt.label) {
+                                      val = matchedOpt.label;
+                                      console.log(`[🔎 ItemTitle] ✅ Resolved to: "${val}"`);
+                                   } else {
+                                      console.log(`[🔎 ItemTitle] ❌ No match in opts. Sample opt values:`, opts.slice(0, 3).map(o => o.value));
+                                   }
+                                }
+                             } else {
+                                console.log(`[🔎 ItemTitle] ❌ titleFieldDef NOT found. detailFields count=${detailFields?.length} fields count=${fields?.length}`);
+                             }
                             
                             // Tentar inferir se a string parece uma ISO date de qualquer forma (fallback robusto)
                             if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val)) {
