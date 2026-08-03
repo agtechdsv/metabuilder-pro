@@ -287,12 +287,25 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                               titleFieldDef = fields.find((f: any) => String(f.id) === String(localFieldId));
                             }
 
+                            if (!titleFieldDef) {
+                              console.warn(`[RecordForm Debug Title] titleFieldDef NÃO ENCONTRADO para localFieldId=${localFieldId}. detailModelId=${detailModelId}`, {
+                                availableFieldIds: fields.map((f:any) => f.id),
+                                modelFields: project?.models?.find((m:any) => m.id === detailModelId)?.fields?.map((f:any) => ({id: f.id, col: f.db_column_name}))
+                              });
+                            }
+
                             if (titleFieldDef) {
                               const rawColName = titleFieldDef.db_column_name;
                               const colName = rawColName.includes('.') ? rawColName.split('.').pop() || rawColName : rawColName;
                               val = detail[colName] ?? detail[colName.toUpperCase()] ?? detail[colName.toLowerCase()];
 
-                              console.log(`[RecordForm Debug Title] Render Título para ${detailModelId}. colName: ${colName}, val: ${val}`, { detail, optsForField: relationalOptions[titleFieldDef.id], allOptsKeys: Object.keys(relationalOptions) });
+                              console.log(`[RecordForm Debug Title] Render Título para ${detailModelId}. colName: ${colName}, val: ${val}`, { 
+                                titleFieldDefId: titleFieldDef.id,
+                                titleFieldDefColName: titleFieldDef.db_column_name,
+                                detailKeys: Object.keys(detail),
+                                optsForField: relationalOptions[titleFieldDef.id], 
+                                allOptsKeys: Object.keys(relationalOptions) 
+                              });
 
                               if (val !== undefined && val !== null) {
                                 let matchedOpt = null;
@@ -810,6 +823,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                     tabsStyleConfig={tabsStyleConfig}
                                     t={t}
                                     mode={mode}
+                                    detailsItemTitles={detailsItemTitles}
                                   />}
                                 </div>
                               );
