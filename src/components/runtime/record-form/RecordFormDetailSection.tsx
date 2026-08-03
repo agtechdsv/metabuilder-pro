@@ -261,6 +261,24 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                             let matchedByRelLabel = false;
                             
                             const checkMatch = (f: any) => {
+                                 if (project?.relations?.length > 0 && project?.models) {
+                                    const explicitRel = project.relations.find((r: any) => {
+                                       const fromId = r.from_model_id || r.detail_model_id;
+                                       const toId = r.to_model_id || r.master_model_id;
+                                       const fromFieldId = r.from_field_id || r.foreign_column_id;
+                                       
+                                       if (fromId === detailModelId && fromFieldId === f.id) {
+                                          const toModel = project.models.find((m: any) => m.id === toId);
+                                          if (toModel) {
+                                             const toModelSafeName = (toModel.db_table_name || toModel.table_name || '').toLowerCase();
+                                             if (toModelSafeName === safeBase || safeBase.includes(toModelSafeName) || toModelSafeName.includes(safeBase)) return true;
+                                          }
+                                       }
+                                       return false;
+                                    });
+                                    if (explicitRel) return true;
+                                 }
+
                                const fName = f.db_column_name?.toLowerCase()?.trim() || '';
                                const fLabel = f.display_name?.toLowerCase()?.trim() || f.label?.toLowerCase()?.trim() || '';
                                
@@ -301,7 +319,8 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                             if (titleFieldDef) {
                                // If matched by rel_label, we need to extract the foreign key ID first
                                if (matchedByRelLabel || val === undefined) {
-                                  val = detail[titleFieldDef.db_column_name];
+                                  const colName = titleFieldDef.db_column_name;
+                                  val = detail[colName] ?? detail[colName.toUpperCase()] ?? detail[colName.toLowerCase()];
                                }
                                
                                if (val !== undefined && val !== null) {

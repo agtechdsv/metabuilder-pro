@@ -286,6 +286,24 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
           console.log(`[MetaBuilder:RecordForm] Checking detailsItemTitles for mId: ${mId}, safeBase: ${safeBase}, modelFound: ${!!model}`);
           if (model && model.fields) {
             const field = model.fields.find((f: any) => {
+              if (project?.relations?.length > 0) {
+                 const explicitRel = project.relations.find((r: any) => {
+                    const fromId = r.from_model_id || r.detail_model_id;
+                    const toId = r.to_model_id || r.master_model_id;
+                    const fromFieldId = r.from_field_id || r.foreign_column_id;
+                    
+                    if (fromId === model.id && fromFieldId === f.id) {
+                       const toModel = project.models.find((m: any) => m.id === toId);
+                       if (toModel) {
+                          const toModelSafeName = (toModel.db_table_name || toModel.table_name || '').toLowerCase();
+                          if (toModelSafeName === safeBase || safeBase.includes(toModelSafeName) || toModelSafeName.includes(safeBase)) return true;
+                       }
+                    }
+                    return false;
+                 });
+                 if (explicitRel) return true;
+              }
+
               const fName = f.db_column_name?.toLowerCase()?.trim() || ''
               const fLabel = f.display_name?.toLowerCase()?.trim() || f.label?.toLowerCase()?.trim() || ''
               if (fName === safeBase || fName.endsWith(`.${safeBase}`) || fName.endsWith(`_${safeBase}`)) return true;
