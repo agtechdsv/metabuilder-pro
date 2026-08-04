@@ -271,28 +271,24 @@ function DynamicBlueprintContent({
   const currentWidth = 280 * scale
   const currentHeight = 80 * scale
 
-  const getCol = useCallback((fieldId?: string) => {
-    if (!fieldId) return null
-    const f = fields.find(f => f.id === fieldId)
-    return f ? f.db_column_name : null
-  }, [fields])
+  const { resolveDynamicFieldDef, extractRawValue } = require('@/lib/field-resolver');
 
   const pkCol = useMemo(() => {
     const pk = fields.find(f => f.is_primary_key)
     return pk ? pk.db_column_name : 'id'
   }, [fields])
 
-  const titleCol = getCol(title_field)
-  const descCol = getCol(desc_field)
-  const statusCol = getCol(status_field)
-  const predCol = getCol(predecessor_field)
+  const titleFieldDef = resolveDynamicFieldDef(title_field, fields);
+  const descFieldDef = resolveDynamicFieldDef(desc_field, fields);
+  const statusFieldDef = resolveDynamicFieldDef(status_field, fields);
+  const predFieldDef = resolveDynamicFieldDef(predecessor_field, fields);
 
-  const getRowVal = useCallback((r: any, col: string | null) => {
-    if (!col || !r) return undefined
-    if (r[col] !== undefined) return r[col]
-    const shortCol = col.split('.').pop() || col
-    return r[shortCol]
-  }, [])
+  const predCol = predFieldDef?.db_column_name || predecessor_field;
+
+  const getRowVal = useCallback((r: any, fieldKey: string | null, fieldDef: any = null) => {
+    if (!fieldKey || !r) return undefined;
+    return extractRawValue(fieldKey, r, fieldDef);
+  }, []);
 
   const getLayoutedElements = (nodes: Node[], edges: Edge[], dir = 'TB') => {
     const dagreGraph = new dagre.graphlib.Graph()
@@ -328,7 +324,7 @@ function DynamicBlueprintContent({
   }
 
   const { initialNodes, initialEdges } = useMemo(() => {
-    if (!data || data.length === 0 || !titleCol || !predCol) {
+    if (!data || data.length === 0 || (!title_field && !titleFieldDef) || !predCol) {
       return { initialNodes: [], initialEdges: [] }
     }
 
@@ -357,21 +353,18 @@ function DynamicBlueprintContent({
       return depths[id]
     }
 
-    const titleFieldObj = fields.find(f => f.db_column_name === titleCol)
-    const descFieldObj = fields.find(f => f.db_column_name === descCol)
-
     data.forEach(row => {
       const id = String(getRowVal(row, pkCol) || row['id'] || row['ID'])
-      const predecessorId = getRowVal(row, predCol)
+      const predecessorId = getRowVal(row, predecessor_field, predFieldDef)
       const depth = getDepth(id)
 
       nodes.push({
         id,
         type: 'blueprintNode',
         data: {
-          title: formatFieldValue(getRowVal(row, titleCol), titleFieldObj, relationalOptions) || 'Sem Título',
-          description: descCol ? formatFieldValue(getRowVal(row, descCol), descFieldObj, relationalOptions) : '',
-          status: statusCol ? getRowVal(row, statusCol) : '',
+          title: formatFieldValue(getRowVal(row, title_field, titleFieldDef), titleFieldDef, relationalOptions) || 'Sem Título',
+          description: desc_field ? formatFieldValue(getRowVal(row, desc_field, descFieldDef), descFieldDef, relationalOptions) : '',
+          status: status_field ? getRowVal(row, status_field, statusFieldDef) : '',
           rawData: row,
           onView,
           onEdit,
@@ -411,7 +404,7 @@ function DynamicBlueprintContent({
 
     const layouted = getLayoutedElements(nodes, edges, direction)
     return { initialNodes: layouted.nodes, initialEdges: layouted.edges }
-  }, [data, titleCol, descCol, statusCol, predCol, pkCol, onView, onEdit, onDelete, scale, direction, animatedEdges])
+  }, [data, title_field, desc_field, status_field, predecessor_field, predCol, pkCol, onView, onEdit, onDelete, scale, direction, animatedEdges])
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
@@ -483,7 +476,7 @@ function DynamicBlueprintContent({
     }, 50)
   }, [nodes, edges, setNodes, setEdges, fitView, direction])
 
-  if (!titleCol || !predCol) {
+  if ((!title_field && !titleFieldDef) || !predCol) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-white dark:bg-neutral-900 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 p-8 text-center">
         <Activity className="w-12 h-12 text-neutral-300 dark:text-neutral-700 mb-4" />

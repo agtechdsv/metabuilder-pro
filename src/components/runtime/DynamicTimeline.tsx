@@ -76,20 +76,12 @@ export default function DynamicTimeline({
     )
   }
 
-  // Obter chaves limpas (sem o prefixo da tabela, caso exista)
-  const getDateFieldKey = (id: string) => {
-    const field = fields.find(f => f.id === id)
-    return field?.db_column_name || id
-  }
+  const { resolveDynamicFieldDef, extractRawValue } = require('@/lib/field-resolver');
 
-  const dateField = getDateFieldKey(timelineConfig.date_field)
-  const titleField = getDateFieldKey(timelineConfig.title_field)
-  const descField = timelineConfig.desc_field ? getDateFieldKey(timelineConfig.desc_field) : null
-  const iconField = timelineConfig.icon_field ? getDateFieldKey(timelineConfig.icon_field) : null
-
-  const titleFieldObj = fields.find(f => f.db_column_name === titleField)
-  const descFieldObj = descField ? fields.find(f => f.db_column_name === descField) : null
-  const iconFieldObj = iconField ? fields.find(f => f.db_column_name === iconField) : null
+  const titleFieldObj = resolveDynamicFieldDef(timelineConfig.title_field, fields);
+  const dateFieldObj = resolveDynamicFieldDef(timelineConfig.date_field, fields);
+  const descFieldObj = timelineConfig.desc_field ? resolveDynamicFieldDef(timelineConfig.desc_field, fields) : null;
+  const iconFieldObj = timelineConfig.icon_field ? resolveDynamicFieldDef(timelineConfig.icon_field, fields) : null;
 
   const [mode, setMode] = useState(timelineConfig.layout_mode || 'alternating')
   const [style, setStyle] = useState(timelineConfig.layout_style || 'cards')
@@ -454,13 +446,13 @@ export default function DynamicTimeline({
             const isEven = index % 2 === 0
             const primaryKey = item._key || item.id || item.ID || index
             
-            const rawDate = getNestedValue(item, dateField)
-            const titleValue = getNestedValue(item, titleField)
+            const rawDate = extractRawValue(timelineConfig.date_field, item, dateFieldObj)
+            const titleValue = extractRawValue(timelineConfig.title_field, item, titleFieldObj)
             const title = formatFieldValue(titleValue, titleFieldObj, relationalOptions) || 'Sem Título'
-            const descValue = descField ? getNestedValue(item, descField) : null
-            const desc = descField ? formatFieldValue(descValue, descFieldObj, relationalOptions) : null
-            const iconStatusValue = iconField ? getNestedValue(item, iconField) : null
-            const iconStatus = iconField ? formatFieldValue(iconStatusValue, iconFieldObj, relationalOptions) : null
+            const descValue = timelineConfig.desc_field ? extractRawValue(timelineConfig.desc_field, item, descFieldObj) : null
+            const desc = timelineConfig.desc_field ? formatFieldValue(descValue, descFieldObj, relationalOptions) : null
+            const iconStatusValue = timelineConfig.icon_field ? extractRawValue(timelineConfig.icon_field, item, iconFieldObj) : null
+            const iconStatus = timelineConfig.icon_field ? formatFieldValue(iconStatusValue, iconFieldObj, relationalOptions) : null
             const itemColor = colors[index % colors.length]
             const nextColor = index < sortedData.length - 1 ? colors[(index + 1) % colors.length] : 'transparent'
 
@@ -590,13 +582,13 @@ export default function DynamicTimeline({
           const isEven = index % 2 === 0
           const primaryKey = item._key || item.id || item.ID || index
           
-          const rawDate = getNestedValue(item, dateField)
-          const titleValue = getNestedValue(item, titleField)
+          const rawDate = extractRawValue(timelineConfig.date_field, item, dateFieldObj)
+          const titleValue = extractRawValue(timelineConfig.title_field, item, titleFieldObj)
           const title = formatFieldValue(titleValue, titleFieldObj, relationalOptions) || 'Sem Título'
-          const descValue = descField ? getNestedValue(item, descField) : null
-          const desc = descField ? formatFieldValue(descValue, descFieldObj, relationalOptions) : null
-          const iconStatusValue = iconField ? getNestedValue(item, iconField) : null
-          const iconStatus = iconField ? formatFieldValue(iconStatusValue, iconFieldObj, relationalOptions) : null
+          const descValue = timelineConfig.desc_field ? extractRawValue(timelineConfig.desc_field, item, descFieldObj) : null
+          const desc = timelineConfig.desc_field ? formatFieldValue(descValue, descFieldObj, relationalOptions) : null
+          const iconStatusValue = timelineConfig.icon_field ? extractRawValue(timelineConfig.icon_field, item, iconFieldObj) : null
+          const iconStatus = timelineConfig.icon_field ? formatFieldValue(iconStatusValue, iconFieldObj, relationalOptions) : null
           const itemColor = colors[index % colors.length]
           const nextColor = index < sortedData.length - 1 ? colors[(index + 1) % colors.length] : 'transparent'
 

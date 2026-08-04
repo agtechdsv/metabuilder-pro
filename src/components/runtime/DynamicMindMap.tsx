@@ -135,22 +135,10 @@ export default function DynamicMindMap({
       hierarchyFields = [centralField, ...hierarchyFields.filter(f => f.id !== centralFieldId)]
     }
 
+    const { extractRawValue } = require('@/lib/field-resolver');
     const getValue = (item: any, field: any) => {
       if (!item || !field) return undefined
-      const colName = field.db_column_name
-      if (colName.includes('.')) {
-        const parts = colName.split('.')
-        let current = item
-        for (const part of parts) {
-          if (current && typeof current === 'object' && part in current) current = current[part]
-          else { current = undefined; break; }
-        }
-        if (current !== undefined) return current
-      }
-      if (item[colName] !== undefined) return item[colName]
-      const simpleName = colName.includes('.') ? colName.split('.').pop() : colName
-      if (simpleName && item[simpleName] !== undefined) return item[simpleName]
-      return undefined
+      return extractRawValue(field.db_column_name, item, field)
     }
 
     const buildTree = (items: any[], level: number): MindMapNode[] => {

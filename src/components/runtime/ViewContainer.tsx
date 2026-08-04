@@ -394,7 +394,12 @@ export default function ViewContainer({
   const labelClear = btnClear?.custom_label !== undefined && btnClear.custom_label !== '' ? btnClear.custom_label : t('runtime.clear')
 
   let correctedKanbanGroupDisplayField = kanbanGroupDisplayField;
-  const actualGroupField = displayFields.find(f => f.id === kanbanGroupField) || displayFields.find(f => f.db_column_name === 'status') || { db_column_name: 'status' };
+  
+  const { resolveDynamicFieldDef } = require('@/lib/field-resolver');
+  const actualGroupField = resolveDynamicFieldDef(kanbanGroupField, displayFields, modelName) 
+    || displayFields.find(f => f.db_column_name === 'status') 
+    || { db_column_name: 'status' };
+    
   if (kanbanGroupDisplayField && !kanbanGroupDisplayField.includes('.')) {
     const join = joins?.find(j => j.localKey === actualGroupField.db_column_name || j.foreignKey === actualGroupField.db_column_name);
     if (join) {

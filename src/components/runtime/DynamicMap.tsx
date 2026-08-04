@@ -64,33 +64,28 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
 
   if (!isMounted || !RL) return null
 
-  // Helper to get real field name
-  const getFieldKey = (id: string) => {
-    const field = fields?.find(f => f.id === id)
-    return field?.db_column_name || id
-  }
+  const { resolveDynamicFieldDef, extractRawValue } = require('@/lib/field-resolver');
 
-  const latField = getFieldKey(mapConfig.lat_field)
-  const lngField = getFieldKey(mapConfig.lng_field)
-  const titleField = getFieldKey(mapConfig.title_field)
-  const descField = mapConfig.desc_field ? getFieldKey(mapConfig.desc_field) : null
-
-  const titleFieldObj = fields.find(f => f.db_column_name === titleField)
-  const descFieldObj = descField ? fields.find(f => f.db_column_name === descField) : null
+  const latFieldDef = resolveDynamicFieldDef(mapConfig.lat_field, fields);
+  const lngFieldDef = resolveDynamicFieldDef(mapConfig.lng_field, fields);
+  const titleFieldDef = resolveDynamicFieldDef(mapConfig.title_field, fields);
+  const descFieldDef = mapConfig.desc_field ? resolveDynamicFieldDef(mapConfig.desc_field, fields) : null;
 
   // Extract valid points
   const validPoints = data.filter(record => {
-    const lat = record[latField]
-    const lng = record[lngField]
+    const lat = extractRawValue(mapConfig.lat_field, record, latFieldDef);
+    const lng = extractRawValue(mapConfig.lng_field, record, lngFieldDef);
     return lat !== null && lat !== undefined && !isNaN(Number(lat)) && 
            lng !== null && lng !== undefined && !isNaN(Number(lng))
   }).map(record => {
+    const rawTitle = extractRawValue(mapConfig.title_field, record, titleFieldDef);
+    const rawDesc = mapConfig.desc_field ? extractRawValue(mapConfig.desc_field, record, descFieldDef) : null;
     return {
       record,
-      lat: Number(record[latField]),
-      lng: Number(record[lngField]),
-      title: formatFieldValue(record[titleField], titleFieldObj, relationalOptions) || 'Sem Título',
-      desc: descField ? formatFieldValue(record[descField], descFieldObj, relationalOptions) : ''
+      lat: Number(extractRawValue(mapConfig.lat_field, record, latFieldDef)),
+      lng: Number(extractRawValue(mapConfig.lng_field, record, lngFieldDef)),
+      title: formatFieldValue(rawTitle, titleFieldDef, relationalOptions) || 'Sem Título',
+      desc: mapConfig.desc_field ? formatFieldValue(rawDesc, descFieldDef, relationalOptions) : ''
     }
   })
 

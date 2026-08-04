@@ -258,83 +258,26 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                         let customField = detailsItemTitles?.[detailModelId || ''];
 
                         if (customField) {
+                          const { resolveDynamicFieldDef, extractRawValue } = require('@/lib/field-resolver');
                           let val: any;
-                          let parsedConfig: any = null;
-                          let titleFieldDef: any = null;
+                          let titleFieldDef = resolveDynamicFieldDef(customField, fields, tableName);
 
-                          try {
-                            if (typeof customField === 'string' && customField.startsWith('{')) {
-                              parsedConfig = JSON.parse(customField);
-                            }
-                          } catch (e) { }
+                          val = extractRawValue(customField, detail, titleFieldDef);
 
-                          if (parsedConfig && (parsedConfig.target_field_id || parsedConfig.relation_path)) {
-                            let localFieldId = parsedConfig.target_field_id;
-                            if (parsedConfig.relation_path && parsedConfig.relation_path.length > 0) {
-                              localFieldId = parsedConfig.relation_path[0].foreign_column_id;
-                            }
+                          if (titleFieldDef && val !== undefined && val !== null) {
+                            let matchedOpt = null;
+                            const opts = relationalOptions[titleFieldDef.id] || [];
+                            matchedOpt = opts.find((o: any) => String(o.value).toLowerCase() === String(val).toLowerCase());
 
-                            console.log(`[RecordForm Debug Title] Parsing customField para model: ${detailModelId}. localFieldId = ${localFieldId}`);
-
-                            if (project?.models) {
-                              const model = project.models.find((m: any) => m.id === detailModelId);
-                              if (model && model.fields) {
-                                titleFieldDef = model.fields.find((f: any) => f.id === localFieldId);
+                            if (!matchedOpt) {
+                              for (const key of Object.keys(relationalOptions)) {
+                                matchedOpt = relationalOptions[key]?.find((o: any) => String(o.value).toLowerCase() === String(val).toLowerCase());
+                                if (matchedOpt) break;
                               }
                             }
 
-                            if (!titleFieldDef && fields) {
-                              titleFieldDef = fields.find((f: any) => String(f.id) === String(localFieldId));
-                            }
-
-                            if (!titleFieldDef) {
-                              console.warn(`[RecordForm Debug Title] titleFieldDef NÃO ENCONTRADO para localFieldId=${localFieldId}. detailModelId=${detailModelId}`, {
-                                availableFieldIds: fields.map((f:any) => f.id),
-                                modelFields: project?.models?.find((m:any) => m.id === detailModelId)?.fields?.map((f:any) => ({id: f.id, col: f.db_column_name}))
-                              });
-                            }
-
-                            if (titleFieldDef) {
-                              const rawColName = titleFieldDef.db_column_name;
-                              const colName = rawColName.includes('.') ? rawColName.split('.').pop() || rawColName : rawColName;
-                              val = detail[colName] ?? detail[colName.toUpperCase()] ?? detail[colName.toLowerCase()];
-
-                              console.log(`[RecordForm Debug Title] Render Título para ${detailModelId}. colName: ${colName}, val: ${val}`, { 
-                                titleFieldDefId: titleFieldDef.id,
-                                titleFieldDefColName: titleFieldDef.db_column_name,
-                                detailKeys: Object.keys(detail),
-                                optsForField: relationalOptions[titleFieldDef.id], 
-                                allOptsKeys: Object.keys(relationalOptions) 
-                              });
-
-                              if (val !== undefined && val !== null) {
-                                let matchedOpt = null;
-                                const opts = relationalOptions[titleFieldDef.id] || [];
-                                matchedOpt = opts.find(o => String(o.value).toLowerCase() === String(val).toLowerCase());
-
-                                if (!matchedOpt) {
-                                  for (const key of Object.keys(relationalOptions)) {
-                                    matchedOpt = relationalOptions[key]?.find((o: any) => String(o.value).toLowerCase() === String(val).toLowerCase());
-                                    if (matchedOpt) break;
-                                  }
-                                }
-
-                                if (matchedOpt && matchedOpt.label) {
-                                  val = matchedOpt.label;
-                                }
-                              }
-                            }
-                          } else if (typeof customField === 'string' && !customField.startsWith('{')) {
-                            const getVal = (row: any, key: string) => {
-                              if (!row) return undefined;
-                              const lowerKey = key.toLowerCase();
-                              return row[key] ?? row[key.toUpperCase()] ?? row[key.toLowerCase()] ?? Object.entries(row).find(([k]) => k.toLowerCase() === lowerKey)?.[1];
-                            };
-                            if (customField.includes('.')) {
-                              const parts = customField.split('.');
-                              val = getVal(detail, customField) ?? getVal(detail, parts[1]);
-                            } else {
-                              val = getVal(detail, customField);
+                            if (matchedOpt && matchedOpt.label) {
+                              val = matchedOpt.label;
                             }
                           }
 
@@ -355,7 +298,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                             }
                           }
                           // Resiliência de objeto aninhado:
-                          if ((val === undefined || val === null || val === '') && customField) {
+                          if ((val === undefined || val === null || val === '') && typeof customField === 'string' && !customField.startsWith('{')) {
                             const targetProp = customField.includes('.') ? customField.split('.')[1] : customField;
                             const targetLower = targetProp?.toLowerCase();
                             if (targetLower) {

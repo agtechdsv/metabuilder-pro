@@ -128,32 +128,29 @@ export default function DynamicGantt({
   const DAY_WIDTH = 40 * scale // Width of each day column in pixels
   const SIDEBAR_WIDTH = 280
 
-  // Helper to map Field ID to DB Column Name
-  const getFieldKey = (id: string) => {
-    const field = fields.find(f => f.id === id)
-    return field?.db_column_name || id
-  }
-
   // 1. Validate data and map tasks
   const tasks = useMemo(() => {
     if (!data || !ganttConfig) return []
+    
+    const { resolveDynamicFieldDef, extractRawValue } = require('@/lib/field-resolver');
 
-    const startField = getFieldKey(ganttConfig.start_date_field)
-    const endField = getFieldKey(ganttConfig.end_date_field)
-    const titleField = getFieldKey(ganttConfig.title_field)
-    const progressField = ganttConfig.progress_field ? getFieldKey(ganttConfig.progress_field) : null
-
-    const titleFieldObj = fields.find(f => f.db_column_name === titleField)
+    const titleFieldDef = resolveDynamicFieldDef(ganttConfig.title_field, fields);
+    const startFieldDef = resolveDynamicFieldDef(ganttConfig.start_date_field, fields);
+    const endFieldDef = resolveDynamicFieldDef(ganttConfig.end_date_field, fields);
+    const progressFieldDef = ganttConfig.progress_field ? resolveDynamicFieldDef(ganttConfig.progress_field, fields) : null;
 
     return data.map((row, index) => {
-      const startDateStr = row[startField]
-      const endDateStr = row[endField]
+      const startDateStr = extractRawValue(ganttConfig.start_date_field, row, startFieldDef);
+      const endDateStr = extractRawValue(ganttConfig.end_date_field, row, endFieldDef);
       
       const startDate = startDateStr ? startOfDay(new Date(startDateStr)) : null
       const endDate = endDateStr ? startOfDay(new Date(endDateStr)) : null
       
-      const title = formatFieldValue(row[titleField], titleFieldObj, relationalOptions) || `Task #${index + 1}`
-      const progress = progressField ? Number(row[progressField]) || 0 : null
+      const rawTitle = extractRawValue(ganttConfig.title_field, row, titleFieldDef);
+      const title = formatFieldValue(rawTitle, titleFieldDef, relationalOptions) || `Task #${index + 1}`
+      
+      const rawProgress = progressFieldDef ? extractRawValue(ganttConfig.progress_field, row, progressFieldDef) : null;
+      const progress = rawProgress !== null && rawProgress !== undefined ? Number(rawProgress) || 0 : null
 
       return {
         id: row.id || index,

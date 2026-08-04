@@ -73,13 +73,15 @@ export default function DynamicScheduler({
     { value: 1.5, icon: <ZoomIn className="w-3.5 h-3.5" />, label: t('runtime.scale_xl', 'Extra Grande') }
   ]
 
-  // Mapeia colunas do banco com base no schedulerConfig
-  const titleCol = fields.find(f => f.id === schedulerConfig.title_field)?.db_column_name || schedulerConfig.title_field || 'title'
-  const startCol = fields.find(f => f.id === schedulerConfig.start_date_field)?.db_column_name || schedulerConfig.start_date_field || 'start_date'
-  const endCol = fields.find(f => f.id === schedulerConfig.end_date_field)?.db_column_name || schedulerConfig.end_date_field || 'end_date'
-  const colorCol = fields.find(f => f.id === schedulerConfig.color_field)?.db_column_name || schedulerConfig.color_field || 'color'
+  const { resolveDynamicFieldDef, extractRawValue } = require('@/lib/field-resolver');
 
+  const titleFieldDef = resolveDynamicFieldDef(schedulerConfig.title_field, fields);
+  const startFieldDef = resolveDynamicFieldDef(schedulerConfig.start_date_field, fields);
+  const endFieldDef = resolveDynamicFieldDef(schedulerConfig.end_date_field, fields);
+  const colorFieldDef = schedulerConfig.color_field ? resolveDynamicFieldDef(schedulerConfig.color_field, fields) : null;
 
+  const startCol = startFieldDef?.db_column_name || schedulerConfig.start_date_field || 'start_date';
+  const endCol = endFieldDef?.db_column_name || schedulerConfig.end_date_field || 'end_date';
 
   // Parse de datas com segurança
   const parseEventDate = (dateVal: any): Date | null => {
@@ -90,21 +92,23 @@ export default function DynamicScheduler({
 
   // Eventos formatados para o calendário
   const events = useMemo(() => {
-    const titleFieldObj = fields.find(f => f.db_column_name === titleCol)
     return data.map(item => {
-      const start = parseEventDate(getNestedValue(item, startCol))
-      const end = parseEventDate(getNestedValue(item, endCol)) || start
-      const rawTitle = getNestedValue(item, titleCol)
+      const startRaw = extractRawValue(schedulerConfig.start_date_field, item, startFieldDef);
+      const endRaw = extractRawValue(schedulerConfig.end_date_field, item, endFieldDef);
+      const start = parseEventDate(startRaw)
+      const end = parseEventDate(endRaw) || start
+      const rawTitle = extractRawValue(schedulerConfig.title_field, item, titleFieldDef)
+      const rawColor = colorFieldDef ? extractRawValue(schedulerConfig.color_field, item, colorFieldDef) : null;
       return {
         raw: item,
         id: String(item._key || item.id || item.ID),
-        title: formatFieldValue(rawTitle, titleFieldObj, relationalOptions) || 'Sem Título',
+        title: formatFieldValue(rawTitle, titleFieldDef, relationalOptions) || 'Sem Título',
         start,
         end,
-        color: String(getNestedValue(item, colorCol) || 'default')
+        color: String(rawColor || 'default')
       }
     }).filter(evt => evt.start !== null) as any[]
-  }, [data, titleCol, startCol, endCol, colorCol])
+  }, [data, schedulerConfig])
 
   // Navegação do calendário
   const navigate = (direction: 'prev' | 'next') => {

@@ -74,11 +74,13 @@ export default function DynamicKanban({
   // Agrupar dados por colunas baseadas no groupField
   const groupColumnName = groupField?.db_column_name || 'status'
   
+  const { extractRawValue } = require('@/lib/field-resolver');
+
   // Descobrir todos os valores únicos do groupField para criar colunas
   const columns = useMemo(() => {
-    const values = Array.from(new Set(data.map(item => String(item[groupColumnName] || 'Unassigned'))))
+    const values = Array.from(new Set(data.map(item => String(extractRawValue(groupColumnName, item, groupField) || 'Unassigned'))))
     return values.sort()
-  }, [data, groupColumnName])
+  }, [data, groupColumnName, groupField])
 
   // Sensores para DND
   const sensors = useSensors(
@@ -110,12 +112,12 @@ export default function DynamicKanban({
     if (!columns.includes(overId)) {
       const overRecord = data.find(item => String(item._key || item.id || item.ID) === overId)
       if (overRecord) {
-        newStatus = String(overRecord[groupColumnName] || 'Unassigned')
+        newStatus = String(extractRawValue(groupColumnName, overRecord, groupField) || 'Unassigned')
       }
     }
 
     const activeRecord = data.find(item => String(item._key || item.id || item.ID) === activeRecordId)
-    if (activeRecord && String(activeRecord[groupColumnName] || 'Unassigned') !== newStatus) {
+    if (activeRecord && String(extractRawValue(groupColumnName, activeRecord, groupField) || 'Unassigned') !== newStatus) {
       onMove(activeRecordId, newStatus)
     }
 
@@ -153,7 +155,7 @@ export default function DynamicKanban({
         {columns.map(column => {
           let displayTitle = dictionary[column] || column;
           if (column !== 'Unassigned') {
-            const sampleItem = data.find(item => String(getNestedValue(item, groupColumnName)) === column);
+            const sampleItem = data.find(item => String(extractRawValue(groupColumnName, item, groupField)) === column);
             if (sampleItem) {
               if (kanbanGroupDisplayField) {
                 const nestedVal = getNestedValue(sampleItem, kanbanGroupDisplayField);
@@ -180,7 +182,7 @@ export default function DynamicKanban({
               }
               return true;
             })}
-            items={data.filter(item => String(getNestedValue(item, groupColumnName) || 'Unassigned') === column)}
+            items={data.filter(item => String(extractRawValue(groupColumnName, item, groupField) || 'Unassigned') === column)}
             onView={onView}
             onEdit={onEdit}
             onDelete={onDelete}

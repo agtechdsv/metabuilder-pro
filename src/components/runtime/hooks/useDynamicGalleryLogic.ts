@@ -26,13 +26,18 @@ export function useDynamicGalleryLogic({
   const [selectedAsset, setSelectedAsset] = useState<any | null>(null)
   const [scale, setScale] = useState(1.0)
 
+  const { resolveDynamicFieldDef, extractRawValue } = require('@/lib/field-resolver');
+
+  const configTitleDef = resolveDynamicFieldDef(galleryConfig?.title_field, fields);
+  const configImageDef = resolveDynamicFieldDef(galleryConfig?.image_field, fields);
+
   // Mapeia uma linha genérica para o formato ideal de asset de galeria
   const mappedAssets = useMemo(() => {
     return data.map((row) => {
       // 1. Coleta todas as propriedades da linha e do mapeamento de campos
       const allValues: Record<string, any> = { ...row }
       fields.forEach(f => {
-        allValues[f.db_column_name] = getNestedValue(row, f.db_column_name)
+        allValues[f.db_column_name] = extractRawValue(f.db_column_name, row, f);
       })
 
       // Helper para formatar base64 bruto sem prefixo dataURI
@@ -49,15 +54,10 @@ export function useDynamicGalleryLogic({
 
       // 1. Identificar título
       let title = ''
-      const titleField = fields.find(f => {
-        if (galleryConfig?.title_field) return f.db_column_name === galleryConfig.title_field || f.id === galleryConfig.title_field
-        const col = f.db_column_name.toLowerCase()
-        return col === 'title' || col === 'name' || col === 'nome' || col === 'titulo' || col === 'label'
-      })
-      let titleFieldObj = titleField;
+      let titleFieldObj = configTitleDef;
       
-      if (titleField) {
-        title = formatFieldValue(allValues[titleField.db_column_name], titleField, relationalOptions) || ''
+      if (configTitleDef) {
+        title = formatFieldValue(extractRawValue(galleryConfig?.title_field, row, configTitleDef), configTitleDef, relationalOptions) || ''
       } else if (galleryConfig?.title_field && getNestedValue(allValues, galleryConfig.title_field) !== undefined) {
         title = String(getNestedValue(allValues, galleryConfig.title_field))
       } else {
@@ -94,13 +94,8 @@ export function useDynamicGalleryLogic({
 
       // 2. Identificar imagem de preview / url principal
       let previewUrl = ''
-      const imageField = fields.find(f => {
-        if (galleryConfig?.image_field) return f.db_column_name === galleryConfig.image_field || f.id === galleryConfig.image_field
-        const col = f.db_column_name.toLowerCase()
-        return col.includes('image') || col.includes('imagem') || col.includes('avatar') || col.includes('thumbnail') || col.includes('thumb') || col.includes('foto') || col.includes('capa') || col.includes('preview')
-      })
-      if (imageField && allValues[imageField.db_column_name]) {
-        previewUrl = formatBase64(String(allValues[imageField.db_column_name]))
+      if (configImageDef) {
+        previewUrl = formatBase64(String(extractRawValue(galleryConfig?.image_field, row, configImageDef) || ''))
       } else if (galleryConfig?.image_field && getNestedValue(allValues, galleryConfig.image_field)) {
         previewUrl = formatBase64(String(getNestedValue(allValues, galleryConfig.image_field)))
       } else {
@@ -338,8 +333,8 @@ export function useDynamicGalleryLogic({
         } else {
           // Fallback nativo: mostrar tudo que sobrar
           if (
-            col !== titleField?.db_column_name &&
-            col !== imageField?.db_column_name &&
+            col !== titleFieldObj?.db_column_name &&
+            col !== configImageDef?.db_column_name &&
             col !== linkField?.db_column_name &&
             col !== downloadField?.db_column_name &&
             col !== fileNameField?.db_column_name &&
