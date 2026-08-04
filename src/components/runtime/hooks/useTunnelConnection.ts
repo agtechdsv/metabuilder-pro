@@ -94,7 +94,9 @@ export function useTunnelConnection({
     const cleanPk = (primaryKeyName || 'id').split('.').pop() || 'id'
     const currentModel = project?.models?.find((m: any) => m.db_table_name === modelName)
     const actualSchemaName = currentModel?.db_schema_name || project?.slug || 'public'
-    const rawQuery = `SELECT * FROM "${modelName}" WHERE "${cleanPk}" = '${String(initialEditId).replace(/'/g, "''")}' LIMIT 1`
+    const dbType = (project?.db_type || 'postgres').toLowerCase();
+    const limitSql = dbType === 'oracle' ? 'FETCH FIRST 1 ROWS ONLY' : 'LIMIT 1';
+    const rawQuery = `SELECT * FROM "${modelName}" WHERE "${cleanPk}" = '${String(initialEditId).replace(/'/g, "''")}' ${limitSql}`
 
     console.log(`[MetaBuilder] 🔍 Buscando registro para edição no modo Cadastro: ${rawQuery}`)
 

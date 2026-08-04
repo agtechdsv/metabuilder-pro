@@ -1,4 +1,4 @@
-﻿import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { Plus, Palette, Calendar, Layers, Activity, Lock, Map as MapIcon, Database, Columns, History, Settings2, SlidersHorizontal, BarChartHorizontal, Share2 } from 'lucide-react'
 import { MultiLevelPathBuilder } from '../StepPersonalizado'
 export function SpecialLayouts({
@@ -250,7 +250,7 @@ export function SpecialLayouts({
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
                         <option value="">Selecione a data...</option>
-                        {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp'))}
+                        {renderFieldOptions(orderedModels, (f: any) => f.data_type?.toLowerCase().includes('date') || f.data_type?.toLowerCase().includes('timestamp'))}
                       </select>
                     </div>
 

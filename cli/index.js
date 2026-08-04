@@ -323,10 +323,10 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
 
       console.log(chalk.yellow(`[ EXEC ] Comando Recebido no schema '${expectedSchema}': ${actionDesc}`));
 
+      let sql = '';
+      let params = [];
       try {
         const safeTable = table ? table.replace(/[^a-zA-Z0-9_]/g, '') : '';
-        let sql = '';
-        let params = [];
         let result;
 
         if (action === 'select') {
@@ -475,10 +475,10 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             }
             // Só acrescenta LIMIT/OFFSET se a query ainda não tiver (evita "LIMIT x LIMIT y")
             const sqlLower = sql.toLowerCase();
-            const alreadyHasLimit = sqlLower.includes(' limit ');
+            const alreadyHasLimit = sqlLower.includes(' limit ') || sqlLower.includes(' fetch next ');
             if (!alreadyHasLimit) {
               if (dbType === 'oracle') {
-                sql += ` OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
+                sql = `SELECT * FROM (${sql}) OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY`;
               } else {
                 sql += ` LIMIT ${limit} OFFSET ${offset}`;
               }
@@ -546,6 +546,10 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           }
           
           if (dbType === 'oracle') {
+            // Traduz a paginação do Postgres para Oracle 12c+
+            sql = sql.replace(/LIMIT\s+(\d+)\s+OFFSET\s+(\d+)/gi, "OFFSET $2 ROWS FETCH NEXT $1 ROWS ONLY");
+            sql = sql.replace(/\)\s+AS\s+"([a-zA-Z0-9_]+)"/gi, ') "$1"');
+            
             sql = sql.replace(/\$(\d+)/g, ':$1');
             // Converte identificadores entre aspas para UPPERCASE, comportamento padrão do Oracle
             sql = sql.replace(/"([a-zA-Z0-9_]+)"/g, (m, p1) => `"${p1.toUpperCase()}"`);
@@ -1028,7 +1032,9 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
         }
         else if (action === 'update') {
           const { idColumn, idValue, data } = payload.payload;
-          const safeIdCol = idColumn.replace(/[^a-zA-Z0-9_]/g, '');
+          const safeIdCol = dbType === 'oracle'
+            ? idColumn.replace(/[^a-zA-Z0-9_]/g, '').toUpperCase()
+            : idColumn.replace(/[^a-zA-Z0-9_]/g, '');
 
           // Detecta e remove colunas GENERATED ALWAYS AS antes de executar o UPDATE.
           // Faz até 5 tentativas removendo automaticamente a coluna rejeitada pelo Postgres.
@@ -1123,7 +1129,9 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
         }
         else if (action === 'delete') {
           const { idColumn, idValue } = payload.payload;
-          const safeIdCol = (idColumn || 'id').replace(/[^a-zA-Z0-9_]/g, '');
+          const safeIdCol = dbType === 'oracle'
+            ? (idColumn || 'id').replace(/[^a-zA-Z0-9_]/g, '').toUpperCase()
+            : (idColumn || 'id').replace(/[^a-zA-Z0-9_]/g, '');
           
           let deletedRowData = { [safeIdCol]: idValue };
 
@@ -1345,8 +1353,8 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
         }
 
       } catch (err) {
-        console.log(chalk.red(`[ ERRO ] Falha na query:`), err.message);
-        
+        console.error(chalk.red(`[ ERRO ] Falha na query: ${err.message}`));
+        if (typeof sql !== 'undefined' && sql) console.log(chalk.red(`[ SQL FAILED ] ${sql}`));
         try {
           cliDbLogger.logError(table || '', sql || '', err.message, null);
         } catch (logErr) {

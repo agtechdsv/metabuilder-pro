@@ -94,7 +94,12 @@ export function extractRawValue(
   const rawColName = fieldDef?.db_column_name || parsedLabelFallback;
   if (rawColName) {
     const colName = rawColName.includes('.') ? rawColName.split('.').pop() || rawColName : rawColName;
-    return row[colName] ?? row[colName.toUpperCase()] ?? row[colName.toLowerCase()];
+    return row[rawColName] 
+        ?? row[rawColName.toUpperCase()] 
+        ?? row[rawColName.toLowerCase()] 
+        ?? row[colName] 
+        ?? row[colName.toUpperCase()] 
+        ?? row[colName.toLowerCase()];
   }
 
   // Fallback: se configValue não for JSON, pode ser o próprio nome da coluna legado

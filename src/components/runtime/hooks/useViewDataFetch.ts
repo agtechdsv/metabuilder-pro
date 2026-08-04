@@ -443,10 +443,21 @@ export function useViewDataFetch({
         })
       }
       if (timelineConfig) {
-        const tFields = [timelineConfig.date_field, timelineConfig.title_field].filter(Boolean)
+        const { resolveDynamicFieldDef } = require('@/lib/field-resolver');
+        const allFields = [...(displayFields || []), ...(formFields || [])];
+        const tFields = [
+          timelineConfig.date_field, 
+          timelineConfig.title_field,
+          timelineConfig.desc_field,
+          timelineConfig.icon_field
+        ].filter(Boolean)
         tFields.forEach(col => {
-          const f = displayFields?.find((x: any) => x.id === col) || formFields?.find((x: any) => x.id === col)
-          addSelectExpr(f ? (f.sql_expression || f.db_column_name) : col)
+          const f = resolveDynamicFieldDef(col, allFields);
+          if (f) {
+            addSelectExpr(f.sql_expression || f.db_column_name);
+          } else if (typeof col === 'string' && !col.startsWith('{')) {
+            addSelectExpr(col);
+          }
         })
       }
 
@@ -489,13 +500,19 @@ export function useViewDataFetch({
           outerJoinsSql = buildJoinsSql(requiredOuterJoins, false);
         }
 
+        const dbType = (project?.db_type || 'postgres').toLowerCase();
+        const limitOffsetStr = dbType === 'oracle' 
+            ? `OFFSET ${currentOffset} ROWS FETCH NEXT ${itemsPerPage} ROWS ONLY`
+            : `LIMIT ${itemsPerPage} OFFSET ${currentOffset}`;
+        const aliasStr = dbType === 'oracle' ? `"${modelName}"` : `AS "${modelName}"`;
+
         rawQuery = `SELECT ${columns} FROM (
     SELECT DISTINCT "${modelName}".* FROM "${modelName}"
     ${joinsSql}
     __WHERE_PLACEHOLDER__
     ORDER BY ${orderSql}
-    LIMIT ${itemsPerPage} OFFSET ${currentOffset}
-  ) AS "${modelName}" ${outerJoinsSql}
+    ${limitOffsetStr}
+  ) ${aliasStr} ${outerJoinsSql}
   ORDER BY ${orderSql}`
       } else {
         rawQuery = `SELECT ${columns} FROM "${modelName}" __WHERE_PLACEHOLDER__ ORDER BY ${orderSql}`

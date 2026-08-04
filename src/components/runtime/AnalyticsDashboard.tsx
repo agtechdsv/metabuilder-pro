@@ -401,7 +401,9 @@ export default function AnalyticsDashboard({
       }).join(', ')
     }
 
-    const sql = `SELECT ${sqlSelect} FROM "${tableName}"${joinSql} WHERE ${whereClause} LIMIT 1000`
+    const dbType = (project?.db_type || 'postgres').toLowerCase()
+    const limitSql = dbType === 'oracle' ? 'FETCH FIRST 1000 ROWS ONLY' : 'LIMIT 1000'
+    const sql = `SELECT ${sqlSelect} FROM "${tableName}"${joinSql} WHERE ${whereClause} ${limitSql}`
     console.log(`[BI DEBUG] Solicitando dados para widget via Túnel:`, sql)
 
     // Pequeno delay para garantir que o canal esteja pronto
