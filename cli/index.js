@@ -983,7 +983,13 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           let placeholders;
           
           if (dbType === 'oracle') {
-            placeholders = values.map((_, i) => `:${i + 1}`);
+            placeholders = values.map((val, i) => {
+              if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?Z?$/.test(val)) {
+                values[i] = val.substring(0, 19).replace('T', ' ');
+                return `TO_TIMESTAMP(:${i + 1}, 'YYYY-MM-DD HH24:MI:SS')`;
+              }
+              return `:${i + 1}`;
+            });
             sql = `INSERT INTO "${safeTable}" (${keys.join(', ')}) VALUES (${placeholders.join(', ')})`;
           } else {
             placeholders = values.map((_, i) => `$${i + 1}`);
@@ -1045,7 +1051,14 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             const values = Object.values(currentData);
             let setClause;
             if (dbType === 'oracle') {
-              setClause = keys.map((key, i) => `${key} = :${i + 1}`).join(', ');
+              setClause = keys.map((key, i) => {
+                const val = values[i];
+                if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?Z?$/.test(val)) {
+                  values[i] = val.substring(0, 19).replace('T', ' ');
+                  return `${key} = TO_TIMESTAMP(:${i + 1}, 'YYYY-MM-DD HH24:MI:SS')`;
+                }
+                return `${key} = :${i + 1}`;
+              }).join(', ');
               sql = `UPDATE "${safeTable}" SET ${setClause} WHERE "${safeIdCol}" = :${values.length + 1}`;
             } else {
               setClause = keys.map((key, i) => `${key} = $${i + 1}`).join(', ');

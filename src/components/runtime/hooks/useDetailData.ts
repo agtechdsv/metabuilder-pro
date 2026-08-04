@@ -630,8 +630,14 @@ export function useDetailData({
       const action = detailModalMode
       const tableName = currentDetailTable
       const fields = detailFields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())
-      const pkField = fields.find(f => f.is_primary_key) || { db_column_name: 'id' }
-      const basePkName = pkField.db_column_name.split('.').pop() || 'id'
+      
+      const modelDef = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase())
+      let pkField = modelDef?.fields?.find((f: any) => f.is_primary_key)
+
+      if (!pkField) {
+        pkField = fields.find(f => f.is_primary_key) || { db_column_name: 'id' }
+      }
+      const basePkName = pkField?.db_column_name?.split('.').pop() || 'id'
       
       let actualPkKey = basePkName
       if (selectedDetail?.[basePkName] !== undefined) actualPkKey = basePkName
@@ -660,7 +666,7 @@ export function useDetailData({
           typeof v === 'object'
         ) continue
 
-        const newValue = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
+        const newValue = (v === null || v === '' || (typeof v === 'string' && v.trim() === '')) ? null : (typeof v === 'number' ? v : String(v))
 
         if (action === 'edit' && selectedDetail) {
           const originalRaw = selectedDetail[k] ?? selectedDetail[lowKey] ?? selectedDetail[k.toUpperCase()]
@@ -669,6 +675,15 @@ export function useDetailData({
         }
 
         sanitizedData[k] = newValue
+      }
+
+      for (const [k, v] of Object.entries(sanitizedData)) {
+        if (v !== null && v !== '') {
+          const fieldDef = modelDef?.fields?.find((f: any) => f.db_column_name?.toLowerCase() === k.toLowerCase())
+          const typeStr = fieldDef?.db_data_type?.toLowerCase() || ''
+          const isNumber = fieldDef && (typeStr.startsWith('number') || typeStr.startsWith('numeric') || typeStr.startsWith('int') || typeStr.startsWith('float') || typeStr.startsWith('decimal') || typeStr.startsWith('double') || typeStr.startsWith('real'))
+          if (isNumber) sanitizedData[k] = Number(v)
+        }
       }
 
       if (action === 'create' && logicType === 'master_detail' && joins) {
@@ -685,14 +700,26 @@ export function useDetailData({
           rawQuery = ''
         } else {
           const setClause = Object.entries(sanitizedData)
-            .map(([k, v]) => (v === null || v === '' || String(v).trim() === '') ? `${k} = NULL` : `${k} = '${String(v).replace(/'/g, "''")}'`)
+            .map(([k, v]) => {
+              if (v === null || v === '' || String(v).trim() === '') return `${k} = NULL`
+              const fieldDef = modelDef?.fields?.find((f: any) => f.db_column_name?.toLowerCase() === k.toLowerCase())
+              const typeStr = fieldDef?.db_data_type?.toLowerCase() || ''
+              const isNumber = fieldDef && (typeStr.startsWith('number') || typeStr.startsWith('numeric') || typeStr.startsWith('int') || typeStr.startsWith('float') || typeStr.startsWith('decimal') || typeStr.startsWith('double') || typeStr.startsWith('real'))
+              return isNumber ? `${k} = ${v}` : `${k} = '${String(v).replace(/'/g, "''")}'`
+            })
             .join(', ')
           rawQuery = `UPDATE ${tableName} SET ${setClause} WHERE ${actualPkKey} = '${String(dPkValue).replace(/'/g, "''")}'`
         }
       } else {
         const keys = Object.keys(sanitizedData).join(', ')
-        const values = Object.values(sanitizedData)
-          .map(v => (v === null || v === '' || String(v).trim() === '') ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`)
+        const values = Object.entries(sanitizedData)
+          .map(([k, v]) => {
+            if (v === null || v === '' || String(v).trim() === '') return 'NULL'
+            const fieldDef = modelDef?.fields?.find((f: any) => f.db_column_name?.toLowerCase() === k.toLowerCase())
+            const typeStr = fieldDef?.db_data_type?.toLowerCase() || ''
+            const isNumber = fieldDef && (typeStr.startsWith('number') || typeStr.startsWith('numeric') || typeStr.startsWith('int') || typeStr.startsWith('float') || typeStr.startsWith('decimal') || typeStr.startsWith('double') || typeStr.startsWith('real'))
+            return isNumber ? `${v}` : `'${String(v).replace(/'/g, "''")}'`
+          })
           .join(', ')
         rawQuery = `INSERT INTO ${tableName} (${keys}) VALUES (${values})`
       }
@@ -744,11 +771,29 @@ export function useDetailData({
           }
 
           const setClause = Object.entries(currentData)
-            .map(([k, v]) => (v === null || v === '' || String(v).trim() === '') ? `${k} = NULL` : `${k} = '${String(v).replace(/'/g, "''")}'`)
+            .map(([k, v]) => {
+              if (v === null || v === '' || String(v).trim() === '') return `${k} = NULL`
+              const fieldDef = modelDef?.fields?.find((f: any) => f.db_column_name?.toLowerCase() === k.toLowerCase())
+              const typeStr = fieldDef?.db_data_type?.toLowerCase() || ''
+              const isNumber = fieldDef && (typeStr.startsWith('number') || typeStr.startsWith('numeric') || typeStr.startsWith('int') || typeStr.startsWith('float') || typeStr.startsWith('decimal') || typeStr.startsWith('double') || typeStr.startsWith('real'))
+              return isNumber ? `${k} = ${v}` : `${k} = '${String(v).replace(/'/g, "''")}'`
+            })
             .join(', ')
+            
+          const insertKeys = Object.keys(currentData).join(', ')
+          const insertValues = Object.entries(currentData)
+            .map(([k, v]) => {
+              if (v === null || v === '' || String(v).trim() === '') return 'NULL'
+              const fieldDef = modelDef?.fields?.find((f: any) => f.db_column_name?.toLowerCase() === k.toLowerCase())
+              const typeStr = fieldDef?.db_data_type?.toLowerCase() || ''
+              const isNumber = fieldDef && (typeStr.startsWith('number') || typeStr.startsWith('numeric') || typeStr.startsWith('int') || typeStr.startsWith('float') || typeStr.startsWith('decimal') || typeStr.startsWith('double') || typeStr.startsWith('real'))
+              return isNumber ? `${v}` : `'${String(v).replace(/'/g, "''")}'`
+            })
+            .join(', ')
+            
           const currentQuery = action === 'edit'
             ? `UPDATE ${tableName} SET ${setClause} WHERE ${actualPkKey} = '${String(dPkValue).replace(/'/g, "''")}'`
-            : rawQuery
+            : `INSERT INTO ${tableName} (${insertKeys}) VALUES (${insertValues})`
 
           const attemptQueryId = attempts === 1 ? queryId : crypto.randomUUID()
 
@@ -779,6 +824,16 @@ export function useDetailData({
             ch.on('broadcast', { event: 'sql_result' }, handleResult)
 
             const doSend = () => {
+              let payloadData = currentData
+              let payloadIdCol = actualPkKey
+              if (project?.db_type !== 'postgres') {
+                payloadData = {}
+                for (const [k, v] of Object.entries(currentData)) {
+                  payloadData[k.toUpperCase()] = v
+                }
+                payloadIdCol = actualPkKey.toUpperCase()
+              }
+
               ch.send({
                 type: 'broadcast',
                 event: 'sql_query',
@@ -786,9 +841,9 @@ export function useDetailData({
                   queryId: attemptQueryId,
                   table: tableName,
                   action: action === 'edit' ? 'update' : 'insert',
-                  data: currentData,
+                  data: payloadData,
                   sql: currentQuery,
-                  idColumn: actualPkKey,
+                  idColumn: payloadIdCol,
                   idValue: dPkValue,
                   token: project?.secret_token || 'test-token',
                   schemaName: project?.models?.find((m: any) => m.db_table_name === tableName)?.db_schema_name || project?.slug || 'public',

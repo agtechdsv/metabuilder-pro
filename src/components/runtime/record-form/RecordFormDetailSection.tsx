@@ -508,13 +508,19 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
 
                                     const matchRecords = (r1: any, r2: any) => {
                                       if (r1 === r2) return true;
-                                      for (const k of Object.keys(r1)) {
-                                        const lk = k.toLowerCase();
-                                        if (lk === 'id' || lk.endsWith('_id') || lk.endsWith('id')) {
-                                          if (r1[k] && r2[k] && String(r1[k]) === String(r2[k])) return true;
-                                        }
-                                      }
-                                      return false;
+                                      
+                                      // Para evitar falsos positivos com foreign keys (ex: cliente_id igual para todos os pedidos),
+                                      // comparamos as propriedades base do registro, ignorando o array _details e propriedades virtuais
+                                      const cleanRecord = (r: any) => {
+                                        const cleaned = { ...r };
+                                        delete cleaned._details;
+                                        Object.keys(cleaned).forEach(k => {
+                                          if (k.startsWith('virt_') || k.startsWith('_')) delete cleaned[k];
+                                        });
+                                        return cleaned;
+                                      };
+                                      
+                                      return JSON.stringify(cleanRecord(r1)) === JSON.stringify(cleanRecord(r2));
                                     };
 
                                     const newTopDetails = (formData._details || []).map((td: any) => {

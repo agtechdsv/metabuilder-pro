@@ -106,7 +106,7 @@ export function useMasterData({
           typeof v === 'object'           // skip objects and arrays (joined relations)
         ) continue
 
-        const newValue = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
+        const newValue = (v === null || v === '' || (typeof v === 'string' && v.trim() === '')) ? null : (typeof v === 'number' ? v : String(v))
 
         // Dirty tracking: envia apenas os campos que foram realmente alterados!
         if (action === 'update' && selectedRow) {
@@ -179,16 +179,26 @@ export function useMasterData({
             ch.on('broadcast', { event: 'sql_result' }, handleResult)
 
             const doSend = () => {
+              let payloadData = currentData
+              let payloadIdCol = actualPkKey
+              if (project?.db_type !== 'postgres') {
+                payloadData = {}
+                for (const [k, v] of Object.entries(currentData)) {
+                  payloadData[k.toUpperCase()] = v
+                }
+                payloadIdCol = actualPkKey.toUpperCase()
+              }
+
               const payload: any = {
                 queryId: attemptQueryId,
                 table: modelName,
                 tableName: modelName, 
                 action,
-                data: currentData,
-                record: currentData, 
+                data: payloadData,
+                record: payloadData, 
                 query: currentQuery, 
                 sql: currentQuery, 
-                idColumn: actualPkKey,
+                idColumn: payloadIdCol,
                 idValue: pkValue,
                 token: project?.secret_token || 'test-token',
                 schemaName: project?.models?.find((m: any) => m.db_table_name === modelName)?.db_schema_name || project?.slug || 'public',
@@ -297,10 +307,14 @@ export function useMasterData({
 
           const isNew = row._isNew
 
-          const rowPkField =
-            detailFields.find(f => f.model_name?.toLowerCase() === rowTable?.toLowerCase() && f.is_primary_key) ||
-            { db_column_name: 'id' }
-          const rowPkName = rowPkField.db_column_name.split('.').pop() || 'id'
+          const modelDef = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === rowTable?.toLowerCase())
+          let rowPkField = modelDef?.fields?.find((f: any) => f.is_primary_key)
+          
+          if (!rowPkField) {
+            rowPkField = detailFields.find(f => f.model_name?.toLowerCase() === rowTable?.toLowerCase() && f.is_primary_key)
+          }
+
+          const rowPkName = rowPkField?.db_column_name?.split('.').pop() || 'id'
           
           let actualRowPkName = rowPkName
           if (row[rowPkName] !== undefined) actualRowPkName = rowPkName
@@ -322,7 +336,7 @@ export function useMasterData({
               v === undefined || typeof v === 'object'
             ) continue
 
-            const newVal = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
+            const newVal = (v === null || v === '' || (typeof v === 'string' && v.trim() === '')) ? null : (typeof v === 'number' ? v : String(v))
 
             // Dirty tracking
             if (!isNew && origParentRow?._details) {
@@ -395,26 +409,57 @@ export function useMasterData({
             }
           }
 
+          for (const [k, v] of Object.entries(sanitized)) {
+            if (v !== null && v !== '') {
+              const fieldDef = modelDef?.fields?.find((f: any) => f.db_column_name?.toLowerCase() === k.toLowerCase())
+              const typeStr = fieldDef?.db_data_type?.toLowerCase() || ''
+              const isNumber = fieldDef && (typeStr.startsWith('number') || typeStr.startsWith('numeric') || typeStr.startsWith('int') || typeStr.startsWith('float') || typeStr.startsWith('decimal') || typeStr.startsWith('double') || typeStr.startsWith('real'))
+              if (isNumber) sanitized[k] = Number(v)
+            }
+          }
+
           let sql = ''
           if (!isNew && rowPkVal && Object.keys(sanitized).length > 0) {
             const set = Object.entries(sanitized)
-              .map(([k, v]) => (v === null || v === '') ? `${k} = NULL` : `${k} = '${String(v).replace(/'/g, "''")}'`)
+              .map(([k, v]) => {
+                if (v === null || v === '') return `${k} = NULL`
+                const fieldDef = modelDef?.fields?.find((f: any) => f.db_column_name?.toLowerCase() === k.toLowerCase())
+                const typeStr = fieldDef?.db_data_type?.toLowerCase() || ''
+                const isNumber = fieldDef && (typeStr.startsWith('number') || typeStr.startsWith('numeric') || typeStr.startsWith('int') || typeStr.startsWith('float') || typeStr.startsWith('decimal') || typeStr.startsWith('double') || typeStr.startsWith('real'))
+                if (isNumber) sanitized[k] = Number(v)
+                return isNumber ? `${k} = ${v}` : `${k} = '${String(v).replace(/'/g, "''")}'`
+              })
               .join(', ')
             sql = `UPDATE ${rowTable} SET ${set} WHERE ${actualRowPkName} = '${String(rowPkVal).replace(/'/g, "''")}'`
           } else if (isNew && Object.keys(sanitized).length > 0) {
             const keys = Object.keys(sanitized).join(', ')
-            const vals = Object.values(sanitized)
-              .map(v => (v === null || v === '') ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`)
+            const vals = Object.entries(sanitized)
+              .map(([k, v]) => {
+                if (v === null || v === '') return 'NULL'
+                const fieldDef = modelDef?.fields?.find((f: any) => f.db_column_name?.toLowerCase() === k.toLowerCase())
+                const typeStr = fieldDef?.db_data_type?.toLowerCase() || ''
+                const isNumber = fieldDef && (typeStr.startsWith('number') || typeStr.startsWith('numeric') || typeStr.startsWith('int') || typeStr.startsWith('float') || typeStr.startsWith('decimal') || typeStr.startsWith('double') || typeStr.startsWith('real'))
+                if (isNumber) sanitized[k] = Number(v)
+                return isNumber ? `${v}` : `'${String(v).replace(/'/g, "''")}'`
+              })
               .join(', ')
             sql = `INSERT INTO ${rowTable} (${keys}) VALUES (${vals})`
           }
 
           if (sql) {
             const qId = crypto.randomUUID()
-            await new Promise<void>((resolve) => {
+            await new Promise<void>((resolve, reject) => {
               let done = false
               const onResult = (payload: any) => {
-                if (payload.payload?.queryId === qId) { done = true; cleanup(); resolve() }
+                if (payload.payload?.queryId === qId) { 
+                  done = true; 
+                  cleanup(); 
+                  if (payload.payload.success !== false) {
+                    resolve() 
+                  } else {
+                    reject(new Error(payload.payload.error || 'Erro no túnel ao salvar detalhe'))
+                  }
+                }
               }
               const cleanup = () => {
                 try {
@@ -424,6 +469,16 @@ export function useMasterData({
               }
               channel.on('broadcast', { event: `query_result_${qId}` }, onResult)
               channel.on('broadcast', { event: 'sql_result' }, onResult)
+              let payloadData = sanitized
+              let payloadIdCol = actualRowPkName
+              if (project?.db_type !== 'postgres') {
+                payloadData = {}
+                for (const [k, v] of Object.entries(sanitized)) {
+                  payloadData[k.toUpperCase()] = v
+                }
+                payloadIdCol = actualRowPkName.toUpperCase()
+              }
+
               channel.send({
                 type: 'broadcast',
                 event: 'sql_query',
@@ -431,9 +486,9 @@ export function useMasterData({
                   queryId: qId,
                   table: rowTable, tableName: rowTable,
                   action: isNew ? 'insert' : 'update',
-                  data: sanitized, record: sanitized,
+                  data: payloadData, record: payloadData,
                   query: sql, sql,
-                  idColumn: actualRowPkName, idValue: rowPkVal,
+                  idColumn: payloadIdCol, idValue: rowPkVal,
                   token: project?.secret_token || 'test-token',
                   schemaName: project?.models?.find((m: any) => m.db_table_name === rowTable)?.db_schema_name || project?.slug || 'public',
                   slug: project?.slug
@@ -455,6 +510,7 @@ export function useMasterData({
       if (formData._details && formData._details.length > 0) {
         await saveNestedDetails(formData._details, modelName, masterId, selectedRow)
       }
+      console.timeEnd('handleSave_details')
 
       setIsProcessing(false)
       if (isTemporary) {
