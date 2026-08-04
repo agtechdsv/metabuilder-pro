@@ -357,7 +357,7 @@ export function useDynamicGalleryLogic({
       })
 
       return {
-        id: row.id,
+        id: row.id || row.ID || row.Id || row._id || `temp_${Math.random()}`,
         title,
         fileName,
         url: previewUrl,
