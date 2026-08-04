@@ -218,6 +218,9 @@ export function useCustomActionsRuntime({
       }
 
       const allParamParts = [...currentLevelParams, ...ancestorParams, params].filter(Boolean)
+      if (typeof window !== 'undefined' && window.location.search.includes('preview=true')) {
+        allParamParts.push('preview=true')
+      }
       const allParams = allParamParts.join('&')
       
       const actualBaseUrl = baseUrl !== undefined ? baseUrl.replace(/\/dashboard\/?$/, '') : undefined;

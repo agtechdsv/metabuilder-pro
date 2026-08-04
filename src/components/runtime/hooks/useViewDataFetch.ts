@@ -34,6 +34,9 @@ export function useViewDataFetch({
   galleryConfig,
   schedulerConfig,
   timelineConfig,
+  mapConfig,
+  ganttConfig,
+  blueprintConfig,
   logicType,
   timelineDirection,
   currentPage,
@@ -460,6 +463,60 @@ export function useViewDataFetch({
           }
         })
       }
+      if (mapConfig) {
+        const { resolveDynamicFieldDef } = require('@/lib/field-resolver');
+        const allFields = [...(displayFields || []), ...(formFields || [])];
+        const mFields = [
+          mapConfig.lat_field,
+          mapConfig.lng_field,
+          mapConfig.title_field,
+          mapConfig.desc_field
+        ].filter(Boolean)
+        mFields.forEach(col => {
+          const f = resolveDynamicFieldDef(col, allFields);
+          if (f) {
+            addSelectExpr(f.sql_expression || f.db_column_name);
+          } else if (typeof col === 'string' && !col.startsWith('{')) {
+            addSelectExpr(col);
+          }
+        })
+      }
+      if (ganttConfig) {
+        const { resolveDynamicFieldDef } = require('@/lib/field-resolver');
+        const allFields = [...(displayFields || []), ...(formFields || [])];
+        const gFields = [
+          ganttConfig.title_field,
+          ganttConfig.start_date_field,
+          ganttConfig.end_date_field,
+          ganttConfig.progress_field
+        ].filter(Boolean)
+        gFields.forEach(col => {
+          const f = resolveDynamicFieldDef(col, allFields);
+          if (f) {
+            addSelectExpr(f.sql_expression || f.db_column_name);
+          } else if (typeof col === 'string' && !col.startsWith('{')) {
+            addSelectExpr(col);
+          }
+        })
+      }
+      if (blueprintConfig) {
+        const { resolveDynamicFieldDef } = require('@/lib/field-resolver');
+        const allFields = [...(displayFields || []), ...(formFields || [])];
+        const bFields = [
+          blueprintConfig.title_field,
+          blueprintConfig.desc_field,
+          blueprintConfig.status_field,
+          blueprintConfig.predecessor_field
+        ].filter(Boolean)
+        bFields.forEach(col => {
+          const f = resolveDynamicFieldDef(col, allFields);
+          if (f) {
+            addSelectExpr(f.sql_expression || f.db_column_name);
+          } else if (typeof col === 'string' && !col.startsWith('{')) {
+            addSelectExpr(col);
+          }
+        })
+      }
 
       if (selectExprs.length === 0) addSelectExpr('*')
       const columns = selectExprs.length > 0 ? selectExprs.join(', ') : '*'
@@ -473,6 +530,10 @@ export function useViewDataFetch({
         const timelineOrderVertical = timelineConfig.timeline_order_vertical || 'asc';
         const orderConf = timelineDirection === 'horizontal' ? timelineOrderHorizontal : timelineOrderVertical;
         orderSql = `"${modelName}"."${dateColumnName}" ${orderConf.toUpperCase()}, "${modelName}"."${primaryKeyName}" DESC`;
+      } else if (logicType === 'scheduler' && schedulerConfig?.start_date_field) {
+        const dateFieldObj = displayFields?.find((f: any) => f.id === schedulerConfig.start_date_field) || formFields?.find((f: any) => f.id === schedulerConfig.start_date_field);
+        const dateColumnName = dateFieldObj ? dateFieldObj.db_column_name : schedulerConfig.start_date_field;
+        orderSql = `"${modelName}"."${dateColumnName}" DESC, "${modelName}"."${primaryKeyName}" DESC`;
       }
 
       let rawQuery = '';
@@ -595,7 +656,7 @@ export function useViewDataFetch({
         tableName: modelName,
         schemaName: actualSchemaName,
         action: 'count_records',
-        query: `SELECT COUNT(DISTINCT "${modelName}"."id") as total FROM "${modelName}" ${joinsSql} __WHERE_PLACEHOLDER__`,
+        query: `SELECT COUNT(DISTINCT "${modelName}"."${primaryKeyName}") as total FROM "${modelName}" ${joinsSql} __WHERE_PLACEHOLDER__`,
         sql: '',
         token: project?.secret_token || 'test-token',
         joins: joins

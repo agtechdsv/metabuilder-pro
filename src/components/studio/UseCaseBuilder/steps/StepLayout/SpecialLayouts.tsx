@@ -153,8 +153,11 @@ export function SpecialLayouts({
                       })}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
-                      <option value="">Selecione o campo de data de início...</option>
-                      {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp'))}
+                      <option value="">Selecione a data inicial...</option>
+                      {renderFieldOptions(orderedModels, (f: any) => {
+                          const dt = (f.data_type || f.db_data_type || f.field_type || '').toLowerCase();
+                          return dt.includes('date') || dt.includes('timestamp');
+                        })}
                     </select>
                   </div>
 
@@ -172,7 +175,10 @@ export function SpecialLayouts({
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Nenhum (Evento de data única)</option>
-                      {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp'))}
+                      {renderFieldOptions(orderedModels, (f: any) => {
+                          const dt = (f.data_type || f.db_data_type || f.field_type || '').toLowerCase();
+                          return dt.includes('date') || dt.includes('timestamp');
+                        })}
                     </select>
                   </div>
 
@@ -250,7 +256,10 @@ export function SpecialLayouts({
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                       >
                         <option value="">Selecione a data...</option>
-                        {renderFieldOptions(orderedModels, (f: any) => f.data_type?.toLowerCase().includes('date') || f.data_type?.toLowerCase().includes('timestamp'))}
+                        {renderFieldOptions(orderedModels, (f: any) => {
+                          const dt = (f.data_type || f.db_data_type || f.field_type || '').toLowerCase();
+                          return dt.includes('date') || dt.includes('timestamp');
+                        })}
                       </select>
                     </div>
 
@@ -449,7 +458,10 @@ export function SpecialLayouts({
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Selecione a data inicial...</option>
-                      {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp'))}
+                      {renderFieldOptions(orderedModels, (f: any) => {
+                          const dt = (f.data_type || f.db_data_type || f.field_type || '').toLowerCase();
+                          return dt.includes('date') || dt.includes('timestamp');
+                        })}
                     </select>
                   </div>
 
@@ -467,7 +479,10 @@ export function SpecialLayouts({
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Selecione a data final...</option>
-                      {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('date') || f.data_type.includes('timestamp'))}
+                      {renderFieldOptions(orderedModels, (f: any) => {
+                          const dt = (f.data_type || f.db_data_type || f.field_type || '').toLowerCase();
+                          return dt.includes('date') || dt.includes('timestamp');
+                        })}
                     </select>
                   </div>
 
@@ -485,7 +500,10 @@ export function SpecialLayouts({
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
                     >
                       <option value="">Nenhum (Progresso não exibido)</option>
-                      {renderFieldOptions(orderedModels, (f: any) => f.data_type.includes('int') || f.data_type.includes('float') || f.data_type.includes('numeric'))}
+                      {renderFieldOptions(orderedModels, (f: any) => {
+                          const dt = (f.data_type || f.db_data_type || f.field_type || '').toLowerCase();
+                          return dt.includes('int') || dt.includes('num') || dt.includes('dec') || dt.includes('float') || dt.includes('double');
+                        })}
                     </select>
                   </div>
                 </div>

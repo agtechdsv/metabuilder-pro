@@ -88,7 +88,7 @@ export default function CustomUseCaseRenderer({
       
       const supabase = createClient()
       const { data, error } = await supabase
-        .from('usecases')
+        .from('ui_views')
         .select('*')
         .eq('project_id', projectId)
         .in('slug', slugsToFetch);
@@ -239,15 +239,15 @@ export default function CustomUseCaseRenderer({
           displayType="list"
           logicType={uc.logic_type || 'grid'}
           
-          kanbanGroupField={ucLayout.kanbanGroupField || ucConfig.kanbanGroupField}
-          kanbanGroupDisplayField={ucLayout.kanbanGroupDisplayField || ucConfig.kanbanGroupDisplayField}
-          kanbanCardFields={ucLayout.kanbanCardFields || ucConfig.kanbanCardFields}
-          timelineConfig={ucLayout.timelineConfig || ucConfig.timelineConfig}
-          schedulerConfig={ucLayout.schedulerConfig || ucConfig.schedulerConfig}
-          mapConfig={ucLayout.mapConfig || ucConfig.mapConfig}
-          ganttConfig={ucLayout.ganttConfig || ucConfig.ganttConfig}
-          blueprintConfig={ucLayout.blueprintConfig || ucConfig.blueprintConfig}
-          buttonsConfig={ucLayout.buttonsConfig || ucConfig.buttonsConfig || []}
+          kanbanGroupField={ucLayout.kanbanGroupField || ucConfig.kanbanGroupField || ucLayout.kanban_group_field}
+          kanbanGroupDisplayField={ucLayout.kanbanGroupDisplayField || ucConfig.kanbanGroupDisplayField || ucLayout.kanban_group_display_field}
+          kanbanCardFields={ucLayout.kanbanCardFields || ucConfig.kanbanCardFields || ucLayout.kanban_card_fields}
+          timelineConfig={ucLayout.timelineConfig || ucConfig.timelineConfig || ucLayout.timeline_config}
+          schedulerConfig={ucLayout.schedulerConfig || ucConfig.schedulerConfig || ucLayout.scheduler_config}
+          mapConfig={ucLayout.mapConfig || ucConfig.mapConfig || ucLayout.map_config}
+          ganttConfig={ucLayout.ganttConfig || ucConfig.ganttConfig || ucLayout.gantt_config}
+          blueprintConfig={ucLayout.blueprintConfig || ucConfig.blueprintConfig || ucLayout.blueprint_config}
+          buttonsConfig={ucLayout.buttonsConfig || ucConfig.buttonsConfig || ucLayout.buttons_config || []}
           
           externalFilters={externalFilters}
           advancedStaticFilters={advancedStaticFilters.length > 0 ? advancedStaticFilters : undefined}

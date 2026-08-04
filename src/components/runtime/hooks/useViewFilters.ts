@@ -114,8 +114,8 @@ export function useViewFilters({
             } else if (projectId) {
               if (!tunnelChannel || !isTunnelReady) continue;
               const queryId = crypto.randomUUID()
-              const filterCol = comp.filter_column ? `, "${comp.filter_column}"` : ''
-              const rawQuery = `SELECT "${comp.rel_label}", "${comp.rel_value}"${filterCol} FROM "${comp.rel_table}"`
+              const colsToSelect = Array.from(new Set([`"${comp.rel_label}"`, `"${comp.rel_value}"`, comp.filter_column ? `"${comp.filter_column}"` : null].filter(Boolean))).join(', ')
+              const rawQuery = `SELECT ${colsToSelect} FROM "${comp.rel_table}"`
               const schemaToUse = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === comp.rel_table?.toLowerCase())?.db_schema_name || project?.slug || 'public'
 
               data = await new Promise<any[]>((resolve, reject) => {

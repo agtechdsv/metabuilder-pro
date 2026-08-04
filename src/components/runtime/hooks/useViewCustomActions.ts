@@ -142,8 +142,11 @@ export function useViewCustomActions({
         })
         .filter(Boolean)
         .join('&')
-
-      const allParams = [fieldsParams, params].filter(Boolean).join('&')
+      const allParamParts = [fieldsParams, params].filter(Boolean)
+      if (typeof window !== 'undefined' && window.location.search.includes('preview=true')) {
+        allParamParts.push('preview=true')
+      }
+      const allParams = allParamParts.join('&')
 
       const pathParts = window.location.pathname.split('/').filter(Boolean)
       const isAdminPath = pathParts[0] === 'admin'
