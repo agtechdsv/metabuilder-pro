@@ -175,7 +175,11 @@ export default function DynamicMindMap({
       const name = formatValue(rawName, rootLevel.title_field || '', rootLevel.model_id);
       const rawDesc = rootLevel.desc_field ? item[rootLevel.desc_field] : undefined;
       const desc = rawDesc ? formatValue(rawDesc, rootLevel.desc_field || '', rootLevel.model_id) : undefined;
-      const key = item.id || item[primaryKeyName] || `root-${idx}`;
+      
+      const pk = primaryKeyName || 'id';
+      const rowId = item[pk] !== undefined ? item[pk] : (item[pk.toUpperCase()] !== undefined ? item[pk.toUpperCase()] : (item.id !== undefined ? item.id : item.ID));
+      const key = rowId !== undefined ? rowId : `root-${idx}`;
+      
       if (!uniqueMap.has(key)) {
         uniqueMap.set(key, {
           id: key,
@@ -264,7 +268,10 @@ export default function DynamicMindMap({
       const tableName = String(modelData.db_table_name);
       const schemaName = modelData.db_schema_name || project?.slug || 'public';
       
-      const parentId = String(node.rawData?.id || node.id).replace(/'/g, "''");
+      const pk = primaryKeyName || 'id';
+      const rawDataId = node.rawData ? (node.rawData[pk] !== undefined ? node.rawData[pk] : (node.rawData[pk.toUpperCase()] !== undefined ? node.rawData[pk.toUpperCase()] : (node.rawData.id !== undefined ? node.rawData.id : node.rawData.ID))) : undefined;
+      const parentId = String(rawDataId !== undefined ? rawDataId : node.id).replace(/'/g, "''");
+      
       let rawQuery = '';
       if (nextLevelConfig.relation_type === 'multilevel' && nextLevelConfig.relation_path) {
         const pathArray = nextLevelConfig.relation_path;
@@ -310,7 +317,11 @@ export default function DynamicMindMap({
             const name = formatValue(rawName, nextLevelConfig.title_field || '', nextLevelConfig.model_id);
             const rawDesc = nextLevelConfig.desc_field ? item[nextLevelConfig.desc_field] : undefined;
             const desc = rawDesc ? formatValue(rawDesc, nextLevelConfig.desc_field || '', nextLevelConfig.model_id) : undefined;
-            const key = item.id || item[primaryKeyName] || `${node.id}-child-${idx}`;
+            
+            const pk = primaryKeyName || 'id';
+            const rowId = item[pk] !== undefined ? item[pk] : (item[pk.toUpperCase()] !== undefined ? item[pk.toUpperCase()] : (item.id !== undefined ? item.id : item.ID));
+            const key = rowId !== undefined ? rowId : `${node.id}-child-${idx}`;
+            
             if (!uniqueChildren.has(key)) {
               uniqueChildren.set(key, {
                 id: key,
