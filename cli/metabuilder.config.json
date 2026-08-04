@@ -5,16 +5,24 @@
       "secretToken": "6bb2b15700733e618ae549aa88a0689df6c21d264ece8e50f213af408258fad7",
       "connectionsString": [
         {
-          "name": "erp_local",
+          "name": "crm",
           "type": "postgres",
-          "connectionString": "postgresql://erp_local:erp_local@localhost:5432/erp_local"
+          "connectionString": "postgresql://crm:crm@localhost:5432/crm"
+        }
+      ]
+    },
+    {
+      "projectId": "f57152fc-f26f-48a3-8cca-e747967edc22",
+      "secretToken": "553e7d6e95a73bf5b03083695dcd3a710a6b94838e5ea34d38abd3f71d7ec5c6",
+      "connectionsString": [
+        {
+          "name": "crm",
+          "type": "oracle",
+          "connectionString": "oracle://crm:admin@192.168.0.201:1521/FREEPDB1"
         }
       ]
     }
   ],
-  "supabaseUrl": "https://chmstvtepzmjhpyxjjam.supabase.co",
-  "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNobXN0dnRlcHptamhweXhqamFtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODAyOTU4OCwiZXhwIjoyMDkzNjA1NTg4fQ.B-s9eb_TgABJWBuBxgIQIqNjtw2Q3e7UXcdhXsx-Ijc",
-  "apiUrl": "http://localhost:3000/api/metadata/sync",
   "ldap": {
     "enabled": false,
     "url": "ldap://10.0.0.15:389",

@@ -70,9 +70,29 @@ export function extractRawValue(
 ): any {
   if (!row) return undefined;
 
-  // Se conseguimos resolver o fieldDef, usamos o db_column_name dele para buscar na row
-  if (fieldDef && fieldDef.db_column_name) {
-    const rawColName = fieldDef.db_column_name;
+  // 1. Especial para o RecordForm: dados relacionais chegam preenchidos na key virt_UUID_DO_CAMPO
+  let parsedLabelFallback: string | null = null;
+  if (typeof configValue === 'string' && configValue.startsWith('{')) {
+    try {
+      const parsedConfig = JSON.parse(configValue);
+      parsedLabelFallback = parsedConfig.display_label;
+
+      let localFieldId = parsedConfig.target_field_id;
+      if (parsedConfig.relation_path && parsedConfig.relation_path.length > 0) {
+        localFieldId = parsedConfig.relation_path[0].foreign_column_id;
+      }
+      
+      if (localFieldId && row[`virt_${localFieldId}`] !== undefined) {
+        return row[`virt_${localFieldId}`];
+      }
+    } catch (e) {
+      console.warn('[FieldResolver] Erro ao extrair valor virt_:', e);
+    }
+  }
+
+  // 2. Fallback normal: se conseguimos resolver o fieldDef, usamos o db_column_name, senão tentamos o display_label do JSON
+  const rawColName = fieldDef?.db_column_name || parsedLabelFallback;
+  if (rawColName) {
     const colName = rawColName.includes('.') ? rawColName.split('.').pop() || rawColName : rawColName;
     return row[colName] ?? row[colName.toUpperCase()] ?? row[colName.toLowerCase()];
   }

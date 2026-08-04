@@ -260,19 +260,22 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                         if (customField) {
                           const { resolveDynamicFieldDef, extractRawValue } = require('@/lib/field-resolver');
                           let val: any;
-                          let titleFieldDef = resolveDynamicFieldDef(customField, fields, tableName);
+                          const allFields = [...(fields || []), ...(detailFields || [])];
+                          let titleFieldDef = resolveDynamicFieldDef(customField, allFields, tableName);
 
                           val = extractRawValue(customField, detail, titleFieldDef);
 
-                          if (titleFieldDef && val !== undefined && val !== null) {
+                          if (val !== undefined && val !== null) {
                             let matchedOpt = null;
-                            const opts = relationalOptions[titleFieldDef.id] || [];
-                            matchedOpt = opts.find((o: any) => String(o.value).toLowerCase() === String(val).toLowerCase());
+                            if (titleFieldDef) {
+                              const opts = relationalOptions[titleFieldDef.id] || [];
+                              matchedOpt = opts.find((o: any) => String(o.value).toLowerCase() === String(val).toLowerCase());
 
-                            if (!matchedOpt) {
-                              for (const key of Object.keys(relationalOptions)) {
-                                matchedOpt = relationalOptions[key]?.find((o: any) => String(o.value).toLowerCase() === String(val).toLowerCase());
-                                if (matchedOpt) break;
+                              if (!matchedOpt) {
+                                for (const key of Object.keys(relationalOptions)) {
+                                  matchedOpt = relationalOptions[key]?.find((o: any) => String(o.value).toLowerCase() === String(val).toLowerCase());
+                                  if (matchedOpt) break;
+                                }
                               }
                             }
 
