@@ -70,7 +70,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
   const project = projects?.[0]
 
   if (projectError || !project) {
-    console.error('Project not found:', project_slug)
+    console.error('Project not found:', project_slug, projectError)
     notFound()
   }
 

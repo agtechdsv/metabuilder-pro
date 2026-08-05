@@ -873,6 +873,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
               setConfig={setConfig}
               models={models}
               relations={relations}
+              useCases={useCases}
               setEditingWidget={setEditingWidget}
               setIsWidgetModalOpen={setIsWidgetModalOpen}
               getFieldName={getFieldName}

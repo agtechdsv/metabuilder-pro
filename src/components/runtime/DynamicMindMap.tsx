@@ -30,6 +30,7 @@ interface DynamicMindMapProps {
   projectId?: string
   onView?: (row: any) => void
   onEdit?: (row: any) => void
+  onEditLevel?: (levelIndex: number, row: any) => void
   onDelete?: (row: any) => void
   dictionary?: any
   models?: any[]
@@ -39,6 +40,7 @@ interface DynamicMindMapProps {
   relationalOptions?: Record<string, any[]>
   customActions?: any[]
   onCustomAction?: (action: any, rowData?: any) => Promise<void>
+  refreshTrigger?: number
 }
 
 // Componente interno para Tooltip Estilizada (Multi-Tema)
@@ -93,7 +95,9 @@ export default function DynamicMindMap({
   isTunnelReady,
   relationalOptions = {},
   customActions = [],
-  onCustomAction
+  onCustomAction,
+  onEditLevel,
+  refreshTrigger
 }: DynamicMindMapProps) {
   const { t, language } = useI18n()
   const localeStr = language === 'pt' ? 'pt-BR' : language === 'en' ? 'en-US' : 'es-ES'
@@ -241,6 +245,17 @@ export default function DynamicMindMap({
     }
     return current
   }, [treeData, currentPath])
+
+  const prevRefreshTriggerRef = useRef(refreshTrigger || 0);
+  useEffect(() => {
+    if (refreshTrigger !== undefined && refreshTrigger !== prevRefreshTriggerRef.current) {
+      prevRefreshTriggerRef.current = refreshTrigger;
+      if (currentPath.length > 0 && currentNode && currentNode.id !== 'virtual-root') {
+        // Se estamos visualizando um nó filho, disparamos o recarregamento dos dados dele
+        fetchChildren(currentPath, currentNode);
+      }
+    }
+  }, [refreshTrigger, currentPath, currentNode]);
 
   // Função Async para Carregar Filhos do Nível Inferior
   const fetchChildren = async (path: number[], node: MindMapNode) => {
@@ -595,11 +610,15 @@ export default function DynamicMindMap({
                           <button onClick={(e) => { e.stopPropagation(); onView({ ...child.rawData, __model_name: child.field?.model_name || child.rawData?.__model_name }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Eye className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
                         </Tooltip>
                       )}
-                      {onEdit && (
+                      {(onEditLevel && mindmapLevels && mindmapLevels[child.level]?.edit_usecase_slug) ? (
+                        <Tooltip text={t('actions.edit', 'Editar')}>
+                          <button onClick={(e) => { e.stopPropagation(); onEditLevel(child.level, { ...child.rawData, __model_name: child.field?.model_name || child.rawData?.__model_name }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Edit className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
+                        </Tooltip>
+                      ) : onEdit ? (
                         <Tooltip text={t('actions.edit', 'Editar')}>
                           <button onClick={(e) => { e.stopPropagation(); onEdit({ ...child.rawData, __model_name: child.field?.model_name || child.rawData?.__model_name }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Edit className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
                         </Tooltip>
-                      )}
+                      ) : null}
                       {onDelete && (
                         <Tooltip text={t('actions.delete', 'Excluir')}>
                           <button onClick={(e) => { e.stopPropagation(); onDelete({ ...child.rawData, __model_name: child.field?.model_name || child.rawData?.__model_name }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Trash2 className="w-3 h-3 text-neutral-500 hover:text-red-500" /></button>

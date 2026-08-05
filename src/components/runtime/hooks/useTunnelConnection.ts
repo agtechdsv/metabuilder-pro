@@ -95,15 +95,26 @@ export function useTunnelConnection({
     const currentModel = project?.models?.find((m: any) => m.db_table_name === modelName)
     const actualSchemaName = currentModel?.db_schema_name || project?.slug || 'public'
     const dbType = (project?.db_type || 'postgres').toLowerCase();
-    const limitSql = dbType === 'oracle' ? 'FETCH FIRST 1 ROWS ONLY' : 'LIMIT 1';
-    const rawQuery = `SELECT * FROM "${modelName}" WHERE "${cleanPk}" = '${String(initialEditId).replace(/'/g, "''")}' ${limitSql}`
+    const isOracle = dbType === 'oracle';
+    const tModel = isOracle ? `"${modelName.toUpperCase()}"` : `"${modelName}"`;
+    const tPk = isOracle ? `"${cleanPk.toUpperCase()}"` : `"${cleanPk}"`;
+    const rawQuery = `SELECT * FROM ${tModel} WHERE ${tPk} = '${String(initialEditId).replace(/'/g, "''")}'`
 
     console.log(`[MetaBuilder] 🔍 Buscando registro para edição no modo Cadastro: ${rawQuery}`)
 
     const handleResult = (payload: any) => {
       if (payload.payload?.queryId !== queryId) return
       if (payload.payload?.success && payload.payload?.data?.length > 0) {
-        const record = payload.payload.data[0]
+        const rawRecord = payload.payload.data[0]
+        const record: any = { ...rawRecord }
+        // Força espelhamento em lowercase para compatibilidade com os forms
+        // (necessário pois alguns drivers como Oracle retornam chaves UPPERCASE)
+        for (const key in rawRecord) {
+          const lowerKey = key.toLowerCase()
+          if (record[lowerKey] === undefined) {
+            record[lowerKey] = rawRecord[key]
+          }
+        }
         setSelectedRow(record)
         setDrawerMode('edit')
         setIsPageVisible(true)

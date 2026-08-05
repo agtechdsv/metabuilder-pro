@@ -39,7 +39,10 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
     .eq('slug', workspace_slug)
     .single()
 
-  if (workspaceError || !workspace) notFound()
+  if (workspaceError || !workspace) {
+    console.error('[LAYOUT] Workspace fetch error:', workspace_slug, workspaceError)
+    notFound()
+  }
 
   // Buscar o profile do owner separadamente para evitar erro de FK
   const { data: ownerProfile } = await supabase

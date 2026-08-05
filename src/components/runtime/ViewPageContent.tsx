@@ -246,7 +246,8 @@ export default function ViewPageContent({
     return projectRelations.filter(r => activeModelIds.has(String(r.detail_model_id)))
   }, [projectRelations, cleanFormFields, masterModelId])
 
-  const isCadastroOnly = logicType === 'cadastro'
+  const [internalIsCadastroOnly, setInternalIsCadastroOnly] = useState(logicType === 'cadastro')
+  const isCadastroOnly = internalIsCadastroOnly
 
   const [activeTab, setActiveTab] = useState<'list' | 'card'>(defaultView)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
@@ -279,8 +280,24 @@ export default function ViewPageContent({
   const [isWidgetModalOpen, setIsWidgetModalOpen] = useState(false)
   const [globalFilterValues, setGlobalFilterValues] = useState<Record<string, string>>({})
 
-  
   const [initialEditId, setInitialEditId] = useState<string | null>(null)
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const search = new URLSearchParams(window.location.search);
+      const editId = search.get('edit_id');
+      const force = search.get('force_form') === 'true' || (search.get('embedded') === 'true' && !!editId);
+      
+      if (editId) {
+        setInitialEditId(editId);
+      }
+      if (force && logicType !== 'cadastro') {
+        setInternalIsCadastroOnly(true);
+        setIsPageVisible(true);
+      }
+    }
+  }, [logicType]);
+
   const [autoOpenSlotConfig, setAutoOpenSlotConfig] = useState<{ id: string, type: 'modal' | 'drawer' } | null>(null)
 
   const [iframeUrl, setIframeUrl] = useState<string>('')
@@ -342,6 +359,18 @@ export default function ViewPageContent({
     logicType,
     dictionary
   });
+
+  useEffect(() => {
+    if (isCadastroOnly && initialEditId && selectedRow && !selectedRow._details) {
+      const loadDetails = async () => {
+        setIsProcessing(true);
+        const details = await fetchDetails(selectedRow, modelName);
+        setSelectedRow((prev: any) => ({ ...prev, _details: details }));
+        setIsProcessing(false);
+      };
+      loadDetails();
+    }
+  }, [isCadastroOnly, initialEditId, selectedRow, modelName, fetchDetails]);
 
   const { gridCustomActions, handleCustomAction } = useCustomActionsRuntime({
     project,
@@ -467,6 +496,41 @@ const isModal = actionInterfaceType === 'modal'
     setIsProcessing(false)
     setActiveTabForMaster('master')
     setOpen(true)
+  }
+
+  const handleEditLevel = (levelIndex: number, row: any) => {
+    const levelConfig = mindmapLevels?.[levelIndex];
+    if (levelConfig && levelConfig.edit_usecase_slug) {
+      const targetSlug = levelConfig.edit_usecase_slug;
+      const pk = primaryKeyName || 'id';
+      const rowId = row[pk] !== undefined ? row[pk] : (row[pk.toUpperCase()] !== undefined ? row[pk.toUpperCase()] : (row.id !== undefined ? row.id : row.ID));
+      let params = `edit_id=${rowId}`;
+      if (typeof window !== 'undefined' && window.location.search.includes('preview=')) {
+        const previewParam = new URLSearchParams(window.location.search).get('preview');
+        params += `&preview=${previewParam}`;
+      }
+      
+      const isDrawer = levelConfig.edit_usecase_open_mode === 'drawer';
+      const isPage = levelConfig.edit_usecase_open_mode === 'page';
+
+      const finalUrl = `/${workspace.slug}/${project.slug}/${targetSlug}?${params}`;
+
+      if (isPage) {
+        window.location.href = finalUrl;
+      } else {
+        setIframeUrl(`${finalUrl}&embedded=true`);
+        setIframeTitle(`Editar Registro`);
+        if (isDrawer) {
+          setIsIframeDrawerOpen(true);
+        } else {
+          setIsIframeModalOpen(true);
+        }
+      }
+    } else {
+      if (levelIndex === 0) {
+        handleOpenEdit(row);
+      }
+    }
   }
 
   const handleOpenDelete = (row: any) => {
@@ -684,6 +748,7 @@ const isModal = actionInterfaceType === 'modal'
               onAdd={handleOpenAdd}
               onView={handleOpenView}
               onEdit={handleOpenEdit}
+              onEditLevel={handleEditLevel}
               onDelete={handleOpenDelete}
               customActions={gridCustomActions}
               onCustomAction={handleCustomAction}

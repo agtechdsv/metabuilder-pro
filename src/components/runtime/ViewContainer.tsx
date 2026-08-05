@@ -40,6 +40,7 @@ interface ViewContainerProps {
   onAdd?: (initialData?: any) => void
   onView?: (row: any) => void
   onEdit?: (row: any) => void
+  onEditLevel?: (levelIndex: number, row: any) => void
   onDelete?: (row: any) => void
   logicType?: string
   primaryKeyName?: string
@@ -159,6 +160,7 @@ export default function ViewContainer({
   onCustomAction,
   projectRelations = [],
   initialItemsPerPage,
+  onEditLevel,
   filterGridColumns = '12'
 }: ViewContainerProps) {
   const { toast } = useToast()
@@ -600,6 +602,7 @@ export default function ViewContainer({
             projectId={projectId}
             onView={onView}
             onEdit={onEdit}
+            onEditLevel={onEditLevel}
             onDelete={onDelete}
             primaryKeyName={primaryKeyName}
             dictionary={dictionary}
@@ -609,6 +612,7 @@ export default function ViewContainer({
             isTunnelReady={isTunnelReady}
             customActions={customActions}
             onCustomAction={handleCustomAction}
+            refreshTrigger={refreshTrigger}
           />
         </div>
       ) : viewMode === 'galeria' ? (

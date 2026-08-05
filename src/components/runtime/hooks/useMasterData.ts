@@ -112,7 +112,8 @@ export function useMasterData({
         if (action === 'update' && selectedRow) {
           const originalRaw = selectedRow[k] ?? selectedRow[lowKey] ?? selectedRow[k.toUpperCase()]
           const originalValue = (originalRaw === null || originalRaw === '' || String(originalRaw).trim() === '') ? null : String(originalRaw)
-          if (newValue === originalValue) continue
+          const newValueString = newValue === null ? null : String(newValue)
+          if (newValueString === originalValue) continue
         }
 
         sanitizedData[k] = newValue
@@ -181,7 +182,7 @@ export function useMasterData({
             const doSend = () => {
               let payloadData = currentData
               let payloadIdCol = actualPkKey
-              if (project?.db_type !== 'postgres') {
+              if (project?.db_type === 'oracle') {
                 payloadData = {}
                 for (const [k, v] of Object.entries(currentData)) {
                   payloadData[k.toUpperCase()] = v
@@ -399,7 +400,7 @@ export function useMasterData({
               // Ajustar o Case da fkCol para bater com o banco, especialmente Oracle
               const lowerFk = fkCol.toLowerCase()
               const actualFkCol = Object.keys(row).find(k => k.toLowerCase() === lowerFk) 
-                || (project?.db_type !== 'postgres' ? fkCol.toUpperCase() : fkCol)
+                || (project?.db_type === 'oracle' ? fkCol.toUpperCase() : fkCol)
 
               if (isNew) {
                 sanitized[actualFkCol] = String(parentPkVal)
@@ -471,7 +472,7 @@ export function useMasterData({
               channel.on('broadcast', { event: 'sql_result' }, onResult)
               let payloadData = sanitized
               let payloadIdCol = actualRowPkName
-              if (project?.db_type !== 'postgres') {
+              if (project?.db_type === 'oracle') {
                 payloadData = {}
                 for (const [k, v] of Object.entries(sanitized)) {
                   payloadData[k.toUpperCase()] = v
@@ -517,7 +518,11 @@ export function useMasterData({
         supabase.removeChannel(channel)
       }
 
-      if (isCadastroOnly) {
+      const isEmbedded = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embedded') === 'true'
+
+      if (isEmbedded) {
+        window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*')
+      } else if (isCadastroOnly) {
         if (action === 'insert') {
           setSelectedRow(null)
           setDrawerMode('create')

@@ -1,11 +1,11 @@
-﻿import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { Plus, BarChart3, GripVertical, Pencil, Trash2, Gauge, Activity, Layers, Share2, LayoutGrid, X } from 'lucide-react'
 import { SortableContext, horizontalListSortingStrategy, rectSortingStrategy } from '@dnd-kit/sortable'
 import { DroppableZone, SortableWidgetCard } from './dnd'
 import { MultiLevelPathBuilder } from '../StepPersonalizado'
 
 export function AnalyticsSection({
-  config, setConfig, models, relations,
+  config, setConfig, models, relations, useCases = [],
   setEditingWidget, setIsWidgetModalOpen, getFieldName, t, orderedModels
 }: any) {
   const handleAddWidget = () => {
@@ -308,6 +308,54 @@ export function AnalyticsSection({
                               <option value="">Nenhum</option>
                               {levelModel?.fields?.map((f: any) => <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>)}
                             </select>
+                          </div>
+
+                          <div className="col-span-full border-t border-dashed border-neutral-200 dark:border-neutral-800 pt-3 mt-3">
+                            <h5 className="text-[9px] font-black uppercase text-indigo-500 mb-3 tracking-widest flex items-center gap-2">
+                              <Pencil className="w-3 h-3" />
+                              Ação de Edição (Opcional)
+                            </h5>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div>
+                                <label className="text-[9px] font-black uppercase text-neutral-400">Caso de Uso de Destino</label>
+                                <select
+                                  value={level.edit_usecase_slug || ''}
+                                  onChange={e => {
+                                    setConfig((prev: any) => {
+                                      const newLevels = [...(prev.layout_config.mindmap_levels || [])];
+                                      newLevels[lIdx].edit_usecase_slug = e.target.value;
+                                      return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
+                                    });
+                                  }}
+                                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
+                                >
+                                  <option value="">Formulário Padrão (Raiz)</option>
+                                  {useCases.filter((uc: any) => uc.model_id === level.model_id).map((uc: any) => (
+                                    <option key={uc.slug} value={uc.slug}>{uc.name} ({uc.slug})</option>
+                                  ))}
+                                </select>
+                                <p className="text-[9px] text-neutral-400 mt-1 italic">Qual caso de uso abrir ao clicar em Editar neste nível.</p>
+                              </div>
+                              <div>
+                                <label className="text-[9px] font-black uppercase text-neutral-400">Modo de Abertura</label>
+                                <select
+                                  value={level.edit_usecase_open_mode || 'modal'}
+                                  onChange={e => {
+                                    setConfig((prev: any) => {
+                                      const newLevels = [...(prev.layout_config.mindmap_levels || [])];
+                                      newLevels[lIdx].edit_usecase_open_mode = e.target.value;
+                                      return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
+                                    });
+                                  }}
+                                  disabled={!level.edit_usecase_slug}
+                                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1 disabled:opacity-50"
+                                >
+                                  <option value="modal">Modal Centralizado (Recomendado)</option>
+                                  <option value="drawer">Drawer Lateral</option>
+                                  <option value="page">Redirecionar Página</option>
+                                </select>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>

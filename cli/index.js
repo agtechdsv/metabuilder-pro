@@ -548,6 +548,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           if (dbType === 'oracle') {
             // Traduz a paginação do Postgres para Oracle 12c+
             sql = sql.replace(/LIMIT\s+(\d+)\s+OFFSET\s+(\d+)/gi, "OFFSET $2 ROWS FETCH NEXT $1 ROWS ONLY");
+            sql = sql.replace(/LIMIT\s+(\d+)(?!\s+OFFSET)/gi, "FETCH FIRST $1 ROWS ONLY");
             sql = sql.replace(/\)\s+AS\s+"([a-zA-Z0-9_]+)"/gi, ') "$1"');
             
             sql = sql.replace(/\$(\d+)/g, ':$1');
@@ -981,7 +982,16 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           console.log(chalk.green(`[ OK ] GET_USERS: Retornou ${safeRows.length} usuários.`));
         }
         else if (action === 'insert') {
-          const data = payload.payload.data; // { coluna: "valor" }
+          let data = payload.payload.data || {}; // { coluna: "valor" }
+          
+          if (dbType === 'oracle') {
+            const upperData = {};
+            for (const [k, v] of Object.entries(data)) {
+              upperData[k.toUpperCase()] = v;
+            }
+            data = upperData;
+          }
+
           const keys = Object.keys(data).map(k => `"${k.replace(/[^a-zA-Z0-9_]/g, '')}"`);
           const values = Object.values(data);
           let placeholders;
@@ -1039,6 +1049,13 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           // Detecta e remove colunas GENERATED ALWAYS AS antes de executar o UPDATE.
           // Faz até 5 tentativas removendo automaticamente a coluna rejeitada pelo Postgres.
           let currentData = { ...data };
+          if (dbType === 'oracle') {
+            const upperData = {};
+            for (const [k, v] of Object.entries(currentData)) {
+              upperData[k.toUpperCase()] = v;
+            }
+            currentData = upperData;
+          }
           let updateResult = null;
           let updateAttempts = 0;
           const MAX_UPDATE_RETRIES = 5;

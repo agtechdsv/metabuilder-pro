@@ -37,7 +37,10 @@ export default async function WorkspaceDashboard({ params }: WorkspaceDashboardP
     .eq('slug', workspace_slug)
     .single()
 
-  if (workspaceError || !workspace) notFound()
+  if (workspaceError || !workspace) {
+    console.error('Workspace fetch error:', workspace_slug, workspaceError)
+    notFound()
+  }
 
   // 2. Busca Projetos deste Workspace
   const { data: projects } = await supabase

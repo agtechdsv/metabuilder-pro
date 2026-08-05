@@ -168,11 +168,14 @@ export default function CustomUseCaseRenderer({
     const hasStaticFilters = slot.static_filters && slot.static_filters.some((f: any) => f.field && f.value);
     
     // Configurações do Caso de Uso
-    const ucConfig = uc.config || {};
-    const ucLayout = uc.layout_config || {};
-    const ucDisplayFields = uc.display_fields || [];
-    const ucFormFields = uc.form_fields || [];
-    const ucFilterFields = uc.filter_fields || [];
+    const isPreview = typeof window !== 'undefined' && window.location.search.includes('preview=draft');
+    const sourceConfig = (isPreview && uc.draft_config) ? uc.draft_config : uc;
+    
+    const ucConfig = sourceConfig.config || {};
+    const ucLayout = sourceConfig.layout_config || {};
+    const ucDisplayFields = sourceConfig.display_fields || [];
+    const ucFormFields = sourceConfig.form_fields || [];
+    const ucFilterFields = sourceConfig.filter_fields || [];
 
     // Se a aba exige vínculo com o Mestre e não temos o ID do mestre (ainda não foi salvo)
     if (useMasterId && (mode === 'create' || !parentId)) {
@@ -200,6 +203,29 @@ export default function CustomUseCaseRenderer({
         );
         if (directJoin) {
           foreignKey = directJoin.from === targetModelName ? directJoin.localKey : directJoin.foreignKey;
+        }
+      }
+
+      if (!foreignKey && project?.models && targetModelName && mModelName) {
+        const targetModel = project.models.find((m: any) => m.db_table_name?.toLowerCase() === targetModelName.toLowerCase());
+        if (targetModel && targetModel.fields) {
+          const relField = targetModel.fields.find((f: any) => {
+            const rel = (f.config?.rel_table || '').toLowerCase();
+            return f.field_type === 'relation' && (rel === mModelName.toLowerCase() || mModelName.toLowerCase().includes(rel));
+          });
+          if (relField) {
+            foreignKey = relField.db_column_name;
+          } else {
+            // Fallback heurístico pelo nome da coluna se não houver config rel_table explícita
+            const singularName = mModelName.toLowerCase().endsWith('s') ? mModelName.toLowerCase().slice(0, -1) : mModelName.toLowerCase();
+            const guessField = targetModel.fields.find((f: any) => {
+              const col = (f.db_column_name || '').toLowerCase();
+              return col.endsWith('_id') && col.includes(singularName);
+            });
+            if (guessField) {
+              foreignKey = guessField.db_column_name;
+            }
+          }
         }
       }
 

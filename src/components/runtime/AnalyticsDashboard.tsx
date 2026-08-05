@@ -246,6 +246,14 @@ export default function AnalyticsDashboard({
     if (!isFormula && widget.field !== '*') {
       const fieldMeta = model?.fields?.find((f: any) => String(f.id) === String(widget.field))
       selectStr = fieldMeta?.db_column_name || widget.field || '*'
+    } else if (isFormula && widget.field) {
+      const formulaStr = String(widget.field)
+      const matches = formulaStr.match(/[a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?/g) || []
+      const keywords = ['SUM', 'AVG', 'MIN', 'MAX', 'COUNT', 'AND', 'OR', 'NOT', 'NULL', 'IS', 'TRUE', 'FALSE']
+      const cols = matches.filter(m => !keywords.includes(m.toUpperCase()) && isNaN(Number(m)))
+      if (cols.length > 0) {
+        selectStr = [...new Set(cols)].join(', ')
+      }
     }
 
     let groupCol = widget.group_by
@@ -264,7 +272,10 @@ export default function AnalyticsDashboard({
             break
           }
         }
-        if (typeof groupCol === 'string' && !selectStr.includes(groupCol)) selectStr += `, ${groupCol}`
+        if (typeof groupCol === 'string' && !selectStr.includes(groupCol)) {
+          if (selectStr === '*') selectStr = groupCol
+          else selectStr += `, ${groupCol}`
+        }
     }
 
     // Build JOINs using the Santo Graal BFS path-finder

@@ -671,7 +671,8 @@ export function useDetailData({
         if (action === 'edit' && selectedDetail) {
           const originalRaw = selectedDetail[k] ?? selectedDetail[lowKey] ?? selectedDetail[k.toUpperCase()]
           const originalValue = (originalRaw === null || originalRaw === '' || String(originalRaw).trim() === '') ? null : String(originalRaw)
-          if (newValue === originalValue) continue
+          const newValueString = newValue === null ? null : String(newValue)
+          if (newValueString === originalValue) continue
         }
 
         sanitizedData[k] = newValue
@@ -826,7 +827,7 @@ export function useDetailData({
             const doSend = () => {
               let payloadData = currentData
               let payloadIdCol = actualPkKey
-              if (project?.db_type !== 'postgres') {
+              if (project?.db_type === 'oracle') {
                 payloadData = {}
                 for (const [k, v] of Object.entries(currentData)) {
                   payloadData[k.toUpperCase()] = v
