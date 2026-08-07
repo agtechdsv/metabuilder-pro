@@ -42,6 +42,7 @@ export interface RecordFormProps {
   detailsItemTitles?: Record<string, string>;
   tabsStyleConfig?: any;
   detailsDisplayMode?: Record<string, 'tabs' | 'sections'>;
+  hiddenDetails?: string[];
   isPageMode?: boolean;
   onEditDetail?: (detail: any) => void;
   onDeleteDetail?: (detail: any) => void;
@@ -79,6 +80,7 @@ export default function RecordForm({
   masterModelId,
   masterModelName,
   detailsDisplayMode = {},
+  hiddenDetails = [],
   tabsStyleConfig,
   isPageMode = false,
   onEditDetail,
@@ -244,8 +246,9 @@ export default function RecordForm({
               const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase());
               return targetModel?.id || fields.find((f: any) => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id;
             };
-            const tabTables = detailTables.filter(tableName => detailsDisplayMode?.[getModelIdForTable(tableName) as string] === 'tabs');
-            const sectionTables = detailTables.filter(tableName => detailsDisplayMode?.[getModelIdForTable(tableName) as string] !== 'tabs');
+            const visibleDetailTables = detailTables.filter(tableName => !hiddenDetails.includes(getModelIdForTable(tableName) as string));
+            const tabTables = visibleDetailTables.filter(tableName => detailsDisplayMode?.[getModelIdForTable(tableName) as string] === 'tabs');
+            const sectionTables = visibleDetailTables.filter(tableName => detailsDisplayMode?.[getModelIdForTable(tableName) as string] !== 'tabs');
 
             return (
               <>

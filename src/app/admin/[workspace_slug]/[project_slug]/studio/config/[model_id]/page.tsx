@@ -55,7 +55,7 @@ export default function ViewConfigurator() {
         // 1. Resolve User
         const { data: { user: userData } } = await supabase.auth.getUser()
         if (!userData) {
-          router.replace('/login')
+          router.replace('/')
           return
         }
 
@@ -67,7 +67,7 @@ export default function ViewConfigurator() {
           .single()
         
         if (!ws) {
-          router.replace('/login')
+          router.replace('/')
           return
         }
 
@@ -80,7 +80,7 @@ export default function ViewConfigurator() {
           .single()
         
         if (!proj) {
-          router.replace('/login')
+          router.replace('/')
           return
         }
 

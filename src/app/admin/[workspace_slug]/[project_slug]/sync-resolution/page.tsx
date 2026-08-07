@@ -10,7 +10,7 @@ export default async function SyncResolutionPage(props: { params: Promise<{ work
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/auth/session-expired')
 
   const { data: profile } = await supabase
     .from('profiles')

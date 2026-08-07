@@ -120,13 +120,25 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
             <button
               title={hiddenDetails.has(model.id) ? "Exibir formulário" : "Ocultar formulário"}
               onClick={() => {
+                let newFields = config.layout_config.form_fields;
+                let newHidden = [...(config.layout_config.hidden_details || [])];
+
                 if (!hiddenDetails.has(model.id)) {
-                  const fieldsToKeep = config.layout_config.form_fields.filter((fid: string) => !model.fields.some((f: any) => f.id === fid))
-                  setConfig({
-                    ...config,
-                    layout_config: { ...config.layout_config, form_fields: fieldsToKeep }
-                  })
+                  newFields = config.layout_config.form_fields.filter((fid: string) => !model.fields.some((f: any) => f.id === fid))
+                  if (!newHidden.includes(model.id)) newHidden.push(model.id);
+                } else {
+                  newHidden = newHidden.filter((id: string) => id !== model.id);
                 }
+                
+                setConfig({
+                  ...config,
+                  layout_config: { 
+                    ...config.layout_config, 
+                    form_fields: newFields,
+                    hidden_details: newHidden
+                  }
+                })
+
                 setHiddenDetails(prev => {
                   const next = new Set(prev)
                   if (next.has(model.id)) next.delete(model.id)

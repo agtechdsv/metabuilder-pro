@@ -13,7 +13,7 @@ export default async function AIBuilderPage({
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/auth/session-expired')
 
   // Verifica PRO
   const { data: profile } = await supabase

@@ -20,14 +20,14 @@ export default async function CheckoutPage({
   const mode = resolvedSearchParams.mode
 
   if (!user) {
-    let redirectUrl = '/login?redirect_to=/checkout'
+    let redirectUrl = '/?redirect_to=/checkout'
     const params = new URLSearchParams()
     if (licensesParam) params.set('licenses', licensesParam)
     if (workspaceSlug) params.set('workspace_slug', workspaceSlug)
     if (cycle) params.set('cycle', cycle)
     const queryString = params.toString()
     if (queryString) {
-      redirectUrl = `/login?redirect_to=/checkout?${queryString}`
+      redirectUrl = `/?redirect_to=/checkout?${queryString}`
     }
     redirect(redirectUrl)
   }

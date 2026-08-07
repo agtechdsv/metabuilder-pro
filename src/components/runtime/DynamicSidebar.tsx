@@ -65,7 +65,7 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
   const handleLogout = () => {
     const sessionCookieName = `client_session_${project.id}`
     document.cookie = `${sessionCookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
-    window.location.href = `${finalBaseNavUrl}/login`
+    window.location.href = `${finalBaseNavUrl}`
   }
 
   const displayName = clientUser?.nome || clientUser?.name || clientUser?.email || 'Usuário Cliente'

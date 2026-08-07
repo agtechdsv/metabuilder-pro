@@ -150,7 +150,8 @@ export function useWizardConfig({
           blueprint_config: sourceData.layout_config?.blueprint_config || { title_field: '', desc_field: '', status_field: '', predecessor_field: '' },
           custom_actions: sourceData.layout_config?.custom_actions || [],
           custom_slots: sourceData.layout_config?.custom_slots || [],
-          max_relation_depth: sourceData.layout_config?.max_relation_depth ?? 2
+          max_relation_depth: sourceData.layout_config?.max_relation_depth ?? 2,
+          master_use_case_slug: sourceData.layout_config?.master_use_case_slug || ''
         },
         buttons_config: mergeButtonsConfig(sourceData.buttons_config, defaults)
       })

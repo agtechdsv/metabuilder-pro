@@ -115,6 +115,40 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
 
   const view = views?.[0]
 
+  if (view && view.logic_type === 'personalizado' && view.layout_config?.master_use_case_slug) {
+    const { data: masterViews } = await supabase
+      .from('ui_views')
+      .select(`
+        ui_components (
+          label,
+          order_index,
+          is_visible,
+          config,
+          field:fields (*)
+        ),
+        layout_config,
+        buttons_config
+      `)
+      .eq('slug', view.layout_config.master_use_case_slug)
+      .eq('project_id', project.id)
+      .limit(1)
+
+    const masterView = masterViews?.[0]
+    if (masterView) {
+      view.ui_components = masterView.ui_components
+      view.layout_config = {
+        ...view.layout_config,
+        grid_fields: masterView.layout_config?.grid_fields,
+        filter_fields: masterView.layout_config?.filter_fields,
+        form_fields: masterView.layout_config?.form_fields,
+        fields_metadata: {
+          ...(view.layout_config?.fields_metadata || {}),
+          ...(masterView.layout_config?.fields_metadata || {})
+        }
+      }
+      view.buttons_config = masterView.buttons_config
+    }
+  }
   // RBAC Permission Check
   if (view) {
     const rawAuthConfig = await supabase
@@ -893,6 +927,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
           masterModelId={view.layout_config?.master_model_id || view.model_id}
           detailsDisplayMode={view.layout_config?.details_display_mode}
           detailsInterfaceTypes={view.layout_config?.details_interface_types}
+          hiddenDetails={view.layout_config?.hidden_details}
           detailsInlineTypes={view.layout_config?.details_inline_types}
           detailsModalSizes={view.layout_config?.details_modal_sizes}
           detailsModalWidths={view.layout_config?.details_modal_widths}

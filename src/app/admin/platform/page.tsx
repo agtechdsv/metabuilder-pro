@@ -14,7 +14,7 @@ export default async function PlatformAdminPage() {
 
   // 1. Get logged-in user
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/auth/session-expired')
 
   // 2. Fetch current profile to check super admin status
   const { data: profile } = await supabase

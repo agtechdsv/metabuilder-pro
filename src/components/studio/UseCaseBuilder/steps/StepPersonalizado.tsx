@@ -109,14 +109,80 @@ export function MultiLevelPathBuilder({ level, onChange, models, parentModelId }
   )
 }
 
+// ─── RelationPathSelector ────────────────────────────────────────────────────
+
+interface RelationPathSelectorProps {
+  path: string[]
+  onChange: (path: string[]) => void
+  relations: any[]
+  models: Model[]
+}
+
+export function RelationPathSelector({ path, onChange, relations, models }: RelationPathSelectorProps) {
+  const addHop = () => onChange([...path, ''])
+  const removeHop = (index: number) => onChange(path.filter((_, i) => i !== index))
+  const updateHop = (index: number, relationId: string) => {
+    const newPath = [...path]
+    newPath[index] = relationId
+    onChange(newPath)
+  }
+
+  // Pre-compute relation labels for the dropdown
+  const relationOptions = relations.map(rel => {
+    const fromModel = models.find(m => m.id === (rel.from_model_id || rel.detail_model_id))
+    const toModel = models.find(m => m.id === (rel.to_model_id || rel.master_model_id))
+    const fromName = fromModel?.display_name || fromModel?.db_table_name || 'Desconhecido'
+    const toName = toModel?.display_name || toModel?.db_table_name || 'Desconhecido'
+    return {
+      id: rel.id,
+      label: `De: ${fromName} -> Para: ${toName} (Chave: ${rel.foreign_column_id || rel.from_field_id || 'N/A'})`
+    }
+  })
+
+  return (
+    <div className="space-y-3 mt-4 border border-dashed border-indigo-200 dark:border-indigo-900 p-4 rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10">
+      <div className="flex items-center justify-between">
+        <label className="text-[9px] font-black uppercase text-indigo-500 tracking-widest">Caminho de Relacionamentos (Joins Dinâmicos)</label>
+        <button type="button" onClick={addHop} className="text-[9px] px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 rounded uppercase font-bold hover:bg-indigo-100 transition-all flex items-center gap-1">
+          <Plus className="w-3 h-3" /> Adicionar Relação
+        </button>
+      </div>
+      {path.length === 0 && (
+        <p className="text-[10px] text-neutral-400 italic">Selecione as relações para conectar a aba Mestre à esta aba.</p>
+      )}
+      {path.map((relationId, idx) => {
+        return (
+          <div key={idx} className="flex gap-2 items-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-2">
+            <div className="text-[9px] font-bold text-neutral-500 uppercase px-2">{idx + 1}</div>
+            <select 
+              value={relationId || ''} 
+              onChange={e => updateHop(idx, e.target.value)} 
+              className="flex-1 text-xs p-2 rounded border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 outline-none focus:border-indigo-500"
+            >
+              <option value="">Selecione o relacionamento...</option>
+              {relationOptions.map(opt => (
+                <option key={opt.id} value={opt.id}>{opt.label}</option>
+              ))}
+            </select>
+            <button type="button" onClick={() => removeHop(idx)} className="text-neutral-400 hover:text-red-500 p-2 rounded-md transition-colors">
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ─── StepPersonalizado ────────────────────────────────────────────────────────
 
 interface StepPersonalizadoProps extends StepBaseProps {
   models: Model[]
   useCases?: UseCase[]
+  relations?: any[]
 }
 
-export function StepPersonalizado({ config, setConfig, models, useCases = [] }: StepPersonalizadoProps) {
+export function StepPersonalizado({ config, setConfig, models, useCases = [], relations = [] }: StepPersonalizadoProps) {
   const { t } = useI18n()
   const [expandedCustomSlot, setExpandedCustomSlot] = useState<number | null>(null)
   const [tabToDelete, setTabToDelete]               = useState<number | null>(null)
@@ -497,6 +563,15 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [] }: 
                           Vincular ao Mestre: {slot.use_master_id !== false ? 'SIM' : 'NÃO'}
                         </button>
                       </div>
+
+                      {slot.use_master_id !== false && (
+                        <RelationPathSelector 
+                          path={slot.relation_path || []} 
+                          onChange={(newPath) => updateSlot(idx, s => ({ ...s, relation_path: newPath }))}
+                          relations={relations}
+                          models={models}
+                        />
+                      )}
 
                       {/* Static filters */}
                       <div className="space-y-3">

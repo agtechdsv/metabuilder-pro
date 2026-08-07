@@ -12,7 +12,7 @@ export default async function EnumerationsPage({
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/auth/session-expired')
 
   const { data: workspace } = await supabase
     .from('workspaces')

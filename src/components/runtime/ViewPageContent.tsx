@@ -67,6 +67,7 @@ interface ViewPageContentProps {
   joins?: any[]
   masterModelId?: string
   detailsDisplayMode?: Record<string, 'tabs' | 'sections'>
+  hiddenDetails?: string[]
   actionInterfaceType?: 'drawer' | 'modal' | 'page'
   detailsInterfaceTypes?: Record<string, string>
   detailsInlineTypes?: Record<string, any>
@@ -141,6 +142,7 @@ export default function ViewPageContent({
   detailsModalSizes,
   detailsModalWidths,
   detailsModalHeights,
+  hiddenDetails = [],
   masterTabTitle,
   detailsTabTitles,
   detailsItemTitles,
@@ -671,6 +673,7 @@ const isModal = actionInterfaceType === 'modal'
               tabsStyleConfig={tabsStyleConfig}
               detailsDisplayMode={detailsDisplayMode}
               isPageMode={true}
+              hiddenDetails={hiddenDetails}
               onEditDetail={handleEditDetail}
               onDeleteDetail={handleDeleteDetail}
               onAddDetail={handleOpenAddDetail}

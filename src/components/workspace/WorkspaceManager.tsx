@@ -493,30 +493,30 @@ export function WorkspaceManager({
                     {!isNavigating && (workspace.can_edit || workspace.can_delete || workspace.theme_config?.portal_enabled) && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         {workspace.theme_config?.portal_enabled && (
-                          <>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                openPreview(`${window.location.origin}/${workspace.slug}`, `Portal: ${workspace.name}`)
-                              }}
-                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
-                              title="Acessar Portal"
-                            >
-                              <ArrowUpRight className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedDesktopWorkspace(workspace);
-                                setShowDesktopModal(true);
-                              }}
-                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-emerald-500 hover:text-emerald-400"
-                              title="Gerar App Desktop Nativo"
-                            >
-                              <Monitor className="w-4 h-4" />
-                            </button>
-                          </>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openPreview(`${window.location.origin}/${workspace.slug}`, `Portal: ${workspace.name}`)
+                            }}
+                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
+                            title="Acessar Portal"
+                          >
+                            <ArrowUpRight className="w-4 h-4" />
+                          </button>
                         )}
+                        <ProGate gateType="desktop" tier={tier} featureName="Gerar App Desktop Nativo">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDesktopWorkspace(workspace);
+                              setShowDesktopModal(true);
+                            }}
+                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-emerald-500 hover:text-emerald-400"
+                            title="Gerar App Desktop Nativo"
+                          >
+                            <Monitor className="w-4 h-4" />
+                          </button>
+                        </ProGate>
                         {workspace.role === 'owner' && profile?.subscription_tier === 'pro' && (
                           <button
                             onClick={(e) => {

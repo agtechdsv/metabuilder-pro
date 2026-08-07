@@ -61,7 +61,7 @@ function ChallengeFormInner() {
       <div className="text-center py-8">
         <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-4" />
         <p className="text-sm text-neutral-500">Fator de autenticação não encontrado.</p>
-        <button onClick={() => router.push('/login')} className="mt-4 text-indigo-500 font-bold text-xs">Voltar ao Login</button>
+        <button onClick={() => router.push('/')} className="mt-4 text-indigo-500 font-bold text-xs">Voltar ao Login</button>
       </div>
     )
   }

@@ -18,7 +18,7 @@ export default async function StudioLayout({ children, params }: StudioLayoutPro
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/auth/session-expired')
 
   // Busca perfil para o Header
   const { data: profile } = await supabase

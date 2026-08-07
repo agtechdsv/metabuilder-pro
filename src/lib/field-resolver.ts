@@ -14,10 +14,15 @@ export function resolveDynamicFieldDef(
   if (!configValue) return null;
 
   try {
-    // 1. Tentar parsear o config como JSON (The True Ultimate Fallback)
+    // 1. Tentar ler o config como objeto JSON (Supabase auto-parses JSONB)
+    let parsedConfig: any = null;
     if (typeof configValue === 'string' && configValue.startsWith('{')) {
-      const parsedConfig = JSON.parse(configValue);
-      
+      parsedConfig = JSON.parse(configValue);
+    } else if (typeof configValue === 'object' && configValue !== null) {
+      parsedConfig = configValue;
+    }
+
+    if (parsedConfig) {
       let localFieldId = parsedConfig.target_field_id;
       if (parsedConfig.relation_path && parsedConfig.relation_path.length > 0) {
         localFieldId = parsedConfig.relation_path[0].foreign_column_id;
@@ -72,9 +77,15 @@ export function extractRawValue(
 
   // 1. Especial para o RecordForm: dados relacionais chegam preenchidos na key virt_UUID_DO_CAMPO
   let parsedLabelFallback: string | null = null;
-  if (typeof configValue === 'string' && configValue.startsWith('{')) {
-    try {
-      const parsedConfig = JSON.parse(configValue);
+  try {
+    let parsedConfig: any = null;
+    if (typeof configValue === 'string' && configValue.startsWith('{')) {
+      parsedConfig = JSON.parse(configValue);
+    } else if (typeof configValue === 'object' && configValue !== null) {
+      parsedConfig = configValue;
+    }
+
+    if (parsedConfig) {
       parsedLabelFallback = parsedConfig.display_label;
 
       let localFieldId = parsedConfig.target_field_id;
@@ -85,9 +96,9 @@ export function extractRawValue(
       if (localFieldId && row[`virt_${localFieldId}`] !== undefined) {
         return row[`virt_${localFieldId}`];
       }
-    } catch (e) {
-      console.warn('[FieldResolver] Erro ao extrair valor virt_:', e);
     }
+  } catch (e) {
+    console.warn('[FieldResolver] Erro ao extrair valor virt_:', e);
   }
 
   // 2. Fallback normal: se conseguimos resolver o fieldDef, usamos o db_column_name, senão tentamos o display_label do JSON

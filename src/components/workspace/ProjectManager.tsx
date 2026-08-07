@@ -738,17 +738,19 @@ export function ProjectManager({
 
                       {!isNavigating && (project.can_edit || project.can_deactivate || project.can_delete) && (
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
-                            title="Acessar versão publicada"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openPreview(`${window.location.origin}/${workspaceSlug}/${project.slug}`, `Projeto: ${project.name}`)
-                            }}
-                          >
-                            <ArrowUpRight className="w-4 h-4" />
-                          </button>
                           {portalEnabled && (
+                            <button
+                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
+                              title="Acessar versão publicada"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openPreview(`${window.location.origin}/${workspaceSlug}/${project.slug}`, `Projeto: ${project.name}`)
+                              }}
+                            >
+                              <ArrowUpRight className="w-4 h-4" />
+                            </button>
+                          )}
+                          <ProGate gateType="desktop" tier={tier || 'free'} featureName="Gerar App Desktop Nativo">
                             <button
                               onClick={(e) => {
                                 e.preventDefault()
@@ -761,7 +763,7 @@ export function ProjectManager({
                             >
                               <Monitor className="w-4 h-4" />
                             </button>
-                          )}
+                          </ProGate>
                           {project.can_edit && (
                             <ProGate gateType="desktop" tier={tier || 'free'} featureName="Exportar Código Fonte">
                               <button

@@ -14,7 +14,7 @@ export default async function ProjectDashboard({ params }: ProjectDashboardProps
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/auth/session-expired')
 
   // Redireciona diretamente para o Studio, que agora é a central única do projeto
   redirect(`/admin/${workspace_slug}/${project_slug}/studio`)

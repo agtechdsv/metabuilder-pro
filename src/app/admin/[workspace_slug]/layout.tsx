@@ -18,7 +18,7 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
 
   // 1. Get logged-in user
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/auth/session-expired')
 
   // Enforce password setup if required
   if (user.user_metadata?.need_password_setup === true) {

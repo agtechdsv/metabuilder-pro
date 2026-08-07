@@ -422,118 +422,105 @@ export function useViewDataFetch({
         })
       }
 
+      const { resolveDynamicFieldDef } = require('@/lib/field-resolver');
+      const allFieldsForResolve = [...(displayFields || []), ...(formFields || [])];
+
+      const safeAddSelectExpr = (col: any) => {
+        if (!col) return;
+        const f = resolveDynamicFieldDef(col, allFieldsForResolve, modelName);
+        console.log('[DEBUG-FETCH] safeAddSelectExpr chamado para:', col, 'resolvido para:', f?.db_column_name || 'NULL');
+        if (f) {
+          addSelectExpr(f.sql_expression || f.db_column_name);
+        } else {
+          // If still a UUID, do NOT add to selectExprs! It will crash the SQL
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(col || '');
+          if (!isUuid && typeof col === 'string' && !col.startsWith('{')) {
+            addSelectExpr(col);
+          }
+        }
+      };
+
+      console.log('[DEBUG-FETCH] kanbanGroup:', kanbanGroupField, 'kanbanCards:', kanbanCardFields, 'timeline:', timelineConfig);
+
       if (kanbanGroupField) {
-        const f = displayFields?.find((x: any) => x.id === kanbanGroupField) || formFields?.find((x: any) => x.id === kanbanGroupField)
-        addSelectExpr(f ? (f.sql_expression || f.db_column_name) : kanbanGroupField)
+        safeAddSelectExpr(kanbanGroupField);
       }
       if (kanbanCardFields) {
-        kanbanCardFields.forEach((col: any) => {
-          const f = displayFields?.find((x: any) => x.id === col) || formFields?.find((x: any) => x.id === col)
-          addSelectExpr(f ? (f.sql_expression || f.db_column_name) : col)
-        })
+        kanbanCardFields.forEach((col: any) => safeAddSelectExpr(col));
       }
       if (galleryConfig?.card_fields) {
-        galleryConfig.card_fields.forEach((col: string) => {
-          const f = displayFields?.find((x: any) => x.id === col) || formFields?.find((x: any) => x.id === col)
-          addSelectExpr(f ? (f.sql_expression || f.db_column_name) : col)
-        })
+        galleryConfig.card_fields.forEach((col: string) => safeAddSelectExpr(col));
       }
       if (schedulerConfig) {
-        const sFields = [schedulerConfig.start_date_field, schedulerConfig.end_date_field, schedulerConfig.title_field, schedulerConfig.color_field].filter(Boolean)
-        sFields.forEach(col => {
-          const f = displayFields?.find((x: any) => x.id === col) || formFields?.find((x: any) => x.id === col)
-          addSelectExpr(f ? (f.sql_expression || f.db_column_name) : col)
-        })
+        const sFields = [schedulerConfig.start_date_field, schedulerConfig.end_date_field, schedulerConfig.title_field, schedulerConfig.color_field].filter(Boolean);
+        sFields.forEach(col => safeAddSelectExpr(col));
       }
       if (timelineConfig) {
-        const { resolveDynamicFieldDef } = require('@/lib/field-resolver');
-        const allFields = [...(displayFields || []), ...(formFields || [])];
         const tFields = [
           timelineConfig.date_field, 
           timelineConfig.title_field,
           timelineConfig.desc_field,
           timelineConfig.icon_field
-        ].filter(Boolean)
-        tFields.forEach(col => {
-          const f = resolveDynamicFieldDef(col, allFields);
-          if (f) {
-            addSelectExpr(f.sql_expression || f.db_column_name);
-          } else if (typeof col === 'string' && !col.startsWith('{')) {
-            addSelectExpr(col);
-          }
-        })
+        ].filter(Boolean);
+        tFields.forEach(col => safeAddSelectExpr(col));
       }
       if (mapConfig) {
-        const { resolveDynamicFieldDef } = require('@/lib/field-resolver');
-        const allFields = [...(displayFields || []), ...(formFields || [])];
         const mFields = [
           mapConfig.lat_field,
           mapConfig.lng_field,
           mapConfig.title_field,
           mapConfig.desc_field
-        ].filter(Boolean)
-        mFields.forEach(col => {
-          const f = resolveDynamicFieldDef(col, allFields);
-          if (f) {
-            addSelectExpr(f.sql_expression || f.db_column_name);
-          } else if (typeof col === 'string' && !col.startsWith('{')) {
-            addSelectExpr(col);
-          }
-        })
+        ].filter(Boolean);
+        mFields.forEach(col => safeAddSelectExpr(col));
       }
       if (ganttConfig) {
-        const { resolveDynamicFieldDef } = require('@/lib/field-resolver');
-        const allFields = [...(displayFields || []), ...(formFields || [])];
         const gFields = [
           ganttConfig.title_field,
           ganttConfig.start_date_field,
           ganttConfig.end_date_field,
           ganttConfig.progress_field
-        ].filter(Boolean)
-        gFields.forEach(col => {
-          const f = resolveDynamicFieldDef(col, allFields);
-          if (f) {
-            addSelectExpr(f.sql_expression || f.db_column_name);
-          } else if (typeof col === 'string' && !col.startsWith('{')) {
-            addSelectExpr(col);
-          }
-        })
+        ].filter(Boolean);
+        gFields.forEach(col => safeAddSelectExpr(col));
       }
       if (blueprintConfig) {
-        const { resolveDynamicFieldDef } = require('@/lib/field-resolver');
-        const allFields = [...(displayFields || []), ...(formFields || [])];
         const bFields = [
           blueprintConfig.title_field,
           blueprintConfig.desc_field,
           blueprintConfig.status_field,
           blueprintConfig.predecessor_field
-        ].filter(Boolean)
-        bFields.forEach(col => {
-          const f = resolveDynamicFieldDef(col, allFields);
-          if (f) {
-            addSelectExpr(f.sql_expression || f.db_column_name);
-          } else if (typeof col === 'string' && !col.startsWith('{')) {
-            addSelectExpr(col);
-          }
-        })
+        ].filter(Boolean);
+        bFields.forEach(col => safeAddSelectExpr(col));
       }
 
       if (selectExprs.length === 0) addSelectExpr('*')
       const columns = selectExprs.length > 0 ? selectExprs.join(', ') : '*'
 
       const currentOffset = append ? data.length : (currentPage - 1) * itemsPerPage;
+      const resolveOrderField = (colId: string) => {
+        if (!colId) return null;
+        const f = resolveDynamicFieldDef(colId, allFieldsForResolve, modelName);
+        if (f) return f.db_column_name;
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(colId || '');
+        if (!isUuid && typeof colId === 'string' && !colId.startsWith('{')) {
+          return colId;
+        }
+        return null;
+      };
+
       let orderSql = `"${modelName}"."${primaryKeyName}" DESC`;
       if (logicType === 'timeline' && timelineConfig?.date_field) {
-        const dateFieldObj = displayFields.find((f: any) => f.id === timelineConfig.date_field);
-        const dateColumnName = dateFieldObj ? dateFieldObj.db_column_name : timelineConfig.date_field;
-        const timelineOrderHorizontal = timelineConfig.timeline_order_horizontal || 'asc';
-        const timelineOrderVertical = timelineConfig.timeline_order_vertical || 'asc';
-        const orderConf = timelineDirection === 'horizontal' ? timelineOrderHorizontal : timelineOrderVertical;
-        orderSql = `"${modelName}"."${dateColumnName}" ${orderConf.toUpperCase()}, "${modelName}"."${primaryKeyName}" DESC`;
+        const dateColumnName = resolveOrderField(timelineConfig.date_field);
+        if (dateColumnName) {
+          const timelineOrderHorizontal = timelineConfig.timeline_order_horizontal || 'asc';
+          const timelineOrderVertical = timelineConfig.timeline_order_vertical || 'asc';
+          const orderConf = timelineDirection === 'horizontal' ? timelineOrderHorizontal : timelineOrderVertical;
+          orderSql = `"${modelName}"."${dateColumnName}" ${orderConf.toUpperCase()}, "${modelName}"."${primaryKeyName}" DESC`;
+        }
       } else if (logicType === 'scheduler' && schedulerConfig?.start_date_field) {
-        const dateFieldObj = displayFields?.find((f: any) => f.id === schedulerConfig.start_date_field) || formFields?.find((f: any) => f.id === schedulerConfig.start_date_field);
-        const dateColumnName = dateFieldObj ? dateFieldObj.db_column_name : schedulerConfig.start_date_field;
-        orderSql = `"${modelName}"."${dateColumnName}" DESC, "${modelName}"."${primaryKeyName}" DESC`;
+        const dateColumnName = resolveOrderField(schedulerConfig.start_date_field);
+        if (dateColumnName) {
+          orderSql = `"${modelName}"."${dateColumnName}" DESC, "${modelName}"."${primaryKeyName}" DESC`;
+        }
       }
 
       let rawQuery = '';

@@ -14,7 +14,7 @@ export default async function SettingsDashboard({ params }: SettingsDashboardPro
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/auth/session-expired')
 
   // 1. Resolve Workspace
   const { data: workspace, error: workspaceError } = await supabase

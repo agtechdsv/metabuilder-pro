@@ -14,7 +14,7 @@ export default async function LogsPage({ params }: LogsPageProps) {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/auth/session-expired')
 
   const { data: workspace, error: workspaceError } = await supabase
     .from('workspaces')

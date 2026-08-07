@@ -82,6 +82,16 @@ export default function DynamicKanban({
     return values.sort()
   }, [data, groupColumnName, groupField])
 
+  // Processar kanbanCardFields que podem ser strings JSON ou objetos
+  const processedKanbanCardFields = useMemo(() => {
+    if (!kanbanCardFields || kanbanCardFields.length === 0) return []
+    const { resolveDynamicFieldDef } = require('@/lib/field-resolver')
+    return kanbanCardFields.map(cardField => {
+      const resolved = resolveDynamicFieldDef(cardField, fields)
+      return resolved ? resolved.db_column_name : null
+    }).filter(Boolean)
+  }, [kanbanCardFields, fields])
+
   // Sensores para DND
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -177,8 +187,8 @@ export default function DynamicKanban({
               // Hide group columns from card content
               if (f.db_column_name === groupColumnName || f.db_column_name === kanbanGroupDisplayField) return false;
               // If card fields are specified, only show those
-              if (kanbanCardFields && kanbanCardFields.length > 0) {
-                return kanbanCardFields.includes(f.db_column_name);
+              if (processedKanbanCardFields && processedKanbanCardFields.length > 0) {
+                return processedKanbanCardFields.includes(f.db_column_name);
               }
               return true;
             })}

@@ -121,7 +121,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
     zone03: true
   })
   const toggleZone = (zone: string) => setExpandedZones(prev => ({ ...prev, [zone]: !prev[zone] }))
-  const [hiddenDetails, setHiddenDetails] = useState<Set<string>>(new Set())
+  const [hiddenDetails, setHiddenDetails] = useState<Set<string>>(new Set(config?.layout_config?.hidden_details || []))
   const [retractedModels, setRetractedModels] = useState<Set<string>>(new Set())
   const hasInitializedRetractedRef = useRef(false)
 

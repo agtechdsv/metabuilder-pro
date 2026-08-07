@@ -15,7 +15,7 @@ export default async function SetPasswordPage({
   
   // Se não estiver logado, manda pro login
   if (!user) {
-    redirect('/login')
+    redirect('/auth/session-expired')
   }
 
   // Se ele já definiu a senha (need_password_setup não é true), redireciona direto

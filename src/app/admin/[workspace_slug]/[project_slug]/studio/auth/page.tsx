@@ -224,7 +224,7 @@ export default function AuthSettingsPage() {
           .single()
         if (profData) setProfile(profData)
       } else {
-        router.replace('/login')
+        router.replace('/')
         return
       }
 

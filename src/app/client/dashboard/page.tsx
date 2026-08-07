@@ -11,7 +11,7 @@ export default async function ClientDashboardPage() {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/auth/session-expired')
 
   const { verifyMfaPolicy } = await import('@/app/auth/actions')
   const mfaRes = await verifyMfaPolicy()

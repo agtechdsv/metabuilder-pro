@@ -234,7 +234,7 @@ export async function signInWithGoogle() {
   })
 
   if (error) {
-    return redirect(`/login?error=${encodeURIComponent(error.message)}`)
+    return redirect(`/?error=${encodeURIComponent(error.message)}`)
   }
 
   if (data.url) {

@@ -26,7 +26,7 @@ export function MfaSetupForm() {
         // Verificar se usuário está logado em AAL1 (password)
         const { data: { user }, error: userError } = await supabase.auth.getUser()
         if (userError || !user) {
-          router.push('/login')
+          router.push('/')
           return
         }
 

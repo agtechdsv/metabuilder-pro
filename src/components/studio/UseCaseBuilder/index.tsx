@@ -104,10 +104,10 @@ export function UseCaseBuilderWizard({
   // ── Step definitions ──────────────────────────────────────────────────────────
   const steps = [
     { id: 1, title: t('wizard.steps.logic', 'Lógica'), icon: <Settings2 className="w-4 h-4" /> },
-    { id: 2, title: config.logic_type === 'personalizado' ? t('wizard.steps.tables_layout', 'Tabelas & Layout') : t('wizard.steps.tables', 'Tabelas'), icon: <Database className="w-4 h-4" /> },
+    { id: 2, title: config.logic_type === 'personalizado' ? t('wizard.steps.master_uc', 'Caso de Uso Mestre') : t('wizard.steps.tables', 'Tabelas'), icon: <Database className="w-4 h-4" /> },
     { id: 3, title: t('wizard.steps.layout', 'Campos & Layout'), icon: <Layout className="w-4 h-4" />, hidden: config.logic_type === 'personalizado' },
     { id: 4, title: t('wizard.steps.actions', 'Query & Ações Finais'), icon: <MousePointer2 className="w-4 h-4" /> }
-  ].filter(s => !s.hidden)
+  ].filter(s => !(s as any).hidden)
 
   // ── Validation ────────────────────────────────────────────────────────────────
   const isStepValid = (step: number): boolean => {
@@ -497,7 +497,7 @@ export function UseCaseBuilderWizard({
           <StepLogic config={config} setConfig={setConfig} />
         )}
         {currentStep === 2 && config.logic_type === 'personalizado' ? (
-          <StepPersonalizado config={config} setConfig={setConfig} models={models} useCases={useCases} />
+          <StepPersonalizado config={config} setConfig={setConfig} models={models} useCases={useCases} relations={relations} />
         ) : currentStep === 2 ? (
           <StepTables config={config} setConfig={setConfig} models={models} relations={relations} />
         ) : null}

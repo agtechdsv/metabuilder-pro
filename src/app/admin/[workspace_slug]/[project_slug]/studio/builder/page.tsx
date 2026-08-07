@@ -72,7 +72,7 @@ export default function UseCaseBuilder() {
       // 1. Resolve User
       const { data: { user: userData } } = await supabase.auth.getUser()
       if (!userData) {
-        router.replace('/login')
+        router.replace('/')
         return
       }
 
@@ -84,7 +84,7 @@ export default function UseCaseBuilder() {
         .single()
       
       if (!ws) {
-        router.replace('/login')
+        router.replace('/')
         return
       }
 
@@ -97,7 +97,7 @@ export default function UseCaseBuilder() {
         .single()
       
       if (!proj) {
-        router.replace('/login')
+        router.replace('/')
         return
       }
 
