@@ -12,6 +12,7 @@ import { resolveRelations, resolveAllJoins } from '@/lib/relations'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { useToast } from '@/components/ui/Toast'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
+import DeleteConfirmModal from './DeleteConfirmModal'
 
 // Use dynamic import for ViewContainer to avoid SSR issues
 const ViewContainer = dynamic(() => import('./ViewContainer'), { ssr: false })
@@ -123,6 +124,17 @@ export default function CustomUseCaseRenderer({
     rowData: any
     isSaving: boolean
   } | null>(null)
+  
+  const [deleteModalState, setDeleteModalState] = useState<{
+    isOpen: boolean
+    rowData: any
+    slotModelName: string
+    pkField: any
+    pkName: string
+    pkValue: any
+    isDeleting: boolean
+  } | null>(null)
+
   const [inlineRefreshKey, setInlineRefreshKey] = useState(0)
   const { toast } = useToast()
 
@@ -178,7 +190,11 @@ export default function CustomUseCaseRenderer({
     // São idênticas às que page.tsx monta — garantindo paridade 100% com o original
     const ucDisplayFields = uc.displayFields || [];
     const ucFormFields = uc.formFields || [];
-    const ucFilterFields = uc.filterFields || [];
+    
+    // Oculta a Zona 1 (filtros) por padrão em abas, a não ser que o dev ative no Studio
+    const showFilters = slot.show_filters === true;
+    const ucFilterFields = showFilters ? (uc.filterFields || []) : [];
+    
     const ucModelName = uc.modelName || '';
     const ucLogicType = uc.logicType || 'grid';
     const ucPrimaryKeyName = uc.primaryKeyName || 'id';
@@ -424,10 +440,75 @@ export default function CustomUseCaseRenderer({
       );
     }
 
+    // ─── Handlers de Ação para as Abas ────────────────────────────────────────
+    // Conecta os botões padrão (Visualizar/Editar/Excluir/Novo) ao sistema
+    // de modal inline existente no CustomUseCaseRenderer.
+    // Sem estes handlers, os botões aparecem mas não fazem nada.
+
+    const handleSlotEdit = (row: any) => {
+      setInlineModalState({
+        isOpen: true,
+        mode: 'edit',
+        slotId: slot.id,
+        slotModelName: ucModelName,
+        formFields: ucFormFields,
+        rowData: row,
+        isSaving: false
+      })
+      setInlineRefreshKey(k => k + 1)
+    }
+
+    const handleSlotView = (row: any) => {
+      // Reutiliza o modal de edição em modo visualização (read-only via isLoading trick)
+      setInlineModalState({
+        isOpen: true,
+        mode: 'edit',
+        slotId: slot.id,
+        slotModelName: ucModelName,
+        formFields: ucFormFields,
+        rowData: row,
+        isSaving: false
+      })
+    }
+
+    const handleSlotAdd = () => {
+      setInlineModalState({
+        isOpen: true,
+        mode: 'create',
+        slotId: slot.id,
+        slotModelName: ucModelName,
+        formFields: ucFormFields,
+        rowData: {},
+        isSaving: false
+      })
+    }
+
+    const handleSlotDelete = (row: any) => {
+      const pkField = ucFormFields.find((f: any) => f.is_primary_key) || { db_column_name: ucPrimaryKeyName }
+      const pkName = pkField.db_column_name.split('.').pop() || ucPrimaryKeyName || 'id'
+      const pkValue = row?.[pkName] || row?.id || row?.ID
+
+      if (!pkValue) {
+        toast('Não foi possível identificar o registro para exclusão.', 'error')
+        return
+      }
+
+      setDeleteModalState({
+        isOpen: true,
+        rowData: row,
+        slotModelName: ucModelName,
+        pkField,
+        pkName,
+        pkValue,
+        isDeleting: false
+      })
+    }
+    // ──────────────────────────────────────────────────────────────────────────
+
     return (
       <div key={slot.id} className="h-full relative overflow-y-auto w-full">
         <ViewContainer
-          externalRefreshTrigger={refreshTrigger}
+          externalRefreshTrigger={inlineRefreshKey + (refreshTrigger || 0)}
           projectId={projectId!}
           modelName={ucModelName}
           displayFields={ucDisplayFields}
@@ -451,6 +532,11 @@ export default function CustomUseCaseRenderer({
           buttonsConfig={uc.buttonsConfig || []}
           customActions={uc.customActions || []}
 
+          onAdd={handleSlotAdd}
+          onView={handleSlotView}
+          onEdit={handleSlotEdit}
+          onDelete={handleSlotDelete}
+
           externalFilters={externalFilters}
           advancedStaticFilters={advancedStaticFilters.length > 0 ? advancedStaticFilters : undefined}
 
@@ -467,6 +553,7 @@ export default function CustomUseCaseRenderer({
       </div>
     );
   }
+
 
   const handleInlineSave = async (formData: any) => {
     if (!inlineModalState) return
@@ -589,6 +676,83 @@ export default function CustomUseCaseRenderer({
     } catch (err: any) {
       toast('Erro inesperado: ' + err.message, 'error')
       setInlineModalState(prev => prev ? { ...prev, isSaving: false } : null)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteModalState) return
+    setDeleteModalState(prev => prev ? { ...prev, isDeleting: true } : null)
+
+    const { slotModelName, pkName, pkValue } = deleteModalState
+    const supabase = createClient()
+    const queryId = crypto.randomUUID()
+    const slotModel = project?.models?.find((m: any) => m.db_table_name === slotModelName)
+    const schemaName = slotModel?.db_schema_name || project?.slug || 'public'
+    const rawQuery = `DELETE FROM "${slotModelName}" WHERE "${pkName}" = '${String(pkValue).replace(/'/g, "''")}'`
+
+    const isTemporary = !tunnelChannel || !isTunnelReady
+    const channelName = `tunnel:${projectId}`
+    const channel = isTemporary ? wrapChannelWithChunking(supabase.channel(channelName)) : tunnelChannel
+
+    try {
+      const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
+        let settled = false
+        const handleResult = (payload: any) => {
+          if (payload.payload?.queryId === queryId) {
+            settled = true
+            cleanup()
+            resolve({ success: payload.payload.success, error: payload.payload.error })
+          }
+        }
+        const cleanup = () => {
+          try {
+            const bindings = channel.bindings?.broadcast
+            if (Array.isArray(bindings)) {
+              channel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult)
+            }
+            if (isTemporary) { channel.unsubscribe(); supabase.removeChannel(channel) }
+          } catch (_) {}
+        }
+        channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
+        channel.on('broadcast', { event: 'sql_result' }, handleResult)
+        const doSend = () => channel.send({
+          type: 'broadcast',
+          event: 'sql_query',
+          payload: {
+            queryId,
+            table: slotModelName,
+            action: 'delete',
+            sql: rawQuery,
+            idColumn: pkName,
+            idValue: pkValue,
+            token: project?.secret_token || 'test-token',
+            schemaName,
+            slug: project?.slug
+          }
+        })
+        if (isTemporary) {
+          channel.subscribe((status: string) => {
+            if (status === 'SUBSCRIBED') doSend()
+          })
+        } else {
+          doSend()
+        }
+        setTimeout(() => {
+          if (!settled) { cleanup(); resolve({ success: false, error: 'Timeout' }) }
+        }, 15000)
+      })
+
+      if (result.success) {
+        toast('Registro excluído com sucesso!', 'success')
+        setInlineRefreshKey(k => k + 1)
+        setDeleteModalState(null)
+      } else {
+        toast(`Erro ao excluir: ${result.error || 'Erro desconhecido'}`, 'error')
+        setDeleteModalState(prev => prev ? { ...prev, isDeleting: false } : null)
+      }
+    } catch (e: any) {
+      toast(`Erro: ${e.message}`, 'error')
+      setDeleteModalState(prev => prev ? { ...prev, isDeleting: false } : null)
     }
   }
 
@@ -804,6 +968,13 @@ export default function CustomUseCaseRenderer({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <DeleteConfirmModal 
+        isOpen={!!deleteModalState?.isOpen} 
+        onClose={() => setDeleteModalState(null)} 
+        onConfirm={handleConfirmDelete}
+        isLoading={deleteModalState?.isDeleting}
+      />
     </div>
   )
 }
