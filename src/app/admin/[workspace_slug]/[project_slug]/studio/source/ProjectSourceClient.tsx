@@ -6,7 +6,7 @@ import { LocalSyncManager } from '@/utils/localSyncManager'
 import dynamic from 'next/dynamic'
 import { 
   FolderGit2, Play, DownloadCloud, AlertTriangle, 
-  CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronDown, Folder
+  CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronDown, Folder, History, X
 } from 'lucide-react'
 import * as tauriFs from '@tauri-apps/plugin-fs'
 import { BaseDirectory } from '@tauri-apps/api/path'
@@ -33,6 +33,8 @@ export function ProjectSourceClient({ project, user }: any) {
   const [sandboxMode, setSandboxMode] = useState(false)
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [devProcess, setDevProcess] = useState<any>(null)
+  const [gitLogs, setGitLogs] = useState<any[]>([])
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false)
   
   const supabase = createClient()
   const { toast } = useToast()
@@ -186,6 +188,17 @@ export function ProjectSourceClient({ project, user }: any) {
     }
   }
 
+  const handleShowLogs = async () => {
+    if (!syncManager) return
+    try {
+      const logs = await syncManager.getLog()
+      setGitLogs(logs)
+      setIsLogModalOpen(true)
+    } catch (err: any) {
+      toast(`Erro ao carregar histórico: ${err.message}`, 'error')
+    }
+  }
+
   const renderTree = (nodes: FileNode[]) => {
     return nodes.map(node => (
       <div key={node.path} className="ml-4">
@@ -281,6 +294,14 @@ export function ProjectSourceClient({ project, user }: any) {
           <div className="w-px h-6 bg-neutral-800 mx-2" />
 
           <button 
+            onClick={handleShowLogs}
+            className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded text-sm font-semibold transition-colors"
+            title="Ver Histórico (Git Log)"
+          >
+            <History className="w-4 h-4" /> Histórico
+          </button>
+
+          <button 
             onClick={handleRunDev}
             disabled={!!devProcess}
             className="flex items-center gap-2 px-4 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded text-sm font-semibold transition-colors disabled:opacity-50"
@@ -341,6 +362,47 @@ export function ProjectSourceClient({ project, user }: any) {
           </div>
         )}
       </div>
+
+      {/* Git Log Modal */}
+      {isLogModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1e1e1e] border border-neutral-800 rounded-xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between p-4 border-b border-neutral-800 shrink-0">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <History className="w-5 h-5 text-indigo-400" /> Histórico de Sincronizações (Git Log)
+              </h2>
+              <button 
+                onClick={() => setIsLogModalOpen(false)}
+                className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {gitLogs.length === 0 ? (
+                <div className="text-center text-neutral-500 py-8">Nenhum commit encontrado.</div>
+              ) : (
+                gitLogs.map(log => (
+                  <div key={log.oid} className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="font-bold text-white text-sm">{log.message}</div>
+                      <div className="text-xs text-neutral-500 font-mono bg-neutral-950 px-2 py-1 rounded">
+                        {log.oid.substring(0, 7)}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-neutral-400">
+                      <span className="flex items-center gap-1.5"><FolderGit2 className="w-3.5 h-3.5" /> {log.author}</span>
+                      <span>•</span>
+                      <span>{log.timestamp}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

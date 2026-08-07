@@ -214,4 +214,22 @@ export class LocalSyncManager {
     // Delete sandbox branch
     await git.deleteBranch({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'sync-sandbox' });
   }
+
+  /**
+   * Retrieves the commit log for the current branch.
+   */
+  public async getLog(depth: number = 50) {
+    if (!isTauri()) return [];
+    try {
+      const commits = await git.log({ fs: tauriFsAdapter, dir: this.projectDir, depth });
+      return commits.map(c => ({
+        oid: c.oid,
+        message: c.commit.message,
+        author: c.commit.author.name,
+        timestamp: new Date(c.commit.author.timestamp * 1000).toLocaleString()
+      }));
+    } catch (e) {
+      return [];
+    }
+  }
 }
