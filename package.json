@@ -37,6 +37,7 @@
     "date-fns": "^4.3.0",
     "esbuild": "^0.28.1",
     "framer-motion": "^12.38.0",
+    "isomorphic-git": "^1.40.4",
     "jspdf": "^4.2.1",
     "jszip": "^3.10.1",
     "leaflet": "^1.9.4",

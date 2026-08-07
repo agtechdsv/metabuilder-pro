@@ -10,7 +10,8 @@ import {
   Code2,
   Network,
   Terminal,
-  Server
+  Server,
+  FolderGit2
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -98,6 +99,13 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
       icon: Server,
       label: 'SQL Studio',
       active: pathname.includes('/studio/sql'),
+      gate: 'desktop'
+    },
+    {
+      href: `${base}/source`,
+      icon: FolderGit2,
+      label: 'Ejetar & Sincronizar (IDE Local)',
+      active: pathname.includes('/studio/source'),
       gate: 'desktop'
     },
   ]

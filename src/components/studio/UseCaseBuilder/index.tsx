@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   ArrowLeft, Save, ChevronRight, ChevronLeft,
   Settings2, Database, Layout, MousePointer2,
-  Trash2, CheckCircle2, Loader2, X, Code2
+  Trash2, CheckCircle2, Loader2, X
 } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
@@ -37,7 +37,6 @@ import { StepActions } from '../StepActions'
 // ── Utils ──────────────────────────────────────────────────────────────────────
 import { createDefaultFieldMeta } from './utils'
 import type { UseCaseBuilderWizardProps } from './types'
-import { UseCaseCodeEditor } from './UseCaseCodeEditor'
 
 export function UseCaseBuilderWizard({
   initialData,
@@ -59,7 +58,6 @@ export function UseCaseBuilderWizard({
   const [isDiscardModalOpen, setIsDiscardModalOpen] = useState(false)
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false)
   const [currentStatus, setCurrentStatus] = useState<string>(initialData?.status || 'draft')
-  const [isCodeEditorOpen, setIsCodeEditorOpen] = useState(false)
 
   // ── Data fetching ────────────────────────────────────────────────────────────
   const {
@@ -460,17 +458,6 @@ export function UseCaseBuilderWizard({
                   )}
                 </>
               )}
-
-              {/* Code Mode button */}
-              <button
-                onClick={() => setIsCodeEditorOpen(true)}
-                title="Editar como código (Code Mode)"
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-indigo-600 text-zinc-400 hover:text-white border border-zinc-700 hover:border-indigo-500 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95"
-              >
-                <Code2 className="w-3.5 h-3.5" />
-                &lt;/&gt;
-              </button>
-
               <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 active:scale-95">
                 {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                 {isSaving ? (initialData ? t('wizard.buttons.updating') : t('wizard.buttons.saving')) : (initialData ? t('wizard.buttons.update') : t('wizard.buttons.finish'))}
@@ -560,21 +547,6 @@ export function UseCaseBuilderWizard({
           </button>
         </div>
       </div>
-
-      {/* Code Mode Editor */}
-      {isCodeEditorOpen && (
-        <UseCaseCodeEditor
-          config={config}
-          models={models}
-          initialData={initialData}
-          projectId={currentProjectId}
-          onClose={() => setIsCodeEditorOpen(false)}
-          onApply={(newConfig) => {
-            setConfig(newConfig)
-            setIsCodeEditorOpen(false)
-          }}
-        />
-      )}
 
       {/* Discard Draft Modal */}
       {isDiscardModalOpen && (

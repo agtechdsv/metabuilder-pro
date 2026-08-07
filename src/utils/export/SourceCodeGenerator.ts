@@ -68,6 +68,27 @@ export class SourceCodeGenerator {
   }
 
   public async generate(): Promise<Buffer> {
+    await this.buildZip()
+    return await this.zip.generateAsync({ type: 'nodebuffer' })
+  }
+
+  public async generateFileMap(): Promise<Record<string, string>> {
+    await this.buildZip()
+    const fileMap: Record<string, string> = {}
+    
+    // JSZip uses relative paths as keys in zip.files
+    for (const relativePath of Object.keys(this.zip.files)) {
+      const zipObject = this.zip.files[relativePath]
+      if (!zipObject.dir) {
+        const content = await zipObject.async('string')
+        fileMap[relativePath] = content
+      }
+    }
+    
+    return fileMap
+  }
+
+  private async buildZip(): Promise<void> {
     generateRootFiles(this.zip, this.project, this.dataMode, this.authStrategy)
     generateEnv(this.zip, this.project, this.dataMode, this.authStrategy, this.dbConfig)
     
@@ -652,7 +673,5 @@ export function PermissionGuard({ children }: { viewSlug: string, children: Reac
 
     // Prevent Next.js favicon 404 in console
     this.zip.folder('public')?.file('favicon.ico', '')
-
-    return await this.zip.generateAsync({ type: 'nodebuffer' })
   }
 }
