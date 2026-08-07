@@ -79,89 +79,37 @@ export default function CustomUseCaseRenderer({
 }: CustomUseCaseRendererProps) {
   const getSlotId = (slot: any, idx: number) => slot?.id || slot?.use_case_slug || `slot-${idx}`;
   const [activeTabId, setActiveTabId] = useState<string>(customSlots && customSlots.length > 0 ? getSlotId(customSlots[0], 0) : '')
-  const [injectedUseCases, setInjectedUseCases] = useState<Record<string, any>>({})
-  const [extraFields, setExtraFields] = useState<any[]>([])
-  
+  // slotProps: props completas vindas do servidor para cada slot, keyed by use_case_slug
+  const [slotProps, setSlotProps] = useState<Record<string, any>>({})
+
   React.useEffect(() => {
-    async function fetchUseCases() {
+    async function fetchAllSlotProps() {
       if (!customSlots || !projectId) return;
-      const slugsToFetch = customSlots.map((s:any) => s.use_case_slug).filter(Boolean);
+      const slugsToFetch = customSlots.map((s: any) => s.use_case_slug).filter(Boolean);
       if (slugsToFetch.length === 0) return;
-      
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('ui_views')
-        .select(`
-          *, 
-          model:models(id, db_table_name, fields(*)),
-          ui_components(
-            component_type,
-            label,
-            order_index,
-            is_visible,
-            config,
-            field:fields (*)
-          )
-        `)
-        .eq('project_id', projectId)
-        .in('slug', slugsToFetch);
-        
-      if (data && !error) {
-        const mapping: Record<string, any> = {};
-        const missingFieldIds = new Set<string>();
 
-        data.forEach((uc: any) => {
-          mapping[uc.slug] = uc;
-          
-          const extractFieldIds = (config: any, fields: string[]) => {
-            if (!config) return;
-            fields.forEach(f => {
-              if (config[f]) {
-                 let parsed: any = null;
-                 try {
-                   if (typeof config[f] === 'string' && config[f].startsWith('{')) parsed = JSON.parse(config[f]);
-                   else if (typeof config[f] === 'object') parsed = config[f];
-                 } catch(e) {}
-                 if (parsed) {
-                   if (parsed.target_field_id) missingFieldIds.add(parsed.target_field_id);
-                   if (parsed.relation_path && parsed.relation_path.length > 0) missingFieldIds.add(parsed.relation_path[0].foreign_column_id);
-                 } else {
-                   missingFieldIds.add(config[f]);
-                 }
-              }
-            });
-          };
-
-          const ucConfig = uc.config || {};
-          const ucLayout = uc.layout_config || {};
-          
-          extractFieldIds(ucLayout.galleryConfig || ucConfig.galleryConfig || ucLayout.gallery_config, ['image_field', 'title_field']);
-          if (ucLayout.galleryConfig?.card_fields) ucLayout.galleryConfig.card_fields.forEach((cf: any) => extractFieldIds({cf}, ['cf']));
-          if (ucLayout.gallery_config?.card_fields) ucLayout.gallery_config.card_fields.forEach((cf: any) => extractFieldIds({cf}, ['cf']));
-          
-          extractFieldIds(ucLayout.timelineConfig || ucConfig.timelineConfig || ucLayout.timeline_config, ['date_field', 'title_field', 'desc_field', 'icon_field']);
-          extractFieldIds(ucLayout.schedulerConfig || ucConfig.schedulerConfig || ucLayout.scheduler_config, ['start_date_field', 'end_date_field', 'title_field', 'color_field']);
-          extractFieldIds(ucLayout.mapConfig || ucConfig.mapConfig || ucLayout.map_config, ['lat_field', 'lng_field', 'title_field', 'desc_field']);
-          extractFieldIds(ucLayout.ganttConfig || ucConfig.ganttConfig || ucLayout.gantt_config, ['title_field', 'start_date_field', 'end_date_field', 'progress_field']);
-          extractFieldIds(ucLayout.blueprintConfig || ucConfig.blueprintConfig || ucLayout.blueprint_config, ['title_field', 'desc_field', 'status_field', 'predecessor_field']);
-          
-          const kGroup = ucLayout.kanbanGroupField || ucConfig.kanbanGroupField || ucLayout.kanban_group_field;
-          const kCards = ucLayout.kanbanCardFields || ucConfig.kanbanCardFields || ucLayout.kanban_card_fields || ucLayout.kanban_cards_fields;
-          if (kGroup) extractFieldIds({k: kGroup}, ['k']);
-          if (Array.isArray(kCards)) {
-             kCards.forEach((c: any) => extractFieldIds({c}, ['c']));
+      // Busca props de todos os slots em paralelo via API Route server-side
+      const results = await Promise.all(
+        slugsToFetch.map(async (slug: string) => {
+          try {
+            const res = await fetch(`/api/runtime/slot-props?projectId=${projectId}&slug=${encodeURIComponent(slug)}`);
+            if (!res.ok) return { slug, props: null };
+            const props = await res.json();
+            return { slug, props };
+          } catch (e) {
+            console.error(`[CustomUseCaseRenderer] Erro ao buscar props para slug "${slug}":`, e);
+            return { slug, props: null };
           }
-        });
+        })
+      );
 
-        if (missingFieldIds.size > 0) {
-          const { data: extra } = await supabase.from('fields').select('*').in('id', Array.from(missingFieldIds));
-          if (extra) setExtraFields(extra);
-        }
-
-        setInjectedUseCases(mapping);
-      }
+      const mapping: Record<string, any> = {};
+      results.forEach(({ slug, props }) => {
+        if (props) mapping[slug] = props;
+      });
+      setSlotProps(mapping);
     }
-    fetchUseCases();
+    fetchAllSlotProps();
   }, [customSlots, projectId]);
   const [openSlotConfig, setOpenSlotConfig] = useState<{ id: string, type: 'modal' | 'drawer', recordId?: any } | null>(autoOpenSlotConfig || null)
 
@@ -214,243 +162,38 @@ export default function CustomUseCaseRenderer({
   }
 
   const renderSlotContent = (slot: any) => {
-    const uc = injectedUseCases[slot.use_case_slug];
+    const uc = slotProps[slot.use_case_slug];
     if (!uc) {
       return (
         <div className="p-8 text-center text-neutral-500 flex flex-col items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mb-4"></div>
-          Carregando Caso de Uso Injetado...
+          Carregando Caso de Uso...
         </div>
       );
     }
 
     const useMasterId = slot.use_master_id !== false;
-    const hasStaticFilters = slot.static_filters && slot.static_filters.some((f: any) => f.field && f.value);
-    
-    // Configurações do Caso de Uso
-    const isPreview = typeof window !== 'undefined' && window.location.search.includes('preview=draft');
-    const sourceConfig = (isPreview && uc.draft_config) ? uc.draft_config : uc;
-    
-    const ucConfig = sourceConfig.config || {};
-    const ucLayout = sourceConfig.layout_config || {};
-    
-    // Extrai e normaliza os campos a partir de ui_components (semelhante ao page.tsx)
-    const gridFieldsOrder = ucLayout.grid_fields || [];
-    const formFieldsOrder = ucLayout.form_fields || [];
-    const filterFieldsOrder = ucLayout.filter_fields || [];
 
-    const resolveSqlExpression = (field: any) => {
-      const dbColName = field.db_column_name;
-      if (field.model_id && field.model_id !== uc.model_id) {
-        const joinedTable = dictionary?.[field.model_id];
-        if (joinedTable) {
-          return `${joinedTable}.${dbColName} AS "${joinedTable}.${dbColName}"`;
-        }
-      }
-      return dbColName;
-    };
-
-    const resolveResultKey = (field: any) => {
-      const dbColName = field.db_column_name;
-      if (field.model_id && field.model_id !== uc.model_id) {
-        const joinedTable = dictionary?.[field.model_id];
-        if (joinedTable) {
-          return `${joinedTable}.${dbColName}`;
-        }
-      }
-      return dbColName;
-    };
-
-    const allComponents = uc.ui_components || [];
-    
-    const ucDisplayFields = allComponents
-      .filter((c: any) => c.is_visible !== false && (c.config?.zones?.includes('grid') || !c.config?.zones) && c.field?.is_visible_in_list !== false)
-      .sort((a: any, b: any) => {
-        const idxA = gridFieldsOrder.indexOf(a.field.id);
-        const idxB = gridFieldsOrder.indexOf(b.field.id);
-        if (idxA === -1 && idxB === -1) return (a.order_index || 0) - (b.order_index || 0);
-        if (idxA === -1) return 1;
-        if (idxB === -1) return -1;
-        return idxA - idxB;
-      })
-      .map((c: any) => ({
-        id: c.field.id,
-        model_id: c.field.model_id,
-        model_name: dictionary?.[c.field.model_id],
-        display_name: c.label || c.field.display_name || c.field.db_column_name,
-        db_column_name: resolveResultKey(c.field),
-        sql_expression: resolveSqlExpression(c.field),
-        is_primary_key: c.field.is_primary_key,
-        data_type: c.field.data_type,
-        is_sortable: c.field.is_sortable,
-        config: Object.keys(c.config || {}).length > 0 ? { ...(c.field.config || {}), ...(c.config || {}) } : c.field.config,
-        zone: 1
-      }));
-
-    // Injetar campos necessários para visualizações especiais (Galeria, Timeline, Kanban, etc)
-    const galleryComp = allComponents.find((c: any) => c.component_type === 'galeria');
-    const timelineComp = allComponents.find((c: any) => c.component_type === 'timeline');
-    const schedulerComp = allComponents.find((c: any) => c.component_type === 'scheduler');
-    const mapComp = allComponents.find((c: any) => c.component_type === 'map');
-    const ganttComp = allComponents.find((c: any) => c.component_type === 'gantt');
-    const blueprintComp = allComponents.find((c: any) => c.component_type === 'blueprint');
-    const kanbanComp = allComponents.find((c: any) => c.component_type === 'kanban');
-
-    const gConfig = galleryComp?.config || ucLayout.galleryConfig || ucConfig.galleryConfig || ucLayout.gallery_config;
-    const tConfig = timelineComp?.config || ucLayout.timelineConfig || ucConfig.timelineConfig || ucLayout.timeline_config;
-    const sConfig = schedulerComp?.config || ucLayout.schedulerConfig || ucConfig.schedulerConfig || ucLayout.scheduler_config;
-    const mConfig = mapComp?.config || ucLayout.mapConfig || ucConfig.mapConfig || ucLayout.map_config;
-    const ganttConfig = ganttComp?.config || ucLayout.ganttConfig || ucConfig.ganttConfig || ucLayout.gantt_config;
-    const blueprintConfig = blueprintComp?.config || ucLayout.blueprintConfig || ucConfig.blueprintConfig || ucLayout.blueprint_config;
-    const kGroup = kanbanComp?.config?.kanbanGroupField || kanbanComp?.config?.kanban_group_field || ucLayout.kanbanGroupField || ucConfig.kanbanGroupField || ucLayout.kanban_group_field;
-    const kCards = kanbanComp?.config?.kanbanCardFields || kanbanComp?.config?.kanban_cards_fields || kanbanComp?.config?.kanban_card_fields || ucLayout.kanbanCardFields || ucConfig.kanbanCardFields || ucLayout.kanban_card_fields || ucLayout.kanban_cards_fields;
-
-    console.log('[DEBUG-CUSR] Configs extraídas:', { tConfig, kGroup, kCards, gConfig, allComponents: allComponents.map((c: any) => c.component_type) });
-
-    const allRequiredFieldIds = new Set<string>();
-    
-    if (gConfig) {
-      if (gConfig.image_field) allRequiredFieldIds.add(gConfig.image_field);
-      if (gConfig.title_field) allRequiredFieldIds.add(gConfig.title_field);
-      (gConfig.card_fields || []).forEach((f: string) => allRequiredFieldIds.add(f));
-    }
-    if (tConfig) {
-      if (tConfig.date_field) allRequiredFieldIds.add(tConfig.date_field);
-      if (tConfig.title_field) allRequiredFieldIds.add(tConfig.title_field);
-      if (tConfig.desc_field) allRequiredFieldIds.add(tConfig.desc_field);
-      if (tConfig.icon_field) allRequiredFieldIds.add(tConfig.icon_field);
-    }
-    if (sConfig) {
-      if (sConfig.start_date_field) allRequiredFieldIds.add(sConfig.start_date_field);
-      if (sConfig.end_date_field) allRequiredFieldIds.add(sConfig.end_date_field);
-      if (sConfig.title_field) allRequiredFieldIds.add(sConfig.title_field);
-      if (sConfig.color_field) allRequiredFieldIds.add(sConfig.color_field);
-    }
-    if (mConfig) {
-      if (mConfig.lat_field) allRequiredFieldIds.add(mConfig.lat_field);
-      if (mConfig.lng_field) allRequiredFieldIds.add(mConfig.lng_field);
-      if (mConfig.title_field) allRequiredFieldIds.add(mConfig.title_field);
-      if (mConfig.desc_field) allRequiredFieldIds.add(mConfig.desc_field);
-    }
-    if (ganttConfig) {
-      if (ganttConfig.title_field) allRequiredFieldIds.add(ganttConfig.title_field);
-      if (ganttConfig.start_date_field) allRequiredFieldIds.add(ganttConfig.start_date_field);
-      if (ganttConfig.end_date_field) allRequiredFieldIds.add(ganttConfig.end_date_field);
-      if (ganttConfig.progress_field) allRequiredFieldIds.add(ganttConfig.progress_field);
-    }
-    if (blueprintConfig) {
-      if (blueprintConfig.title_field) allRequiredFieldIds.add(blueprintConfig.title_field);
-      if (blueprintConfig.desc_field) allRequiredFieldIds.add(blueprintConfig.desc_field);
-      if (blueprintConfig.status_field) allRequiredFieldIds.add(blueprintConfig.status_field);
-      if (blueprintConfig.predecessor_field) allRequiredFieldIds.add(blueprintConfig.predecessor_field);
-    }
-    if (kGroup) allRequiredFieldIds.add(kGroup);
-    if (kCards) {
-      (kCards || []).forEach((f: string) => allRequiredFieldIds.add(f));
-    }
-
-    const targetModel = project?.models?.find((m: any) => m.id === uc.model_id);
-
-    allRequiredFieldIds.forEach((fieldId: string) => {
-      if (!fieldId) return;
-
-      let actualFieldId = fieldId;
-      try {
-        let parsed: any = null;
-        if (typeof fieldId === 'string' && fieldId.startsWith('{')) {
-          parsed = JSON.parse(fieldId);
-        } else if (typeof fieldId === 'object' && fieldId !== null) {
-          parsed = fieldId;
-        }
-
-        if (parsed) {
-          actualFieldId = parsed.target_field_id;
-          if (parsed.relation_path && parsed.relation_path.length > 0) {
-            actualFieldId = parsed.relation_path[0].foreign_column_id;
-          }
-        }
-      } catch (e) {}
-
-      if (!actualFieldId) return;
-
-      if (!ucDisplayFields.some((f: any) => String(f.id) === String(actualFieldId) || f.db_column_name === actualFieldId)) {
-        let fieldData = allComponents.find((comp: any) => String(comp.field?.id) === String(actualFieldId) || comp.field?.db_column_name === actualFieldId)?.field;
-        
-        if (!fieldData && (uc.model?.fields || targetModel?.fields)) {
-          const fieldsArray = uc.model?.fields || targetModel?.fields;
-          fieldData = fieldsArray.find((f: any) => String(f.id) === String(actualFieldId) || f.db_column_name === actualFieldId);
-        }
-
-        if (!fieldData && extraFields.length > 0) {
-          fieldData = extraFields.find((f: any) => String(f.id) === String(actualFieldId));
-        }
-
-        if (fieldData) {
-          ucDisplayFields.push({
-            id: fieldData.id,
-            model_id: fieldData.model_id,
-            model_name: dictionary?.[fieldData.model_id] || targetModel?.db_table_name,
-            display_name: fieldData.display_name || fieldData.db_column_name,
-            db_column_name: resolveResultKey(fieldData),
-            sql_expression: resolveSqlExpression(fieldData),
-            is_primary_key: fieldData.is_primary_key,
-            data_type: fieldData.data_type,
-            is_sortable: fieldData.is_sortable,
-            config: fieldData.config || {},
-            hidden: true,
-            zone: 1
-          });
-        }
-      }
-    });
-
-    let ucFormFields = allComponents
-      .filter((c: any) => c.is_visible !== false && c.config?.zones?.includes('form') && c.field?.is_visible_in_form !== false)
-      .sort((a: any, b: any) => {
-        const idxA = formFieldsOrder.indexOf(a.field.id);
-        const idxB = formFieldsOrder.indexOf(b.field.id);
-        if (idxA === -1 && idxB === -1) return (a.order_index || 0) - (b.order_index || 0);
-        if (idxA === -1) return 1;
-        if (idxB === -1) return -1;
-        return idxA - idxB;
-      })
-      .map((c: any) => ({
-        id: c.field.id,
-        model_id: c.field.model_id,
-        model_name: dictionary?.[c.field.model_id],
-        display_name: c.label || c.field.display_name || c.field.db_column_name,
-        db_column_name: resolveResultKey(c.field),
-        sql_expression: resolveSqlExpression(c.field),
-        is_primary_key: c.field.is_primary_key,
-        data_type: c.field.data_type,
-        is_sortable: c.field.is_sortable,
-        config: Object.keys(c.config || {}).length > 0 ? { ...(c.field.config || {}), ...(c.config || {}) } : c.field.config,
-        zone: 3
-      }));
-
-    const ucFilterFields = allComponents
-      .filter((c: any) => c.is_visible !== false && c.config?.zones?.includes('filter') && c.field?.is_visible_in_list !== false)
-      .sort((a: any, b: any) => {
-        const idxA = filterFieldsOrder.indexOf(a.field.id);
-        const idxB = filterFieldsOrder.indexOf(b.field.id);
-        if (idxA === -1 && idxB === -1) return (a.order_index || 0) - (b.order_index || 0);
-        if (idxA === -1) return 1;
-        if (idxB === -1) return -1;
-        return idxA - idxB;
-      })
-      .map((c: any) => ({
-        id: c.field.id,
-        model_id: c.field.model_id,
-        model_name: dictionary?.[c.field.model_id],
-        display_name: c.label || c.field.display_name || c.field.db_column_name,
-        db_column_name: resolveResultKey(c.field),
-        sql_expression: resolveSqlExpression(c.field),
-        is_primary_key: c.field.is_primary_key,
-        data_type: c.field.data_type,
-        is_sortable: c.field.is_sortable,
-        config: Object.keys(c.config || {}).length > 0 ? { ...(c.field.config || {}), ...(c.config || {}) } : c.field.config,
-        zone: 2
-      }));
+    // Props vindas do servidor via /api/runtime/slot-props
+    // São idênticas às que page.tsx monta — garantindo paridade 100% com o original
+    const ucDisplayFields = uc.displayFields || [];
+    const ucFormFields = uc.formFields || [];
+    const ucFilterFields = uc.filterFields || [];
+    const ucModelName = uc.modelName || '';
+    const ucLogicType = uc.logicType || 'grid';
+    const ucPrimaryKeyName = uc.primaryKeyName || 'id';
+    const ucJoins = uc.joins || [];
+    const ucDictionary = uc.dictionary || {};
+    const ucProjectRelations = uc.projectRelations || projectRelations;
+    const tConfig = uc.timelineConfig;
+    const sConfig = uc.schedulerConfig;
+    const gConfig = uc.galleryConfig;
+    const mConfig = uc.mapConfig;
+    const ganttConfig = uc.ganttConfig;
+    const blueprintConfig = uc.blueprintConfig;
+    const kGroup = uc.kanbanGroupField;
+    const kCards = uc.kanbanCardFields;
+    const kGroupDisplay = uc.kanbanGroupDisplayField;
 
     // Se a aba exige vínculo com o Mestre e não temos o ID do mestre (ainda não foi salvo)
     if (useMasterId && (mode === 'create' || !parentId)) {
@@ -461,6 +204,9 @@ export default function CustomUseCaseRenderer({
       )
     }
 
+    // Resolve o modelId do slot a partir dos dados retornados pela API
+    const ucModelId = uc.modelId;
+
     let externalFilters: Record<string, any> = {};
     let advancedStaticFilters: any[] = [];
     let customJoins: any[] = [];
@@ -468,7 +214,7 @@ export default function CustomUseCaseRenderer({
 
     // Lógica de Vínculo com o Mestre
     if (useMasterId && parentId) {
-      const targetModelName = project?.models?.find((m: any) => m.id === uc.model_id)?.db_table_name;
+      const targetModelName = ucModelName;
       const mModelName = masterModelName || project?.models?.find((m: any) => m.id === masterModelId)?.db_table_name;
       
       // Lógica de Joins Dinâmicos (Santo Graal)
@@ -541,8 +287,8 @@ export default function CustomUseCaseRenderer({
           }
         }
 
-        if (!foreignKey && projectRelations && projectRelations.length > 0) {
-          const rel = projectRelations.find((r: any) => 
+        if (!foreignKey && ucProjectRelations && ucProjectRelations.length > 0) {
+          const rel = ucProjectRelations.find((r: any) => 
             (r.table_from === mModelName && r.table_to === targetModelName) || 
             (r.table_from === targetModelName && r.table_to === mModelName)
           );
@@ -593,7 +339,7 @@ export default function CustomUseCaseRenderer({
     }
 
     if (slot.static_filters && Array.isArray(slot.static_filters)) {
-      const targetModelName = project?.models?.find((m: any) => m.id === uc.model_id)?.db_table_name;
+      const targetModelName = ucModelName;
       const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === targetModelName?.toLowerCase());
       
       slot.static_filters.forEach((f: any) => {
@@ -645,14 +391,13 @@ export default function CustomUseCaseRenderer({
       })
     }
 
-    const isMasterTabEditingMasterRecord = (getSlotId(slot, visibleSlots.findIndex(s => s === slot)) === getSlotId(customSlots[0], 0)) && (!uc.model_id || uc.model_id === masterModelId);
+    const isMasterTabEditingMasterRecord = (getSlotId(slot, visibleSlots.findIndex(s => s === slot)) === getSlotId(customSlots[0], 0)) && (!ucModelId || ucModelId === masterModelId);
 
-    
     // Se for a aba principal do mestre, podemos reutilizar os 'fields' cacheados do componente pai (ViewPageContent)
     // para evitar reconstruir a árvore toda (útil para byoc e layouts pesados).
     const finalFormFields = (isMasterTabEditingMasterRecord && fields && fields.length > 0) ? fields : ucFormFields;
 
-    if (uc.logic_type === 'cadastro' || isMasterTabEditingMasterRecord || slot.render_mode === 'form') {
+    if (ucLogicType === 'cadastro' || isMasterTabEditingMasterRecord || slot.render_mode === 'form') {
       return (
         <div key={slot.id} className="h-full relative overflow-y-auto w-full p-4 lg:p-6 bg-white dark:bg-neutral-900 rounded-b-3xl">
           <RecordForm
@@ -663,16 +408,16 @@ export default function CustomUseCaseRenderer({
             onCancel={onClose}
             isLoading={isLoading}
             logicType="cadastro"
-            masterModelId={uc.model_id || masterModelId}
-            masterModelName={project?.models?.find((m: any) => m.id === (uc.model_id || masterModelId))?.db_table_name || masterModelName}
+            masterModelId={ucModelId || masterModelId}
+            masterModelName={ucModelName || masterModelName}
             projectId={projectId}
             secretToken={secretToken}
             tunnelChannel={tunnelChannel}
             isTunnelReady={isTunnelReady}
             project={project}
-            joins={ucLayout.joins || joins}
-            dictionary={dictionary}
-            hiddenDetails={ucLayout.hidden_details || []}
+            joins={ucJoins || joins}
+            dictionary={ucDictionary || dictionary}
+            hiddenDetails={uc.hiddenDetails || []}
             hideHeader={isMasterTabEditingMasterRecord}
           />
         </div>
@@ -684,15 +429,17 @@ export default function CustomUseCaseRenderer({
         <ViewContainer
           externalRefreshTrigger={refreshTrigger}
           projectId={projectId!}
-          modelName={project?.models?.find((m: any) => m.id === uc.model_id)?.db_table_name || ''}
+          modelName={ucModelName}
           displayFields={ucDisplayFields}
           filterFields={ucFilterFields}
           formFields={ucFormFields}
-          displayType="list"
-          logicType={uc.logic_type || 'grid'}
-          
+          displayType={uc.displayType || 'list'}
+          defaultView={uc.defaultView || 'list'}
+          logicType={ucLogicType}
+          primaryKeyName={ucPrimaryKeyName}
+
           kanbanGroupField={kGroup}
-          kanbanGroupDisplayField={kanbanComp?.config?.kanbanGroupDisplayField || kanbanComp?.config?.kanban_group_display_field || ucLayout.kanbanGroupDisplayField || ucConfig.kanbanGroupDisplayField || ucLayout.kanban_group_display_field}
+          kanbanGroupDisplayField={kGroupDisplay}
           kanbanCardFields={kCards}
           timelineConfig={tConfig}
           schedulerConfig={sConfig}
@@ -700,18 +447,22 @@ export default function CustomUseCaseRenderer({
           ganttConfig={ganttConfig}
           blueprintConfig={blueprintConfig}
           galleryConfig={gConfig}
-          galleryClickBehavior={galleryComp?.config?.galleryClickBehavior || galleryComp?.config?.gallery_click_behavior || ucLayout.galleryClickBehavior || ucConfig.galleryClickBehavior || ucLayout.gallery_click_behavior}
-          buttonsConfig={ucLayout.buttonsConfig || ucConfig.buttonsConfig || ucLayout.buttons_config || []}
-          
+          galleryClickBehavior={uc.galleryClickBehavior}
+          buttonsConfig={uc.buttonsConfig || []}
+          customActions={uc.customActions || []}
+
           externalFilters={externalFilters}
           advancedStaticFilters={advancedStaticFilters.length > 0 ? advancedStaticFilters : undefined}
-          
+
           locale="pt-BR"
           project={project}
-          joins={customJoinsResolved ? [...(ucLayout.joins || joins || []), ...customJoins] : (ucLayout.joins || joins)}
-          dictionary={dictionary}
+          joins={customJoinsResolved ? [...(ucJoins || []), ...customJoins] : ucJoins}
+          dictionary={ucDictionary}
+          projectRelations={ucProjectRelations}
           tunnelChannel={tunnelChannel}
           isTunnelReady={isTunnelReady}
+          filterGridColumns={uc.filterGridColumns}
+          initialItemsPerPage={uc.initialItemsPerPage}
         />
       </div>
     );
