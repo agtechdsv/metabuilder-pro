@@ -42,7 +42,7 @@ export function IDELanding({ user }: { user: any }) {
       {/* Header */}
       <header className="w-full px-8 py-6 flex items-center justify-between relative z-10">
         <div className="flex items-center gap-3">
-          <img src="/icon-desktop-square.png" alt="MetaBuilder PRO" className="w-10 h-10 object-contain drop-shadow-md" />
+          <img src="/logo-transparent_v4.png" alt="MetaBuilder PRO" className="w-12 h-12 object-contain drop-shadow-md" />
           <h1 className="text-xl font-bold tracking-tight">
             MetaBuilder<span className="text-indigo-600 dark:text-indigo-500">PRO</span>
           </h1>
@@ -112,7 +112,13 @@ export function IDELanding({ user }: { user: any }) {
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           <div className="bg-white/80 dark:bg-neutral-900/50 backdrop-blur-xl border border-neutral-200 dark:border-white/10 p-8 rounded-[2rem] shadow-2xl">
-            <h3 className="text-xl font-bold mb-6 text-center">Acesse sua conta</h3>
+            <div className="flex flex-col items-center">
+              <div className="w-20 h-20 flex items-center justify-center mb-4 relative group">
+                <div className="absolute inset-0 bg-indigo-500/10 blur-[20px] rounded-full pointer-events-none group-hover:bg-indigo-500/20 transition-colors duration-700" />
+                <img src="/logo-transparent_v4.png" alt="MetaBuilder PRO Logo" className="w-full h-full object-contain drop-shadow-lg relative z-10 hover:scale-105 transition-transform duration-700" />
+              </div>
+              <h3 className="text-xl font-bold mb-6 text-center">Acesse sua conta</h3>
+            </div>
             <LoginForm disableAutoRedirectOnMount={!isTauri()} />
           </div>
         </motion.div>

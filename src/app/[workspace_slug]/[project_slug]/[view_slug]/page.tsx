@@ -115,38 +115,87 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
 
   const view = views?.[0]
 
-  if (view && view.logic_type === 'personalizado' && view.layout_config?.master_use_case_slug) {
-    const { data: masterViews } = await supabase
-      .from('ui_views')
-      .select(`
-        ui_components (
-          label,
-          order_index,
-          is_visible,
-          config,
-          field:fields (*)
-        ),
-        layout_config,
-        buttons_config
-      `)
-      .eq('slug', view.layout_config.master_use_case_slug)
-      .eq('project_id', project.id)
-      .limit(1)
+  if (view && view.logic_type === 'personalizado') {
+    const masterSlug = view.layout_config?.master_use_case_slug
+    let resolvedMasterView: any = null
 
-    const masterView = masterViews?.[0]
-    if (masterView) {
-      view.ui_components = masterView.ui_components
+    // Tenta buscar o masterView pelo slug definido, mas só se for um slug diferente
+    // (evita auto-referência quando o personalizado aponta para si mesmo)
+    if (masterSlug && masterSlug !== view_slug) {
+      const { data: masterViews } = await supabase
+        .from('ui_views')
+        .select(`
+          id, slug, logic_type,
+          ui_components (
+            label,
+            order_index,
+            is_visible,
+            config,
+            field:fields (*)
+          ),
+          layout_config,
+          buttons_config
+        `)
+        .eq('slug', masterSlug)
+        .eq('project_id', project.id)
+        .limit(1)
+
+      const mv = masterViews?.[0]
+      // Só usa se realmente tiver campos configurados (não é outro personalizado vazio)
+      if (mv && mv.logic_type !== 'personalizado' && (mv.layout_config?.grid_fields?.length > 0 || mv.layout_config?.form_fields?.length > 0)) {
+        resolvedMasterView = mv
+      }
+    }
+
+    // Fallback: busca qualquer UC irmão do mesmo model com campos configurados
+    // Cobre o caso de auto-referência (master_use_case_slug === view_slug) e personalizados sem campos
+    if (!resolvedMasterView) {
+      const { data: siblings } = await supabase
+        .from('ui_views')
+        .select(`
+          id, slug, logic_type,
+          ui_components (
+            label,
+            order_index,
+            is_visible,
+            config,
+            field:fields (*)
+          ),
+          layout_config,
+          buttons_config
+        `)
+        .eq('project_id', project.id)
+        .eq('model_id', view.model_id)
+        .neq('logic_type', 'personalizado')
+        .neq('id', view.id)
+
+      // Prefere o que tem mais form_fields + grid_fields configurados
+      const ranked = (siblings || [])
+        .filter((v: any) => (v.layout_config?.grid_fields?.length || 0) > 0 || (v.layout_config?.form_fields?.length || 0) > 0)
+        .sort((a: any, b: any) =>
+          ((b.layout_config?.form_fields?.length || 0) + (b.layout_config?.grid_fields?.length || 0)) -
+          ((a.layout_config?.form_fields?.length || 0) + (a.layout_config?.grid_fields?.length || 0))
+        )
+
+      resolvedMasterView = ranked[0] || (siblings || [])[0] || null
+      if (resolvedMasterView) {
+        console.log(`[page.tsx] Personalizado "${view_slug}" sem campos — usando UC irmão "${resolvedMasterView.slug}" (${resolvedMasterView.logic_type})`)
+      }
+    }
+
+    if (resolvedMasterView) {
+      view.ui_components = resolvedMasterView.ui_components
       view.layout_config = {
         ...view.layout_config,
-        grid_fields: masterView.layout_config?.grid_fields,
-        filter_fields: masterView.layout_config?.filter_fields,
-        form_fields: masterView.layout_config?.form_fields,
+        grid_fields: resolvedMasterView.layout_config?.grid_fields,
+        filter_fields: resolvedMasterView.layout_config?.filter_fields,
+        form_fields: resolvedMasterView.layout_config?.form_fields,
         fields_metadata: {
           ...(view.layout_config?.fields_metadata || {}),
-          ...(masterView.layout_config?.fields_metadata || {})
+          ...(resolvedMasterView.layout_config?.fields_metadata || {})
         }
       }
-      view.buttons_config = masterView.buttons_config
+      view.buttons_config = resolvedMasterView.buttons_config
     }
   }
   // RBAC Permission Check

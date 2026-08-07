@@ -8,6 +8,9 @@ export function AgTechContent() {
 
   return (
     <div className="space-y-12">
+      <div className="flex justify-center mb-6">
+        <img src="/Logo-AGTech.jpeg" alt="AGTech" className="w-28 h-28 object-contain rounded-2xl shadow-md border border-neutral-100 dark:border-neutral-800" />
+      </div>
       <div className="space-y-6">
         <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
           {t('agtech.p1')}

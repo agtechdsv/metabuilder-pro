@@ -64,9 +64,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(props, {
       headers: {
-        // Cache de 30s no servidor para reduzir carga no Supabase
-        // A cada 30s o servidor revalida em background (stale-while-revalidate)
-        'Cache-Control': 's-maxage=30, stale-while-revalidate=60',
+        'Cache-Control': 'no-store, max-age=0',
       },
     })
   } catch (error) {

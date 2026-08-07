@@ -158,7 +158,13 @@ export default function CustomUseCaseRenderer({
   
   // The first slot is considered the Master. Other slots are Details.
   // For details, we need to pass the parent ID to filter the grid/kanban.
-  const parentId = initialData?.id
+  // Oracle uses UPPERCASE column names (e.g. ID instead of id), so we resolve
+  // the PK by checking lowercase first, then uppercase, then any key matching /^id$/i.
+  const parentId = initialData?.id ?? initialData?.ID ?? (
+    initialData
+      ? Object.entries(initialData).find(([k]) => /^id$/i.test(k))?.[1]
+      : undefined
+  )
 
   const getSlotIcon = (type: string) => {
     switch (type) {
@@ -262,13 +268,17 @@ export default function CustomUseCaseRenderer({
           customJoinsResolved = true;
           // Apply filter on the MASTER table instead of the local table!
           // This forces the query to traverse the JOIN graph to find matches.
+          // Resolve the actual PK column name from the master model (Oracle may use uppercase "ID")
+          const masterModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === mModelName?.toLowerCase());
+          const masterPkField = masterModel?.fields?.find((f: any) => f.is_primary_key);
+          const masterPkColName = masterPkField?.db_column_name || 'id';
           advancedStaticFilters.push({
-            field: `${mModelName}.id`,
+            field: `${mModelName}.${masterPkColName}`,
             operator: '=',
             value: parentId,
             logic: 'AND'
           });
-          console.log(`[MetaBuilder:CustomSlot] Joins dinâmicos resolvidos! ${customJoins.length} joins aplicados.`);
+          console.log(`[MetaBuilder:CustomSlot] Joins dinâmicos resolvidos! ${customJoins.length} joins aplicados. PK mestre: ${masterPkColName}`);
         }
       }
 
@@ -411,9 +421,11 @@ export default function CustomUseCaseRenderer({
 
     // Se for a aba principal do mestre, podemos reutilizar os 'fields' cacheados do componente pai (ViewPageContent)
     // para evitar reconstruir a árvore toda (útil para byoc e layouts pesados).
-    const finalFormFields = (isMasterTabEditingMasterRecord && fields && fields.length > 0) ? fields : ucFormFields;
+    // Também quando o UC do slot é 'personalizado', seus formFields estarão vazios — usar os do pai.
+    const needsParentFields = (isMasterTabEditingMasterRecord || ucLogicType === 'personalizado' || ucLogicType === 'mestre_detalhe' || ucLogicType === 'pesquisa_cadastro') && fields && fields.length > 0
+    const finalFormFields = needsParentFields ? fields : (ucFormFields.length > 0 ? ucFormFields : fields);
 
-    if (ucLogicType === 'cadastro' || isMasterTabEditingMasterRecord || slot.render_mode === 'form') {
+    if (ucLogicType === 'cadastro' || ucLogicType === 'personalizado' || ucLogicType === 'mestre_detalhe' || ucLogicType === 'pesquisa_cadastro' || isMasterTabEditingMasterRecord || slot.render_mode === 'form') {
       return (
         <div key={slot.id} className="h-full relative overflow-y-auto w-full p-4 lg:p-6 bg-white dark:bg-neutral-900 rounded-b-3xl">
           <RecordForm
@@ -512,7 +524,7 @@ export default function CustomUseCaseRenderer({
           projectId={projectId!}
           modelName={ucModelName}
           displayFields={ucDisplayFields}
-          filterFields={ucFilterFields}
+          filterFields={isMasterSlot ? ucFilterFields : []}
           formFields={ucFormFields}
           displayType={uc.displayType || 'list'}
           defaultView={uc.defaultView || 'list'}

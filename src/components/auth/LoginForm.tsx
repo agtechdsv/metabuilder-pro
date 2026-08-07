@@ -545,11 +545,9 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
       {/* Header Section with Animated Gradient Icon */}
       <div className="text-center mb-10">
         <div className="inline-flex relative group mb-8">
-          <div className="absolute inset-0 bg-indigo-500 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity rounded-full" />
-          <div className="relative p-5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-xl group-hover:scale-110 transition-all duration-500">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-              <Layers className="w-6 h-6 animate-pulse" />
-            </div>
+          <div className="absolute inset-0 bg-indigo-500 blur-[40px] opacity-20 group-hover:opacity-40 transition-opacity rounded-full" />
+          <div className="relative w-24 h-24 flex items-center justify-center group-hover:scale-110 transition-all duration-500">
+            <img src="/logo-transparent_v4.png" alt="Logo" className="w-full h-full object-contain drop-shadow-2xl" />
           </div>
         </div>
 

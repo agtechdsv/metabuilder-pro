@@ -68,8 +68,9 @@ export default function SplashPage() {
 
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center h-full pt-8" data-tauri-drag-region>
-          <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-lg mb-6 backdrop-blur-md">
-            <img src="/icon-desktop-square.png" alt="MetaBuilder PRO Logo" className="w-12 h-12 object-contain drop-shadow-md" />
+          <div className="w-40 h-40 flex items-center justify-center mb-6 relative group">
+            <div className="absolute inset-0 bg-indigo-500/20 blur-[40px] rounded-full pointer-events-none group-hover:bg-indigo-500/40 transition-colors duration-700" />
+            <img src="/logo-transparent_v4.png" alt="MetaBuilder PRO Logo" className="w-full h-full object-contain drop-shadow-2xl relative z-10 hover:scale-105 transition-transform duration-700" />
           </div>
           
           <h1 className="text-3xl font-black tracking-tight text-white mb-2">

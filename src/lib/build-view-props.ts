@@ -243,6 +243,58 @@ export async function buildViewProps(
     return idxA - idxB
   })
 
+  // Fallback para UC do tipo 'personalizado' sem displayFields próprios:
+  // A lista principal (ViewContainer) ficaria com linhas vazias sem isso.
+  // Busca displayFields de um UC irmão do mesmo model com grid_fields configurados.
+  if (view.logic_type === 'personalizado' && displayFields.length === 0) {
+    const { data: siblings } = await supabase
+      .from('ui_views')
+      .select(`*, ui_components(label, order_index, is_visible, config, field:fields(*))`)
+      .eq('project_id', projectId)
+      .eq('model_id', view.model_id)
+      .neq('logic_type', 'personalizado')
+      .neq('id', view.id)
+
+    const withGridFields = (siblings || []).filter((v: any) => (v.layout_config?.grid_fields?.length || 0) > 0)
+    const siblingView = withGridFields.length > 0
+      ? withGridFields.sort((a: any, b: any) => (b.layout_config?.grid_fields?.length || 0) - (a.layout_config?.grid_fields?.length || 0))[0]
+      : (siblings || [])[0]
+
+    if (siblingView) {
+      const siblingGridOrder: string[] = siblingView.layout_config?.grid_fields || []
+      const siblingComponents = siblingView.ui_components || []
+      const siblingDisplayFields = siblingComponents
+        .filter((c: any) => c.is_visible !== false && (c.config?.zones?.includes('grid') || !c.config?.zones) && c.field?.is_visible_in_list !== false)
+        .sort((a: any, b: any) => {
+          const idxA = siblingGridOrder.indexOf(a.field.id)
+          const idxB = siblingGridOrder.indexOf(b.field.id)
+          if (idxA === -1 && idxB === -1) return a.order_index - b.order_index
+          if (idxA === -1) return 1
+          if (idxB === -1) return -1
+          return idxA - idxB
+        })
+        .map((c: any) => ({
+          id: c.field.id,
+          model_id: c.field.model_id,
+          model_name: tableDictionary[c.field.model_id],
+          display_name: c.label || c.field.display_name || c.field.db_column_name,
+          db_column_name: resolveResultKey(c.field),
+          sql_expression: resolveSqlExpression(c.field),
+          is_primary_key: c.field.is_primary_key,
+          data_type: c.field.data_type,
+          is_sortable: c.field.is_sortable,
+          config: Object.keys(c.config || {}).length > 0
+            ? { ...(c.field.config || {}), ...(c.config || {}) }
+            : c.field.config
+        }))
+
+      if (siblingDisplayFields.length > 0) {
+        displayFields.push(...siblingDisplayFields)
+        console.log(`[buildViewProps] Personalizado "${viewSlug}" sem displayFields — usando ${siblingDisplayFields.length} campos do UC "${siblingView.slug}" (${siblingView.logic_type})`)
+      }
+    }
+  }
+
   const formFields: any[] = allComponents
     .filter((c: any) =>
       c.is_visible !== false &&
@@ -407,6 +459,80 @@ export async function buildViewProps(
   const buttonsConfig = view.buttons_config || []
   const canAdd = buttonsConfig.find((b: any) => b.id === 'add')?.visible !== false
   const canExport = buttonsConfig.find((b: any) => b.id === 'export')?.visible !== false
+
+  // Fallback para UC do tipo 'personalizado' sem formFields próprios:
+  // Busca os formFields do UC filho definido em masterUseCaseSlug (se diferente do próprio slug)
+  // OU procura qualquer outro UC do mesmo model com formFields configurados.
+  // Isso ocorre quando o slot da 1ª aba aponta para o próprio personalizado (padrão Oracle)
+  if (view.logic_type === 'personalizado' && formFields.length === 0) {
+    const masterSlug = view.layout_config?.master_use_case_slug
+    let masterView: any = null
+
+    // Tenta primeiro o masterUseCaseSlug (se diferente do próprio slug para evitar loop)
+    if (masterSlug && masterSlug !== viewSlug) {
+      const { data: masterViews } = await supabase
+        .from('ui_views')
+        .select(`*, ui_components(label, order_index, is_visible, config, field:fields(*))`)
+        .eq('slug', masterSlug)
+        .eq('project_id', projectId)
+        .limit(1)
+      masterView = masterViews?.[0]
+    }
+
+    // Fallback: qualquer UC não-personalizado do mesmo model que tenha formFields
+    if (!masterView || !masterView.layout_config?.form_fields?.length) {
+      const { data: siblings } = await supabase
+        .from('ui_views')
+        .select(`*, ui_components(label, order_index, is_visible, config, field:fields(*))`)
+        .eq('project_id', projectId)
+        .eq('model_id', view.model_id)
+        .neq('logic_type', 'personalizado')
+        .neq('id', view.id)
+      
+      // Preferir o que tem mais form_fields configurados
+      const withFormFields = (siblings || []).filter((v: any) => (v.layout_config?.form_fields?.length || 0) > 0)
+      if (withFormFields.length > 0) {
+        masterView = withFormFields.sort((a: any, b: any) => (b.layout_config?.form_fields?.length || 0) - (a.layout_config?.form_fields?.length || 0))[0]
+      } else if ((siblings || []).length > 0) {
+        // Último fallback: qualquer UC do mesmo model
+        masterView = siblings![0]
+      }
+    }
+
+    if (masterView) {
+      const masterFormFieldsOrder: string[] = masterView.layout_config?.form_fields || []
+      const masterComponents = masterView.ui_components || []
+      const masterFormFields = masterComponents
+        .filter((c: any) => c.is_visible !== false && c.config?.zones?.includes('form') && c.field?.is_visible_in_form !== false)
+        .sort((a: any, b: any) => {
+          const idxA = masterFormFieldsOrder.indexOf(a.field.id)
+          const idxB = masterFormFieldsOrder.indexOf(b.field.id)
+          if (idxA === -1 && idxB === -1) return a.order_index - b.order_index
+          if (idxA === -1) return 1
+          if (idxB === -1) return -1
+          return idxA - idxB
+        })
+        .map((c: any) => ({
+          id: c.field.id,
+          model_id: c.field.model_id,
+          model_name: tableDictionary[c.field.model_id],
+          display_name: c.label || c.field.display_name || c.field.db_column_name,
+          db_column_name: resolveResultKey(c.field),
+          sql_expression: resolveSqlExpression(c.field),
+          data_type: c.field.data_type,
+          is_primary_key: c.field.is_primary_key,
+          config: Object.keys(c.config || {}).length > 0
+            ? { ...(c.field.config || {}), ...(c.config || {}) }
+            : c.field.config,
+          zone: 3
+        }))
+      
+      if (masterFormFields.length > 0) {
+        formFields.push(...masterFormFields)
+        console.log(`[buildViewProps] Personalizado "${viewSlug}" sem formFields — usando ${masterFormFields.length} campos do UC "${masterView.slug}" (${masterView.logic_type})`)
+      }
+    }
+  }
 
   return {
     viewId: view.id,
