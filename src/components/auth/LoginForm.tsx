@@ -542,8 +542,15 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
 
   return (
     <div className={cn("w-full max-w-md mx-auto", className)}>
-      {/* Header Section */}
+      {/* Header Section with Animated Gradient Icon */}
       <div className="text-center mb-10">
+        <div className="inline-flex relative group mb-8">
+          <div className="absolute inset-0 bg-indigo-500 blur-[40px] opacity-20 group-hover:opacity-40 transition-opacity rounded-full" />
+          <div className="relative w-24 h-24 flex items-center justify-center group-hover:scale-110 transition-all duration-500">
+            <img src="/logo-transparent_v4.png" alt="Logo" className="w-full h-full object-contain drop-shadow-2xl" />
+          </div>
+        </div>
+
         <h2 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-2">
           {mode === 'login' ? 'MetaBuilder' : t('auth.login.join_title', 'Comece')} <span className="text-indigo-600">{mode === 'login' ? 'PRO' : 'Gratuitamente'}</span>
         </h2>
