@@ -113,11 +113,7 @@ export function IDELanding({ user }: { user: any }) {
         >
           <div className="bg-white/80 dark:bg-neutral-900/50 backdrop-blur-xl border border-neutral-200 dark:border-white/10 p-8 rounded-[2rem] shadow-2xl">
             <div className="flex flex-col items-center">
-              <div className="w-full max-w-[200px] mb-6 relative">
-                <img src="/logo-white.png" alt="MetaBuilder PRO" className="block dark:hidden w-full h-auto object-contain drop-shadow-sm hover:scale-105 transition-transform duration-500" />
-                <img src="/logo-black.png" alt="MetaBuilder PRO" className="hidden dark:block w-full h-auto object-contain drop-shadow-sm hover:scale-105 transition-transform duration-500" />
-              </div>
-              <h3 className="text-xl font-bold mb-6 text-center">Acesse sua conta</h3>
+              <h3 className="text-xl font-bold mb-6 text-center mt-4">Acesse sua conta</h3>
             </div>
             <LoginForm disableAutoRedirectOnMount={!isTauri()} />
           </div>
