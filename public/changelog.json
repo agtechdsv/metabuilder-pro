@@ -1,4 +1,16 @@
 {
+  "v1.0.8": {
+    "date": "2026-08-08",
+    "pt": [
+      "Nova funcionalidade de sincronização local de projetos baseada em Git, garantindo maior desempenho, estabilidade e backup automático para o seu trabalho."
+    ],
+    "en": [
+      "New local project synchronization powered by Git, delivering improved performance, stability, and automatic backups for your work."
+    ],
+    "es": [
+      "Nueva funcionalidad de sincronización local de proyectos basada en Git, ofreciendo mayor rendimiento, estabilidad y respaldo automático para tu trabajo."
+    ]
+  },
   "v1.0.7": {
     "date": "2026-08-08",
     "pt": [
