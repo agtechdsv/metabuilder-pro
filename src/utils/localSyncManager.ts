@@ -78,6 +78,14 @@ const tauriFsAdapter = {
         const stat = await tauriFs.stat(path, { baseDir: BaseDirectory.Home });
         return {
           ...stat,
+          mtime: stat.mtime ? new Date(stat.mtime) : new Date(),
+          ctime: stat.mtime ? new Date(stat.mtime) : new Date(),
+          mode: (stat as any).mode || (stat.isDirectory ? 0o40000 : 0o100644),
+          dev: (stat as any).dev || 1,
+          ino: (stat as any).ino || 1,
+          uid: (stat as any).uid || 0,
+          gid: (stat as any).gid || 0,
+          size: stat.size || 0,
           isDirectory: () => stat.isDirectory,
           isFile: () => stat.isFile,
           isSymbolicLink: () => stat.isSymlink,
@@ -91,6 +99,14 @@ const tauriFsAdapter = {
         const stat = await tauriFs.lstat(path, { baseDir: BaseDirectory.Home });
         return {
           ...stat,
+          mtime: stat.mtime ? new Date(stat.mtime) : new Date(),
+          ctime: stat.mtime ? new Date(stat.mtime) : new Date(),
+          mode: (stat as any).mode || (stat.isDirectory ? 0o40000 : 0o100644),
+          dev: (stat as any).dev || 1,
+          ino: (stat as any).ino || 1,
+          uid: (stat as any).uid || 0,
+          gid: (stat as any).gid || 0,
+          size: stat.size || 0,
           isDirectory: () => stat.isDirectory,
           isFile: () => stat.isFile,
           isSymbolicLink: () => stat.isSymlink,
