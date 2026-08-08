@@ -276,6 +276,9 @@ export class LocalSyncManager {
       abortOnConflict: false
     });
 
+    // isomorphic-git merge does not update the working tree, we must checkout manually
+    await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'sync-sandbox', force: true });
+
     return mergeResult; // Can contain conflicts
   }
 
@@ -295,6 +298,9 @@ export class LocalSyncManager {
       author: { name: 'MetaBuilder Dev', email: 'dev@metabuilder.app' },
       fastForward: true
     });
+
+    // isomorphic-git merge does not update the working tree, we must checkout manually
+    await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'local', force: true });
 
     // Delete sandbox branch
     await git.deleteBranch({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'sync-sandbox' });
