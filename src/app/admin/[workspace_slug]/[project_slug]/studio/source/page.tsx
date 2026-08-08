@@ -3,13 +3,14 @@ import { redirect } from 'next/navigation'
 import { ProjectSourceClient } from './ProjectSourceClient'
 
 interface PageProps {
-  params: {
+  params: Promise<{
     workspace_slug: string
     project_slug: string
-  }
+  }>
 }
 
 export default async function SourceStudioPage({ params }: PageProps) {
+  const { workspace_slug, project_slug } = await params
   const supabase = await createClient()
 
   // Verifica autenticação
@@ -22,11 +23,11 @@ export default async function SourceStudioPage({ params }: PageProps) {
   const { data: project } = await supabase
     .from('projects')
     .select('*, workspace:workspaces(*)')
-    .eq('slug', params.project_slug)
+    .eq('slug', project_slug)
     .single()
 
   if (!project) {
-    redirect(`/admin/${params.workspace_slug}`)
+    redirect(`/admin/${workspace_slug}`)
   }
 
   return (
