@@ -1,4 +1,19 @@
 {
+  "v1.0.4": {
+    "date": "2026-08-08",
+    "pt": [
+      "Novo sistema de login ultrasseguro com suporte a autenticação biométrica (Passkeys), verificação em duas etapas (MFA) e acesso rápido via links diretos no aplicativo.",
+      "Nova tela inicial da IDE com design renovado, detecção automática da versão do ambiente e fluxo de autenticação integrado."
+    ],
+    "en": [
+      "New ultra-secure login system featuring biometric authentication (Passkeys), Multi-Factor Authentication (MFA), and seamless quick access via app deep links.",
+      "Redesigned IDE landing page with automatic environment version detection and an integrated authentication experience."
+    ],
+    "es": [
+      "Nuevo sistema de inicio de sesión ultra seguro con soporte para autenticación biométrica (Passkeys), verificación en dos pasos (MFA) y acceso rápido mediante enlaces directos en la aplicación.",
+      "Nueva página de inicio del IDE rediseñada con detección automática de la versión del entorno y una experiencia de autenticación integrada."
+    ]
+  },
   "v1.0.3": {
     "date": "2026-08-07",
     "pt": [
