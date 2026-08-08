@@ -20,7 +20,8 @@
         "fullscreen": false,
         "maximized": true,
         "visible": false,
-        "backgroundColor": "#F8F7FF"
+        "backgroundColor": "#F8F7FF",
+        "fileDropEnabled": false
       }
     ],
     "macOSPrivateApi": true,
