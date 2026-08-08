@@ -21,7 +21,7 @@
         "maximized": true,
         "visible": false,
         "backgroundColor": "#F8F7FF",
-        "fileDropEnabled": false
+        "dragDropEnabled": false
       }
     ],
     "macOSPrivateApi": true,
