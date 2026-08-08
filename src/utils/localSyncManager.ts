@@ -91,7 +91,7 @@ export class LocalSyncManager {
   /**
    * Fetches the latest source code from the web, puts it into the upstream branch, and commits it.
    */
-  public async syncFromWeb(apiEndpoint: string, authHeader: string) {
+  public async syncFromWeb(apiEndpoint: string, authHeader: string, bodyPayload?: Record<string, any>) {
     if (!isTauri()) throw new Error("Local sync is only available on the Desktop App.");
 
     const res = await fetch(apiEndpoint, {
@@ -100,7 +100,7 @@ export class LocalSyncManager {
         'Content-Type': 'application/json',
         'Authorization': authHeader
       },
-      body: JSON.stringify({ projectId: this.projectId })
+      body: JSON.stringify(bodyPayload || { projectId: this.projectId })
     });
 
     if (!res.ok) {

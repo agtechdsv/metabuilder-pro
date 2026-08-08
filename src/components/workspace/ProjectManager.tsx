@@ -22,7 +22,8 @@ import {
   X,
   FolderOpen,
   Copy,
-  Bot
+  Bot,
+  FolderGit2
 } from 'lucide-react'
 import { AIBuilderSettings } from './AIBuilderSettings'
 import Link from 'next/link'
@@ -32,6 +33,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Drawer } from '@/components/ui/Drawer'
 import { Modal } from '@/components/ui/Modal'
 import { useI18n } from '@/i18n/I18nContext'
+import { useIDE } from '@/contexts/IDESyncContext'
 import { IconPicker } from '@/components/studio/IconPicker'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { cn } from '@/lib/utils'
@@ -310,6 +312,7 @@ export function ProjectManager({
   const router = useRouter()
   const searchParams = useSearchParams()
   const { openPreview } = usePreview()
+  const { openIDE } = useIDE()
   const pathname = usePathname()
   const { t } = useI18n()
   const { toast } = useToast()
@@ -748,6 +751,19 @@ export function ProjectManager({
                               }}
                             >
                               <ArrowUpRight className="w-4 h-4" />
+                            </button>
+                          )}
+                          {project.can_edit && (
+                            <button
+                              className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                              title="IDE Local (Ejetar & Sincronizar)"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                openIDE({ type: 'project', id: project.id, name: project.name, slug: project.slug })
+                              }}
+                            >
+                              <FolderGit2 className="w-4 h-4" />
                             </button>
                           )}
                           <ProGate gateType="desktop" tier={tier || 'free'} featureName="Gerar App Desktop Nativo">

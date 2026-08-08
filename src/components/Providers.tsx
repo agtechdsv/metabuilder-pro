@@ -6,6 +6,7 @@ import { AutoUpdater } from '@/components/tauri/AutoUpdater'
 import { GlobalDesktopListener } from './layout/GlobalDesktopListener'
 import { UpgradeModalProvider } from '@/context/UpgradeModalContext'
 import { PreviewProvider } from '@/contexts/PreviewContext'
+import { IDESyncProvider } from '@/contexts/IDESyncContext'
 
 export function Providers({ 
   children,
@@ -20,10 +21,12 @@ export function Providers({
         <ToastProvider>
           <UpgradeModalProvider>
             <PreviewProvider>
-              <ProgressBarProvider />
-              <AutoUpdater />
-              <GlobalDesktopListener />
-              {children}
+              <IDESyncProvider>
+                <ProgressBarProvider />
+                <AutoUpdater />
+                <GlobalDesktopListener />
+                {children}
+              </IDESyncProvider>
             </PreviewProvider>
           </UpgradeModalProvider>
         </ToastProvider>

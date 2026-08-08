@@ -100,14 +100,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
       label: 'SQL Studio',
       active: pathname.includes('/studio/sql'),
       gate: 'desktop'
-    },
-    {
-      href: `${base}/source`,
-      icon: FolderGit2,
-      label: 'Ejetar & Sincronizar (IDE Local)',
-      active: pathname.includes('/studio/source'),
-      gate: 'desktop'
-    },
+    }
   ]
 
   return (

@@ -25,10 +25,12 @@ import {
   Download,
   Network,
   Bot,
-  Database
+  Database,
+  FolderGit2
 } from 'lucide-react'
 import { AIBuilderSettings } from './AIBuilderSettings'
 import { usePreview } from '@/contexts/PreviewContext'
+import { useIDE } from '@/contexts/IDESyncContext'
 import Link from 'next/link'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
 import { WorkspaceTunnelControl } from '@/components/workspace/WorkspaceTunnelControl'
@@ -116,6 +118,7 @@ export function WorkspaceManager({
   const [selectedDesktopWorkspace, setSelectedDesktopWorkspace] = useState<Workspace | null>(null)
   const [exportingWorkspaceId, setExportingWorkspaceId] = useState<string | null>(null)
   const { openPreview } = usePreview()
+  const { openIDE } = useIDE()
 
   const supabase = createClient()
   const { toast } = useToast()
@@ -542,6 +545,17 @@ export function WorkspaceManager({
                                 {exportingWorkspaceId === workspace.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                               </button>
                             </ProGate>
+                            <button
+                              className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                              title="IDE Local (Ejetar & Sincronizar Workspace)"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                openIDE({ type: 'workspace', id: workspace.id, name: workspace.name, slug: workspace.slug })
+                              }}
+                            >
+                              <FolderGit2 className="w-4 h-4" />
+                            </button>
                             <button
                               onClick={(e) => {
                                 e.preventDefault()
