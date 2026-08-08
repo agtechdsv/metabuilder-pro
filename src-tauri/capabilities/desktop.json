@@ -25,6 +25,13 @@
     "fs:allow-download-read",
     "fs:allow-download-write",
     "fs:allow-document-read",
-    "fs:allow-document-write"
+    "fs:allow-document-write",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        "$DOCUMENT/**",
+        "$DOCUMENT/**/*"
+      ]
+    }
   ]
 }
