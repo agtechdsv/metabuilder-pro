@@ -3,52 +3,101 @@ import * as tauriFs from '@tauri-apps/plugin-fs';
 import { BaseDirectory, join } from '@tauri-apps/api/path';
 import git from 'isomorphic-git';
 
+class NodeError extends Error {
+  code: string;
+  constructor(message: string, code: string) {
+    super(message);
+    this.code = code;
+  }
+}
+
+const handleFsError = (err: any) => {
+  const msg = err?.message || String(err);
+  if (msg.includes('os error 3') || msg.includes('os error 2') || msg.includes('cannot find') || msg.includes('não pode encontrar') || msg.includes('No such file') || msg.includes('not found') || msg.includes('Failed to get metadata')) {
+    throw new NodeError(msg, 'ENOENT');
+  }
+  throw err;
+};
+
 // Create a pseudo-fs adapter that maps isomorphic-git's required fs methods to Tauri's plugin-fs
 const tauriFsAdapter = {
   promises: {
     readFile: async (path: string, opts?: any) => {
-      const isUtf8 = opts === 'utf8' || opts?.encoding === 'utf8';
-      if (isUtf8) {
-        return await tauriFs.readTextFile(path, { baseDir: BaseDirectory.Document });
+      try {
+        const isUtf8 = opts === 'utf8' || opts?.encoding === 'utf8';
+        if (isUtf8) {
+          return await tauriFs.readTextFile(path, { baseDir: BaseDirectory.Document });
+        }
+        return await tauriFs.readFile(path, { baseDir: BaseDirectory.Document });
+      } catch (err) {
+        handleFsError(err);
       }
-      return await tauriFs.readFile(path, { baseDir: BaseDirectory.Document });
     },
     writeFile: async (path: string, data: any, opts?: any) => {
-      if (typeof data === 'string') {
-        return await tauriFs.writeTextFile(path, data, { baseDir: BaseDirectory.Document });
+      try {
+        if (typeof data === 'string') {
+          return await tauriFs.writeTextFile(path, data, { baseDir: BaseDirectory.Document });
+        }
+        return await tauriFs.writeFile(path, data, { baseDir: BaseDirectory.Document });
+      } catch (err) {
+        handleFsError(err);
       }
-      return await tauriFs.writeFile(path, data, { baseDir: BaseDirectory.Document });
     },
     unlink: async (path: string) => {
-      return await tauriFs.remove(path, { baseDir: BaseDirectory.Document });
+      try {
+        return await tauriFs.remove(path, { baseDir: BaseDirectory.Document });
+      } catch (err) {
+        handleFsError(err);
+      }
     },
     readdir: async (path: string) => {
-      const entries = await tauriFs.readDir(path, { baseDir: BaseDirectory.Document });
-      return entries.map(e => e.name);
+      try {
+        const entries = await tauriFs.readDir(path, { baseDir: BaseDirectory.Document });
+        return entries.map(e => e.name);
+      } catch (err) {
+        handleFsError(err);
+        return [];
+      }
     },
     mkdir: async (path: string) => {
-      return await tauriFs.mkdir(path, { baseDir: BaseDirectory.Document, recursive: true });
+      try {
+        return await tauriFs.mkdir(path, { baseDir: BaseDirectory.Document, recursive: true });
+      } catch (err) {
+        handleFsError(err);
+      }
     },
     rmdir: async (path: string) => {
-      return await tauriFs.remove(path, { baseDir: BaseDirectory.Document, recursive: true });
+      try {
+        return await tauriFs.remove(path, { baseDir: BaseDirectory.Document, recursive: true });
+      } catch (err) {
+        handleFsError(err);
+      }
     },
     stat: async (path: string) => {
-      const stat = await tauriFs.stat(path, { baseDir: BaseDirectory.Document });
-      return {
-        ...stat,
-        isDirectory: () => stat.isDirectory,
-        isFile: () => stat.isFile,
-        isSymbolicLink: () => stat.isSymlink,
-      };
+      try {
+        const stat = await tauriFs.stat(path, { baseDir: BaseDirectory.Document });
+        return {
+          ...stat,
+          isDirectory: () => stat.isDirectory,
+          isFile: () => stat.isFile,
+          isSymbolicLink: () => stat.isSymlink,
+        };
+      } catch (err) {
+        handleFsError(err);
+      }
     },
     lstat: async (path: string) => {
-      const stat = await tauriFs.lstat(path, { baseDir: BaseDirectory.Document });
-      return {
-        ...stat,
-        isDirectory: () => stat.isDirectory,
-        isFile: () => stat.isFile,
-        isSymbolicLink: () => stat.isSymlink,
-      };
+      try {
+        const stat = await tauriFs.lstat(path, { baseDir: BaseDirectory.Document });
+        return {
+          ...stat,
+          isDirectory: () => stat.isDirectory,
+          isFile: () => stat.isFile,
+          isSymbolicLink: () => stat.isSymlink,
+        };
+      } catch (err) {
+        handleFsError(err);
+      }
     },
     readlink: async (path: string) => {
       throw new Error("Symlinks not fully supported by this adapter");
