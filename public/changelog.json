@@ -1,4 +1,19 @@
 {
+  "v1.0.9": {
+    "date": "2026-08-08",
+    "pt": [
+      "Novo sistema de sincronização local de projetos integrada ao Git, garantindo backup contínuo e trabalho offline otimizado.",
+      "Painel de administração unificado para Projetos e Workspaces, facilitando a organização, gestão e navegação entre seus ambientes de trabalho."
+    ],
+    "en": [
+      "New local project synchronization integrated with Git, ensuring continuous backups and an optimized offline workflow.",
+      "Unified administration hub for Projects and Workspaces, simplifying organization, management, and navigation across your work environments."
+    ],
+    "es": [
+      "Nuevo sistema de sincronización local de proyectos integrada con Git, garantizando respaldo continuo y un flujo de trabajo offline optimizado.",
+      "Panel de administración unificado para Proyectos y Espacios de Trabajo, facilitando la organización, gestión y navegación entre sus entornos."
+    ]
+  },
   "v1.0.8": {
     "date": "2026-08-08",
     "pt": [
