@@ -26,9 +26,9 @@ const tauriFsAdapter = {
       try {
         const isUtf8 = opts === 'utf8' || opts?.encoding === 'utf8';
         if (isUtf8) {
-          return await tauriFs.readTextFile(path, { baseDir: BaseDirectory.Document });
+          return await tauriFs.readTextFile(path, { baseDir: BaseDirectory.Home });
         }
-        return await tauriFs.readFile(path, { baseDir: BaseDirectory.Document });
+        return await tauriFs.readFile(path, { baseDir: BaseDirectory.Home });
       } catch (err) {
         handleFsError(err);
       }
@@ -36,23 +36,23 @@ const tauriFsAdapter = {
     writeFile: async (path: string, data: any, opts?: any) => {
       try {
         if (typeof data === 'string') {
-          return await tauriFs.writeTextFile(path, data, { baseDir: BaseDirectory.Document });
+          return await tauriFs.writeTextFile(path, data, { baseDir: BaseDirectory.Home });
         }
-        return await tauriFs.writeFile(path, data, { baseDir: BaseDirectory.Document });
+        return await tauriFs.writeFile(path, data, { baseDir: BaseDirectory.Home });
       } catch (err) {
         handleFsError(err);
       }
     },
     unlink: async (path: string) => {
       try {
-        return await tauriFs.remove(path, { baseDir: BaseDirectory.Document });
+        return await tauriFs.remove(path, { baseDir: BaseDirectory.Home });
       } catch (err) {
         handleFsError(err);
       }
     },
     readdir: async (path: string) => {
       try {
-        const entries = await tauriFs.readDir(path, { baseDir: BaseDirectory.Document });
+        const entries = await tauriFs.readDir(path, { baseDir: BaseDirectory.Home });
         return entries.map(e => e.name);
       } catch (err) {
         handleFsError(err);
@@ -61,21 +61,21 @@ const tauriFsAdapter = {
     },
     mkdir: async (path: string) => {
       try {
-        return await tauriFs.mkdir(path, { baseDir: BaseDirectory.Document, recursive: true });
+        return await tauriFs.mkdir(path, { baseDir: BaseDirectory.Home, recursive: true });
       } catch (err) {
         handleFsError(err);
       }
     },
     rmdir: async (path: string) => {
       try {
-        return await tauriFs.remove(path, { baseDir: BaseDirectory.Document, recursive: true });
+        return await tauriFs.remove(path, { baseDir: BaseDirectory.Home, recursive: true });
       } catch (err) {
         handleFsError(err);
       }
     },
     stat: async (path: string) => {
       try {
-        const stat = await tauriFs.stat(path, { baseDir: BaseDirectory.Document });
+        const stat = await tauriFs.stat(path, { baseDir: BaseDirectory.Home });
         return {
           ...stat,
           isDirectory: () => stat.isDirectory,
@@ -88,7 +88,7 @@ const tauriFsAdapter = {
     },
     lstat: async (path: string) => {
       try {
-        const stat = await tauriFs.lstat(path, { baseDir: BaseDirectory.Document });
+        const stat = await tauriFs.lstat(path, { baseDir: BaseDirectory.Home });
         return {
           ...stat,
           isDirectory: () => stat.isDirectory,
@@ -116,7 +116,7 @@ export class LocalSyncManager {
   constructor(projectId: string, projectSlug: string) {
     this.projectId = projectId;
     this.projectSlug = projectSlug || 'default-project';
-    this.projectDir = `MetaBuilderPro/${this.projectSlug}`;
+    this.projectDir = `AGTech/MetaBuilderPRO/${this.projectSlug}`;
   }
 
   /**
@@ -126,14 +126,45 @@ export class LocalSyncManager {
     if (!isTauri()) throw new Error("Local sync is only available on the Desktop App.");
     
     // Ensure base directory exists
-    await tauriFs.mkdir(this.projectDir, { baseDir: BaseDirectory.Document, recursive: true });
+    await tauriFs.mkdir(this.projectDir, { baseDir: BaseDirectory.Home, recursive: true });
 
     // Check if .git exists
+    let gitExists = false;
     try {
-      await tauriFs.stat(`${this.projectDir}/.git`, { baseDir: BaseDirectory.Document });
+      await tauriFs.stat(`${this.projectDir}/.git`, { baseDir: BaseDirectory.Home });
+      gitExists = true;
     } catch {
+      gitExists = false;
+    }
+
+    if (!gitExists) {
       // Doesn't exist, init git
       await git.init({ fs: tauriFsAdapter, dir: this.projectDir, defaultBranch: 'local' });
+      
+      // Create an initial commit so we have a HEAD, preventing branching errors
+      await tauriFsAdapter.promises.writeFile(`${this.projectDir}/.metabuilder`, 'Initialized by MetaBuilder PRO');
+      await git.add({ fs: tauriFsAdapter, dir: this.projectDir, filepath: '.metabuilder' });
+      await git.commit({
+        fs: tauriFsAdapter,
+        dir: this.projectDir,
+        author: { name: 'System', email: 'system@metabuilder.app' },
+        message: 'Initial project setup'
+      });
+    } else {
+      // .git exists, but let's make sure it has at least one commit
+      try {
+        await git.log({ fs: tauriFsAdapter, dir: this.projectDir, depth: 1 });
+      } catch {
+        // Repo exists but no commits yet (maybe it crashed halfway previously)
+        await tauriFsAdapter.promises.writeFile(`${this.projectDir}/.metabuilder`, 'Initialized by MetaBuilder PRO');
+        await git.add({ fs: tauriFsAdapter, dir: this.projectDir, filepath: '.metabuilder' });
+        await git.commit({
+          fs: tauriFsAdapter,
+          dir: this.projectDir,
+          author: { name: 'System', email: 'system@metabuilder.app' },
+          message: 'Initial project setup'
+        });
+      }
     }
   }
 
@@ -181,7 +212,7 @@ export class LocalSyncManager {
       const parts = relativePath.split('/');
       if (parts.length > 1) {
         const dirParts = parts.slice(0, -1).join('/');
-        await tauriFs.mkdir(`${this.projectDir}/${dirParts}`, { baseDir: BaseDirectory.Document, recursive: true });
+        await tauriFs.mkdir(`${this.projectDir}/${dirParts}`, { baseDir: BaseDirectory.Home, recursive: true });
       }
 
       await tauriFsAdapter.promises.writeFile(fullPath, content);

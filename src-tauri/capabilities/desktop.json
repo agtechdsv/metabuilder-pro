@@ -24,13 +24,13 @@
     "opener:allow-open-path",
     "fs:allow-download-read",
     "fs:allow-download-write",
-    "fs:allow-document-read",
-    "fs:allow-document-write",
+    "fs:allow-home-read",
+    "fs:allow-home-write",
     {
       "identifier": "fs:scope",
       "allow": [
-        "$DOCUMENT/**",
-        "$DOCUMENT/**/*"
+        "$HOME/**",
+        "$HOME/**/*"
       ]
     }
   ]
