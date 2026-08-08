@@ -11,7 +11,7 @@ import dynamic from 'next/dynamic'
 import { isTauri } from '@/utils/tauriUtils'
 import { LocalSyncManager } from '@/utils/localSyncManager'
 import * as tauriFs from '@tauri-apps/plugin-fs'
-import { BaseDirectory } from '@tauri-apps/api/path'
+import { BaseDirectory, homeDir } from '@tauri-apps/api/path'
 import { Command } from '@tauri-apps/plugin-shell'
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
@@ -109,10 +109,10 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const loadFileTree = async () => {
     if (!target) return
     try {
-      const basePath = `MetaBuilderPro/${target.slug}`
+      const basePath = `AGTech/MetaBuilderPRO/${target.slug}`
       
       const buildTree = async (dirPath: string): Promise<FileNode[]> => {
-        const entries = await tauriFs.readDir(dirPath, { baseDir: BaseDirectory.Document })
+        const entries = await tauriFs.readDir(dirPath, { baseDir: BaseDirectory.Home })
         const nodes: FileNode[] = []
         
         for (const entry of entries) {
@@ -146,7 +146,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const handleSelectFile = async (path: string) => {
     setSelectedFile(path)
     try {
-      const content = await tauriFs.readTextFile(path, { baseDir: BaseDirectory.Document })
+      const content = await tauriFs.readTextFile(path, { baseDir: BaseDirectory.Home })
       setFileContent(content)
     } catch (err) {
       toast('Erro ao ler arquivo', 'error')
@@ -156,7 +156,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const handleSaveFile = async (value: string | undefined) => {
     if (!selectedFile || value === undefined) return
     try {
-      await tauriFs.writeTextFile(selectedFile, value, { baseDir: BaseDirectory.Document })
+      await tauriFs.writeTextFile(selectedFile, value, { baseDir: BaseDirectory.Home })
       setFileContent(value)
       toast('Salvo localmente!', 'success')
     } catch (err) {
@@ -231,7 +231,10 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const handleRunDev = async () => {
     if (!target) return
     try {
-      const cmd = Command.create('npm', ['run', 'dev'], { cwd: `C:/Users/Alexandre/Documents/MetaBuilderPro/${target.slug}` })
+      const home = await homeDir()
+      // Fixes backslashes on windows to forward slashes for the shell cwd
+      const cleanHome = home.replace(/\\/g, '/')
+      const cmd = Command.create('npm', ['run', 'dev'], { cwd: `${cleanHome}/AGTech/MetaBuilderPRO/${target.slug}` })
       cmd.on('close', data => {
         console.log(`npm run dev closed with code ${data.code}`)
         setDevProcess(null)
@@ -396,7 +399,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                   {/* Editor */}
                   <div className="flex-1 flex flex-col min-w-0">
                     <div className="h-10 bg-[#1e1e1e] border-b border-neutral-800 flex items-center px-4 text-sm text-neutral-400">
-                      {selectedFile ? selectedFile.replace(`MetaBuilderPro/${target.slug}/`, '') : 'Nenhum arquivo selecionado'}
+                      {selectedFile ? selectedFile.replace(`AGTech/MetaBuilderPRO/${target.slug}/`, '') : 'Nenhum arquivo selecionado'}
                     </div>
                     <div className="flex-1">
                       {selectedFile ? (
