@@ -494,7 +494,7 @@ export function WorkspaceManager({
 
                     {/* Exibe para quem tem permissão de editar ou excluir, ou se portal estiver habilitado */}
                     {!isNavigating && (workspace.can_edit || workspace.can_delete || workspace.theme_config?.portal_enabled) && (
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute top-6 right-6 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm p-1 rounded-xl z-20">
                         {workspace.theme_config?.portal_enabled && (
                           <button
                             onClick={(e) => {

@@ -720,7 +720,7 @@ export function ProjectManager({
                           )}
                         </div>
                       </div>
-                      <div className="flex flex-col gap-0.5 w-full min-w-0">
+                      <div className="flex flex-col gap-0.5 w-full min-w-0 pr-20">
                         <h4 className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-white transition-colors truncate">{project.name}</h4>
                         <p className="text-xs text-neutral-500 font-mono mt-0.5 truncate">/{project.slug}</p>
                         {project.description && (
@@ -731,8 +731,8 @@ export function ProjectManager({
                       </div>
                     </Link>
 
-                    <div className="flex flex-col items-end gap-4">
-                      <div className={`px-4 py-1.5 text-[10px] font-bold rounded-full border uppercase tracking-widest transition-all ${project.is_active
+                    <div className="absolute top-5 right-5 flex flex-col items-end gap-2 z-20 pointer-events-none">
+                      <div className={`pointer-events-auto px-4 py-1.5 text-[10px] font-bold rounded-full border uppercase tracking-widest transition-all ${project.is_active
                         ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                         : 'bg-red-500/10 text-red-500 border-red-500/20'
                         }`}>
@@ -740,7 +740,7 @@ export function ProjectManager({
                       </div>
 
                       {!isNavigating && (project.can_edit || project.can_deactivate || project.can_delete) && (
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="pointer-events-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm p-1 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800">
                           {portalEnabled && (
                             <button
                               className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
