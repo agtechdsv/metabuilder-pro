@@ -1,4 +1,16 @@
 {
+  "v1.0.7": {
+    "date": "2026-08-08",
+    "pt": [
+      "Reforço na segurança da aplicação desktop, introduzindo um novo sistema de permissões para garantir uma experiência mais segura, estável e confiável."
+    ],
+    "en": [
+      "Reinforced desktop application security, introducing a new permission management system to ensure a safer, more stable, and reliable experience."
+    ],
+    "es": [
+      "Seguridad reforzada en la aplicación de escritorio, introduciendo un nuevo sistema de gestión de permisos para garantizar una experiencia más segura, estable y confiable."
+    ]
+  },
   "v1.0.6": {
     "date": "2026-08-08",
     "pt": [
