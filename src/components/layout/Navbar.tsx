@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { LayoutDashboard, Plus, LogIn, ChevronDown, Terminal, Briefcase, Server, Sparkles } from 'lucide-react'
+import { LayoutDashboard, Plus, LogIn, ChevronDown, Terminal, Briefcase, Server, Sparkles, GitMerge } from 'lucide-react'
 import { signOut } from '@/app/auth/actions'
 import { LoginForm } from '@/components/auth/LoginForm'
 import { AuthModal } from '@/components/auth/AuthModal'
@@ -100,10 +100,14 @@ export function Navbar({ user, profile, showLogin = true, isStudio = false }: Na
                     <Link href="/features/bpm" className="px-4 py-2 rounded-xl text-xs font-bold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
                       <span className="bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">{t('marketing_v2.navbar.bpm')}</span>
                     </Link>
-                    <Link href="/features/ide" className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-50/50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 transition-colors border border-indigo-100 dark:border-indigo-800/30 flex items-center gap-2 my-1">
-                      <Terminal className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                      <span className="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">IDE Desktop (Pro)</span>
-                    </Link>
+                      <Link href="/features/ide" className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-50/50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 transition-colors border border-indigo-100 dark:border-indigo-800/30 flex items-center gap-2 my-1">
+                        <Terminal className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                        <span className="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">IDE Desktop (Pro)</span>
+                      </Link>
+                      <Link href="/features/git-architecture" className="px-4 py-2 rounded-xl text-xs font-bold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center gap-2 mb-1">
+                        <GitMerge className="w-3.5 h-3.5 text-neutral-500" />
+                        <span className="text-neutral-700 dark:text-neutral-300">Arquitetura Git</span>
+                      </Link>
                     <Link href="/features/ai-studio" className="px-4 py-2 rounded-xl text-xs font-bold bg-violet-50/50 hover:bg-violet-100 dark:bg-violet-900/20 dark:hover:bg-violet-900/40 transition-colors border border-violet-100 dark:border-violet-800/30 flex items-center gap-2 my-1">
                       <Sparkles className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
                       <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 dark:from-violet-400 dark:to-fuchsia-400 bg-clip-text text-transparent">AI Studio</span>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy, Fingerprint, FileCode2, ScrollText, Network, Terminal, Sparkles, Bot, Code2 } from 'lucide-react'
+import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy, Fingerprint, FileCode2, ScrollText, Network, Terminal, Sparkles, Bot, Code2, GitMerge } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -235,7 +235,7 @@ export function MarketingSections() {
                    
                    <p className="text-neutral-500 mt-6 mb-2">-- Executando raw SQL no Postgres local (0ms delay)</p>
                    <p className="text-orange-300">SELECT id, name, role FROM public.users;</p>
-                   <p className="text-emerald-400 mt-2">✓ 1.240 rows returned in 12ms</p>
+                   <p className="text-emerald-400">✓ 1.240 rows returned in 12ms</p>
                    
                    <div className="mt-6 flex items-center gap-2">
                      <span className="text-green-400">C:\MetaBuilder\Projects&gt;</span>
@@ -495,7 +495,7 @@ export function MarketingSections() {
                   </div>
                   <div className="flex-1 flex items-center justify-center">
                     <div className="h-px bg-indigo-200 dark:bg-indigo-800 flex-1 relative">
-                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white dark:bg-neutral-900 border border-indigo-500 flex items-center justify-center">
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white dark:bg-neutral-900 border border-indigo-50 flex items-center justify-center">
                         <Zap className="w-4 h-4 text-indigo-500 animate-pulse" />
                       </div>
                     </div>
@@ -1076,6 +1076,50 @@ export function MarketingSections() {
           </div>
         )}
       </section>
+
+        {/* Git Architecture Teaser */}
+        <section className="max-w-7xl mx-auto py-10">
+          <div className="bg-black text-white rounded-[3rem] p-12 md:p-20 relative overflow-hidden flex flex-col md:flex-row items-center gap-12 border border-neutral-800 shadow-2xl">
+            <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-[120px] pointer-events-none transform translate-x-1/2 -translate-y-1/2"></div>
+            
+            <div className="flex-1 space-y-8 z-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-bold tracking-widest uppercase">
+                <GitMerge className="w-4 h-4" /> Segurança Absoluta
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black tracking-tighter leading-tight">
+                Desenvolva sem medo <br />de perder seu código.
+              </h2>
+              <p className="text-neutral-400 text-lg md:text-xl leading-relaxed max-w-xl">
+                O MetaBuilder PRO utiliza uma <strong>Arquitetura Invisível de 3 Branches</strong>. Todo código que a Inteligência Artificial gera é testado em uma <span className="text-indigo-400 font-semibold">Caixa de Areia isolada</span> antes de tocar no seu trabalho local. 
+              </p>
+              <div className="pt-4">
+                <Link href="/features/git-architecture" className="inline-flex items-center gap-3 px-8 py-4 bg-white text-black hover:bg-neutral-200 rounded-2xl font-bold transition-all hover:scale-105 active:scale-95">
+                  Entenda a Arquitetura <ArrowRight className="w-5 h-5" />
+                </Link>
+              </div>
+            </div>
+
+            <div className="w-full md:w-[400px] relative z-10 shrink-0 hidden lg:block">
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10 h-full w-full"></div>
+              <div className="bg-[#1e1e1e] p-6 rounded-3xl border border-neutral-800 shadow-2xl font-mono text-sm text-neutral-400 space-y-4 opacity-80 transform -rotate-2 hover:rotate-0 transition-transform duration-500">
+                <div className="flex items-center gap-2 pb-4 border-b border-neutral-800">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-emerald-400">$ git merge upstream</p>
+                  <p>Auto-merging src/app/page.tsx</p>
+                  <p>Merge made by the 'ort' strategy.</p>
+                  <p className="text-neutral-600 mt-4"># Testando em sync-sandbox</p>
+                  <p className="text-neutral-600"># Se aceito:</p>
+                  <p className="text-indigo-400">$ git checkout local</p>
+                  <p className="text-indigo-400">$ git merge sync-sandbox</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
       {/* Final CTA */}
       <section className="max-w-7xl mx-auto py-20 text-center space-y-10">
