@@ -402,7 +402,12 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                       {selectedFile ? selectedFile.replace(`AGTech/MetaBuilderPRO/${target.slug}/`, '') : 'Nenhum arquivo selecionado'}
                     </div>
                     <div className="flex-1">
-                      {selectedFile ? (
+                      {isSyncing ? (
+                        <div className="flex flex-col items-center justify-center h-full text-neutral-500 gap-4">
+                          <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
+                          <span className="text-sm font-medium animate-pulse text-indigo-400">Sincronizando arquivos com a nuvem...</span>
+                        </div>
+                      ) : selectedFile ? (
                         <MonacoEditor
                           language={selectedFile.endsWith('.tsx') || selectedFile.endsWith('.ts') ? 'typescript' : selectedFile.endsWith('.json') ? 'json' : 'javascript'}
                           theme="vs-dark"

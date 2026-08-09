@@ -4,7 +4,13 @@ import { SourceCodeGenerator } from '@/utils/export/SourceCodeGenerator'
 
 export async function POST(request: Request) {
   try {
-    const { projectId, dataMode = 'supabase', authStrategy = 'managed', legacyDriver = 'supabase', dbConfig, authConfig } = await request.json()
+    const payload = await request.json()
+    const projectId = payload.projectId
+    const dataMode = payload.dataMode
+    const authStrategy = payload.authStrategy || 'managed'
+    const legacyDriver = payload.legacyDriver
+    const dbConfig = payload.dbConfig
+    const authConfig = payload.authConfig
     const supabase = await createClient()
 
     // 1. Authenticate
@@ -109,8 +115,25 @@ export async function POST(request: Request) {
       .select('*')
       .eq('project_id', projectId)
 
+    const finalDataMode = dataMode || project.data_mode || 'supabase'
+    const finalLegacyDriver = legacyDriver || project.legacy_db_driver || 'supabase'
+    let finalDbConfig = dbConfig
+      
+    // Se dbConfig não foi fornecido via API (ex: Sincronização automática via IDE), 
+    // monta o dbConfig lendo as configurações salvas no banco de dados do projeto.
+    if (!finalDbConfig && project.legacy_db_driver) {
+      finalDbConfig = {
+        host: project.legacy_db_host,
+        port: project.legacy_db_port,
+        user: project.legacy_db_user,
+        password: project.legacy_db_password,
+        database: project.legacy_db_name,
+        url: project.legacy_db_url
+      }
+    }
+
     // 4. Generate the Source Code (File Map)
-    const generator = new SourceCodeGenerator(project, mappedModels, finalUiViews || [], customComponents || [], dataMode, authStrategy, legacyDriver, dbConfig, projectRoles || [], rolePermissions, enumerations || [], rawProjectRelations || [])
+    const generator = new SourceCodeGenerator(project, mappedModels, finalUiViews || [], customComponents || [], finalDataMode, authStrategy, finalLegacyDriver, finalDbConfig, projectRoles || [], rolePermissions, enumerations || [], rawProjectRelations || [])
     const fileMap = await generator.generateFileMap()
 
     // 5. Return as JSON
