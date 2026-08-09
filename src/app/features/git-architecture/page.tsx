@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Database, ShieldCheck, CheckCircle2, ArrowLeft, GitMerge, GitBranch, History, GitCommit, ShieldAlert, Sparkles, Terminal } from 'lucide-react'
+import { Database, ShieldCheck, CheckCircle2, ArrowLeft, GitMerge, GitBranch, History, GitCommit, ShieldAlert, Sparkles, Terminal, Code2 } from 'lucide-react'
 import Link from 'next/link'
 import { BottomCta } from '@/components/landing/BottomCta'
 import { useI18n } from '@/i18n/I18nContext'
@@ -103,6 +103,32 @@ export default function GitArchitectureFeaturePage() {
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* High-Code / Pro-Code */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+        <div className="order-2 lg:order-1 relative">
+          <div className="absolute inset-0 bg-emerald-500/10 blur-3xl rounded-full"></div>
+          <div className="relative p-2 rounded-[2.5rem] bg-gradient-to-br from-emerald-500/20 to-teal-500/10 dark:from-emerald-900/40 dark:to-teal-900/20 border border-emerald-500/20 shadow-2xl space-y-6 overflow-hidden">
+             <img src="/ide-editor-demo.png" alt="Demonstração do Editor de Código da IDE" className="w-full h-auto rounded-[2rem] shadow-inner" />
+          </div>
+        </div>
+        
+        <div className="order-1 lg:order-2 space-y-8">
+          <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20">
+            <Code2 className="w-8 h-8" />
+          </div>
+          <h2 className="text-4xl md:text-5xl font-black tracking-tighter dark:text-white leading-[1.1]">
+            Por que Triangulação? <br/>
+            Porque somos <span className="bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">Pro-Code (High-Code).</span>
+          </h2>
+          <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
+            Diferente de plataformas "No-Code" onde você fica preso em painéis e não vê o código fonte, o MetaBuilder PRO gera uma aplicação real em <strong>Next.js e React</strong>.
+          </p>
+          <p className="text-lg text-neutral-500 dark:text-neutral-400 leading-relaxed">
+            Você tem acesso total através do nosso IDE embutido, podendo escrever lógicas complexas e criar componentes personalizados. A arquitetura de branches existe exatamente para proteger o SEU código manual das automações da Inteligência Artificial.
+          </p>
         </div>
       </section>
 
