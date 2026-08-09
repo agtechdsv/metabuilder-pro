@@ -107,6 +107,44 @@ const config = {
 };
 export default config;
 `)
+
+  zip.file('.gitignore', `# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# local env files
+.env*.local
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+
+# vercel
+.vercel
+`)
 }
 
 export function generateEnv(zip: JSZip, project: any, dataMode: string = 'supabase', authStrategy: string = 'managed', legacyDriver: string = 'supabase', dbConfig: any = null) {
@@ -177,10 +215,51 @@ LDAP_BIND_PASSWORD=admin_password
 LOCAL_DOWNLOAD_PATH=C:\\AgTech\\DownloadsMetaBuilder
 `
 
+  let envExample = `# Authentication
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Project Token
+META_PROJECT_TOKEN=your_project_token
+`
+  if (dbConfig || dataMode === 'postgres' || dataMode === 'legacy' || dataMode === 'oracle' || dataMode === 'mysql') {
+    let dummyString = 'postgresql://user:password@localhost:5432/dbname'
+    if (legacyDriver === 'oracle') dummyString = 'oracle://user:password@localhost:1521/dbname'
+    else if (legacyDriver === 'mysql') dummyString = 'mysql://user:password@localhost:3306/dbname'
+    else if (legacyDriver === 'sqlserver') dummyString = 'sqlserver://localhost:1433;database=dbname;user=user;password=password;'
+    
+    envExample += `
+# Database Connection
+DATABASE_URL="${dummyString}"
+`
+  }
+
+  if (authStrategy === 'legacy' || authStrategy === 'ldap') {
+    envExample += `
+# JWT Session Secret
+JWT_SECRET=super-secret-key-replace-me-in-production
+`
+  }
+
+  if (authStrategy === 'ldap') {
+    envExample += `
+# LDAP Configuration
+LDAP_URL=ldap://10.0.0.15:389
+LDAP_BASE_DN=dc=empresa,dc=local
+LDAP_BIND_DN=cn=admin,dc=empresa,dc=local
+LDAP_BIND_PASSWORD=admin_password
+`
+  }
+
+  envExample += `
+# Export Manager Configuration
+LOCAL_DOWNLOAD_PATH=C:\\AgTech\\DownloadsMetaBuilder
+`
+
   const envFileName = dbConfig ? '.env.local' : '.env.example'
   zip.file(envFileName, envContent)
-
+  
   if (envFileName !== '.env.example') {
-    zip.file('.env.example', envContent)
+    zip.file('.env.example', envExample)
   }
 }
