@@ -4,6 +4,7 @@
   "description": "Shell commands for export and extraction",
   "windows": ["main"],
   "permissions": [
+    "shell:allow-spawn",
     {
       "identifier": "shell:allow-execute",
       "allow": [
