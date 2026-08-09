@@ -1,4 +1,19 @@
 {
+  "v1.1.0": {
+    "date": "2026-08-09",
+    "pt": [
+      "Inicialização do ambiente de desenvolvimento muito mais rápida e otimizada através da execução de comandos nativos do sistema.",
+      "Maior estabilidade e confiabilidade na sincronização em tempo real com a sua IDE, garantindo um fluxo de trabalho sem interrupções."
+    ],
+    "en": [
+      "Significantly faster and optimized development environment startup powered by native system commands.",
+      "Enhanced stability and reliability in real-time IDE synchronization for a seamless workflow."
+    ],
+    "es": [
+      "Inicio del entorno de desarrollo significativamente más rápido y optimizado mediante la ejecución de comandos nativos del sistema.",
+      "Mayor estabilidad y confiabilidad en la sincronización en tiempo real con tu IDE, garantizando un flujo de trabajo sin interrupciones."
+    ]
+  },
   "v1.0.15": {
     "date": "2026-08-09",
     "pt": [
