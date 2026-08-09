@@ -4,21 +4,7 @@
   "description": "Shell commands for export and extraction",
   "windows": ["main"],
   "permissions": [
-    {
-      "identifier": "shell:allow-spawn",
-      "allow": [
-        {
-          "name": "npm-run-dev",
-          "cmd": "npm",
-          "args": ["run", "dev"]
-        },
-        {
-          "name": "cmd-npm-run-dev",
-          "cmd": "cmd",
-          "args": ["/c", "npm", "run", "dev"]
-        }
-      ]
-    },
+    "shell:allow-spawn",
     {
       "identifier": "shell:allow-execute",
       "allow": [
