@@ -361,21 +361,63 @@ export class LocalSyncManager {
     }
   }
 
-  /**
-   * Retrieves the commit log for the current branch.
-   */
-  public async getLog(depth: number = 50) {
-    if (!isTauri()) return [];
-    try {
-      const commits = await git.log({ fs: tauriFsAdapter, dir: this.projectDir, depth });
-      return commits.map(c => ({
-        oid: c.oid,
-        message: c.commit.message,
-        author: c.commit.author.name,
-        timestamp: new Date(c.commit.author.timestamp * 1000).toLocaleString()
-      }));
-    } catch (e) {
-      return [];
+    /**
+     * Retrieves the list of local branches
+     */
+    public async getBranches() {
+      if (!isTauri()) return { branches: [], currentBranch: 'local' };
+      try {
+        const branches = await git.listBranches({ fs: tauriFsAdapter, dir: this.projectDir });
+        const currentBranch = await git.currentBranch({ fs: tauriFsAdapter, dir: this.projectDir }) || 'local';
+        return { branches, currentBranch };
+      } catch {
+        return { branches: [], currentBranch: 'local' };
+      }
     }
+
+    /**
+     * Retrieves the commit log for a given branch or current branch.
+     */
+    public async getLog(depth: number = 50, ref?: string) {
+      if (!isTauri()) return [];
+      try {
+        const commits = await git.log({ fs: tauriFsAdapter, dir: this.projectDir, depth, ref });
+        return commits.map(c => ({
+          oid: c.oid,
+          message: c.commit.message,
+          author: c.commit.author.name,
+          timestamp: new Date(c.commit.author.timestamp * 1000).toLocaleString()
+        }));
+      } catch (e) {
+        return [];
+      }
+    }
+
+  /**
+   * Reverts the current branch to a specific commit.
+   */
+  public async revertToCommit(oid: string) {
+    if (!isTauri()) return;
+    const currentBranch = await git.currentBranch({ fs: tauriFsAdapter, dir: this.projectDir }) || 'local';
+    
+    // Update branch pointer to the target commit
+    await git.writeRef({
+      fs: tauriFsAdapter,
+      dir: this.projectDir,
+      ref: `refs/heads/${currentBranch}`,
+      value: oid,
+      force: true
+    });
+
+    // Checkout files matching the new branch head
+    await git.checkout({
+      fs: tauriFsAdapter,
+      dir: this.projectDir,
+      ref: currentBranch,
+      force: true
+    });
+    
+    // Cleanup any empty directories left by the checkout
+    await this.cleanupEmptyDirectories(this.projectDir);
   }
 }
