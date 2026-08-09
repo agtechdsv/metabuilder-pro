@@ -309,13 +309,17 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       const home = await homeDir()
       // Fixes backslashes on windows to forward slashes for the shell cwd
       const cleanHome = home.replace(/\\/g, '/')
-      const cmd = Command.create('npm', ['run', 'dev'], { cwd: `${cleanHome}/AGTech/MetaBuilderPRO/${target.slug}` })
+      const cmd = Command.create('cmd-npm-run-dev', [], { cwd: `${cleanHome}/AGTech/MetaBuilderPRO/${target.slug}` })
+      
       cmd.on('close', data => {
         console.log(`npm run dev closed with code ${data.code}`)
         setDevProcess(null)
       })
-      cmd.on('error', error => console.error(`command error: "${error}"`))
-      cmd.stdout.on('data', line => console.log(`npm: ${line}`))
+      cmd.on('error', error => {
+        console.error(`command error:`, error)
+      })
+      cmd.stdout.on('data', line => console.log(`npm stdout: ${line}`))
+      cmd.stderr.on('data', line => console.error(`npm stderr: ${line}`))
       
       const child = await cmd.spawn()
       setDevProcess(child)
@@ -324,7 +328,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       // Abre o Navegador Interno
       openPreview('http://localhost:3000', `Preview: ${target.name}`)
     } catch (err: any) {
-      toast(`Erro ao rodar projeto: ${err.message}`, 'error')
+      console.error('ERRO FATAL EM RUN DEV:', err)
+      const msg = typeof err === 'string' ? err : (err?.message || String(err))
+      toast(`Erro ao rodar projeto: ${msg}`, 'error')
     }
   }
 

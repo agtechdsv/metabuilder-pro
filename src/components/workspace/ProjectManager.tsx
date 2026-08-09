@@ -754,17 +754,19 @@ export function ProjectManager({
                             </button>
                           )}
                           {project.can_edit && (
-                            <button
-                              className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-                              title="IDE Local (Ejetar & Sincronizar)"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                openIDE({ type: 'project', id: project.id, name: project.name, slug: project.slug })
-                              }}
-                            >
-                              <FolderGit2 className="w-4 h-4" />
-                            </button>
+                            <ProGate gateType="desktop" tier={tier || 'free'} featureName="IDE Local (Ejetar & Sincronizar)">
+                              <button
+                                className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                                title="IDE Local (Ejetar & Sincronizar)"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  openIDE({ type: 'project', id: project.id, name: project.name, slug: project.slug })
+                                }}
+                              >
+                                <FolderGit2 className="w-4 h-4" />
+                              </button>
+                            </ProGate>
                           )}
                           <ProGate gateType="desktop" tier={tier || 'free'} featureName="Gerar App Desktop Nativo">
                             <button
