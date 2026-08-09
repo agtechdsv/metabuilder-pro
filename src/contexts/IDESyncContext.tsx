@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   FolderGit2, Play, DownloadCloud, AlertTriangle, 
-  CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronDown, Folder, History, X, Minimize2, AppWindow, LayoutDashboard
+  CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronDown, Folder, History, X, Minimize2, AppWindow, LayoutDashboard, Loader2
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { isTauri } from '@/utils/tauriUtils'
@@ -56,6 +56,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [fileContent, setFileContent] = useState<string>('')
   const [isSyncing, setIsSyncing] = useState(false)
   const [isDiscarding, setIsDiscarding] = useState(false)
+  const [isConfirming, setIsConfirming] = useState(false)
   const [sandboxMode, setSandboxMode] = useState(false)
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [devProcess, setDevProcess] = useState<any>(null)
@@ -239,12 +240,15 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
 
   const handleConfirmSync = async () => {
     if (!syncManager) return
+    setIsConfirming(true)
     try {
       await syncManager.confirmSync()
       setSandboxMode(false)
       toast('Sincronização Efetivada', 'success')
     } catch (err: any) {
       toast(`Erro: ${err.message}`, 'error')
+    } finally {
+      setIsConfirming(false)
     }
   }
 
@@ -401,17 +405,17 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                         <>
                           <button 
                             onClick={() => setShowDiscardConfirm(true)}
-                            disabled={isDiscarding}
+                            disabled={isDiscarding || isConfirming}
                             className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
                           >
                             <XCircle className="w-3.5 h-3.5 text-red-400" /> {isDiscarding ? 'Descartando...' : 'Descartar'}
                           </button>
                           <button 
                             onClick={handleConfirmSync}
-                            disabled={isDiscarding}
+                            disabled={isDiscarding || isConfirming}
                             className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-colors shadow-lg shadow-emerald-500/20 disabled:opacity-50"
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Confirmar Merge
+                            {isConfirming ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />} {isConfirming ? 'Confirmando...' : 'Confirmar Merge'}
                           </button>
                         </>
                       ) : (
