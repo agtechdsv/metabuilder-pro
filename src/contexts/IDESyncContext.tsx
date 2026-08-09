@@ -619,8 +619,20 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
 
                   {/* Editor */}
                   <div className="flex-1 flex flex-col min-w-0">
-                    <div className="h-10 bg-[#1e1e1e] border-b border-neutral-800 flex items-center px-4 text-sm text-neutral-400">
-                      {selectedFile ? selectedFile.replace(`AGTech/MetaBuilderPRO/${target.slug}/`, '') : 'Nenhum arquivo selecionado'}
+                    <div className="h-10 bg-[#1e1e1e] border-b border-neutral-800 flex items-center justify-between px-4 text-sm text-neutral-400">
+                      <span>{selectedFile ? selectedFile.replace(`AGTech/MetaBuilderPRO/${target.slug}/`, '') : 'Nenhum arquivo selecionado'}</span>
+                      {selectedFile && (
+                        <button
+                          onClick={() => {
+                            setSelectedFile(null)
+                            setFileContent('')
+                          }}
+                          className="p-1 hover:bg-neutral-800 rounded text-neutral-500 hover:text-white transition-colors"
+                          title="Fechar arquivo"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                     <div className="flex-1">
                       {isSyncing ? (
