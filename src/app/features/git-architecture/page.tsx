@@ -23,28 +23,28 @@ export default function GitArchitectureFeaturePage() {
             <GitBranch className="w-8 h-8" />
           </div>
           <h1 className="text-5xl md:text-7xl font-black tracking-tighter dark:text-white leading-[1]">
-            Git Sem Dor: <br/>
+            Git Sem Dor: <br />
             <span className="bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">Triangulação de Branches</span>
           </h1>
           <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
             Desenvolva localmente enquanto a IA programa na nuvem. Nossa arquitetura invisível isola o seu trabalho, funde as atualizações automaticamente e garante que você nunca perca uma linha de código.
           </p>
         </div>
-        
+
         <div className="relative">
           <div className="absolute inset-0 bg-indigo-500/10 blur-3xl rounded-full"></div>
           <div className="relative p-2 rounded-[2.5rem] bg-gradient-to-br from-indigo-500/20 to-purple-500/10 dark:from-indigo-900/40 dark:to-purple-900/20 border border-indigo-500/20 shadow-2xl space-y-6 overflow-hidden">
-             <div className="bg-[#1e1e1e] p-6 rounded-[2rem] shadow-inner text-white h-[400px] flex flex-col items-center justify-center relative overflow-hidden">
-                <div className="absolute top-10 left-10 text-emerald-400 font-mono text-sm opacity-50 flex items-center gap-2"><GitCommit className="w-4 h-4"/> local</div>
-                <div className="absolute top-10 right-10 text-cyan-400 font-mono text-sm opacity-50 flex items-center gap-2"><GitCommit className="w-4 h-4"/> upstream</div>
-                
-                <div className="w-24 h-24 rounded-full border border-indigo-500/30 flex items-center justify-center mb-6 relative">
-                  <div className="absolute inset-0 rounded-full border border-indigo-500 animate-ping opacity-20"></div>
-                  <GitMerge className="w-10 h-10 text-indigo-400" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">sync-sandbox</h3>
-                <p className="text-sm text-neutral-400 text-center max-w-[200px]">A caixa de areia onde os dois mundos se encontram com segurança.</p>
-             </div>
+            <div className="bg-[#1e1e1e] p-6 rounded-[2rem] shadow-inner text-white h-[400px] flex flex-col items-center justify-center relative overflow-hidden">
+              <div className="absolute top-10 left-10 text-emerald-400 font-mono text-sm opacity-50 flex items-center gap-2"><GitCommit className="w-4 h-4" /> local</div>
+              <div className="absolute top-10 right-10 text-cyan-400 font-mono text-sm opacity-50 flex items-center gap-2"><GitCommit className="w-4 h-4" /> upstream</div>
+
+              <div className="w-24 h-24 rounded-full border border-indigo-500/30 flex items-center justify-center mb-6 relative">
+                <div className="absolute inset-0 rounded-full border border-indigo-500 animate-ping opacity-20"></div>
+                <GitMerge className="w-10 h-10 text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">sync-sandbox</h3>
+              <p className="text-sm text-neutral-400 text-center max-w-[200px]">A caixa de areia onde os dois mundos se encontram com segurança.</p>
+            </div>
           </div>
         </div>
       </section>
@@ -84,7 +84,7 @@ export default function GitArchitectureFeaturePage() {
               <h3 className="text-xl font-bold dark:text-white mb-2">A Nuvem Pura</h3>
               <div className="text-xs font-mono text-cyan-500 bg-cyan-500/10 px-2 py-1 rounded inline-block mb-4">branch: upstream</div>
               <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed">
-                O cofre intocável. O único papel desta branch é receber o código cru gerado pela IA no Studio Web. Quando você clica em Sincronizar, ela faz o download e armazena as novidades aqui, sem tocar no seu trabalho atual.
+                O cofre intocável. O único papel desta branch é receber o código cru gerado pelo dev no Studio Web. Quando você clica em Sincronizar, ela faz o download e armazena as novidades aqui, sem tocar no seu trabalho atual.
               </p>
             </div>
           </div>
@@ -141,19 +141,19 @@ export default function GitArchitectureFeaturePage() {
           <div className="relative">
             <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500/20 to-indigo-500/20 blur-xl rounded-full opacity-50"></div>
             <div className="relative bg-black border border-neutral-800 rounded-2xl p-6 shadow-2xl font-mono text-sm text-neutral-400 space-y-3">
-               <div className="flex items-center gap-2 mb-4 pb-4 border-b border-neutral-800">
-                  <Terminal className="w-4 h-4 text-neutral-500" />
-                  <span className="text-neutral-300">Terminal Oculto da IDE</span>
-               </div>
-               <p>$ git checkout local -b sync-sandbox</p>
-               <p>$ git merge upstream</p>
-               <p className="text-yellow-400"># Você está isolado e seguro aqui...</p>
-               <p className="text-neutral-600"># Se Confirmar:</p>
-               <p>$ git checkout local</p>
-               <p>$ git merge sync-sandbox</p>
-               <p className="text-neutral-600"># Se Descartar:</p>
-               <p>$ git checkout local --force</p>
-               <p>$ git branch -D sync-sandbox</p>
+              <div className="flex items-center gap-2 mb-4 pb-4 border-b border-neutral-800">
+                <Terminal className="w-4 h-4 text-neutral-500" />
+                <span className="text-neutral-300">Terminal Oculto da IDE</span>
+              </div>
+              <p>$ git checkout local -b sync-sandbox</p>
+              <p>$ git merge upstream</p>
+              <p className="text-yellow-400"># Você está isolado e seguro aqui...</p>
+              <p className="text-neutral-600"># Se Confirmar:</p>
+              <p>$ git checkout local</p>
+              <p>$ git merge sync-sandbox</p>
+              <p className="text-neutral-600"># Se Descartar:</p>
+              <p>$ git checkout local --force</p>
+              <p>$ git branch -D sync-sandbox</p>
             </div>
           </div>
         </div>
