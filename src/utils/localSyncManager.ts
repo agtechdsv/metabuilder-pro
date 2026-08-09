@@ -315,6 +315,50 @@ export class LocalSyncManager {
     
     // Delete sandbox branch
     await git.deleteBranch({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'sync-sandbox' });
+
+    // Clean up empty directories left by isomorphic-git
+    await this.cleanupEmptyDirectories(this.projectDir);
+
+    // Clean up .env files if they were left untracked
+    try {
+      await tauriFs.remove(`${this.projectDir}/.env.local`, { baseDir: BaseDirectory.Home });
+    } catch (e) {}
+    try {
+      await tauriFs.remove(`${this.projectDir}/.env.example`, { baseDir: BaseDirectory.Home });
+    } catch (e) {}
+  }
+
+  /**
+   * Recursively deletes empty directories inside a given path
+   */
+  private async cleanupEmptyDirectories(path: string) {
+    if (!isTauri()) return;
+    try {
+      const entries = await tauriFs.readDir(path, { baseDir: BaseDirectory.Home });
+      let isEmpty = true;
+
+      for (const entry of entries) {
+        if (entry.name === '.git') {
+          isEmpty = false;
+          continue;
+        }
+        
+        const fullPath = `${path}/${entry.name}`;
+        if (entry.isDirectory) {
+          const isDirEmpty = await this.cleanupEmptyDirectories(fullPath);
+          if (isDirEmpty) {
+            await tauriFs.remove(fullPath, { baseDir: BaseDirectory.Home });
+          } else {
+            isEmpty = false;
+          }
+        } else {
+          isEmpty = false;
+        }
+      }
+      return isEmpty;
+    } catch (e) {
+      return false;
+    }
   }
 
   /**
