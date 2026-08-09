@@ -182,7 +182,27 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       const token = session?.access_token || ''
       
       const apiRoute = target.type === 'project' ? '/api/project-source' : '/api/workspace-source'
-      const payload = target.type === 'project' ? { projectId: target.id } : { workspaceId: target.id }
+      let payload: any = target.type === 'project' ? { projectId: target.id } : { workspaceId: target.id }
+      
+      // Lógica de injeção da configuração local de Banco de Dados (Tunnel)
+      try {
+        const configStr = await tauriFs.readTextFile('metabuilder.config.json', { baseDir: BaseDirectory.AppLocalData })
+        if (configStr) {
+          const tunnelConfig = JSON.parse(configStr)
+          const projectConn = tunnelConfig?.connections?.find((c: any) => c.projectId === target.id)
+          if (projectConn && projectConn.connectionsString && projectConn.connectionsString.length > 0) {
+            const primaryConn = projectConn.connectionsString[0]
+            
+            payload.legacyDriver = primaryConn.type || 'postgres'
+            payload.dbConfig = {
+              url: primaryConn.connectionString
+            }
+            payload.dataMode = 'legacy'
+          }
+        }
+      } catch (e) {
+        // Arquivo pode não existir na primeira execução, ignoramos silenciosamente.
+      }
 
       await syncManager.syncFromWeb(apiRoute, `Bearer ${token}`, payload)
       

@@ -127,7 +127,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=${supaAnon}
 META_PROJECT_TOKEN=${project.secret_token || 'your_project_token'}
 `
 
-  if (dataMode === 'postgres' || dataMode === 'legacy' || dataMode === 'oracle' || dataMode === 'mysql') {
+  if (dbConfig || dataMode === 'postgres' || dataMode === 'legacy' || dataMode === 'oracle' || dataMode === 'mysql') {
     let connectionString = dbConfig?.url || ''
     
     if (!connectionString) {

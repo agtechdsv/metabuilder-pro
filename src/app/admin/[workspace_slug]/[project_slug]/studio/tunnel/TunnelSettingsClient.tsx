@@ -132,7 +132,8 @@ export default function TunnelSettingsClient({
         setConfig(data)
         
         // Populate DB Connections from JSON
-        const cStrings = data.connections?.[0]?.connectionsString
+        const projectConn = data.connections?.find((c: any) => c.projectId === projectInfo?.id)
+        const cStrings = projectConn?.connectionsString || data.connections?.[0]?.connectionsString
         if (cStrings && Array.isArray(cStrings) && cStrings.length > 0) {
           const parsedConns = cStrings.map((c: any) => parseConnectionString(c.connectionString, c.name))
           setDbConnections(parsedConns)
@@ -227,16 +228,36 @@ export default function TunnelSettingsClient({
           apiUrl: 'https://metabuilderpro.com/api/metadata/sync'
         };
 
+        let oldConfig: any = { connections: [] };
         try {
           const fileContent = await readTextFile('metabuilder.config.json', { baseDir: BaseDirectory.AppLocalData });
-          const oldConfig = JSON.parse(fileContent);
+          oldConfig = JSON.parse(fileContent);
           existingSystemKeys.supabaseUrl = oldConfig.supabaseUrl || existingSystemKeys.supabaseUrl;
           existingSystemKeys.supabaseAnonKey = oldConfig.supabaseAnonKey || existingSystemKeys.supabaseAnonKey;
           existingSystemKeys.apiUrl = oldConfig.apiUrl || existingSystemKeys.apiUrl;
         } catch (e) {}
 
+        // Preserve other projects' connections
+        let mergedConnections = oldConfig.connections || [];
+        if (projectInfo) {
+          mergedConnections = mergedConnections.filter((c: any) => c.projectId !== projectInfo.id);
+          mergedConnections.push({
+            projectId: projectInfo.id,
+            secretToken: projectInfo.token,
+            connectionsString: dbConnections.map(conn => ({
+              name: conn.name || 'default',
+              type: conn.type,
+              connectionString: buildConnectionString(conn)
+            }))
+          });
+        } else {
+          // Fallback if no projectInfo (should not happen in studio)
+          mergedConnections = newConfig.connections;
+        }
+
         const finalConfig = {
           ...newConfig,
+          connections: mergedConnections,
           ...existingSystemKeys
         };
 
