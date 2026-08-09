@@ -18,6 +18,7 @@ import { Command } from '@tauri-apps/plugin-shell'
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { usePreview } from './PreviewContext'
+import { invoke } from '@tauri-apps/api/core'
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
 
