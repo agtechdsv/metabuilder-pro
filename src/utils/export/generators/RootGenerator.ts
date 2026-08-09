@@ -109,7 +109,7 @@ export default config;
 `)
 }
 
-export function generateEnv(zip: JSZip, project: any, dataMode: string = 'supabase', authStrategy: string = 'managed', dbConfig: any = null) {
+export function generateEnv(zip: JSZip, project: any, dataMode: string = 'supabase', authStrategy: string = 'managed', legacyDriver: string = 'supabase', dbConfig: any = null) {
   let supaUrl = dbConfig?.supabaseUrl ? dbConfig.supabaseUrl : 'https://your-project.supabase.co'
   let supaAnon = dbConfig?.supabaseAnonKey ? dbConfig.supabaseAnonKey : 'your_supabase_anon_key'
 
@@ -127,17 +127,30 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=${supaAnon}
 META_PROJECT_TOKEN=${project.secret_token || 'your_project_token'}
 `
 
-  if (dataMode === 'postgres') {
-    const user = dbConfig?.user || 'postgres'
-    const password = dbConfig?.password || 'senha'
-    const host = dbConfig?.host || 'localhost'
-    const port = dbConfig?.port || '5432'
-    const database = dbConfig?.database || `${project.slug || 'app'}_db`
-    const connectionString = `postgresql://${user}:${password}@${host}:${port}/${database}`
+  if (dataMode === 'postgres' || dataMode === 'legacy' || dataMode === 'oracle' || dataMode === 'mysql') {
+    let connectionString = dbConfig?.url || ''
+    
+    if (!connectionString) {
+      const user = dbConfig?.user || 'postgres'
+      const password = dbConfig?.password || 'senha'
+      const host = dbConfig?.host || 'localhost'
+      const port = dbConfig?.port || (legacyDriver === 'postgres' ? '5432' : legacyDriver === 'oracle' ? '1521' : legacyDriver === 'mysql' ? '3306' : legacyDriver === 'sqlserver' ? '1433' : '5432')
+      const database = dbConfig?.database || `${project.slug || 'app'}_db`
+      
+      if (legacyDriver === 'oracle') {
+        connectionString = `oracle://${user}:${password}@${host}:${port}/${database}`
+      } else if (legacyDriver === 'mysql') {
+        connectionString = `mysql://${user}:${password}@${host}:${port}/${database}`
+      } else if (legacyDriver === 'sqlserver') {
+        connectionString = `sqlserver://${host}:${port};database=${database};user=${user};password=${password};`
+      } else {
+        connectionString = `postgresql://${user}:${password}@${host}:${port}/${database}`
+      }
+    }
 
     envContent += `
 # Database Connection
-DATABASE_URL=${connectionString}
+DATABASE_URL="${connectionString}"
 `
   }
 
