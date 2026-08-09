@@ -309,20 +309,29 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       const home = await homeDir()
       // Fixes backslashes on windows to forward slashes for the shell cwd
       const cleanHome = home.replace(/\\/g, '/')
-      const cmd = Command.create('cmd-npm-run-dev', [], { cwd: `${cleanHome}/AGTech/MetaBuilderPRO/${target.slug}` })
+      const projectPath = `${cleanHome}/AGTech/MetaBuilderPRO/${target.slug}`
       
-      cmd.on('close', data => {
-        console.log(`npm run dev closed with code ${data.code}`)
-        setDevProcess(null)
+      await invoke('start_nextjs_dev', { projectPath })
+
+      // Escutar os logs do processo emitidos pelo Rust
+      const { listen } = await import('@tauri-apps/api/event')
+      const unlisten = await listen<string>('nextjs-dev-log', (event) => {
+        console.log(`[Next.js Dev] ${event.payload}`)
+        if (event.payload.includes('Encerrado com código')) {
+          setDevProcess(null)
+          unlisten()
+        }
       })
-      cmd.on('error', error => {
-        console.error(`command error:`, error)
-      })
-      cmd.stdout.on('data', line => console.log(`npm stdout: ${line}`))
-      cmd.stderr.on('data', line => console.error(`npm stderr: ${line}`))
+
+      // Apenas criamos um dummy devProcess para o frontend saber que está rodando
+      // (no original armazenávamos o Child process, mas aqui usamos o CliState do backend)
+      setDevProcess({
+        kill: async () => {
+          await invoke('stopcli')
+          setDevProcess(null)
+        }
+      } as any)
       
-      const child = await cmd.spawn()
-      setDevProcess(child)
       toast('Servidor Iniciado na porta 3000', 'success')
       
       // Abre o Navegador Interno
