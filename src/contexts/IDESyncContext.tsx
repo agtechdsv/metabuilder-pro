@@ -5,11 +5,13 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   FolderGit2, Play, DownloadCloud, AlertTriangle, 
-  CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronDown, Folder, History, X, Minimize2, AppWindow, LayoutDashboard, Loader2
+  CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronDown, Folder, History, X, Minimize2, AppWindow, LayoutDashboard, Loader2, Settings, Plus, Network, UploadCloud, Download
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { isTauri } from '@/utils/tauriUtils'
 import { LocalSyncManager } from '@/utils/localSyncManager'
+import { IDEGitSettingsModal } from '@/components/ide/IDEGitSettingsModal'
+import { GitConfigManager } from '@/utils/gitConfigManager'
 import * as tauriFs from '@tauri-apps/plugin-fs'
 import { BaseDirectory, homeDir } from '@tauri-apps/api/path'
 import { Command } from '@tauri-apps/plugin-shell'
@@ -67,6 +69,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
   const [revertConfirmOid, setRevertConfirmOid] = useState<string | null>(null)
   const [isReverting, setIsReverting] = useState(false)
+  const [showGitSettings, setShowGitSettings] = useState(false)
+  const [isPushing, setIsPushing] = useState(false)
+  const [isPulling, setIsPulling] = useState(false)
   
   const [mounted, setMounted] = useState(false)
   const { toast } = useToast()
@@ -82,8 +87,14 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       const manager = new LocalSyncManager(target.id, target.slug)
       setSyncManager(manager)
       manager.initLocalProject().then(async () => {
-        const { currentBranch } = await manager.getBranches()
-        if (currentBranch === 'sync-sandbox') {
+        const { branches, currentBranch } = await manager.getBranches()
+        setBranches(branches)
+        setSelectedBranch(currentBranch)
+        const configManager = new GitConfigManager(target.slug)
+        const config = await configManager.getConfig()
+        const sandboxBranch = config.branchSandbox || 'sync-sandbox'
+
+        if (currentBranch === sandboxBranch) {
           setSandboxMode(true)
         } else {
           setSandboxMode(false)
@@ -329,12 +340,77 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
 
   const handleBranchChange = async (branchName: string) => {
     if (!syncManager) return
+    
+    if (branchName === '__NEW_BRANCH__') {
+      const name = window.prompt("Nome da nova branch:")
+      if (!name) return
+      try {
+        await syncManager.createBranch(name)
+        const { branches, currentBranch } = await syncManager.getBranches()
+        setBranches(branches)
+        setSelectedBranch(currentBranch)
+        await loadFileTree()
+        toast(`Branch ${name} criada com sucesso!`, 'success')
+      } catch (err: any) {
+        toast(`Erro ao criar branch: ${err.message}`, 'error')
+      }
+      return
+    }
+
     setSelectedBranch(branchName)
     try {
-      const logs = await syncManager.getLog(50, branchName)
-      setGitLogs(logs)
+      if (isLogModalOpen) {
+        const logs = await syncManager.getLog(50, branchName)
+        setGitLogs(logs)
+      } else {
+        await syncManager.checkoutBranch(branchName)
+        await loadFileTree()
+        setFileContent('')
+        setSelectedFile(null)
+      }
     } catch (err: any) {
-      toast(`Erro ao carregar histórico da branch: ${err.message}`, 'error')
+      toast(`Erro ao trocar branch: ${err.message}`, 'error')
+    }
+  }
+
+  const handlePushToRemote = async () => {
+    if (!syncManager || !target) return
+    setIsPushing(true)
+    try {
+      const configManager = new GitConfigManager(target.slug)
+      const config = await configManager.getConfig()
+      if (!config.remoteUrl || !config.accessToken) {
+        toast('Configure a URL e o Token do GitHub nas Configurações Git primeiro.', 'error')
+        setShowGitSettings(true)
+        return
+      }
+      await syncManager.pushToRemote(config.remoteUrl, config.accessToken, selectedBranch)
+      toast(`Branch ${selectedBranch} enviada para o remoto com sucesso!`, 'success')
+    } catch (err: any) {
+      toast(`Erro no Push: ${err.message}`, 'error')
+    } finally {
+      setIsPushing(false)
+    }
+  }
+
+  const handlePullFromRemote = async () => {
+    if (!syncManager || !target) return
+    setIsPulling(true)
+    try {
+      const configManager = new GitConfigManager(target.slug)
+      const config = await configManager.getConfig()
+      if (!config.remoteUrl || !config.accessToken) {
+        toast('Configure a URL e o Token do GitHub nas Configurações Git primeiro.', 'error')
+        setShowGitSettings(true)
+        return
+      }
+      await syncManager.pullFromRemote(config.remoteUrl, config.accessToken, selectedBranch)
+      await loadFileTree()
+      toast(`Branch ${selectedBranch} atualizada com sucesso!`, 'success')
+    } catch (err: any) {
+      toast(`Erro no Pull: ${err.message}`, 'error')
+    } finally {
+      setIsPulling(false)
     }
   }
 
@@ -429,12 +505,60 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                         </button>
                       )}
                       
+                      <div className="flex items-center bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden h-8">
+                        <div className="px-2 bg-neutral-800 text-neutral-400 border-r border-neutral-700 flex items-center h-full">
+                          <FolderGit2 className="w-3.5 h-3.5" />
+                        </div>
+                        <select 
+                          value={selectedBranch}
+                          onChange={(e) => handleBranchChange(e.target.value)}
+                          className="bg-transparent text-xs text-neutral-300 font-mono px-2 py-1 outline-none min-w-[120px] h-full"
+                        >
+                          <option value="__NEW_BRANCH__" className="text-emerald-400 font-bold bg-neutral-900">
+                            + Nova Branch...
+                          </option>
+                          <optgroup label="Branches">
+                            {branches.map(b => (
+                              <option key={b} value={b} className="bg-neutral-900 text-neutral-300">
+                                {b}
+                              </option>
+                            ))}
+                          </optgroup>
+                        </select>
+                      </div>
+
+                      <button 
+                        onClick={handlePushToRemote}
+                        disabled={isPushing}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
+                        title="Push para Remoto (GitHub)"
+                      >
+                        {isPushing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />} Push
+                      </button>
+
+                      <button 
+                        onClick={handlePullFromRemote}
+                        disabled={isPulling}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
+                        title="Pull do Remoto (GitHub)"
+                      >
+                        {isPulling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} Pull
+                      </button>
+
                       <button 
                         onClick={handleShowLogs}
                         className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg text-xs font-semibold transition-colors"
                         title="Ver Histórico (Git Log)"
                       >
                         <History className="w-3.5 h-3.5" /> Histórico
+                      </button>
+
+                      <button 
+                        onClick={() => setShowGitSettings(true)}
+                        className="flex items-center justify-center w-8 h-8 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg transition-colors border border-neutral-700"
+                        title="Configurações Git (Remote & Pipeline)"
+                      >
+                        <Settings className="w-4 h-4" />
                       </button>
 
                       <button 
@@ -689,6 +813,11 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
           </div>
         </div>
       )}
+      <IDEGitSettingsModal 
+        isOpen={showGitSettings} 
+        onClose={() => setShowGitSettings(false)} 
+        projectSlug={target?.slug || ''} 
+      />
     </IDESyncContext.Provider>
   )
 }

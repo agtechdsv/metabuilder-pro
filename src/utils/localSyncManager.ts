@@ -2,6 +2,8 @@ import { isTauri } from './tauriUtils';
 import * as tauriFs from '@tauri-apps/plugin-fs';
 import { BaseDirectory, join } from '@tauri-apps/api/path';
 import git from 'isomorphic-git';
+import http from 'isomorphic-git/http/web';
+import { GitConfigManager } from './gitConfigManager';
 
 class NodeError extends Error {
   code: string;
@@ -135,6 +137,16 @@ export class LocalSyncManager {
     this.projectDir = `AGTech/MetaBuilderPRO/${this.projectSlug}`;
   }
 
+  public async getConfiguredBranches() {
+    const configManager = new GitConfigManager(this.projectSlug);
+    const config = await configManager.getConfig();
+    return {
+      local: config.branchLocal || 'local',
+      upstream: config.branchUpstream || 'upstream',
+      sandbox: config.branchSandbox || 'sync-sandbox'
+    };
+  }
+
   /**
    * Initializes the local project directory and git repository if they don't exist.
    */
@@ -154,8 +166,9 @@ export class LocalSyncManager {
     }
 
     if (!gitExists) {
+      const { local } = await this.getConfiguredBranches();
       // Doesn't exist, init git
-      await git.init({ fs: tauriFsAdapter, dir: this.projectDir, defaultBranch: 'local' });
+      await git.init({ fs: tauriFsAdapter, dir: this.projectDir, defaultBranch: local });
       
       // Create an initial commit so we have a HEAD, preventing branching errors
       await tauriFsAdapter.promises.writeFile(`${this.projectDir}/.metabuilder`, 'Initialized by MetaBuilder PRO');
@@ -207,18 +220,20 @@ export class LocalSyncManager {
 
     // Ensure git is initialized
     await this.initLocalProject();
+    
+    const { local, upstream } = await this.getConfiguredBranches();
 
     // Check if upstream branch exists
     const branches = await git.listBranches({ fs: tauriFsAdapter, dir: this.projectDir });
     let previousBranch = await git.currentBranch({ fs: tauriFsAdapter, dir: this.projectDir });
-    if (!previousBranch) previousBranch = 'local';
+    if (!previousBranch) previousBranch = local;
 
-    if (!branches.includes('upstream')) {
-      await git.branch({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'upstream' });
+    if (!branches.includes(upstream)) {
+      await git.branch({ fs: tauriFsAdapter, dir: this.projectDir, ref: upstream });
     }
 
     // Checkout upstream branch to write the new files
-    await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'upstream', force: true });
+    await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: upstream, force: true });
 
     // Write files to disk
     for (const [relativePath, content] of Object.entries(fileMap)) {
@@ -257,27 +272,29 @@ export class LocalSyncManager {
   public async startSyncSandbox() {
     if (!isTauri()) throw new Error("Local sync is only available on the Desktop App.");
 
+    const { local, upstream, sandbox } = await this.getConfiguredBranches();
+
     const currentBranch = await git.currentBranch({ fs: tauriFsAdapter, dir: this.projectDir });
-    if (currentBranch !== 'local') {
-      await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'local' });
+    if (currentBranch !== local) {
+      await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: local });
     }
 
     // Create and checkout sandbox branch from local
-    await git.branch({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'sync-sandbox', force: true });
-    await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'sync-sandbox' });
+    await git.branch({ fs: tauriFsAdapter, dir: this.projectDir, ref: sandbox, force: true });
+    await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: sandbox });
 
     // Merge upstream into sandbox
     const mergeResult = await git.merge({
       fs: tauriFsAdapter,
       dir: this.projectDir,
-      ours: 'sync-sandbox',
-      theirs: 'upstream',
+      ours: sandbox,
+      theirs: upstream,
       author: { name: 'MetaBuilder Dev', email: 'dev@metabuilder.app' },
       abortOnConflict: false
     });
 
     // isomorphic-git merge does not update the working tree, we must checkout manually
-    await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'sync-sandbox', force: true });
+    await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: sandbox, force: true });
 
     return mergeResult; // Can contain conflicts
   }
@@ -286,35 +303,39 @@ export class LocalSyncManager {
    * Confirms the sync, merging sandbox into local.
    */
   public async confirmSync() {
+    const { local, sandbox } = await this.getConfiguredBranches();
+
     // Checkout local
-    await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'local' });
+    await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: local });
     
     // Merge sandbox into local (should be fast-forward)
     await git.merge({
       fs: tauriFsAdapter,
       dir: this.projectDir,
-      ours: 'local',
-      theirs: 'sync-sandbox',
+      ours: local,
+      theirs: sandbox,
       author: { name: 'MetaBuilder Dev', email: 'dev@metabuilder.app' },
       fastForward: true
     });
 
     // isomorphic-git merge does not update the working tree, we must checkout manually
-    await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'local', force: true });
+    await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: local, force: true });
 
     // Delete sandbox branch
-    await git.deleteBranch({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'sync-sandbox' });
+    await git.deleteBranch({ fs: tauriFsAdapter, dir: this.projectDir, ref: sandbox });
   }
 
   /**
    * Aborts the sync, destroying the sandbox and returning to local.
    */
   public async abortSync() {
+    const { local, sandbox } = await this.getConfiguredBranches();
+
     // Revert to local
-    await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'local', force: true });
+    await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: local, force: true });
     
     // Delete sandbox branch
-    await git.deleteBranch({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'sync-sandbox' });
+    await git.deleteBranch({ fs: tauriFsAdapter, dir: this.projectDir, ref: sandbox });
 
     // Clean up empty directories left by isomorphic-git
     await this.cleanupEmptyDirectories(this.projectDir);
@@ -367,12 +388,63 @@ export class LocalSyncManager {
     public async getBranches() {
       if (!isTauri()) return { branches: [], currentBranch: 'local' };
       try {
+        const { local } = await this.getConfiguredBranches();
         const branches = await git.listBranches({ fs: tauriFsAdapter, dir: this.projectDir });
-        const currentBranch = await git.currentBranch({ fs: tauriFsAdapter, dir: this.projectDir }) || 'local';
+        const currentBranch = await git.currentBranch({ fs: tauriFsAdapter, dir: this.projectDir }) || local;
         return { branches, currentBranch };
       } catch {
         return { branches: [], currentBranch: 'local' };
       }
+    }
+
+    /**
+     * Creates a new branch from the current branch
+     */
+    public async createBranch(branchName: string) {
+      if (!isTauri()) return;
+      await git.branch({ fs: tauriFsAdapter, dir: this.projectDir, ref: branchName });
+      await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: branchName });
+    }
+
+    /**
+     * Checks out an existing branch
+     */
+    public async checkoutBranch(branchName: string) {
+      if (!isTauri()) return;
+      await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: branchName });
+    }
+
+    /**
+     * Pushes the current branch to a remote repository
+     */
+    public async pushToRemote(remoteUrl: string, token: string, branchName: string) {
+      if (!isTauri()) return;
+      await git.push({
+        fs: tauriFsAdapter,
+        http,
+        dir: this.projectDir,
+        url: remoteUrl,
+        ref: branchName,
+        remoteRef: branchName,
+        onAuth: () => ({ username: token })
+      });
+    }
+
+    /**
+     * Pulls the branch from a remote repository
+     */
+    public async pullFromRemote(remoteUrl: string, token: string, branchName: string) {
+      if (!isTauri()) return;
+      await git.pull({
+        fs: tauriFsAdapter,
+        http,
+        dir: this.projectDir,
+        url: remoteUrl,
+        ref: branchName,
+        singleBranch: true,
+        author: { name: 'MetaBuilder Dev', email: 'dev@metabuilder.app' },
+        onAuth: () => ({ username: token })
+      });
     }
 
     /**
@@ -398,7 +470,8 @@ export class LocalSyncManager {
    */
   public async revertToCommit(oid: string) {
     if (!isTauri()) return;
-    const currentBranch = await git.currentBranch({ fs: tauriFsAdapter, dir: this.projectDir }) || 'local';
+    const { local } = await this.getConfiguredBranches();
+    const currentBranch = await git.currentBranch({ fs: tauriFsAdapter, dir: this.projectDir }) || local;
     
     // Update branch pointer to the target commit
     await git.writeRef({
