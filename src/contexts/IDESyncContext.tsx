@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   FolderGit2, Play, DownloadCloud, AlertTriangle, 
-  CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronDown, Folder, History, X, Minimize2, AppWindow, LayoutDashboard, Loader2, Settings, Plus, Network, UploadCloud, Download
+  CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronDown, Folder, History, X, Minimize2, AppWindow, LayoutDashboard, Loader2, Settings, Plus, Network, UploadCloud, Download, GitBranch
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { isTauri } from '@/utils/tauriUtils'
@@ -72,6 +72,10 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [showGitSettings, setShowGitSettings] = useState(false)
   const [isPushing, setIsPushing] = useState(false)
   const [isPulling, setIsPulling] = useState(false)
+  
+  const [showNewBranchModal, setShowNewBranchModal] = useState(false)
+  const [newBranchName, setNewBranchName] = useState('')
+  const [isCreatingBranch, setIsCreatingBranch] = useState(false)
   
   const [mounted, setMounted] = useState(false)
   const { toast } = useToast()
@@ -342,18 +346,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     if (!syncManager) return
     
     if (branchName === '__NEW_BRANCH__') {
-      const name = window.prompt("Nome da nova branch:")
-      if (!name) return
-      try {
-        await syncManager.createBranch(name)
-        const { branches, currentBranch } = await syncManager.getBranches()
-        setBranches(branches)
-        setSelectedBranch(currentBranch)
-        await loadFileTree()
-        toast(`Branch ${name} criada com sucesso!`, 'success')
-      } catch (err: any) {
-        toast(`Erro ao criar branch: ${err.message}`, 'error')
-      }
+      setNewBranchName('')
+      setShowNewBranchModal(true)
+      setSelectedBranch(selectedBranch) // Reset select value visually
       return
     }
 
@@ -370,6 +365,26 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       }
     } catch (err: any) {
       toast(`Erro ao trocar branch: ${err.message}`, 'error')
+    }
+  }
+
+  const handleCreateBranchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newBranchName.trim() || !syncManager) return
+    setIsCreatingBranch(true)
+    const name = newBranchName.trim()
+    try {
+      await syncManager.createBranch(name)
+      const { branches, currentBranch } = await syncManager.getBranches()
+      setBranches(branches)
+      setSelectedBranch(currentBranch)
+      await loadFileTree()
+      toast(`Branch ${name} criada com sucesso!`, 'success')
+      setShowNewBranchModal(false)
+    } catch (err: any) {
+      toast(`Erro ao criar branch: ${err.message}`, 'error')
+    } finally {
+      setIsCreatingBranch(false)
     }
   }
 
@@ -813,6 +828,54 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
           </div>
         </div>
       )}
+
+      {/* Modal Nova Branch */}
+      {showNewBranchModal && isOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999999] flex items-center justify-center p-4">
+          <div className="bg-[#1e1e1e] border border-neutral-800 rounded-xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden">
+            <div className="p-6">
+              <div className="w-12 h-12 rounded-full bg-emerald-900/20 flex items-center justify-center mb-4">
+                <GitBranch className="w-6 h-6 text-emerald-500" />
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">Criar Nova Branch</h2>
+              <p className="text-sm text-neutral-400 mb-6">
+                Digite um nome para a sua nova branch. Ela será criada a partir da branch atual e você já será movido para ela.
+              </p>
+              
+              <form onSubmit={handleCreateBranchSubmit}>
+                <input 
+                  type="text" 
+                  value={newBranchName}
+                  onChange={e => setNewBranchName(e.target.value)}
+                  placeholder="Ex: feat/nova-tela"
+                  autoFocus
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-mono mb-6"
+                />
+
+                <div className="flex justify-end gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => setShowNewBranchModal(false)}
+                    disabled={isCreatingBranch}
+                    className="px-4 py-2 text-sm font-semibold text-neutral-400 hover:text-white transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={!newBranchName.trim() || isCreatingBranch}
+                    className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                  >
+                    {isCreatingBranch ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    Criar Branch
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       <IDEGitSettingsModal 
         isOpen={showGitSettings} 
         onClose={() => setShowGitSettings(false)} 
