@@ -80,7 +80,15 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     if (isOpen && target && isTauri()) {
       const manager = new LocalSyncManager(target.id, target.slug)
       setSyncManager(manager)
-      manager.initLocalProject().then(() => loadFileTree())
+      manager.initLocalProject().then(async () => {
+        const { currentBranch } = await manager.getBranches()
+        if (currentBranch === 'sync-sandbox') {
+          setSandboxMode(true)
+        } else {
+          setSandboxMode(false)
+        }
+        await loadFileTree()
+      })
     }
   }, [isOpen, target])
 
