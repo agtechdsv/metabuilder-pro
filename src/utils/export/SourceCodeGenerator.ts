@@ -89,7 +89,7 @@ export class SourceCodeGenerator {
   }
 
   private async buildZip(): Promise<void> {
-    generateRootFiles(this.zip, this.project, this.dataMode, this.authStrategy)
+    generateRootFiles(this.zip, this.project, this.dataMode, this.authStrategy, this.legacyDriver)
     generateEnv(this.zip, this.project, this.dataMode, this.authStrategy, this.legacyDriver, this.dbConfig)
     
     // Fase 2: Copiar a Engrenagem Visual Inteira

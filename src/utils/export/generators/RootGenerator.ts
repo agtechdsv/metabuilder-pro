@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 
-export function generateRootFiles(zip: JSZip, project: any, dataMode: string = 'supabase', authStrategy: string = 'managed') {
+export function generateRootFiles(zip: JSZip, project: any, dataMode: string = 'supabase', authStrategy: string = 'managed', legacyDriver: string = '') {
   const security = project.theme_config?.security || { traditional_login: true, mfa_enabled: false, passkey_enabled: false }
 
   zip.file('package.json', JSON.stringify({
@@ -31,7 +31,7 @@ export function generateRootFiles(zip: JSZip, project: any, dataMode: string = '
       'next-nprogress-bar': '^2.4.7',
       '@supabase/supabase-js': '^2.43.4',
       '@supabase/ssr': '^0.3.0',
-      ...(dataMode === 'postgres' ? { 'pg': '^8.11.5' } : {}),
+      ...(dataMode === 'postgres' || legacyDriver === 'postgres' ? { 'pg': '^8.11.5' } : {}),
       '@simplewebauthn/browser': '^13.3.0',
       '@simplewebauthn/server': '^13.3.1',
       '@xyflow/react': '^12.10.2',
@@ -54,7 +54,7 @@ export function generateRootFiles(zip: JSZip, project: any, dataMode: string = '
       '@types/dagre': '^0.7.54',
       '@types/leaflet': '^1.9.21',
       '@types/qrcode': '^1.5.6',
-      ...(dataMode === 'postgres' ? { '@types/pg': '^8.11.5' } : {}),
+      ...(dataMode === 'postgres' || legacyDriver === 'postgres' ? { '@types/pg': '^8.11.5' } : {}),
       ...(authStrategy === 'ldap' ? { '@types/ldapjs': '^3.0.5' } : {})
     }
   }, null, 2))
