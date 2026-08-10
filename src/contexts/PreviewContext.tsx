@@ -32,6 +32,7 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
   const [tabs, setTabs] = useState<PreviewTab[]>([])
   const [activeTabId, setActiveTabId] = useState<string | null>(null)
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, tabId: string } | null>(null)
+  const [loadingTabs, setLoadingTabs] = useState<Set<string>>(new Set())
   
   const [isTauri, setIsTauri] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -65,11 +66,15 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
         const exists = prev.find(t => t.url === targetUrl || t.title === targetTitle)
         if (exists) {
           setActiveTabId(exists.id)
+          // Mark as loading again since user is re-opening
+          setLoadingTabs(prev => new Set([...prev, exists.id]))
           return prev
         }
         
         const newTabId = Math.random().toString(36).substring(7)
         setActiveTabId(newTabId)
+        // Mark new tab as loading immediately
+        setLoadingTabs(prev => new Set([...prev, newTabId]))
         return [...prev, {
           id: newTabId,
           url: targetUrl,
@@ -169,6 +174,8 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
     if (activeTabId && iframeRefs.current[activeTabId]) {
       const iframe = iframeRefs.current[activeTabId]
       if (iframe) {
+        // Mark as loading before refresh
+        setLoadingTabs(prev => new Set([...prev, activeTabId]))
         const currentSrc = iframe.src
         iframe.src = 'about:blank'
         setTimeout(() => {
@@ -184,12 +191,24 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
       try {
         const currentUrl = iframe.contentWindow?.location.href
         if (currentUrl && currentUrl !== 'about:blank') {
+          // Clear loading state when iframe has content
+          setLoadingTabs(prev => {
+            const next = new Set(prev)
+            next.delete(tabId)
+            return next
+          })
           setTabs(prev => prev.map(t => 
             t.id === tabId && t.displayUrl !== currentUrl ? { ...t, displayUrl: currentUrl } : t
           ))
         }
       } catch (e) {
         // Ignora erro cross-origin se a navegação sair do escopo local
+        // Still clear loading on cross-origin (means page loaded)
+        setLoadingTabs(prev => {
+          const next = new Set(prev)
+          next.delete(tabId)
+          return next
+        })
       }
     }
   }
@@ -361,15 +380,26 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
                 {/* Iframes */}
                 <div className="flex-1 bg-white relative">
                   {tabs.map(tab => (
-                    <iframe 
+                    <div
                       key={tab.id}
-                      ref={el => { iframeRefs.current[tab.id] = el }}
-                      src={tab.url}
-                      onLoad={() => handleIframeLoad(tab.id)}
-                      className={`w-full h-full border-none absolute inset-0 bg-white ${activeTabId === tab.id ? `opacity-100 z-10 ${isMinimized ? 'pointer-events-none' : 'pointer-events-auto'}` : 'opacity-0 z-0 pointer-events-none'}`}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
+                      className={`w-full h-full absolute inset-0 ${activeTabId === tab.id ? 'z-10' : 'z-0 pointer-events-none'}`}
+                    >
+                      {/* Loading overlay — shown while iframe is blank */}
+                      {loadingTabs.has(tab.id) && activeTabId === tab.id && (
+                        <div className="absolute inset-0 z-20 bg-neutral-900 flex flex-col items-center justify-center gap-4">
+                          <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
+                          <span className="text-sm font-medium text-indigo-400 animate-pulse">Carregando aplicação...</span>
+                        </div>
+                      )}
+                      <iframe 
+                        ref={el => { iframeRefs.current[tab.id] = el }}
+                        src={tab.url}
+                        onLoad={() => handleIframeLoad(tab.id)}
+                        className={`w-full h-full border-none bg-white ${activeTabId === tab.id ? `opacity-100 ${isMinimized ? 'pointer-events-none' : 'pointer-events-auto'}` : 'opacity-0 pointer-events-none'}`}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
                   ))}
                 </div>
               </motion.div>
