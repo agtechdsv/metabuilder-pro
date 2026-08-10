@@ -77,6 +77,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [showNewBranchModal, setShowNewBranchModal] = useState(false)
   const [newBranchName, setNewBranchName] = useState('')
   const [isCreatingBranch, setIsCreatingBranch] = useState(false)
+  const [ideLoadingState, setIdeLoadingState] = useState<{isLoading: boolean, message: string}>({ isLoading: false, message: '' })
   
   const [mounted, setMounted] = useState(false)
   const { toast } = useToast()
@@ -307,6 +308,8 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const handleRunDev = async () => {
     if (!target) return
     try {
+      setIdeLoadingState({ isLoading: true, message: 'Instalando dependências... Aguarde.' })
+      
       const home = await homeDir()
       // Fixes backslashes on windows to forward slashes for the shell cwd
       const cleanHome = home.replace(/\\/g, '/')
@@ -320,15 +323,24 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       const unlisten = await listen<string>('nextjs-dev-log', (event) => {
         console.log(`[Next.js Dev] ${event.payload}`)
         
+        const payloadLower = event.payload.toLowerCase()
+        
+        // Atualiza a mensagem quando começar a rodar o Next.js
+        if (payloadLower.includes('> next dev') || payloadLower.includes('starting...')) {
+          setIdeLoadingState({ isLoading: true, message: 'Iniciando o servidor... Aguarde.' })
+        }
+        
         // Se ainda não abriu o preview e o log indica que o Next.js iniciou
-        if (!previewOpened && event.payload.toLowerCase().includes('ready in')) {
+        if (!previewOpened && payloadLower.includes('ready in')) {
           previewOpened = true
+          setIdeLoadingState({ isLoading: false, message: '' })
           toast('Servidor Iniciado na porta 3000', 'success')
           openPreview('http://localhost:3000', `Preview: ${target.name}`)
         }
 
         if (event.payload.includes('Encerrado com código')) {
           setDevProcess(null)
+          setIdeLoadingState({ isLoading: false, message: '' })
           unlisten()
         }
       })
@@ -339,11 +351,12 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         kill: async () => {
           await invoke('stopcli')
           setDevProcess(null)
+          setIdeLoadingState({ isLoading: false, message: '' })
         }
       } as any)
       
-      toast('Instalando dependências e iniciando servidor... Aguarde.', 'info')
     } catch (err: any) {
+      setIdeLoadingState({ isLoading: false, message: '' })
       console.error('ERRO FATAL EM RUN DEV:', err)
       const msg = typeof err === 'string' ? err : (err?.message || String(err))
       toast(`Erro ao rodar projeto: ${msg}`, 'error')
@@ -598,14 +611,37 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                         <Settings className="w-4 h-4" />
                       </button>
 
-                      <button 
-                        onClick={handleRunDev}
-                        disabled={!!devProcess}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
-                      >
-                        <Play className="w-3.5 h-3.5 text-green-400" /> 
-                        {devProcess ? 'Servidor Ativo' : 'Rodar Preview Local'}
-                      </button>
+                      {!devProcess ? (
+                        <button 
+                          onClick={handleRunDev}
+                          disabled={isSyncing || ideLoadingState.isLoading}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
+                        >
+                          <Play className="w-3.5 h-3.5 text-green-400" /> 
+                          Rodar Preview Local
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => openPreview('http://localhost:3000', `Preview: ${target?.name}`)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-lg text-xs font-semibold transition-colors border border-indigo-500/30"
+                            title="Reabrir Navegador Interno"
+                          >
+                            <AppWindow className="w-3.5 h-3.5" /> 
+                            Servidor Ativo
+                          </button>
+                          <button 
+                            onClick={() => {
+                              if (devProcess && devProcess.kill) devProcess.kill()
+                            }}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-semibold transition-colors border border-red-500/30"
+                            title="Parar Servidor Local"
+                          >
+                            <XCircle className="w-3.5 h-3.5" /> 
+                            Stop
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     <button 
@@ -655,6 +691,11 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                         <div className="flex flex-col items-center justify-center h-full text-neutral-500 gap-4">
                           <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
                           <span className="text-sm font-medium animate-pulse text-indigo-400">Sincronizando arquivos com a nuvem...</span>
+                        </div>
+                      ) : ideLoadingState.isLoading ? (
+                        <div className="flex flex-col items-center justify-center h-full text-neutral-500 gap-4">
+                          <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
+                          <span className="text-sm font-medium animate-pulse text-indigo-400">{ideLoadingState.message}</span>
                         </div>
                       ) : selectedFile ? (
                         <MonacoEditor

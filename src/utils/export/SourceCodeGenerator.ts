@@ -207,6 +207,9 @@ export class SourceCodeGenerator {
           )
         }
 
+        // Remove any remaining cleanup() calls that were left in the catch block
+        content = content.replace(/cleanup\(\)/g, '')
+
         componentsFolder.folder('auth')?.file('LoginPortalClient.tsx', content)
       }
       await this.copyFolderToZip(path.join(cwd, 'src/components/shared'), componentsFolder.folder('shared')!)
