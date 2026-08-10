@@ -230,6 +230,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
               url: primaryConn.connectionString
             }
             payload.dataMode = 'legacy'
+            payload.authStrategy = 'legacy' // Adicionado para garantir que o LoginPortalClient use o BD local
           }
         }
       } catch (e) {
