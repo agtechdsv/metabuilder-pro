@@ -1,4 +1,19 @@
 {
+  "v1.1.5": {
+    "date": "2026-08-10",
+    "pt": [
+      "Visualização local aprimorada: agora seus pré-projetos abrem diretamente no navegador padrão do seu sistema para uma experiência de teste mais integrada e completa.",
+      "Maior controle sobre o carregamento: adicionada a funcionalidade de interromper e cancelar a renderização da pré-visualização a qualquer momento, garantindo mais agilidade no seu fluxo de trabalho."
+    ],
+    "en": [
+      "Enhanced local preview: your project previews now launch directly in your system's default browser for a seamless testing experience.",
+      "Better loading control: introduced the ability to stop preview loading at any time, giving you full control and saving valuable time."
+    ],
+    "es": [
+      "Vista previa local mejorada: ahora las previsualizaciones de tus proyectos se abren directamente en el navegador predeterminado de tu sistema para una experiencia de prueba más fluida.",
+      "Mayor control de carga: se añadió la posibilidad de detener el procesamiento de la vista previa en cualquier momento, evitando esperas innecesarias."
+    ]
+  },
   "v1.1.4": {
     "date": "2026-08-10",
     "pt": [
