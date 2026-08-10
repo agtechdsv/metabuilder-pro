@@ -1,4 +1,19 @@
 {
+  "v1.1.2": {
+    "date": "2026-08-10",
+    "pt": [
+      "Melhoria na estabilidade e no processo de instalação de dependências para usuários do Windows.",
+      "Experiência de pré-visualização aprimorada: a janela de visualização agora aguarda o carregamento completo antes de ser exibida, garantindo uma navegação mais fluida e sem interrupções."
+    ],
+    "en": [
+      "Improved stability and dependency installation process for Windows users.",
+      "Enhanced preview experience: the preview window now waits until content is fully loaded before displaying, ensuring a smoother and seamless interface."
+    ],
+    "es": [
+      "Mejora en la estabilidad y en el proceso de instalación de dependencias para usuarios de Windows.",
+      "Experiencia de vista previa mejorada: la ventana de visualización ahora espera a que el contenido esté completamente listo antes de mostrarse, garantizando una interfaz más fluida y sin interrupciones."
+    ]
+  },
   "v1.1.1": {
     "date": "2026-08-10",
     "pt": [
