@@ -1,0 +1,15 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "start-nextjs-dev",
+      "description": "allow start_nextjs_dev to spawn npm run dev natively",
+      "commands": {
+        "allow": [
+          "start_nextjs_dev"
+        ],
+        "deny": []
+      }
+    }
+  ]
+}

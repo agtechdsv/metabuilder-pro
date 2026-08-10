@@ -58,6 +58,7 @@
     "core:window:allow-set-focus",
     "startcli",
     "stopcli",
+    "start-nextjs-dev",
     "statuscli",
     "runsynccli",
     "openbrowser",
