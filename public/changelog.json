@@ -1,4 +1,22 @@
 {
+  "v1.1.3": {
+    "date": "2026-08-10",
+    "pt": [
+      "Experiência de desenvolvimento aprimorada na IDE, contando agora com indicadores visuais mais claros durante o carregamento da visualização local.",
+      "Maior autonomia no ambiente local com a adição do novo botão para interromper o servidor com apenas um clique.",
+      "Correção de instabilidades e melhorias no gerador de portais de login, garantindo uma criação mais confiável."
+    ],
+    "en": [
+      "Enhanced IDE development experience featuring clearer visual loading states for local previews.",
+      "Greater control over your local environment with a new one-click button to stop the server.",
+      "Improved stability and bug fixes for the login portal generator, ensuring a more reliable creation process."
+    ],
+    "es": [
+      "Experiencia de desarrollo mejorada en el IDE con indicadores visuales de carga más claros para las vistas previas locales.",
+      "Mayor control sobre tu entorno local con un nuevo botón para detener el servidor con un solo clic.",
+      "Mayor estabilidad y corrección de errores en el generador de portales de inicio de sesión para un proceso más confiable."
+    ]
+  },
   "v1.1.2": {
     "date": "2026-08-10",
     "pt": [
