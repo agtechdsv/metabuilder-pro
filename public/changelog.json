@@ -1,4 +1,19 @@
 {
+  "v1.1.8": {
+    "date": "2026-08-10",
+    "pt": [
+      "Melhoria no fluxo de login: corrigimos uma falha que podia impedir o acesso à plataforma, garantindo uma entrada mais rápida e sem erros.",
+      "Aumento na estabilidade e no desempenho durante a autenticação e gestão de sessões de usuário."
+    ],
+    "en": [
+      "Login flow improvement: fixed an issue that could prevent access to the platform, ensuring faster and error-free sign-in.",
+      "Enhanced stability and performance for user authentication and session management."
+    ],
+    "es": [
+      "Mejora en el flujo de inicio de sesión: corregimos un problema que podía impedir el acceso a la plataforma, garantizando un ingreso más rápido y sin errores.",
+      "Mayor estabilidad y rendimiento en la autenticación y gestión de sesiones de usuario."
+    ]
+  },
   "v1.1.7": {
     "date": "2026-08-10",
     "pt": [
