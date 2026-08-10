@@ -331,15 +331,39 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         
         if (!previewOpened && payloadLower.includes('ready in')) {
           previewOpened = true
-          setIdeLoadingState({ isLoading: false, message: '' })
-          toast('Servidor iniciado! Abrindo no browser...', 'success')
-          // Abre no browser do sistema (evita limitações do WebView2 com HMR do Next.js)
-          import('@tauri-apps/plugin-shell').then(({ open }) => {
-            open('http://localhost:3000')
-          }).catch(() => {
-            // fallback: abre no navegador interno
-            openPreview('http://localhost:3000', `Preview: ${target.name}`)
-          })
+          setIdeLoadingState({ isLoading: true, message: 'Compilando a aplicação... Aguarde.' })
+
+          // Aquecimento: faz um fetch para forçar o Next.js a compilar a página
+          // antes de abrir o Chrome. Assim o Chrome encontra a página pronta.
+          const warmUpAndOpen = async () => {
+            const maxAttempts = 40 // até ~2 minutos
+            for (let i = 0; i < maxAttempts; i++) {
+              try {
+                const res = await fetch('http://localhost:3000', {
+                  signal: AbortSignal.timeout(8000),
+                  cache: 'no-store',
+                })
+                if (res.status < 500) {
+                  // Página respondeu com sucesso — agora o Chrome vai abrir compilado
+                  setIdeLoadingState({ isLoading: false, message: '' })
+                  toast('Aplicação pronta! Abrindo no browser...', 'success')
+                  import('@tauri-apps/plugin-shell').then(({ open }) => {
+                    open('http://localhost:3000')
+                  }).catch(() => {
+                    openPreview('http://localhost:3000', `Preview: ${target.name}`)
+                  })
+                  return
+                }
+              } catch (_) {
+                // Ainda compilando, aguarda e tenta novamente
+              }
+              await new Promise(r => setTimeout(r, 3000))
+            }
+            // Fallback: se não respondeu após 2min, abre mesmo assim
+            setIdeLoadingState({ isLoading: false, message: '' })
+            import('@tauri-apps/plugin-shell').then(({ open }) => open('http://localhost:3000'))
+          }
+          warmUpAndOpen()
         }
 
         if (event.payload.includes('Encerrado com código')) {
