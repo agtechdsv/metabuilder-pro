@@ -436,32 +436,28 @@ export async function setPasswordAction(...args: any[]): Promise<any> { return {
             const emailCol = authConf.db_email_column || 'email'
             const passCol = authConf.db_password_column || 'senha'
             const idCol = authConf.db_user_role_column || 'id'
+            const usesPostgres = this.legacyDriver === 'postgres'
             
             const routeContent = `import { NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
-import { createClient } from '@/utils/supabase/server';
-${this.legacyDriver === 'postgres' ? "import { Pool } from 'pg';" : ""}
+${usesPostgres ? "import { Pool } from 'pg';" : "import { createClient } from '@/utils/supabase/server';"}
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'super-secret-key-replace-me');
 
 export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
-    let user = null;
+    let user: Record<string, any> | null = null;
 
-    ${this.legacyDriver === 'postgres' ? `
-    // Postgres Native Mode
+    ${usesPostgres ? `// Postgres Native Mode
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     const result = await pool.query('SELECT * FROM "${tableName}" WHERE "${emailCol}" = $1 LIMIT 1', [email]);
     if (result.rows.length > 0) user = result.rows[0];
-    await pool.end();
-    ` : `
-    // Supabase SDK Mode
+    await pool.end();` : `// Supabase SDK Mode
     const supabase = await createClient();
     const { data } = await supabase.from('${tableName}').select('*').eq('${emailCol}', email).limit(1).single();
-    user = data;
-    `}
+    user = data;`}
 
     if (!user) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 401 });
 
@@ -477,10 +473,12 @@ export async function POST(request: Request) {
       .setExpirationTime('24h')
       .sign(JWT_SECRET);
 
-    cookies().set('legacy_auth_token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 60 * 60 * 24 });
+    const cookieStore = await cookies();
+    cookieStore.set('legacy_auth_token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 60 * 60 * 24 });
     return NextResponse.json({ success: true, user: { id: user["${idCol}"], email: user["${emailCol}"] } });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[Auth Login Error]', error);
+    return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 });
   }
 }`
             customApiFolder.file('route.ts', routeContent)
