@@ -78,6 +78,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [newBranchName, setNewBranchName] = useState('')
   const [isCreatingBranch, setIsCreatingBranch] = useState(false)
   const [ideLoadingState, setIdeLoadingState] = useState<{isLoading: boolean, message: string}>({ isLoading: false, message: '' })
+  const [isStoppingServer, setIsStoppingServer] = useState(false)
   
   const [mounted, setMounted] = useState(false)
   const { toast } = useToast()
@@ -312,13 +313,11 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       setIdeLoadingState({ isLoading: true, message: 'Instalando dependências... Aguarde.' })
       
       const home = await homeDir()
-      // Fixes backslashes on windows to forward slashes for the shell cwd
       const cleanHome = home.replace(/\\/g, '/')
       const projectPath = `${cleanHome}/AGTech/MetaBuilderPRO/${target.slug}`
       
       await invoke('start_nextjs_dev', { projectPath })
 
-      // Escutar os logs do processo emitidos pelo Rust
       const { listen } = await import('@tauri-apps/api/event')
       let previewOpened = false
       const unlisten = await listen<string>('nextjs-dev-log', (event) => {
@@ -326,33 +325,42 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         
         const payloadLower = event.payload.toLowerCase()
         
-        // Atualiza a mensagem quando começar a rodar o Next.js
         if (payloadLower.includes('> next dev') || payloadLower.includes('starting...')) {
           setIdeLoadingState({ isLoading: true, message: 'Iniciando o servidor... Aguarde.' })
         }
         
-        // Se ainda não abriu o preview e o log indica que o Next.js iniciou
         if (!previewOpened && payloadLower.includes('ready in')) {
           previewOpened = true
           setIdeLoadingState({ isLoading: false, message: '' })
-          toast('Servidor Iniciado na porta 3000', 'success')
-          openPreview('http://localhost:3000', `Preview: ${target.name}`)
+          toast('Servidor iniciado! Abrindo no browser...', 'success')
+          // Abre no browser do sistema (evita limitações do WebView2 com HMR do Next.js)
+          import('@tauri-apps/plugin-shell').then(({ open }) => {
+            open('http://localhost:3000')
+          }).catch(() => {
+            // fallback: abre no navegador interno
+            openPreview('http://localhost:3000', `Preview: ${target.name}`)
+          })
         }
 
         if (event.payload.includes('Encerrado com código')) {
           setDevProcess(null)
+          setIsStoppingServer(false)
           setIdeLoadingState({ isLoading: false, message: '' })
           unlisten()
         }
       })
 
-      // Apenas criamos um dummy devProcess para o frontend saber que está rodando
-      // (no original armazenávamos o Child process, mas aqui usamos o CliState do backend)
       setDevProcess({
         kill: async () => {
+          setIsStoppingServer(true)
           await invoke('stopcli')
-          setDevProcess(null)
-          setIdeLoadingState({ isLoading: false, message: '' })
+          // O estado será limpo quando o evento 'Encerrado' chegar
+          // Mas colocamos um fallback de 5s caso o evento não chegue
+          setTimeout(() => {
+            setDevProcess(null)
+            setIsStoppingServer(false)
+            setIdeLoadingState({ isLoading: false, message: '' })
+          }, 5000)
         }
       } as any)
       
@@ -624,9 +632,12 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                       ) : (
                         <div className="flex items-center gap-2">
                           <button 
-                            onClick={() => openPreview('http://localhost:3000', `Preview: ${target?.name}`)}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-lg text-xs font-semibold transition-colors border border-indigo-500/30"
-                            title="Reabrir Navegador Interno"
+                            onClick={() => {
+                              import('@tauri-apps/plugin-shell').then(({ open }) => open('http://localhost:3000'))
+                            }}
+                            disabled={isStoppingServer}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-lg text-xs font-semibold transition-colors border border-indigo-500/30 disabled:opacity-50"
+                            title="Abrir no Browser"
                           >
                             <AppWindow className="w-3.5 h-3.5" /> 
                             Servidor Ativo
@@ -635,11 +646,14 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                             onClick={() => {
                               if (devProcess && devProcess.kill) devProcess.kill()
                             }}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-semibold transition-colors border border-red-500/30"
+                            disabled={isStoppingServer}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-semibold transition-colors border border-red-500/30 disabled:opacity-50"
                             title="Parar Servidor Local"
                           >
-                            <XCircle className="w-3.5 h-3.5" /> 
-                            Stop
+                            {isStoppingServer 
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : <XCircle className="w-3.5 h-3.5" />} 
+                            {isStoppingServer ? 'Parando...' : 'Stop'}
                           </button>
                         </div>
                       )}
