@@ -316,8 +316,17 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
 
       // Escutar os logs do processo emitidos pelo Rust
       const { listen } = await import('@tauri-apps/api/event')
+      let previewOpened = false
       const unlisten = await listen<string>('nextjs-dev-log', (event) => {
         console.log(`[Next.js Dev] ${event.payload}`)
+        
+        // Se ainda não abriu o preview e o log indica que o Next.js iniciou
+        if (!previewOpened && event.payload.toLowerCase().includes('ready in')) {
+          previewOpened = true
+          toast('Servidor Iniciado na porta 3000', 'success')
+          openPreview('http://localhost:3000', `Preview: ${target.name}`)
+        }
+
         if (event.payload.includes('Encerrado com código')) {
           setDevProcess(null)
           unlisten()
@@ -333,10 +342,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         }
       } as any)
       
-      toast('Servidor Iniciado na porta 3000', 'success')
-      
-      // Abre o Navegador Interno
-      openPreview('http://localhost:3000', `Preview: ${target.name}`)
+      toast('Instalando dependências e iniciando servidor... Aguarde.', 'info')
     } catch (err: any) {
       console.error('ERRO FATAL EM RUN DEV:', err)
       const msg = typeof err === 'string' ? err : (err?.message || String(err))
