@@ -182,6 +182,86 @@ fn start_nextjs_dev(app: tauri::AppHandle, state: State<'_, CliState>, project_p
 }
 
 #[command]
+fn start_npm_install(app: tauri::AppHandle, state: State<'_, CliState>, project_path: String) -> Result<String, String> {
+    let sidecar_command = app.shell().command("cmd")
+        .args(vec!["/c", "npm install"])
+        .current_dir(&project_path);
+
+    let (mut rx, _child) = sidecar_command.spawn().map_err(|e| e.to_string())?;
+
+    let app_handle = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let _ = app_handle.emit("nextjs-dev-log", "[Build] Iniciando npm install...".to_string());
+        while let Some(event) = rx.recv().await {
+            match event {
+                tauri_plugin_shell::process::CommandEvent::Stdout(line) => {
+                    let _ = app_handle.emit("nextjs-dev-log", String::from_utf8_lossy(&line).to_string());
+                }
+                tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
+                    let _ = app_handle.emit("nextjs-dev-log", format!("ERROR: {}", String::from_utf8_lossy(&line)));
+                }
+                tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
+                    let code = payload.code.unwrap_or(-1);
+                    if code == 0 {
+                        let _ = app_handle.emit("nextjs-dev-log", "[Build] npm install concluído com sucesso!".to_string());
+                        let _ = app_handle.emit("npm-install-done", true);
+                    } else {
+                        let _ = app_handle.emit("nextjs-dev-log", format!("[Build] npm install falhou com código {}", code));
+                        let _ = app_handle.emit("npm-install-done", false);
+                    }
+                }
+                _ => {}
+            }
+        }
+    });
+
+    Ok("Install iniciado".to_string())
+}
+
+#[command]
+fn start_nextjs_server(app: tauri::AppHandle, state: State<'_, CliState>, project_path: String) -> Result<String, String> {
+    let mut child_guard = state.child.lock().unwrap();
+    if child_guard.is_some() {
+        return Ok("Já está rodando".to_string());
+    }
+
+    let sidecar_command = app.shell().command("cmd")
+        .args(vec!["/c", "npm run dev"])
+        .current_dir(&project_path);
+
+    let (mut rx, child) = sidecar_command.spawn().map_err(|e| e.to_string())?;
+
+    {
+        let mut pid_guard = state.dev_pid.lock().unwrap();
+        *pid_guard = Some(child.pid());
+    }
+    *child_guard = Some(child);
+
+    let app_handle = app.clone();
+    tauri::async_runtime::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            match event {
+                tauri_plugin_shell::process::CommandEvent::Stdout(line) => {
+                    let _ = app_handle.emit("nextjs-dev-log", String::from_utf8_lossy(&line).to_string());
+                }
+                tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
+                    let _ = app_handle.emit("nextjs-dev-log", format!("ERROR: {}", String::from_utf8_lossy(&line)));
+                }
+                tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
+                    let _ = app_handle.emit("nextjs-dev-log", format!("Encerrado com código {:?}", payload.code));
+                    let state = app_handle.state::<CliState>();
+                    let mut child_guard = state.child.lock().unwrap();
+                    *child_guard = None;
+                }
+                _ => {}
+            }
+        }
+    });
+
+    Ok("Servidor iniciado".to_string())
+}
+
+#[command]
 fn open_devtools(window: tauri::WebviewWindow) {
     window.open_devtools();
 }
@@ -626,6 +706,8 @@ pub fn run() {
             startcli,
             stopcli,
             start_nextjs_dev,
+            start_npm_install,
+            start_nextjs_server,
             statuscli,
             runsynccli,
             openbrowser,

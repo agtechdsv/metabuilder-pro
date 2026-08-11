@@ -5,7 +5,8 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   FolderGit2, Play, DownloadCloud, AlertTriangle, 
-  CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronDown, Folder, History, X, Minimize2, AppWindow, LayoutDashboard, Loader2, Settings, Plus, Network, UploadCloud, Download, GitBranch
+  CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronDown, Folder, History, X, Minimize2, AppWindow, LayoutDashboard, Loader2, Settings, Plus, Network, UploadCloud, Download, GitBranch,
+  Package, Square, Trash2, PanelBottomOpen
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { isTauri } from '@/utils/tauriUtils'
@@ -79,6 +80,12 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [isCreatingBranch, setIsCreatingBranch] = useState(false)
   const [ideLoadingState, setIdeLoadingState] = useState<{isLoading: boolean, message: string}>({ isLoading: false, message: '' })
   const [isStoppingServer, setIsStoppingServer] = useState(false)
+  const [isInstalling, setIsInstalling] = useState(false)
+  
+  // Console panel state
+  const [consoleLogs, setConsoleLogs] = useState<Array<{ts: string, text: string, type: 'info'|'error'|'warn'|'stdout'}>>([])
+  const [showConsole, setShowConsole] = useState(true) // open by default
+  const consoleEndRef = useRef<HTMLDivElement>(null)
   
   const [mounted, setMounted] = useState(false)
   const { toast } = useToast()
@@ -88,6 +95,20 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Helper to append a line to the console
+  const addConsoleLog = (text: string, type: 'info'|'error'|'warn'|'stdout' = 'stdout') => {
+    setConsoleLogs(prev => [...prev, {
+      ts: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      text,
+      type
+    }])
+  }
+
+  // Auto-scroll console to bottom on new logs
+  useEffect(() => {
+    consoleEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [consoleLogs])
 
   useEffect(() => {
     if (isOpen && target && isTauri()) {
@@ -307,69 +328,83 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const handleRunDev = async () => {
-    if (!target) return
+  const getProjectPath = async () => {
+    const home = await homeDir()
+    return `${home.replace(/\\/g, '/')}/AGTech/MetaBuilderPRO/${target!.slug}`
+  }
+
+  const handleInstall = async () => {
+    if (!target || isInstalling || devProcess) return
+    setIsInstalling(true)
+    setShowConsole(true)
+    addConsoleLog('▶ Iniciando npm install...', 'info')
     try {
-      setIdeLoadingState({ isLoading: true, message: 'Instalando dependências... Aguarde.' })
+      const projectPath = await getProjectPath()
+      const { listen } = await import('@tauri-apps/api/event')
       
-      const home = await homeDir()
-      const cleanHome = home.replace(/\\/g, '/')
-      const projectPath = `${cleanHome}/AGTech/MetaBuilderPRO/${target.slug}`
-      
-      await invoke('start_nextjs_dev', { projectPath })
+      await new Promise<void>(async (resolve, reject) => {
+        const unlistenInstall = await listen<boolean>('npm-install-done', (event) => {
+          unlistenInstall()
+          if (event.payload) resolve(); else reject(new Error('npm install falhou'))
+        })
+        try {
+          await invoke('start_npm_install', { projectPath })
+        } catch (e) {
+          unlistenInstall()
+          reject(e)
+        }
+      })
+
+      addConsoleLog('✓ Dependências instaladas com sucesso!', 'info')
+    } catch (err: any) {
+      addConsoleLog(`✗ Erro no build: ${err?.message || err}`, 'error')
+      toast('Erro ao instalar dependências', 'error')
+    } finally {
+      setIsInstalling(false)
+    }
+  }
+
+  const handleStart = async () => {
+    if (!target || devProcess || isInstalling) return
+    setShowConsole(true)
+    addConsoleLog('▶ Iniciando servidor Next.js...', 'info')
+    try {
+      const projectPath = await getProjectPath()
+      await invoke('start_nextjs_server', { projectPath })
 
       const { listen } = await import('@tauri-apps/api/event')
-      let previewOpened = false
+      let serverReady = false
       const unlisten = await listen<string>('nextjs-dev-log', (event) => {
-        console.log(`[Next.js Dev] ${event.payload}`)
-        
-        const payloadLower = event.payload.toLowerCase()
-        
-        if (payloadLower.includes('> next dev') || payloadLower.includes('starting...')) {
-          setIdeLoadingState({ isLoading: true, message: 'Iniciando o servidor... Aguarde.' })
-        }
-        
-        if (!previewOpened && payloadLower.includes('ready in')) {
-          previewOpened = true
-          setIdeLoadingState({ isLoading: true, message: 'Compilando a aplicação... Aguarde.' })
+        const text = event.payload
+        const lower = text.toLowerCase()
+        const type = lower.includes('error') ? 'error' : lower.includes('warn') ? 'warn' : 'stdout'
+        addConsoleLog(text, type)
 
-          // Aquecimento: faz um fetch para forçar o Next.js a compilar a página
-          // antes de abrir o Chrome. Assim o Chrome encontra a página pronta.
-          const warmUpAndOpen = async () => {
-            const maxAttempts = 40 // até ~2 minutos
-            for (let i = 0; i < maxAttempts; i++) {
+        if (!serverReady && lower.includes('ready in')) {
+          serverReady = true
+          addConsoleLog('⚙ Compilando a aplicação... Aguardando primeira resposta.', 'info')
+
+          // Warm-up: wait for first successful HTTP response before enabling open-in-browser
+          const warmUp = async () => {
+            for (let i = 0; i < 40; i++) {
               try {
-                const res = await fetch('http://localhost:3000', {
-                  signal: AbortSignal.timeout(8000),
-                  cache: 'no-store',
-                })
+                const res = await fetch('http://localhost:3000', { signal: AbortSignal.timeout(8000), cache: 'no-store' })
                 if (res.status < 500) {
-                  // Página respondeu com sucesso — agora o Chrome vai abrir compilado
-                  setIdeLoadingState({ isLoading: false, message: '' })
-                  toast('Aplicação pronta! Abrindo no browser...', 'success')
-                  import('@tauri-apps/plugin-shell').then(({ open }) => {
-                    open('http://localhost:3000')
-                  }).catch(() => {
-                    openPreview('http://localhost:3000', `Preview: ${target.name}`)
-                  })
+                  addConsoleLog('✓ Aplicação pronta em localhost:3000', 'info')
+                  toast('Servidor pronto!', 'success')
                   return
                 }
-              } catch (_) {
-                // Ainda compilando, aguarda e tenta novamente
-              }
+              } catch (_) {}
               await new Promise(r => setTimeout(r, 3000))
             }
-            // Fallback: se não respondeu após 2min, abre mesmo assim
-            setIdeLoadingState({ isLoading: false, message: '' })
-            import('@tauri-apps/plugin-shell').then(({ open }) => open('http://localhost:3000'))
           }
-          warmUpAndOpen()
+          warmUp()
         }
 
-        if (event.payload.includes('Encerrado com código')) {
+        if (text.includes('Encerrado com código')) {
           setDevProcess(null)
           setIsStoppingServer(false)
-          setIdeLoadingState({ isLoading: false, message: '' })
+          addConsoleLog('■ Servidor encerrado.', 'info')
           unlisten()
         }
       })
@@ -378,23 +413,36 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         kill: async () => {
           setIsStoppingServer(true)
           await invoke('stopcli')
-          // O estado será limpo quando o evento 'Encerrado' chegar
-          // Mas colocamos um fallback de 5s caso o evento não chegue
           setTimeout(() => {
             setDevProcess(null)
             setIsStoppingServer(false)
-            setIdeLoadingState({ isLoading: false, message: '' })
           }, 5000)
         }
       } as any)
-      
+
     } catch (err: any) {
-      setIdeLoadingState({ isLoading: false, message: '' })
-      console.error('ERRO FATAL EM RUN DEV:', err)
-      const msg = typeof err === 'string' ? err : (err?.message || String(err))
-      toast(`Erro ao rodar projeto: ${msg}`, 'error')
+      addConsoleLog(`✗ Erro ao iniciar servidor: ${err?.message || err}`, 'error')
+      toast(`Erro ao iniciar servidor: ${err?.message || err}`, 'error')
     }
   }
+
+  const handleStop = async () => {
+    if (!devProcess || isStoppingServer) return
+    devProcess.kill()
+  }
+
+  const handleOpenBrowser = async () => {
+    addConsoleLog('↗ Abrindo localhost:3000 no browser...', 'info')
+    import('@tauri-apps/plugin-shell').then(({ open }) => {
+      open('http://localhost:3000')
+    }).catch(() => {
+      openPreview('http://localhost:3000', `Preview: ${target?.name}`)
+    })
+  }
+
+  // Keep the original handleRunDev for backward compat (used by old sync flow if needed)
+  const handleRunDev = handleStart
+
 
   const handleShowLogs = async () => {
     if (!syncManager) return
@@ -644,43 +692,18 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                         <Settings className="w-4 h-4" />
                       </button>
 
-                      {!devProcess ? (
-                        <button 
-                          onClick={handleRunDev}
-                          disabled={isSyncing || ideLoadingState.isLoading}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
-                        >
-                          <Play className="w-3.5 h-3.5 text-green-400" /> 
-                          Rodar Preview Local
-                        </button>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => {
-                              import('@tauri-apps/plugin-shell').then(({ open }) => open('http://localhost:3000'))
-                            }}
-                            disabled={isStoppingServer}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-lg text-xs font-semibold transition-colors border border-indigo-500/30 disabled:opacity-50"
-                            title="Abrir no Browser"
-                          >
-                            <AppWindow className="w-3.5 h-3.5" /> 
-                            Servidor Ativo
-                          </button>
-                          <button 
-                            onClick={() => {
-                              if (devProcess && devProcess.kill) devProcess.kill()
-                            }}
-                            disabled={isStoppingServer}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-semibold transition-colors border border-red-500/30 disabled:opacity-50"
-                            title="Parar Servidor Local"
-                          >
-                            {isStoppingServer 
-                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              : <XCircle className="w-3.5 h-3.5" />} 
-                            {isStoppingServer ? 'Parando...' : 'Stop'}
-                          </button>
-                        </div>
-                      )}
+                      {/* Console toggle button */}
+                      <button
+                        onClick={() => setShowConsole(v => !v)}
+                        className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors border ${
+                          showConsole
+                            ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400'
+                            : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white hover:bg-neutral-700'
+                        }`}
+                        title={showConsole ? 'Ocultar Console' : 'Mostrar Console'}
+                      >
+                        <PanelBottomOpen className="w-4 h-4" />
+                      </button>
                     </div>
 
                     <button 
@@ -701,67 +724,170 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                   </div>
                 </div>
 
-                {/* Main Content IDE */}
-                <div className="flex-1 flex min-h-0 bg-[#1e1e1e]">
-                  {/* Sidebar Tree */}
-                  <div className="w-64 border-r border-neutral-800 bg-[#181818] overflow-y-auto py-2">
-                    {renderTree(fileTree)}
+                {/* Main Content IDE — editor + console */}
+                <div className="flex-1 flex flex-col min-h-0 bg-[#1e1e1e]">
+
+                  {/* Editor Row */}
+                  <div className="flex flex-1 min-h-0">
+                    {/* Sidebar Tree */}
+                    <div className="w-64 border-r border-neutral-800 bg-[#181818] overflow-y-auto py-2">
+                      {renderTree(fileTree)}
+                    </div>
+
+                    {/* Editor */}
+                    <div className="flex-1 flex flex-col min-w-0">
+                      <div className="h-10 bg-[#1e1e1e] border-b border-neutral-800 flex items-center justify-between px-4 text-sm text-neutral-400">
+                        <span>{selectedFile ? selectedFile.replace(`AGTech/MetaBuilderPRO/${target.slug}/`, '') : 'Nenhum arquivo selecionado'}</span>
+                        {selectedFile && (
+                          <button
+                            onClick={() => {
+                              setSelectedFile(null)
+                              setFileContent('')
+                            }}
+                            className="p-1 hover:bg-neutral-800 rounded text-neutral-500 hover:text-white transition-colors"
+                            title="Fechar arquivo"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        {selectedFile ? (
+                          <MonacoEditor
+                            language={selectedFile.endsWith('.tsx') || selectedFile.endsWith('.ts') ? 'typescript' : selectedFile.endsWith('.json') ? 'json' : 'javascript'}
+                            theme="vs-dark"
+                            value={fileContent}
+                            onChange={val => setFileContent(val || '')}
+                            options={{
+                              minimap: { enabled: false },
+                              fontSize: 13,
+                              wordWrap: 'on',
+                              padding: { top: 16 }
+                            }}
+                            onMount={(editor, monaco) => {
+                              editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+                                handleSaveFile(editor.getValue())
+                              })
+                            }}
+                          />
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-neutral-600">
+                            Selecione um arquivo na árvore ao lado
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Editor */}
-                  <div className="flex-1 flex flex-col min-w-0">
-                    <div className="h-10 bg-[#1e1e1e] border-b border-neutral-800 flex items-center justify-between px-4 text-sm text-neutral-400">
-                      <span>{selectedFile ? selectedFile.replace(`AGTech/MetaBuilderPRO/${target.slug}/`, '') : 'Nenhum arquivo selecionado'}</span>
-                      {selectedFile && (
-                        <button
-                          onClick={() => {
-                            setSelectedFile(null)
-                            setFileContent('')
-                          }}
-                          className="p-1 hover:bg-neutral-800 rounded text-neutral-500 hover:text-white transition-colors"
-                          title="Fechar arquivo"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      {isSyncing ? (
-                        <div className="flex flex-col items-center justify-center h-full text-neutral-500 gap-4">
-                          <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
-                          <span className="text-sm font-medium animate-pulse text-indigo-400">Sincronizando arquivos com a nuvem...</span>
+                  {/* Console Panel */}
+                  <AnimatePresence>
+                    {showConsole && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 220, opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: 'easeInOut' }}
+                        className="border-t border-neutral-800 bg-[#0d0d0d] flex flex-col overflow-hidden shrink-0"
+                      >
+                        {/* Console toolbar */}
+                        <div className="flex items-center justify-between px-3 py-1.5 border-b border-neutral-800 shrink-0 bg-[#141414]">
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mr-2">Console</span>
+
+                            {/* Build */}
+                            <button
+                              onClick={handleInstall}
+                              disabled={isInstalling || !!devProcess || isSyncing}
+                              title="Build (npm install)"
+                              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-amber-400"
+                            >
+                              {isInstalling
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <Package className="w-3.5 h-3.5" />}
+                              <span className="hidden sm:inline">Build</span>
+                            </button>
+
+                            {/* Start / Stop toggle */}
+                            {!devProcess ? (
+                              <button
+                                onClick={handleStart}
+                                disabled={isInstalling || isSyncing}
+                                title="Start (npm run dev)"
+                                className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-green-400"
+                              >
+                                <Play className="w-3.5 h-3.5 text-green-400" />
+                                <span className="hidden sm:inline">Start</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={handleStop}
+                                disabled={isStoppingServer}
+                                title="Stop servidor"
+                                className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-red-400"
+                              >
+                                {isStoppingServer
+                                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  : <Square className="w-3.5 h-3.5 fill-red-400 text-red-400" />}
+                                <span className="hidden sm:inline">{isStoppingServer ? 'Parando...' : 'Stop'}</span>
+                              </button>
+                            )}
+
+                            {/* Open Browser */}
+                            <button
+                              onClick={handleOpenBrowser}
+                              disabled={!devProcess}
+                              title="Abrir no Browser"
+                              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-indigo-400"
+                            >
+                              <AppWindow className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Browser</span>
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            {/* Clear */}
+                            <button
+                              onClick={() => setConsoleLogs([])}
+                              title="Limpar Console"
+                              className="flex items-center justify-center w-6 h-6 rounded hover:bg-neutral-800 text-neutral-500 hover:text-white transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                            {/* Close */}
+                            <button
+                              onClick={() => setShowConsole(false)}
+                              title="Fechar Console"
+                              className="flex items-center justify-center w-6 h-6 rounded hover:bg-neutral-800 text-neutral-500 hover:text-white transition-colors"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
-                      ) : ideLoadingState.isLoading ? (
-                        <div className="flex flex-col items-center justify-center h-full text-neutral-500 gap-4">
-                          <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
-                          <span className="text-sm font-medium animate-pulse text-indigo-400">{ideLoadingState.message}</span>
+
+                        {/* Log lines */}
+                        <div className="flex-1 overflow-y-auto px-3 py-2 font-mono text-[11px] leading-relaxed space-y-0.5">
+                          {consoleLogs.length === 0 && (
+                            <span className="text-neutral-600">Console pronto. Use os ícones acima para iniciar.</span>
+                          )}
+                          {consoleLogs.map((log, i) => (
+                            <div key={i} className={`flex gap-2 ${
+                              log.type === 'error' ? 'text-red-400'
+                              : log.type === 'warn' ? 'text-yellow-400'
+                              : log.type === 'info' ? 'text-cyan-400'
+                              : 'text-neutral-300'
+                            }`}>
+                              <span className="text-neutral-600 shrink-0">{log.ts}</span>
+                              <span className="break-all whitespace-pre-wrap">{log.text}</span>
+                            </div>
+                          ))}
+                          <div ref={consoleEndRef} />
                         </div>
-                      ) : selectedFile ? (
-                        <MonacoEditor
-                          language={selectedFile.endsWith('.tsx') || selectedFile.endsWith('.ts') ? 'typescript' : selectedFile.endsWith('.json') ? 'json' : 'javascript'}
-                          theme="vs-dark"
-                          value={fileContent}
-                          onChange={val => setFileContent(val || '')}
-                          options={{
-                            minimap: { enabled: false },
-                            fontSize: 13,
-                            wordWrap: 'on',
-                            padding: { top: 16 }
-                          }}
-                          onMount={(editor, monaco) => {
-                            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-                              handleSaveFile(editor.getValue())
-                            })
-                          }}
-                        />
-                      ) : (
-                        <div className="h-full flex items-center justify-center text-neutral-600">
-                          Selecione um arquivo na árvore ao lado
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                 </div>
+
               </motion.div>
 
               {/* Floating Restore Button when minimized */}
