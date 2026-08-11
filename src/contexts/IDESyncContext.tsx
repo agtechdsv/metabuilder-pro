@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   FolderGit2, Play, DownloadCloud, AlertTriangle, 
   CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronDown, Folder, History, X, Minimize2, AppWindow, LayoutDashboard, Loader2, Settings, Plus, Network, UploadCloud, Download, GitBranch,
-  Package, Square, Trash2, PanelBottomOpen
+  Package, Square, Trash2, PanelBottomOpen, PanelLeftOpen
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { isTauri } from '@/utils/tauriUtils'
@@ -85,6 +85,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   // Console panel state
   const [consoleLogs, setConsoleLogs] = useState<Array<{ts: string, text: string, type: 'info'|'error'|'warn'|'stdout'}>>([])
   const [showConsole, setShowConsole] = useState(true) // open by default
+  const [showSidebar, setShowSidebar] = useState(true) // open by default
   const consoleEndRef = useRef<HTMLDivElement>(null)
   
   const [mounted, setMounted] = useState(false)
@@ -704,6 +705,19 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                       >
                         <PanelBottomOpen className="w-4 h-4" />
                       </button>
+
+                      {/* Sidebar toggle button */}
+                      <button
+                        onClick={() => setShowSidebar(v => !v)}
+                        className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors border ${
+                          showSidebar
+                            ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400'
+                            : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white hover:bg-neutral-700'
+                        }`}
+                        title={showSidebar ? 'Ocultar Arquivos' : 'Mostrar Arquivos'}
+                      >
+                        <PanelLeftOpen className="w-4 h-4" />
+                      </button>
                     </div>
 
                     <button 
@@ -730,9 +744,19 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                   {/* Editor Row */}
                   <div className="flex flex-1 min-h-0">
                     {/* Sidebar Tree */}
-                    <div className="w-64 border-r border-neutral-800 bg-[#181818] overflow-y-auto py-2">
-                      {renderTree(fileTree)}
-                    </div>
+                    <AnimatePresence initial={false}>
+                      {showSidebar && (
+                        <motion.div
+                          initial={{ width: 0, opacity: 0 }}
+                          animate={{ width: 256, opacity: 1 }}
+                          exit={{ width: 0, opacity: 0 }}
+                          transition={{ duration: 0.2, ease: 'easeInOut' }}
+                          className="border-r border-neutral-800 bg-[#181818] overflow-y-auto py-2 overflow-x-hidden shrink-0"
+                        >
+                          {renderTree(fileTree)}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                     {/* Editor */}
                     <div className="flex-1 flex flex-col min-w-0">
