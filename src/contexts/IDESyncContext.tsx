@@ -389,8 +389,13 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
           const warmUp = async () => {
             for (let i = 0; i < 40; i++) {
               try {
-                const res = await fetch('http://localhost:3000', { signal: AbortSignal.timeout(8000), cache: 'no-store' })
-                if (res.status < 500) {
+                const res = await fetch('http://localhost:3000', { 
+                  mode: 'no-cors',
+                  signal: AbortSignal.timeout(8000), 
+                  cache: 'no-store' 
+                })
+                // mode: 'no-cors' returns an opaque response with status 0, which means the server responded!
+                if (res.status === 0 || res.status < 500) {
                   addConsoleLog('✓ Aplicação pronta em localhost:3000', 'info')
                   toast('Servidor pronto!', 'success')
                   return
