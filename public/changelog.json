@@ -1,19 +1,4 @@
 {
-  "v1.0.14": {
-    "date": "2026-08-09",
-    "pt": [
-      "Integração avançada com o sistema operacional: abra links externos e gerencie arquivos locais diretamente pelo aplicativo com mais segurança e rapidez.",
-      "Melhorias de desempenho e estabilidade no processamento de tarefas do sistema e manipulação de arquivos no aplicativo desktop."
-    ],
-    "en": [
-      "Advanced operating system integration: seamlessly open external links and manage local files directly within the app faster and more securely.",
-      "Performance and stability enhancements for handling local system tasks and file management."
-    ],
-    "es": [
-      "Integración avanzada con el sistema operativo: abre enlaces externos y gestiona archivos locales directamente desde la aplicación de forma más segura y rápida.",
-      "Mejoras de rendimiento y estabilidad en el procesamiento de tareas del sistema y la gestión de archivos locales."
-    ]
-  },
   "v1.0.12": {
     "date": "2026-08-09",
     "pt": [
