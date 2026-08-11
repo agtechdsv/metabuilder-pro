@@ -1,28 +1,4 @@
 {
-  "v1.0.3": {
-    "date": "2026-08-07",
-    "pt": [
-      "Nova Visualização Multimodal: Suporte a visões em Kanban, Gantt, Timeline, Galeria Dinâmica e Mapa Mental para uma gestão visual e interativa de dados.",
-      "Formulários Dinâmicos e Relacionais: Novo sistema de formulários avançados com carregamento inteligente (lazy loading) de sub-registros, tabelas aninhadas e ações em lote.",
-      "Painel de Gerenciamento de Projetos: Dashboard do Project Manager totalmente integrado com tempo de execução otimizado para gestão de registros em tempo real.",
-      "Carregamento de Dados Ultra-Rápido: Otimizações de arquitetura e conexão centralizada que aceleram significativamente o processamento de consultas e sub-dados.",
-      "Mapeamento e Galeria Inteligente de Mídias: Mapeamento automático de dados para ativos com geração instantânea de pré-visualizações visuais."
-    ],
-    "en": [
-      "New Multimodal Views: Added support for Kanban, Gantt, Timeline, Dynamic Gallery, and Mind Map layouts for interactive data management.",
-      "Advanced Relational Forms: New dynamic form engine featuring lazy-loading for nested sub-records, sub-tables, and bulk expansion controls.",
-      "Project Manager Dashboard: Dedicated ProjectManager dashboard with streamlined runtime form components for seamless project tracking.",
-      "Ultra-Fast Data Fetching: Architecture improvements and centralized tunnel connections that significantly boost real-time record and query performance.",
-      "Smart Asset Mapping & Gallery: Automated data-to-asset mapping with instant preview generation inside the Dynamic Gallery."
-    ],
-    "es": [
-      "Nuevas Vistas Multimodales: Soporte para vistas en Kanban, Gantt, Línea de Tiempo, Galería Dinámica y Mapas Mentales para una gestión visual e interactiva.",
-      "Formularios Dinámicos y Relacionales: Nuevo motor de formularios avanzados con carga inteligente de subregistros, subtablas y controles de expansión masiva.",
-      "Panel de Gestión de Proyectos: Dashboard centralizado del Project Manager optimizado para el seguimiento y ejecución de proyectos en tiempo real.",
-      "Carga de Datos Ultra Rápida: Mejoras de arquitectura y conexiones centralizadas que aceleran considerablemente las consultas y procesamiento de subtablas.",
-      "Mapeo y Galería Inteligente de Archivos: Mapeo automático de datos a activos visuales con generación instantánea de vistas previas."
-    ]
-  },
   "v1.0.2": {
     "date": "2026-08-02",
     "pt": [
