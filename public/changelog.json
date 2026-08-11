@@ -1,22 +1,4 @@
 {
-  "v1.0.5": {
-    "date": "2026-08-08",
-    "pt": [
-      "Nova versão nativa para desktop com excelente desempenho e inicialização ultra-rápida.",
-      "Sistema de atualizações automáticas integrado para garantir acesso transparente às últimas funcionalidades e melhorias de segurança.",
-      "Suporte a Links Diretos (Deep-linking) para abrir projetos e telas específicas da plataforma diretamente a partir do seu navegador ou e-mail."
-    ],
-    "en": [
-      "New native desktop application providing top-tier performance and ultra-fast startup times.",
-      "Integrated automatic updates to seamlessly deliver the latest features and security improvements.",
-      "Deep-linking support enabling you to open specific platform views or projects directly from web links or emails."
-    ],
-    "es": [
-      "Nueva versión de escritorio nativa que ofrece un rendimiento superior y un inicio ultra rápido.",
-      "Sistema de actualizaciones automáticas integrado para recibir de forma fluida las últimas funciones y mejoras de seguridad.",
-      "Soporte para Enlaces Directos (Deep-linking) para abrir vistas o proyectos específicos de la plataforma directamente desde el navegador o correo electrónico."
-    ]
-  },
   "v1.0.4": {
     "date": "2026-08-08",
     "pt": [
