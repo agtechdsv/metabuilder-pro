@@ -173,15 +173,12 @@ export class SourceCodeGenerator {
         if (this.authStrategy === 'managed') {
           // Convert handleSubmit to use Supabase Auth
           content = content.replace(
-            /const queryId = crypto\.randomUUID\(\)[\s\S]*?setIsLoading\(false\)\n\s*\}/m,
+            /const queryId = crypto\.randomUUID\(\)[\s\S]*?\} catch \(err: any\) \{/m,
             `try {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
         if (data?.user) finalizeLogin(data.user)
-      } catch (err: any) {
-        setErrorMsg(err.message || t('runtime.auth_unexpected_error', 'Erro inesperado ao realizar autenticação.'))
-        setIsLoading(false)
-      }`
+      } catch (err: any) {`
           )
 
           // Convert handlePasskeyLogin to use Supabase Auth
@@ -196,7 +193,7 @@ export class SourceCodeGenerator {
           const endpoint = this.authStrategy === 'legacy' ? '/api/auth/login' : '/api/auth/ldap'
           // Convert handleSubmit to POST custom endpoint
           content = content.replace(
-            /const queryId = crypto\.randomUUID\(\)[\s\S]*?setIsLoading\(false\)\n\s*\}/m,
+            /const queryId = crypto\.randomUUID\(\)[\s\S]*?\} catch \(err: any\) \{/m,
             `try {
         const res = await fetch('${endpoint}', {
           method: 'POST',
@@ -206,15 +203,14 @@ export class SourceCodeGenerator {
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Erro no login')
         finalizeLogin(data.user || { id: data.userId || 'legacy-user' })
-      } catch (err: any) {
-        setErrorMsg(err.message || t('runtime.auth_unexpected_error', 'Erro inesperado ao realizar autenticação.'))
-        setIsLoading(false)
-      }`
+      } catch (err: any) {`
           )
         }
 
         // Remove any remaining cleanup() calls that were left in the catch block
         content = content.replace(/cleanup\(\)/g, '')
+        // Fix the catch block to show the real error message instead of masking it
+        content = content.replace(/setErrorMsg\(t\('runtime\.auth_unexpected_error',\s*'[^']+'\)\)/g, "setErrorMsg(err?.message || t('runtime.auth_unexpected_error', 'Erro inesperado ao realizar autenticação.'))")
 
         componentsFolder.folder('auth')?.file('LoginPortalClient.tsx', content)
       }
