@@ -52,9 +52,8 @@ export async function POST(request: Request) {
           ldap_base_dn: dbAuthConfig.ldap_base_dn,
           ...(dbAuthConfig.ui_config || {}),
         }
-        // Também atualiza o auth_strategy do projeto se houver auth_type salvo
-        if (dbAuthConfig.auth_type && !finalAuthStrategy) {
-          // finalAuthStrategy é definido abaixo, mas aqui garantimos que o projeto tem o tipo correto
+        // Garante que o project.auth_strategy reflita o auth_type salvo na config (será usado em finalAuthStrategy abaixo)
+        if (dbAuthConfig.auth_type) {
           project.auth_strategy = dbAuthConfig.auth_type
         }
       }
