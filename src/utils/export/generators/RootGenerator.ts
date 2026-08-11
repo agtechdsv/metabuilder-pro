@@ -41,7 +41,7 @@ export function generateRootFiles(zip: JSZip, project: any, dataMode: string = '
       'otplib': '^13.4.1',
       'qrcode': '^1.5.4',
       'qrcode.react': '^4.2.0',
-      ...(authStrategy === 'legacy' || authStrategy === 'ldap' ? { 'jose': '^5.4.0' } : {}),
+      ...(authStrategy === 'legacy' || authStrategy === 'ldap' ? { 'jose': '^5.4.0', 'bcryptjs': '^2.4.3' } : {}),
       ...(authStrategy === 'ldap' ? { 'ldapjs': '^3.0.7' } : {})
     },
     devDependencies: {
@@ -55,6 +55,7 @@ export function generateRootFiles(zip: JSZip, project: any, dataMode: string = '
       '@types/leaflet': '^1.9.21',
       '@types/qrcode': '^1.5.6',
       ...(dataMode === 'postgres' || legacyDriver === 'postgres' ? { '@types/pg': '^8.11.5' } : {}),
+      ...(authStrategy === 'legacy' || authStrategy === 'ldap' ? { '@types/bcryptjs': '^2.4.6' } : {}),
       ...(authStrategy === 'ldap' ? { '@types/ldapjs': '^3.0.5' } : {})
     }
   }, null, 2))

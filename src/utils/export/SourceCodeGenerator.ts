@@ -447,6 +447,7 @@ export async function setPasswordAction(...args: any[]): Promise<any> { return {
             const routeContent = `import { NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
+import bcrypt from 'bcryptjs';
 ${usesPostgres ? "import { Pool } from 'pg';" : "import { createClient } from '@/utils/supabase/server';"}
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'super-secret-key-replace-me');
@@ -467,8 +468,11 @@ export async function POST(request: Request) {
 
     if (!user) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 401 });
 
-    // ATENÇÃO: Adicione a validação de hash (bcrypt) aqui na implementação final
-    if (user["${passCol}"] !== password) {
+    const storedPassword = user["${passCol}"];
+    const isBcrypt = storedPassword?.startsWith('$2');
+    const isMatch = isBcrypt ? await bcrypt.compare(password, storedPassword) : storedPassword === password;
+
+    if (!isMatch) {
       return NextResponse.json({ error: 'Senha incorreta' }, { status: 401 });
     }
 
