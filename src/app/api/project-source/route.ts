@@ -33,15 +33,30 @@ export async function POST(request: Request) {
     if (authConfig) {
       project.auth_config = { ...(project.auth_config || {}), ...authConfig }
     } else {
-      // Busca as configurações de autenticação salvas no banco
+      // Busca as configurações de autenticação salvas no banco (colunas diretas da tabela)
       const { data: dbAuthConfig } = await supabase
         .from('project_auth_config')
-        .select('auth_config')
+        .select('db_table_name, db_email_column, db_password_column, db_password_hash_type, ldap_server_url, ldap_base_dn, ui_config, auth_type')
         .eq('project_id', projectId)
         .single()
       
-      if (dbAuthConfig && dbAuthConfig.auth_config) {
-        project.auth_config = { ...(project.auth_config || {}), ...dbAuthConfig.auth_config }
+      if (dbAuthConfig) {
+        // Mapeia as colunas da tabela para o formato esperado pelo SourceCodeGenerator
+        project.auth_config = {
+          ...(project.auth_config || {}),
+          db_table_name: dbAuthConfig.db_table_name,
+          db_email_column: dbAuthConfig.db_email_column,
+          db_password_column: dbAuthConfig.db_password_column,
+          db_password_hash_type: dbAuthConfig.db_password_hash_type,
+          ldap_server_url: dbAuthConfig.ldap_server_url,
+          ldap_base_dn: dbAuthConfig.ldap_base_dn,
+          ...(dbAuthConfig.ui_config || {}),
+        }
+        // Também atualiza o auth_strategy do projeto se houver auth_type salvo
+        if (dbAuthConfig.auth_type && !finalAuthStrategy) {
+          // finalAuthStrategy é definido abaixo, mas aqui garantimos que o projeto tem o tipo correto
+          project.auth_strategy = dbAuthConfig.auth_type
+        }
       }
     }
 
@@ -128,7 +143,8 @@ export async function POST(request: Request) {
 
     const finalDataMode = dataMode || project.data_mode || 'supabase'
     const finalLegacyDriver = legacyDriver || project.legacy_db_driver || 'supabase'
-    const finalAuthStrategy = authStrategy || project.auth_strategy || 'managed'
+    // auth_strategy: payload tem prioridade, depois auth_config.auth_type (da tabela project_auth_config), depois project.auth_strategy, depois managed
+    const finalAuthStrategy = authStrategy || project.auth_config?.auth_type || project.auth_strategy || 'managed'
     let finalDbConfig = dbConfig
       
     // Se dbConfig não foi fornecido via API (ex: Sincronização automática via IDE), 
