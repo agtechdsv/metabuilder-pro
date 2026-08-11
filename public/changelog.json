@@ -1,4 +1,22 @@
 {
+  "v1.2.1": {
+    "date": "2026-08-11",
+    "pt": [
+      "Novo Painel de Console na IDE: Substituímos o antigo botão 'Rodar Preview Local' por um console completo com ações de Build, Iniciar, Parar e atalho direto para o Navegador.",
+      "Alternância da Barra Lateral: Agora você pode facilmente mostrar ou ocultar a árvore de arquivos para maximizar seu espaço de edição de código.",
+      "Gerenciamento Rápido de Pastas: Adicionamos botões para 'Expandir Tudo' e 'Recolher Tudo' no explorador de arquivos, tornando a navegação em projetos grandes muito mais ágil."
+    ],
+    "en": [
+      "New IDE Console Panel: Replaced the 'Run Local Preview' button with a full-featured console including Build, Start, Stop, and direct Browser action icons.",
+      "Sidebar Toggle: Easily show or hide the file tree navigation sidebar to maximize your code editor workspace.",
+      "Quick Folder Management: Added 'Expand All' and 'Collapse All' buttons to the file explorer for faster navigation through complex projects."
+    ],
+    "es": [
+      "Nuevo Panel de Consola en el IDE: Reemplazamos el botón 'Ejecutar Vista Previa Local' por una consola completa con controles para Compilar (Build), Iniciar, Detener y acceso directo al Navegador.",
+      "Ocultar/Mostrar Barra Lateral: Ahora puedes alternar fácilmente la visibilidad del árbol de archivos para maximizar tu área de trabajo.",
+      "Gestión Rápida de Carpetas: Agregamos botones para 'Expandir Todo' y 'Contraer Todo' en el explorador de archivos para una navegación más ágil en proyectos grandes."
+    ]
+  },
   "v1.2.0": {
     "date": "2026-08-11",
     "pt": [
