@@ -1,19 +1,4 @@
 {
-  "v1.0.6": {
-    "date": "2026-08-08",
-    "pt": [
-      "Novo Source Studio: Uma nova experiência centralizada e segura para gerenciamento de projetos, com autenticação avançada e validação de ambientes de trabalho.",
-      "Gestão de Workspaces e Integração IDESync: Novo sistema robusto para administrar seus workspaces com sincronização em tempo real na sua IDE e suporte aprimorado a provedores."
-    ],
-    "en": [
-      "New Source Studio: A centralized and secure project management hub featuring enhanced authentication and workspace validation.",
-      "Workspace Management & IDESync Integration: A powerful new workspace system with real-time IDE synchronization and robust provider infrastructure."
-    ],
-    "es": [
-      "Nuevo Source Studio: Un centro de gestión de proyectos centralizado y seguro, con autenticación avanzada y validación de espacios de trabajo.",
-      "Gestión de Espacios de Trabajo e Integración IDESync: Nuevo sistema robusto para administrar sus espacios de trabajo con sincronización en tiempo real en su IDE e infraestructura de proveedores mejorada."
-    ]
-  },
   "v1.0.5": {
     "date": "2026-08-08",
     "pt": [
