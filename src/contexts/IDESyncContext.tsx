@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   FolderGit2, Play, DownloadCloud, AlertTriangle, 
   CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronDown, Folder, History, X, Minimize2, AppWindow, LayoutDashboard, Loader2, Settings, Plus, Network, UploadCloud, Download, GitBranch,
-  Package, Square, Trash2, PanelBottomOpen, PanelLeftOpen
+  Package, Square, Trash2, PanelBottomOpen, PanelLeftOpen, UnfoldVertical, FoldVertical
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { isTauri } from '@/utils/tauriUtils'
@@ -576,6 +576,24 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     ))
   }
 
+  const expandAll = () => {
+    const allDirs = new Set<string>()
+    const collect = (nodes: FileNode[]) => {
+      nodes.forEach(node => {
+        if (node.isDirectory) {
+          allDirs.add(node.path)
+          if (node.children) collect(node.children)
+        }
+      })
+    }
+    collect(fileTree)
+    setExpandedFolders(allDirs)
+  }
+
+  const collapseAll = () => {
+    setExpandedFolders(new Set())
+  }
+
   return (
     <IDESyncContext.Provider value={{ openIDE }}>
       {children}
@@ -751,9 +769,31 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                           animate={{ width: 256, opacity: 1 }}
                           exit={{ width: 0, opacity: 0 }}
                           transition={{ duration: 0.2, ease: 'easeInOut' }}
-                          className="border-r border-neutral-800 bg-[#181818] overflow-y-auto py-2 overflow-x-hidden shrink-0"
+                          className="border-r border-neutral-800 bg-[#181818] overflow-y-auto overflow-x-hidden shrink-0 flex flex-col"
                         >
-                          {renderTree(fileTree)}
+                          {/* Expand/Collapse all toolbar */}
+                          <div className="flex items-center justify-between px-2 py-1 border-b border-neutral-800/60 shrink-0">
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-600">Explorer</span>
+                            <div className="flex items-center gap-0.5">
+                              <button
+                                onClick={expandAll}
+                                title="Expandir tudo"
+                                className="flex items-center justify-center w-5 h-5 rounded hover:bg-neutral-700 text-neutral-500 hover:text-neutral-200 transition-colors"
+                              >
+                                <UnfoldVertical className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={collapseAll}
+                                title="Retrair tudo"
+                                className="flex items-center justify-center w-5 h-5 rounded hover:bg-neutral-700 text-neutral-500 hover:text-neutral-200 transition-colors"
+                              >
+                                <FoldVertical className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex-1 overflow-y-auto overflow-x-hidden py-1">
+                            {renderTree(fileTree)}
+                          </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
