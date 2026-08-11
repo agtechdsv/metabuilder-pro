@@ -1,19 +1,4 @@
 {
-  "v1.0.2": {
-    "date": "2026-08-02",
-    "pt": [
-      "Nova ferramenta de linha de comando (CLI) para inspeção inteligente de banco de dados e gestão simplificada de túneis de conexão seguros.",
-      "Atualizações na documentação e histórico de versões para proporcionar maior transparência sobre a evolução da plataforma."
-    ],
-    "en": [
-      "New Command-Line Interface (CLI) tool for intelligent database introspection and streamlined management of secure connection tunnels.",
-      "Documentation and changelog updates for enhanced transparency regarding platform evolutions."
-    ],
-    "es": [
-      "Nueva herramienta de línea de comandos (CLI) para inspección inteligente de bases de datos y gestión simplificada de túneles de conexión seguros.",
-      "Actualizaciones en la documentación e historial de versiones para brindar mayor transparencia sobre la evolución de la plataforma."
-    ]
-  },
   "v1.0.1": {
     "date": "2026-08-02",
     "pt": [
