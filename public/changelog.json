@@ -1,4 +1,16 @@
 {
+  "v1.2.2": {
+    "date": "2026-08-11",
+    "pt": [
+      "Melhorias de estabilidade e segurança: execução mais fluida e confiável durante a inicialização do servidor local e gerenciamento de dependências em segundo plano."
+    ],
+    "en": [
+      "Stability and security enhancements: smoother and more reliable execution during local server startup and background dependency management."
+    ],
+    "es": [
+      "Mejoras de estabilidad y seguridad: ejecución más fluida y confiable durante el inicio del servidor local y la gestión de dependencias en segundo plano."
+    ]
+  },
   "v1.2.1": {
     "date": "2026-08-11",
     "pt": [
