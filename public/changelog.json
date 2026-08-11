@@ -1,19 +1,4 @@
 {
-  "v1.0.11": {
-    "date": "2026-08-09",
-    "pt": [
-      "Nova Sincronização Inteligente com IDE Local: Gerencie e sincronize seus projetos locais em tempo real diretamente na plataforma, garantindo maior agilidade e controle do seu código.",
-      "Melhorias de Estabilidade e Integração: Otimizações na estrutura de dados para um fluxo de trabalho mais fluido e sem interrupções."
-    ],
-    "en": [
-      "New Smart Local IDE Synchronization: Effortlessly manage and sync your local workspace projects in real time directly within the platform.",
-      "Stability & Integration Enhancements: Core optimizations ensuring a smoother workflow and seamless project management."
-    ],
-    "es": [
-      "Nueva Sincronización Inteligente con IDE Local: Gestiona y sincroniza tus proyectos locales en tiempo real directamente desde la plataforma, mejorando la agilidad y el control de tu código.",
-      "Mejoras de Estabilidad e Integración: Optimizaciones en la estructura interna para un flujo de trabajo más fluido y sin interrupciones."
-    ]
-  },
   "v1.0.10": {
     "date": "2026-08-09",
     "pt": [
