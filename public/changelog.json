@@ -1,4 +1,19 @@
 {
+  "v1.1.9": {
+    "date": "2026-08-11",
+    "pt": [
+      "Feedback de login mais claro e preciso: exibição de mensagens de erro específicas para ajudar na resolução rápida de problemas de acesso.",
+      "Segurança e flexibilidade de autenticação reforçadas: melhorias no sistema de verificação de senhas para garantir maior proteção aos seus dados de login."
+    ],
+    "en": [
+      "Clearer and more accurate login feedback: specific error messages are now displayed to help resolve access issues quickly.",
+      "Enhanced authentication security and flexibility: upgraded password verification system to ensure greater protection for your login credentials."
+    ],
+    "es": [
+      "Comentarios de inicio de sesión más claros y precisos: ahora se muestran mensajes de error específicos para ayudar a resolver problemas de acceso rápidamente.",
+      "Seguridad y flexibilidad de autenticación mejoradas: mejoras en el sistema de verificación de contraseñas para garantizar una mayor protección de sus datos de acceso."
+    ]
+  },
   "v1.1.8": {
     "date": "2026-08-10",
     "pt": [
