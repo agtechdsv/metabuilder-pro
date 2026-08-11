@@ -1,4 +1,16 @@
 {
+  "v1.1.2": {
+    "date": "2026-08-11",
+    "pt": [
+      "Maior estabilidade na sincronização de projetos: aprimoramos o carregamento automático das configurações de autenticação para garantir um acesso contínuo e sem falhas, mesmo em cenários de oscilação de dados."
+    ],
+    "en": [
+      "Enhanced project synchronization stability: improved automatic loading of authentication settings to ensure seamless, uninterrupted access even when payload data is incomplete."
+    ],
+    "es": [
+      "Mayor estabilidad en la sincronización de proyectos: mejoramos la carga automática de las configuraciones de autenticación para garantizar un acceso continuo y sin interrupciones, incluso ante la falta de datos temporales."
+    ]
+  },
   "v1.1.1": {
     "date": "2026-08-11",
     "pt": [
