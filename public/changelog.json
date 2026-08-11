@@ -1,22 +1,4 @@
 {
-  "v1.1.4": {
-    "date": "2026-08-10",
-    "pt": [
-      "Melhoria na experiência de visualização: adicionada uma indicação visual de carregamento (overlay) ao navegar no Preview da plataforma.",
-      "Autenticação mais estável no ambiente de testes: ajuste na sincronização do IDE para garantir que a pré-visualização local utilize o banco de dados correto de forma transparente.",
-      "Maior estabilidade e desempenho no Windows: encerramento completo de todos os processos do servidor de desenvolvimento ao parar a execução, evitando consumo desnecessário de memória."
-    ],
-    "en": [
-      "Enhanced Preview experience: Added a smooth loading overlay while navigating within the platform's Preview browser.",
-      "More reliable local authentication: Improved IDE sync to ensure local previews seamlessly connect to your local database for testing.",
-      "Better performance on Windows: Development servers now shut down completely when stopped, preventing lingering background processes."
-    ],
-    "es": [
-      "Experiencia de vista previa mejorada: se añadió un indicador visual de carga al navegar en la vista previa de la plataforma.",
-      "Autenticación local más estable: mejora en la sincronización del IDE para garantizar que la vista previa local utilice la base de datos correcta sin interrupciones.",
-      "Mayor rendimiento en Windows: el servidor de desarrollo ahora se detiene por completo al finalizar la ejecución, evitando procesos fantasma en segundo plano."
-    ]
-  },
   "v1.1.3": {
     "date": "2026-08-10",
     "pt": [
