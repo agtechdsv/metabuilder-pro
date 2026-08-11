@@ -442,12 +442,36 @@ export async function setPasswordAction(...args: any[]): Promise<any> { return {
             const emailCol = authConf.db_email_column || 'email'
             const passCol = authConf.db_password_column || 'senha'
             const idCol = authConf.db_user_role_column || 'id'
+            const hashType = authConf.db_password_hash_type || 'bcrypt'
             const usesPostgres = this.legacyDriver === 'postgres'
             
+            let passwordCheckLogic = `
+    const storedPassword = user["${passCol}"];
+    const isBcrypt = storedPassword?.startsWith('$2');
+    const isMatch = isBcrypt ? await bcrypt.compare(password, storedPassword) : storedPassword === password;`
+
+            if (hashType === 'md5') {
+              passwordCheckLogic = `
+    const crypto = require('crypto');
+    const storedPassword = user["${passCol}"];
+    const hash = crypto.createHash('md5').update(password).digest('hex');
+    const isMatch = storedPassword === hash || storedPassword === password;`
+            } else if (hashType === 'sha256') {
+              passwordCheckLogic = `
+    const crypto = require('crypto');
+    const storedPassword = user["${passCol}"];
+    const hash = crypto.createHash('sha256').update(password).digest('hex');
+    const isMatch = storedPassword === hash || storedPassword === password;`
+            } else if (hashType === 'plain') {
+              passwordCheckLogic = `
+    const storedPassword = user["${passCol}"];
+    const isMatch = storedPassword === password;`
+            }
+
             const routeContent = `import { NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
-import bcrypt from 'bcryptjs';
+${hashType === 'bcrypt' ? "import bcrypt from 'bcryptjs';" : ""}
 ${usesPostgres ? "import { Pool } from 'pg';" : "import { createClient } from '@/utils/supabase/server';"}
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'super-secret-key-replace-me');
@@ -468,9 +492,7 @@ export async function POST(request: Request) {
 
     if (!user) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 401 });
 
-    const storedPassword = user["${passCol}"];
-    const isBcrypt = storedPassword?.startsWith('$2');
-    const isMatch = isBcrypt ? await bcrypt.compare(password, storedPassword) : storedPassword === password;
+${passwordCheckLogic}
 
     if (!isMatch) {
       return NextResponse.json({ error: 'Senha incorreta' }, { status: 401 });
