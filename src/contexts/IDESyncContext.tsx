@@ -253,7 +253,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
               url: primaryConn.connectionString
             }
             payload.dataMode = 'legacy'
-            payload.authStrategy = 'legacy' // Adicionado para garantir que o LoginPortalClient use o BD local
+            // O authStrategy agora não é forçado para legacy, respeitando o que vem do banco de dados (project.auth_strategy)
           }
         }
       } catch (e) {

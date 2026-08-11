@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     const payload = await request.json()
     const projectId = payload.projectId
     const dataMode = payload.dataMode
-    const authStrategy = payload.authStrategy || 'managed'
+    let authStrategy = payload.authStrategy // Será resolvido após carregar o projeto
     const legacyDriver = payload.legacyDriver
     const dbConfig = payload.dbConfig
     const authConfig = payload.authConfig
@@ -117,6 +117,7 @@ export async function POST(request: Request) {
 
     const finalDataMode = dataMode || project.data_mode || 'supabase'
     const finalLegacyDriver = legacyDriver || project.legacy_db_driver || 'supabase'
+    const finalAuthStrategy = authStrategy || project.auth_strategy || 'managed'
     let finalDbConfig = dbConfig
       
     // Se dbConfig não foi fornecido via API (ex: Sincronização automática via IDE), 
@@ -133,7 +134,7 @@ export async function POST(request: Request) {
     }
 
     // 4. Generate the Source Code (File Map)
-    const generator = new SourceCodeGenerator(project, mappedModels, finalUiViews || [], customComponents || [], finalDataMode, authStrategy, finalLegacyDriver, finalDbConfig, projectRoles || [], rolePermissions, enumerations || [], rawProjectRelations || [])
+    const generator = new SourceCodeGenerator(project, mappedModels, finalUiViews || [], customComponents || [], finalDataMode, finalAuthStrategy, finalLegacyDriver, finalDbConfig, projectRoles || [], rolePermissions, enumerations || [], rawProjectRelations || [])
     const fileMap = await generator.generateFileMap()
 
     // 5. Return as JSON
