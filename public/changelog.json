@@ -1,16 +1,4 @@
 {
-  "v1.1.7": {
-    "date": "2026-08-10",
-    "pt": [
-      "Navegação inicial mais rápida e sem falhas: Otimizamos o carregamento da plataforma para eliminar erros na primeira visualização e garantir um acesso imediato e fluido."
-    ],
-    "en": [
-      "Faster and flawless initial loading: We optimized platform initialization to eliminate first-load errors and ensure immediate, smooth access."
-    ],
-    "es": [
-      "Carga inicial más rápida y sin errores: Optimizamos el inicio de la plataforma para eliminar fallos en la primera visualización y garantizar un acceso inmediato y fluido."
-    ]
-  },
   "v1.1.6": {
     "date": "2026-08-10",
     "pt": [
