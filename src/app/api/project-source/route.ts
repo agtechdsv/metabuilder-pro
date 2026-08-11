@@ -32,6 +32,17 @@ export async function POST(request: Request) {
 
     if (authConfig) {
       project.auth_config = { ...(project.auth_config || {}), ...authConfig }
+    } else {
+      // Busca as configurações de autenticação salvas no banco
+      const { data: dbAuthConfig } = await supabase
+        .from('project_auth_config')
+        .select('auth_config')
+        .eq('project_id', projectId)
+        .single()
+      
+      if (dbAuthConfig && dbAuthConfig.auth_config) {
+        project.auth_config = { ...(project.auth_config || {}), ...dbAuthConfig.auth_config }
+      }
     }
 
     // 3. Fetch Models to generate Features (including fields and views)
