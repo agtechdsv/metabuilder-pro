@@ -59,6 +59,8 @@
     "startcli",
     "stopcli",
     "start-nextjs-dev",
+    "start-npm-install",
+    "start-nextjs-server",
     "statuscli",
     "runsynccli",
     "openbrowser",

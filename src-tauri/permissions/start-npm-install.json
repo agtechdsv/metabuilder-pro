@@ -1,0 +1,15 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "start-npm-install",
+      "description": "allow start_npm_install to run npm install natively",
+      "commands": {
+        "allow": [
+          "start_npm_install"
+        ],
+        "deny": []
+      }
+    }
+  ]
+}

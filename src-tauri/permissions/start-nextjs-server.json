@@ -1,0 +1,15 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "start-nextjs-server",
+      "description": "allow start_nextjs_server to run npm run dev natively",
+      "commands": {
+        "allow": [
+          "start_nextjs_server"
+        ],
+        "deny": []
+      }
+    }
+  ]
+}
