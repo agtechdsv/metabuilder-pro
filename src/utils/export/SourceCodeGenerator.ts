@@ -626,13 +626,14 @@ export async function POST(request: Request) {
 export const PERMISSIONS_MAP = ${JSON.stringify(permissionsMap, null, 2)};
 
 export function hasViewAccess(viewSlug: string, roleId: string | null): boolean {
-  if (!roleId) return false; // Sem role não acessa nada
   const conf = PERMISSIONS_MAP[viewSlug as keyof typeof PERMISSIONS_MAP];
   if (!conf) return true; // Se não tem config, o default é liberado
   
   if (conf.isDefaultBlocked) {
+    if (!roleId) return false;
     return conf.allowedRoles.includes(roleId);
   } else {
+    if (!roleId) return true; // Sem role acessa se não for default blocked
     return !conf.blockedRoles.includes(roleId);
   }
 }
