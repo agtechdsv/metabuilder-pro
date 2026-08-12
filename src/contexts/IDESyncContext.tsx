@@ -336,6 +336,62 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       setLastSelectedPath(path)
     }
   }
+  const handleEmptyTrash = async () => {
+    const trashDir = getTrashDir()
+    try {
+      setFileActionLoading(true)
+      await tauriFs.remove(trashDir, { baseDir: BaseDirectory.Home, recursive: true })
+      await tauriFs.mkdir(trashDir, { baseDir: BaseDirectory.Home, recursive: true })
+      await loadFileTree()
+      toast('Lixeira esvaziada.', 'success')
+    } catch (e: any) {
+      toast('Erro ao esvaziar lixeira: ' + e.message, 'error')
+    } finally {
+      setFileActionLoading(false)
+    }
+  }
+
+  const handlePermanentDelete = async (nodes: FileNode[]) => {
+    try {
+      setFileActionLoading(true)
+      for (const node of nodes) {
+        await tauriFs.remove(node.path, { baseDir: BaseDirectory.Home, recursive: node.isDirectory })
+      }
+      setSelectedPaths(new Set())
+      await loadFileTree()
+      toast(`${nodes.length} item(s) deletado(s) permanentemente.`, 'success')
+    } catch (e: any) {
+      toast('Erro ao deletar: ' + e.message, 'error')
+    } finally {
+      setFileActionLoading(false)
+    }
+  }
+
+  const handleRestoreFromTrash = async (nodes: FileNode[]) => {
+    try {
+      setFileActionLoading(true)
+      const projectRoot = getTrashDir().replace('/.trash', '')
+      for (const node of nodes) {
+        const parts = node.name.split('_')
+        if (parts.length > 1) {
+          parts.shift() // remove timestamp
+        }
+        const originalName = parts.join('_').replace(/___/g, '/')
+        const newPath = `${projectRoot}/${originalName}`
+        
+        const parentDir = newPath.substring(0, newPath.lastIndexOf('/'))
+        await tauriFs.mkdir(parentDir, { baseDir: BaseDirectory.Home, recursive: true })
+        await tauriFs.rename(node.path, newPath, { oldPathBaseDir: BaseDirectory.Home, newPathBaseDir: BaseDirectory.Home })
+      }
+      setSelectedPaths(new Set())
+      await loadFileTree()
+      toast(`${nodes.length} item(s) restaurado(s).`, 'success')
+    } catch (e: any) {
+      toast('Erro ao restaurar: ' + e.message, 'error')
+    } finally {
+      setFileActionLoading(false)
+    }
+  }
 
   const handleSelectFile = async (path: string, modifier?: 'ctrl' | 'shift') => {
     setCtxMenu(null) // Fecha o menu de contexto ao abrir um arquivo
