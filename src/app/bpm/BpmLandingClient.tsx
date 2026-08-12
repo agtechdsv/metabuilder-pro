@@ -1,7 +1,6 @@
 'use client'
 
 import { Navbar } from '@/components/layout/Navbar'
-import { Footer } from '@/components/layout/Footer'
 import { ArrowRight, Workflow, Activity, Database, CheckCircle2, MonitorPlay, Zap, ShieldAlert, Cpu } from 'lucide-react'
 import Link from 'next/link'
 import { useI18n } from '@/i18n/I18nContext'
@@ -189,8 +188,6 @@ export function BpmLandingClient({ user, profile }: BpmLandingClientProps) {
           </div>
         </section>
       </main>
-
-      <Footer />
     </div>
   )
 }
