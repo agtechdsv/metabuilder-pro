@@ -1,4 +1,19 @@
 {
+  "v1.1.4": {
+    "date": "2026-08-12",
+    "pt": [
+      "Novo menu de contexto no Explorador de Arquivos: agora você pode clicar com o botão direito para criar, renomear, excluir, copiar e mover arquivos ou pastas com praticidade.",
+      "Navegação mais fluida em aplicativos exportados: fluxo de redirecionamento pós-login aprimorado para garantir um acesso contínuo e sem interrupções."
+    ],
+    "en": [
+      "New File Explorer context menu: easily right-click to create, rename, delete, copy, and move files or folders.",
+      "Seamless navigation in exported applications: improved post-login redirection for an uninterrupted access experience."
+    ],
+    "es": [
+      "Nuevo menú contextual en el Explorador de Archivos: ahora puedes hacer clic derecho para crear, renombrar, eliminar, copiar y mover archivos o carpetas con facilidad.",
+      "Navegación más fluida en aplicaciones exportadas: flujo de redirección posterior al inicio de sesión mejorado para un acceso continuo y sin interrupciones."
+    ]
+  },
   "v1.1.3": {
     "date": "2026-08-11",
     "pt": [
