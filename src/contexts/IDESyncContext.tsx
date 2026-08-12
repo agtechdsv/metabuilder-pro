@@ -327,34 +327,39 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     if (undoStack.length === 0) return
     const action = undoStack[undoStack.length - 1]
     const newStack = undoStack.slice(0, -1)
+    setUndoStack(newStack)
     try {
       setFileActionLoading(true)
       if (action.type === 'delete') {
         for (const f of action.originalPaths) {
+          if (!(await tauriFs.exists(f.trashPath, { baseDir: BaseDirectory.Home }))) continue
           const parentDir = f.path.substring(0, f.path.lastIndexOf('/'))
           await tauriFs.mkdir(parentDir, { baseDir: BaseDirectory.Home, recursive: true })
           await tauriFs.rename(f.trashPath, f.path, { oldPathBaseDir: BaseDirectory.Home, newPathBaseDir: BaseDirectory.Home })
         }
       } else if (action.type === 'rename') {
-        await tauriFs.rename(action.newPath, action.oldPath, { oldPathBaseDir: BaseDirectory.Home, newPathBaseDir: BaseDirectory.Home })
+        if (await tauriFs.exists(action.newPath, { baseDir: BaseDirectory.Home })) {
+          await tauriFs.rename(action.newPath, action.oldPath, { oldPathBaseDir: BaseDirectory.Home, newPathBaseDir: BaseDirectory.Home })
+        }
       } else if (action.type === 'new' || action.type === 'copy') {
         const trashDir = getTrashDir()
         await tauriFs.mkdir(trashDir, { baseDir: BaseDirectory.Home, recursive: true })
         const timestamp = Date.now()
         const pathsToDelete = action.type === 'new' ? [action.path] : action.destPaths
         for (const p of pathsToDelete) {
+          if (!(await tauriFs.exists(p, { baseDir: BaseDirectory.Home }))) continue
           const name = p.split('/').pop()
           await tauriFs.rename(p, `${trashDir}/${timestamp}_undo_${name}`, { oldPathBaseDir: BaseDirectory.Home, newPathBaseDir: BaseDirectory.Home })
         }
       } else if (action.type === 'move') {
         for (const m of action.moves) {
+          if (!(await tauriFs.exists(m.newPath, { baseDir: BaseDirectory.Home }))) continue
           const parentDir = m.originalPath.substring(0, m.originalPath.lastIndexOf('/'))
           await tauriFs.mkdir(parentDir, { baseDir: BaseDirectory.Home, recursive: true })
           await tauriFs.rename(m.newPath, m.originalPath, { oldPathBaseDir: BaseDirectory.Home, newPathBaseDir: BaseDirectory.Home })
         }
       }
       
-      setUndoStack(newStack)
       await loadFileTree()
       toast('Ação desfeita com sucesso!', 'success')
     } catch (e: any) {
