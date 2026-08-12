@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   FolderGit2, Play, DownloadCloud, AlertTriangle, 
   CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronDown, Folder, History, X, Minimize2, AppWindow, LayoutDashboard, Loader2, Settings, Plus, Network, UploadCloud, Download, GitBranch,
-  Package, Square, Trash2, PanelBottomOpen, PanelLeftOpen, UnfoldVertical, FoldVertical
+  Package, Square, Trash2, PanelBottomOpen, PanelLeftOpen, UnfoldVertical, FoldVertical,
+  FilePlus, FolderPlus, Pencil, Copy, Scissors, ClipboardPaste, MoreVertical
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { isTauri } from '@/utils/tauriUtils'
@@ -87,6 +88,14 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [showConsole, setShowConsole] = useState(true) // open by default
   const [showSidebar, setShowSidebar] = useState(true) // open by default
   const consoleEndRef = useRef<HTMLDivElement>(null)
+
+  // File explorer context menu state
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; node: FileNode } | null>(null)
+  const [fileActionModal, setFileActionModal] = useState<{ type: 'rename' | 'new-file' | 'new-folder' | 'copy' | 'move'; node?: FileNode; destPath?: string } | null>(null)
+  const [fileActionInput, setFileActionInput] = useState('')
+  const [fileActionLoading, setFileActionLoading] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<FileNode | null>(null)
+  const [clipboard, setClipboard] = useState<{ node: FileNode; op: 'copy' | 'cut' } | null>(null)
   
   const [mounted, setMounted] = useState(false)
   const { toast } = useToast()
@@ -551,30 +560,143 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const renderTree = (nodes: FileNode[]) => {
+  // ── File Explorer Operations ────────────────────────────────────────────────
+
+  const projectDir = target ? `AGTech/MetaBuilderPRO/${target.slug}` : ''
+
+  const fsAbsPath = (relativePath: string) => {
+    // relativePath is stored as relative inside the project dir
+    return relativePath
+  }
+
+  const handleDeleteNode = async (node: FileNode) => {
+    try {
+      setFileActionLoading(true)
+      if (node.isDirectory) {
+        await tauriFs.remove(node.path, { baseDir: BaseDirectory.Home, recursive: true })
+      } else {
+        await tauriFs.remove(node.path, { baseDir: BaseDirectory.Home })
+      }
+      if (selectedFile === node.path) {
+        setSelectedFile(null)
+        setFileContent('')
+      }
+      await loadFileTree()
+      toast(`'${node.name}' deletado com sucesso.`, 'success')
+    } catch (e: any) {
+      toast('Erro ao deletar: ' + e.message, 'error')
+    } finally {
+      setFileActionLoading(false)
+      setDeleteConfirm(null)
+    }
+  }
+
+  const handleRenameNode = async (node: FileNode, newName: string) => {
+    if (!newName.trim()) return
+    try {
+      setFileActionLoading(true)
+      const parentPath = node.path.substring(0, node.path.lastIndexOf('/'))
+      const newPath = `${parentPath}/${newName.trim()}`
+      await tauriFs.rename(node.path, newPath, { oldPathBaseDir: BaseDirectory.Home, newPathBaseDir: BaseDirectory.Home })
+      if (selectedFile === node.path) {
+        setSelectedFile(newPath)
+      }
+      await loadFileTree()
+      toast(`Renomeado para '${newName.trim()}'.`, 'success')
+    } catch (e: any) {
+      toast('Erro ao renomear: ' + e.message, 'error')
+    } finally {
+      setFileActionLoading(false)
+      setFileActionModal(null)
+    }
+  }
+
+  const handleNewItem = async (parentNode: FileNode, name: string, isDir: boolean) => {
+    if (!name.trim()) return
+    try {
+      setFileActionLoading(true)
+      const newPath = `${parentNode.path}/${name.trim()}`
+      if (isDir) {
+        await tauriFs.mkdir(newPath, { baseDir: BaseDirectory.Home, recursive: true })
+      } else {
+        await tauriFs.writeTextFile(newPath, '', { baseDir: BaseDirectory.Home })
+      }
+      // Auto-expand parent
+      setExpandedFolders(prev => { const s = new Set(prev); s.add(parentNode.path); return s })
+      await loadFileTree()
+      toast(`'${name.trim()}' criado com sucesso.`, 'success')
+    } catch (e: any) {
+      toast('Erro ao criar: ' + e.message, 'error')
+    } finally {
+      setFileActionLoading(false)
+      setFileActionModal(null)
+    }
+  }
+
+  const handleCopyPasteNode = async (dest: FileNode) => {
+    if (!clipboard) return
+    try {
+      setFileActionLoading(true)
+      const destDir = dest.isDirectory ? dest.path : dest.path.substring(0, dest.path.lastIndexOf('/'))
+      const newPath = `${destDir}/${clipboard.node.name}`
+      await tauriFs.copyFile(clipboard.node.path, newPath, { fromPathBaseDir: BaseDirectory.Home, toPathBaseDir: BaseDirectory.Home })
+      if (clipboard.op === 'cut') {
+        await tauriFs.remove(clipboard.node.path, { baseDir: BaseDirectory.Home })
+        setClipboard(null)
+      }
+      setExpandedFolders(prev => { const s = new Set(prev); s.add(destDir); return s })
+      await loadFileTree()
+      toast(`'${clipboard.node.name}' ${clipboard.op === 'copy' ? 'copiado' : 'movido'} com sucesso.`, 'success')
+    } catch (e: any) {
+      toast('Erro ao colar: ' + e.message, 'error')
+    } finally {
+      setFileActionLoading(false)
+    }
+  }
+
+  const renderTree = (nodes: FileNode[], depth = 0): React.ReactNode => {
     return nodes.map(node => (
-      <div key={node.path} className="ml-4">
+      <div key={node.path} className={depth === 0 ? '' : 'ml-4'}>
         {node.isDirectory ? (
           <div>
             <div 
-              className="flex items-center gap-1.5 py-1 px-2 hover:bg-neutral-800/50 cursor-pointer rounded text-neutral-300 text-sm"
+              className={`group flex items-center gap-1.5 py-1 px-2 hover:bg-neutral-800/50 cursor-pointer rounded text-neutral-300 text-sm ${clipboard?.node.path === node.path && clipboard.op === 'cut' ? 'opacity-50' : ''}`}
               onClick={() => toggleFolder(node.path)}
+              onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, node }) }}
             >
-              {expandedFolders.has(node.path) ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-              <Folder className="w-3.5 h-3.5 text-blue-400" />
-              {node.name}
+              {expandedFolders.has(node.path) ? <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />}
+              <Folder className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+              <span className="truncate flex-1">{node.name}</span>
+              {clipboard && (
+                <button
+                  className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-indigo-600/30 text-indigo-400 flex-shrink-0"
+                  title="Colar aqui"
+                  onClick={(e) => { e.stopPropagation(); handleCopyPasteNode(node) }}
+                ><ClipboardPaste className="w-3 h-3" /></button>
+              )}
+              <button
+                className="opacity-0 group-hover:opacity-100 ml-1 p-0.5 rounded hover:bg-neutral-700"
+                title="Mais ações"
+                onClick={(e) => { e.stopPropagation(); setCtxMenu({ x: e.currentTarget.getBoundingClientRect().right, y: e.currentTarget.getBoundingClientRect().bottom, node }) }}
+              ><MoreVertical className="w-3 h-3 text-neutral-500" /></button>
             </div>
             {expandedFolders.has(node.path) && node.children && (
-              <div>{renderTree(node.children)}</div>
+              <div>{renderTree(node.children, depth + 1)}</div>
             )}
           </div>
         ) : (
           <div 
-            className={`flex items-center gap-1.5 py-1 px-2 ml-4 cursor-pointer rounded text-sm ${selectedFile === node.path ? 'bg-indigo-600/20 text-indigo-400' : 'text-neutral-400 hover:bg-neutral-800/50'}`}
+            className={`group flex items-center gap-1.5 py-1 px-2 ml-4 cursor-pointer rounded text-sm ${selectedFile === node.path ? 'bg-indigo-600/20 text-indigo-400' : 'text-neutral-400 hover:bg-neutral-800/50'} ${clipboard?.node.path === node.path && clipboard.op === 'cut' ? 'opacity-50' : ''}`}
             onClick={() => handleSelectFile(node.path)}
+            onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, node }) }}
           >
-            <FileCode2 className="w-3.5 h-3.5 opacity-70" />
-            {node.name}
+            <FileCode2 className="w-3.5 h-3.5 opacity-70 flex-shrink-0" />
+            <span className="truncate flex-1">{node.name}</span>
+            <button
+              className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 rounded hover:bg-neutral-700 flex-shrink-0"
+              title="Mais ações"
+              onClick={(e) => { e.stopPropagation(); setCtxMenu({ x: e.currentTarget.getBoundingClientRect().right, y: e.currentTarget.getBoundingClientRect().bottom, node }) }}
+            ><MoreVertical className="w-3 h-3 text-neutral-500" /></button>
           </div>
         )}
       </div>
@@ -1190,6 +1312,119 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────── File Explorer: Context Menu ──────────────────────────────────────────────────────────── */}
+      {ctxMenu && (
+        <>
+          <div className="fixed inset-0 z-[99990]" onClick={() => setCtxMenu(null)} />
+          <div
+            className="fixed z-[99999] bg-[#1e1e1e] border border-neutral-700 rounded-xl shadow-2xl py-1.5 w-52 text-sm"
+            style={{ left: ctxMenu.x, top: ctxMenu.y }}
+          >
+            {ctxMenu.node.isDirectory && (
+              <>
+                <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-neutral-700/60 text-neutral-200 transition-colors" onClick={() => { setFileActionModal({ type: 'new-file', node: ctxMenu.node }); setFileActionInput(''); setCtxMenu(null) }}>
+                  <FilePlus className="w-3.5 h-3.5 text-blue-400" /> Novo Arquivo
+                </button>
+                <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-neutral-700/60 text-neutral-200 transition-colors" onClick={() => { setFileActionModal({ type: 'new-folder', node: ctxMenu.node }); setFileActionInput(''); setCtxMenu(null) }}>
+                  <FolderPlus className="w-3.5 h-3.5 text-yellow-400" /> Nova Pasta
+                </button>
+                {clipboard && (
+                  <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-indigo-700/40 text-indigo-300 transition-colors" onClick={() => { handleCopyPasteNode(ctxMenu.node); setCtxMenu(null) }}>
+                    <ClipboardPaste className="w-3.5 h-3.5" /> Colar aqui
+                  </button>
+                )}
+                <div className="border-t border-neutral-700 my-1" />
+              </>
+            )}
+            <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-neutral-700/60 text-neutral-200 transition-colors" onClick={() => { setFileActionModal({ type: 'rename', node: ctxMenu.node }); setFileActionInput(ctxMenu.node.name); setCtxMenu(null) }}>
+              <Pencil className="w-3.5 h-3.5 text-emerald-400" /> Renomear
+            </button>
+            <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-neutral-700/60 text-neutral-200 transition-colors" onClick={() => { setClipboard({ node: ctxMenu.node, op: 'copy' }); setCtxMenu(null) }}>
+              <Copy className="w-3.5 h-3.5 text-sky-400" /> Copiar
+            </button>
+            {!ctxMenu.node.isDirectory && (
+              <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-neutral-700/60 text-neutral-200 transition-colors" onClick={() => { setClipboard({ node: ctxMenu.node, op: 'cut' }); setCtxMenu(null) }}>
+                <Scissors className="w-3.5 h-3.5 text-orange-400" /> Recortar (Mover)
+              </button>
+            )}
+            <div className="border-t border-neutral-700 my-1" />
+            <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-red-900/40 text-red-400 transition-colors" onClick={() => { setDeleteConfirm(ctxMenu.node); setCtxMenu(null) }}>
+              <Trash2 className="w-3.5 h-3.5" /> {ctxMenu.node.isDirectory ? 'Deletar Pasta' : 'Deletar Arquivo'}
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ──────────────── Delete Confirm Modal ────────────────────────────────────────────────────────────────── */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
+          <div className="bg-[#1e1e1e] border border-neutral-800 rounded-xl shadow-2xl w-full max-w-sm p-6">
+            <div className="w-12 h-12 rounded-full bg-red-900/20 flex items-center justify-center mb-4">
+              <Trash2 className="w-6 h-6 text-red-500" />
+            </div>
+            <h3 className="text-lg font-bold text-white mb-2">Confirmar Exclusão</h3>
+            <p className="text-sm text-neutral-400 mb-1">Você está prestes a deletar permanentemente:</p>
+            <p className="text-sm font-mono text-red-300 bg-red-900/10 rounded px-3 py-1.5 mb-3 break-all">{deleteConfirm.name}</p>
+            {deleteConfirm.isDirectory && (
+              <p className="text-xs text-amber-400 bg-amber-900/20 rounded px-3 py-2 mb-4">⚠️ Todos os arquivos, subpastas e seu conteúdo serão permanentemente removidos.</p>
+            )}
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setDeleteConfirm(null)} disabled={fileActionLoading} className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors">Cancelar</button>
+              <button onClick={() => handleDeleteNode(deleteConfirm)} disabled={fileActionLoading} className="flex items-center gap-2 px-5 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50">
+                {fileActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Deletar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────── Rename / New File / New Folder Modal ────────────────────────────────────────────────── */}
+      {fileActionModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
+          <div className="bg-[#1e1e1e] border border-neutral-800 rounded-xl shadow-2xl w-full max-w-sm p-6">
+            <h3 className="text-lg font-bold text-white mb-4">
+              {fileActionModal.type === 'rename' && 'Renomear'}
+              {fileActionModal.type === 'new-file' && 'Novo Arquivo'}
+              {fileActionModal.type === 'new-folder' && 'Nova Pasta'}
+            </h3>
+            <p className="text-xs text-neutral-500 mb-2">
+              {fileActionModal.type === 'rename' && `Renomear "${fileActionModal.node?.name}"`}
+              {fileActionModal.type === 'new-file' && `Criar dentro de "${fileActionModal.node?.name}"`}
+              {fileActionModal.type === 'new-folder' && `Criar dentro de "${fileActionModal.node?.name}"`}
+            </p>
+            <input
+              autoFocus
+              type="text"
+              value={fileActionInput}
+              onChange={e => setFileActionInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  if (fileActionModal.type === 'rename' && fileActionModal.node) handleRenameNode(fileActionModal.node, fileActionInput)
+                  if ((fileActionModal.type === 'new-file' || fileActionModal.type === 'new-folder') && fileActionModal.node) handleNewItem(fileActionModal.node, fileActionInput, fileActionModal.type === 'new-folder')
+                }
+                if (e.key === 'Escape') setFileActionModal(null)
+              }}
+              placeholder={fileActionModal.type === 'rename' ? 'Novo nome...' : fileActionModal.type === 'new-file' ? 'nome-do-arquivo.ts' : 'nome-da-pasta'}
+              className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 mb-4"
+            />
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setFileActionModal(null)} className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors">Cancelar</button>
+              <button
+                onClick={() => {
+                  if (fileActionModal.type === 'rename' && fileActionModal.node) handleRenameNode(fileActionModal.node, fileActionInput)
+                  if ((fileActionModal.type === 'new-file' || fileActionModal.type === 'new-folder') && fileActionModal.node) handleNewItem(fileActionModal.node, fileActionInput, fileActionModal.type === 'new-folder')
+                }}
+                disabled={!fileActionInput.trim() || fileActionLoading}
+                className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50"
+              >
+                {fileActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                {fileActionModal.type === 'rename' ? 'Renomear' : 'Criar'}
+              </button>
             </div>
           </div>
         </div>

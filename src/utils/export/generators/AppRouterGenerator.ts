@@ -182,11 +182,12 @@ export default function LoginPage() {
     <div className="flex-1 min-h-screen bg-slate-50 dark:bg-[#050505]">
       <LoginPortalClient 
         project={projectConfig}
-        workspaceSlug="export"
-        projectSlug="export"
+        workspaceSlug=""
+        projectSlug={(projectConfig as any).slug || ''}
         locale="pt"
         visualConfig={visual}
         authConfig={auth}
+        isCustomDomain={true}
       />
     </div>
   )
