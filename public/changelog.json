@@ -1,4 +1,22 @@
 {
+  "v1.1.6": {
+    "date": "2026-08-12",
+    "pt": [
+      "Painéis redimensionáveis na IDE: personalize seu espaço de trabalho ajustando o tamanho dos painéis de forma simples e flexível.",
+      "Nova aba de Lixeira: gerencie e recupere arquivos excluídos com facilidade em um local dedicado.",
+      "Atalhos de teclado aprimorados: navegação mais rápida e produtiva pelo explorador de arquivos."
+    ],
+    "en": [
+      "Resizable IDE Panels: Customize your workspace layout effortlessly by adjusting panel sizes to your preference.",
+      "New Trash Tab: Easily view, manage, and restore deleted files from a dedicated space.",
+      "Enhanced Keyboard Navigation: Enjoy faster, seamless file explorer control using keyboard shortcuts."
+    ],
+    "es": [
+      "Paneles redimensionables en el IDE: Personaliza tu espacio de trabajo ajustando el tamaño de los paneles de forma sencilla y flexible.",
+      "Nueva pestaña de Papelera: Gestiona y recupera archivos eliminados fácilmente desde una sección dedicada.",
+      "Navegación por teclado mejorada: Mayor velocidad y productividad en el explorador de archivos mediante atajos de teclado."
+    ]
+  },
   "v1.1.5": {
     "date": "2026-08-12",
     "pt": [
