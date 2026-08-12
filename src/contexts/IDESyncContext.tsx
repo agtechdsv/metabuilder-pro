@@ -1266,7 +1266,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                               </button>
                             </div>
                             <div className="flex items-center gap-0.5 px-2">
-                              {explorerActiveTab === 'trash' && (
+                              {explorerActiveTab === 'trash' && (fileTree.find(n => n.name === '.trash')?.children?.length || 0) > 0 && (
                                 <button
                                   onClick={() => setDeleteConfirm({ mode: 'empty' })}
                                   title="Esvaziar Lixeira"
