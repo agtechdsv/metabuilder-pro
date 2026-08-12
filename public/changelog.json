@@ -1,22 +1,4 @@
 {
-  "v1.1.5": {
-    "date": "2026-08-12",
-    "pt": [
-      "Gerenciamento avançado de arquivos: Seleção múltipla, atalhos de teclado dedicados, Lixeira para recuperação segura e suporte a historico de ações (Desfazer/Undo).",
-      "Suporte à cópia recursiva e completa de pastas e diretórios inteiros com um único comando.",
-      "Navegação e usabilidade aprimoradas na árvore de arquivos, incluindo fechamento inteligente do menu de contexto via tecla ESC ou clique."
-    ],
-    "en": [
-      "Advanced file management: Multi-file selection, dedicated keyboard shortcuts, Trash bin for safe recovery, and Undo action history.",
-      "Full recursive folder copying to duplicate entire directory structures effortlessly.",
-      "Enhanced file tree navigation and smoother context menu interactions with smart closing via ESC key or outside clicks."
-    ],
-    "es": [
-      "Gestión avanzada de archivos: Selección múltiple, atajos de teclado dedicados, Papelera para recuperación segura e historial de acciones para deshacer cambios.",
-      "Soporte para copia recursiva y completa de carpetas y directorios enteros sin esfuerzo.",
-      "Navegación mejorada en el árbol de archivos y menú contextual optimizado con cierre inteligente mediante la tecla ESC o clics externos."
-    ]
-  },
   "v1.1.4": {
     "date": "2026-08-12",
     "pt": [
