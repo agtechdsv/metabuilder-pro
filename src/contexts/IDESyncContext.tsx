@@ -101,12 +101,30 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [fileActionModal, setFileActionModal] = useState<{ type: 'rename' | 'new-file' | 'new-folder' | 'copy' | 'move'; node?: FileNode; destPath?: string } | null>(null)
   const [fileActionInput, setFileActionInput] = useState('')
   const [fileActionLoading, setFileActionLoading] = useState(false)
-  const [deleteConfirm, setDeleteConfirm] = useState<FileNode[] | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ mode: 'trash' | 'permanent' | 'empty', nodes?: FileNode[] } | null>(null)
   const [clipboard, setClipboard] = useState<{ nodes: FileNode[]; op: 'copy' | 'cut' } | null>(null)
   
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set())
   const [lastSelectedPath, setLastSelectedPath] = useState<string | null>(null)
   const [undoStack, setUndoStack] = useState<UndoAction[]>([])
+  
+  const [explorerWidth, setExplorerWidth] = useState(256)
+  const [consoleHeight, setConsoleHeight] = useState(200)
+  const [explorerActiveTab, setExplorerActiveTab] = useState<'explorer' | 'trash'>('explorer')
+  const isResizingExplorer = useRef(false)
+  const isResizingConsole = useRef(false)
+
+  const getNodesFromPaths = (paths: string[]): FileNode[] => {
+    const nodes: FileNode[] = []
+    const findNodes = (treeNodes: FileNode[]) => {
+      for (const node of treeNodes) {
+        if (paths.includes(node.path)) nodes.push(node)
+        if (node.children) findNodes(node.children)
+      }
+    }
+    findNodes(fileTree)
+    return nodes
+  }
   
   const [mounted, setMounted] = useState(false)
   const { toast } = useToast()
@@ -119,6 +137,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
 
   // ESC fecha menu de contexto e modais de ação de arquivo
   // Ctrl+Z para Desfazer
+  // Teclado Delete
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -130,11 +149,44 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
           e.preventDefault()
           handleUndo()
         }
+      } else if (e.key === 'Delete') {
+        if (!fileActionModal && !deleteConfirm && selectedPaths.size > 0 && !fileActionLoading) {
+          const nodes = getNodesFromPaths(Array.from(selectedPaths))
+          setDeleteConfirm({ mode: explorerActiveTab === 'trash' ? 'permanent' : 'trash', nodes })
+        }
       }
     }
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingExplorer.current) {
+        let newWidth = e.clientX - 64 // 64 is the app side nav width approx
+        if (newWidth < 150) newWidth = 150
+        if (newWidth > 600) newWidth = 600
+        setExplorerWidth(newWidth)
+      } else if (isResizingConsole.current) {
+        let newHeight = window.innerHeight - e.clientY
+        if (newHeight < 100) newHeight = 100
+        if (newHeight > 600) newHeight = 600
+        setConsoleHeight(newHeight)
+      }
+    }
+    
+    const handleMouseUp = () => {
+      isResizingExplorer.current = false
+      isResizingConsole.current = false
+      document.body.style.cursor = 'default'
+      document.body.style.userSelect = 'auto'
+    }
+
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [undoStack, fileActionLoading])
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [undoStack, fileActionLoading, selectedPaths, deleteConfirm, fileActionModal, explorerActiveTab, fileTree])
 
   // Helper to append a line to the console
   const addConsoleLog = (text: string, type: 'info'|'error'|'warn'|'stdout' = 'stdout') => {
@@ -765,18 +817,6 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     return relativePath
   }
 
-  const getNodesFromPaths = (paths: string[]): FileNode[] => {
-    const nodes: FileNode[] = []
-    const findNodes = (treeNodes: FileNode[]) => {
-      for (const node of treeNodes) {
-        if (paths.includes(node.path)) nodes.push(node)
-        if (node.children) findNodes(node.children)
-      }
-    }
-    findNodes(fileTree)
-    return nodes
-  }
-
   const handleDeleteNode = async (nodesToDelete: FileNode[]) => {
     try {
       setFileActionLoading(true)
@@ -914,8 +954,18 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const renderTree = (nodes: FileNode[], depth = 0): React.ReactNode => {
-    return nodes.map(node => {
+  const renderTree = (nodes: FileNode[], depth: number = 0): React.ReactNode => {
+    let visibleNodes = nodes
+    if (depth === 0) {
+      if (explorerActiveTab === 'explorer') {
+        visibleNodes = nodes.filter(n => n.name !== '.trash')
+      } else {
+        const trashNode = nodes.find(n => n.name === '.trash')
+        visibleNodes = trashNode?.children || []
+      }
+    }
+
+    return visibleNodes.map(node => {
       const isSelected = selectedPaths.has(node.path)
       const isTrashNode = node.name === '.trash'
       const displayNodeName = isTrashNode ? '🗑️ Lixeira' : node.name
@@ -1175,15 +1225,28 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                       {showSidebar && (
                         <motion.div
                           initial={{ width: 0, opacity: 0 }}
-                          animate={{ width: 256, opacity: 1 }}
+                          animate={{ width: explorerWidth, opacity: 1 }}
                           exit={{ width: 0, opacity: 0 }}
                           transition={{ duration: 0.2, ease: 'easeInOut' }}
                           className="border-r border-neutral-800 bg-[#181818] overflow-y-auto overflow-x-hidden shrink-0 flex flex-col"
                         >
-                          {/* Expand/Collapse all toolbar */}
-                          <div className="flex items-center justify-between px-2 py-1 border-b border-neutral-800/60 shrink-0">
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-600">Explorer</span>
-                            <div className="flex items-center gap-0.5">
+                          {/* Explorer Header / Tabs */}
+                          <div className="flex items-center justify-between border-b border-neutral-800/60 shrink-0">
+                            <div className="flex items-center h-full">
+                              <button 
+                                onClick={() => setExplorerActiveTab('explorer')}
+                                className={`px-2.5 py-1.5 h-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 border-r border-neutral-800/60 transition-colors ${explorerActiveTab === 'explorer' ? 'text-indigo-400 bg-neutral-800/30' : 'text-neutral-500 hover:bg-neutral-800/20'}`}
+                              >
+                                <Network className="w-3 h-3" /> Explorer
+                              </button>
+                              <button 
+                                onClick={() => setExplorerActiveTab('trash')}
+                                className={`px-2.5 py-1.5 h-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 border-r border-neutral-800/60 transition-colors ${explorerActiveTab === 'trash' ? 'text-red-400 bg-red-900/10' : 'text-neutral-500 hover:bg-neutral-800/20'}`}
+                              >
+                                <Trash2 className="w-3 h-3" /> Lixeira
+                              </button>
+                            </div>
+                            <div className="flex items-center gap-0.5 px-2">
                               {undoStack.length > 0 && (
                                 <button
                                   onClick={handleUndo}
@@ -1215,6 +1278,18 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                         </motion.div>
                       )}
                     </AnimatePresence>
+
+                    {/* Horizontal Drag Handle (Explorer vs Editor) */}
+                    {showSidebar && (
+                      <div 
+                        className="w-1 cursor-col-resize hover:bg-indigo-500/50 transition-colors shrink-0 z-10"
+                        onMouseDown={() => {
+                          isResizingExplorer.current = true
+                          document.body.style.cursor = 'col-resize'
+                          document.body.style.userSelect = 'none'
+                        }}
+                      />
+                    )}
 
                     {/* Editor */}
                     <div className="flex-1 flex flex-col min-w-0">
@@ -1270,13 +1345,24 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                       </div>
                     </div>
                   </div>
+                  {/* Vertical Drag Handle (Editor vs Console) */}
+                  {showConsole && (
+                    <div 
+                      className="h-1 cursor-row-resize hover:bg-indigo-500/50 transition-colors shrink-0 z-10"
+                      onMouseDown={() => {
+                        isResizingConsole.current = true
+                        document.body.style.cursor = 'row-resize'
+                        document.body.style.userSelect = 'none'
+                      }}
+                    />
+                  )}
 
                   {/* Console Panel */}
                   <AnimatePresence>
                     {showConsole && (
                       <motion.div
                         initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 220, opacity: 1 }}
+                        animate={{ height: consoleHeight, opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.2, ease: 'easeInOut' }}
                         className="border-t border-neutral-800 bg-[#0d0d0d] flex flex-col overflow-hidden shrink-0"
@@ -1625,7 +1711,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
 
               if (isTrashRoot) {
                 return (
-                  <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-red-900/40 text-red-400 transition-colors" onClick={() => { handleEmptyTrash(); setCtxMenu(null) }}>
+                  <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-red-900/40 text-red-400 transition-colors" onClick={() => { setDeleteConfirm({ mode: 'empty' }); setCtxMenu(null) }}>
                     <Trash2 className="w-3.5 h-3.5" /> Esvaziar Lixeira
                   </button>
                 )
@@ -1638,7 +1724,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                       <Undo2 className="w-3.5 h-3.5" /> Recuperar {selectedNodes.length > 1 ? `(${selectedNodes.length})` : ''}
                     </button>
                     <div className="border-t border-neutral-700 my-1" />
-                    <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-red-900/40 text-red-400 transition-colors" onClick={() => { handlePermanentDelete(selectedNodes); setCtxMenu(null) }}>
+                    <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-red-900/40 text-red-400 transition-colors" onClick={() => { setDeleteConfirm({ mode: 'permanent', nodes: selectedNodes }); setCtxMenu(null) }}>
                       <Trash2 className="w-3.5 h-3.5" /> Excluir Permanentemente
                     </button>
                   </>
@@ -1675,7 +1761,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     <Scissors className="w-3.5 h-3.5 text-orange-400" /> Recortar {selectedNodes.length > 1 ? `(${selectedNodes.length})` : ''}
                   </button>
                   <div className="border-t border-neutral-700 my-1" />
-                  <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-red-900/40 text-red-400 transition-colors" onClick={() => { setDeleteConfirm(selectedNodes); setCtxMenu(null) }}>
+                  <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-red-900/40 text-red-400 transition-colors" onClick={() => { setDeleteConfirm({ mode: 'trash', nodes: selectedNodes }); setCtxMenu(null) }}>
                     <Trash2 className="w-3.5 h-3.5" /> Deletar {selectedNodes.length > 1 ? `(${selectedNodes.length} itens)` : ctxMenu.node.isDirectory ? 'Pasta' : 'Arquivo'}
                   </button>
                 </>
@@ -1693,7 +1779,10 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
           autoFocus
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
-              handleDeleteNode(deleteConfirm)
+              if (deleteConfirm.mode === 'trash' && deleteConfirm.nodes) handleDeleteNode(deleteConfirm.nodes)
+              if (deleteConfirm.mode === 'permanent' && deleteConfirm.nodes) handlePermanentDelete(deleteConfirm.nodes)
+              if (deleteConfirm.mode === 'empty') handleEmptyTrash()
+              setDeleteConfirm(null)
             }
             if (e.key === 'Escape') {
               setDeleteConfirm(null)
@@ -1704,20 +1793,46 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
             <div className="w-12 h-12 rounded-full bg-red-900/20 flex items-center justify-center mb-4">
               <Trash2 className="w-6 h-6 text-red-500" />
             </div>
-            <h3 className="text-lg font-bold text-white mb-2">Confirmar Exclusão</h3>
-            <p className="text-sm text-neutral-400 mb-1">Você está prestes a deletar:</p>
-            {deleteConfirm.length === 1 ? (
-              <p className="text-sm font-mono text-red-300 bg-red-900/10 rounded px-3 py-1.5 mb-3 break-all">{deleteConfirm[0].name}</p>
+            <h3 className="text-lg font-bold text-white mb-2">
+              {deleteConfirm.mode === 'empty' ? 'Esvaziar Lixeira' : 'Confirmar Exclusão'}
+            </h3>
+            
+            {deleteConfirm.mode === 'empty' ? (
+              <p className="text-sm text-neutral-400 mb-4">Você está prestes a deletar todos os itens da lixeira permanentemente. Esta ação não pode ser desfeita.</p>
             ) : (
-              <p className="text-sm font-mono text-red-300 bg-red-900/10 rounded px-3 py-1.5 mb-3 break-all">{deleteConfirm.length} itens selecionados</p>
+              <>
+                <p className="text-sm text-neutral-400 mb-1">
+                  Você está prestes a {deleteConfirm.mode === 'permanent' ? 'deletar permanentemente:' : 'deletar:'}
+                </p>
+                {deleteConfirm.nodes && deleteConfirm.nodes.length === 1 ? (
+                  <p className="text-sm font-mono text-red-300 bg-red-900/10 rounded px-3 py-1.5 mb-3 break-all">{deleteConfirm.nodes[0].name}</p>
+                ) : (
+                  <p className="text-sm font-mono text-red-300 bg-red-900/10 rounded px-3 py-1.5 mb-3 break-all">{deleteConfirm.nodes?.length} itens selecionados</p>
+                )}
+                
+                {deleteConfirm.mode === 'trash' && deleteConfirm.nodes?.some(n => n.isDirectory) && (
+                  <p className="text-xs text-amber-400 bg-amber-900/20 rounded px-3 py-2 mb-4">⚠️ Todos os arquivos, subpastas e seu conteúdo serão movidos para a Lixeira.</p>
+                )}
+                
+                {deleteConfirm.mode === 'permanent' && (
+                  <p className="text-xs text-red-400 bg-red-900/20 rounded px-3 py-2 mb-4">⚠️ Os itens serão removidos permanentemente. Esta ação não pode ser desfeita.</p>
+                )}
+              </>
             )}
-            {deleteConfirm.some(n => n.isDirectory) && (
-              <p className="text-xs text-amber-400 bg-amber-900/20 rounded px-3 py-2 mb-4">⚠️ Todos os arquivos, subpastas e seu conteúdo serão movidos para a Lixeira.</p>
-            )}
+
             <div className="flex justify-end gap-3 mt-4">
               <button onClick={() => setDeleteConfirm(null)} disabled={fileActionLoading} className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors">Cancelar</button>
-              <button onClick={() => handleDeleteNode(deleteConfirm)} disabled={fileActionLoading} className="flex items-center gap-2 px-5 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50">
-                {fileActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Deletar
+              <button 
+                onClick={() => {
+                  if (deleteConfirm.mode === 'trash' && deleteConfirm.nodes) handleDeleteNode(deleteConfirm.nodes)
+                  if (deleteConfirm.mode === 'permanent' && deleteConfirm.nodes) handlePermanentDelete(deleteConfirm.nodes)
+                  if (deleteConfirm.mode === 'empty') handleEmptyTrash()
+                  setDeleteConfirm(null)
+                }} 
+                disabled={fileActionLoading} 
+                className="flex items-center gap-2 px-5 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50"
+              >
+                {fileActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} {deleteConfirm.mode === 'empty' ? 'Esvaziar' : 'Deletar'}
               </button>
             </div>
           </div>
