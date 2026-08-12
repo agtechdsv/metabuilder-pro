@@ -144,13 +144,26 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         setCtxMenu(null)
         setDeleteConfirm(null)
         setFileActionModal(null)
+        setShowDiscardConfirm(false)
+      } else if (e.key === 'Enter') {
+        if (deleteConfirm) {
+          e.preventDefault()
+          if (deleteConfirm.mode === 'trash' && deleteConfirm.nodes) handleDeleteNode(deleteConfirm.nodes)
+          if (deleteConfirm.mode === 'permanent' && deleteConfirm.nodes) handlePermanentDelete(deleteConfirm.nodes)
+          if (deleteConfirm.mode === 'empty') handleEmptyTrash()
+          setDeleteConfirm(null)
+        } else if (showDiscardConfirm) {
+          e.preventDefault()
+          handleAbortSync()
+          setShowDiscardConfirm(false)
+        }
       } else if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
         if (undoStack.length > 0 && !fileActionLoading) {
           e.preventDefault()
           handleUndo()
         }
       } else if (e.key === 'Delete') {
-        if (!fileActionModal && !deleteConfirm && selectedPaths.size > 0 && !fileActionLoading) {
+        if (!fileActionModal && !deleteConfirm && !showDiscardConfirm && selectedPaths.size > 0 && !fileActionLoading) {
           const nodes = getNodesFromPaths(Array.from(selectedPaths))
           setDeleteConfirm({ mode: explorerActiveTab === 'trash' ? 'permanent' : 'trash', nodes })
         }
@@ -186,7 +199,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [undoStack, fileActionLoading, selectedPaths, deleteConfirm, fileActionModal, explorerActiveTab, fileTree])
+  }, [undoStack, fileActionLoading, selectedPaths, deleteConfirm, fileActionModal, explorerActiveTab, fileTree, showDiscardConfirm])
 
   // Helper to append a line to the console
   const addConsoleLog = (text: string, type: 'info'|'error'|'warn'|'stdout' = 'stdout') => {
@@ -342,11 +355,10 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       }
       
       setUndoStack(newStack)
-      setSelectedPaths(new Set())
       await loadFileTree()
-      toast('Ação desfeita com sucesso.', 'success')
+      toast('Ação desfeita com sucesso!', 'success')
     } catch (e: any) {
-      toast('Erro ao desfazer: ' + e.message, 'error')
+      toast(`Erro ao desfazer: ${e?.message || e || 'Erro desconhecido'}`, 'error')
     } finally {
       setFileActionLoading(false)
     }
@@ -371,7 +383,14 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       setSelectedPaths(newSel)
       setLastSelectedPath(path)
     } else if (modifier === 'shift' && lastSelectedPath) {
-      const visible = getVisibleNodes(fileTree)
+      let rootNodes = fileTree
+      if (explorerActiveTab === 'trash') {
+        const trashNode = fileTree.find(n => n.name === '.trash')
+        rootNodes = trashNode?.children || []
+      } else {
+        rootNodes = fileTree.filter(n => n.name !== '.trash')
+      }
+      const visible = getVisibleNodes(rootNodes)
       const idx1 = visible.indexOf(lastSelectedPath)
       const idx2 = visible.indexOf(path)
       if (idx1 !== -1 && idx2 !== -1) {
@@ -1247,6 +1266,15 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                               </button>
                             </div>
                             <div className="flex items-center gap-0.5 px-2">
+                              {explorerActiveTab === 'trash' && (
+                                <button
+                                  onClick={() => setDeleteConfirm({ mode: 'empty' })}
+                                  title="Esvaziar Lixeira"
+                                  className="flex items-center justify-center w-5 h-5 rounded hover:bg-red-900/40 text-red-400 hover:text-red-300 transition-colors mr-1"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
                               {undoStack.length > 0 && (
                                 <button
                                   onClick={handleUndo}
@@ -1272,7 +1300,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                               </button>
                             </div>
                           </div>
-                          <div className="flex-1 overflow-y-auto overflow-x-hidden py-1">
+                          <div className="flex-1 overflow-y-auto overflow-x-hidden py-1 select-none">
                             {renderTree(fileTree)}
                           </div>
                         </motion.div>
