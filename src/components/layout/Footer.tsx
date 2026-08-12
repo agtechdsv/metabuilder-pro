@@ -25,17 +25,19 @@ export function Footer() {
         </div>
 
         {/* Centro: Info Consolidada */}
-        <div className="flex items-center gap-2 text-sm font-medium text-neutral-400 dark:text-neutral-500">
-          <span>{t('footer.developed_by')}</span>
-          <button 
-            onClick={() => setLegalType('agtech')}
-            className="text-indigo-650 font-bold hover:scale-105 transition-transform"
-          >
-            AGTech ®
-          </button>
-          <span className="mx-1 opacity-30">|</span>
-          <span>MetadataTech {t('footer.high_performance')} © 2026</span>
-          <span className="ml-1">{t('footer.all_rights_reserved')}</span>
+        <div className="flex flex-col items-center gap-1 text-[11px] font-medium text-neutral-400 dark:text-neutral-500">
+          <div className="flex items-center gap-1">
+             <span>© 2026 AG Tech Serviços de Informática Ltda. Todos os direitos reservados.</span>
+          </div>
+          <div className="flex items-center gap-1">
+             <span>MetaBuilder PRO™ é uma marca comercial da</span>
+             <button 
+               onClick={() => setLegalType('agtech')}
+               className="text-indigo-600 dark:text-indigo-400 font-bold hover:scale-105 transition-transform"
+             >
+               AG Tech
+             </button>
+          </div>
         </div>
 
         {/* Lado Direito: Links Legais */}

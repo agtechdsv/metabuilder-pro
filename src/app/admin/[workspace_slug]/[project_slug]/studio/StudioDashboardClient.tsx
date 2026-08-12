@@ -1637,11 +1637,6 @@ export function StudioDashboardClient({
           <AIBuilderSettings workspaceId={workspace.id} isPro={tier === 'pro'} />
         </Modal>
       </main>
-
-      <footer className="mt-8 pt-8 pb-4 text-center text-[10px] font-medium text-neutral-400 dark:text-neutral-500 border-t border-neutral-100 dark:border-neutral-800 flex flex-col gap-1 w-full max-w-7xl mx-auto">
-         <span>© 2026 AG Tech Serviços de Informática Ltda. Todos os direitos reservados.</span>
-         <span>MetaBuilder PRO™ é uma marca comercial da AG Tech.</span>
-      </footer>
     </>
   )
 }
