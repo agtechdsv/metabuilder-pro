@@ -425,8 +425,9 @@ export function LoginPortalClient({
             </div>
           </main>
 
-          <footer className="p-8 text-center text-[10px] font-medium text-neutral-400 dark:text-neutral-600">
-             © {new Date().getFullYear()} AGTech Innovation Lab. All rights reserved.
+          <footer className="p-8 text-center text-[10px] font-medium text-neutral-400 dark:text-neutral-600 flex flex-col gap-1">
+             <span>© 2026 AG Tech Serviços de Informática Ltda. Todos os direitos reservados.</span>
+             <span>MetaBuilder PRO™ é uma marca comercial da AG Tech.</span>
           </footer>
           </div>
 
