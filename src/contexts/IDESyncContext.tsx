@@ -106,6 +106,19 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     setMounted(true)
   }, [])
 
+  // ESC fecha menu de contexto e modais de ação de arquivo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setCtxMenu(null)
+        setDeleteConfirm(null)
+        setFileActionModal(null)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   // Helper to append a line to the console
   const addConsoleLog = (text: string, type: 'info'|'error'|'warn'|'stdout' = 'stdout') => {
     setConsoleLogs(prev => [...prev, {
@@ -208,6 +221,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   }
 
   const handleSelectFile = async (path: string) => {
+    setCtxMenu(null) // Fecha o menu de contexto ao abrir um arquivo
     setSelectedFile(path)
     try {
       const content = await tauriFs.readTextFile(path, { baseDir: BaseDirectory.Home })
@@ -229,6 +243,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   }
 
   const toggleFolder = (path: string) => {
+    setCtxMenu(null) // Fecha o menu de contexto ao abrir/fechar pasta
     const newExpanded = new Set(expandedFolders)
     if (newExpanded.has(path)) {
       newExpanded.delete(path)
@@ -633,20 +648,41 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Copia recursivamente um diretório inteiro
+  const copyDirRecursive = async (srcPath: string, destPath: string): Promise<void> => {
+    await tauriFs.mkdir(destPath, { baseDir: BaseDirectory.Home, recursive: true })
+    const entries = await tauriFs.readDir(srcPath, { baseDir: BaseDirectory.Home })
+    for (const entry of entries) {
+      const entrySrc = `${srcPath}/${entry.name}`
+      const entryDest = `${destPath}/${entry.name}`
+      if (entry.isDirectory) {
+        await copyDirRecursive(entrySrc, entryDest)
+      } else {
+        await tauriFs.copyFile(entrySrc, entryDest, { fromPathBaseDir: BaseDirectory.Home, toPathBaseDir: BaseDirectory.Home })
+      }
+    }
+  }
+
   const handleCopyPasteNode = async (dest: FileNode) => {
     if (!clipboard) return
+    const clipNode = clipboard
     try {
       setFileActionLoading(true)
       const destDir = dest.isDirectory ? dest.path : dest.path.substring(0, dest.path.lastIndexOf('/'))
-      const newPath = `${destDir}/${clipboard.node.name}`
-      await tauriFs.copyFile(clipboard.node.path, newPath, { fromPathBaseDir: BaseDirectory.Home, toPathBaseDir: BaseDirectory.Home })
-      if (clipboard.op === 'cut') {
-        await tauriFs.remove(clipboard.node.path, { baseDir: BaseDirectory.Home })
+      const newPath = `${destDir}/${clipNode.node.name}`
+      if (clipNode.node.isDirectory) {
+        // Cópia recursiva de diretório
+        await copyDirRecursive(clipNode.node.path, newPath)
+      } else {
+        await tauriFs.copyFile(clipNode.node.path, newPath, { fromPathBaseDir: BaseDirectory.Home, toPathBaseDir: BaseDirectory.Home })
+      }
+      if (clipNode.op === 'cut') {
+        await tauriFs.remove(clipNode.node.path, { baseDir: BaseDirectory.Home, recursive: clipNode.node.isDirectory })
         setClipboard(null)
       }
       setExpandedFolders(prev => { const s = new Set(prev); s.add(destDir); return s })
       await loadFileTree()
-      toast(`'${clipboard.node.name}' ${clipboard.op === 'copy' ? 'copiado' : 'movido'} com sucesso.`, 'success')
+      toast(`'${clipNode.node.name}' ${clipNode.op === 'copy' ? 'copiado' : 'movido'} com sucesso.`, 'success')
     } catch (e: any) {
       toast('Erro ao colar: ' + e.message, 'error')
     } finally {
