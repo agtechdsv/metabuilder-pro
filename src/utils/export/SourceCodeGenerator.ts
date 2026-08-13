@@ -210,8 +210,7 @@ export class SourceCodeGenerator {
           // Convert handlePasskeyLogin to use POST custom endpoint or fail gracefully if unsupported
           content = content.replace(
             /const queryId = crypto\.randomUUID\(\)[\s\S]*?\} catch \(err: any\) \{/m,
-            `try {
-        // Biometria para legado/ldap ainda requer endpoint customizado.
+            `// Biometria para legado/ldap ainda requer endpoint customizado.
         // Simulando sucesso ou retornando erro.
         throw new Error('Biometria não suportada neste modo de autenticação.')
       } catch (err: any) {`
