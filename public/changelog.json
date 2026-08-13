@@ -1,4 +1,19 @@
 {
+  "v1.0.3": {
+    "date": "2026-08-13",
+    "pt": [
+      "Nova funcionalidade de Exportação de Código-Fonte: agora você pode baixar o código completo do seu projeto com interface dinâmica e fluxos de autenticação pré-configurados.",
+      "Maior autonomia e portabilidade: gere projetos prontos para produção com layouts personalizáveis e integração de segurança integrada."
+    ],
+    "en": [
+      "New Source Code Export feature: Easily export your full project codebase with dynamic UI components and pre-configured authentication flows.",
+      "Enhanced flexibility and portability: Generate production-ready projects with customizable layouts and built-in security integrations."
+    ],
+    "es": [
+      "Nueva función de Exportación de Código Fuente: exporta el código completo de tu proyecto con interfaces dinámicas y flujos de autenticación preconfigurados.",
+      "Mayor autonomía y portabilidad: genera proyectos listos para producción con diseños personalizables e integraciones de seguridad listas para usar."
+    ]
+  },
   "v1.0.2": {
     "date": "2026-08-13",
     "pt": [
