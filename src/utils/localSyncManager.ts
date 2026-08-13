@@ -172,7 +172,12 @@ export class LocalSyncManager {
       
       // Create an initial commit so we have a HEAD, preventing branching errors
       await tauriFsAdapter.promises.writeFile(`${this.projectDir}/.metabuilder`, 'Initialized by MetaBuilder PRO');
+      const defaultGitIgnore = `node_modules\n.next\n.vscode\n.DS_Store\n*.log\n.env*\n`;
+      await tauriFsAdapter.promises.writeFile(`${this.projectDir}/.gitignore`, defaultGitIgnore);
+      
       await git.add({ fs: tauriFsAdapter, dir: this.projectDir, filepath: '.metabuilder' });
+      await git.add({ fs: tauriFsAdapter, dir: this.projectDir, filepath: '.gitignore' });
+      
       await git.commit({
         fs: tauriFsAdapter,
         dir: this.projectDir,
@@ -186,7 +191,11 @@ export class LocalSyncManager {
       } catch {
         // Repo exists but no commits yet (maybe it crashed halfway previously)
         await tauriFsAdapter.promises.writeFile(`${this.projectDir}/.metabuilder`, 'Initialized by MetaBuilder PRO');
+        const defaultGitIgnore = `node_modules\n.next\n.vscode\n.DS_Store\n*.log\n.env*\n`;
+        await tauriFsAdapter.promises.writeFile(`${this.projectDir}/.gitignore`, defaultGitIgnore);
+        
         await git.add({ fs: tauriFsAdapter, dir: this.projectDir, filepath: '.metabuilder' });
+        await git.add({ fs: tauriFsAdapter, dir: this.projectDir, filepath: '.gitignore' });
         await git.commit({
           fs: tauriFsAdapter,
           dir: this.projectDir,
@@ -220,6 +229,14 @@ export class LocalSyncManager {
 
     // Ensure git is initialized
     await this.initLocalProject();
+    
+    // SAFETY MEASURE: If .gitignore was deleted by a previous abortSync, drop it back in.
+    // This prevents isomorphic-git from attempting to stat 50k files in node_modules over IPC,
+    // which causes ERR_INSUFFICIENT_RESOURCES and crashes the sync.
+    try {
+      const defaultGitIgnore = `node_modules\n.next\n.vscode\n.DS_Store\n*.log\n.env*\n`;
+      await tauriFsAdapter.promises.writeFile(`${this.projectDir}/.gitignore`, defaultGitIgnore);
+    } catch(e) {}
     
     const { local, upstream } = await this.getConfiguredBranches();
 
