@@ -144,7 +144,7 @@ fn start_nextjs_dev(app: tauri::AppHandle, state: State<'_, CliState>, project_p
     }
 
     let sidecar_command = app.shell().command("cmd")
-        .args(vec!["/c", "call npm install && npm run dev"])
+        .args(vec!["/c", "set DATABASE_URL= && set NEXT_PUBLIC_SUPABASE_URL= && set SUPABASE_SERVICE_ROLE_KEY= && call npm install && npm run dev"])
         .current_dir(&project_path);
 
     let (mut rx, child) = sidecar_command.spawn().map_err(|e| e.to_string())?;
@@ -226,7 +226,7 @@ fn start_nextjs_server(app: tauri::AppHandle, state: State<'_, CliState>, projec
     }
 
     let sidecar_command = app.shell().command("cmd")
-        .args(vec!["/c", "npm run dev"])
+        .args(vec!["/c", "set DATABASE_URL= && set NEXT_PUBLIC_SUPABASE_URL= && set SUPABASE_SERVICE_ROLE_KEY= && npm run dev"])
         .current_dir(&project_path);
 
     let (mut rx, child) = sidecar_command.spawn().map_err(|e| e.to_string())?;
