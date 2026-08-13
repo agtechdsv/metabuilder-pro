@@ -1,4 +1,19 @@
 {
+  "v1.0.2": {
+    "date": "2026-08-13",
+    "pt": [
+      "Gerenciamento Integrado de Servidores: Agora você pode iniciar, controlar e monitorar servidores de desenvolvimento Next.js e executar comandos CLI diretamente na plataforma, sem a necessidade de um terminal externo.",
+      "Melhorias de Estabilidade e Sincronização: Atualizações internas do sistema para garantir maior confiabilidade, desempenho e fluidez na sua jornada de desenvolvimento."
+    ],
+    "en": [
+      "Integrated Server Management: Effortlessly start, control, and monitor Next.js development servers and CLI commands directly within the app, eliminating the need for external terminals.",
+      "Stability and Performance Enhancements: Internal system updates ensuring better reliability, smoother workflows, and enhanced data synchronization."
+    ],
+    "es": [
+      "Gestión Integrada de Servidores: Inicie, controle y monitoree servidores de desarrollo Next.js y ejecute comandos CLI directamente desde la plataforma, sin necesidad de terminales externas.",
+      "Mejoras de Estabilidad y Rendimiento: Actualizaciones internas del sistema para garantizar una mayor confiabilidad y un flujo de trabajo más fluido."
+    ]
+  },
   "v1.0.1": {
     "date": "2026-08-13",
     "pt": [
