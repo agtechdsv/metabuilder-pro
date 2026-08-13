@@ -107,7 +107,8 @@ export class SourceCodeGenerator {
       
       // Override hooks if adapter exists (e.g. postgres or native supabase)
       if (this.dataMode && this.dataMode !== 'tunnel') {
-        const adapterHooksPath = path.join(cwd, 'src/templates/export/adapters', this.dataMode, 'hooks')
+        const actualAdapterName = this.dataMode === 'legacy' ? this.legacyDriver : this.dataMode;
+        const adapterHooksPath = path.join(cwd, 'src/templates/export/adapters', actualAdapterName, 'hooks')
         if (fs.existsSync(adapterHooksPath)) {
           const hooksFolder = componentsFolder.folder('runtime')?.folder('hooks')
           if (hooksFolder) {
@@ -563,7 +564,8 @@ export async function POST(request: Request) {
 
     // Injetar os Adapters Escolhidos (sobrescrevendo os hooks copiados acima)
     if (this.dataMode !== 'tunnel') {
-      const adapterPath = path.join(cwd, 'src/templates/export/adapters', this.dataMode)
+      const actualAdapterName = this.dataMode === 'legacy' ? this.legacyDriver : this.dataMode;
+      const adapterPath = path.join(cwd, 'src/templates/export/adapters', actualAdapterName)
       if (fs.existsSync(adapterPath)) {
         const hooksFolder = componentsFolder?.folder('runtime')?.folder('hooks')
         if (hooksFolder && fs.existsSync(path.join(adapterPath, 'hooks'))) {
@@ -697,8 +699,9 @@ export function PermissionGuard({ children }: { viewSlug: string, children: Reac
     }
 
     // 2. Setup src/app structure and default pages
-    generateAppRouter(this.zip, { ...this.project, db_type: this.dataMode }, this.models, this.uiViews, this.authStrategy, this.projectRelations)
-    generateFeatures(this.zip, this.models, this.uiViews, this.dataMode)
+    const actualAdapterName = this.dataMode === 'legacy' ? this.legacyDriver : this.dataMode;
+    generateAppRouter(this.zip, { ...this.project, db_type: actualAdapterName }, this.models, this.uiViews, this.authStrategy, this.projectRelations)
+    generateFeatures(this.zip, this.models, this.uiViews, actualAdapterName)
     generateBYOC(this.zip, this.customComponents)
 
     // Prevent Next.js favicon 404 in console
