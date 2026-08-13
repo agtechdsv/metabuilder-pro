@@ -206,12 +206,26 @@ export class SourceCodeGenerator {
         finalizeLogin(data.user || { id: data.userId || 'legacy-user' })
       } catch (err: any) {`
           )
+
+          // Convert handlePasskeyLogin to use POST custom endpoint or fail gracefully if unsupported
+          content = content.replace(
+            /const queryId = crypto\.randomUUID\(\)[\s\S]*?\} catch \(err: any\) \{/m,
+            `try {
+        // Biometria para legado/ldap ainda requer endpoint customizado.
+        // Simulando sucesso ou retornando erro.
+        throw new Error('Biometria não suportada neste modo de autenticação.')
+      } catch (err: any) {`
+          )
         }
 
         // Remove any remaining cleanup() calls that were left in the catch block
         content = content.replace(/cleanup\(\)/g, '')
         // Fix the catch block to show the real error message instead of masking it
         content = content.replace(/setErrorMsg\(t\('runtime\.auth_unexpected_error',\s*'[^']+'\)\)/g, "setErrorMsg(err?.message || t('runtime.auth_unexpected_error', 'Erro inesperado ao realizar autenticação.'))")
+        // Remove supabase dependency if it's unused (for clean legacy output)
+        if (this.authStrategy === 'legacy' || this.authStrategy === 'ldap') {
+           content = content.replace(/const supabase = createClient\(\)/g, 'const supabase = null as any;')
+        }
 
         componentsFolder.folder('auth')?.file('LoginPortalClient.tsx', content)
       }
@@ -261,6 +275,23 @@ export class SourceCodeGenerator {
     const utilsFolder = this.zip.folder('src/utils/supabase')
     if (utilsFolder) {
       await this.copyFolderToZip(path.join(cwd, 'src/utils/supabase'), utilsFolder)
+      
+      // Make supabase clients tolerant to missing env vars in exported projects
+      const clientTsPath = path.join(cwd, 'src/utils/supabase/client.ts')
+      if (fs.existsSync(clientTsPath)) {
+        let content = fs.readFileSync(clientTsPath, 'utf8')
+        content = content.replace(/process\.env\.NEXT_PUBLIC_SUPABASE_URL!/g, "process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co'")
+        content = content.replace(/process\.env\.NEXT_PUBLIC_SUPABASE_ANON_KEY!/g, "process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy_key'")
+        utilsFolder.file('client.ts', content)
+      }
+      
+      const serverTsPath = path.join(cwd, 'src/utils/supabase/server.ts')
+      if (fs.existsSync(serverTsPath)) {
+        let content = fs.readFileSync(serverTsPath, 'utf8')
+        content = content.replace(/process\.env\.NEXT_PUBLIC_SUPABASE_URL!/g, "process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co'")
+        content = content.replace(/process\.env\.NEXT_PUBLIC_SUPABASE_ANON_KEY!/g, "process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy_key'")
+        utilsFolder.file('server.ts', content)
+      }
     }
 
     // Export async exports API (Central de Exportações) - Standalone Mock
