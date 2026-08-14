@@ -1052,22 +1052,26 @@ export function StudioDashboardClient({
                             <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure_login')}
                           </button>
                         )}
-                        <Link
-                          href={`/${workspace_slug}/${project_slug}/login`}
-                          target="_blank"
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            openPreview(`${window.location.origin}/${workspace_slug}/${project_slug}/login`, 'Portal de Login')
+                          }}
                           className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-indigo-600 dark:hover:text-white shadow-sm"
                         >
                           <ExternalLink className="w-5 h-5" />
-                        </Link>
+                        </button>
                       </>
                     ) : (
-                      <Link
-                        href={`/${workspace_slug}/${project_slug}/login`}
-                        target="_blank"
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          openPreview(`${window.location.origin}/${workspace_slug}/${project_slug}/login`, 'Portal de Login')
+                        }}
                         className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-indigo-600 text-white rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-indigo-500/20"
                       >
                         <ExternalLink className="w-4 h-4" /> {t('dashboard.projects.studio.view_portal')}
-                      </Link>
+                      </button>
                     )}
                   </div>
                 </div>
@@ -1120,24 +1124,28 @@ export function StudioDashboardClient({
                           <Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure_module')}
                         </button>
                         {isAutomationsActive && (
-                          <Link
-                            href={`/${workspace_slug}/${project_slug}/automations`}
-                            target="_blank"
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault()
+                              openPreview(`${window.location.origin}/${workspace_slug}/${project_slug}/automations`, t('dashboard.projects.studio.automations_bpm'))
+                            }}
                             className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-emerald-600 dark:hover:text-white shadow-sm"
                           >
                             <ExternalLink className="w-5 h-5" />
-                          </Link>
+                          </button>
                         )}
                       </>
                     ) : (
                       isAutomationsActive && (
-                        <Link
-                          href={`/${workspace_slug}/${project_slug}/automations`}
-                          target="_blank"
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            openPreview(`${window.location.origin}/${workspace_slug}/${project_slug}/automations`, t('dashboard.projects.studio.automations_bpm'))
+                          }}
                           className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-emerald-600 text-white rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-emerald-500/20"
                         >
                           <ExternalLink className="w-4 h-4" /> {t('dashboard.projects.studio.access_bpm')}
-                        </Link>
+                        </button>
                       )
                     )}
                   </div>
@@ -1191,24 +1199,28 @@ export function StudioDashboardClient({
                           <Settings2 className="w-4 h-4" /> {isDownloadsActive ? t('dashboard.projects.studio.disable_module') : t('dashboard.projects.studio.enable_module')}
                         </button>
                         {isDownloadsActive && (
-                          <Link
-                            href={`/${workspace_slug}/${project_slug}/downloads`}
-                            target="_blank"
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault()
+                              openPreview(`${window.location.origin}/${workspace_slug}/${project_slug}/downloads`, t('dashboard.projects.studio.downloads_center'))
+                            }}
                             className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-blue-600 dark:hover:text-white shadow-sm"
                           >
                             <ExternalLink className="w-5 h-5" />
-                          </Link>
+                          </button>
                         )}
                       </>
                     ) : (
                       isDownloadsActive && (
-                        <Link
-                          href={`/${workspace_slug}/${project_slug}/downloads`}
-                          target="_blank"
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            openPreview(`${window.location.origin}/${workspace_slug}/${project_slug}/downloads`, t('dashboard.projects.studio.downloads_center'))
+                          }}
                           className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-blue-600 text-white rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-blue-500/20"
                         >
                           <ExternalLink className="w-4 h-4" /> {t('dashboard.projects.studio.access_downloads')}
-                        </Link>
+                        </button>
                       )
                     )}
                   </div>
