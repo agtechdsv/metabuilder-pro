@@ -159,9 +159,24 @@ export function generateEnv(zip: JSZip, project: any, dataMode: string = 'supaba
     supaAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || supaAnon
   }
 
-  let envContent = `# Authentication
+  // Only include Supabase credentials when they are actually needed.
+  // For legacy/ldap auth modes the app authenticates via its own API route (/api/auth/login)
+  // and never calls Supabase Auth. Emitting the placeholder URL causes the safe-client guard
+  // to miss the stub (URL starts with 'https://') and attempt a real Supabase connection,
+  // which fails and breaks login.
+  const needsSupabase = authStrategy === 'managed' || dataMode === 'supabase' || dataMode === 'tunnel' || authStrategy === 'tunnel'
+
+  let envContent = needsSupabase
+    ? `# Authentication
 NEXT_PUBLIC_SUPABASE_URL=${supaUrl}
 NEXT_PUBLIC_SUPABASE_ANON_KEY=${supaAnon}
+
+# Project Token
+META_PROJECT_TOKEN=${project.secret_token || 'your_project_token'}
+`
+    : `# Authentication (Supabase not used in this auth mode)
+# NEXT_PUBLIC_SUPABASE_URL=  <- not required for legacy/ldap auth
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=  <- not required for legacy/ldap auth
 
 # Project Token
 META_PROJECT_TOKEN=${project.secret_token || 'your_project_token'}

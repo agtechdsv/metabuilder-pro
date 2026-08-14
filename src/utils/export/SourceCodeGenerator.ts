@@ -283,7 +283,10 @@ export function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   
-  if (!url || !key || !url.trim().startsWith('http')) {
+  // Guard: return a no-op stub when Supabase is not configured or only has placeholder values.
+  // This prevents connection errors when auth mode is legacy/ldap (which does not use Supabase).
+  const isUnconfigured = !url || !key || !url.trim().startsWith('http') || url.includes('your-project.supabase.co')
+  if (isUnconfigured) {
     return {
       auth: {
         getUser: async () => ({ data: { user: null } }),
@@ -315,7 +318,10 @@ export async function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   
-  if (!url || !key || !url.trim().startsWith('http')) {
+  // Guard: return a no-op stub when Supabase is not configured or only has placeholder values.
+  // This prevents connection errors when auth mode is legacy/ldap (which does not use Supabase).
+  const isUnconfigured = !url || !key || !url.trim().startsWith('http') || url.includes('your-project.supabase.co')
+  if (isUnconfigured) {
     return {
       auth: {
         getUser: async () => ({ data: { user: null } }),
