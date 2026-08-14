@@ -32,6 +32,7 @@ export function generateRootFiles(zip: JSZip, project: any, dataMode: string = '
       '@supabase/supabase-js': '^2.43.4',
       '@supabase/ssr': '^0.3.0',
       ...(dataMode === 'postgres' || legacyDriver === 'postgres' ? { 'pg': '^8.11.5' } : {}),
+      ...(dataMode === 'oracle' || legacyDriver === 'oracle' ? { 'oracledb': '^6.6.0' } : {}),
       '@simplewebauthn/browser': '^13.3.0',
       '@simplewebauthn/server': '^13.3.1',
       '@xyflow/react': '^12.10.2',

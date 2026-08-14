@@ -275,21 +275,72 @@ export class SourceCodeGenerator {
     if (utilsFolder) {
       await this.copyFolderToZip(path.join(cwd, 'src/utils/supabase'), utilsFolder)
       
-      // Make supabase clients tolerant to missing env vars in exported projects
       const clientTsPath = path.join(cwd, 'src/utils/supabase/client.ts')
       if (fs.existsSync(clientTsPath)) {
-        let content = fs.readFileSync(clientTsPath, 'utf8')
-        content = content.replace(/process\.env\.NEXT_PUBLIC_SUPABASE_URL!/g, "process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co'")
-        content = content.replace(/process\.env\.NEXT_PUBLIC_SUPABASE_ANON_KEY!/g, "process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy_key'")
-        utilsFolder.file('client.ts', content)
+        const safeClientContent = `import { createBrowserClient } from '@supabase/ssr'
+
+export function createClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  
+  if (!url || !key) {
+    return {
+      auth: {
+        getUser: async () => ({ data: { user: null } }),
+        getSession: async () => ({ data: { session: null } }),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+        signInWithPassword: async () => ({ data: null, error: new Error("Supabase is not configured.") }),
+        signOut: async () => ({ error: null }),
+      },
+      from: () => ({
+        select: () => ({ eq: () => ({ single: async () => ({ data: null }), limit: () => ({ single: async () => ({ data: null }) }) }) })
+      }),
+      channel: () => ({ on: () => ({ subscribe: () => {} }), unsubscribe: () => {} }),
+      removeChannel: () => {}
+    } as any;
+  }
+  
+  return createBrowserClient(url, key)
+}`
+        utilsFolder.file('client.ts', safeClientContent)
       }
       
       const serverTsPath = path.join(cwd, 'src/utils/supabase/server.ts')
       if (fs.existsSync(serverTsPath)) {
-        let content = fs.readFileSync(serverTsPath, 'utf8')
-        content = content.replace(/process\.env\.NEXT_PUBLIC_SUPABASE_URL!/g, "process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co'")
-        content = content.replace(/process\.env\.NEXT_PUBLIC_SUPABASE_ANON_KEY!/g, "process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy_key'")
-        utilsFolder.file('server.ts', content)
+        const safeServerContent = `import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+export async function createClient() {
+  const cookieStore = await cookies()
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  
+  if (!url || !key) {
+    return {
+      auth: {
+        getUser: async () => ({ data: { user: null } }),
+        getSession: async () => ({ data: { session: null } }),
+      },
+      from: () => ({
+        select: () => ({ eq: () => ({ single: async () => ({ data: null }), limit: () => ({ single: async () => ({ data: null }) }) }) })
+      })
+    } as any;
+  }
+  
+  return createServerClient(url, key, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+        } catch {}
+      },
+    },
+  })
+}`
+        utilsFolder.file('server.ts', safeServerContent)
       }
     }
 
@@ -471,6 +522,7 @@ export async function setPasswordAction(...args: any[]): Promise<any> { return {
             const idCol = authConf.db_user_role_column || 'id'
             const hashType = authConf.db_password_hash_type || 'bcrypt'
             const usesPostgres = this.legacyDriver === 'postgres'
+            const usesOracle = this.legacyDriver === 'oracle'
             
             let passwordCheckLogic = `
     const storedPassword = user["${passCol}"];
@@ -495,11 +547,53 @@ export async function setPasswordAction(...args: any[]): Promise<any> { return {
     const isMatch = storedPassword === password;`
             }
 
+            let dbImport = "import { createClient } from '@/utils/supabase/server';";
+            if (usesPostgres) dbImport = "import { Pool } from 'pg';";
+            else if (usesOracle) dbImport = "import oracledb from 'oracledb';";
+
+            let dbQueryLogic = `// Supabase SDK Mode
+    const supabase = await createClient();
+    const { data } = await supabase.from('${tableName}').select('*').eq('${emailCol}', email).limit(1).single();
+    user = data;`;
+
+            if (usesPostgres) {
+              dbQueryLogic = `// Postgres Native Mode
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const result = await pool.query('SELECT * FROM "${tableName}" WHERE "${emailCol}" = $1 LIMIT 1', [email]);
+    if (result.rows.length > 0) user = result.rows[0];
+    await pool.end();`;
+            } else if (usesOracle) {
+              dbQueryLogic = `// Oracle Native Mode
+    if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is missing');
+    const dbUrl = new URL(process.env.DATABASE_URL);
+    const connection = await oracledb.getConnection({
+      user: decodeURIComponent(dbUrl.username),
+      password: decodeURIComponent(dbUrl.password),
+      connectString: \`\${dbUrl.hostname}:\${dbUrl.port}\${dbUrl.pathname}\`
+    });
+    try {
+      const result = await connection.execute(
+        \`SELECT * FROM ${tableName} WHERE ${emailCol} = :email FETCH FIRST 1 ROWS ONLY\`,
+        { email },
+        { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      );
+      if (result.rows && result.rows.length > 0) {
+        const row = result.rows[0] as any;
+        user = {};
+        for (const k of Object.keys(row)) {
+          user[k.toLowerCase()] = row[k]; // Normalize to lowercase for config matching
+        }
+      }
+    } finally {
+      await connection.close();
+    }`;
+            }
+
             const routeContent = `import { NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
 ${hashType === 'bcrypt' ? "import bcrypt from 'bcryptjs';" : ""}
-${usesPostgres ? "import { Pool } from 'pg';" : "import { createClient } from '@/utils/supabase/server';"}
+${dbImport}
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'super-secret-key-replace-me');
 
@@ -508,14 +602,7 @@ export async function POST(request: Request) {
     const { email, password } = await request.json();
     let user: Record<string, any> | null = null;
 
-    ${usesPostgres ? `// Postgres Native Mode
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    const result = await pool.query('SELECT * FROM "${tableName}" WHERE "${emailCol}" = $1 LIMIT 1', [email]);
-    if (result.rows.length > 0) user = result.rows[0];
-    await pool.end();` : `// Supabase SDK Mode
-    const supabase = await createClient();
-    const { data } = await supabase.from('${tableName}').select('*').eq('${emailCol}', email).limit(1).single();
-    user = data;`}
+    ${dbQueryLogic}
 
     if (!user) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 401 });
 
