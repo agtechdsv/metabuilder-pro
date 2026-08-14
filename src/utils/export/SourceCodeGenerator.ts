@@ -283,7 +283,7 @@ export function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   
-  if (!url || !key) {
+  if (!url || !key || !url.trim().startsWith('http')) {
     return {
       auth: {
         getUser: async () => ({ data: { user: null } }),
@@ -315,7 +315,7 @@ export async function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   
-  if (!url || !key) {
+  if (!url || !key || !url.trim().startsWith('http')) {
     return {
       auth: {
         getUser: async () => ({ data: { user: null } }),

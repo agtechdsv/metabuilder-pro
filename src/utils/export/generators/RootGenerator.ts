@@ -150,8 +150,8 @@ yarn-error.log*
 }
 
 export function generateEnv(zip: JSZip, project: any, dataMode: string = 'supabase', authStrategy: string = 'managed', legacyDriver: string = 'supabase', dbConfig: any = null) {
-  let supaUrl = dbConfig?.supabaseUrl ? dbConfig.supabaseUrl : 'https://your-project.supabase.co'
-  let supaAnon = dbConfig?.supabaseAnonKey ? dbConfig.supabaseAnonKey : 'your_supabase_anon_key'
+  let supaUrl = dbConfig?.supabaseUrl?.trim() ? dbConfig.supabaseUrl.trim() : 'https://your-project.supabase.co'
+  let supaAnon = dbConfig?.supabaseAnonKey?.trim() ? dbConfig.supabaseAnonKey.trim() : 'your_supabase_anon_key'
 
   // If using Tunnel for anything, inject Central MetaBuilder credentials
   if (dataMode === 'tunnel' || authStrategy === 'tunnel') {
