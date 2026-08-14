@@ -65,6 +65,7 @@ export default function AuthSettingsPage() {
     auth_type: 'none',
     db_table_name: '',
     db_email_column: '',
+    db_display_name_column: '',
     db_password_column: '',
     db_password_hash_type: 'bcrypt',
     ldap_server_url: '',
@@ -154,7 +155,8 @@ export default function AuthSettingsPage() {
             db_user_role_column: config.ui_config?.db_user_role_column || '',
             db_user_roles_table: config.ui_config?.db_user_roles_table || '',
             db_user_roles_user_id_column: config.ui_config?.db_user_roles_user_id_column || '',
-            db_user_roles_role_id_column: config.ui_config?.db_user_roles_role_id_column || ''
+            db_user_roles_role_id_column: config.ui_config?.db_user_roles_role_id_column || '',
+            db_display_name_column: config.ui_config?.db_display_name_column || ''
           })
           if (config.ui_config) {
             setVisualConfig(prev => ({
@@ -850,7 +852,8 @@ export default function AuthSettingsPage() {
             db_user_role_column: authConfig.db_user_role_column,
             db_user_roles_table: authConfig.db_user_roles_table,
             db_user_roles_user_id_column: authConfig.db_user_roles_user_id_column,
-            db_user_roles_role_id_column: authConfig.db_user_roles_role_id_column
+            db_user_roles_role_id_column: authConfig.db_user_roles_role_id_column,
+            db_display_name_column: authConfig.db_display_name_column
           }
         })
 
@@ -1069,6 +1072,21 @@ export default function AuthSettingsPage() {
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
                       >
                         <option value="">Selecione o campo...</option>
+                        {fields.map((f: any) => (
+                          <option key={f.id} value={f.name || f.db_column_name}>
+                            {f.label || f.name || f.db_column_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Coluna de Exibição (Opcional)</label>
+                      <select 
+                        value={authConfig.db_display_name_column || ''}
+                        onChange={(e) => setAuthConfig({...authConfig, db_display_name_column: e.target.value})}
+                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
+                      >
+                        <option value="">(Padrão Automático)</option>
                         {fields.map((f: any) => (
                           <option key={f.id} value={f.name || f.db_column_name}>
                             {f.label || f.name || f.db_column_name}

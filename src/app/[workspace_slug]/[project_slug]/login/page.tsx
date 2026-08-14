@@ -62,7 +62,8 @@ export default async function LoginPage({ params }: any) {
     db_user_role_column: visual.db_user_role_column || '',
     db_user_roles_table: visual.db_user_roles_table || '',
     db_user_roles_user_id_column: visual.db_user_roles_user_id_column || '',
-    db_user_roles_role_id_column: visual.db_user_roles_role_id_column || ''
+    db_user_roles_role_id_column: visual.db_user_roles_role_id_column || '',
+    db_display_name_column: visual.db_display_name_column || ''
   }
   const allowSignup = visual.allow_signup || false
   

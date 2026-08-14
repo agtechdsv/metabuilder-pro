@@ -228,6 +228,11 @@ export function LoginPortalClient({
   }
 
   const finalizeLogin = (user: any) => {
+    // Injeta a coluna de exibição configurada
+    if (authConfig.db_display_name_column && user[authConfig.db_display_name_column]) {
+      user.__display_name = user[authConfig.db_display_name_column]
+    }
+
     // Salva o cookie de sessão para o projeto
     const cookieName = `client_session_${project.id}`
     document.cookie = `${cookieName}=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=86400; SameSite=Lax`

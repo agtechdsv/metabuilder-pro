@@ -68,8 +68,8 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
     window.location.href = `${finalBaseNavUrl}`
   }
 
-  const displayName = clientUser?.nome || clientUser?.name || clientUser?.email || 'Usuário Cliente'
-  const displayEmail = clientUser?.email || t('runtime.sidebar_logout')
+  const displayName = clientUser?.__display_name || clientUser?.nome || clientUser?.NOME || clientUser?.name || clientUser?.NAME || clientUser?.email || clientUser?.EMAIL || 'Usuário Cliente'
+  const displayEmail = clientUser?.email || clientUser?.EMAIL || t('runtime.sidebar_logout')
   const avatarLetter = displayName.charAt(0).toUpperCase()
 
   const toggleExpand = (e: React.MouseEvent, id: string) => {

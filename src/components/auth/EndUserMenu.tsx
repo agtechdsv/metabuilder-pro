@@ -18,10 +18,12 @@ export function EndUserMenu({ user, projectId }: EndUserMenuProps) {
   const { t } = useI18n()
 
   const getDisplayName = () => {
-    if (user?.full_name && user.full_name.trim()) return user.full_name
-    if (user?.name && user.name.trim()) return user.name
+    if (user?.__display_name && user.__display_name.trim()) return user.__display_name
 
-    const email = user?.email || user?.Email || user?.mail
+    const fullName = user?.full_name || user?.FULL_NAME || user?.name || user?.NAME || user?.nome || user?.NOME
+    if (fullName && fullName.trim()) return fullName
+
+    const email = user?.email || user?.Email || user?.mail || user?.EMAIL || user?.MAIL
     if (email && email.includes('@')) {
       const localPart = email.split('@')[0]
       return localPart.charAt(0).toUpperCase() + localPart.slice(1)
