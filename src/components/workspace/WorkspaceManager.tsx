@@ -346,7 +346,7 @@ export function WorkspaceManager({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
           { label: t('dashboard.stats.active_workspaces'), value: workspaces.length, icon: Building2, color: 'blue' },
-          { label: t('dashboard.stats.total_projects'), value: workspaces.reduce((acc, w) => acc + (w.projects?.[0]?.count || 0), 0), icon: Activity, color: 'indigo' },
+          { label: t('dashboard.stats.total_projects'), value: workspaces.reduce((acc, w) => acc + (w.project_count ?? w.projects?.[0]?.count ?? 0), 0), icon: Activity, color: 'indigo' },
           { 
             label: t('dashboard.stats.active_members'), 
             value: totalActiveMembers ?? (teamData ? (teamData.activeGuests || 0) + 1 : 1), 
