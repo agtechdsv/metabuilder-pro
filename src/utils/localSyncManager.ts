@@ -55,7 +55,10 @@ const tauriFsAdapter = {
     readdir: async (path: string) => {
       try {
         const entries = await tauriFs.readDir(path, { baseDir: BaseDirectory.Home });
-        return entries.map(e => e.name);
+        // Filter out massive ignored directories to prevent isomorphic-git from traversing them and crashing IPC
+        return entries
+          .map(e => e.name)
+          .filter(name => !['node_modules', '.next'].includes(name));
       } catch (err) {
         handleFsError(err);
         return [];
