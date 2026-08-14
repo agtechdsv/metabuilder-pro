@@ -1,4 +1,22 @@
 {
+  "v1.0.7": {
+    "date": "2026-08-14",
+    "pt": [
+      "Exportação Completa de Código-Fonte: Agora você pode exportar e baixar todos os arquivos do seu projeto diretamente da plataforma com total autonomia.",
+      "Geração Inteligente de Estrutura Inicial (Boilerplate): Criação automatizada de arquivos e estruturas essenciais para acelerar o início de novos projetos.",
+      "Melhorias de Estabilidade e Conexão: Otimizações internas na integração de autenticação e backend para uma experiência mais fluida e segura."
+    ],
+    "en": [
+      "Full Source Code Export: You can now export and download all your project files directly from the platform with complete autonomy.",
+      "Smart Boilerplate Generation: Automated creation of essential foundation files to kickstart new project development faster.",
+      "Stability & Backend Improvements: Internal enhancements to authentication and SSR integrations for a smoother, more reliable experience."
+    ],
+    "es": [
+      "Exportación Completa de Código Fuente: Ahora puedes exportar y descargar todos los archivos de tu proyecto directamente desde la plataforma con total autonomía.",
+      "Generación Inteligente de Estructura Base: Creación automatizada de archivos esenciales para acelerar el lanzamiento de nuevos proyectos.",
+      "Mejoras de Estabilidad y Conectividad: Optimizaciones internas en la integración de backend y autenticación para una experiencia más fluida y segura."
+    ]
+  },
   "v1.0.6": {
     "date": "2026-08-14",
     "pt": [
