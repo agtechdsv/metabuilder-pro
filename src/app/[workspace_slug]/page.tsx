@@ -33,11 +33,6 @@ export default async function PortalPage({ params }: PortalPageProps) {
 
   if (workspaceError || !workspace) notFound()
 
-  // Verify if portal is enabled
-  if (!workspace.theme_config?.portal_enabled) {
-    notFound() // Hide portal if disabled
-  }
-
   // 2. Fetch Projects that have show_in_portal enabled
   const { data: projects } = await supabase
     .from('projects')
@@ -49,7 +44,7 @@ export default async function PortalPage({ params }: PortalPageProps) {
   const portalProjects = (projects || []).filter(p => p.theme_config?.show_in_portal)
 
   if (portalProjects.length === 0) {
-    // Maybe show an empty state, but let's just let it render the empty grid
+    notFound() // Hide portal if there are no projects configured to be shown
   }
 
   const portalLogo = workspace.theme_config?.portal_logo_url

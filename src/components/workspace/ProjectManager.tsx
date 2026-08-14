@@ -108,8 +108,6 @@ export function ProjectManager({
   
   const [showDesktopModal, setShowDesktopModal] = useState(false)
   const [selectedDesktopProject, setSelectedDesktopProject] = useState<Project | null>(null)
-  const [portalEnabled, setPortalEnabled] = useState(workspaceThemeConfig?.portal_enabled || false)
-  const [isTogglingPortal, setIsTogglingPortal] = useState(false)
   
   const [isWorkspaceSettingsModalOpen, setIsWorkspaceSettingsModalOpen] = useState(false)
   const [workspaceFormData, setWorkspaceFormData] = useState({
@@ -457,27 +455,6 @@ export function ProjectManager({
     }
   }
 
-  const toggleWorkspacePortal = async () => {
-    setIsTogglingPortal(true)
-    const newStatus = !portalEnabled
-    try {
-      const { error } = await supabase
-        .from('workspaces')
-        .update({ theme_config: { ...workspaceThemeConfig, portal_enabled: newStatus } })
-        .eq('id', workspaceId)
-
-      if (error) throw error
-      setPortalEnabled(newStatus)
-      toast(newStatus ? 'Portal de Aplicações ativado' : 'Portal de Aplicações desativado', 'success')
-      router.refresh()
-    } catch (err: any) {
-      console.error(err)
-      toast(err.message || 'Erro ao alterar portal da workspace', 'error')
-    } finally {
-      setIsTogglingPortal(false)
-    }
-  }
-
   const saveWorkspaceSettings = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSavingWorkspaceSettings(true)
@@ -649,23 +626,15 @@ export function ProjectManager({
             {t('dashboard.projects.your_projects')}
           </h3>
           <div className="flex items-center gap-4">
-            {canCreate && (
-              <div className="flex items-center gap-2 mr-4 border-r dark:border-neutral-800 pr-4">
-                <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest hidden sm:block mr-2">Portal de Aplicações</span>
-                <button
-                  onClick={toggleWorkspacePortal}
-                  disabled={isTogglingPortal}
-                  className={`w-10 h-5 rounded-full transition-all relative ${portalEnabled ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-800'} ${isTogglingPortal ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  title={portalEnabled ? 'Desativar Portal' : 'Ativar Portal'}
-                >
-                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${portalEnabled ? 'right-0.5' : 'left-0.5'}`} />
-                </button>
+            {canCreate && projects.some(p => p.theme_config?.show_in_portal) && (
+              <div className="flex items-center mr-4 border-r dark:border-neutral-800 pr-4">
                 <button
                   onClick={() => setIsWorkspaceSettingsModalOpen(true)}
-                  className="p-1.5 ml-1 text-neutral-400 hover:text-indigo-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition-colors"
-                  title="Configurações do Portal e Domínio"
+                  className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold text-neutral-500 hover:text-indigo-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg uppercase tracking-widest transition-colors"
+                  title="Configurações do Portal"
                 >
-                  <Settings className="w-4 h-4" />
+                  <Settings className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Personalizar Portal</span>
                 </button>
               </div>
             )}
@@ -862,15 +831,13 @@ export function ProjectManager({
                             </>
                           )}
                           {/* 5. Remover/Adicionar do Portal */}
-                          {portalEnabled && (
-                            <button
-                              onClick={(e) => { e.preventDefault(); toggleProjectPortal(project); }}
-                              className={`p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ${project.theme_config?.show_in_portal ? 'text-indigo-500 hover:text-indigo-600' : 'text-neutral-400 hover:text-indigo-400'}`}
-                              title={project.theme_config?.show_in_portal ? 'Remover do Portal' : 'Adicionar ao Portal'}
-                            >
-                              <Database className="w-4 h-4" />
-                            </button>
-                          )}
+                          <button
+                            onClick={(e) => { e.preventDefault(); toggleProjectPortal(project); }}
+                            className={`p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ${project.theme_config?.show_in_portal ? 'text-indigo-500 hover:text-indigo-600' : 'text-neutral-400 hover:text-indigo-400'}`}
+                            title={project.theme_config?.show_in_portal ? 'Remover do Portal' : 'Adicionar ao Portal'}
+                          >
+                            <Database className="w-4 h-4" />
+                          </button>
                           {/* 6. Desativar/Ativar */}
                           {project.can_deactivate && (
                             <button
@@ -1049,51 +1016,48 @@ export function ProjectManager({
                 />
               )}
             </div>
-
-            {portalEnabled && (
-              <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 space-y-6">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Portal & Branding</h4>
-                  <p className="text-xs text-neutral-500">Configure a exibição deste projeto no Portal de Aplicações e a personalização da tela de login.</p>
-                </div>
-
-                <div className="flex items-center gap-3 bg-indigo-50/50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/20 p-4 rounded-xl">
-                  <input
-                    type="checkbox"
-                    id="showInPortal"
-                    checked={formData.show_in_portal}
-                    onChange={(e) => setFormData({ ...formData, show_in_portal: e.target.checked })}
-                    className="w-4 h-4 text-indigo-600 border-neutral-300 rounded focus:ring-indigo-500"
-                  />
-                  <label htmlFor="showInPortal" className="text-sm font-medium text-neutral-900 dark:text-white cursor-pointer select-none">
-                    Exibir no Portal de Aplicações
-                  </label>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">URL da Logo (Opcional)</label>
-                  <input
-                    type="url"
-                    value={formData.login_logo_url}
-                    onChange={e => setFormData({ ...formData, login_logo_url: e.target.value })}
-                    placeholder="https://sua-empresa.com/logo.png"
-                    className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">URL do Banner (Opcional)</label>
-                  <input
-                    type="url"
-                    value={formData.login_banner_url}
-                    onChange={e => setFormData({ ...formData, login_banner_url: e.target.value })}
-                    placeholder="https://sua-empresa.com/banner.jpg"
-                    className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white"
-                  />
-                  <p className="text-[10px] text-neutral-500 dark:text-neutral-600">Recomendado: Imagem vertical ou padrão geométrico.</p>
-                </div>
+            <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 space-y-6">
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Portal & Branding</h4>
+                <p className="text-xs text-neutral-500">Configure a exibição deste projeto no Portal de Aplicações e a personalização da tela de login.</p>
               </div>
-            )}
+
+              <div className="flex items-center gap-3 bg-indigo-50/50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/20 p-4 rounded-xl">
+                <input
+                  type="checkbox"
+                  id="showInPortal"
+                  checked={formData.show_in_portal}
+                  onChange={(e) => setFormData({ ...formData, show_in_portal: e.target.checked })}
+                  className="w-4 h-4 text-indigo-600 border-neutral-300 rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="showInPortal" className="text-sm font-medium text-neutral-900 dark:text-white cursor-pointer select-none">
+                  Exibir no Portal de Aplicações
+                </label>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">URL da Logo (Opcional)</label>
+                <input
+                  type="url"
+                  value={formData.login_logo_url}
+                  onChange={e => setFormData({ ...formData, login_logo_url: e.target.value })}
+                  placeholder="https://sua-empresa.com/logo.png"
+                  className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">URL do Banner (Opcional)</label>
+                <input
+                  type="url"
+                  value={formData.login_banner_url}
+                  onChange={e => setFormData({ ...formData, login_banner_url: e.target.value })}
+                  placeholder="https://sua-empresa.com/banner.jpg"
+                  className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white"
+                />
+                <p className="text-[10px] text-neutral-500 dark:text-neutral-600">Recomendado: Imagem vertical ou padrão geométrico.</p>
+              </div>
+            </div>
 
             {selectedProject && (
               <div className="pt-4 flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-950 rounded-xl border border-neutral-200 dark:border-neutral-800">

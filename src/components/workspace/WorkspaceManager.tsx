@@ -495,10 +495,10 @@ export function WorkspaceManager({
                     </Link>
 
                     {/* Exibe para quem tem permissão de editar, excluir, ou se houver projeto no portal (todos veem Acessar Portal se houver) */}
-                    {!isNavigating && (workspace.can_edit || workspace.can_delete || workspace.has_portal_project || workspace.theme_config?.portal_enabled) && (
+                    {!isNavigating && (workspace.can_edit || workspace.can_delete || workspace.has_portal_project) && (
                       <div className="absolute top-6 right-6 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm p-1 rounded-xl z-20">
                         {/* 1. Acessar Portal */}
-                        {(workspace.has_portal_project || workspace.theme_config?.portal_enabled) && (
+                        {workspace.has_portal_project && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
