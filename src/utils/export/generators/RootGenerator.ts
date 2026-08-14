@@ -30,7 +30,7 @@ export function generateRootFiles(zip: JSZip, project: any, dataMode: string = '
       '@dnd-kit/utilities': '^3.2.2',
       'next-nprogress-bar': '^2.4.7',
       '@supabase/supabase-js': '^2.43.4',
-      '@supabase/ssr': '^0.3.0',
+      '@supabase/ssr': '^0.10.2',
       ...(dataMode === 'postgres' || legacyDriver === 'postgres' ? { 'pg': '^8.11.5' } : {}),
       ...(dataMode === 'oracle' || legacyDriver === 'oracle' ? { 'oracledb': '^6.6.0' } : {}),
       '@simplewebauthn/browser': '^13.3.0',
