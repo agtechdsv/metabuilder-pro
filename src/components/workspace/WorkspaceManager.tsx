@@ -51,11 +51,13 @@ interface Workspace {
   name: string
   slug: string
   owner_id?: string
-  projects?: { count: number }[]
+  projects?: { count: number }[] | any[]
   can_edit?: boolean
   can_delete?: boolean
   role?: string
   theme_config?: any
+  project_count?: number
+  has_portal_project?: boolean
 }
 
 interface Guest {
@@ -492,11 +494,11 @@ export function WorkspaceManager({
                       </div>
                     </Link>
 
-                    {/* Exibe para quem tem permissão de editar, excluir, ou se portal estiver habilitado (todos veem Acessar Portal) */}
-                    {!isNavigating && (workspace.can_edit || workspace.can_delete || workspace.theme_config?.portal_enabled) && (
+                    {/* Exibe para quem tem permissão de editar, excluir, ou se houver projeto no portal (todos veem Acessar Portal se houver) */}
+                    {!isNavigating && (workspace.can_edit || workspace.can_delete || workspace.has_portal_project) && (
                       <div className="absolute top-6 right-6 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm p-1 rounded-xl z-20">
                         {/* 1. Acessar Portal */}
-                        {workspace.theme_config?.portal_enabled && (
+                        {workspace.has_portal_project && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
@@ -597,7 +599,7 @@ export function WorkspaceManager({
                     className="flex items-center justify-between pt-4 border-t border-neutral-100 dark:border-neutral-800/50"
                   >
                     <span className="text-xs font-bold text-neutral-500 tracking-tighter">
-                      {workspace.projects?.[0]?.count || 0} {t('dashboard.projects_count')}
+                      {workspace.project_count ?? workspace.projects?.[0]?.count ?? 0} {t('dashboard.projects_count')}
                     </span>
                     <div className={cn(
                       "w-8 h-8 rounded-full flex items-center justify-center transition-all",

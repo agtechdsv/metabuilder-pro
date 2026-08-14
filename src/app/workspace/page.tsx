@@ -76,7 +76,7 @@ export default async function GlobalDashboard() {
   // Busca os Workspaces do usuário
   const { data: workspaces } = await supabase
     .from('workspaces')
-    .select('*, projects(count)')
+    .select('*, projects(id, theme_config)')
     .order('created_at', { ascending: false })
 
   if (workspaces) {
@@ -86,6 +86,10 @@ export default async function GlobalDashboard() {
       w.role = isOwner ? 'owner' : (mem?.role || 'guest')
       w.can_edit = isOwner || isGlobalGuest || mem?.can_edit === true
       w.can_delete = isOwner || isGlobalGuest || mem?.can_delete === true
+      
+      // Calculate project count and if it has any portal project
+      w.project_count = w.projects?.length || 0
+      w.has_portal_project = w.projects?.some((p: any) => p.theme_config?.show_in_portal === true) || false
     })
   }
 

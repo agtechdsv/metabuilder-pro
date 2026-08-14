@@ -16,6 +16,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Modal } from '@/components/ui/Modal'
 import { useI18n } from '@/i18n/I18nContext'
+import { usePreview } from '@/contexts/PreviewContext'
 
 interface View {
   id: string
@@ -41,6 +42,7 @@ export function UseCaseManager({ initialViews, workspaceSlug, projectSlug, proje
   const supabase = createClient()
   const router = useRouter()
   const { t } = useI18n()
+  const { openPreview } = usePreview()
 
   const openDeleteModal = (view: View) => {
     setSelectedView(view)
@@ -111,14 +113,16 @@ export function UseCaseManager({ initialViews, workspaceSlug, projectSlug, proje
               >
                 <Layout className="w-4 h-4" /> {t('dashboard.projects.personalize_visual')}
               </Link>
-              <Link 
-                href={`/${workspaceSlug}/${projectSlug}/login`}
-                target="_blank"
+              <button 
+                onClick={(e) => {
+                  e.preventDefault()
+                  openPreview(`${window.location.origin}/${workspaceSlug}/${projectSlug}/login`, 'Portal de Login')
+                }}
                 className="p-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-all border border-neutral-200 dark:border-transparent"
                 title="Ver Tela de Login"
               >
                 <ExternalLink className="w-4 h-4 text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white" />
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -138,13 +142,15 @@ export function UseCaseManager({ initialViews, workspaceSlug, projectSlug, proje
               </div>
 
               <div className="flex items-center gap-2">
-                <Link 
-                  href={`/${workspaceSlug}/${projectSlug}/${view.slug}`}
-                  target="_blank"
+                <button 
+                  onClick={(e) => {
+                    e.preventDefault()
+                    openPreview(`${window.location.origin}/${workspaceSlug}/${projectSlug}/${view.slug}`, view.name)
+                  }}
                   className="flex-1 flex items-center justify-center gap-2 py-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg text-[11px] font-bold transition-all text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700"
                 >
                   <ExternalLink className="w-4 h-4" /> {t('dashboard.projects.open_app')}
-                </Link>
+                </button>
                 <button 
                   onClick={() => openDeleteModal(view)}
                   className="p-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-all border border-neutral-200 dark:border-transparent hover:border-red-500/30 text-neutral-400 hover:text-red-600 dark:hover:text-red-400"

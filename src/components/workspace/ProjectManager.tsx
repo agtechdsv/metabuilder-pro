@@ -739,21 +739,19 @@ export function ProjectManager({
                         {project.is_active ? t('dashboard.projects.status_active') : t('dashboard.projects.status_inactive')}
                       </div>
 
-                      {!isNavigating && (project.can_edit || project.can_deactivate || project.can_delete || portalEnabled) && (
+                      {!isNavigating && (
                         <div className="pointer-events-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm p-1 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800">
                           {/* 1. Acessar versão publicada */}
-                          {portalEnabled && (
-                            <button
-                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
-                              title="Acessar versão publicada"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                openPreview(`${window.location.origin}/${workspaceSlug}/${project.slug}`, `Projeto: ${project.name}`)
-                              }}
-                            >
-                              <ArrowUpRight className="w-4 h-4" />
-                            </button>
-                          )}
+                          <button
+                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
+                            title="Acessar versão publicada"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openPreview(`${window.location.origin}/${workspaceSlug}/${project.slug}`, `Projeto: ${project.name}`)
+                            }}
+                          >
+                            <ArrowUpRight className="w-4 h-4" />
+                          </button>
                           {/* 2. Gerar App Desktop Nativo */}
                           <ProGate gateType="desktop" tier={tier || 'free'} featureName="Gerar App Desktop Nativo">
                             <button
