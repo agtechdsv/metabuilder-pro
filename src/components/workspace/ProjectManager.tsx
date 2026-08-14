@@ -739,8 +739,9 @@ export function ProjectManager({
                         {project.is_active ? t('dashboard.projects.status_active') : t('dashboard.projects.status_inactive')}
                       </div>
 
-                      {!isNavigating && (project.can_edit || project.can_deactivate || project.can_delete) && (
+                      {!isNavigating && (project.can_edit || project.can_deactivate || project.can_delete || portalEnabled) && (
                         <div className="pointer-events-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm p-1 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800">
+                          {/* 1. Acessar versão publicada */}
                           {portalEnabled && (
                             <button
                               className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
@@ -753,21 +754,7 @@ export function ProjectManager({
                               <ArrowUpRight className="w-4 h-4" />
                             </button>
                           )}
-                          {project.can_edit && (
-                            <ProGate gateType="desktop" tier={tier || 'free'} featureName="IDE Local (Ejetar & Sincronizar)">
-                              <button
-                                className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-                                title="IDE Local (Ejetar & Sincronizar)"
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                  openIDE({ type: 'project', id: project.id, name: project.name, slug: project.slug })
-                                }}
-                              >
-                                <FolderGit2 className="w-4 h-4" />
-                              </button>
-                            </ProGate>
-                          )}
+                          {/* 2. Gerar App Desktop Nativo */}
                           <ProGate gateType="desktop" tier={tier || 'free'} featureName="Gerar App Desktop Nativo">
                             <button
                               onClick={(e) => {
@@ -783,82 +770,100 @@ export function ProjectManager({
                             </button>
                           </ProGate>
                           {project.can_edit && (
-                            <ProGate gateType="desktop" tier={tier || 'free'} featureName="Exportar Código Fonte">
-                              <button
-                                onClick={async (e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                
-                                setExportDbType('supabase')
-                                setExportDbUser('postgres')
-                                setExportDbPassword('senha')
-                                setExportDbUser('user')
-                                setExportDbPassword('password')
-                                setExportDbHost('localhost')
-                                setExportDbPort('5432')
-                                setExportDbName(`dataBase`)
-                                setExportSupaUrl('')
-                                setExportSupaAnonKey('')
-
-                                // Fetch auth config to pre-select
-                                const supabase = createClient()
-                                const { data: authConf } = await supabase
-                                  .from('project_auth_config')
-                                  .select('auth_type, auth_config')
-                                  .eq('project_id', project.id)
-                                  .maybeSingle()
-
-                                const authType = authConf?.auth_type || 'none'
-                                setExportAuthStrategy(
-                                  authType === 'ldap' ? 'ldap' : 
-                                  authType === 'legacy' ? 'legacy' : 'none'
-                                )
-
-                                setExportAuthTableName(authConf?.auth_config?.legacy?.usersTable || authConf?.auth_config?.db_table_name || 'usuarios')
-                                setExportAuthEmailCol(authConf?.auth_config?.legacy?.emailColumn || authConf?.auth_config?.db_email_column || 'email')
-                                setExportAuthPassCol(authConf?.auth_config?.legacy?.passwordColumn || authConf?.auth_config?.db_password_column || 'senha')
-                                setExportAuthHash(authConf?.auth_config?.legacy?.passwordHash || authConf?.auth_config?.db_password_hash || 'Bcrypt')
-
-                                const { data: models, error: modelsError } = await supabase
-                                  .from('models')
-                                  .select('id, db_table_name')
-                                  .eq('project_id', project.id)
-                                  .order('db_table_name')
-                                
-                                if (models && models.length > 0) {
-                                  const { data: fields } = await supabase
-                                    .from('fields')
-                                    .select('id, db_column_name, model_id')
-                                    .in('model_id', models.map(m => m.id))
+                            <>
+                              {/* 3. IDE Local */}
+                              <ProGate gateType="desktop" tier={tier || 'free'} featureName="IDE Local (Ejetar & Sincronizar)">
+                                <button
+                                  className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                                  title="IDE Local (Ejetar & Sincronizar)"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    openIDE({ type: 'project', id: project.id, name: project.name, slug: project.slug })
+                                  }}
+                                >
+                                  <FolderGit2 className="w-4 h-4" />
+                                </button>
+                              </ProGate>
+                              {/* 4. Exportar Código Fonte */}
+                              <ProGate gateType="desktop" tier={tier || 'free'} featureName="Exportar Código Fonte">
+                                <button
+                                  onClick={async (e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
                                   
-                                  const mappedModels = models.map(m => ({
-                                    ...m,
-                                    fields: fields?.filter(f => f.model_id === m.id) || []
-                                  }))
-                                  setExportModels(mappedModels)
-                                } else {
-                                  console.error('Error fetching models:', modelsError)
-                                  setExportModels([])
-                                }
+                                  setExportDbType('supabase')
+                                  setExportDbUser('postgres')
+                                  setExportDbPassword('senha')
+                                  setExportDbUser('user')
+                                  setExportDbPassword('password')
+                                  setExportDbHost('localhost')
+                                  setExportDbPort('5432')
+                                  setExportDbName(`dataBase`)
+                                  setExportSupaUrl('')
+                                  setExportSupaAnonKey('')
 
-                                setDownloadModal({
-                                  open: true,
-                                  phase: 'selecting',
-                                  fileName: `${project.slug || 'app'}-source-code.zip`,
-                                  progress: 0,
-                                  savedPath: '',
-                                  savedDir: '',
-                                  projectId: project.id,
-                                  authConfig: authConf?.auth_config
-                                })
-                              }}
-                              className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-                              title="Exportar Código Fonte (Next.js)"
-                            >
-                              <Download className="w-4 h-4" />
-                              </button>
-                            </ProGate>
+                                  // Fetch auth config to pre-select
+                                  const supabase = createClient()
+                                  const { data: authConf } = await supabase
+                                    .from('project_auth_config')
+                                    .select('auth_type, auth_config')
+                                    .eq('project_id', project.id)
+                                    .maybeSingle()
+
+                                  const authType = authConf?.auth_type || 'none'
+                                  setExportAuthStrategy(
+                                    authType === 'ldap' ? 'ldap' : 
+                                    authType === 'legacy' ? 'legacy' : 'none'
+                                  )
+
+                                  setExportAuthTableName(authConf?.auth_config?.legacy?.usersTable || authConf?.auth_config?.db_table_name || 'usuarios')
+                                  setExportAuthEmailCol(authConf?.auth_config?.legacy?.emailColumn || authConf?.auth_config?.db_email_column || 'email')
+                                  setExportAuthPassCol(authConf?.auth_config?.legacy?.passwordColumn || authConf?.auth_config?.db_password_column || 'senha')
+                                  setExportAuthHash(authConf?.auth_config?.legacy?.passwordHash || authConf?.auth_config?.db_password_hash || 'Bcrypt')
+
+                                  const { data: models, error: modelsError } = await supabase
+                                    .from('models')
+                                    .select('id, db_table_name')
+                                    .eq('project_id', project.id)
+                                    .order('db_table_name')
+                                  
+                                  if (models && models.length > 0) {
+                                    const { data: fields } = await supabase
+                                      .from('fields')
+                                      .select('id, db_column_name, model_id')
+                                      .in('model_id', models.map(m => m.id))
+                                    
+                                    const mappedModels = models.map(m => ({
+                                      ...m,
+                                      fields: fields?.filter(f => f.model_id === m.id) || []
+                                    }))
+                                    setExportModels(mappedModels)
+                                  } else {
+                                    console.error('Error fetching models:', modelsError)
+                                    setExportModels([])
+                                  }
+
+                                  setDownloadModal({
+                                    open: true,
+                                    phase: 'selecting',
+                                    fileName: `${project.slug || 'app'}-source-code.zip`,
+                                    progress: 0,
+                                    savedPath: '',
+                                    savedDir: '',
+                                    projectId: project.id,
+                                    authConfig: authConf?.auth_config
+                                  })
+                                }}
+                                className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                                title="Exportar Código Fonte (Next.js)"
+                              >
+                                <Download className="w-4 h-4" />
+                                </button>
+                              </ProGate>
+                            </>
                           )}
+                          {/* 5. Remover/Adicionar do Portal */}
                           {portalEnabled && (
                             <button
                               onClick={(e) => { e.preventDefault(); toggleProjectPortal(project); }}
@@ -868,6 +873,7 @@ export function ProjectManager({
                               <Database className="w-4 h-4" />
                             </button>
                           )}
+                          {/* 6. Desativar/Ativar */}
                           {project.can_deactivate && (
                             <button
                               onClick={() => toggleActive(project)}
@@ -877,6 +883,7 @@ export function ProjectManager({
                               {project.is_active ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
                             </button>
                           )}
+                          {/* 7. Editar Projeto */}
                           {project.can_edit && (
                             <button
                               onClick={() => openDrawer(project)}
@@ -886,6 +893,7 @@ export function ProjectManager({
                               <Pencil className="w-4 h-4" />
                             </button>
                           )}
+                          {/* 8. Excluir Projeto */}
                           {project.can_delete && (
                             <button
                               onClick={() => openDeleteModal(project)}

@@ -492,9 +492,10 @@ export function WorkspaceManager({
                       </div>
                     </Link>
 
-                    {/* Exibe para quem tem permissão de editar ou excluir, ou se portal estiver habilitado */}
+                    {/* Exibe para quem tem permissão de editar, excluir, ou se portal estiver habilitado (todos veem Acessar Portal) */}
                     {!isNavigating && (workspace.can_edit || workspace.can_delete || workspace.theme_config?.portal_enabled) && (
                       <div className="absolute top-6 right-6 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm p-1 rounded-xl z-20">
+                        {/* 1. Acessar Portal */}
                         {workspace.theme_config?.portal_enabled && (
                           <button
                             onClick={(e) => {
@@ -507,6 +508,7 @@ export function WorkspaceManager({
                             <ArrowUpRight className="w-4 h-4" />
                           </button>
                         )}
+                        {/* 2. Gerar App Desktop Nativo */}
                         <ProGate gateType="desktop" tier={tier} featureName="Gerar App Desktop Nativo">
                           <button
                             onClick={(e) => {
@@ -520,31 +522,9 @@ export function WorkspaceManager({
                             <Monitor className="w-4 h-4" />
                           </button>
                         </ProGate>
-                        {workspace.role === 'owner' && profile?.subscription_tier === 'pro' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedWorkspaceForAI(workspace.id);
-                              setIsAIModalOpen(true);
-                            }}
-                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-violet-500 hover:text-violet-400"
-                            title="Configurações AI Builder"
-                          >
-                            <Bot className="w-4 h-4" />
-                          </button>
-                        )}
                         {workspace.can_edit && (
                           <>
-                            <ProGate gateType="desktop" tier={tier} featureName="Exportar Código Fonte">
-                              <button
-                                onClick={(e) => handleExportWorkspace(e, workspace)}
-                                disabled={exportingWorkspaceId === workspace.id}
-                                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-500 disabled:opacity-50"
-                                title="Exportar Código Fonte (Next.js)"
-                              >
-                                {exportingWorkspaceId === workspace.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                              </button>
-                            </ProGate>
+                            {/* 3. IDE Local */}
                             <ProGate gateType="desktop" tier={tier} featureName="IDE Local (Ejetar & Sincronizar Workspace)">
                               <button
                                 className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
@@ -558,6 +538,18 @@ export function WorkspaceManager({
                                 <FolderGit2 className="w-4 h-4" />
                               </button>
                             </ProGate>
+                            {/* 4. Exportar Código Fonte */}
+                            <ProGate gateType="desktop" tier={tier} featureName="Exportar Código Fonte">
+                              <button
+                                onClick={(e) => handleExportWorkspace(e, workspace)}
+                                disabled={exportingWorkspaceId === workspace.id}
+                                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-500 disabled:opacity-50"
+                                title="Exportar Código Fonte (Next.js)"
+                              >
+                                {exportingWorkspaceId === workspace.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                              </button>
+                            </ProGate>
+                            {/* 5. Editar Workspace */}
                             <button
                               onClick={(e) => {
                                 e.preventDefault()
@@ -571,6 +563,7 @@ export function WorkspaceManager({
                             </button>
                           </>
                         )}
+                        {/* 6. Excluir Workspace */}
                         {workspace.can_delete && (
                           <button
                             onClick={() => openDeleteModal(workspace)}
@@ -578,6 +571,20 @@ export function WorkspaceManager({
                             title={t('dashboard.delete_workspace')}
                           >
                             <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {/* AI Builder (owner/pro only — posicionado ao final por ser feature avançada) */}
+                        {workspace.role === 'owner' && profile?.subscription_tier === 'pro' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedWorkspaceForAI(workspace.id);
+                              setIsAIModalOpen(true);
+                            }}
+                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-violet-500 hover:text-violet-400"
+                            title="Configurações AI Builder"
+                          >
+                            <Bot className="w-4 h-4" />
                           </button>
                         )}
                       </div>
