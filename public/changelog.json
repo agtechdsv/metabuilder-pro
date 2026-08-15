@@ -1,16 +1,4 @@
 {
-  "v1.0.1": {
-    "date": "2026-08-13",
-    "pt": [
-      "Novo Exportador Automático de Código-Fonte: Exporte seus projetos com facilidade, contando com sanitização automática de componentes e remapeamento inteligente de autenticação para um código limpo e pronto para uso."
-    ],
-    "en": [
-      "New Automated Source Code Exporter: Easily export your projects with automatic component sanitization and seamless authentication remapping for clean, production-ready code."
-    ],
-    "es": [
-      "Nuevo Exportador Automático de Código Fuente: Exporte sus proyectos fácilmente con sanitización automática de componentes y remapeo inteligente de autenticación para obtener un código limpio y listo para usar."
-    ]
-  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
