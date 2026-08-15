@@ -102,6 +102,34 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
     }
   }
 
+  // Tauri: Escuta deep links (metabuilder://) para capturar o login
+  useEffect(() => {
+    if (!isTauri()) return
+
+    let unlisten: (() => void) | undefined
+    onOpenUrl((urls) => {
+      try {
+        const urlStr = urls[0]
+        if (urlStr) {
+          // Converte metabuilder://auth/callback?code=... para /auth/callback?code=...
+          const validUrlString = urlStr.replace(/^metabuilder:\/\//, window.location.origin + '/')
+          const urlObj = new URL(validUrlString)
+          
+          // Redireciona a janela atual da IDE para a rota de callback do Next.js
+          window.location.href = urlObj.pathname + urlObj.search + urlObj.hash
+        }
+      } catch (e) {
+        console.error('Error handling deep link:', e)
+      }
+    }).then(fn => {
+      unlisten = fn
+    }).catch(console.error)
+
+    return () => {
+      if (unlisten) unlisten()
+    }
+  }, [])
+
   // Listener para capturar o Magic Link / Convite na URL (Hash Fragment) ou sessão já existente
   useEffect(() => {
     const supabase = createClient()
@@ -149,32 +177,6 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
       // para o servidor. Se usarmos router.push, o Next.js pode fazer um soft-navigation
       // antes do cookie estar pronto, causando um redirect fantasma de volta pro /login.
       window.location.href = redirectTo
-    }
-
-    // Tauri: Escuta deep links (metabuilder://) para capturar o login
-    if (isTauri()) {
-      let unlisten: (() => void) | undefined;
-      onOpenUrl((urls) => {
-        try {
-          const urlStr = urls[0];
-          if (urlStr) {
-            // Converte metabuilder://auth/callback?code=... para /auth/callback?code=...
-            const validUrlString = urlStr.replace(/^metabuilder:\/\//, window.location.origin + '/');
-            const urlObj = new URL(validUrlString);
-            
-            // Redireciona a janela atual da IDE para a rota de callback do Next.js
-            window.location.href = urlObj.pathname + urlObj.search + urlObj.hash;
-          }
-        } catch (e) {
-          console.error('Error handling deep link:', e);
-        }
-      }).then(fn => {
-        unlisten = fn;
-      }).catch(console.error);
-
-      return () => {
-        if (unlisten) unlisten();
-      }
     }
 
     // Abre o modal imediatamente se detectar o hash de convite

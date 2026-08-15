@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { HeaderActions } from '@/components/layout/HeaderActions'
 import { ReleaseNotes } from '@/components/tauri/ReleaseNotes'
 import { LoginForm } from '@/components/auth/LoginForm'
@@ -54,7 +54,7 @@ export function IDELanding({ user }: { user: any }) {
         </div>
 
         <div className="flex items-center gap-4">
-          <HeaderActions user={user} profile={null} />
+          <HeaderActions user={null} profile={null} />
         </div>
       </header>
 
