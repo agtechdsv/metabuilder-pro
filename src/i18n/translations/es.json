@@ -2021,8 +2021,30 @@
           "custom": "Personalizado..."
         },
         "viacep_title": "Búsqueda Automática de Dirección (ViaCEP)",
-        "viacep_desc": "Mapee los campos del formulario que recibirán los datos de ViaCEP automáticamente:"
+        "viacep_desc": "Mapee los campos del formulario que recibirán los datos de ViaCEP automáticamente:",
+        "formula_title": "Cálculos y Fórmulas"
       }
+    },
+    "personalizado": {
+      "title": "Configuración del Orquestador de Casos de Uso",
+      "subtitle": "Defina el Caso de Uso Maestro y las Pestañas (Detalles) que compondrán este panel unificado.",
+      "master_uc_title": "Caso de Uso Maestro",
+      "select_master": "Seleccione el Maestro",
+      "select_master_placeholder": "Seleccione el Caso de Uso Maestro...",
+      "tabs_layout_title": "Diseño Personalizado (Pestañas)",
+      "tabs_layout_desc": "Configure los Widgets para cada pestaña del registro.",
+      "icon_label": "Icono",
+      "tab_title_label": "Título de la Pestaña",
+      "tab_title_placeholder": "Ej: Detalles",
+      "use_case_label": "Caso de Uso",
+      "select_use_case_placeholder": "Seleccione el Caso de Uso...",
+      "widget_label": "Widget",
+      "widget_master_detail": "Maestro/Detalle (Pestañas)",
+      "collapse_config": "Plegar Configuraciones",
+      "expand_config": "Desplegar Configuraciones",
+      "remove_tab": "Eliminar Pestaña",
+      "new_tab_title": "Nueva Pestaña",
+      "add_tab": "Agregar Pestaña"
     },
     "actions": {
       "title": "Consulta y Acciones Finales",
@@ -2065,6 +2087,23 @@
         "amber": "Amarillo (Atención)",
         "purple": "Púrpura (Especial)"
       },
+      "locations": {
+        "title": "Ubicaciones de Renderizado",
+        "multiple_selection": "(Selección Múltiple)",
+        "search_screen": "Pantalla de Búsqueda (Lista)",
+        "master_default": "Maestro",
+        "master_tab": "Pestaña Maestro ({name})",
+        "detail_tab": "Pestaña Detalle ({name})",
+        "subdetail_tab": "Pestaña Sub-Detalle ({name})",
+        "custom_tab": "Pestaña {title} ({name})",
+        "level": "Nivel {level} ({name})",
+        "unknown": "Desconocido",
+        "target_fields": "Campos Destino",
+        "no_fields_found": "Ningún campo encontrado en el modelo.",
+        "input_position": "Posición en el Input",
+        "left": "Izquierda",
+        "right": "Derecha"
+      },
       "context": "Contexto",
       "contexts": {
         "row": "Acción de Fila (Búsqueda)",
@@ -2072,7 +2111,20 @@
         "master_top": "Acción Global (Parte Superior del Maestro)",
         "detail_top": "Acción Global (Parte Superior del Detalle)",
         "detail_row": "Acción de Fila (Detalle)",
-        "field_group": "Agrupado al Campo (Formulario)"
+        "field_group": "Agrupado al Campo",
+        "global_top_search": "Acción Global (Parte Superior de Búsqueda)",
+        "row_grid": "Acción de Fila (Grid)",
+        "show_on_node": "Mostrar Botón en el Nodo",
+        "global_top": "Acción Global (Superior)",
+        "row_grid_list": "Acción de Fila (Grid/Lista)"
+      },
+      "trigger": {
+        "origin": "ORIGEN",
+        "origin_table": "Origen (Tabla: {table})",
+        "dest": "DESTINO",
+        "dest_table": "Destino (Tabla: {table})",
+        "select_placeholder": "Seleccione para insertar...",
+        "add_param": "+ Agregar Parámetro"
       },
       "target_fields": "Campos Destino (Seleccione uno o más)",
       "position": "Posición",
@@ -2140,11 +2192,17 @@
         "page_desc": "El formulario se mostrará en la misma pantalla, reemplazando la lista actual."
       }
     },
+    "status": {
+      "draft_pending": "Borrador Pendiente",
+      "published": "Publicado"
+    },
     "buttons": {
       "updating": "Actualizando...",
       "saving": "Guardando...",
       "update": "Actualizar Caso de Uso",
       "finish": "Finalizar Caso de Uso",
+      "discard_draft": "Descartar Borrador",
+      "publish": "Publicar",
       "prev": "Volver Paso",
       "next": "Próximo Paso",
       "error_save": "Error al guardar el caso de uso",
@@ -3256,9 +3314,30 @@
       "collapse_all": "Contraer todo",
       "no_file_selected": "Ningún archivo seleccionado",
       "close_file": "Cerrar archivo",
-      "syncing_cloud": "Sincronizando archivos con la nube...",
       "select_file_hint": "Seleccione un archivo en el árbol lateral"
     }
+  },
+  "formula_builder": {
+    "fn_soma": "SUMA",
+    "fn_media": "PROMEDIO",
+    "fn_count": "CONTEO",
+    "fn_maximo": "MÁXIMO",
+    "fn_minimo": "MÍNIMO",
+    "fn_arredondar": "REDONDEAR",
+    "fn_se": "SI",
+    "clear_all_title": "Limpiar toda la fórmula",
+    "clear": "Limpiar",
+    "empty": "La fórmula está vacía. Agregue campos y operadores abajo.",
+    "parentheses_warning": "Aviso: Hay paréntesis abiertos que no se cerraron correctamente.",
+    "syntax_error": "Error de Sintaxis: La estructura matemática de la fórmula es inválida. Verifique el orden de los operadores y funciones.",
+    "math_logical": "Matemáticos y Lógicos",
+    "functions": "Funciones",
+    "insert_field": "Insertar Campo",
+    "select_insert": "Seleccione para insertar...",
+    "calc_fields": "Campos Calculados",
+    "table_prefix": "Tabla",
+    "free_value": "VALOR LIBRE",
+    "free_value_placeholder": "Ej: 100 o Cancelado"
   },
   "runtime": {
     "scale_small": "Pequeño",

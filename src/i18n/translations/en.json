@@ -1947,8 +1947,30 @@
           "custom": "Custom..."
         },
         "viacep_title": "Automatic Address Lookup (ViaCEP)",
-        "viacep_desc": "Map the form fields that will receive the ViaCEP data automatically:"
+        "viacep_desc": "Map the form fields that will receive the ViaCEP data automatically:",
+        "formula_title": "Calculations & Formulas"
       }
+    },
+    "personalizado": {
+      "title": "Use Case Orchestrator Configuration",
+      "subtitle": "Define the Master Use Case and the Tabs (Details) that will compose this unified dashboard.",
+      "master_uc_title": "Master Use Case",
+      "select_master": "Select Master",
+      "select_master_placeholder": "Select Master Use Case...",
+      "tabs_layout_title": "Custom Layout (Tabs)",
+      "tabs_layout_desc": "Configure Widgets for each record tab.",
+      "icon_label": "Icon",
+      "tab_title_label": "Tab Title",
+      "tab_title_placeholder": "Ex: Details",
+      "use_case_label": "Use Case",
+      "select_use_case_placeholder": "Select Use Case...",
+      "widget_label": "Widget",
+      "widget_master_detail": "Master/Detail (Tabs)",
+      "collapse_config": "Collapse Settings",
+      "expand_config": "Expand Settings",
+      "remove_tab": "Remove Tab",
+      "new_tab_title": "New Tab",
+      "add_tab": "Add Tab"
     },
     "actions": {
       "title": "Query & Final Actions",
@@ -1991,6 +2013,23 @@
         "amber": "Yellow (Warning)",
         "purple": "Purple (Special)"
       },
+      "locations": {
+        "title": "Rendering Locations",
+        "multiple_selection": "(Multiple Selection)",
+        "search_screen": "Search Screen (List)",
+        "master_default": "Master",
+        "master_tab": "Master Tab ({name})",
+        "detail_tab": "Detail Tab ({name})",
+        "subdetail_tab": "Sub-Detail Tab ({name})",
+        "custom_tab": "{title} Tab ({name})",
+        "level": "Level {level} ({name})",
+        "unknown": "Unknown",
+        "target_fields": "Target Fields",
+        "no_fields_found": "No fields found in model.",
+        "input_position": "Input Position",
+        "left": "Left",
+        "right": "Right"
+      },
       "context": "Context",
       "contexts": {
         "row": "Row Action (Search)",
@@ -1998,7 +2037,20 @@
         "master_top": "Global Action (Master Top)",
         "detail_top": "Global Action (Detail Top)",
         "detail_row": "Row Action (Detail)",
-        "field_group": "Grouped to Field (Form)"
+        "field_group": "Grouped to Field",
+        "global_top_search": "Global Action (Search Top)",
+        "row_grid": "Row Action (Grid)",
+        "show_on_node": "Display Button on Node",
+        "global_top": "Global Action (Top)",
+        "row_grid_list": "Row Action (Grid/List)"
+      },
+      "trigger": {
+        "origin": "ORIGIN",
+        "origin_table": "Origin (Table: {table})",
+        "dest": "DESTINATION",
+        "dest_table": "Destination (Table: {table})",
+        "select_placeholder": "Select to insert...",
+        "add_param": "+ Add Parameter"
       },
       "target_fields": "Target Fields (Select one or more)",
       "position": "Position",
@@ -2066,11 +2118,17 @@
         "page_desc": "The form will be displayed on the same screen, replacing the current list."
       }
     },
+    "status": {
+      "draft_pending": "Draft Pending",
+      "published": "Published"
+    },
     "buttons": {
       "updating": "Updating...",
       "saving": "Saving...",
       "update": "Update Use Case",
       "finish": "Finish Use Case",
+      "discard_draft": "Discard Draft",
+      "publish": "Publish",
       "prev": "Back Step",
       "next": "Next Step",
       "error_save": "Error saving use case",
@@ -3181,9 +3239,30 @@
       "collapse_all": "Collapse All",
       "no_file_selected": "No file selected",
       "close_file": "Close file",
-      "syncing_cloud": "Syncing files with the cloud...",
       "select_file_hint": "Select a file from the tree on the left"
     }
+  },
+  "formula_builder": {
+    "fn_soma": "SUM",
+    "fn_media": "AVG",
+    "fn_count": "COUNT",
+    "fn_maximo": "MAX",
+    "fn_minimo": "MIN",
+    "fn_arredondar": "ROUND",
+    "fn_se": "IF",
+    "clear_all_title": "Clear entire formula",
+    "clear": "Clear",
+    "empty": "The formula is empty. Add fields and operators below.",
+    "parentheses_warning": "Warning: There are open parentheses that were not properly closed.",
+    "syntax_error": "Syntax Error: The mathematical structure of the formula is invalid. Check operator and function order.",
+    "math_logical": "Mathematical & Logical",
+    "functions": "Functions",
+    "insert_field": "Insert Field",
+    "select_insert": "Select to insert...",
+    "calc_fields": "Calculated Fields",
+    "table_prefix": "Table",
+    "free_value": "FREE VALUE",
+    "free_value_placeholder": "Ex: 100 or Cancelled"
   },
   "runtime": {
     "scale_small": "Small",

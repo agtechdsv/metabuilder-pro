@@ -211,10 +211,10 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
       <div className="space-y-2">
         <h2 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
-          Configuração do Orquestrador de Casos de Uso
+          {t('wizard.personalizado.title', 'Configuração do Orquestrador de Casos de Uso')}
         </h2>
         <p className="text-neutral-500 dark:text-neutral-400 text-sm">
-          Defina o Caso de Uso Mestre e as Abas (Detalhes) que comporão este painel unificado.
+          {t('wizard.personalizado.subtitle', 'Defina o Caso de Uso Mestre e as Abas (Detalhes) que comporão este painel unificado.')}
         </p>
       </div>
 
@@ -222,12 +222,12 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
       <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20"><Database className="w-4 h-4" /></div>
-          <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Caso de Uso Mestre</h4>
+          <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.personalizado.master_uc_title', 'Caso de Uso Mestre')}</h4>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500 ml-1">Selecione o Mestre</label>
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500 ml-1">{t('wizard.personalizado.select_master', 'Selecione o Mestre')}</label>
             <select
               value={(config.layout_config as any).master_use_case_slug || ''}
               onChange={e => {
@@ -241,7 +241,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
               }}
               className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
             >
-              <option value="">Selecione o Caso de Uso Mestre...</option>
+              <option value="">{t('wizard.personalizado.select_master_placeholder', 'Selecione o Caso de Uso Mestre...')}</option>
               {useCases.map(uc => <option key={uc.slug} value={uc.slug}>{uc.name}</option>)}
             </select>
           </div>
@@ -301,8 +301,8 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
               <Layout className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="text-[10px] font-black uppercase text-rose-600 tracking-[0.3em]">Layout Personalizado (Abas)</h4>
-              <p className="text-[10px] text-neutral-400 font-medium mt-1">Configure os Widgets para cada aba do registro.</p>
+              <h4 className="text-[10px] font-black uppercase text-rose-600 tracking-[0.3em]">{t('wizard.personalizado.tabs_layout_title', 'Layout Personalizado (Abas)')}</h4>
+              <p className="text-[10px] text-neutral-400 font-medium mt-1">{t('wizard.personalizado.tabs_layout_desc', 'Configure os Widgets para cada aba do registro.')}</p>
             </div>
           </div>
 
@@ -313,7 +313,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                 <div className="flex gap-4 items-start w-full">
                   {/* Icon */}
                   <div className="space-y-2 flex-initial">
-                    <label className="text-[9px] font-black uppercase text-neutral-400">Ícone</label>
+                    <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.icon_label', 'Ícone')}</label>
                     <div className="relative">
                       <button type="button" onClick={() => setEditingSlotTabIconIndex(idx)} className="w-10 h-10 flex items-center justify-center bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg hover:bg-neutral-50">
                         <DynamicIcon icon={slot.icon || 'Layout'} className="w-5 h-5 text-neutral-500" />
@@ -330,18 +330,18 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
 
                   {/* Title */}
                   <div className="space-y-2 flex-1">
-                    <label className="text-[9px] font-black uppercase text-neutral-400">Título da Aba</label>
+                    <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.tab_title_label', 'Título da Aba')}</label>
                     <input
                       type="text" value={slot.title || ''}
                       onChange={e => updateSlot(idx, s => ({ ...s, title: e.target.value }))}
                       className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-rose-500"
-                      placeholder="Ex: Detalhes"
+                      placeholder={t('wizard.personalizado.tab_title_placeholder', 'Ex: Detalhes')}
                     />
                   </div>
 
                   {/* Use case selector */}
                   <div className="space-y-2 flex-1">
-                    <label className="text-[9px] font-black uppercase text-neutral-400">Caso de Uso</label>
+                    <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.use_case_label', 'Caso de Uso')}</label>
                     <select
                       value={slot.use_case_slug || ''}
                       onChange={e => {
@@ -350,31 +350,31 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                       }}
                       className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-rose-500"
                     >
-                      <option value="">Selecione o Caso de Uso...</option>
+                      <option value="">{t('wizard.personalizado.select_use_case_placeholder', 'Selecione o Caso de Uso...')}</option>
                       {useCases?.map(uc => <option key={uc.slug} value={uc.slug}>{uc.name}</option>)}
                     </select>
                   </div>
 
                   {/* Widget type (read-only) */}
                   <div className="space-y-2 flex-1">
-                    <label className="text-[9px] font-black uppercase text-neutral-400">Widget</label>
+                    <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.widget_label', 'Widget')}</label>
                     <select
                       value={useCases?.find(uc => uc.slug === slot.use_case_slug)?.logic_type || slot.type || 'form'}
                       disabled
                       className="w-full bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-bold text-neutral-500 dark:text-neutral-400 outline-none cursor-not-allowed"
                     >
-                      <option value="form">Formulário</option>
-                      <option value="pesquisa_cadastro">Pesquisa / Cadastro</option>
-                      <option value="kanban">Kanban</option>
-                      <option value="timeline">Linha do Tempo</option>
-                      <option value="scheduler">Agenda / Calendário</option>
-                      <option value="gantt">Gráfico de Gantt</option>
-                      <option value="mapa_mental">Mapa Mental</option>
-                      <option value="analytics">Dashboard BI</option>
-                      <option value="galeria">Galeria Assets</option>
-                      <option value="map">Mapa Geospatial</option>
-                      <option value="blueprint">Fluxograma (Blueprint)</option>
-                      <option value="personalizado">Mestre/Detalhe (Abas)</option>
+                      <option value="form">{t('wizard.logic.types.pesquisa_cadastro.title', 'Formulário')}</option>
+                      <option value="pesquisa_cadastro">{t('wizard.logic.types.pesquisa_cadastro.title', 'Pesquisa / Cadastro')}</option>
+                      <option value="kanban">{t('wizard.logic.types.kanban.title', 'Kanban')}</option>
+                      <option value="timeline">{t('wizard.logic.types.timeline.title', 'Linha do Tempo')}</option>
+                      <option value="scheduler">{t('wizard.logic.types.scheduler.title', 'Agenda / Calendário')}</option>
+                      <option value="gantt">{t('wizard.logic.types.gantt.title', 'Gráfico de Gantt')}</option>
+                      <option value="mapa_mental">{t('wizard.logic.types.mapa_mental.title', 'Mapa Mental')}</option>
+                      <option value="analytics">{t('wizard.logic.types.analytics.title', 'Dashboard BI')}</option>
+                      <option value="galeria">{t('wizard.logic.types.galeria.title', 'Galeria Assets')}</option>
+                      <option value="map">{t('wizard.logic.types.map.title', 'Mapa Geospatial')}</option>
+                      <option value="blueprint">{t('wizard.logic.types.blueprint.title', 'Fluxograma (Blueprint)')}</option>
+                      <option value="personalizado">{t('wizard.personalizado.widget_master_detail', 'Mestre/Detalhe (Abas)')}</option>
                     </select>
                   </div>
 
@@ -382,7 +382,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                   <button
                     onClick={() => setExpandedCustomSlot(expandedCustomSlot === idx ? null : idx)}
                     className="mt-6 p-2.5 text-indigo-500 hover:text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 rounded-lg transition-all"
-                    title={expandedCustomSlot === idx ? 'Recolher Configurações' : 'Expandir Configurações'}
+                    title={expandedCustomSlot === idx ? t('wizard.personalizado.collapse_config', 'Recolher Configurações') : t('wizard.personalizado.expand_config', 'Expandir Configurações')}
                   >
                     {expandedCustomSlot === idx ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
@@ -397,14 +397,14 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                         }}
                         className="p-2.5 text-white bg-red-500 hover:bg-red-600 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1"
                       >
-                        <Check className="w-3.5 h-3.5" /> Sim
+                        <Check className="w-3.5 h-3.5" /> {t('common.yes', 'Sim')}
                       </button>
                       <button onClick={() => setTabToDelete(null)} className="p-2.5 text-neutral-500 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-lg transition-all">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ) : (
-                    <button onClick={() => setTabToDelete(idx)} className="mt-6 p-2.5 text-neutral-400 hover:text-red-500 bg-neutral-50 hover:bg-red-50 dark:bg-neutral-900 dark:hover:bg-red-900/20 rounded-lg transition-all" title="Remover Aba">
+                    <button onClick={() => setTabToDelete(idx)} className="mt-6 p-2.5 text-neutral-400 hover:text-red-500 bg-neutral-50 hover:bg-red-50 dark:bg-neutral-900 dark:hover:bg-red-900/20 rounded-lg transition-all" title={t('wizard.personalizado.remove_tab', 'Remover Aba')}>
                       <Trash2 className="w-4 h-4" />
                     </button>
                   )}
@@ -663,13 +663,13 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
             {/* Add tab button */}
             <button
               onClick={() => {
-                const newSlots = [...(config.layout_config.custom_slots || []), { id: `tab-${Date.now()}`, title: 'Nova Aba', type: 'form', model_id: config.selected_models[0] }]
+                const newSlots = [...(config.layout_config.custom_slots || []), { id: `tab-${Date.now()}`, title: t('wizard.personalizado.new_tab_title', 'Nova Aba'), type: 'form', model_id: config.selected_models[0] }]
                 setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } })
               }}
               className="w-full p-4 border-2 border-dashed border-rose-200 dark:border-rose-900/50 rounded-xl flex items-center justify-center gap-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all font-bold text-xs uppercase tracking-widest shadow-sm"
             >
               <Plus className="w-4 h-4" />
-              Adicionar Aba
+              {t('wizard.personalizado.add_tab', 'Adicionar Aba')}
             </button>
           </div>
         </div>

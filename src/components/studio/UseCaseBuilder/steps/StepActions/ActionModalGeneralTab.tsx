@@ -30,23 +30,24 @@ export function ActionModalGeneralTab({
     const locs = [];
     if (config.logic_type === 'pesquisa_cadastro') {
       const masterUc = useCases?.find((uc: any) => uc.slug === config.layout_config.master_use_case_slug);
-      locs.push({ id: 'search', label: 'Tela de Pesquisa (Lista)', modelId: masterUc?.model_id || '', depth: 0 });
+      locs.push({ id: 'search', label: t('wizard.actions.locations.search_screen', 'Tela de Pesquisa (Lista)'), modelId: masterUc?.model_id || '', depth: 0 });
     }
     
     if (config.logic_type === 'pesquisa_cadastro' || config.logic_type === 'personalizado') {
       const rootId = config.layout_config.master_model_id || config.selected_models?.[0];
       const rootModel = models.find((m: any) => m.id === rootId);
-      const masterLabel = (config.layout_config as any).master_tab_title || rootModel?.display_name || rootModel?.db_table_name || 'Mestre';
-      locs.push({ id: 'master', label: `Aba Mestre (${masterLabel})`, modelId: rootId || '', depth: 0 });
+      const masterLabel = (config.layout_config as any).master_tab_title || rootModel?.display_name || rootModel?.db_table_name || t('wizard.actions.locations.master_default', 'Mestre');
+      locs.push({ id: 'master', label: t('wizard.actions.locations.master_tab', 'Aba Mestre ({name})').replace('{name}', masterLabel), modelId: rootId || '', depth: 0 });
     }
 
     if (config.logic_type === 'mapa_mental') {
       const levels = config.layout_config?.mindmap_levels || [];
       levels.forEach((level: any, index: number) => {
         const model = models.find((m: any) => m.id === level.model_id);
+        const name = model?.display_name || model?.db_table_name || t('wizard.actions.locations.unknown', 'Desconhecido');
         locs.push({
           id: `mindmap:level:${index + 1}`,
-          label: `Nível ${index + 1} (${model?.display_name || model?.db_table_name || 'Desconhecido'})`,
+          label: t('wizard.actions.locations.level', 'Nível {level} ({name})').replace('{level}', String(index + 1)).replace('{name}', name),
           modelId: level.model_id || '',
           depth: index
         });
@@ -89,10 +90,12 @@ export function ActionModalGeneralTab({
           if (currentDepth > 0) {
             const isUsed = modelHasFields(node, false);
             if (isUsed) {
-              const typeLabel = currentDepth === 1 ? 'Aba Detalhe' : 'Aba Sub-Detalhe';
               const customTitle = (config.layout_config as any).details_tab_titles?.[node.id];
               const nodeLabel = customTitle || node.display_name || node.db_table_name || node.name;
-              locs.push({ id: `detail:${node.id}`, label: `${typeLabel} (${nodeLabel})`, modelId: node.id, depth: currentDepth });
+              const label = currentDepth === 1
+                ? t('wizard.actions.locations.detail_tab', 'Aba Detalhe ({name})').replace('{name}', nodeLabel)
+                : t('wizard.actions.locations.subdetail_tab', 'Aba Sub-Detalhe ({name})').replace('{name}', nodeLabel);
+              locs.push({ id: `detail:${node.id}`, label, modelId: node.id, depth: currentDepth });
             }
           }
           if (node.children && Array.isArray(node.children)) {
@@ -106,7 +109,10 @@ export function ActionModalGeneralTab({
     if (config.logic_type === 'personalizado') {
       (config.layout_config.custom_slots || []).forEach((slot: any) => {
         const slotUc = useCases?.find((uc: any) => uc.slug === slot.use_case_slug);
-        locs.push({ id: `slot:${slot.id}`, label: `Aba ${slot.title} (${slotUc?.name || 'Desconhecido'})`, modelId: slotUc?.model_id || '', depth: 0 });
+        const slotLabel = t('wizard.actions.locations.custom_tab', 'Aba {title} ({name})')
+          .replace('{title}', slot.title || '')
+          .replace('{name}', slotUc?.name || t('wizard.actions.locations.unknown', 'Desconhecido'));
+        locs.push({ id: `slot:${slot.id}`, label: slotLabel, modelId: slotUc?.model_id || '', depth: 0 });
       });
     }
     return locs;
@@ -210,7 +216,7 @@ export function ActionModalGeneralTab({
       <div className="lg:col-span-7 space-y-4">
         <div className="space-y-4">
           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">
-            Locais de Renderização <span className="normal-case font-normal">(Seleção Múltipla)</span>
+            {t('wizard.actions.locations.title', 'Locais de Renderização')} <span className="normal-case font-normal">{t('wizard.actions.locations.multiple_selection', '(Seleção Múltipla)')}</span>
           </label>
           <div className="space-y-3 max-h-[55vh] overflow-y-auto custom-scrollbar pr-2 pb-2">
             {availableLocations.map(loc => {
@@ -220,17 +226,17 @@ export function ActionModalGeneralTab({
               
               const renderOptions = [];
               if (isSearch) {
-                renderOptions.push({ value: 'global_top', label: 'Ação Global (Topo da Pesquisa)' });
-                renderOptions.push({ value: 'row', label: 'Ação de Linha (Grid)' });
-                renderOptions.push({ value: 'bulk', label: 'Ação em Massa (Multi-seleção)' });
+                renderOptions.push({ value: 'global_top', label: t('wizard.actions.contexts.global_top_search', 'Ação Global (Topo da Pesquisa)') });
+                renderOptions.push({ value: 'row', label: t('wizard.actions.contexts.row_grid', 'Ação de Linha (Grid)') });
+                renderOptions.push({ value: 'bulk', label: t('wizard.actions.contexts.bulk', 'Ação em Massa (Multi-seleção)') });
               } else if (loc.id.startsWith('mindmap:level:')) {
-                renderOptions.push({ value: 'row', label: 'Exibir Botão no Nó' });
+                renderOptions.push({ value: 'row', label: t('wizard.actions.contexts.show_on_node', 'Exibir Botão no Nó') });
               } else {
-                renderOptions.push({ value: 'global_top', label: 'Ação Global (Topo)' });
+                renderOptions.push({ value: 'global_top', label: t('wizard.actions.contexts.global_top', 'Ação Global (Topo)') });
                 if (loc.id !== 'master') {
-                  renderOptions.push({ value: 'row', label: 'Ação de Linha (Grid/Lista)' });
+                  renderOptions.push({ value: 'row', label: t('wizard.actions.contexts.row_grid_list', 'Ação de Linha (Grid/Lista)') });
                 }
-                renderOptions.push({ value: 'field_group', label: 'Agrupado ao Campo' });
+                renderOptions.push({ value: 'field_group', label: t('wizard.actions.contexts.field_group', 'Agrupado ao Campo') });
               }
 
               return (
@@ -265,12 +271,12 @@ export function ActionModalGeneralTab({
                     {p?.contexts.includes('field_group') && (
                       <div className="p-3 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-xl space-y-3 mt-2 animate-in fade-in slide-in-from-top-2">
                         <div className="space-y-1.5">
-                          <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">Campos Alvo</label>
+                          <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">{t('wizard.actions.locations.target_fields', 'Campos Alvo')}</label>
                           <div className="max-h-40 overflow-y-auto custom-scrollbar border border-indigo-100 dark:border-indigo-900/30 rounded-lg bg-white dark:bg-neutral-950 p-2 space-y-1">
                             {(() => {
                               const targetModel = models.find((m: any) => m.id === loc.modelId);
                               if (!targetModel || !targetModel.fields || targetModel.fields.length === 0) {
-                                return <p className="text-[10px] text-neutral-400 italic p-2">Nenhum campo encontrado no model.</p>;
+                                return <p className="text-[10px] text-neutral-400 italic p-2">{t('wizard.actions.locations.no_fields_found', 'Nenhum campo encontrado no model.')}</p>;
                               }
                               return targetModel.fields.map((f: any) => {
                                 const val = f.db_column_name;
@@ -286,10 +292,10 @@ export function ActionModalGeneralTab({
                           </div>
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">Posição no Input</label>
+                          <label className="text-[9px] font-black uppercase tracking-[0.1em] text-indigo-500">{t('wizard.actions.locations.input_position', 'Posição no Input')}</label>
                           <div className="flex gap-2">
-                            <button type="button" onClick={() => setEditingAction({ ...editingAction, group_position: 'left' })} className={cn("flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-md transition-all border", (editingAction.group_position || 'right') === 'left' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50')}>Esquerda</button>
-                            <button type="button" onClick={() => setEditingAction({ ...editingAction, group_position: 'right' })} className={cn("flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-md transition-all border", (editingAction.group_position || 'right') === 'right' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50')}>Direita</button>
+                            <button type="button" onClick={() => setEditingAction({ ...editingAction, group_position: 'left' })} className={cn("flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-md transition-all border", (editingAction.group_position || 'right') === 'left' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50')}>{t('wizard.actions.locations.left', 'Esquerda')}</button>
+                            <button type="button" onClick={() => setEditingAction({ ...editingAction, group_position: 'right' })} className={cn("flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-md transition-all border", (editingAction.group_position || 'right') === 'right' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50')}>{t('wizard.actions.locations.right', 'Direita')}</button>
                           </div>
                         </div>
                       </div>

@@ -709,7 +709,7 @@ export function FieldDrawer({
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
                       <h4 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-widest">
-                        Cálculos e Fórmulas
+                        {t('wizard.layout.drawer.formula_title', 'Cálculos e Fórmulas')}
                       </h4>
                     </div>
                     <FormulaBuilder

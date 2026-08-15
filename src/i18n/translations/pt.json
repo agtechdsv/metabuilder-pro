@@ -1947,8 +1947,30 @@
           "custom": "Personalizado (Custom)..."
         },
         "viacep_title": "Busca Automática de Endereço (ViaCEP)",
-        "viacep_desc": "Mapeie os campos do formulário que receberão os dados do ViaCEP automaticamente:"
+        "viacep_desc": "Mapeie os campos do formulário que receberão os dados do ViaCEP automaticamente:",
+        "formula_title": "Cálculos e Fórmulas"
       }
+    },
+    "personalizado": {
+      "title": "Configuração do Orquestrador de Casos de Uso",
+      "subtitle": "Defina o Caso de Uso Mestre e as Abas (Detalhes) que comporão este painel unificado.",
+      "master_uc_title": "Caso de Uso Mestre",
+      "select_master": "Selecione o Mestre",
+      "select_master_placeholder": "Selecione o Caso de Uso Mestre...",
+      "tabs_layout_title": "Layout Personalizado (Abas)",
+      "tabs_layout_desc": "Configure os Widgets para cada aba do registro.",
+      "icon_label": "Ícone",
+      "tab_title_label": "Título da Aba",
+      "tab_title_placeholder": "Ex: Detalhes",
+      "use_case_label": "Caso de Uso",
+      "select_use_case_placeholder": "Selecione o Caso de Uso...",
+      "widget_label": "Widget",
+      "widget_master_detail": "Mestre/Detalhe (Abas)",
+      "collapse_config": "Recolher Configurações",
+      "expand_config": "Expandir Configurações",
+      "remove_tab": "Remover Aba",
+      "new_tab_title": "Nova Aba",
+      "add_tab": "Adicionar Aba"
     },
     "actions": {
       "title": "Query & Ações Finais",
@@ -1991,14 +2013,44 @@
         "amber": "Amarelo (Atenção)",
         "purple": "Roxo (Especial)"
       },
+      "locations": {
+        "title": "Locais de Renderização",
+        "multiple_selection": "(Seleção Múltipla)",
+        "search_screen": "Tela de Pesquisa (Lista)",
+        "master_default": "Mestre",
+        "master_tab": "Aba Mestre ({name})",
+        "detail_tab": "Aba Detalhe ({name})",
+        "subdetail_tab": "Aba Sub-Detalhe ({name})",
+        "custom_tab": "Aba {title} ({name})",
+        "level": "Nível {level} ({name})",
+        "unknown": "Desconhecido",
+        "target_fields": "Campos Alvo",
+        "no_fields_found": "Nenhum campo encontrado no model.",
+        "input_position": "Posição no Input",
+        "left": "Esquerda",
+        "right": "Direita"
+      },
       "context": "Contexto",
       "contexts": {
         "row": "Ação de Linha (Pesquisa)",
-        "bulk": "Ação Global (Topo da Pesquisa)",
+        "bulk": "Ação em Massa (Multi-seleção)",
         "master_top": "Ação Global (Topo do Mestre)",
         "detail_top": "Ação Global (Topo do Detalhe)",
         "detail_row": "Ação de Linha (Detalhe)",
-        "field_group": "Agrupado ao Campo (Formulário)"
+        "field_group": "Agrupado ao Campo",
+        "global_top_search": "Ação Global (Topo da Pesquisa)",
+        "row_grid": "Ação de Linha (Grid)",
+        "show_on_node": "Exibir Botão no Nó",
+        "global_top": "Ação Global (Topo)",
+        "row_grid_list": "Ação de Linha (Grid/Lista)"
+      },
+      "trigger": {
+        "origin": "ORIGEM",
+        "origin_table": "Origem (Tabela: {table})",
+        "dest": "DESTINO",
+        "dest_table": "Destino (Tabela: {table})",
+        "select_placeholder": "Selecione para inserir...",
+        "add_param": "+ Adicionar Parâmetro"
       },
       "target_fields": "Campos Alvo (Selecione um ou mais)",
       "position": "Posição",
@@ -2066,11 +2118,17 @@
         "page_desc": "O formulário será exibido na mesma tela, substituindo a lista atual."
       }
     },
+    "status": {
+      "draft_pending": "Rascunho Pendente",
+      "published": "Publicado"
+    },
     "buttons": {
       "updating": "Atualizando...",
       "saving": "Salvando...",
       "update": "Atualizar Caso de Uso",
       "finish": "Finalizar Caso de Uso",
+      "discard_draft": "Descartar Rascunho",
+      "publish": "Publicar",
       "prev": "Voltar Passo",
       "next": "Próximo Passo",
       "error_save": "Erro ao salvar caso de uso",
@@ -3182,9 +3240,30 @@
       "collapse_all": "Retrair tudo",
       "no_file_selected": "Nenhum arquivo selecionado",
       "close_file": "Fechar arquivo",
-      "syncing_cloud": "Sincronizando arquivos com a nuvem...",
       "select_file_hint": "Selecione um arquivo na árvore ao lado"
     }
+  },
+  "formula_builder": {
+    "fn_soma": "SOMA",
+    "fn_media": "MÉDIA",
+    "fn_count": "CONTAGEM",
+    "fn_maximo": "MÁXIMO",
+    "fn_minimo": "MÍNIMO",
+    "fn_arredondar": "ARREDONDAR",
+    "fn_se": "SE",
+    "clear_all_title": "Limpar toda a fórmula",
+    "clear": "Limpar",
+    "empty": "A fórmula está vazia. Adicione campos e operadores abaixo.",
+    "parentheses_warning": "Aviso: Há parênteses abertos que não foram fechados corretamente.",
+    "syntax_error": "Erro de Sintaxe: A estrutura matemática da fórmula é inválida. Verifique a ordem dos operadores e funções.",
+    "math_logical": "Matemáticos & Lógicos",
+    "functions": "Funções",
+    "insert_field": "Inserir Campo",
+    "select_insert": "Selecione para inserir...",
+    "calc_fields": "Campos Calculados",
+    "table_prefix": "Tabela",
+    "free_value": "VALOR LIVRE",
+    "free_value_placeholder": "Ex: 100 ou Cancelado"
   },
   "runtime": {
     "scale_small": "Pequeno",

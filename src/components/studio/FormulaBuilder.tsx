@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Plus, X, Calculator, Database, FunctionSquare, Hash } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n/I18nContext'
 
 export type FormulaToken = {
   id: string;
@@ -22,6 +23,7 @@ interface FormulaBuilderProps {
 }
 
 export default function FormulaBuilder({ value = [], onChange, availableFields = [] }: FormulaBuilderProps) {
+  const { t } = useI18n()
   const [numberInput, setNumberInput] = useState('')
 
   const addToken = (type: FormulaToken['type'], val: string, label: string) => {
@@ -48,14 +50,14 @@ export default function FormulaBuilder({ value = [], onChange, availableFields =
   ]
 
   const functions = [
-    { val: 'SOMA', label: 'SOMA' },
-    { val: 'MEDIA', label: 'MÉDIA' },
-    { val: 'COUNT', label: 'CONTAGEM' },
-    { val: 'MAXIMO', label: 'MÁXIMO' },
-    { val: 'MINIMO', label: 'MÍNIMO' },
-    { val: 'ARREDONDAR', label: 'ARREDONDAR' },
+    { val: 'SOMA', label: t('formula_builder.fn_soma', 'SOMA') },
+    { val: 'MEDIA', label: t('formula_builder.fn_media', 'MÉDIA') },
+    { val: 'COUNT', label: t('formula_builder.fn_count', 'CONTAGEM') },
+    { val: 'MAXIMO', label: t('formula_builder.fn_maximo', 'MÁXIMO') },
+    { val: 'MINIMO', label: t('formula_builder.fn_minimo', 'MÍNIMO') },
+    { val: 'ARREDONDAR', label: t('formula_builder.fn_arredondar', 'ARREDONDAR') },
     { val: 'ABS', label: 'ABS' },
-    { val: 'SE', label: 'SE' }
+    { val: 'SE', label: t('formula_builder.fn_se', 'SE') }
   ]
 
   const getTokenColor = (type: string) => {
@@ -87,7 +89,8 @@ export default function FormulaBuilder({ value = [], onChange, availableFields =
 
     const context: any = {
       'SOMA': () => 1, 'MEDIA': () => 1, 'COUNT': () => 1, 'MAXIMO': () => 1, 
-      'MINIMO': () => 1, 'ARREDONDAR': () => 1, 'ABS': () => 1, 'SE': () => 1
+      'MINIMO': () => 1, 'ARREDONDAR': () => 1, 'ABS': () => 1, 'SE': () => 1,
+      'SUM': () => 1, 'AVG': () => 1, 'MAX': () => 1, 'MIN': () => 1, 'ROUND': () => 1, 'IF': () => 1, 'SI': () => 1, 'PROMEDIO': () => 1
     };
     for(let i=0; i<varIdx; i++) context[`var_${i}`] = 1;
 
@@ -112,14 +115,14 @@ export default function FormulaBuilder({ value = [], onChange, availableFields =
             type="button"
             onClick={() => onChange([])}
             className="absolute top-2 right-2 p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
-            title="Limpar toda a fórmula"
+            title={t('formula_builder.clear_all_title', 'Limpar toda a fórmula')}
           >
-            <X className="w-3.5 h-3.5" /> Limpar
+            <X className="w-3.5 h-3.5" /> {t('formula_builder.clear', 'Limpar')}
           </button>
         )}
         
         {value.length === 0 ? (
-          <span className="text-xs text-neutral-400 italic mt-1">A fórmula está vazia. Adicione campos e operadores abaixo.</span>
+          <span className="text-xs text-neutral-400 italic mt-1">{t('formula_builder.empty', 'A fórmula está vazia. Adicione campos e operadores abaixo.')}</span>
         ) : (
           value.map((token) => (
             <div 
@@ -146,14 +149,14 @@ export default function FormulaBuilder({ value = [], onChange, availableFields =
       {value.filter(t => t.value === '(').length !== value.filter(t => t.value === ')').length && (
         <div className="px-3 py-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-700 dark:text-amber-400 text-xs font-medium flex items-center gap-2 shadow-sm">
           <span className="text-lg leading-none">⚠️</span>
-          Aviso: Há parênteses abertos que não foram fechados corretamente.
+          {t('formula_builder.parentheses_warning', 'Aviso: Há parênteses abertos que não foram fechados corretamente.')}
         </div>
       )}
 
       {!isSyntaxValid && value.length > 0 && (
         <div className="px-3 py-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-xs font-medium flex items-center gap-2 shadow-sm">
           <span className="text-lg leading-none">🚨</span>
-          Erro de Sintaxe: A estrutura matemática da fórmula é inválida. Verifique a ordem dos operadores e funções.
+          {t('formula_builder.syntax_error', 'Erro de Sintaxe: A estrutura matemática da fórmula é inválida. Verifique a ordem dos operadores e funções.')}
         </div>
       )}
 
@@ -163,7 +166,7 @@ export default function FormulaBuilder({ value = [], onChange, availableFields =
         {/* Operadores e Funções */}
         <div className="flex flex-col gap-2 p-3 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl">
           <div className="flex items-center gap-2 text-[10px] font-black uppercase text-neutral-500 tracking-wider mb-1">
-            <Calculator className="w-3.5 h-3.5" /> Matemáticos & Lógicos
+            <Calculator className="w-3.5 h-3.5" /> {t('formula_builder.math_logical', 'Matemáticos & Lógicos')}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {operators.map(op => (
@@ -181,7 +184,7 @@ export default function FormulaBuilder({ value = [], onChange, availableFields =
           <div className="w-full h-px bg-neutral-200 dark:bg-neutral-800 my-1" />
 
           <div className="flex items-center gap-2 text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-500 tracking-wider mb-1">
-            <FunctionSquare className="w-3.5 h-3.5" /> Funções
+            <FunctionSquare className="w-3.5 h-3.5" /> {t('formula_builder.functions', 'Funções')}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {functions.map(fn => (
@@ -209,7 +212,7 @@ export default function FormulaBuilder({ value = [], onChange, availableFields =
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2 p-3 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30 rounded-xl">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider mb-1">
-              <Database className="w-3.5 h-3.5" /> Inserir Campo
+              <Database className="w-3.5 h-3.5" /> {t('formula_builder.insert_field', 'Inserir Campo')}
             </div>
             <select
               className="w-full px-3 py-2 bg-white dark:bg-neutral-950 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs outline-none focus:ring-2 ring-indigo-500/50"
@@ -222,10 +225,10 @@ export default function FormulaBuilder({ value = [], onChange, availableFields =
                 e.target.value = ''; // reset after insert
               }}
             >
-              <option value="">Selecione para inserir...</option>
+              <option value="">{t('formula_builder.select_insert', 'Selecione para inserir...')}</option>
               
               {availableFields.some(f => (f as any).isVirtual) && (
-                <optgroup label="Campos Calculados" className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
+                <optgroup label={t('formula_builder.calc_fields', 'Campos Calculados')} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
                   {availableFields.filter(f => (f as any).isVirtual).map(f => (
                     <option key={f.id} value={f.id} className="text-neutral-800 dark:text-neutral-200 font-normal normal-case">
                       {f.modelName.toLowerCase()} → {String(f.db_column_name).toLowerCase()}
@@ -241,7 +244,7 @@ export default function FormulaBuilder({ value = [], onChange, availableFields =
                   return acc;
                 }, {})
               ).map(([modelName, fields]: [string, any]) => (
-                <optgroup key={modelName} label={modelName.startsWith('Tabela:') || modelName.startsWith('Relação:') ? modelName : `Tabela: ${modelName}`} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
+                <optgroup key={modelName} label={modelName.startsWith('Tabela:') || modelName.startsWith('Relação:') || modelName.startsWith('Table:') || modelName.startsWith('Tabla:') ? modelName : `${t('formula_builder.table_prefix', 'Tabela')}: ${modelName}`} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
                   {fields.map((f: any) => (
                     <option key={f.id} value={f.id} className="text-neutral-800 dark:text-neutral-200 font-normal normal-case">
                       {String(f.db_column_name).toLowerCase()}
@@ -254,13 +257,13 @@ export default function FormulaBuilder({ value = [], onChange, availableFields =
 
           <div className="flex flex-col gap-2 p-3 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded-xl">
             <label className="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider flex items-center gap-1">
-              <Hash className="w-3 h-3" /> VALOR LIVRE
+              <Hash className="w-3 h-3" /> {t('formula_builder.free_value', 'VALOR LIVRE')}
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
                 className="flex-1 px-3 py-1.5 text-sm bg-white dark:bg-neutral-900 border border-amber-200 dark:border-amber-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                placeholder="Ex: 100 ou Cancelado"
+                placeholder={t('formula_builder.free_value_placeholder', 'Ex: 100 ou Cancelado')}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && e.currentTarget.value) {
                     const val = e.currentTarget.value.trim();

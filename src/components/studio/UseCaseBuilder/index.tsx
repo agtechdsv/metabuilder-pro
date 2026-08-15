@@ -444,15 +444,15 @@ export function UseCaseBuilderWizard({
                     "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
                     initialData.draft_config ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
                   )}>
-                    {initialData.draft_config ? 'Rascunho Pendente' : 'Publicado'}
+                    {initialData.draft_config ? t('wizard.status.draft_pending', 'Rascunho Pendente') : t('wizard.status.published', 'Publicado')}
                   </div>
                   {initialData.draft_config && (
                     <>
                       <button onClick={() => setIsDiscardModalOpen(true)} className="flex items-center gap-2 px-6 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-red-500/5 active:scale-95 border border-red-500/20">
-                        <Trash2 className="w-3.5 h-3.5" /> Descartar Rascunho
+                        <Trash2 className="w-3.5 h-3.5" /> {t('wizard.buttons.discard_draft', 'Descartar Rascunho')}
                       </button>
                       <button onClick={() => setIsPublishModalOpen(true)} disabled={isSaving} className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20 disabled:opacity-50 active:scale-95">
-                        🚀 Publicar
+                        🚀 {t('wizard.buttons.publish', 'Publicar')}
                       </button>
                     </>
                   )}

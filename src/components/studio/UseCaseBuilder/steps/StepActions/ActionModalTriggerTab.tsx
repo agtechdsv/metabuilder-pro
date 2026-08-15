@@ -191,18 +191,18 @@ export function ActionModalTriggerTab({
                         return (
                           <div key={p.location} className="space-y-2 p-4 bg-white dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl">
                             <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2 mb-2">
-                              <span className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400">
-                                Nível {levelStr}: {levelModel?.display_name || levelModel?.db_table_name || 'Desconhecido'}
+                              <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                                {t('wizard.actions.locations.level', 'Nível {level} ({name})').replace('{level}', levelStr).replace('{name}', levelModel?.display_name || levelModel?.db_table_name || t('wizard.actions.locations.unknown', 'Desconhecido'))}
                               </span>
                             </div>
 
                             {/* Table Header */}
                             <div className="flex gap-4 px-2 pb-2">
                               <div className="flex-1 text-[10px] font-black uppercase tracking-wider text-neutral-400">
-                                Origem {levelModel ? `(Tabela: ${levelModel.db_table_name})` : ''}
+                                {levelModel ? t('wizard.actions.trigger.origin_table', 'Origem (Tabela: {table})').replace('{table}', levelModel.db_table_name) : t('wizard.actions.trigger.origin', 'ORIGEM')}
                               </div>
                               <div className="flex-1 text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400">
-                                Destino {destModels[0] ? `(Tabela: ${destModels[0].db_table_name})` : ''}
+                                {destModels[0] ? t('wizard.actions.trigger.dest_table', 'Destino (Tabela: {table})').replace('{table}', destModels[0].db_table_name) : t('wizard.actions.trigger.dest', 'DESTINO')}
                               </div>
                               <div className="w-8"></div>
                             </div>
@@ -223,7 +223,7 @@ export function ActionModalTriggerTab({
                                   }}
                                   className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
                                 >
-                                  <option value="">Selecione para inserir...</option>
+                                  <option value="">{t('wizard.actions.trigger.select_placeholder', 'Selecione para inserir...')}</option>
                                   {levelSourceGroups.map((g: any, i: number) => (
                                     <optgroup key={i} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
                                       {g.model.fields?.map((f: any) => (
@@ -248,7 +248,7 @@ export function ActionModalTriggerTab({
                                   }}
                                   className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-rose-500"
                                 >
-                                  <option value="">Selecione para inserir...</option>
+                                  <option value="">{t('wizard.actions.trigger.select_placeholder', 'Selecione para inserir...')}</option>
                                   {destGroups.map((g: any, i: number) => (
                                     <optgroup key={i} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
                                       {g.model.fields?.map((f: any) => (
@@ -288,7 +288,7 @@ export function ActionModalTriggerTab({
                               }}
                               className="mt-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
                             >
-                              <Plus className="w-3 h-3" /> Adicionar Parâmetro
+                              <Plus className="w-3 h-3" /> {t('wizard.actions.trigger.add_param', '+ Adicionar Parâmetro')}
                             </button>
                           </div>
                         );
@@ -318,10 +318,10 @@ export function ActionModalTriggerTab({
                     {/* Table Header */}
                     <div className="flex gap-4 px-2 pb-2 border-b border-neutral-100 dark:border-neutral-800">
                       <div className="flex-1 text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                        Origem {sourceModels[0] ? `(Tabela: ${sourceModels[0].db_table_name})` : ''}
+                        {sourceModels[0] ? t('wizard.actions.trigger.origin_table', 'Origem (Tabela: {table})').replace('{table}', sourceModels[0].db_table_name) : t('wizard.actions.trigger.origin', 'ORIGEM')}
                       </div>
                       <div className="flex-1 text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400">
-                        Destino {destModels[0] ? `(Tabela: ${destModels[0].db_table_name})` : ''}
+                        {destModels[0] ? t('wizard.actions.trigger.dest_table', 'Destino (Tabela: {table})').replace('{table}', destModels[0].db_table_name) : t('wizard.actions.trigger.dest', 'DESTINO')}
                       </div>
                       <div className="w-8"></div>
                     </div>
@@ -338,7 +338,7 @@ export function ActionModalTriggerTab({
                           }}
                           className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
                         >
-                          <option value="">Selecione para inserir...</option>
+                          <option value="">{t('wizard.actions.trigger.select_placeholder', 'Selecione para inserir...')}</option>
                           {sourceGroups.map((g: any, i: number) => (
                             <optgroup key={i} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
                               {g.model.fields?.map((f: any) => (
@@ -359,7 +359,7 @@ export function ActionModalTriggerTab({
                           }}
                           className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm outline-none focus:border-rose-500"
                         >
-                          <option value="">Selecione para inserir...</option>
+                          <option value="">{t('wizard.actions.trigger.select_placeholder', 'Selecione para inserir...')}</option>
                           {destGroups.map((g: any, i: number) => (
                             <optgroup key={i} label={g.label} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 normal-case">
                               {g.model.fields?.map((f: any) => (
@@ -394,7 +394,7 @@ export function ActionModalTriggerTab({
                       }}
                       className="mt-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
                     >
-                      <Plus className="w-3 h-3" /> Adicionar Parâmetro
+                      <Plus className="w-3 h-3" /> {t('wizard.actions.trigger.add_param', '+ Adicionar Parâmetro')}
                     </button>
                   </div>
                 );
