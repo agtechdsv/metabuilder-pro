@@ -1,8 +1,19 @@
 import { AgTechContent } from '@/components/legal/AgTechContent'
 import { Layers, Cpu } from 'lucide-react'
 import Link from 'next/link'
+import { TranslationProvider } from '@/i18n/TranslationProvider'
+import { useI18n } from '@/i18n/I18nContext'
 
 export default function AgTechPage() {
+  return (
+    <TranslationProvider>
+      <AgTechPageContent />
+    </TranslationProvider>
+  )
+}
+
+function AgTechPageContent() {
+  const { t } = useI18n()
   return (
     <main className="min-h-screen bg-black text-white p-8 md:p-24 relative overflow-hidden">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-blue-500/5 rounded-full blur-[120px] pointer-events-none"></div>
@@ -20,8 +31,8 @@ export default function AgTechPage() {
               <Cpu className="w-8 h-8 text-blue-500" />
             </div>
             <div className="space-y-1">
-              <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-neutral-500">Engenharia AGTech</h1>
-              <p className="text-blue-500 font-bold text-xs uppercase tracking-widest">Innovation Lab</p>
+              <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-neutral-500">{t('agtech.engineering_title', 'Engenharia AGTech')}</h1>
+              <p className="text-blue-500 font-bold text-xs uppercase tracking-widest">{t('agtech.lab', 'Innovation Lab')}</p>
             </div>
         </div>
 
@@ -31,7 +42,7 @@ export default function AgTechPage() {
 
         <div className="flex justify-center pt-8">
            <Link href="/" className="bg-neutral-800 hover:bg-neutral-700 text-white px-8 py-3 rounded-xl font-bold transition-all border border-neutral-700">
-             Voltar para Início
+             {t('common.back_to_home', 'Voltar para a Home')}
            </Link>
         </div>
       </div>

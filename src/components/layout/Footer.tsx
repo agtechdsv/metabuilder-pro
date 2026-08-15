@@ -27,10 +27,10 @@ export function Footer() {
         {/* Centro: Info Consolidada */}
         <div className="flex flex-col items-center gap-1 text-[11px] font-medium text-neutral-400 dark:text-neutral-500">
           <div className="flex items-center gap-1">
-             <span>© 2026 AG Tech Serviços de Informática Ltda. Todos os direitos reservados.</span>
+             <span>{t('footer.copyright', '© 2026 AG Tech Serviços de Informática Ltda. Todos os direitos reservados.')}</span>
           </div>
           <div className="flex items-center gap-1">
-             <span>MetaBuilder PRO™ é uma marca comercial da</span>
+             <span>{t('footer.trademark', 'MetaBuilder PRO™ é uma marca comercial da')}</span>
              <button 
                onClick={() => setLegalType('agtech')}
                className="text-indigo-600 dark:text-indigo-400 font-bold hover:scale-105 transition-transform"

@@ -41,7 +41,7 @@ export function HeroActions({ user }: HeroActionsProps) {
             href="/downloads"
             className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 shadow-2xl shadow-indigo-900/40 active:scale-95 border border-indigo-400/20 group w-full sm:w-auto text-sm uppercase tracking-widest"
           >
-            <span>⬇ Baixar IDE Gratuitamente</span>
+            <span>{t('hero.download_ide', '⬇ Baixar IDE Gratuitamente')}</span>
           </Link>
           <Link
             href="/agendamento"

@@ -166,16 +166,16 @@ export function MarketingSections() {
           
           <div className="flex-1 space-y-8 z-10">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-bold text-xs uppercase tracking-widest border border-indigo-500/20 shadow-sm">
-              <Terminal className="w-4 h-4" /> IDE Desktop Exclusiva
+              <Terminal className="w-4 h-4" /> {t('marketing_v2.home.ide_badge', 'IDE Desktop Exclusiva')}
             </div>
             
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-neutral-900 dark:text-white leading-[1.1]">
-              O paraíso para <br />
-              <span className="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">Pro Developers.</span>
+              {t('marketing_v2.home.ide_title_part1', 'O paraíso para')} <br />
+              <span className="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">{t('marketing_v2.home.ide_title_part2', 'Pro Developers.')}</span>
             </h2>
             
             <p className="text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed max-w-xl font-medium">
-              Esqueça as limitações da nuvem. Nossa IDE nativa oferece controle absoluto com BYOC (Bring Your Own Code), Terminal Integrado, SQL Studio avançado local e Ejeção total do código fonte.
+              {t('marketing_v2.home.ide_desc', 'Esqueça as limitações da nuvem. Nossa IDE nativa oferece controle absoluto com BYOC (Bring Your Own Code), Terminal Integrado, SQL Studio avançado local e Ejeção total do código fonte.')}
             </p>
             
             <div className="grid grid-cols-2 gap-4">
@@ -183,25 +183,25 @@ export function MarketingSections() {
                 <div className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center shadow-sm">
                   <FileCode2 className="w-5 h-5 text-indigo-500" />
                 </div>
-                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">Editor Monaco</span>
+                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">{t('marketing_v2.home.ide_monaco', 'Editor Monaco')}</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center shadow-sm">
                   <Terminal className="w-5 h-5 text-emerald-500" />
                 </div>
-                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">Terminal Nativo</span>
+                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">{t('marketing_v2.home.ide_terminal', 'Terminal Nativo')}</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center shadow-sm">
                   <Database className="w-5 h-5 text-blue-500" />
                 </div>
-                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">SQL Studio Local</span>
+                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">{t('marketing_v2.home.ide_sql', 'SQL Studio Local')}</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center shadow-sm">
                   <ScrollText className="w-5 h-5 text-orange-500" />
                 </div>
-                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">Acesso a Logs</span>
+                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">{t('marketing_v2.home.ide_logs', 'Acesso a Logs')}</span>
               </div>
             </div>
 
@@ -210,7 +210,7 @@ export function MarketingSections() {
                 href="/features/ide"
                 className="inline-flex items-center gap-3 px-8 py-4 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold rounded-2xl hover:scale-105 transition-transform shadow-xl shadow-black/10 dark:shadow-white/10"
               >
-                Conheça a IDE <ArrowRight className="w-5 h-5" />
+                {t('marketing_v2.home.ide_cta', 'Conheça a IDE')} <ArrowRight className="w-5 h-5" />
               </Link>
             </div>
           </div>
@@ -258,16 +258,16 @@ export function MarketingSections() {
           
           <div className="flex-1 space-y-8 z-10 order-2 lg:order-1">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-400 font-bold text-xs uppercase tracking-widest border border-violet-500/20 shadow-sm">
-              <Sparkles className="w-4 h-4" /> AI Builder
+              <Sparkles className="w-4 h-4" /> {t('marketing_v2.home.ai_badge', 'AI Builder')}
             </div>
             
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-neutral-900 dark:text-white leading-[1.1]">
-              Casos de Uso com <br />
-              <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 dark:from-violet-400 dark:to-fuchsia-400 bg-clip-text text-transparent">Inteligência Artificial.</span>
+              {t('marketing_v2.home.ai_title_part1', 'Casos de Uso com')} <br />
+              <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 dark:from-violet-400 dark:to-fuchsia-400 bg-clip-text text-transparent">{t('marketing_v2.home.ai_title_part2', 'Inteligência Artificial.')}</span>
             </h2>
             
             <p className="text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed max-w-xl font-medium">
-              Acelere seu desenvolvimento em 100x. Basta descrever o que você precisa em linguagem natural e a IA geradora configurada escreve todo o código React pronto para produção, com formulários, grids e painéis interativos.
+              {t('marketing_v2.home.ai_desc', 'Acelere seu desenvolvimento em 100x. Basta descrever o que você precisa em linguagem natural e a IA geradora configurada escreve todo o código React pronto para produção, com formulários, grids e painéis interativos.')}
             </p>
             
             <div className="grid grid-cols-2 gap-4">
@@ -275,13 +275,13 @@ export function MarketingSections() {
                 <div className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center shadow-sm">
                   <Bot className="w-5 h-5 text-violet-500" />
                 </div>
-                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">Geração Inteligente</span>
+                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">{t('marketing_v2.home.ai_feat1', 'Geração Inteligente')}</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center shadow-sm">
                   <Code2 className="w-5 h-5 text-fuchsia-500" />
                 </div>
-                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">Código Nativo React</span>
+                <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">{t('marketing_v2.home.ai_feat2', 'Código Nativo React')}</span>
               </div>
             </div>
 
@@ -290,7 +290,7 @@ export function MarketingSections() {
                 href="/features/ai-studio"
                 className="inline-flex items-center gap-3 px-8 py-4 bg-violet-600 text-white font-bold rounded-2xl hover:bg-violet-700 hover:scale-105 transition-all shadow-xl shadow-violet-500/20"
               >
-                Conheça o AI Studio <ArrowRight className="w-5 h-5" />
+                {t('marketing_v2.home.ai_cta', 'Conheça o AI Studio')} <ArrowRight className="w-5 h-5" />
               </Link>
             </div>
           </div>
@@ -502,7 +502,7 @@ export function MarketingSections() {
                   </div>
                   <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-500/20 text-center flex-1">
                     <Database className="w-6 h-6 mx-auto mb-2 text-emerald-600" />
-                    <span className="text-[10px] font-black uppercase dark:text-white">Seu Banco Local</span>
+                    <span className="text-[10px] font-black uppercase dark:text-white">{t('marketing_v2.home.zero_trust_local_db', 'Seu Banco Local')}</span>
                   </div>
                 </div>
 
@@ -790,7 +790,7 @@ export function MarketingSections() {
               <Globe className="w-7 h-7" />
             </div>
             <span className="px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[9px] font-black uppercase tracking-widest rounded-full shadow-sm animate-pulse">
-              Novo Recurso Premium
+              {t('marketing_v2.home.premium_feature_badge', 'Novo Recurso Premium')}
             </span>
           </div>
           
@@ -819,17 +819,17 @@ export function MarketingSections() {
           
           <div className="flex-1 space-y-8 z-10">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold tracking-widest uppercase">
-              <GitMerge className="w-4 h-4" /> Segurança Absoluta
+              <GitMerge className="w-4 h-4" /> {t('marketing_v2.home.git_badge', 'Segurança Absoluta')}
             </div>
             <h2 className="text-4xl md:text-5xl font-black tracking-tighter leading-tight">
-              Desenvolva sem medo <br />de perder seu código.
+              {t('marketing_v2.home.git_title', 'Desenvolva sem medo de perder seu código.')}
             </h2>
             <p className="text-neutral-600 dark:text-neutral-400 text-lg md:text-xl leading-relaxed max-w-xl">
-              O MetaBuilder PRO utiliza uma <strong>Arquitetura Invisível de 3 Branches</strong>. Todo código que a Inteligência Artificial gera é testado em uma <span className="text-indigo-600 dark:text-indigo-400 font-semibold">Caixa de Areia isolada</span> antes de tocar no seu trabalho local. 
+              {t('marketing_v2.home.git_desc', 'O MetaBuilder PRO utiliza uma Arquitetura Invisível de 3 Branches. Todo código que a Inteligência Artificial gera é testado em uma Caixa de Areia isolada antes de tocar no seu trabalho local.')}
             </p>
             <div className="pt-4">
               <Link href="/features/git-architecture" className="inline-flex items-center gap-3 px-8 py-4 bg-black dark:bg-white text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 rounded-2xl font-bold transition-all hover:scale-105 active:scale-95 shadow-lg">
-                Entenda a Arquitetura <ArrowRight className="w-5 h-5" />
+                {t('marketing_v2.home.git_cta', 'Entenda a Arquitetura')} <ArrowRight className="w-5 h-5" />
               </Link>
             </div>
           </div>

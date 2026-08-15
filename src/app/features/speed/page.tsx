@@ -41,7 +41,7 @@ export default function SpeedFeaturePage() {
                <div className="space-y-2">
                  <div className="flex justify-between text-xs font-bold text-neutral-400">
                    <span>{t('marketing_v2.features.speed.stats_traditional')}</span>
-                   <span>12 Horas</span>
+                   <span>12 {t('marketing_v2.features.speed.hours', 'Horas')}</span>
                  </div>
                  <div className="w-full h-3 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
                     <div className="w-full h-full bg-neutral-300 dark:bg-neutral-700"></div>
@@ -50,7 +50,7 @@ export default function SpeedFeaturePage() {
                <div className="space-y-2">
                  <div className="flex justify-between text-xs font-bold text-yellow-500">
                    <span>{t('marketing_v2.features.speed.stats_metabuilder')}</span>
-                   <span>15 Minutos</span>
+                   <span>15 {t('marketing_v2.features.speed.minutes', 'Minutos')}</span>
                  </div>
                  <div className="w-full h-3 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
                     <motion.div 

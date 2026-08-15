@@ -22,29 +22,29 @@ export default function AIStudioFeaturePage() {
 
   const aiFeatures = [
     {
-      title: "Geração Inteligente",
-      desc: "Descreva a regra de negócio em linguagem natural e a IA configurada interpretará o contexto do banco de dados, modelos e relacionamentos para criar a tela perfeita.",
+      title: t('marketing_v2.features.ai_studio.feat1_title', 'Geração Inteligente'),
+      desc: t('marketing_v2.features.ai_studio.feat1_desc', 'Descreva a regra de negócio em linguagem natural e a IA configurada interpretará o contexto do banco de dados, modelos e relacionamentos para criar a tela perfeita.'),
       icon: <Bot className="w-8 h-8 text-violet-500" />,
       color: "from-violet-500/20 to-fuchsia-500/5",
       borderColor: "border-violet-500/20"
     },
     {
-      title: "Código React Nativo",
-      desc: "O resultado gerado não é um mockup. É código React.js funcional, otimizado e pronto para produção, com formulários de ponta e lógicas de estado avançadas.",
+      title: t('marketing_v2.features.ai_studio.feat2_title', 'Código React Nativo'),
+      desc: t('marketing_v2.features.ai_studio.feat2_desc', 'O resultado gerado não é um mockup. É código React.js funcional, otimizado e pronto para produção, com formulários de ponta e lógicas de estado avançadas.'),
       icon: <Code2 className="w-8 h-8 text-fuchsia-500" />,
       color: "from-fuchsia-500/20 to-pink-500/5",
       borderColor: "border-fuchsia-500/20"
     },
     {
-      title: "Grids e Componentes",
-      desc: "A inteligência sabe exatamente como instanciar nossos componentes UI de alta performance como DataGrids avançados, seletores, filtros e modais interativos.",
+      title: t('marketing_v2.features.ai_studio.feat3_title', 'Grids e Componentes'),
+      desc: t('marketing_v2.features.ai_studio.feat3_desc', 'A inteligência sabe exatamente como instanciar nossos componentes UI de alta performance como DataGrids avançados, seletores, filtros e modais interativos.'),
       icon: <Layers className="w-8 h-8 text-pink-500" />,
       color: "from-pink-500/20 to-rose-500/5",
       borderColor: "border-pink-500/20"
     },
     {
-      title: "Contexto do Schema",
-      desc: "A IA tem visão total sobre as tabelas e relacionamentos do projeto para garantir que o caso de uso gerado conectará no Supabase/banco corretamente na primeira tentativa.",
+      title: t('marketing_v2.features.ai_studio.feat4_title', 'Contexto do Schema'),
+      desc: t('marketing_v2.features.ai_studio.feat4_desc', 'A IA tem visão total sobre as tabelas e relacionamentos do projeto para garantir que o caso de uso gerado conectará no Supabase/banco corretamente na primeira tentativa.'),
       icon: <FileJson className="w-8 h-8 text-rose-500" />,
       color: "from-rose-500/20 to-orange-500/5",
       borderColor: "border-rose-500/20"
@@ -65,18 +65,18 @@ export default function AIStudioFeaturePage() {
         <div className="text-center max-w-5xl mx-auto mb-32 animate-fade-in-up">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-400 font-black text-xs uppercase tracking-widest mb-8 border border-violet-500/20 shadow-sm">
             <Sparkles className="w-4 h-4" />
-            MetaBuilder AI Studio
+            {t('marketing_v2.features.ai_studio.badge', 'MetaBuilder AI Studio')}
           </div>
           
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-8 leading-[1.05] tracking-tight text-neutral-900 dark:text-white">
-            Programação com <br />
+            {t('marketing_v2.features.ai_studio.hero_title_part1', 'Programação com')} <br />
             <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 dark:from-violet-400 dark:to-fuchsia-400 bg-clip-text text-transparent">
-              Inteligência Artificial.
+              {t('marketing_v2.features.ai_studio.hero_title_part2', 'Inteligência Artificial.')}
             </span>
           </h1>
           
           <p className="text-xl md:text-2xl text-neutral-600 dark:text-neutral-400 max-w-3xl mx-auto mb-12 leading-relaxed font-medium">
-            Desenvolva interfaces e fluxos de negócio em segundos. Descreva a tela que você precisa e a Inteligência Artificial configurada vai gerar código React perfeitamente integrado ao seu banco de dados.
+            {t('marketing_v2.features.ai_studio.hero_desc', 'Desenvolva interfaces e fluxos de negócio em segundos. Descreva a tela que você precisa e a Inteligência Artificial configurada vai gerar código React perfeitamente integrado ao seu banco de dados.')}
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -85,7 +85,7 @@ export default function AIStudioFeaturePage() {
               className="group relative px-10 py-5 bg-violet-600 hover:bg-violet-700 text-white font-black text-sm uppercase tracking-widest rounded-full shadow-2xl hover:shadow-violet-500/40 transition-all flex items-center gap-3 overflow-hidden hover:scale-105"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-              Experimente Grátis
+              {t('marketing_v2.features.ai_studio.hero_cta', 'Experimente Grátis')}
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
@@ -94,8 +94,8 @@ export default function AIStudioFeaturePage() {
         {/* Feature Bento Grid */}
         <div className="mb-32">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-black text-neutral-900 dark:text-white mb-4">Como funciona a Mágica?</h2>
-            <p className="text-neutral-500 text-lg">Um gerador avançado conectado ao contexto do seu banco.</p>
+            <h2 className="text-3xl md:text-4xl font-black text-neutral-900 dark:text-white mb-4">{t('marketing_v2.features.ai_studio.section_title', 'Como funciona a Mágica?')}</h2>
+            <p className="text-neutral-500 text-lg">{t('marketing_v2.features.ai_studio.section_desc', 'Um gerador avançado conectado ao contexto do seu banco.')}</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

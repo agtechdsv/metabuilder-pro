@@ -64,7 +64,7 @@ export default function BrandingFeaturePage() {
 
                 <div className="absolute bottom-6 right-6 flex items-center gap-2 px-3 py-1 bg-neutral-900 text-white rounded-full text-[9px] font-black uppercase tracking-tighter animate-bounce">
                    <MousePointer2 className="w-3 h-3" />
-                   Customize Now
+                   {t('marketing_v2.features.branding.customize_now', 'Personalize Agora')}
                 </div>
              </div>
           </div>
@@ -79,14 +79,14 @@ export default function BrandingFeaturePage() {
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-xs font-bold uppercase tracking-widest text-indigo-100 backdrop-blur-md border border-white/10">
               <Globe className="w-4 h-4" />
-              Novo Recurso Premium
+              {t('marketing_v2.features.branding.custom_domain_badge', 'Novo Recurso Premium')}
             </div>
             <h2 className="text-4xl md:text-5xl font-black tracking-tighter leading-tight">
-              Domínio Próprio <br/>
-              <span className="text-indigo-200">100% White-Label</span>
+              {t('marketing_v2.features.branding.custom_domain_title_part1', 'Domínio Próprio')} <br/>
+              <span className="text-indigo-200">{t('marketing_v2.features.branding.custom_domain_title_part2', '100% White-Label')}</span>
             </h2>
             <p className="text-lg text-indigo-100/80 leading-relaxed max-w-lg">
-              Ofereça o sistema para seus clientes usando a URL da sua própria empresa (ex: <strong>app.suaempresa.com</strong>). O MetaBuilder PRO roda de forma transparente com roteamento dinâmico e geração automática de certificados SSL gratuitos.
+              {t('marketing_v2.features.branding.custom_domain_desc', 'Ofereça o sistema para seus clientes usando a URL da sua própria empresa (ex: app.suaempresa.com). O MetaBuilder PRO roda de forma transparente com roteamento dinâmico e geração automática de certificados SSL gratuitos.')}
             </p>
           </div>
           
@@ -104,7 +104,7 @@ export default function BrandingFeaturePage() {
                  <div className="h-10 w-full bg-white/10 rounded-xl"></div>
                  <div className="h-10 w-full bg-white/10 rounded-xl"></div>
                  <div className="h-12 w-full bg-indigo-500 rounded-xl mt-4 flex items-center justify-center text-[10px] font-black uppercase tracking-widest text-white">
-                   Acessar Sistema
+                   {t('marketing_v2.features.branding.custom_domain_access_btn', 'Acessar Sistema')}
                  </div>
                </div>
             </div>

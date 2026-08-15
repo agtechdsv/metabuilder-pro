@@ -237,10 +237,10 @@ function AppointmentPageContent() {
       if (response.success) {
         setCurrentStep(4)
       } else {
-        setSubmitError(response.error || 'Erro ao agendar compromisso. Tente novamente.')
+        setSubmitError(response.error || t('scheduling.error_booking', 'Erro ao agendar compromisso. Tente novamente.'))
       }
     } catch (err) {
-      setSubmitError('Erro na conexão com o servidor. Tente novamente.')
+      setSubmitError(t('scheduling.error_connection', 'Erro na conexão com o servidor. Tente novamente.'))
     } finally {
       setIsSubmitting(false)
     }

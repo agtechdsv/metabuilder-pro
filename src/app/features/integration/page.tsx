@@ -35,7 +35,7 @@ export default function IntegrationFeaturePage() {
           <div className="relative p-8 rounded-[3rem] bg-[#0A0A0F] border border-white/10 shadow-3xl">
              <div className="flex items-center gap-2 mb-6">
                 <Terminal className="w-4 h-4 text-blue-400" />
-                <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest">Connection Console</span>
+                <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest">{t('marketing_v2.features.integration.console_title', 'Connection Console')}</span>
              </div>
              <div className="space-y-4 font-mono text-[12px] text-blue-300/80">
                 <p><span className="text-white">$</span> connect --adapter postgres --ssl true</p>

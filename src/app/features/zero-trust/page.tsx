@@ -55,7 +55,7 @@ export default function ZeroTrustFeaturePage() {
              </div>
              
              <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-black/50 border border-neutral-100 dark:white/5 font-mono text-[11px] text-indigo-400">
-                <p className="text-neutral-500"># Túnel estabelecido via WebSocket Seguro</p>
+                <p className="text-neutral-500">{t('marketing_v2.features.zero_trust.tunnel_status_msg', '# Túnel estabelecido via WebSocket Seguro')}</p>
                 <p>tunnel_id: mtb_live_9823</p>
                 <p>status: <span className="text-emerald-500">ENCRYPTED_AND_READY</span></p>
              </div>

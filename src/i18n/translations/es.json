@@ -8,7 +8,8 @@
     "cta_label": "¿QUIERES ELEVAR EL NIVEL TECNOLÓGICO DE TU PROYECTO?",
     "cta_button": "HABLA CON NUESTROS INGENIEROS",
     "security": "METABUILDERPRO SECURITY",
-    "compliance": "COMPLIANCE & PROTECCIÓN DE DATOS"
+    "compliance": "COMPLIANCE & PROTECCIÓN DE DATOS",
+    "engineering_title": "Ingeniería AGTech"
   },
   "legal": {
     "official_document": "Documento Oficial",
@@ -19,7 +20,10 @@
     "high_performance": "de Alto Rendimiento",
     "all_rights_reserved": "Todos los derechos reservados.",
     "privacy": "Privacidad",
-    "terms": "Términos"
+    "terms": "Términos",
+    "copyright": "© 2026 AG Tech Serviços de Informática Ltda. Todos los derechos reservados.",
+    "trademark": "MetaBuilder PRO™ es una marca comercial de",
+    "rights_reserved": "Todos los derechos reservados."
   },
   "privacy": {
     "title": "Política de Privacidad",
@@ -230,7 +234,8 @@
     "subtitle": "El motor definitivo para generar aplicaciones CRUD dinámicas orientadas a bases de datos sin tocar la generación de archivos físicos. Conecte su DB empresarial de forma segura.",
     "cta_start": "Empezar a Construir",
     "cta_demo": "Agendar demostración",
-    "demo_subtext": "Mucho más que una demostración técnica: una conversación para entender sus necesidades y asegurar que somos la solución ideal para sus proyectos."
+    "demo_subtext": "Mucho más que una demostración técnica: una conversación para entender sus necesidades y asegurar que somos la solución ideal para sus proyectos.",
+    "download_ide": "⬇ Descargar IDE Gratis"
   },
   "metavoice": {
     "title": "MetaVoice",
@@ -880,7 +885,13 @@
       "source_code": "Código Fuente (Export)",
       "logs": "Auditoría & Logs (CLI)",
       "ide": "IDE Nativo y Túnel",
-      "desktop": "Compilador Desktop"
+      "desktop": "Compilador Desktop",
+      "developers": "Desarrolladores",
+      "owners": "Propietarios",
+      "infrastructure": "Infraestructura",
+      "ide_desktop": "IDE de Escritorio (Pro)",
+      "git_architecture": "Arquitectura Git",
+      "ai_studio": "AI Studio"
     },
     "hero": {
       "badge": "El Motor de Software del Futuro",
@@ -983,7 +994,29 @@
       "pricing_btn_consultant": "Hablar con Asesor",
       "pricing_btn_checkout": "Completar Contratación",
       "pricing_equivalent": "Equivalente a",
-      "pricing_per_license": " / licencia"
+      "pricing_per_license": " / licencia",
+      "ide_badge": "IDE de Escritorio Exclusivo",
+      "ide_title_part1": "El paraíso para",
+      "ide_title_part2": "Pro Developers.",
+      "ide_desc": "Olvídate de las limitaciones de la nube. Nuestro IDE nativo ofrece control absoluto con BYOC (Bring Your Own Code), Terminal Integrado, SQL Studio avanzado local y Eyección total del código fuente.",
+      "ide_monaco": "Editor Monaco",
+      "ide_terminal": "Terminal Nativo",
+      "ide_sql": "SQL Studio Local",
+      "ide_logs": "Acceso a Logs",
+      "ide_cta": "Conoce el IDE",
+      "ai_badge": "AI Builder",
+      "ai_title_part1": "Casos de Uso con",
+      "ai_title_part2": "Inteligencia Artificial.",
+      "ai_desc": "Acelera tu desarrollo 100x. Solo describe lo que necesitas en lenguaje natural y la IA configurada escribirá todo el código React listo para producción, con formularios, grids y paneles interactivos.",
+      "ai_feat1": "Generación Inteligente",
+      "ai_feat2": "Código Nativo React",
+      "ai_cta": "Conoce AI Studio",
+      "zero_trust_local_db": "Tu Base de Datos Local",
+      "premium_feature_badge": "Nueva Función Premium",
+      "git_badge": "Seguridad Absoluta",
+      "git_title": "Desarrolla sin miedo a perder tu código.",
+      "git_desc": "MetaBuilder PRO utiliza una Arquitectura Invisible de 3 Ramas. Todo código generado por la Inteligencia Artificial se prueba en un Sandbox aislado antes de tocar tu trabajo local.",
+      "git_cta": "Entiende la Arquitectura"
     },
     "features": {
       "speed": {
@@ -1029,7 +1062,12 @@
         "item3_desc": "Soporte nativo para modo claro y oscuro por proyecto.",
         "footer_title": "No somos una plantilla.",
         "footer_subtitle": "Somos una plataforma de marca.",
-        "footer_cta": "Iniciar Configuración Visual"
+        "footer_cta": "Iniciar Configuración Visual",
+        "custom_domain_badge": "Nueva Función Premium",
+        "custom_domain_title_part1": "Dominio Propio",
+        "custom_domain_title_part2": "100% Marca Blanca",
+        "custom_domain_desc": "Ofrezca el sistema a sus clientes utilizando la URL de su propia empresa (ej: app.suempresa.com). MetaBuilder PRO se ejecuta de forma transparente con enrutamiento dinámico y generación automática de certificados SSL gratuitos.",
+        "custom_domain_access_btn": "Acceder al Sistema"
       },
       "zero_trust": {
         "title": "Arquitectura. Puente Zero-Trust.",
@@ -1125,6 +1163,78 @@
         "block2_desc": "La auditoría local es procesada ultra rápido por el binario del Túnel CLI. Defina políticas de retención para purgar automáticamente los registros antiguos y mantener el rendimiento de consultas a la base de datos totalmente optimizado.",
         "footer_title": "Control absoluto sobre sus datos.",
         "footer_desc": "Ya sea depurando una regla de negocio compleja en BPM, monitoreando consultas de escritura pesadas o auditando el acceso de los usuarios finales, nuestro motor de logs proporciona la transparencia necesaria para operaciones robustas."
+      },
+      "ai_studio": {
+        "badge": "MetaBuilder AI Studio",
+        "hero_title_part1": "Programación con",
+        "hero_title_part2": "Inteligencia Artificial.",
+        "hero_desc": "Desarrolla interfaces y flujos de negocio en segundos. Describe la pantalla que necesitas y la Inteligencia Artificial configurada generará código React perfectamente integrado con tu base de datos.",
+        "hero_cta": "Pruébalo Gratis",
+        "section_title": "¿Cómo funciona la Magia?",
+        "section_desc": "Un generador avanzado conectado al contexto de tu base de datos.",
+        "feat1_title": "Generación Inteligente",
+        "feat1_desc": "Describe la regla de negocio en lenguaje natural y la IA configurada interpretará el contexto de la base de datos, modelos y relaciones para crear la pantalla perfecta.",
+        "feat2_title": "Código React Nativo",
+        "feat2_desc": "El resultado generado no es una maqueta. Es código React.js funcional, optimizado y listo para producción, con formularios avanzados y lógica de estado moderna.",
+        "feat3_title": "Grids y Componentes",
+        "feat3_desc": "La inteligencia sabe exactamente cómo instanciar nuestros componentes UI de alto rendimiento como DataGrids avanzados, selectores, filtros y modales interactivos.",
+        "feat4_title": "Contexto de Schema",
+        "feat4_desc": "La IA tiene visión total sobre las tablas y relaciones del proyecto para garantizar que el caso de uso generado se conecte a Supabase/base de datos correctamente al primer intento."
+      },
+      "git_architecture": {
+        "hero_title_part1": "Git Sin Dolor:",
+        "hero_title_part2": "Triangulación de Ramas",
+        "hero_desc": "Desarrolla localmente mientras la IA programa en la nube. Nuestra arquitectura invisible aísla tu trabajo, fusiona actualizaciones automáticamente y garantiza que nunca pierdas una línea de código.",
+        "sandbox_title": "sync-sandbox",
+        "sandbox_desc": "El espacio aislado donde ambos mundos se encuentran con seguridad.",
+        "section_3branches_title": "La Arquitectura de 3 Ramas",
+        "section_3branches_desc": "MetaBuilder PRO construye un flujo Git empresarial dentro de tu máquina, ocultando todos los comandos difíciles. Entiende la Triangulación:",
+        "branch_local_title": "El Puerto Seguro",
+        "branch_local_badge": "branch: local",
+        "branch_local_desc": "Esta es la base de tu proyecto. Todo código que escribiste, configuraste y consideras estable reside aquí. Es tu disco en estado normal.",
+        "branch_local_desc_bold": "El IDE nunca altera esta rama sin tu aprobación explícita.",
+        "branch_upstream_title": "La Nube Pura",
+        "branch_upstream_badge": "branch: upstream",
+        "branch_upstream_desc": "La bóveda intocable. La única función de esta rama es recibir el código generado en Studio Web. Al sincronizar, descarga y guarda novedades aquí sin tocar tu trabajo actual.",
+        "branch_sandbox_title": "El Campo de Batalla",
+        "branch_sandbox_badge": "branch: sync-sandbox",
+        "branch_sandbox_desc": "La verdadera magia. El IDE copia tu Puerto Seguro y fusiona la Nube Pura sobre él dentro de este sandbox. Aquí puedes probar el Preview, experimentar y tomar decisiones sin miedo a equivocarte.",
+        "pro_code_title_part1": "¿Por qué Triangulación?",
+        "pro_code_title_part2": "Porque somos Pro-Code (High-Code).",
+        "pro_code_p1": "A diferencia de plataformas \"No-Code\" donde quedas atrapado en paneles sin ver el código fuente, MetaBuilder PRO genera una aplicación real en Next.js y React.",
+        "pro_code_p2": "Tienes acceso total mediante nuestro IDE integrado para escribir lógica compleja y crear componentes personalizados. La arquitectura de ramas existe para proteger TU código manual de las automatizaciones de IA.",
+        "control_title": "El Control Final Siempre es Tuyo",
+        "control_desc": "Tras la fusión en Sandbox, tienes el poder absoluto sobre el destino de tu código. Prueba localmente, edita archivos y valida los cambios. Al terminar, tienes dos botones:",
+        "confirm_merge_title": "Confirmar Merge",
+        "confirm_merge_desc": "¡Todo funciona! El IDE traslada el código del Sandbox permanentemente a tu Puerto Seguro (local).",
+        "discard_title": "Descartar",
+        "discard_desc": "¿La fusión se rompió o no te gustó el resultado? Haz clic en descartar. El Sandbox se esfuma al instante y tu código vuelve a ser el de antes.",
+        "revert_title": "Revertir Commit (Máquina del Tiempo)",
+        "revert_desc": "¿Hiciste cambios en el Sandbox y te arrepentiste? Vuelve a cualquier estado anterior en milisegundos con un solo clic.",
+        "terminal_title": "Terminal Oculto del IDE"
+      },
+      "ide": {
+        "badge": "MetaBuilder IDE Pro",
+        "hero_title_part1": "Poder de nube,",
+        "hero_title_part2": "libertad local.",
+        "hero_desc": "Desarrollado para el Pro Developer. MetaBuilder Desktop IDE ofrece un entorno sin restricciones, combinando modelado low-code con acceso nativo a la infraestructura de tu máquina.",
+        "hero_cta": "Descargar el IDE",
+        "pro_title": "Experiencia Pro Developer",
+        "pro_desc": "Control absoluto sobre tu código e infraestructura.",
+        "byoc_title": "BYOC (Bring Your Own Code)",
+        "byoc_desc": "Inyecta componentes React personalizados de forma nativa. El IDE incluye Monaco Editor integrado con resaltado de sintaxis y validaciones en tiempo real. Codifica sin salir de la plataforma.",
+        "pty_title": "Terminal PTY Integrado",
+        "pty_desc": "Acceso total a la consola de tu sistema directamente desde el IDE. Ejecuta comandos bash o PowerShell, scripts de base de datos y orquesta contenedores junto a tu proyecto.",
+        "sql_title": "SQL Studio Local",
+        "sql_desc": "Consola nativa para ejecutar consultas crudas (DDL y DML) contra tu base de datos local con 0ms de retraso de red. Sin intermediarios ni límites de la nube.",
+        "eject_title": "Eyección de Código Fuente",
+        "eject_desc": "Cero bloqueo de proveedor. En cualquier momento, genera y descarga el código fuente completo (Next.js / Node.js) de tu aplicación listo para ejecutarse donde desees.",
+        "infra_title": "Conectividad y Seguridad",
+        "infra_desc": "Funcionalidades empresariales integradas en tu entorno de desarrollo.",
+        "terminal_integrated": "Terminal Integrado",
+        "terminal_byoc_init": "Iniciando compilación del componente BYOC...",
+        "terminal_swc_compile": "Compilando dependencias locales con SWC",
+        "terminal_build_complete": "✓ Compilación completada en 2.4s"
       }
     },
     "use_cases_page": {
@@ -2283,7 +2393,9 @@
     "confirming_btn": "Confirmando...",
     "confirm_booking_btn": "Confirmar Cita",
     "google_meet_desc": "Videoconferência a través de Google Meet",
-    "zero_trust_desc": "Privacidad Zero-Trust"
+    "zero_trust_desc": "Privacidad Zero-Trust",
+    "error_booking": "Error al programar la cita. Por favor, inténtelo de nuevo.",
+    "error_connection": "Error de conexión con el servidor. Por favor, inténtelo de nuevo."
   },
   "sync_resolution": {
     "title": "Aviso de Sincronización",
@@ -2320,7 +2432,16 @@
         "title": "Autenticación Corporativa (LDAP)",
         "desc": "Habilite y conecte el Active Directory de la empresa cliente con un solo clic."
       }
-    }
+    },
+    "loading": "Cargando...",
+    "future_title_part1": "El futuro del",
+    "future_title_part2": "desarrollo",
+    "welcome_desc": "Bienvenido a MetaBuilder PRO IDE. Estructure interfaces premium, conecte bases de datos y genere código de alta calidad en tiempo récord.",
+    "native_perf_title": "Rendimiento Nativo",
+    "native_perf_desc": "Acceso directo al sistema de archivos local para generación ultrarrápida de código.",
+    "advanced_editor_title": "Editor Avanzado",
+    "advanced_editor_desc": "Inteligencia de metadados integrada directamente en su entorno de trabajo.",
+    "access_account": "Acceda a su cuenta"
   },
   "ide": {
     "byoc": {
@@ -2339,5 +2460,55 @@
       "eject_notif_title": "¡Proyecto Expulsado! 🎉",
       "eject_notif_body": "Archivos y dependencias instalados correctamente."
     }
+  },
+  "desktop_landing": {
+    "hero": {
+      "title_part1": "Compilador Desktop.",
+      "title_part2": "Nativo & Marca Blanca",
+      "desc": "Transforma tu proyecto o portal de aplicaciones de Workspace en una aplicación instalable de Windows (.msi) totalmente personalizada para tu cliente final."
+    },
+    "compilation": {
+      "status": "Panel de Compilación",
+      "running": "Compilando",
+      "step1_title": "1. Personalización de Marca Blanca",
+      "step1_desc": "Nombre del software, descripción e ícono de 512x512 aplicados con éxito.",
+      "step2_title": "2. Configuración de Túnel Seguro",
+      "step2_desc": "Credenciales y túnel del proyecto incrustados de forma nativa y segura.",
+      "step3_title": "3. Generación de MSI (Rust/Tauri)",
+      "step3_desc": "Compilando los binarios nativos de alto rendimiento en GitHub Actions..."
+    },
+    "pillars": {
+      "title": "Todo lo que necesitas",
+      "desc": "Olvídate de scripts complejos o compilaciones lentas en tu máquina local.",
+      "tauri": {
+        "title": "Compilación Rust & Tauri",
+        "desc": "Genera ejecutables ligeros, rápidos y seguros. El motor de compilación integrado genera instaladores MSI nativos para Windows en pocos minutos."
+      },
+      "tunnel": {
+        "title": "Túnel Local Integrado (Zero-Trust)",
+        "desc": "Accede y sincroniza datos locales de la infraestructura del cliente sin abrir puertos de firewall ni IPs públicas. Conexión cifrada de extremo a extremo."
+      },
+      "whitelabel": {
+        "title": "Personalización de Marca Blanca",
+        "desc": "Modifica el nombre de la app, descripción, ícono y colores para reflejar la marca de tu cliente. Entrega software propio de alta fidelidad sin mención a MetaBuilder."
+      },
+      "downloads": {
+        "title": "Centro de Descargas Activo",
+        "desc": "Publica el archivo de instalación automáticamente en el Centro de Descargas. Tus clientes pueden descargar, gestionar versiones y ejecutar instaladores con un solo clic."
+      }
+    }
+  },
+  "downloads_page": {
+    "badge": "Descargas",
+    "title": "Descargue MetaBuilder IDE",
+    "desc": "Acceda a la infraestructura de su máquina localmente con todo el poder de la nube. Cree su cuenta gratis desde la propia aplicación.",
+    "current_version": "Versión actual:",
+    "win_desc": "Windows 10 o superior (64 bits)",
+    "download_win": "Descargar para Windows",
+    "mac_desc": "macOS 11+ (Intel & Apple Silicon)",
+    "download_mac": "Descargar para Mac",
+    "linux_desc": "Ubuntu, Debian, Linux Mint (.deb)",
+    "download_linux": "Descargar para Linux",
+    "unavailable": "No disponible"
   }
 }

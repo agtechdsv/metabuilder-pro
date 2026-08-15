@@ -10,29 +10,29 @@ export default function IDEFeaturePage() {
 
   const proFeatures = [
     {
-      title: "BYOC (Bring Your Own Code)",
-      desc: "Injete componentes React customizados nativamente. A IDE conta com o poderoso Monaco Editor integrado, oferecendo syntax highlighting e validações em tempo real. Codifique sem sair da plataforma.",
+      title: t('marketing_v2.features.ide.byoc_title', 'BYOC (Bring Your Own Code)'),
+      desc: t('marketing_v2.features.ide.byoc_desc', 'Injete componentes React customizados nativamente. A IDE conta com o poderoso Monaco Editor integrado, oferecendo syntax highlighting e validações em tempo real. Codifique sem sair da plataforma.'),
       icon: <FileCode2 className="w-8 h-8 text-indigo-500" />,
       color: "from-indigo-500/20 to-blue-500/5",
       borderColor: "border-indigo-500/20"
     },
     {
-      title: "Terminal PTY Integrado",
-      desc: "Acesso total ao shell do seu sistema diretamente pela IDE. Execute comandos bash ou powershell, inicie scripts de banco de dados, gerencie dependências e orquestre containers lado a lado com seu projeto.",
+      title: t('marketing_v2.features.ide.pty_title', 'Terminal PTY Integrado'),
+      desc: t('marketing_v2.features.ide.pty_desc', 'Acesso total ao shell do seu sistema diretamente pela IDE. Execute comandos bash ou powershell, inicie scripts de banco de dados, gerencie dependências e orquestre containers lado a lado com seu projeto.'),
       icon: <Terminal className="w-8 h-8 text-emerald-500" />,
       color: "from-emerald-500/20 to-teal-500/5",
       borderColor: "border-emerald-500/20"
     },
     {
-      title: "SQL Studio Local",
-      desc: "Console nativo para rodar queries cruas (DDL e DML) contra a sua base de dados local com 0ms de delay de rede. Sem proxies e sem limitações impostas pela nuvem.",
+      title: t('marketing_v2.features.ide.sql_title', 'SQL Studio Local'),
+      desc: t('marketing_v2.features.ide.sql_desc', 'Console nativo para rodar queries cruas (DDL e DML) contra a sua base de dados local com 0ms de delay de rede. Sem proxies e sem limitações impostas pela nuvem.'),
       icon: <Database className="w-8 h-8 text-blue-500" />,
       color: "from-blue-500/20 to-cyan-500/5",
       borderColor: "border-blue-500/20"
     },
     {
-      title: "Ejeção de Código Fonte",
-      desc: "Sem vendor lock-in absoluto. A qualquer momento, gere e faça download do código fonte completo (Next.js / Node.js) da sua aplicação pronta para ser executada onde você quiser.",
+      title: t('marketing_v2.features.ide.eject_title', 'Ejeção de Código Fonte'),
+      desc: t('marketing_v2.features.ide.eject_desc', 'Sem vendor lock-in absoluto. A qualquer momento, gere e faça download do código fonte completo (Next.js / Node.js) da sua aplicação pronta para ser executada onde você quiser.'),
       icon: <Download className="w-8 h-8 text-purple-500" />,
       color: "from-purple-500/20 to-pink-500/5",
       borderColor: "border-purple-500/20"
@@ -71,18 +71,18 @@ export default function IDEFeaturePage() {
         <div className="text-center max-w-5xl mx-auto mb-32 animate-fade-in-up">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-black text-xs uppercase tracking-widest mb-8 border border-indigo-500/20 shadow-sm">
             <Cpu className="w-4 h-4" />
-            MetaBuilder IDE Pro
+            {t('marketing_v2.features.ide.badge', 'MetaBuilder IDE Pro')}
           </div>
           
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-8 leading-[1.05] tracking-tight text-neutral-900 dark:text-white">
-            Poder de nuvem, <br />
+            {t('marketing_v2.features.ide.hero_title_part1', 'Poder de nuvem,')} <br />
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
-              liberdade local.
+              {t('marketing_v2.features.ide.hero_title_part2', 'liberdade local.')}
             </span>
           </h1>
           
           <p className="text-xl md:text-2xl text-neutral-600 dark:text-neutral-400 max-w-3xl mx-auto mb-12 leading-relaxed font-medium">
-            Desenvolvida para o Pro Developer. A MetaBuilder IDE Desktop oferece um ambiente sem restrições, unindo modelagem low-code ao acesso nativo à infraestrutura da sua máquina.
+            {t('marketing_v2.features.ide.hero_desc', 'Desenvolvida para o Pro Developer. A MetaBuilder IDE Desktop oferece um ambiente sem restrições, unindo modelagem low-code ao acesso nativo à infraestrutura da sua máquina.')}
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -91,7 +91,7 @@ export default function IDEFeaturePage() {
               className="group relative px-10 py-5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm uppercase tracking-widest rounded-full shadow-2xl hover:shadow-indigo-500/40 transition-all flex items-center gap-3 overflow-hidden hover:scale-105"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-              Download da IDE
+              {t('marketing_v2.features.ide.hero_cta', 'Download da IDE')}
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
@@ -100,8 +100,8 @@ export default function IDEFeaturePage() {
         {/* Feature Bento Grid (Pro Developer) */}
         <div className="mb-32">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-black text-neutral-900 dark:text-white mb-4">Experiência Pro Developer</h2>
-            <p className="text-neutral-500 text-lg">Controle absoluto sobre o seu código e infraestrutura.</p>
+            <h2 className="text-3xl md:text-4xl font-black text-neutral-900 dark:text-white mb-4">{t('marketing_v2.features.ide.pro_title', 'Experiência Pro Developer')}</h2>
+            <p className="text-neutral-500 text-lg">{t('marketing_v2.features.ide.pro_desc', 'Controle absoluto sobre o seu código e infraestrutura.')}</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -129,8 +129,8 @@ export default function IDEFeaturePage() {
         {/* Infra features */}
         <div className="mb-32">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-black text-neutral-900 dark:text-white mb-4">Conectividade e Segurança</h2>
-            <p className="text-neutral-500 text-lg">Funcionalidades empresariais embutidas no seu ambiente de desenvolvimento.</p>
+            <h2 className="text-3xl md:text-4xl font-black text-neutral-900 dark:text-white mb-4">{t('marketing_v2.features.ide.infra_title', 'Conectividade e Segurança')}</h2>
+            <p className="text-neutral-500 text-lg">{t('marketing_v2.features.ide.infra_desc', 'Funcionalidades empresariais embutidas no seu ambiente de desenvolvimento.')}</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -200,11 +200,11 @@ export default function IDEFeaturePage() {
                   {/* Terminal Panel */}
                   <div className="h-48 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-black p-4 font-mono text-[12px] overflow-hidden flex flex-col relative">
                      <div className="flex items-center gap-2 mb-2 text-neutral-500 font-bold uppercase tracking-wider text-[10px]">
-                       <Terminal className="w-3 h-3" /> Terminal Integrado
+                       <Terminal className="w-3 h-3" /> {t('marketing_v2.features.ide.terminal_integrated', 'Terminal Integrado')}
                      </div>
-                     <p className="text-neutral-500 mb-1">Iniciando compilação do componente BYOC...</p>
-                     <p className="text-neutral-800 dark:text-neutral-300">Compilando dependências locais com SWC</p>
-                     <p className="text-emerald-600 dark:text-emerald-400 mt-1">✓ Build completada em 2.4s</p>
+                     <p className="text-neutral-500 mb-1">{t('marketing_v2.features.ide.terminal_byoc_init', 'Iniciando compilação do componente BYOC...')}</p>
+                     <p className="text-neutral-800 dark:text-neutral-300">{t('marketing_v2.features.ide.terminal_swc_compile', 'Compilando dependências locais com SWC')}</p>
+                     <p className="text-emerald-600 dark:text-emerald-400 mt-1">{t('marketing_v2.features.ide.terminal_build_complete', '✓ Build completada em 2.4s')}</p>
                      <div className="mt-2 flex items-center gap-2">
                        <span className="text-green-600 dark:text-green-400">C:\Projects\MetaApp&gt;</span>
                        <span className="w-2 h-4 bg-neutral-800 dark:bg-neutral-300 animate-pulse"></span>

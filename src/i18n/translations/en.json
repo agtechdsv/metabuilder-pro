@@ -8,7 +8,8 @@
     "cta_label": "WANT TO ELEVATE THE TECHNOLOGY LEVEL OF YOUR PROJECT?",
     "cta_button": "TALK TO OUR ENGINEERS",
     "security": "METABUILDERPRO SECURITY",
-    "compliance": "COMPLIANCE & DATA PROTECTION"
+    "compliance": "COMPLIANCE & DATA PROTECTION",
+    "engineering_title": "AGTech Engineering"
   },
   "legal": {
     "official_document": "Official Document",
@@ -19,7 +20,10 @@
     "high_performance": "High Performance",
     "all_rights_reserved": "All rights reserved.",
     "privacy": "Privacy",
-    "terms": "Terms"
+    "terms": "Terms",
+    "copyright": "© 2026 AG Tech Serviços de Informática Ltda. All rights reserved.",
+    "trademark": "MetaBuilder PRO™ is a trademark of",
+    "rights_reserved": "All rights reserved."
   },
   "privacy": {
     "title": "Privacy Policy",
@@ -152,7 +156,8 @@
     "subtitle": "The ultimate engine for generating dynamic, database-driven CRUD applications without ever touching physical file generation. Connect your enterprise DB securely.",
     "cta_start": "Start Building Now",
     "cta_demo": "Schedule demo",
-    "demo_subtext": "Much more than a technical demo: a conversation to understand your needs and ensure we are the ideal solution for your projects."
+    "demo_subtext": "Much more than a technical demo: a conversation to understand your needs and ensure we are the ideal solution for your projects.",
+    "download_ide": "⬇ Download IDE for Free"
   },
   "metavoice": {
     "title": "MetaVoice",
@@ -802,7 +807,13 @@
       "source_code": "Source Code (Export)",
       "logs": "Audit & Logs (CLI)",
       "ide": "Native IDE & Tunnel",
-      "desktop": "Desktop Compiler"
+      "desktop": "Desktop Compiler",
+      "developers": "Developers",
+      "owners": "Owners",
+      "infrastructure": "Infrastructure",
+      "ide_desktop": "Desktop IDE (Pro)",
+      "git_architecture": "Git Architecture",
+      "ai_studio": "AI Studio"
     },
     "hero": {
       "badge": "The Software Engine of the Future",
@@ -905,7 +916,29 @@
       "pricing_btn_consultant": "Talk to Consultant",
       "pricing_btn_checkout": "Checkout Now",
       "pricing_equivalent": "Equivalent to",
-      "pricing_per_license": " / license"
+      "pricing_per_license": " / license",
+      "ide_badge": "Exclusive Desktop IDE",
+      "ide_title_part1": "Paradise for",
+      "ide_title_part2": "Pro Developers.",
+      "ide_desc": "Forget cloud limitations. Our native IDE provides absolute control with BYOC (Bring Your Own Code), Integrated Terminal, advanced local SQL Studio, and full source code Ejection.",
+      "ide_monaco": "Monaco Editor",
+      "ide_terminal": "Native Terminal",
+      "ide_sql": "Local SQL Studio",
+      "ide_logs": "Log Access",
+      "ide_cta": "Explore the IDE",
+      "ai_badge": "AI Builder",
+      "ai_title_part1": "Use Cases with",
+      "ai_title_part2": "Artificial Intelligence.",
+      "ai_desc": "Accelerate your development 100x. Just describe what you need in natural language and the configured AI writes production-ready React code with forms, grids, and interactive panels.",
+      "ai_feat1": "Intelligent Generation",
+      "ai_feat2": "Native React Code",
+      "ai_cta": "Explore AI Studio",
+      "zero_trust_local_db": "Your Local Database",
+      "premium_feature_badge": "New Premium Feature",
+      "git_badge": "Absolute Security",
+      "git_title": "Develop without fear of losing your code.",
+      "git_desc": "MetaBuilder PRO uses an Invisible 3-Branch Architecture. All AI-generated code is tested in an isolated Sandbox before touching your local work.",
+      "git_cta": "Understand Architecture"
     },
     "features": {
       "speed": {
@@ -951,7 +984,12 @@
         "item3_desc": "Native support for Light and Dark mode per project.",
         "footer_title": "We are not a template.",
         "footer_subtitle": "We are a branding platform.",
-        "footer_cta": "Start Visual Configuration"
+        "footer_cta": "Start Visual Configuration",
+        "custom_domain_badge": "New Premium Feature",
+        "custom_domain_title_part1": "Custom Domain",
+        "custom_domain_title_part2": "100% White-Label",
+        "custom_domain_desc": "Offer the system to your clients using your own company URL (e.g., app.yourcompany.com). MetaBuilder PRO runs transparently with dynamic routing and automatic free SSL certificate generation.",
+        "custom_domain_access_btn": "Access System"
       },
       "zero_trust": {
         "title": "Architecture. Zero-Trust Bridge.",
@@ -1047,6 +1085,78 @@
         "block2_desc": "Local auditing is processed ultra-fast by the Tunnel CLI binary. Define retention policies to automatically purge old records and keep database query performance fully optimized.",
         "footer_title": "Absolute control over your data.",
         "footer_desc": "Whether debugging a complex business rule in BPM, monitoring heavy write queries, or auditing final user access, our logging engine provides the transparency required for robust operations."
+      },
+      "ai_studio": {
+        "badge": "MetaBuilder AI Studio",
+        "hero_title_part1": "Programming with",
+        "hero_title_part2": "Artificial Intelligence.",
+        "hero_desc": "Build interfaces and business workflows in seconds. Describe the screen you need and the configured AI generates React code perfectly integrated with your database.",
+        "hero_cta": "Try for Free",
+        "section_title": "How Does the Magic Work?",
+        "section_desc": "An advanced generator connected to your database context.",
+        "feat1_title": "Intelligent Generation",
+        "feat1_desc": "Describe the business rule in natural language and the AI will interpret database context, models, and relationships to create the perfect UI.",
+        "feat2_title": "Native React Code",
+        "feat2_desc": "The generated result is not a mockup. It is functional, optimized, production-ready React.js code with advanced state logic and forms.",
+        "feat3_title": "Grids and Components",
+        "feat3_desc": "The AI knows exactly how to instantiate our high-performance UI components like advanced DataGrids, selectors, filters, and interactive modals.",
+        "feat4_title": "Schema Context",
+        "feat4_desc": "The AI has full visibility into project tables and relationships to ensure the generated use case connects to Supabase/database correctly on the first try."
+      },
+      "git_architecture": {
+        "hero_title_part1": "Painless Git:",
+        "hero_title_part2": "Branch Triangulation",
+        "hero_desc": "Develop locally while AI codes in the cloud. Our invisible architecture isolates your work, merges updates automatically, and ensures you never lose a line of code.",
+        "sandbox_title": "sync-sandbox",
+        "sandbox_desc": "The sandbox where both worlds meet securely.",
+        "section_3branches_title": "The 3-Branch Architecture",
+        "section_3branches_desc": "MetaBuilder PRO builds an enterprise Git workflow inside your machine, hiding all complex commands from you. Understand Triangulation:",
+        "branch_local_title": "The Safe Harbor",
+        "branch_local_badge": "branch: local",
+        "branch_local_desc": "This is your project's foundation. All code you typed, configured, and consider stable stays here. It is your normal disk state.",
+        "branch_local_desc_bold": "The IDE never changes this branch without your explicit approval.",
+        "branch_upstream_title": "The Pure Cloud",
+        "branch_upstream_badge": "branch: upstream",
+        "branch_upstream_desc": "The untouched vault. The sole role of this branch is to receive raw code generated in Studio Web. When you click Sync, it downloads and stores updates here without touching your active work.",
+        "branch_sandbox_title": "The Battlefield",
+        "branch_sandbox_badge": "branch: sync-sandbox",
+        "branch_sandbox_desc": "The real magic. The IDE copies your Safe Harbor and merges Pure Cloud on top of it inside this sandbox. This is where you preview, test, and make decisions without risk.",
+        "pro_code_title_part1": "Why Triangulation?",
+        "pro_code_title_part2": "Because we are Pro-Code (High-Code).",
+        "pro_code_p1": "Unlike \"No-Code\" platforms that trap you in black-box dashboards with no source access, MetaBuilder PRO generates real Next.js and React applications.",
+        "pro_code_p2": "You have full access through our built-in IDE to write complex logic and custom components. The branch architecture exists precisely to protect YOUR manual code from AI automations.",
+        "control_title": "The Final Control is Always Yours",
+        "control_desc": "After merging in the Sandbox, you have absolute control over your code's destiny. Test locally, edit files, and validate changes. When finished, you have options:",
+        "confirm_merge_title": "Confirm Merge",
+        "confirm_merge_desc": "Everything works! The IDE moves Sandbox code permanently into your Safe Harbor (local).",
+        "discard_title": "Discard",
+        "discard_desc": "Did the merge break or you dislike the result? Click discard. The Sandbox is wiped instantly and your code reverts to exactly how it was.",
+        "revert_title": "Revert Commit (Time Machine)",
+        "revert_desc": "Made changes inside Sandbox and changed your mind? Roll back to any previous state in milliseconds with one click.",
+        "terminal_title": "IDE Hidden Terminal"
+      },
+      "ide": {
+        "badge": "MetaBuilder IDE Pro",
+        "hero_title_part1": "Cloud power,",
+        "hero_title_part2": "local freedom.",
+        "hero_desc": "Built for Pro Developers. MetaBuilder Desktop IDE provides an unrestricted environment, combining low-code modeling with native machine infrastructure access.",
+        "hero_cta": "Download IDE",
+        "pro_title": "Pro Developer Experience",
+        "pro_desc": "Absolute control over your code and infrastructure.",
+        "byoc_title": "BYOC (Bring Your Own Code)",
+        "byoc_desc": "Natively inject custom React components. The IDE includes Monaco Editor with real-time syntax highlighting and validation. Code without leaving the platform.",
+        "pty_title": "Integrated PTY Terminal",
+        "pty_desc": "Full shell access directly from the IDE. Run bash or PowerShell commands, database scripts, package managers, and container orchestration alongside your project.",
+        "sql_title": "Local SQL Studio",
+        "sql_desc": "Native console to run raw queries (DDL & DML) against your local database with 0ms network latency. No proxies and no cloud limitations.",
+        "eject_title": "Source Code Ejection",
+        "eject_desc": "Zero vendor lock-in. Generate and download full source code (Next.js / Node.js) for your application ready to deploy anywhere.",
+        "infra_title": "Connectivity & Security",
+        "infra_desc": "Enterprise features embedded into your development environment.",
+        "terminal_integrated": "Integrated Terminal",
+        "terminal_byoc_init": "Starting BYOC component compilation...",
+        "terminal_swc_compile": "Compiling local dependencies with SWC",
+        "terminal_build_complete": "✓ Build completed in 2.4s"
       }
     },
     "use_cases_page": {
@@ -2208,7 +2318,9 @@
     "confirming_btn": "Confirming...",
     "confirm_booking_btn": "Confirm Appointment",
     "google_meet_desc": "Video conference via Google Meet",
-    "zero_trust_desc": "Zero-Trust Privacy"
+    "zero_trust_desc": "Zero-Trust Privacy",
+    "error_booking": "Error scheduling appointment. Please try again.",
+    "error_connection": "Server connection error. Please try again."
   },
   "sync_resolution": {
     "title": "Sync Notice",
@@ -2245,7 +2357,16 @@
         "title": "Corporate Authentication (LDAP)",
         "desc": "Enable and connect the client company's Active Directory with just one click."
       }
-    }
+    },
+    "loading": "Loading...",
+    "future_title_part1": "The future of",
+    "future_title_part2": "development",
+    "welcome_desc": "Welcome to MetaBuilder PRO IDE. Structure premium interfaces, connect databases, and generate top-quality code in record time.",
+    "native_perf_title": "Native Performance",
+    "native_perf_desc": "Direct local filesystem access for ultra-fast code generation.",
+    "advanced_editor_title": "Advanced Editor",
+    "advanced_editor_desc": "Integrated metadata intelligence directly in your workspace.",
+    "access_account": "Sign in to your account"
   },
   "ide": {
     "byoc": {
@@ -2264,5 +2385,55 @@
       "eject_notif_title": "Project Ejected! 🎉",
       "eject_notif_body": "Files and dependencies installed successfully."
     }
+  },
+  "desktop_landing": {
+    "hero": {
+      "title_part1": "Desktop Compiler.",
+      "title_part2": "Native & White-Label",
+      "desc": "Transform your project or Workspace applications portal into an installable Windows (.msi) app customized for your end client."
+    },
+    "compilation": {
+      "status": "Compilation Dashboard",
+      "running": "Compiling",
+      "step1_title": "1. White-Label Customization",
+      "step1_desc": "Software name, description, and 512x512 icon applied successfully.",
+      "step2_title": "2. Secure Tunnel Configuration",
+      "step2_desc": "Project credentials and secure tunnel embedded natively.",
+      "step3_title": "3. MSI Generation (Rust/Tauri)",
+      "step3_desc": "Compiling high-performance native binaries on GitHub Actions..."
+    },
+    "pillars": {
+      "title": "Everything You Need",
+      "desc": "Forget complex scripts or slow builds on your local computer.",
+      "tauri": {
+        "title": "Rust & Tauri Compilation",
+        "desc": "Generate lightweight, fast, and secure executables. The built-in compilation engine produces native Windows MSI installers in minutes."
+      },
+      "tunnel": {
+        "title": "Integrated Local Tunnel (Zero-Trust)",
+        "desc": "Access and synchronize client infrastructure data without opening firewall ports or public IPs. End-to-end encrypted connection."
+      },
+      "whitelabel": {
+        "title": "White-Label Personalization",
+        "desc": "Customize app name, description, icon, and colors to match your client's brand. Deliver high-fidelity software with zero MetaBuilder mentions."
+      },
+      "downloads": {
+        "title": "Active Downloads Center",
+        "desc": "Publish installer files directly to the Downloads Center. Your clients can download, manage versions, and launch installers with one click."
+      }
+    }
+  },
+  "downloads_page": {
+    "badge": "Downloads",
+    "title": "Download MetaBuilder IDE",
+    "desc": "Access local machine infrastructure with full cloud capabilities. Create your account for free directly within the app.",
+    "current_version": "Current version:",
+    "win_desc": "Windows 10 or later (64-bit)",
+    "download_win": "Download for Windows",
+    "mac_desc": "macOS 11+ (Intel & Apple Silicon)",
+    "download_mac": "Download for Mac",
+    "linux_desc": "Ubuntu, Debian, Linux Mint (.deb)",
+    "download_linux": "Download for Linux",
+    "unavailable": "Unavailable"
   }
 }

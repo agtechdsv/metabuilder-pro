@@ -23,11 +23,11 @@ export default function GitArchitectureFeaturePage() {
             <GitBranch className="w-8 h-8" />
           </div>
           <h1 className="text-5xl md:text-7xl font-black tracking-tighter dark:text-white leading-[1]">
-            Git Sem Dor: <br />
-            <span className="bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">Triangulação de Branches</span>
+            {t('marketing_v2.features.git_architecture.hero_title_part1', 'Git Sem Dor:')} <br />
+            <span className="bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">{t('marketing_v2.features.git_architecture.hero_title_part2', 'Triangulação de Branches')}</span>
           </h1>
           <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
-            Desenvolva localmente enquanto a IA programa na nuvem. Nossa arquitetura invisível isola o seu trabalho, funde as atualizações automaticamente e garante que você nunca perca uma linha de código.
+            {t('marketing_v2.features.git_architecture.hero_desc', 'Desenvolva localmente enquanto a IA programa na nuvem. Nossa arquitetura invisível isola o seu trabalho, funde as atualizações automaticamente e garante que você nunca perca uma linha de código.')}
           </p>
         </div>
 
@@ -42,8 +42,8 @@ export default function GitArchitectureFeaturePage() {
                 <div className="absolute inset-0 rounded-full border border-indigo-500 animate-ping opacity-20"></div>
                 <GitMerge className="w-10 h-10 text-indigo-400" />
               </div>
-              <h3 className="text-xl font-bold mb-2">sync-sandbox</h3>
-              <p className="text-sm text-neutral-400 text-center max-w-[200px]">A caixa de areia onde os dois mundos se encontram com segurança.</p>
+              <h3 className="text-xl font-bold mb-2">{t('marketing_v2.features.git_architecture.sandbox_title', 'sync-sandbox')}</h3>
+              <p className="text-sm text-neutral-400 text-center max-w-[200px]">{t('marketing_v2.features.git_architecture.sandbox_desc', 'A caixa de areia onde os dois mundos se encontram com segurança.')}</p>
             </div>
           </div>
         </div>
@@ -52,9 +52,9 @@ export default function GitArchitectureFeaturePage() {
       {/* As 3 Branches */}
       <section className="space-y-16">
         <div className="text-center space-y-4 max-w-3xl mx-auto">
-          <h2 className="text-4xl font-bold dark:text-white">A Arquitetura de 3 Branches</h2>
+          <h2 className="text-4xl font-bold dark:text-white">{t('marketing_v2.features.git_architecture.section_3branches_title', 'A Arquitetura de 3 Branches')}</h2>
           <p className="text-neutral-500 dark:text-neutral-400 text-lg">
-            O MetaBuilder PRO constrói um fluxo Git corporativo dentro do seu computador, mas esconde todos os comandos difíceis de você. Entenda a Triangulação:
+            {t('marketing_v2.features.git_architecture.section_3branches_desc', 'O MetaBuilder PRO constrói um fluxo Git corporativo dentro do seu computador, mas esconde todos os comandos difíceis de você. Entenda a Triangulação:')}
           </p>
         </div>
 
@@ -66,10 +66,10 @@ export default function GitArchitectureFeaturePage() {
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-xl font-bold dark:text-white mb-2">O Porto Seguro</h3>
-              <div className="text-xs font-mono text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded inline-block mb-4">branch: local</div>
+              <h3 className="text-xl font-bold dark:text-white mb-2">{t('marketing_v2.features.git_architecture.branch_local_title', 'O Porto Seguro')}</h3>
+              <div className="text-xs font-mono text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded inline-block mb-4">{t('marketing_v2.features.git_architecture.branch_local_badge', 'branch: local')}</div>
               <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed">
-                Esta é a base do seu projeto. Todo código que você digitou, configurou e considera "pronto e estável" fica aqui. É o seu HD em estado normal. <strong>A IDE nunca altera essa branch sem a sua aprovação explícita.</strong>
+                {t('marketing_v2.features.git_architecture.branch_local_desc', 'Esta é a base do seu projeto. Todo código que você digitou, configurou e considera "pronto e estável" fica aqui. É o seu HD em estado normal.')} <strong>{t('marketing_v2.features.git_architecture.branch_local_desc_bold', 'A IDE nunca altera essa branch sem a sua aprovação explícita.')}</strong>
               </p>
             </div>
           </div>
@@ -81,10 +81,10 @@ export default function GitArchitectureFeaturePage() {
               <Database className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-xl font-bold dark:text-white mb-2">A Nuvem Pura</h3>
-              <div className="text-xs font-mono text-cyan-500 bg-cyan-500/10 px-2 py-1 rounded inline-block mb-4">branch: upstream</div>
+              <h3 className="text-xl font-bold dark:text-white mb-2">{t('marketing_v2.features.git_architecture.branch_upstream_title', 'A Nuvem Pura')}</h3>
+              <div className="text-xs font-mono text-cyan-500 bg-cyan-500/10 px-2 py-1 rounded inline-block mb-4">{t('marketing_v2.features.git_architecture.branch_upstream_badge', 'branch: upstream')}</div>
               <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed">
-                O cofre intocável. O único papel desta branch é receber o código cru gerado pelo dev no Studio Web. Quando você clica em Sincronizar, ela faz o download e armazena as novidades aqui, sem tocar no seu trabalho atual.
+                {t('marketing_v2.features.git_architecture.branch_upstream_desc', 'O cofre intocável. O único papel desta branch é receber o código cru gerado pelo dev no Studio Web. Quando você clica em Sincronizar, ela faz o download e armazena as novidades aqui, sem tocar no seu trabalho atual.')}
               </p>
             </div>
           </div>
@@ -96,10 +96,10 @@ export default function GitArchitectureFeaturePage() {
               <GitMerge className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-xl font-bold dark:text-white mb-2">O Campo de Batalha</h3>
-              <div className="text-xs font-mono text-indigo-500 bg-indigo-500/10 px-2 py-1 rounded inline-block mb-4">branch: sync-sandbox</div>
+              <h3 className="text-xl font-bold dark:text-white mb-2">{t('marketing_v2.features.git_architecture.branch_sandbox_title', 'O Campo de Batalha')}</h3>
+              <div className="text-xs font-mono text-indigo-500 bg-indigo-500/10 px-2 py-1 rounded inline-block mb-4">{t('marketing_v2.features.git_architecture.branch_sandbox_badge', 'branch: sync-sandbox')}</div>
               <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed">
-                A verdadeira mágica. A IDE copia o seu "Porto Seguro" e funde a "Nuvem Pura" em cima dele dentro desta caixa de areia. É aqui que você testa o Preview, experimenta e toma decisões sem medo de errar.
+                {t('marketing_v2.features.git_architecture.branch_sandbox_desc', 'A verdadeira mágica. A IDE copia o seu "Porto Seguro" e funde a "Nuvem Pura" em cima dele dentro desta caixa de areia. É aqui que você testa o Preview, experimenta e toma decisões sem medo de errar.')}
               </p>
             </div>
           </div>
@@ -120,14 +120,14 @@ export default function GitArchitectureFeaturePage() {
             <Code2 className="w-8 h-8" />
           </div>
           <h2 className="text-4xl md:text-5xl font-black tracking-tighter dark:text-white leading-[1.1]">
-            Por que Triangulação? <br/>
-            Porque somos <span className="bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">Pro-Code (High-Code).</span>
+            {t('marketing_v2.features.git_architecture.pro_code_title_part1', 'Por que Triangulação?')} <br/>
+            {t('marketing_v2.features.git_architecture.pro_code_title_part2', 'Porque somos Pro-Code (High-Code).')}
           </h2>
           <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
-            Diferente de plataformas "No-Code" onde você fica preso em painéis e não vê o código fonte, o MetaBuilder PRO gera uma aplicação real em <strong>Next.js e React</strong>.
+            {t('marketing_v2.features.git_architecture.pro_code_p1', 'Diferente de plataformas "No-Code" onde você fica preso em painéis e não vê o código fonte, o MetaBuilder PRO gera uma aplicação real em Next.js e React.')}
           </p>
           <p className="text-lg text-neutral-500 dark:text-neutral-400 leading-relaxed">
-            Você tem acesso total através do nosso IDE embutido, podendo escrever lógicas complexas e criar componentes personalizados. A arquitetura de branches existe exatamente para proteger o SEU código manual das automações da Inteligência Artificial.
+            {t('marketing_v2.features.git_architecture.pro_code_p2', 'Você tem acesso total através do nosso IDE embutido, podendo escrever lógicas complexas e criar componentes personalizados. A arquitetura de branches existe exatamente para proteger o SEU código manual das automações da Inteligência Artificial.')}
           </p>
         </div>
       </section>
@@ -136,30 +136,30 @@ export default function GitArchitectureFeaturePage() {
       <section className="bg-neutral-50 dark:bg-neutral-900/30 rounded-3xl p-8 md:p-12 border border-neutral-200 dark:border-neutral-800">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
-            <h3 className="text-3xl font-bold dark:text-white">O Controle Final é Sempre Seu</h3>
+            <h3 className="text-3xl font-bold dark:text-white">{t('marketing_v2.features.git_architecture.control_title', 'O Controle Final é Sempre Seu')}</h3>
             <p className="text-neutral-500 dark:text-neutral-400">
-              Após a fusão na Sandbox, você tem o poder absoluto sobre o destino do seu código. Teste no navegador local, modifique arquivos e valide as alterações. Quando terminar, você tem dois botões:
+              {t('marketing_v2.features.git_architecture.control_desc', 'Após a fusão na Sandbox, você tem o poder absoluto sobre o destino do seu código. Teste no navegador local, modifique arquivos e valide as alterações. Quando terminar, você tem dois botões:')}
             </p>
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
                 <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0 mt-0.5" />
                 <div>
-                  <strong className="dark:text-white block">Confirmar Merge</strong>
-                  <span className="text-sm text-neutral-500">Tudo funciona! A IDE transporta o código da Sandbox permanentemente para o seu Porto Seguro (local).</span>
+                  <strong className="dark:text-white block">{t('marketing_v2.features.git_architecture.confirm_merge_title', 'Confirmar Merge')}</strong>
+                  <span className="text-sm text-neutral-500">{t('marketing_v2.features.git_architecture.confirm_merge_desc', 'Tudo funciona! A IDE transporta o código da Sandbox permanentemente para o seu Porto Seguro (local).')}</span>
                 </div>
               </li>
               <li className="flex items-start gap-3">
                 <ShieldAlert className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
                 <div>
-                  <strong className="dark:text-white block">Descartar</strong>
-                  <span className="text-sm text-neutral-500">A fusão quebrou? Você não gostou do resultado? Clique em descartar. A Sandbox é evaporada instantaneamente e seu código volta a ser o que era antes.</span>
+                  <strong className="dark:text-white block">{t('marketing_v2.features.git_architecture.discard_title', 'Descartar')}</strong>
+                  <span className="text-sm text-neutral-500">{t('marketing_v2.features.git_architecture.discard_desc', 'A fusão quebrou? Você não gostou do resultado? Clique em descartar. A Sandbox é evaporada instantaneamente e seu código volta a ser o que era antes.')}</span>
                 </div>
               </li>
               <li className="flex items-start gap-3">
                 <History className="w-6 h-6 text-orange-500 shrink-0 mt-0.5" />
                 <div>
-                  <strong className="dark:text-white block">Reverter Commit (Máquina do Tempo)</strong>
-                  <span className="text-sm text-neutral-500">Fez alterações dentro da Sandbox e se arrependeu? Volte para qualquer estado anterior em milissegundos com um clique.</span>
+                  <strong className="dark:text-white block">{t('marketing_v2.features.git_architecture.revert_title', 'Reverter Commit (Máquina do Tempo)')}</strong>
+                  <span className="text-sm text-neutral-500">{t('marketing_v2.features.git_architecture.revert_desc', 'Fez alterações dentro da Sandbox e se arrependeu? Volte para qualquer estado anterior em milissegundos com um clique.')}</span>
                 </div>
               </li>
             </ul>
@@ -169,7 +169,7 @@ export default function GitArchitectureFeaturePage() {
             <div className="relative bg-black border border-neutral-800 rounded-2xl p-6 shadow-2xl font-mono text-sm text-neutral-400 space-y-3">
               <div className="flex items-center gap-2 mb-4 pb-4 border-b border-neutral-800">
                 <Terminal className="w-4 h-4 text-neutral-500" />
-                <span className="text-neutral-300">Terminal Oculto da IDE</span>
+                <span className="text-neutral-300">{t('marketing_v2.features.git_architecture.terminal_title', 'Terminal Oculto da IDE')}</span>
               </div>
               <p>$ git checkout local -b sync-sandbox</p>
               <p>$ git merge upstream</p>
