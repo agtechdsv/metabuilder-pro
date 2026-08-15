@@ -364,27 +364,9 @@ export function StudioDashboardClient({
     }
   }
 
-  const handleGenerateWithAI = async () => {
-    setIsCheckingAI(true)
-    try {
-      const res = await fetch(`/api/ai-builder/config?workspace_id=${workspace.id}`)
-      const data = await res.json()
-      
-      if (!data.config) {
-        if (workspace.owner_id === user.id) {
-          setIsAISettingsModalOpen(true)
-        } else {
-          toast('A IA não está configurada! Por favor, solicite ao administrador/owner do workspace que adicione a Chave de API da IA nas configurações.', 'error')
-        }
-        return
-      }
-      
-      router.push(`/admin/${workspace_slug}/${project_slug}/studio/ai-builder`)
-    } catch (e: any) {
-      toast('Erro ao verificar configurações da IA.', 'error')
-    } finally {
-      setIsCheckingAI(false)
-    }
+  const handleGenerateWithAI = () => {
+    setViewToEdit(null)
+    setViewMode('ai-editor')
   }
 
   const handleDeleteView = async () => {
@@ -886,7 +868,7 @@ export function StudioDashboardClient({
           </div>
         )}
 
-        {viewMode === 'ai-editor' && viewToEdit ? (
+        {viewMode === 'ai-editor' ? (
           <div className="flex flex-col h-[calc(100vh-200px)] min-h-0 bg-white dark:bg-neutral-950 rounded-2xl shadow-xl overflow-hidden border border-neutral-200 dark:border-neutral-800">
             <AIBuilderChat
               workspaceId={workspace.id}
@@ -894,7 +876,7 @@ export function StudioDashboardClient({
               projectId={project.id}
               projectSlug={project_slug}
               projectSecretToken={project.secret_token}
-              initialView={viewToEdit}
+              initialView={viewToEdit || undefined}
               onClose={() => { setViewMode('list'); setViewToEdit(null) }}
             />
           </div>

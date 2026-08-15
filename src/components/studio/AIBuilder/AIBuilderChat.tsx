@@ -440,7 +440,7 @@ export function AIBuilderChat({
             </button>
             <span className="text-neutral-300 dark:text-neutral-700">/</span>
             <span className="flex items-center gap-1.5 text-sm font-bold text-violet-600 dark:text-violet-400">
-              <Sparkles className="w-3.5 h-3.5" /> Editando: {initialView?.name}
+              <Sparkles className="w-3.5 h-3.5" /> {initialView?.name ? `Editando: ${initialView.name}` : 'Gerar Caso de Uso com IA'}
             </span>
           </div>
         )}

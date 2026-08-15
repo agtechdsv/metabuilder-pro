@@ -1,4 +1,4 @@
-﻿import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { Settings2, Search, RefreshCcw, Plus, Pencil, Trash2 } from 'lucide-react'
 
 export function ButtonsConfig({
@@ -22,7 +22,7 @@ export function ButtonsConfig({
                 }}
                 className="text-[9px] font-bold px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors uppercase tracking-wider"
               >
-                Selecionar Todos
+                {t('wizard.actions.select_all', 'Selecionar Todos')}
               </button>
               <button
                 type="button"
@@ -36,13 +36,17 @@ export function ButtonsConfig({
                 }}
                 className="text-[9px] font-bold px-2 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors uppercase tracking-wider"
               >
-                Desmarcar Todos
+                {t('wizard.actions.deselect_all', 'Desmarcar Todos')}
               </button>
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {config.buttons_config.filter((b: any) => b.id !== 'export').map((btn: any) => {
               const isDisabled = isButtonDisabledByModel(btn.id)
+              const resolvedLabel = btn.custom_label !== undefined && btn.custom_label !== ''
+                ? btn.custom_label
+                : (btn.labelKey ? t(btn.labelKey, btn.label) : (t(`runtime.${btn.id}`, btn.label) || btn.label))
+
               return (
                 <div key={btn.id} className="relative group/btn w-full">
                   <button
@@ -61,7 +65,7 @@ export function ButtonsConfig({
                       btn.visible
                         ? "bg-white dark:bg-neutral-955 border-indigo-600 shadow-lg shadow-indigo-500/5"
                         : "bg-neutral-50/50 dark:bg-neutral-900/30 border-neutral-200 dark:border-neutral-800 opacity-50",
-                      isDisabled && "opacity-30 cursor-not-allowed hover:border-neutral-200 dark:hover:border-neutral-800"
+                      isDisabled && "opacity-30 cursor-not-allowed hover:border-neutral-200 dark:border-neutral-800"
                     )}
                   >
                     <div className={cn(
@@ -91,7 +95,7 @@ export function ButtonsConfig({
                         textTransform: (btn.text_transform !== undefined ? (btn.text_transform !== 'none' ? btn.text_transform : undefined) : 'capitalize') as any
                       } : undefined}
                     >
-                      {btn.custom_label !== undefined && btn.custom_label !== '' ? btn.custom_label : (t(btn.labelKey) || btn.label)}
+                      {resolvedLabel}
                     </span>
                   </button>
 
@@ -103,7 +107,7 @@ export function ButtonsConfig({
                         e.stopPropagation();
                         setSelectedButtonConfig({
                           ...btn,
-                          custom_label: btn.custom_label !== undefined ? btn.custom_label : (t(btn.labelKey) || btn.label),
+                          custom_label: resolvedLabel,
                           font_family: btn.font_family || 'Inter (Padrão)',
                           font_size: btn.font_size || '10px',
                           text_color: btn.text_color || '',
@@ -113,7 +117,7 @@ export function ButtonsConfig({
                         setIsButtonPropertiesOpen(true);
                       }}
                       className="absolute top-3 right-3 p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-400 opacity-0 group-hover/btn:opacity-100 focus:opacity-100 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all cursor-pointer z-10"
-                      title="Propriedades do Botão"
+                      title={t('wizard.actions.button_properties', 'Propriedades do Botão')}
                     >
                       <Settings2 className="w-3.5 h-3.5" />
                     </button>

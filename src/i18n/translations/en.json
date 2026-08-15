@@ -1984,6 +1984,9 @@
         "desc": "You write raw SQL for greater control and performance."
       },
       "interface_buttons": "Interface Buttons",
+      "select_all": "Select All",
+      "deselect_all": "Deselect All",
+      "button_properties": "Button Properties",
       "data_strategy": "Data Strategy",
       "sql_editor": "SQL Editor",
       "export_data_title": "Data Export",
@@ -3265,6 +3268,13 @@
     "free_value_placeholder": "Ex: 100 or Cancelled"
   },
   "runtime": {
+    "search": "Search",
+    "clear": "Clear",
+    "view": "View",
+    "new_record": "New Record",
+    "edit": "Edit",
+    "delete": "Delete",
+    "export": "Export Data",
     "scale_small": "Small",
     "scale_normal": "Normal",
     "scale_large": "Large",

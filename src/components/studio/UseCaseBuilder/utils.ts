@@ -136,13 +136,13 @@ export function buildDefaultButtonsConfig(
   t: (key: string, fallback?: string) => string
 ) {
   return [
-    { id: 'search', label: t('runtime.search'), labelKey: 'runtime.search', icon: 'search', action: 'search', visible: true },
-    { id: 'clear', label: t('runtime.clear'), labelKey: 'runtime.clear', icon: 'refresh-ccw', action: 'clear', visible: true },
-    { id: 'view', label: t('runtime.view'), labelKey: 'runtime.view', icon: 'search', action: 'view', visible: true },
-    { id: 'add', label: t('runtime.new_record'), labelKey: 'runtime.new_record', icon: 'plus', action: 'create', visible: true },
-    { id: 'edit', label: t('runtime.edit'), labelKey: 'runtime.edit', icon: 'pencil', action: 'pencil', action_key: 'update', visible: true },
-    { id: 'delete', label: t('runtime.delete'), labelKey: 'runtime.delete', icon: 'trash', action_key: 'delete', visible: true },
-    { id: 'export', label: 'Exportar Dados', labelKey: 'runtime.export', icon: 'download', action: 'export', visible: true }
+    { id: 'search', label: t('runtime.search', 'Pesquisar'), labelKey: 'runtime.search', icon: 'search', action: 'search', visible: true },
+    { id: 'clear', label: t('runtime.clear', 'Limpar'), labelKey: 'runtime.clear', icon: 'refresh-ccw', action: 'clear', visible: true },
+    { id: 'view', label: t('runtime.view', 'Visualizar'), labelKey: 'runtime.view', icon: 'search', action: 'view', visible: true },
+    { id: 'add', label: t('runtime.new_record', 'Novo Registro'), labelKey: 'runtime.new_record', icon: 'plus', action: 'create', visible: true },
+    { id: 'edit', label: t('runtime.edit', 'Editar'), labelKey: 'runtime.edit', icon: 'pencil', action: 'pencil', action_key: 'update', visible: true },
+    { id: 'delete', label: t('runtime.delete', 'Excluir'), labelKey: 'runtime.delete', icon: 'trash', action_key: 'delete', visible: true },
+    { id: 'export', label: t('runtime.export', 'Exportar Dados'), labelKey: 'runtime.export', icon: 'download', action: 'export', visible: true }
   ]
 }
 

@@ -2058,6 +2058,9 @@
         "desc": "Usted escribe el SQL puro para mayor control y rendimiento."
       },
       "interface_buttons": "Botones de Interfaz",
+      "select_all": "Seleccionar Todos",
+      "deselect_all": "Desmarcar Todos",
+      "button_properties": "Propiedades del Botón",
       "data_strategy": "Estrategia de Datos",
       "sql_editor": "SQL Editor",
       "export_data_title": "Exportación de Datos",
@@ -3340,6 +3343,13 @@
     "free_value_placeholder": "Ej: 100 o Cancelado"
   },
   "runtime": {
+    "search": "Buscar",
+    "clear": "Limpiar",
+    "view": "Ver",
+    "new_record": "Nuevo Registro",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "export": "Exportar Datos",
     "scale_small": "Pequeño",
     "scale_normal": "Normal",
     "scale_large": "Grande",
