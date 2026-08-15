@@ -232,7 +232,7 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                     <div className="p-2 bg-amber-500/10 rounded-xl group-hover:bg-amber-500/20 transition-all text-amber-500">
                       <ShieldCheck className="w-4.5 h-4.5" />
                     </div>
-                    <span className="text-sm font-bold">Painel Admin</span>
+                    <span className="text-sm font-bold">{t('common.admin_panel', 'Painel Admin')}</span>
                   </Link>
                 )}
 
@@ -245,7 +245,7 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                     <div className="p-2 bg-emerald-500/10 rounded-xl group-hover:bg-emerald-500/20 transition-all text-emerald-500">
                       <Gauge className="w-4.5 h-4.5" />
                     </div>
-                    <span className="text-sm font-bold">Painel de Controle</span>
+                    <span className="text-sm font-bold">{t('common.control_panel', 'Painel de Controle')}</span>
                   </Link>
                 )}
 

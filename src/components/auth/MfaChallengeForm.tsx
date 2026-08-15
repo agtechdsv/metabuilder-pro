@@ -6,8 +6,10 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ShieldCheck, ArrowRight, Loader2, AlertCircle } from 'lucide-react'
 import { signOut } from '@/app/auth/actions'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n/I18nContext'
 
 function ChallengeFormInner() {
+  const { t } = useI18n()
   const [verifyCode, setVerifyCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isVerifying, setIsVerifying] = useState(false)
@@ -49,7 +51,7 @@ function ChallengeFormInner() {
       }
       window.location.href = redirectTo
     } catch (err: any) {
-      setError('Código inválido ou expirado. Tente novamente.')
+      setError(t('auth.mfa.error_code', 'Código inválido ou expirado. Tente novamente.'))
       setIsVerifying(false)
       setVerifyCode('')
       inputRef.current?.focus()
@@ -60,8 +62,8 @@ function ChallengeFormInner() {
     return (
       <div className="text-center py-8">
         <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-4" />
-        <p className="text-sm text-neutral-500">Fator de autenticação não encontrado.</p>
-        <button onClick={() => router.push('/')} className="mt-4 text-indigo-500 font-bold text-xs">Voltar ao Login</button>
+        <p className="text-sm text-neutral-500">{t('auth.mfa.factor_not_found', 'Fator de autenticação não encontrado.')}</p>
+        <button onClick={() => router.push('/')} className="mt-4 text-indigo-500 font-bold text-xs">{t('common.login', 'Voltar ao Login')}</button>
       </div>
     )
   }
@@ -79,10 +81,10 @@ function ChallengeFormInner() {
         </div>
 
         <h2 className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight mb-2">
-          Verificação de 2 Fatores
+          {t('auth.mfa.challenge_title', 'Verificação de 2 Fatores')}
         </h2>
         <p className="text-neutral-500 dark:text-neutral-400 text-xs font-medium px-4 leading-relaxed">
-          Digite o código de 6 dígitos gerado pelo seu aplicativo autenticador.
+          {t('auth.mfa.challenge_desc', 'Digite o código de 6 dígitos gerado pelo seu aplicativo autenticador.')}
         </p>
       </div>
 
@@ -95,7 +97,7 @@ function ChallengeFormInner() {
 
       <form onSubmit={handleVerify} className="space-y-4">
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-2">Código de 6 Dígitos</label>
+          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-2">{t('auth.mfa.code_label', 'Código de 6 Dígitos')}</label>
           <div className="relative group">
             <input
               type="text"
@@ -119,7 +121,7 @@ function ChallengeFormInner() {
             <Loader2 className="w-5 h-5 animate-spin" />
           ) : (
             <>
-              Autenticar <ArrowRight className="w-4 h-4" />
+              {t('auth.mfa.authenticate_btn', 'Autenticar')} <ArrowRight className="w-4 h-4" />
             </>
           )}
         </button>
@@ -131,7 +133,7 @@ function ChallengeFormInner() {
             window.location.href = '/'
           })
         }} className="text-[10px] font-bold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 uppercase tracking-widest">
-          Fazer login com outra conta
+          {t('auth.mfa.switch_account', 'Fazer login com outra conta')}
         </button>
       </div>
     </div>

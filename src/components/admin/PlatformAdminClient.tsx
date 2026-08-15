@@ -28,6 +28,7 @@ import { useClientsAdmin } from './hooks/useClientsAdmin'
 import { useAgendaAdmin } from './hooks/useAgendaAdmin'
 import { useIClubAdmin } from './hooks/useIClubAdmin'
 
+import { useI18n } from '@/i18n/I18nContext'
 import { DashboardTab } from './tabs/DashboardTab'
 import { ClientsTab } from './tabs/ClientsTab'
 import { AgendaTab } from './tabs/AgendaTab'
@@ -177,6 +178,20 @@ export default function PlatformAdminClient({
   const agendaHook = useAgendaAdmin(activeTab)
   const iclubHook = useIClubAdmin(activeTab)
 
+  const { t } = useI18n()
+
+  const TAB_CONFIG = {
+    dashboard: { label: t('admin.tabs.dashboard', 'Dashboard BI'), icon: BarChart3, iconColor: 'text-blue-500 dark:text-blue-400' },
+    plans: { label: t('admin.tabs.plans', 'Regras de Preços'), icon: Layers, iconColor: 'text-emerald-500 dark:text-emerald-400' },
+    clients: { label: t('admin.tabs.clients', 'Gestão de Clientes'), icon: Users, iconColor: 'text-purple-500 dark:text-purple-400' },
+    agenda: { label: t('admin.tabs.agenda', 'Agenda'), icon: Calendar, iconColor: 'text-teal-500 dark:text-teal-400' },
+    iclub: { label: t('admin.tabs.iclub', 'Gestão do iClub'), icon: Zap, iconColor: 'text-indigo-500 dark:text-indigo-400' },
+    metavoice: { label: t('admin.tabs.metavoice', 'MetaVoice'), icon: Lightbulb, iconColor: 'text-amber-500 dark:text-amber-400' },
+    community: { label: t('admin.tabs.community', 'MetaBuilders'), icon: Users, iconColor: 'text-blue-500 dark:text-blue-400' },
+    arquivos: { label: t('admin.tabs.arquivos', 'IDEs, CLI & Manuais'), icon: Layers, iconColor: 'text-indigo-500 dark:text-indigo-400' },
+    releases: { label: t('admin.tabs.releases', 'Releases (IDE)'), icon: Rocket, iconColor: 'text-rose-500 dark:text-rose-400' },
+  } as const
+
   return (
     <div className="space-y-8 pb-10">
       <ReleaseCompletionNotifier />
@@ -190,14 +205,14 @@ export default function PlatformAdminClient({
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="px-2 py-0.5 rounded bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[9px] font-black uppercase tracking-wider border border-indigo-500/15">Super Admin</span>
+                <span className="px-2 py-0.5 rounded bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[9px] font-black uppercase tracking-wider border border-indigo-500/15">{t('admin.super_admin_badge', 'Super Admin')}</span>
                 <span className="text-xs font-bold text-neutral-400">{currentUserEmail}</span>
               </div>
               <h2 className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">
-                Painel de Controle <span className="text-indigo-500">PRO</span>
+                {t('admin.header_title', 'Painel de Controle')} <span className="text-indigo-500">PRO</span>
               </h2>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-                Monitore o crescimento da plataforma, crie planos e controle o acesso de clientes ativos.
+                {t('admin.header_desc', 'Monitore o crescimento da plataforma, crie planos e controle o acesso de clientes ativos.')}
               </p>
             </div>
           </div>
@@ -207,7 +222,7 @@ export default function PlatformAdminClient({
               onClick={handleRefresh}
               disabled={isRefreshing}
               className="p-2.5 text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-800 rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center justify-center disabled:opacity-50 group active:scale-95 duration-200 shadow-sm"
-              title="Atualizar dados gerais"
+              title={t('admin.refresh_tooltip', 'Atualizar dados gerais')}
             >
               <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
             </button>

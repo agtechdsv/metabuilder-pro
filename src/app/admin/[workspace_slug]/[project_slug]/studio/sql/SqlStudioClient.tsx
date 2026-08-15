@@ -6,6 +6,7 @@ import { Play, Database, AlertCircle, ArrowLeft } from 'lucide-react'
 import { ByocEditor } from '@/components/studio/ByocEditor'
 import { useToast } from '@/components/ui/Toast'
 import Link from 'next/link'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface SqlStudioClientProps {
   workspaceSlug: string
@@ -14,6 +15,7 @@ interface SqlStudioClientProps {
 }
 
 export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStudioClientProps) {
+  const { t } = useI18n()
   const [query, setQuery] = useState<string>('-- Escreva sua query SQL aqui...\nSELECT * FROM "minha_tabela" LIMIT 10;')
   const [results, setResults] = useState<any[]>([])
   const [columns, setColumns] = useState<string[]>([])
@@ -92,7 +94,7 @@ export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStud
     setTimeout(() => {
       setLoading((prev) => {
         if (prev) {
-          setErrorMsg('Tempo esgotado. Verifique se o agente CLI do Metabuilder está rodando na sua máquina conectada.')
+          setErrorMsg(t('studio.sql.timeout', 'Tempo esgotado. Verifique se o agente CLI do Metabuilder está rodando na sua máquina conectada.'))
           toast('Timeout do Túnel', 'error')
           supabase.removeChannel(channel)
           return false
@@ -129,7 +131,7 @@ export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStud
               SQL <span className="text-emerald-600 dark:text-emerald-500">Studio</span>
             </h2>
             <p className="text-[10px] text-neutral-400 uppercase font-black tracking-[0.2em]">
-              Execução Local • Nativo
+              {t('studio.sql.subtitle', 'Execução Local • Nativo')}
             </p>
           </div>
         </div>
@@ -138,7 +140,7 @@ export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStud
             href={`/admin/${workspaceSlug}/${projectSlug}/studio`}
             className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900/50 dark:hover:bg-neutral-850 border border-neutral-200 dark:border-neutral-800 rounded-2xl text-[10px] font-black tracking-widest transition-all uppercase text-neutral-600 dark:text-neutral-300"
           >
-            <ArrowLeft className="w-4 h-4" /> Voltar ao Studio
+            <ArrowLeft className="w-4 h-4" /> {t('studio.sql.back_studio', 'Voltar ao Studio')}
           </Link>
           <button
             onClick={handleExecute}
@@ -150,7 +152,7 @@ export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStud
             ) : (
               <Play className="w-4 h-4 fill-current" />
             )}
-            EXECUTAR (CTRL + ENTER)
+            {t('studio.sql.execute_btn', 'EXECUTAR (CTRL + ENTER)')}
           </button>
         </div>
       </div>
@@ -170,16 +172,16 @@ export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStud
         <div className="flex-grow min-h-0 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col overflow-hidden shadow-sm">
           <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 flex justify-between items-center">
             <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-              Resultados
+              {t('studio.sql.results_title', 'Resultados')}
             </span>
             {rowsAffected !== null && (
               <span className="text-xs font-medium text-emerald-600 dark:text-emerald-500">
-                Linhas Afetadas: {rowsAffected}
+                {t('studio.sql.rows_affected', 'Linhas Afetadas: {count}').replace('{count}', String(rowsAffected))}
               </span>
             )}
             {results.length > 0 && rowsAffected === null && (
               <span className="text-xs font-medium text-neutral-500">
-                {results.length} linha(s)
+                {t('studio.sql.rows_count', '{count} linha(s)').replace('{count}', String(results.length))}
               </span>
             )}
           </div>
@@ -187,7 +189,7 @@ export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStud
             {errorMsg ? (
               <div className="p-6 flex flex-col items-center justify-center h-full text-center">
                 <AlertCircle className="w-10 h-10 text-red-500 mb-3" />
-                <h3 className="text-sm font-bold text-neutral-800 dark:text-white mb-1">Erro na Execução</h3>
+                <h3 className="text-sm font-bold text-neutral-800 dark:text-white mb-1">{t('studio.sql.error_execution', 'Erro na Execução')}</h3>
                 <p className="text-xs text-red-600 dark:text-red-400 max-w-lg">{errorMsg}</p>
               </div>
             ) : results.length > 0 ? (
@@ -216,8 +218,8 @@ export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStud
             ) : (
               <div className="p-6 flex flex-col items-center justify-center h-full text-center text-neutral-400">
                 <Database className="w-12 h-12 mb-4 opacity-20" />
-                <p className="text-sm font-medium">Nenhum resultado para exibir.</p>
-                <p className="text-xs mt-1">Execute uma query para ver os dados aqui.</p>
+                <p className="text-sm font-medium">{t('studio.sql.no_results_title', 'Nenhum resultado para exibir.')}</p>
+                <p className="text-xs mt-1">{t('studio.sql.no_results_desc', 'Execute uma query para ver os dados aqui.')}</p>
               </div>
             )}
           </div>

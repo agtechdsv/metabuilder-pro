@@ -7,12 +7,14 @@ import { KeyRound, Eye, EyeOff, Loader2, LogOut, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { setPasswordAction } from '@/app/auth/set-password/actions'
 import { signOut } from '@/app/auth/actions'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface SetPasswordFormProps {
   workspaceSlug?: string
 }
 
 export function SetPasswordForm({ workspaceSlug }: SetPasswordFormProps) {
+  const { t } = useI18n()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -27,39 +29,32 @@ export function SetPasswordForm({ workspaceSlug }: SetPasswordFormProps) {
     e.preventDefault()
     
     if (!password) {
-      toast('Por favor, informe a senha.', 'error')
+      toast(t('auth.set_password.error_empty', 'Por favor, informe a senha.'), 'error')
       return
     }
 
     if (password.length < 6) {
-      toast('A senha deve ter pelo menos 6 caracteres.', 'error')
+      toast(t('auth.set_password.error_min', 'A senha deve ter pelo menos 6 caracteres.'), 'error')
       return
     }
 
     if (password !== confirmPassword) {
-      toast('As senhas não coincidem.', 'error')
+      toast(t('auth.set_password.error_match', 'As senhas não coincidem.'), 'error')
       return
     }
 
     setIsLoading(true)
     try {
-      // Chama a Server Action — ela executa no servidor com acesso direto ao
-      // cookie store, evitando o race-condition entre client e servidor.
-      // O redirect também acontece server-side, garantindo que a sessão
-      // atualizada já esteja gravada antes da navegação.
       const result = await setPasswordAction(password, workspaceSlug)
 
-      // Se chegou aqui sem redirect, houve um erro
       if (result?.error) {
         throw new Error(result.error)
       }
     } catch (err: any) {
-      // Erros de redirect do Next.js propagam como exceção — ignorar
       if (err?.message?.includes('NEXT_REDIRECT')) return
-      toast(err.message || 'Erro ao definir senha.', 'error')
+      toast(err.message || t('auth.set_password.error_general', 'Erro ao definir senha.'), 'error')
       setIsLoading(false)
     }
-    // Não reseta isLoading em caso de sucesso: o redirect está em andamento
   }
 
   const handleCancel = async () => {
@@ -82,10 +77,10 @@ export function SetPasswordForm({ workspaceSlug }: SetPasswordFormProps) {
           <KeyRound className="h-6 w-6 animate-pulse" />
         </div>
         <h1 className="text-2xl font-black tracking-tight text-neutral-900 dark:text-white">
-          Defina sua Senha
+          {t('auth.set_password.title', 'Defina sua Senha')}
         </h1>
         <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium px-2 leading-relaxed">
-          Para garantir a segurança de sua conta, defina uma senha de acesso antes de entrar no Workspace.
+          {t('auth.set_password.desc', 'Para garantir a segurança de sua conta, defina uma senha de acesso antes de entrar no Workspace.')}
         </p>
       </div>
 
@@ -93,7 +88,7 @@ export function SetPasswordForm({ workspaceSlug }: SetPasswordFormProps) {
         {/* Nova Senha */}
         <div className="space-y-2">
           <label className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest px-2">
-            Nova Senha
+            {t('auth.set_password.new_password', 'Nova Senha')}
           </label>
           <div className="relative group">
             <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 group-focus-within:text-indigo-500 transition-colors" />
@@ -101,7 +96,7 @@ export function SetPasswordForm({ workspaceSlug }: SetPasswordFormProps) {
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Digite sua nova senha"
+              placeholder={t('auth.set_password.new_password_placeholder', 'Digite sua nova senha')}
               required
               disabled={isLoading || isLoggingOut}
               className="w-full bg-neutral-100/50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 focus:border-indigo-500 focus:bg-white dark:focus:bg-neutral-900 rounded-2xl py-4 pl-14 pr-14 text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 transition-all outline-none"
@@ -120,7 +115,7 @@ export function SetPasswordForm({ workspaceSlug }: SetPasswordFormProps) {
         {/* Confirmar Senha */}
         <div className="space-y-2">
           <label className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest px-2">
-            Confirmar Nova Senha
+            {t('auth.set_password.confirm_password', 'Confirmar Nova Senha')}
           </label>
           <div className="relative group">
             <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 group-focus-within:text-indigo-500 transition-colors" />
@@ -128,7 +123,7 @@ export function SetPasswordForm({ workspaceSlug }: SetPasswordFormProps) {
               type={showConfirmPassword ? 'text' : 'password'}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirme sua nova senha"
+              placeholder={t('auth.set_password.confirm_password_placeholder', 'Confirme sua nova senha')}
               required
               disabled={isLoading || isLoggingOut}
               className={cn(
@@ -158,7 +153,7 @@ export function SetPasswordForm({ workspaceSlug }: SetPasswordFormProps) {
           ) : (
             <>
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
-              <span className="relative z-10">Definir Senha e Acessar</span>
+              <span className="relative z-10">{t('auth.set_password.submit_btn', 'Definir Senha e Acessar')}</span>
             </>
           )}
         </button>
@@ -176,7 +171,7 @@ export function SetPasswordForm({ workspaceSlug }: SetPasswordFormProps) {
           ) : (
             <>
               <LogOut className="h-4 w-4" />
-              Cancelar e Sair
+              {t('auth.set_password.cancel_btn', 'Cancelar e Sair')}
             </>
           )}
         </button>

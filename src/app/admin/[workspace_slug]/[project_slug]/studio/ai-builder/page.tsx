@@ -55,6 +55,11 @@ export default async function AIBuilderPage({
   const isPro = profile?.subscription_tier === 'pro'
   const isOwner = user.id === workspace.owner_id
 
+  const { getLocale } = await import('@/i18n/get-locale')
+  const { getTranslations } = await import('@/i18n/get-translations')
+  const locale = await getLocale()
+  const t = await getTranslations(locale)
+
   return (
     <div className="w-full flex flex-col" style={{ height: 'calc(100vh - 150px)' }}>
       <Breadcrumbs
@@ -69,15 +74,15 @@ export default async function AIBuilderPage({
           <div className="w-20 h-20 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-3xl flex items-center justify-center mb-6">
             <span className="text-4xl">🤖</span>
           </div>
-          <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-2">AI Builder</h2>
+          <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-2">{t('studio.ai_builder.pro_only_title')}</h2>
           <p className="text-neutral-500 dark:text-neutral-400 text-sm max-w-sm mb-6">
-            Gere casos de uso completos com IA usando a chave de API de sua preferência. Recurso exclusivo do plano PRO.
+            {t('studio.ai_builder.pro_only_desc')}
           </p>
           <a
             href={`/admin/${workspace_slug}/settings`}
             className="inline-flex items-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-2xl font-bold shadow-lg shadow-violet-600/20 transition-all"
           >
-            🔒 Ver Planos PRO
+            {t('studio.ai_builder.see_pro_plans')}
           </a>
         </div>
       ) : !aiConfig ? (
@@ -86,12 +91,12 @@ export default async function AIBuilderPage({
             <span className="text-4xl">🔑</span>
           </div>
           <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-2">
-            {isOwner ? 'Configure sua Chave de IA' : 'IA Não Configurada'}
+            {isOwner ? t('studio.ai_builder.config_key_title_owner') : t('studio.ai_builder.config_key_title_dev')}
           </h2>
           <p className="text-neutral-500 dark:text-neutral-400 text-sm max-w-sm mb-6">
             {isOwner 
-              ? 'Para usar o AI Builder, configure sua chave de API de IA nas Configurações do Workspace.'
-              : 'A chave de API para a geração de casos do AI Builder ainda não foi configurada. Favor entrar em contato com o owner do projeto e solicite a realização da configuração.'}
+              ? t('studio.ai_builder.config_key_desc_owner')
+              : t('studio.ai_builder.config_key_desc_dev')}
           </p>
           {isOwner && <AIBuilderConfigTrigger workspaceId={workspace.id} isPro={isPro} />}
         </div>

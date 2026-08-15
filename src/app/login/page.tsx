@@ -1,6 +1,8 @@
 import { LoginForm } from '@/components/auth/LoginForm'
 import { Layers } from 'lucide-react'
 import Link from 'next/link'
+import { getLocale } from '@/i18n/get-locale'
+import { getTranslations } from '@/i18n/get-translations'
 
 export default async function LoginPage({
   searchParams,
@@ -8,6 +10,9 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string; message?: string }>
 }) {
   const resolvedSearchParams = await searchParams
+  const locale = await getLocale()
+  const t = await getTranslations(locale)
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-gradient-to-b from-neutral-50 to-neutral-200 dark:from-neutral-900 dark:to-black text-neutral-900 dark:text-white transition-colors duration-300">
       <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in duration-500">
@@ -18,7 +23,7 @@ export default async function LoginPage({
         </div>
 
         <p className="text-center text-xs text-neutral-500 font-medium">
-          Secure enterprise authentication powered by MetaBuilderPRO
+          {t('auth.login.powered_by')}
         </p>
       </div>
     </main>

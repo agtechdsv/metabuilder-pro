@@ -25,6 +25,11 @@ export default async function PlatformAdminPage() {
 
   // 3. Deny access if not super admin
   if (!profile || !profile.is_super_admin) {
+    const { getLocale } = await import('@/i18n/get-locale')
+    const { getTranslations } = await import('@/i18n/get-translations')
+    const locale = await getLocale()
+    const t = await getTranslations(locale)
+
     return (
       <div className="min-h-screen flex flex-col pt-16 bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300">
         <Navbar user={user} profile={profile} />
@@ -37,9 +42,9 @@ export default async function PlatformAdminPage() {
             </div>
             
             <div className="space-y-2">
-              <h3 className="text-xl font-black text-neutral-900 dark:text-white uppercase tracking-wider">Acesso Restrito</h3>
+              <h3 className="text-xl font-black text-neutral-900 dark:text-white uppercase tracking-wider">{t('admin.access_restricted_title')}</h3>
               <p className="text-sm text-neutral-500 dark:text-neutral-450 leading-relaxed">
-                Desculpe, esta área de controle é exclusiva para o administrador global da plataforma (**agtechtrade@gmail.com**).
+                {t('admin.access_restricted_desc')}
               </p>
             </div>
 
@@ -49,7 +54,7 @@ export default async function PlatformAdminPage() {
                 className="inline-flex items-center gap-2 h-11 px-6 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>Voltar ao Workspace</span>
+                <span>{t('admin.back_to_workspace')}</span>
               </Link>
             </div>
           </div>

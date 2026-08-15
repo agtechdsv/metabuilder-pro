@@ -147,7 +147,10 @@
     "back_to_home": "Voltar para a Home",
     "runtime_online": "RUNTIME ONLINE",
     "clear_all": "Limpar Tudo",
-    "info": "Este campo já está nesta zona"
+    "info": "Este campo já está nesta zona",
+    "admin_panel": "Painel Admin",
+    "control_panel": "Painel de Controle",
+    "user": "Usuário"
   },
   "hero": {
     "badge": "Mecanismo de Metadados Next-Gen",
@@ -2269,7 +2272,13 @@
         "title": "Link Expirado ou Inválido",
         "desc": "Por motivos de segurança, os links de convite e redefinição de senha expiram em pouco tempo ou após o primeiro clique. Solicite um novo convite ou tente realizar o processo novamente.",
         "back_home": "Ir para a Página Inicial"
-      }
+      },
+      "passkey_verified": "Biometria verificada! Entrando...",
+      "passkey_cancelled": "Operação cancelada ou nenhuma biometria encontrada neste aparelho.",
+      "passkey_error": "Erro ao processar login biométrico.",
+      "verifying": "Verificando...",
+      "biometrics_signin": "Entrar com Biometria",
+      "powered_by": "Autenticação empresarial segura por MetaBuilderPRO"
     },
     "callback": {
       "authenticating": "Autenticando...",
@@ -2280,6 +2289,32 @@
       "auth_error_title": "Erro na Autenticação",
       "auth_error_desc": "Não foi possível concluir o login.",
       "close_try_again": "Fechar e Tentar Novamente"
+    },
+    "mfa": {
+      "challenge_title": "Verificação de 2 Fatores",
+      "challenge_desc": "Digite o código de 6 dígitos gerado pelo seu aplicativo autenticador.",
+      "code_label": "Código de 6 Dígitos",
+      "authenticate_btn": "Autenticar",
+      "error_code": "Código inválido ou expirado. Tente novamente.",
+      "switch_account": "Fazer login com outra conta",
+      "setup_title": "Segurança Obrigatória",
+      "setup_desc": "A política da empresa exige a configuração do Autenticador em 2 Fatores (Microsoft Authenticator, Google Authenticator ou Authy).",
+      "manual_code": "Ou digite o código manualmente:",
+      "verify_complete_btn": "Verificar e Concluir",
+      "preparing": "Preparando Autenticador..."
+    },
+    "set_password": {
+      "title": "Defina sua Senha",
+      "desc": "Para garantir a segurança de sua conta, defina uma senha de acesso antes de entrar no Workspace.",
+      "new_password": "Nova Senha",
+      "new_password_placeholder": "Digite sua nova senha",
+      "confirm_password": "Confirmar Nova Senha",
+      "confirm_password_placeholder": "Confirme sua nova senha",
+      "submit_btn": "Definir Senha e Acessar",
+      "cancel_btn": "Cancelar e Sair",
+      "error_empty": "Por favor, informe a senha.",
+      "error_min": "A senha deve ter pelo menos 6 caracteres.",
+      "error_match": "As senhas não coincidem."
     }
   },
   "scheduling": {
@@ -2439,5 +2474,75 @@
     "linux_desc": "Ubuntu, Debian, Linux Mint (.deb)",
     "download_linux": "Baixar para Linux",
     "unavailable": "Indisponível"
+  },
+  "admin": {
+    "access_restricted_title": "Acesso Restrito",
+    "access_restricted_desc": "Desculpe, esta área de controle é exclusiva para o administrador global da plataforma.",
+    "back_to_workspace": "Voltar ao Workspace",
+    "header_title": "Painel de Controle",
+    "header_desc": "Monitore o crescimento da plataforma, crie planos e controle o acesso de clientes ativos.",
+    "refresh_tooltip": "Atualizar dados gerais",
+    "super_admin_badge": "Super Admin",
+    "tabs": {
+      "dashboard": "Dashboard BI",
+      "plans": "Regras de Preços",
+      "clients": "Gestão de Clientes",
+      "agenda": "Agenda",
+      "iclub": "Gestão do iClub",
+      "metavoice": "MetaVoice",
+      "community": "MetaBuilders",
+      "arquivos": "IDEs, CLI & Manuais",
+      "releases": "Releases (IDE)"
+    }
+  },
+  "client_dashboard": {
+    "title": "Painel de Controle",
+    "subtitle": "Visão geral dos seus dados, assinatura e conta",
+    "community_title": "MetaBuilders",
+    "community_subtitle": "Conecte-se com outros Owners e Desenvolvedores",
+    "downloads_title": "Central de Downloads",
+    "downloads_subtitle": "Baixe a IDE Desktop e mantenha seu ambiente de trabalho sempre atualizado",
+    "metavoice_title": "Sugestões & Ideias (MetaVoice)",
+    "metavoice_subtitle": "Deixe sugestões ou vote nas ideias da comunidade para nos ajudar a melhorar o MetaBuilder PRO",
+    "tabs": {
+      "dashboard": "Dashboard BI",
+      "productivity": "Produtividade",
+      "downloads": "Central de Downloads",
+      "whitelabel": "White-Label",
+      "community": "MetaBuilders",
+      "metavoice": "MetaVoice",
+      "iclub": "iClub",
+      "security": "Segurança",
+      "subscription": "Assinatura",
+      "cancel": "Cancelamento"
+    }
+  },
+  "studio": {
+    "sql": {
+      "title": "SQL Studio",
+      "subtitle": "Execução Local • Nativo",
+      "back_studio": "Voltar ao Studio",
+      "execute_btn": "EXECUTAR (CTRL + ENTER)",
+      "results_title": "Resultados",
+      "rows_affected": "Linhas Afetadas: {count}",
+      "rows_count": "{count} linha(s)",
+      "no_results_title": "Nenhum resultado para exibir.",
+      "no_results_desc": "Execute uma query para ver os dados aqui.",
+      "error_execution": "Erro na Execução",
+      "timeout": "Tempo esgotado. Verifique se o agente CLI do Metabuilder está rodando na sua máquina conectada."
+    },
+    "terminal": {
+      "title": "Terminal Integrado",
+      "desc": "Execute comandos locais diretamente no diretório do projeto via PTY Nativo."
+    },
+    "ai_builder": {
+      "pro_only_title": "AI Builder",
+      "pro_only_desc": "Gere casos de uso completos com IA usando a chave de API de sua preferência. Recurso exclusivo do plano PRO.",
+      "see_pro_plans": "🔒 Ver Planos PRO",
+      "config_key_title_owner": "Configure sua Chave de IA",
+      "config_key_title_dev": "IA Não Configurada",
+      "config_key_desc_owner": "Para usar o AI Builder, configure sua chave de API de IA nas Configurações do Workspace.",
+      "config_key_desc_dev": "A chave de API para a geração de casos do AI Builder ainda não foi configurada. Favor entrar em contato com o owner do projeto e solicite a realização da configuração."
+    }
   }
 }

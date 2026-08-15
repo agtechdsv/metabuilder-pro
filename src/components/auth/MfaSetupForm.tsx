@@ -7,8 +7,10 @@ import { ShieldAlert, ArrowRight, Loader2, AlertCircle } from 'lucide-react'
 import { signOut } from '@/app/auth/actions'
 import { cn } from '@/lib/utils'
 import { QRCodeSVG } from 'qrcode.react'
+import { useI18n } from '@/i18n/I18nContext'
 
 export function MfaSetupForm() {
+  const { t } = useI18n()
   const [totpUri, setTotpUri] = useState<string | null>(null)
   const [secretStr, setSecretStr] = useState<string | null>(null)
   const [factorId, setFactorId] = useState<string | null>(null)
@@ -51,7 +53,7 @@ export function MfaSetupForm() {
         setSecretStr(data.totp.secret)
         setIsLoading(false)
       } catch (err: any) {
-        setError(err.message || 'Erro ao iniciar configuração do MFA')
+        setError(err.message || t('auth.mfa.error_init', 'Erro ao iniciar configuração do MFA'))
         setIsLoading(false)
       }
     }
@@ -88,7 +90,7 @@ export function MfaSetupForm() {
       }
       window.location.href = redirectTo
     } catch (err: any) {
-      setError('Código inválido ou expirado. Tente novamente.')
+      setError(t('auth.mfa.error_code', 'Código inválido ou expirado. Tente novamente.'))
       setIsVerifying(false)
     }
   }
@@ -97,7 +99,7 @@ export function MfaSetupForm() {
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-4">
         <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-        <p className="text-sm font-bold text-neutral-500 uppercase tracking-widest">Preparando Autenticador...</p>
+        <p className="text-sm font-bold text-neutral-500 uppercase tracking-widest">{t('auth.mfa.preparing', 'Preparando Autenticador...')}</p>
       </div>
     )
   }
@@ -115,10 +117,10 @@ export function MfaSetupForm() {
         </div>
 
         <h2 className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight mb-2">
-          Segurança Obrigatória
+          {t('auth.mfa.setup_title', 'Segurança Obrigatória')}
         </h2>
         <p className="text-neutral-500 dark:text-neutral-400 text-xs font-medium px-4 leading-relaxed">
-          A política da empresa exige a configuração do Autenticador em 2 Fatores (Microsoft Authenticator, Google Authenticator ou Authy).
+          {t('auth.mfa.setup_desc', 'A política da empresa exige a configuração do Autenticador em 2 Fatores (Microsoft Authenticator, Google Authenticator ou Authy).')}
         </p>
       </div>
 
@@ -138,13 +140,13 @@ export function MfaSetupForm() {
           </div>
 
           <div className="text-center space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Ou digite o código manualmente:</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('auth.mfa.manual_code', 'Ou digite o código manualmente:')}</p>
             <p className="font-mono text-sm font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 py-2 rounded-lg break-all px-2">{secretStr}</p>
           </div>
 
           <form onSubmit={handleVerify} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-2">Código de 6 Dígitos</label>
+              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-2">{t('auth.mfa.code_label', 'Código de 6 Dígitos')}</label>
               <div className="relative group">
                 <input
                   type="text"
@@ -168,7 +170,7 @@ export function MfaSetupForm() {
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
-                  Verificar e Concluir <ArrowRight className="w-4 h-4" />
+                  {t('auth.mfa.verify_complete_btn', 'Verificar e Concluir')} <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
@@ -182,7 +184,7 @@ export function MfaSetupForm() {
             window.location.href = '/'
           })
         }} className="text-[10px] font-bold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 uppercase tracking-widest">
-          Fazer login com outra conta
+          {t('auth.mfa.switch_account', 'Fazer login com outra conta')}
         </button>
       </div>
     </div>

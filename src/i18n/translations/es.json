@@ -225,7 +225,10 @@
     "back_to_home": "Volver a la Home",
     "runtime_online": "Runtime Online",
     "clear_all": "Limpiar Todo",
-    "info": "Este campo ya está nesta zona"
+    "info": "Este campo ya está nesta zona",
+    "admin_panel": "Panel de Admin",
+    "control_panel": "Panel de Control",
+    "user": "Usuario"
   },
   "hero": {
     "badge": "Motor de Metadatos de Próxima Generación",
@@ -2340,7 +2343,13 @@
         "title": "Enlace Expirado o Inválido",
         "desc": "Por razones de seguridad, los enlaces de invitación y restablecimiento de contraseña expiran rápidamente o tras el primer clic. Solicite una nueva invitación o intente nuevamente.",
         "back_home": "Ir a la Página de Inicio"
-      }
+      },
+      "passkey_verified": "¡Biometría verificada! Entrando...",
+      "passkey_cancelled": "Operación cancelada o no se encontró biometría en este dispositivo.",
+      "passkey_error": "Error al procesar el inicio de sesión biométrico.",
+      "verifying": "Verificando...",
+      "biometrics_signin": "Iniciar sesión con Biometría",
+      "powered_by": "Autenticación empresarial segura por MetaBuilderPRO"
     },
     "callback": {
       "authenticating": "Autenticando...",
@@ -2351,6 +2360,32 @@
       "auth_error_title": "Error de Autenticación",
       "auth_error_desc": "No se pudo completar el inicio de sesión.",
       "close_try_again": "Cerrar y Intentar de Nuevo"
+    },
+    "mfa": {
+      "challenge_title": "Autenticación de 2 Factores",
+      "challenge_desc": "Ingrese el código de 6 dígitos generado por su aplicación de autenticación.",
+      "code_label": "Código de 6 Dígitos",
+      "authenticate_btn": "Autenticar",
+      "error_code": "Código no válido o caducado. Inténtelo de nuevo.",
+      "switch_account": "Iniciar sesión con otra cuenta",
+      "setup_title": "Seguridad Obligatoria",
+      "setup_desc": "La política de la empresa requiere la configuración de Autenticación de 2 Factores (Microsoft Authenticator, Google Authenticator o Authy).",
+      "manual_code": "O introduzca el código manualmente:",
+      "verify_complete_btn": "Verificar y Completar",
+      "preparing": "Preparando Autenticador..."
+    },
+    "set_password": {
+      "title": "Establece tu Contraseña",
+      "desc": "Para garantizar la seguridad de tu cuenta, establece una contraseña antes de entrar al Workspace.",
+      "new_password": "Nueva Contraseña",
+      "new_password_placeholder": "Introduce tu nueva contraseña",
+      "confirm_password": "Confirmar Nueva Contraseña",
+      "confirm_password_placeholder": "Confirma tu nueva contraseña",
+      "submit_btn": "Establecer Contraseña y Entrar",
+      "cancel_btn": "Cancelar y Salir",
+      "error_empty": "Por favor, introduce la contraseña.",
+      "error_min": "La contraseña debe tener al menos 6 caracteres.",
+      "error_match": "Las contraseñas no coinciden."
     }
   },
   "scheduling": {
@@ -2510,5 +2545,75 @@
     "linux_desc": "Ubuntu, Debian, Linux Mint (.deb)",
     "download_linux": "Descargar para Linux",
     "unavailable": "No disponible"
+  },
+  "admin": {
+    "access_restricted_title": "Acceso Restringido",
+    "access_restricted_desc": "Disculpe, esta área de control es exclusiva para el administrador global de la plataforma.",
+    "back_to_workspace": "Volver al Workspace",
+    "header_title": "Panel de Control",
+    "header_desc": "Monitoree el crecimiento de la plataforma, cree planes y administre el acceso de clientes activos.",
+    "refresh_tooltip": "Actualizar datos generales",
+    "super_admin_badge": "Super Admin",
+    "tabs": {
+      "dashboard": "Dashboard BI",
+      "plans": "Reglas de Precios",
+      "clients": "Gestión de Clientes",
+      "agenda": "Agenda",
+      "iclub": "Gestión del iClub",
+      "metavoice": "MetaVoice",
+      "community": "MetaBuilders",
+      "arquivos": "IDEs, CLI y Manuales",
+      "releases": "Releases (IDE)"
+    }
+  },
+  "client_dashboard": {
+    "title": "Panel de Control",
+    "subtitle": "Visión general de sus datos, suscripción y cuenta",
+    "community_title": "MetaBuilders",
+    "community_subtitle": "Conéctese con otros Owners y Desarrolladores",
+    "downloads_title": "Centro de Descargas",
+    "downloads_subtitle": "Descargue el IDE Desktop y mantenga su entorno de trabajo siempre actualizado",
+    "metavoice_title": "Sugerencias e Ideas (MetaVoice)",
+    "metavoice_subtitle": "Deje sugerencias o vote en ideas comunitarias para ayudarnos a mejorar MetaBuilder PRO",
+    "tabs": {
+      "dashboard": "Dashboard BI",
+      "productivity": "Productividad",
+      "downloads": "Centro de Descargas",
+      "whitelabel": "White-Label",
+      "community": "MetaBuilders",
+      "metavoice": "MetaVoice",
+      "iclub": "iClub",
+      "security": "Seguridad",
+      "subscription": "Suscripción",
+      "cancel": "Cancelación"
+    }
+  },
+  "studio": {
+    "sql": {
+      "title": "SQL Studio",
+      "subtitle": "Ejecución Local • Nativo",
+      "back_studio": "Volver al Studio",
+      "execute_btn": "EJECUTAR (CTRL + ENTER)",
+      "results_title": "Resultados",
+      "rows_affected": "Filas Afectadas: {count}",
+      "rows_count": "{count} fila(s)",
+      "no_results_title": "No hay resultados para mostrar.",
+      "no_results_desc": "Ejecute una consulta para ver los datos aquí.",
+      "error_execution": "Error en la Ejecución",
+      "timeout": "Tiempo agotado. Verifique que el agente CLI de Metabuilder se esté ejecutando en su máquina conectada."
+    },
+    "terminal": {
+      "title": "Terminal Integrado",
+      "desc": "Ejecute comandos locales directamente en el directorio del proyecto a través de PTY Nativo."
+    },
+    "ai_builder": {
+      "pro_only_title": "AI Builder",
+      "pro_only_desc": "Genere casos de uso completos con IA utilizando su clave de API preferida. Función exclusiva PRO.",
+      "see_pro_plans": "🔒 Ver Planes PRO",
+      "config_key_title_owner": "Configure su Clave de IA",
+      "config_key_title_dev": "IA No Configurada",
+      "config_key_desc_owner": "Para usar AI Builder, configure su clave de API de IA en la Configuración del Workspace.",
+      "config_key_desc_dev": "La clave de API para la generación de casos de AI Builder aún no está configurada. Comuníquese con el propietario del proyecto."
+    }
   }
 }

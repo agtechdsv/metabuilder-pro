@@ -84,7 +84,7 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
       const verificationJSON = await verificationResp.json()
 
       if (verificationJSON.verified && verificationJSON.loginUrl) {
-        setSuccessMessage('Biometria verificada! Entrando...')
+        setSuccessMessage(t('auth.login.passkey_verified', 'Biometria verificada! Entrando...'))
         // Redireciona para o magic link gerado para consolidar a sessão
         window.location.href = verificationJSON.loginUrl
       } else {
@@ -93,9 +93,9 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
     } catch (error: any) {
       console.error(error)
       if (error.name === 'NotAllowedError' || error.message?.includes('timed out or was not allowed')) {
-        setClientError('Operação cancelada ou nenhuma biometria encontrada neste aparelho.')
+        setClientError(t('auth.login.passkey_cancelled', 'Operação cancelada ou nenhuma biometria encontrada neste aparelho.'))
       } else {
-        setClientError(error.message || 'Erro ao processar login biométrico.')
+        setClientError(error.message || t('auth.login.passkey_error', 'Erro ao processar login biométrico.'))
       }
     } finally {
       setIsPasskeyLoading(false)
@@ -617,7 +617,7 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
               </svg>
             </div>
           )}
-          {isPasskeyLoading ? 'Verificando...' : 'Entrar com Biometria'}
+          {isPasskeyLoading ? t('auth.login.verifying', 'Verificando...') : t('auth.login.biometrics_signin', 'Entrar com Biometria')}
         </button>
       )}
 
