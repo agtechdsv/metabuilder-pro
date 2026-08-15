@@ -33,31 +33,33 @@ import {
   getSuggestionById
 } from '@/app/actions/metavoice'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n'
 
 interface MetaVoiceViewProps {
   userId?: string
   hideHeader?: boolean
 }
 
-const CATEGORIES = [
-  { id: 'all', label: 'Todas as Categorias' },
-  { id: 'ui_ux', label: 'UI / UX' },
-  { id: 'integration', label: 'Integração' },
-  { id: 'feature', label: 'Nova Funcionalidade' },
-  { id: 'bug', label: 'Bug / Correção' },
-  { id: 'other', label: 'Outro' }
-]
+const CATEGORY_KEYS: Record<string, string> = {
+  all: 'cat_all',
+  ui_ux: 'cat_ui_ux',
+  integration: 'cat_integration',
+  feature: 'cat_feature',
+  bug: 'cat_bug',
+  other: 'cat_other'
+}
 
-const STATUS_MAP: Record<string, { label: string, color: string, icon: any }> = {
-  under_review: { label: 'Em Análise', color: 'bg-amber-500/10 text-amber-500', icon: Clock },
-  planned: { label: 'Planejado', color: 'bg-blue-500/10 text-blue-500', icon: Layers },
-  in_progress: { label: 'Em Desenvolvimento', color: 'bg-purple-500/10 text-purple-500', icon: Activity },
-  completed: { label: 'Concluído', color: 'bg-emerald-500/10 text-emerald-500', icon: CheckCircle2 },
-  declined: { label: 'Descartada', color: 'bg-rose-500/10 text-rose-500', icon: Ban },
-  duplicate: { label: 'Duplicata', color: 'bg-neutral-500/10 text-neutral-500', icon: Layers },
+const STATUS_ICONS: Record<string, { color: string, icon: any, key: string, fallback: string }> = {
+  under_review: { fallback: 'Em Análise', color: 'bg-amber-500/10 text-amber-500', icon: Clock, key: 'status_under_review' },
+  planned: { fallback: 'Planejado', color: 'bg-blue-500/10 text-blue-500', icon: Layers, key: 'status_planned' },
+  in_progress: { fallback: 'Em Desenvolvimento', color: 'bg-purple-500/10 text-purple-500', icon: Activity, key: 'status_in_progress' },
+  completed: { fallback: 'Concluído', color: 'bg-emerald-500/10 text-emerald-500', icon: CheckCircle2, key: 'status_completed' },
+  declined: { fallback: 'Descartada', color: 'bg-rose-500/10 text-rose-500', icon: Ban, key: 'status_declined' },
+  duplicate: { fallback: 'Duplicata', color: 'bg-neutral-500/10 text-neutral-500', icon: Layers, key: 'status_duplicate' },
 }
 
 export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps) {
+  const { t } = useI18n()
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [loading, setLoading] = useState(true)
   const [filterCategory, setFilterCategory] = useState('all')
@@ -82,6 +84,34 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
   const [isCommenting, setIsCommenting] = useState(false)
 
   const { toast } = useToast()
+
+  const getCategoryLabel = (id: string) => {
+    if (id === 'all') return t('client_views.metavoice.cat_all', 'Todas as Categorias')
+    if (id === 'ui_ux') return t('client_views.metavoice.cat_ui_ux', 'UI / UX')
+    if (id === 'integration') return t('client_views.metavoice.cat_integration', 'Integração')
+    if (id === 'feature') return t('client_views.metavoice.cat_feature', 'Nova Funcionalidade')
+    if (id === 'bug') return t('client_views.metavoice.cat_bug', 'Bug / Correção')
+    if (id === 'other') return t('client_views.metavoice.cat_other', 'Outro')
+    return id
+  }
+
+  const getStatusInfo = (status: string) => {
+    const item = STATUS_ICONS[status] || STATUS_ICONS.under_review
+    return {
+      label: t(`client_views.metavoice.${item.key}`, item.fallback),
+      color: item.color,
+      icon: item.icon
+    }
+  }
+
+  const categoriesList = [
+    { id: 'all', label: getCategoryLabel('all') },
+    { id: 'ui_ux', label: getCategoryLabel('ui_ux') },
+    { id: 'integration', label: getCategoryLabel('integration') },
+    { id: 'feature', label: getCategoryLabel('feature') },
+    { id: 'bug', label: getCategoryLabel('bug') },
+    { id: 'other', label: getCategoryLabel('other') }
+  ]
 
   const fetchSuggestions = async (silent = false) => {
     if (!silent) setLoading(true)
@@ -126,7 +156,7 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
     if (error) {
       toast(error, 'error')
     } else {
-      toast('Sugestão enviada com sucesso!', 'success')
+      toast(t('client_views.metavoice.toast_create_success', 'Sugestão enviada com sucesso!'), 'success')
       setShowNewModal(false)
       setNewTitle('')
       setNewDesc('')
@@ -187,7 +217,7 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
     if (error) {
       toast(error, 'error')
     } else {
-      toast('Comentário adicionado!', 'success')
+      toast(t('client_views.metavoice.toast_comment_success', 'Comentário adicionado!'), 'success')
       setNewComment('')
       refreshSelectedSilently(selectedId)
       fetchSuggestions(true)
@@ -200,8 +230,6 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
     s.description.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const getCategoryLabel = (id: string) => CATEGORIES.find(c => c.id === id)?.label || id
-
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-200">
 
@@ -213,7 +241,7 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
           <div className="relative z-10">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-white/10 border border-white/20 backdrop-blur-md uppercase tracking-widest">
-                <Lightbulb className="w-3.5 h-3.5 text-amber-400" /> MetaVoice
+                <Lightbulb className="w-3.5 h-3.5 text-amber-400" /> {t('client_views.metavoice.tag', 'MetaVoice')}
               </span>
               <button 
                 onClick={() => {
@@ -222,21 +250,21 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
                   }
                 }}
                 className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md border border-white/20 transition-all flex items-center gap-2 group"
-                title="Abrir em Nova Janela (Modo Foco)"
+                title={t('client_views.metavoice.focus_mode_tooltip', 'Abrir em Nova Janela (Modo Foco)')}
               >
-                <span className="hidden md:inline text-xs font-bold uppercase tracking-widest group-hover:text-white">Modo Foco</span>
+                <span className="hidden md:inline text-xs font-bold uppercase tracking-widest group-hover:text-white">{t('client_views.metavoice.focus_mode', 'Modo Foco')}</span>
                 <ExternalLink className="w-4 h-4" />
               </button>
             </div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-2">Ideias & Sugestões</h2>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-2">{t('client_views.metavoice.title', 'Ideias & Sugestões')}</h2>
             <p className="text-indigo-100 text-sm md:text-base leading-relaxed">
-              Envie suas ideias, vote nas sugestões da comunidade e acompanhe o nosso roadmap.
+              {t('client_views.metavoice.desc', 'Envie suas ideias, vote nas sugestões da comunidade e acompanhe o nosso roadmap.')}
             </p>
             <button
               onClick={() => setShowNewModal(true)}
               className="px-5 py-2.5 bg-white text-indigo-900 font-black text-sm uppercase tracking-wider rounded-xl hover:bg-neutral-100 transition-colors shadow-sm flex items-center gap-2"
             >
-              <Plus className="w-4 h-4" /> Nova Sugestão
+              <Plus className="w-4 h-4" /> {t('client_views.metavoice.new_suggestion_btn', 'Nova Sugestão')}
             </button>
           </div>
         </div>
@@ -248,7 +276,7 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
           <input
             type="text"
-            placeholder="Buscar sugestões..."
+            placeholder={t('client_views.metavoice.search_placeholder', 'Buscar sugestões...')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full bg-transparent border-none focus:ring-0 pl-10 pr-4 py-2 text-sm text-neutral-900 dark:text-neutral-100"
@@ -261,21 +289,23 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
             onChange={e => setFilterCategory(e.target.value)}
             className="bg-neutral-100 dark:bg-neutral-800 border-none text-xs font-bold rounded-lg px-3 py-2 text-neutral-700 dark:text-neutral-300 focus:ring-0"
           >
-            {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+            {categoriesList.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
             className="bg-neutral-100 dark:bg-neutral-800 border-none text-xs font-bold rounded-lg px-3 py-2 text-neutral-700 dark:text-neutral-300 focus:ring-0"
           >
-            <option value="all">Todos os Status</option>
-            {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            <option value="all">{t('client_views.metavoice.status_all', 'Todos os Status')}</option>
+            {Object.keys(STATUS_ICONS).map(k => (
+              <option key={k} value={k}>{getStatusInfo(k).label}</option>
+            ))}
           </select>
           <button
             type="button"
             onClick={() => fetchSuggestions()}
             disabled={loading}
-            title="Atualizar lista"
+            title={t('client_views.metavoice.refresh_tooltip', 'Atualizar lista')}
             className="p-2 text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-800 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center justify-center disabled:opacity-50 group active:scale-95 duration-200"
           >
             <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", loading ? "animate-spin" : "group-hover:rotate-180")} />
@@ -293,16 +323,16 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
           <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-neutral-400 mb-4">
             <Lightbulb className="w-8 h-8" />
           </div>
-          <h3 className="text-lg font-black text-neutral-900 dark:text-white">Nenhuma sugestão encontrada</h3>
+          <h3 className="text-lg font-black text-neutral-900 dark:text-white">{t('client_views.metavoice.empty_title', 'Nenhuma sugestão encontrada')}</h3>
           <p className="text-sm text-neutral-500 mt-2 max-w-sm">
-            Seja o primeiro a enviar uma ideia nesta categoria!
+            {t('client_views.metavoice.empty_desc', 'Seja o primeiro a enviar uma ideia nesta categoria!')}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredSuggestions.map(s => {
             const hasLiked = s.votes?.some(v => v.user_id === userId && v.type === 'like')
-            const st = STATUS_MAP[s.status] || STATUS_MAP.under_review
+            const st = getStatusInfo(s.status)
             const StatusIcon = st.icon
 
             return (
@@ -332,13 +362,13 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
                   <div className="flex items-center gap-2 mb-4">
                     <img
                       src={s.author.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${s.author.id}`}
-                      alt={s.author.full_name || 'Usuário'}
+                      alt={s.author.full_name || t('client_views.metavoice.user_fallback', 'Usuário')}
                       className="w-5 h-5 rounded-full object-cover border border-neutral-200 dark:border-neutral-800"
                     />
                     <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 flex items-center gap-1.5">
-                      {s.author.full_name || 'Membro'}
+                      {s.author.full_name || t('client_views.metavoice.member_fallback', 'Membro')}
                       {s.is_anonymous && (
-                        <span className="text-[8px] font-black text-rose-500 uppercase bg-rose-500/10 px-1.5 py-0.5 rounded-full">Anônimo</span>
+                        <span className="text-[8px] font-black text-rose-500 uppercase bg-rose-500/10 px-1.5 py-0.5 rounded-full">{t('client_views.metavoice.anonymous_badge', 'Anônimo')}</span>
                       )}
                     </span>
                   </div>
@@ -375,7 +405,7 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
                             handleStar(s.id, star)
                           }}
                           className="focus:outline-none transition-transform hover:scale-120 p-0.5"
-                          title={`Avaliar importância: ${star} estrelas`}
+                          title={t('client_views.metavoice.rate_importance_tooltip', 'Avaliar importância: {star} estrelas').replace('{star}', String(star))}
                         >
                           <Star className={cn("w-4 h-4 transition-colors", isFilled ? "fill-amber-400 text-amber-400" : "text-neutral-300 dark:text-neutral-700 hover:text-amber-300")} />
                         </button>
@@ -383,7 +413,7 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
                     })}
                     {s.avgStars !== undefined && s.avgStars > 0 && (
                       <span className="text-[10px] font-black text-amber-500 ml-1">
-                        (Média: {s.avgStars.toFixed(1)})
+                        ({t('client_views.metavoice.avg_label', 'Média: ')}{s.avgStars.toFixed(1)})
                       </span>
                     )}
                   </div>
@@ -395,32 +425,32 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
       )}
 
       {/* New Suggestion Modal */}
-      <Modal isOpen={showNewModal} onClose={() => setShowNewModal(false)} title="Nova Sugestão" size="2xl">
+      <Modal isOpen={showNewModal} onClose={() => setShowNewModal(false)} title={t('client_views.metavoice.modal_new_title', 'Nova Sugestão')} size="2xl">
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
-            <label className="block text-xs font-black uppercase text-neutral-500 mb-1.5">Título da Sugestão</label>
+            <label className="block text-xs font-black uppercase text-neutral-500 mb-1.5">{t('client_views.metavoice.label_title', 'Título da Sugestão')}</label>
             <input
               required
               value={newTitle}
               onChange={e => setNewTitle(e.target.value)}
-              placeholder="Ex: Modo Escuro no Editor SQL"
+              placeholder={t('client_views.metavoice.placeholder_title', 'Ex: Modo Escuro no Editor SQL')}
               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <div>
-            <label className="block text-xs font-black uppercase text-neutral-500 mb-1.5">Categoria</label>
+            <label className="block text-xs font-black uppercase text-neutral-500 mb-1.5">{t('client_views.metavoice.label_category', 'Categoria')}</label>
             <select
               value={newCategory}
               onChange={e => setNewCategory(e.target.value)}
               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500"
             >
-              {CATEGORIES.filter(c => c.id !== 'all').map(c => (
+              {categoriesList.filter(c => c.id !== 'all').map(c => (
                 <option key={c.id} value={c.id}>{c.label}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-black uppercase text-neutral-500 mb-1.5">Descrição Detalhada</label>
+            <label className="block text-xs font-black uppercase text-neutral-500 mb-1.5">{t('client_views.metavoice.label_description', 'Descrição Detalhada')}</label>
             <textarea
               required
               maxLength={2000}
@@ -443,11 +473,11 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
                   }
                 }
               }}
-              placeholder="Explique o que você gostaria que fosse implementado e qual problema isso resolve... (Cole uma imagem com Ctrl+V)"
+              placeholder={t('client_views.metavoice.placeholder_description', 'Explique o que você gostaria que fosse implementado e qual problema isso resolve... (Cole uma imagem com Ctrl+V)')}
               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 h-48 resize-none"
             />
             <div className="flex justify-between items-center mt-1.5 px-1">
-              <span className="text-[10px] text-neutral-400">Máximo de 2000 caracteres</span>
+              <span className="text-[10px] text-neutral-400">{t('client_views.metavoice.max_chars', 'Máximo de 2000 caracteres')}</span>
               <span className={cn(
                 "text-[10px] font-bold",
                 newDesc.length > 1800 ? "text-rose-500 animate-pulse" : "text-neutral-400"
@@ -466,7 +496,8 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
                 >
                   <X className="w-4 h-4" />
                 </button>
-                <span className="absolute bottom-2 left-2 text-[9px] font-black bg-neutral-900/70 text-white px-2 py-0.5 rounded-full backdrop-blur-sm">🖼️ Imagem colada
+                <span className="absolute bottom-2 left-2 text-[9px] font-black bg-neutral-900/70 text-white px-2 py-0.5 rounded-full backdrop-blur-sm">
+                  🖼️ {t('client_views.metavoice.pasted_image', 'Imagem colada')}
                 </span>
               </div>
             )}
@@ -480,7 +511,7 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
               className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-neutral-300"
             />
             <label htmlFor="anon" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
-              Submeter anonimamente (outros usuários não verão seu nome)
+              {t('client_views.metavoice.anonymous_checkbox', 'Submeter anonimamente (outros usuários não verão seu nome)')}
             </label>
           </div>
           <div className="pt-4 flex justify-end gap-3 border-t border-neutral-100 dark:border-neutral-800">
@@ -489,7 +520,7 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
               onClick={() => setShowNewModal(false)}
               className="px-5 py-2.5 text-sm font-bold text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
             >
-              Cancelar
+              {t('client_views.metavoice.cancel', 'Cancelar')}
             </button>
             <button
               type="submit"
@@ -497,14 +528,14 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
               className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black uppercase tracking-wider rounded-xl transition-colors disabled:opacity-50 flex items-center gap-2"
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              Enviar Sugestão
+              {t('client_views.metavoice.submit_btn', 'Enviar Sugestão')}
             </button>
           </div>
         </form>
       </Modal>
 
       {/* Details Drawer/Modal */}
-      <Modal isOpen={!!selectedId} onClose={() => setSelectedId(null)} title="Detalhes da Sugestão" size="2xl">
+      <Modal isOpen={!!selectedId} onClose={() => setSelectedId(null)} title={t('client_views.metavoice.modal_details_title', 'Detalhes da Sugestão')} size="2xl">
         {loadingDetails || !selectedSuggestion ? (
           <div className="py-20 flex justify-center">
             <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
@@ -514,8 +545,8 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
             {/* Header Content */}
             <div>
               <div className="flex justify-between items-start mb-4">
-                <span className={cn("px-2.5 py-1 rounded-full text-[9px] font-black uppercase flex items-center gap-1", STATUS_MAP[selectedSuggestion.status]?.color || STATUS_MAP.under_review.color)}>
-                  {STATUS_MAP[selectedSuggestion.status]?.label || 'Em Análise'}
+                <span className={cn("px-2.5 py-1 rounded-full text-[9px] font-black uppercase flex items-center gap-1", getStatusInfo(selectedSuggestion.status).color)}>
+                  {getStatusInfo(selectedSuggestion.status).label}
                 </span>
                 <span className="text-[10px] font-black uppercase text-neutral-400">
                   {new Date(selectedSuggestion.created_at).toLocaleDateString()}
@@ -527,13 +558,13 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
                 <div className="flex items-center gap-2 mb-4">
                   <img
                     src={selectedSuggestion.author.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${selectedSuggestion.author.id}`}
-                    alt={selectedSuggestion.author.full_name || 'Usuário'}
+                    alt={selectedSuggestion.author.full_name || t('client_views.metavoice.user_fallback', 'Usuário')}
                     className="w-6 h-6 rounded-full object-cover border border-neutral-200 dark:border-neutral-800"
                   />
                   <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 flex items-center gap-1.5">
-                    Sugerido por <strong className="text-neutral-900 dark:text-white">{selectedSuggestion.author.full_name}</strong>
+                    {t('client_views.metavoice.suggested_by', 'Sugerido por')} <strong className="text-neutral-900 dark:text-white">{selectedSuggestion.author.full_name}</strong>
                     {selectedSuggestion.is_anonymous && (
-                      <span className="text-[9px] font-black text-rose-500 uppercase bg-rose-500/10 px-2 py-0.5 rounded-full">Anônimo (Visível apenas para Admin)</span>
+                      <span className="text-[9px] font-black text-rose-500 uppercase bg-rose-500/10 px-2 py-0.5 rounded-full">{t('client_views.metavoice.anonymous_admin_only', 'Anônimo (Visível apenas para Admin)')}</span>
                     )}
                   </span>
                 </div>
@@ -558,7 +589,7 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
               <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-2xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <ShieldAlert className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-xs font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">Resposta Oficial do Time</span>
+                  <span className="text-xs font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">{t('client_views.metavoice.official_response', 'Resposta Oficial do Time')}</span>
                 </div>
                 <p className="text-sm text-emerald-800 dark:text-emerald-200">
                   {selectedSuggestion.admin_response_public}
@@ -579,17 +610,17 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
                   )}
                 >
                   <ThumbsUp className={cn("w-4 h-4", selectedSuggestion.votes?.some(v => v.user_id === userId && v.type === 'like') && "fill-current")} />
-                  {selectedSuggestion.votes?.some(v => v.user_id === userId && v.type === 'like') ? 'Você votou' : 'Eu também quero!'}
+                  {selectedSuggestion.votes?.some(v => v.user_id === userId && v.type === 'like') ? t('client_views.metavoice.you_voted', 'Você votou') : t('client_views.metavoice.want_too', 'Eu também quero!')}
                 </button>
                 <span className="text-sm font-bold text-neutral-500">
-                  {selectedSuggestion.votes?.filter(v => v.type === 'like').length || 0} votos
+                  {selectedSuggestion.votes?.filter(v => v.type === 'like').length || 0} {t('client_views.metavoice.votes_count', 'votos')}
                 </span>
               </div>
 
               <div className="w-px h-8 bg-neutral-200 dark:bg-neutral-800 hidden sm:block"></div>
 
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mr-2">Avalie a importância:</span>
+                <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mr-2">{t('client_views.metavoice.rate_importance', 'Avalie a importância:')}</span>
                 {[1, 2, 3, 4, 5].map(star => {
                   const userStar = selectedSuggestion.votes?.find(v => v.user_id === userId && v.type === 'star')?.star_value || 0
                   const isFilled = star <= userStar
@@ -609,7 +640,7 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
             {/* Comments */}
             <div className="space-y-4">
               <h3 className="text-sm font-black uppercase text-neutral-500 tracking-wider border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                Comentários ({selectedSuggestion.comments?.length || 0})
+                {t('client_views.metavoice.comments_title', 'Comentários')} ({selectedSuggestion.comments?.length || 0})
               </h3>
 
               <div className="space-y-4 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
@@ -622,14 +653,14 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
                     ) : (
                       <img
                         src={comment.author?.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${comment.author?.id || comment.id}`}
-                        alt={comment.author?.full_name || 'Membro'}
+                        alt={comment.author?.full_name || t('client_views.metavoice.member_fallback', 'Membro')}
                         className="w-8 h-8 rounded-full object-cover shrink-0 border border-neutral-200 dark:border-neutral-800"
                       />
                     )}
                     <div className={cn("flex-1 p-3 rounded-2xl", comment.is_admin_response ? "bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20" : "bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800")}>
                       <div className="flex items-center justify-between mb-1">
                         <span className={cn("text-xs font-black", comment.is_admin_response ? "text-indigo-600 dark:text-indigo-400" : "text-neutral-900 dark:text-white")}>
-                          {comment.is_admin_response ? 'Equipe MetaBuilderPRO' : (comment.author?.full_name || 'Usuário')}
+                          {comment.is_admin_response ? t('client_views.metavoice.team_name', 'Equipe MetaBuilderPRO') : (comment.author?.full_name || t('client_views.metavoice.user_fallback', 'Usuário'))}
                         </span>
                         <span className="text-[9px] font-medium text-neutral-400">
                           {new Date(comment.created_at).toLocaleDateString()}
@@ -640,7 +671,7 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
                   </div>
                 ))}
                 {(!selectedSuggestion.comments || selectedSuggestion.comments.length === 0) && (
-                  <p className="text-xs text-neutral-400 italic text-center py-4">Nenhum comentário ainda. Seja o primeiro a opinar!</p>
+                  <p className="text-xs text-neutral-400 italic text-center py-4">{t('client_views.metavoice.empty_comments', 'Nenhum comentário ainda. Seja o primeiro a opinar!')}</p>
                 )}
               </div>
 
@@ -650,7 +681,7 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
                   required
                   value={newComment}
                   onChange={e => setNewComment(e.target.value)}
-                  placeholder="Adicionar um comentário..."
+                  placeholder={t('client_views.metavoice.comment_placeholder', 'Adicionar um comentário...')}
                   className="flex-1 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                 />
                 <button
@@ -658,7 +689,7 @@ export function MetaVoiceView({ userId, hideHeader = false }: MetaVoiceViewProps
                   disabled={isCommenting}
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors disabled:opacity-50"
                 >
-                  {isCommenting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Enviar'}
+                  {isCommenting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('client_views.metavoice.send_comment', 'Enviar')}
                 </button>
               </form>
             </div>

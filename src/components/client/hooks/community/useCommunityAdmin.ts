@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { toggleCommunityPostHide, deleteCommunityPostAdmin, toggleCommunityCommentHide, deleteCommunityCommentAdmin, toggleUserCommunityBlock } from '@/app/actions/admin'
+import { useI18n } from '@/i18n'
 
 export function useCommunityAdmin(isSimulator: boolean, fetchPosts: any, fetchConnectionsData: any, setPosts: any, setCommentsForPost: any, setConnections: any, openCommentsPostId: string | null, setOpenCommentsPostId: any) {
+  const { t } = useI18n()
   const [processingAdminAction, setProcessingAdminAction] = useState<Record<string, boolean>>({})
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, title: string, message: string, onConfirm: () => void }>({
     isOpen: false, title: '', message: '', onConfirm: () => {}
@@ -24,8 +26,8 @@ export function useCommunityAdmin(isSimulator: boolean, fetchPosts: any, fetchCo
   const handleAdminDeletePost = (postId: string) => {
     setConfirmModal({
       isOpen: true,
-      title: 'Excluir Publicação',
-      message: 'Tem certeza de que deseja EXCLUIR permanentemente esta publicação?',
+      title: t('client_views.community.admin_delete_post_title', 'Excluir Publicação'),
+      message: t('client_views.community.admin_delete_post_msg', 'Tem certeza de que deseja EXCLUIR permanentemente esta publicação?'),
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }))
         setProcessingAdminAction(prev => ({ ...prev, [`post_delete_${postId}`]: true }))
@@ -70,8 +72,8 @@ export function useCommunityAdmin(isSimulator: boolean, fetchPosts: any, fetchCo
   const handleAdminDeleteComment = (postId: string, commentId: string) => {
     setConfirmModal({
       isOpen: true,
-      title: 'Excluir Comentário',
-      message: 'Tem certeza de que deseja EXCLUIR permanentemente este comentário?',
+      title: t('client_views.community.admin_delete_comment_title', 'Excluir Comentário'),
+      message: t('client_views.community.admin_delete_comment_msg', 'Tem certeza de que deseja EXCLUIR permanentemente este comentário?'),
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }))
         setProcessingAdminAction(prev => ({ ...prev, [`comment_delete_${commentId}`]: true }))
@@ -91,11 +93,11 @@ export function useCommunityAdmin(isSimulator: boolean, fetchPosts: any, fetchCo
   }
 
   const handleAdminToggleUserBlock = (userId: string, isBlocked: boolean) => {
-    const actionText = isBlocked ? 'Desbloquear' : 'Bloquear'
+    const actionText = isBlocked ? t('client_views.community.unblock', 'Desbloquear') : t('client_views.community.block', 'Bloquear')
     setConfirmModal({
       isOpen: true,
-      title: `${actionText} Usuário`,
-      message: isBlocked ? 'Desbloquear este usuário na Comunidade?' : 'Bloquear este usuário da Comunidade?',
+      title: `${actionText} ${t('client_views.community.user', 'Usuário')}`,
+      message: isBlocked ? t('client_views.community.unblock_user_msg', 'Desbloquear este usuário na Comunidade?') : t('client_views.community.block_user_msg', 'Bloquear este usuário da Comunidade?'),
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }))
         setProcessingAdminAction(prev => ({ ...prev, [`user_block_${userId}`]: true }))

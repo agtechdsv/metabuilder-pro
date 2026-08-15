@@ -16,6 +16,7 @@ import { useCommunityConnections } from './hooks/community/useCommunityConnectio
 import { useCommunityFeed } from './hooks/community/useCommunityFeed'
 import { useCommunityChat } from './hooks/community/useCommunityChat'
 import { useCommunityAdmin } from './hooks/community/useCommunityAdmin'
+import { useI18n } from '@/i18n'
 
 export default function CommunityHubView({ 
   hideHeader = false,
@@ -24,6 +25,7 @@ export default function CommunityHubView({
   hideHeader?: boolean
   isSimulator?: boolean
 }) {
+  const { t } = useI18n()
   const supabase = createClient()
   const imageInputRef = useRef<HTMLInputElement>(null)
   
@@ -74,7 +76,7 @@ export default function CommunityHubView({
           <div className="relative z-10">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-white/10 border border-white/20 backdrop-blur-md uppercase tracking-widest">
-                <Users className="w-3.5 h-3.5 text-blue-400" /> Networking & Hub
+                <Users className="w-3.5 h-3.5 text-blue-400" /> {t('client_views.community.tag', 'Networking & Hub')}
               </span>
               <button 
                 onClick={() => {
@@ -83,15 +85,15 @@ export default function CommunityHubView({
                   }
                 }}
                 className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-md border border-white/20 transition-all flex items-center gap-2 group"
-                title="Abrir em Nova Janela (Modo Foco)"
+                title={t('client_views.community.focus_mode_tooltip', 'Abrir em Nova Janela (Modo Foco)')}
               >
-                <span className="hidden md:inline text-xs font-bold uppercase tracking-widest group-hover:text-white">Modo Foco</span>
+                <span className="hidden md:inline text-xs font-bold uppercase tracking-widest group-hover:text-white">{t('client_views.community.focus_mode', 'Modo Foco')}</span>
                 <ExternalLink className="w-4 h-4" />
               </button>
             </div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-2">MetaBuilders</h2>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-2">{t('client_views.community.title', 'MetaBuilders')}</h2>
             <p className="text-indigo-100 text-sm md:text-base leading-relaxed">
-              Conecte-se com outros Owners e Desenvolvedores, compartilhe insights e faça networking.
+              {t('client_views.community.desc', 'Conecte-se com outros Owners e Desenvolvedores, compartilhe insights e faça networking.')}
             </p>
           </div>
         </div>
@@ -128,7 +130,7 @@ export default function CommunityHubView({
                       </div>
                       <div className="flex-1 space-y-4">
                         <textarea 
-                          placeholder="O que você quer compartilhar com a comunidade? (Cole uma imagem com Ctrl+V)"
+                          placeholder={t('client_views.community.create_post_placeholder', 'O que você quer compartilhar com a comunidade? (Cole uma imagem com Ctrl+V)')}
                           value={newPostContent}
                           onChange={(e) => setNewPostContent(e.target.value)}
                           onPaste={handlePostPaste}
@@ -172,11 +174,11 @@ export default function CommunityHubView({
                             {isPublishing ? (
                               <>
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                <span>Publicando...</span>
+                                <span>{t('client_views.community.publishing', 'Publicando...')}</span>
                               </>
                             ) : (
                               <>
-                                <span>Publicar</span>
+                                <span>{t('client_views.community.publish', 'Publicar')}</span>
                                 <Send className="w-4 h-4" />
                               </>
                             )}
@@ -191,13 +193,13 @@ export default function CommunityHubView({
                 {isLoadingPosts ? (
                   <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800">
                     <Loader2 className="w-10 h-10 animate-spin text-indigo-500 mb-4" />
-                    <p className="text-neutral-400 font-medium">Carregando feed...</p>
+                    <p className="text-neutral-400 font-medium">{t('client_views.community.loading_feed', 'Carregando feed...')}</p>
                   </div>
                 ) : posts.length === 0 ? (
                   <div className="text-center py-16 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800">
                     <MessageSquareOff className="w-12 h-12 mx-auto text-neutral-400 mb-3" />
-                    <p className="text-neutral-500 dark:text-neutral-400 font-bold">Nenhuma publicação ainda.</p>
-                    <p className="text-xs text-neutral-400 mt-1">Seja o primeiro a compartilhar algo com a comunidade!</p>
+                    <p className="text-neutral-500 dark:text-neutral-400 font-bold">{t('client_views.community.empty_posts_title', 'Nenhuma publicação ainda.')}</p>
+                    <p className="text-xs text-neutral-400 mt-1">{t('client_views.community.empty_posts_desc', 'Seja o primeiro a compartilhar algo com a comunidade!')}</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -218,7 +220,7 @@ export default function CommunityHubView({
                                   {post.user.role}
                                 </span>
                                 {isCurrentUserAdmin && post.is_hidden && (
-                                  <span className="px-1.5 py-0.5 text-[8px] font-black uppercase bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded border border-amber-200 dark:border-amber-700">Oculto</span>
+                                  <span className="px-1.5 py-0.5 text-[8px] font-black uppercase bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded border border-amber-200 dark:border-amber-700">{t('client_views.community.hidden_badge', 'Oculto')}</span>
                                 )}
                               </h4>
                               <span className="text-xs text-neutral-400">
@@ -236,7 +238,7 @@ export default function CommunityHubView({
                               <button
                                 onClick={() => handleAdminToggleUserBlock(post.user.id, post.user.is_blocked_community)}
                                 disabled={processingAdminAction[`user_block_${post.user.id}`]}
-                                title={post.user.is_blocked_community ? 'Desbloquear usuário' : 'Bloquear usuário'}
+                                title={post.user.is_blocked_community ? t('client_views.community.unblock_user', 'Desbloquear usuário') : t('client_views.community.block_user', 'Bloquear usuário')}
                                 className={cn(
                                   "p-1.5 rounded-lg text-xs transition-all active:scale-90 disabled:opacity-50",
                                   post.user.is_blocked_community
@@ -249,7 +251,7 @@ export default function CommunityHubView({
                               <button
                                 onClick={() => handleAdminTogglePostHide(post.id, post.is_hidden)}
                                 disabled={processingAdminAction[`post_hide_${post.id}`]}
-                                title={post.is_hidden ? 'Exibir post' : 'Ocultar post'}
+                                title={post.is_hidden ? t('client_views.community.show_post', 'Exibir post') : t('client_views.community.hide_post', 'Ocultar post')}
                                 className="p-1.5 rounded-lg text-neutral-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all active:scale-90 disabled:opacity-50"
                               >
                                 {post.is_hidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -257,7 +259,7 @@ export default function CommunityHubView({
                               <button
                                 onClick={() => handleAdminDeletePost(post.id)}
                                 disabled={processingAdminAction[`post_delete_${post.id}`]}
-                                title="Excluir post permanentemente"
+                                title={t('client_views.community.delete_post', 'Excluir post permanentemente')}
                                 className="p-1.5 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-90 disabled:opacity-50"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -313,17 +315,17 @@ export default function CommunityHubView({
                         {/* Comments Drawer / Section */}
                         {openCommentsPostId === post.id && (
                           <div className="mt-6 pt-6 border-t border-neutral-100 dark:border-neutral-800 space-y-4 animate-in slide-in-from-top-4 duration-200">
-                            <h5 className="font-black text-xs uppercase tracking-widest text-neutral-450">Comentários</h5>
+                            <h5 className="font-black text-xs uppercase tracking-widest text-neutral-450">{t('client_views.community.comments_title', 'Comentários')}</h5>
                             
                             {isLoadingComments[post.id] ? (
                               <div className="flex items-center gap-2 py-4 justify-center">
                                 <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
-                                <span className="text-xs text-neutral-400">Carregando...</span>
+                                <span className="text-xs text-neutral-400">{t('client_views.community.loading_comments', 'Carregando...')}</span>
                               </div>
                             ) : (
                               <div className="space-y-3">
                                 {(commentsForPost[post.id] || []).length === 0 ? (
-                                  <p className="text-xs text-neutral-450 italic py-2 text-center">Nenhum comentário. Comece a conversa!</p>
+                                  <p className="text-xs text-neutral-450 italic py-2 text-center">{t('client_views.community.empty_comments', 'Nenhum comentário. Comece a conversa!')}</p>
                                 ) : (
                                   (commentsForPost[post.id] || []).map(comment => (
                                     <div key={comment.id} className={cn("flex gap-3 items-start p-3 rounded-2xl", comment.is_hidden ? "bg-amber-50/60 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50" : "bg-neutral-50 dark:bg-neutral-850")}>
@@ -336,7 +338,7 @@ export default function CommunityHubView({
                                               {comment.user.role}
                                             </span>
                                             {isCurrentUserAdmin && comment.is_hidden && (
-                                              <span className="px-1.5 py-0.5 text-[8px] font-black uppercase bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded border border-amber-200 dark:border-amber-700">Oculto</span>
+                                              <span className="px-1.5 py-0.5 text-[8px] font-black uppercase bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded border border-amber-200 dark:border-amber-700">{t('client_views.community.hidden_badge', 'Oculto')}</span>
                                             )}
                                           </div>
                                           <div className="flex items-center gap-1 shrink-0">
@@ -349,7 +351,7 @@ export default function CommunityHubView({
                                                 <button
                                                   onClick={() => handleAdminToggleUserBlock(comment.user.id, comment.user.is_blocked_community)}
                                                   disabled={processingAdminAction[`user_block_${comment.user.id}`]}
-                                                  title={comment.user.is_blocked_community ? 'Desbloquear usuário' : 'Bloquear usuário'}
+                                                  title={comment.user.is_blocked_community ? t('client_views.community.unblock_user', 'Desbloquear usuário') : t('client_views.community.block_user', 'Bloquear usuário')}
                                                   className={cn(
                                                     "p-1 rounded-lg transition-all active:scale-90 disabled:opacity-50",
                                                     comment.user.is_blocked_community
@@ -362,7 +364,7 @@ export default function CommunityHubView({
                                                 <button
                                                   onClick={() => handleAdminToggleCommentHide(post.id, comment.id, comment.is_hidden)}
                                                   disabled={processingAdminAction[`comment_hide_${comment.id}`]}
-                                                  title={comment.is_hidden ? 'Exibir comentário' : 'Ocultar comentário'}
+                                                  title={comment.is_hidden ? t('client_views.community.show_comment', 'Exibir comentário') : t('client_views.community.hide_comment', 'Ocultar comentário')}
                                                   className="p-1 rounded-lg text-neutral-300 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all active:scale-90 disabled:opacity-50"
                                                 >
                                                   {comment.is_hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
@@ -370,7 +372,7 @@ export default function CommunityHubView({
                                                 <button
                                                   onClick={() => handleAdminDeleteComment(post.id, comment.id)}
                                                   disabled={processingAdminAction[`comment_delete_${comment.id}`]}
-                                                  title="Excluir comentário"
+                                                  title={t('client_views.community.delete_comment', 'Excluir comentário')}
                                                   className="p-1 rounded-lg text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-90 disabled:opacity-50"
                                                 >
                                                   <Trash2 className="w-3.5 h-3.5" />
@@ -394,7 +396,7 @@ export default function CommunityHubView({
                               <div className="flex gap-3 items-center pt-2">
                                 <input 
                                   type="text" 
-                                  placeholder="Escreva um comentário..."
+                                  placeholder={t('client_views.community.comment_placeholder', 'Escreva um comentário...')}
                                   value={newCommentText}
                                   onChange={(e) => setNewCommentText(e.target.value)}
                                   onKeyDown={(e) => e.key === 'Enter' && handleSubmitComment(post.id)}
@@ -455,7 +457,7 @@ export default function CommunityHubView({
                               {activeConnection.user.role}
                             </span>
                           </h4>
-                          <span className="text-[10px] text-neutral-400">Ativo agora</span>
+                          <span className="text-[10px] text-neutral-400">{t('client_views.community.active_now', 'Ativo agora')}</span>
                         </div>
                       </div>
                     )}
@@ -467,13 +469,13 @@ export default function CommunityHubView({
                   {isLoadingMessages ? (
                     <div className="h-full flex flex-col items-center justify-center">
                       <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-2" />
-                      <span className="text-xs text-neutral-400 font-semibold">Carregando conversa...</span>
+                      <span className="text-xs text-neutral-400 font-semibold">{t('client_views.community.loading_chat', 'Carregando conversa...')}</span>
                     </div>
                   ) : messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center opacity-75">
                       <MessageSquare className="w-12 h-12 text-neutral-350 dark:text-neutral-700 mb-3" />
-                      <h4 className="font-bold text-sm text-neutral-500">Inicie a conversa</h4>
-                      <p className="text-xs text-neutral-400 mt-1 max-w-[280px]">As mensagens enviadas aqui são criptografadas e privadas entre vocês.</p>
+                      <h4 className="font-bold text-sm text-neutral-500">{t('client_views.community.start_chat_title', 'Inicie a conversa')}</h4>
+                      <p className="text-xs text-neutral-400 mt-1 max-w-[280px]">{t('client_views.community.start_chat_desc', 'As mensagens enviadas aqui são criptografadas e privadas entre vocês.')}</p>
                     </div>
                   ) : (
                     messages.map(msg => {
@@ -509,7 +511,7 @@ export default function CommunityHubView({
                     </button>
                     
                     <textarea 
-                      placeholder="Escreva sua mensagem..."
+                      placeholder={t('client_views.community.chat_placeholder', 'Escreva sua mensagem...')}
                       value={newMessageText}
                       onChange={(e) => setNewMessageText(e.target.value)}
                       onKeyDown={handleKeyPress}
@@ -545,7 +547,7 @@ export default function CommunityHubView({
               <div className="mb-6 pb-6 border-b border-neutral-100 dark:border-neutral-800">
                 <h3 className="font-black text-xs uppercase tracking-widest text-amber-500 mb-4 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
-                  Solicitações de Conexão ({pendingIncoming.length})
+                  {t('client_views.community.connection_requests', 'Solicitações de Conexão ({count})').replace('{count}', String(pendingIncoming.length))}
                 </h3>
                 <div className="space-y-3">
                   {pendingIncoming.map(conn => (
@@ -562,7 +564,7 @@ export default function CommunityHubView({
                           onClick={() => handleConnectionAction('accept', conn.id)}
                           disabled={isProcessingConnection[conn.id]}
                           className="p-1 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/60 rounded-lg transition-colors"
-                          title="Aceitar"
+                          title={t('client_views.community.accept', 'Aceitar')}
                         >
                           {isProcessingConnection[conn.id] ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -574,7 +576,7 @@ export default function CommunityHubView({
                           onClick={() => handleConnectionAction('reject', conn.id)}
                           disabled={isProcessingConnection[conn.id]}
                           className="p-1 text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/60 rounded-lg transition-colors"
-                          title="Recusar"
+                          title={t('client_views.community.reject', 'Recusar')}
                         >
                           {isProcessingConnection[conn.id] ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -591,9 +593,9 @@ export default function CommunityHubView({
 
             {/* My Connections List */}
             <h3 className="font-black text-xs uppercase tracking-widest text-neutral-400 mb-6 flex items-center justify-between">
-              <span>Minhas Conexões</span>
+              <span>{t('client_views.community.my_connections', 'Minhas Conexões')}</span>
               <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-[10px] font-bold normal-case text-neutral-500">
-                {activeConnections.length} conexões
+                {activeConnections.length} {t('client_views.community.connections_count', 'conexões')}
               </span>
             </h3>
             
@@ -602,7 +604,7 @@ export default function CommunityHubView({
                 <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
               </div>
             ) : activeConnections.length === 0 ? (
-              <p className="text-xs text-neutral-400 text-center py-4 italic">Nenhuma conexão ativa. Conecte-se abaixo!</p>
+              <p className="text-xs text-neutral-400 text-center py-4 italic">{t('client_views.community.empty_connections', 'Nenhuma conexão ativa. Conecte-se abaixo!')}</p>
             ) : (
               <div className="space-y-3">
                 {activeConnections.map(conn => (
@@ -628,7 +630,7 @@ export default function CommunityHubView({
                       <button 
                         onClick={() => handleOpenChat(conn)}
                         className="p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-colors"
-                        title="Enviar Mensagem Privada"
+                        title={t('client_views.community.send_dm_tooltip', 'Enviar Mensagem Privada')}
                       >
                         <MessageSquare className="w-4 h-4" />
                       </button>
@@ -637,7 +639,7 @@ export default function CommunityHubView({
                         onClick={() => handleConnectionAction('remove', conn.id)}
                         disabled={isProcessingConnection[conn.id]}
                         className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
-                        title="Desconectar"
+                        title={t('client_views.community.disconnect_tooltip', 'Desconectar')}
                       >
                         {isProcessingConnection[conn.id] ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -653,14 +655,14 @@ export default function CommunityHubView({
 
             {/* Suggestions & Discover */}
             <div className="mt-8 pt-6 border-t border-neutral-100 dark:border-neutral-800">
-              <h3 className="font-black text-xs uppercase tracking-widest text-neutral-400 mb-4">Sugestões (Descobrir)</h3>
+              <h3 className="font-black text-xs uppercase tracking-widest text-neutral-400 mb-4">{t('client_views.community.suggestions_title', 'Sugestões (Descobrir)')}</h3>
               
               {isLoadingConnections ? (
                 <div className="flex justify-center py-4">
                   <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
                 </div>
               ) : suggestions.length === 0 ? (
-                <p className="text-xs text-neutral-400 text-center py-2 italic">Nenhuma sugestão disponível no momento.</p>
+                <p className="text-xs text-neutral-400 text-center py-2 italic">{t('client_views.community.empty_suggestions', 'Nenhuma sugestão disponível no momento.')}</p>
               ) : (
                 <div className="space-y-3">
                   {suggestions.map(sugg => {
@@ -684,12 +686,12 @@ export default function CommunityHubView({
                               ? "text-neutral-405 bg-neutral-50 dark:bg-neutral-800 text-xs font-bold" 
                               : "text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50"
                           )}
-                          title={isPendingSent ? "Solicitação Pendente" : "Enviar solicitação de conexão"}
+                          title={isPendingSent ? t('client_views.community.pending_tooltip', 'Solicitação Pendente') : t('client_views.community.send_connection_tooltip', 'Enviar solicitação de conexão')}
                         >
                           {isProcessingConnection[sugg.id] ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : isPendingSent ? (
-                            <span className="text-[10px]">Pendente</span>
+                            <span className="text-[10px]">{t('client_views.community.pending', 'Pendente')}</span>
                           ) : (
                             <UserPlus className="w-4 h-4" />
                           )}
@@ -722,14 +724,14 @@ export default function CommunityHubView({
               onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
               className="px-4 py-2 text-xs font-bold text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
             >
-              Cancelar
+              {t('client_views.community.cancel', 'Cancelar')}
             </button>
             <button
               type="button"
               onClick={confirmModal.onConfirm}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
             >
-              Confirmar
+              {t('client_views.community.confirm', 'Confirmar')}
             </button>
           </div>
         </div>
