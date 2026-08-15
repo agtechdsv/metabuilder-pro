@@ -1,19 +1,4 @@
 {
-  "v1.0.4": {
-    "date": "2026-08-14",
-    "pt": [
-      "Nova Exportação Inteligente de Código-Fonte: Baixe seus projetos completos em arquivos ZIP limpos, otimizados e com segurança integrada.",
-      "Sincronização Local e Integração Nativa com Git: Gerencie versões e mantenha seus arquivos sincronizados diretamente no seu desktop com máxima performance e estabilidade."
-    ],
-    "en": [
-      "Smart Source Code Export: Easily download your complete projects as clean, optimized, and secure ZIP packages.",
-      "Native Local Sync & Git Integration: Seamlessly synchronize local project files and manage version control directly on your desktop with enhanced performance."
-    ],
-    "es": [
-      "Exportación Inteligente de Código Fuente: Descargue sus proyectos completos en archivos ZIP limpios, optimizados y con seguridad integrada.",
-      "Sincronización Local e Integración Nativa con Git: Gestione versiones y mantenga sus archivos sincronizados directamente en su escritorio con máximo rendimiento y estabilidad."
-    ]
-  },
   "v1.0.3": {
     "date": "2026-08-13",
     "pt": [
