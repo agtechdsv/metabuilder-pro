@@ -5,6 +5,7 @@ import { Lock, Monitor } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUpgradeModal } from '@/context/UpgradeModalContext'
 import { isTauri } from '@/utils/tauriUtils'
+import { useI18n } from '@/i18n/I18nContext'
 
 type GateType = 'pro' | 'desktop'
 
@@ -39,6 +40,7 @@ interface ProGateProps {
  */
 export function ProGate({ tier, featureName, gateType, children, className }: ProGateProps) {
   const { openUpgrade, openDesktopOnly } = useUpgradeModal()
+  const { t } = useI18n()
   const isDesktop = isTauri()
 
   // Determina se está bloqueado e qual modal deve abrir
@@ -70,6 +72,10 @@ export function ProGate({ tier, featureName, gateType, children, className }: Pr
     return <>{children}</>
   }
 
+  const tooltipText = icon === 'monitor' 
+    ? `${featureName} — ${t('progate.desktop_exclusive', 'Exclusivo da IDE Desktop')}` 
+    : `${featureName} — ${t('progate.pro_available', 'Disponível no plano PRO')}`
+
   return (
     <div
       className={cn('relative group cursor-not-allowed', className)}
@@ -78,7 +84,7 @@ export function ProGate({ tier, featureName, gateType, children, className }: Pr
         e.stopPropagation()
         handleClick()
       }}
-      title={icon === 'monitor' ? `${featureName} — Exclusivo da IDE Desktop` : `${featureName} — Disponível no plano PRO`}
+      title={tooltipText}
     >
       {/* Conteúdo acinzentado */}
       <div className="opacity-40 pointer-events-none select-none">

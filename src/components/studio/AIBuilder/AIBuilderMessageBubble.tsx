@@ -1,6 +1,7 @@
 'use client'
 
 import { Bot, User, Loader2 } from 'lucide-react'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface Message {
   id: string
@@ -77,6 +78,7 @@ function InlineText({ text }: { text: string }) {
 }
 
 export function AIBuilderMessageBubble({ message }: AIBuilderMessageBubbleProps) {
+  const { t } = useI18n()
   const isUser = message.role === 'user'
   const isJson = message.parsedSuccessfully === true
   return (
@@ -99,11 +101,11 @@ export function AIBuilderMessageBubble({ message }: AIBuilderMessageBubbleProps)
         {message.isStreaming && !message.content ? (
           <div className="flex items-center gap-2 text-neutral-400">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            <span className="text-xs">Gerando...</span>
+            <span className="text-xs">{t('ai_builder.generating', 'Gerando...')}</span>
           </div>
         ) : isJson ? (
           <div className="text-xs text-neutral-500 dark:text-neutral-400 italic">
-            ✅ Código gerado! A tela de revisão foi aberta automaticamente.
+            {t('ai_builder.code_generated_success', '✅ Código gerado! A tela de revisão foi aberta automaticamente.')}
           </div>
         ) : (
           <SimpleMarkdown text={message.content} />

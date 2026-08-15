@@ -7,6 +7,7 @@ import { TableSelector } from './TableSelector'
 import { AIBuilderReviewPanel } from './AIBuilderReviewPanel'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface Message {
   id: string
@@ -43,6 +44,7 @@ export function AIBuilderChat({
   initialView,
   onClose,
 }: AIBuilderChatProps) {
+  const { t } = useI18n()
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -112,7 +114,7 @@ export function AIBuilderChat({
               {
                 id: 'edit-welcome',
                 role: 'assistant',
-                content: `✏️ **Modo Edição** — Você está editando **"${initialView.name}"**.\n\nSeu histórico de conversas anterior foi restaurado. Você pode continuar enviando mensagens para que eu faça alterações, ou editar o código manualmente na aba **Componente**.\n\nQuando estiver pronto, clique em **Atualizar Projeto**.`,
+                content: t('ai_builder.welcome_edit_history', '✏️ **Modo Edição** — Você está editando **"{name}"**.\n\nSeu histórico de conversas anterior foi restaurado. Você pode continuar enviando mensagens para que eu faça alterações, ou editar o código manualmente na aba **Componente**.\n\nQuando estiver pronto, clique em **Atualizar Projeto**.').replace('{name}', initialView.name),
               },
               ...mappedHistory
             ])
@@ -120,7 +122,7 @@ export function AIBuilderChat({
             setMessages([{
               id: 'edit-welcome',
               role: 'assistant',
-              content: `✏️ **Modo Edição** — Você está editando **"${initialView.name}"**.\n\nO código atual foi carregado na aba **Componente**. Você pode:\n- Editar o código diretamente\n- Enviar uma mensagem pedindo que eu faça alterações\n- Ajustar as Configurações na aba correspondente\n\nQuando estiver pronto, clique em **Atualizar Projeto**.`,
+              content: t('ai_builder.welcome_edit_no_history', '✏️ **Modo Edição** — Você está editando **"{name}"**.\n\nO código atual foi carregado na aba **Componente**. Você pode:\n- Editar o código diretamente\n- Enviar uma mensagem pedindo que eu faça alterações\n- Ajustar as Configurações na aba correspondente\n\nQuando estiver pronto, clique em **Atualizar Projeto**.').replace('{name}', initialView.name),
             }])
           }
         })
@@ -128,7 +130,7 @@ export function AIBuilderChat({
         setMessages([{
           id: 'edit-welcome',
           role: 'assistant',
-          content: `✏️ **Modo Edição** — Você está editando **"${initialView.name}"**.\n\nO código atual foi carregado na aba **Componente**. Você pode:\n- Editar o código diretamente\n- Enviar uma mensagem pedindo que eu faça alterações\n- Ajustar as Configurações na aba correspondente\n\nQuando estiver pronto, clique em **Atualizar Projeto**.`,
+          content: t('ai_builder.welcome_edit_no_history', '✏️ **Modo Edição** — Você está editando **"{name}"**.\n\nO código atual foi carregado na aba **Componente**. Você pode:\n- Editar o código diretamente\n- Enviar uma mensagem pedindo que eu faça alterações\n- Ajustar as Configurações na aba correspondente\n\nQuando estiver pronto, clique em **Atualizar Projeto**.').replace('{name}', initialView.name),
         }])
         // Cria uma sessão de edição se não tinha uma anterior
         supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -170,7 +172,7 @@ export function AIBuilderChat({
     setMessages([{
       id: 'welcome',
       role: 'assistant',
-      content: '👋 Olá! Sou seu assistente de geração de casos de uso.\n\nDescreva o que você precisa e eu vou gerar o componente React completo, pronto para usar no seu projeto!\n\n**Dicas:**\n- Selecione as tabelas que o caso de uso vai usar no painel à esquerda\n- Você pode enviar um arquivo de especificação (PDF, TXT, MD)\n- Quando estiver satisfeito com o resultado, clique em **Gerar** para eu produzir o código',
+      content: t('ai_builder.welcome_create', '👋 Olá! Sou seu assistente de geração de casos de uso.\n\nDescreva o que você precisa e eu vou gerar o componente React completo, pronto para usar no seu projeto!\n\n**Dicas:**\n- Selecione as tabelas que o caso de uso vai usar no painel à esquerda\n- Você pode enviar um arquivo de especificação (PDF, TXT, MD)\n- Quando estiver satisfeito com o resultado, clique em **Gerar** para eu produzir o código'),
     }])
   }
 
@@ -418,7 +420,7 @@ export function AIBuilderChat({
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         className="shrink-0 flex items-center justify-center w-5 bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 border-r border-neutral-200 dark:border-neutral-800 transition-colors"
-        title={sidebarOpen ? 'Fechar painel' : 'Abrir seletor de tabelas'}
+        title={sidebarOpen ? t('ai_builder.toggle_panel_close', 'Fechar painel') : t('ai_builder.toggle_panel_open', 'Abrir seletor de tabelas')}
       >
         {sidebarOpen ? (
           <ChevronLeft className="w-3 h-3 text-neutral-400" />
@@ -436,11 +438,11 @@ export function AIBuilderChat({
               onClick={onClose}
               className="flex items-center gap-1.5 text-neutral-500 hover:text-neutral-900 dark:hover:text-white text-sm font-bold transition-colors"
             >
-              ← Voltar ao Studio
+              {t('ai_builder.header_back', '← Voltar ao Studio')}
             </button>
             <span className="text-neutral-300 dark:text-neutral-700">/</span>
             <span className="flex items-center gap-1.5 text-sm font-bold text-violet-600 dark:text-violet-400">
-              <Sparkles className="w-3.5 h-3.5" /> {initialView?.name ? `Editando: ${initialView.name}` : 'Gerar Caso de Uso com IA'}
+              <Sparkles className="w-3.5 h-3.5" /> {initialView?.name ? t('ai_builder.header_editing', 'Editando: {name}').replace('{name}', initialView.name) : t('ai_builder.header_create_title', 'Gerar Caso de Uso com IA')}
             </span>
           </div>
         )}
@@ -448,15 +450,15 @@ export function AIBuilderChat({
         {/* Context pills */}
         {(selectedTables.length > 0 || newTables.length > 0) && (
           <div className="flex items-center gap-2 px-4 py-2 border-b border-neutral-200 dark:border-neutral-800 bg-violet-50 dark:bg-violet-500/5 shrink-0 flex-wrap">
-            <span className="text-xs font-bold text-violet-600 dark:text-violet-400">Contexto:</span>
-            {selectedTables.map((t) => (
-              <span key={t.id} className="px-2 py-0.5 bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 rounded-full text-xs font-medium">
-                📋 {t.db_table_name}
+            <span className="text-xs font-bold text-violet-600 dark:text-violet-400">{t('ai_builder.context_label', 'Contexto:')}</span>
+            {selectedTables.map((tItem) => (
+              <span key={tItem.id} className="px-2 py-0.5 bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 rounded-full text-xs font-medium">
+                📋 {tItem.db_table_name}
               </span>
             ))}
-            {newTables.map((t, i) => (
+            {newTables.map((tItem, i) => (
               <span key={i} className="px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 rounded-full text-xs font-medium">
-                ✨ {t} (nova)
+                ✨ {tItem} {t('ai_builder.new_badge', '(nova)')}
               </span>
             ))}
           </div>
@@ -465,12 +467,12 @@ export function AIBuilderChat({
         {/* Banner Ir para Revisão */}
         {reviewData && !showReview && (
           <div className="bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-100 dark:border-emerald-800/50 p-3 flex items-center justify-between shrink-0">
-            <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Você tem um código gerado pronto para revisão.</span>
+            <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">{t('ai_builder.ready_banner', 'Você tem um código gerado pronto para revisão.')}</span>
             <button
               onClick={() => setShowReview(true)}
               className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-2"
             >
-              Ir para Revisão
+              {t('ai_builder.go_to_review', 'Ir para Revisão')}
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -508,7 +510,7 @@ export function AIBuilderChat({
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Descreva o caso de uso que você quer gerar... (Ctrl+Enter para enviar)"
+                placeholder={t('ai_builder.placeholder_input', 'Descreva o caso de uso que você quer gerar... (Ctrl+Enter para enviar)')}
                 rows={3}
                 className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl text-sm text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 resize-none"
               />
@@ -525,7 +527,7 @@ export function AIBuilderChat({
               <button
                 onClick={() => fileInputRef.current?.click()}
                 className="w-10 h-10 flex items-center justify-center bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-500 transition-colors"
-                title="Anexar arquivo"
+                title={t('ai_builder.attach_file_tooltip', 'Anexar arquivo')}
               >
                 <Paperclip className="w-4 h-4" />
               </button>
@@ -543,7 +545,7 @@ export function AIBuilderChat({
             </div>
           </div>
           <p className="text-xs text-neutral-400 mt-2 text-center">
-            Ctrl+Enter para enviar • Quando a IA gerar o código, uma tela de revisão será aberta automaticamente
+            {t('ai_builder.hint_send', 'Ctrl+Enter para enviar • Quando a IA gerar o código, uma tela de revisão será aberta automaticamente')}
           </p>
         </div>
       </div>

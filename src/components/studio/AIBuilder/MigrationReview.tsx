@@ -1,6 +1,7 @@
 'use client'
 
 import { Check, X, AlertTriangle, ShieldAlert } from 'lucide-react'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface MigrationReviewProps {
   migrations: string[]
@@ -9,24 +10,26 @@ interface MigrationReviewProps {
   onToggleAll: (selectAll: boolean) => void
 }
 
-function classifyRisk(sql: string): { level: 'safe' | 'warning' | 'danger'; label: string } {
+function classifyRisk(sql: string, t: (k: string, fallback?: string) => string): { level: 'safe' | 'warning' | 'danger'; label: string } {
   const upper = sql.toUpperCase()
   if (upper.includes('DROP TABLE') || upper.includes('DROP COLUMN')) {
-    return { level: 'danger', label: '⚠️ Perigo — Remove dados permanentemente' }
+    return { level: 'danger', label: t('ai_builder.risk_danger', '⚠️ Perigo — Remove dados permanentemente') }
   }
   if (upper.includes('ALTER TABLE') || upper.includes('TRUNCATE')) {
-    return { level: 'warning', label: '⚠️ Atenção — Modifica estrutura existente' }
+    return { level: 'warning', label: t('ai_builder.risk_warning', '⚠️ Atenção — Modifica estrutura existente') }
   }
-  return { level: 'safe', label: '✅ Seguro — Cria nova tabela' }
+  return { level: 'safe', label: t('ai_builder.risk_safe', '✅ Seguro — Cria nova tabela') }
 }
 
 export function MigrationReview({ migrations, approvedIndices, onToggleApproval, onToggleAll }: MigrationReviewProps) {
+  const { t } = useI18n()
+
   if (!migrations || migrations.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center text-neutral-400 p-8">
         <Check className="w-12 h-12 mb-3 opacity-30" />
-        <p className="text-sm font-medium">Nenhuma migração SQL necessária.</p>
-        <p className="text-xs mt-1">O caso de uso usa apenas tabelas existentes.</p>
+        <p className="text-sm font-medium">{t('ai_builder.no_migrations_needed', 'Nenhuma migração SQL necessária.')}</p>
+        <p className="text-xs mt-1">{t('ai_builder.only_existing_tables', 'O caso de uso usa apenas tabelas existentes.')}</p>
       </div>
     )
   }
@@ -36,9 +39,9 @@ export function MigrationReview({ migrations, approvedIndices, onToggleApproval,
       <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20 rounded-xl">
         <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-bold text-amber-700 dark:text-amber-400">Revise antes de aplicar</p>
+          <p className="text-sm font-bold text-amber-700 dark:text-amber-400">{t('ai_builder.review_before_apply', 'Revise antes de aplicar')}</p>
           <p className="text-xs text-amber-600 dark:text-amber-400/80 mt-0.5">
-            Essas queries serão executadas diretamente no seu banco. Confirme individualmente quais deseja aprovar.
+            {t('ai_builder.review_queries_desc', 'Essas queries serão executadas diretamente no seu banco. Confirme individualmente quais deseja aprovar.')}
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
@@ -49,13 +52,13 @@ export function MigrationReview({ migrations, approvedIndices, onToggleApproval,
               onChange={(e) => onToggleAll(e.target.checked)}
               className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 bg-amber-100 border-amber-300 dark:bg-amber-900 dark:border-amber-700"
             />
-            Selecionar todas
+            {t('ai_builder.select_all', 'Selecionar todas')}
           </label>
         </div>
       </div>
 
       {migrations.map((sql, i) => {
-        const risk = classifyRisk(sql)
+        const risk = classifyRisk(sql, t)
         const approved = approvedIndices.has(i)
 
         return (
@@ -113,7 +116,9 @@ export function MigrationReview({ migrations, approvedIndices, onToggleApproval,
       })}
 
       <p className="text-xs text-neutral-400 text-center">
-        {approvedIndices.size} de {migrations.length} migration{migrations.length !== 1 ? 's' : ''} aprovada{approvedIndices.size !== 1 ? 's' : ''}
+        {t('ai_builder.migrations_approved_count', '{approved} de {total} migração(ões) aprovada(s)')
+          .replace('{approved}', approvedIndices.size.toString())
+          .replace('{total}', migrations.length.toString())}
       </p>
     </div>
   )

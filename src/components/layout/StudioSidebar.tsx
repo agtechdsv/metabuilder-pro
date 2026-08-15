@@ -41,21 +41,21 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
     {
       href: `${base}`,
       icon: LayoutDashboard,
-      label: t('dashboard.projects.studio.sidebar.dashboard'),
+      label: t('dashboard.projects.studio.sidebar.dashboard', 'Dashboard'),
       active: pathname === base,
       gate: null
     },
     {
       href: `${base}/data`,
       icon: Database,
-      label: t('dashboard.projects.studio.sidebar.data'),
+      label: t('dashboard.projects.studio.sidebar.data', 'Dados & Schemas'),
       active: pathname.includes('/studio/data'),
       gate: null
     },
     {
       href: `${base}/auth`,
       icon: ShieldCheck,
-      label: t('dashboard.projects.studio.sidebar.auth'),
+      label: t('dashboard.projects.studio.sidebar.auth', 'Autenticação'),
       active: pathname.includes('/studio/auth'),
       gate: 'pro'
     },
@@ -105,9 +105,15 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
 
   return (
     <aside className="fixed left-0 top-20 h-[calc(100vh-80px)] w-20 bg-white dark:bg-neutral-900/50 border-r border-neutral-200 dark:border-neutral-800 flex flex-col items-center py-8 gap-8 z-20 backdrop-blur-xl transition-colors">
-      <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(79,70,229,0.4)]">
+      <Link
+        href={base}
+        className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(79,70,229,0.4)] group relative"
+      >
         <Box className="text-white w-6 h-6" />
-      </div>
+        <span className="absolute left-16 px-2 py-1 bg-neutral-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-30">
+          {t('dashboard.projects.studio.title', 'MetaBuilder Studio')}
+        </span>
+      </Link>
       <nav className="flex flex-col gap-4">
         {freeLinks.map((link, idx) => {
           const Icon = link.icon

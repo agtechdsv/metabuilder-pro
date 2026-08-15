@@ -8,6 +8,7 @@ import { NavigationConfigurator } from './NavigationConfigurator'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/Toast'
 import { usePreview } from '@/contexts/PreviewContext'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface ReviewData {
   use_case_name: string
@@ -47,6 +48,7 @@ export function AIBuilderReviewPanel({
   onClose,
   viewId,
 }: AIBuilderReviewPanelProps) {
+  const { t } = useI18n()
   const isEditMode = !!viewId
   const [activeTab, setActiveTab] = useState<'component' | 'migrations' | 'settings'>('component')
   const [code, setCode] = useState(reviewData.component_code)
@@ -66,7 +68,7 @@ export function AIBuilderReviewPanel({
 
   const handleApply = async () => {
     if (!useCaseName.trim() || !useCaseSlug.trim()) {
-      toast('Informe o nome e o slug do caso de uso.', 'error')
+      toast(t('ai_builder.toast_fill_name_slug', 'Informe o nome e o slug do caso de uso.'), 'error')
       setActiveTab('settings')
       return
     }
@@ -94,12 +96,16 @@ export function AIBuilderReviewPanel({
 
       const data = await res.json()
       if (data.success) {
-        toast(`"${useCaseName}" ${isEditMode ? 'atualizado' : 'criado'} com sucesso! 🎉`, 'success')
+        toast(isEditMode
+          ? t('ai_builder.toast_success_updated', '"{name}" atualizado com sucesso! 🎉').replace('{name}', useCaseName)
+          : t('ai_builder.toast_success_created', '"{name}" criado com sucesso! 🎉').replace('{name}', useCaseName),
+          'success'
+        )
         window.location.href = `/admin/${workspaceSlug}/${projectSlug}/studio`
       } else if (data.code === 'FREEMIUM_LIMIT') {
-        toast('Limite do plano Freemium atingido. Faça upgrade para PRO.', 'error')
+        toast(t('ai_builder.toast_freemium_limit', 'Limite do plano Freemium atingido. Faça upgrade para PRO.'), 'error')
       } else {
-        toast(data.error || 'Erro ao aplicar o caso de uso.', 'error')
+        toast(data.error || t('ai_builder.toast_apply_error', 'Erro ao aplicar o caso de uso.'), 'error')
       }
     } finally {
       setIsApplying(false)
@@ -118,7 +124,7 @@ export function AIBuilderReviewPanel({
                 onClick={onClose}
                 className="flex items-center gap-1.5 text-neutral-500 hover:text-neutral-900 dark:hover:text-white text-sm font-bold transition-colors"
               >
-                ← Voltar ao Studio
+                {t('ai_builder.header_back', '← Voltar ao Studio')}
               </button>
               <span className="text-neutral-300 dark:text-neutral-700">/</span>
             </>
@@ -127,7 +133,7 @@ export function AIBuilderReviewPanel({
             onClick={() => onBack(code)}
             className="flex items-center gap-1.5 text-neutral-500 hover:text-neutral-900 dark:hover:text-white text-sm font-bold transition-colors"
           >
-            {!onClose && <ArrowLeft className="w-4 h-4" />} Voltar ao Chat
+            {!onClose && <ArrowLeft className="w-4 h-4" />} {t('ai_builder.header_back_chat', 'Voltar ao Chat')}
           </button>
           <span className="text-neutral-300 dark:text-neutral-700">/</span>
           <div className="flex items-center gap-2">
@@ -148,7 +154,7 @@ export function AIBuilderReviewPanel({
           ) : (
             <Check className="w-4 h-4" />
           )}
-          {isEditMode ? 'Atualizar Projeto' : 'Aplicar ao Projeto'}
+          {isEditMode ? t('ai_builder.btn_update_project', 'Atualizar Projeto') : t('ai_builder.btn_apply_project', 'Aplicar ao Projeto')}
         </button>
       </div>
 
@@ -162,7 +168,7 @@ export function AIBuilderReviewPanel({
               : 'border-transparent text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'
           }`}
         >
-          <Code2 className="w-3.5 h-3.5" /> Componente
+          <Code2 className="w-3.5 h-3.5" /> {t('ai_builder.tab_component', 'Componente')}
         </button>
         <button
           onClick={() => setActiveTab('migrations')}
@@ -173,7 +179,7 @@ export function AIBuilderReviewPanel({
           }`}
         >
           <Database className="w-3.5 h-3.5" />
-          Migrações SQL
+          {t('ai_builder.tab_migrations', 'Migrações SQL')}
           {hasMigrations && (
             <span className="w-4 h-4 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs flex items-center justify-center">
               {reviewData.new_migrations.length}
@@ -188,7 +194,7 @@ export function AIBuilderReviewPanel({
               : 'border-transparent text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'
           }`}
         >
-          <Settings className="w-3.5 h-3.5" /> Configurações
+          <Settings className="w-3.5 h-3.5" /> {t('ai_builder.tab_settings', 'Configurações')}
         </button>
       </div>
 

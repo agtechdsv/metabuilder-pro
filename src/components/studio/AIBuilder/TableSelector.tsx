@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Database, Plus, X, Check, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface TableSelectorProps {
   projectId: string
@@ -18,6 +19,7 @@ export function TableSelector({
   newTables,
   onChangeNewTables,
 }: TableSelectorProps) {
+  const { t } = useI18n()
   const [models, setModels] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [expandedModels, setExpandedModels] = useState<Set<string>>(new Set())
@@ -82,14 +84,14 @@ export function TableSelector({
       {/* Header */}
       <div>
         <h4 className="text-xs font-black text-neutral-900 dark:text-white uppercase tracking-wider">
-          Contexto do Banco
+          {t('ai_builder.table_context_title', 'Contexto do Banco')}
         </h4>
         <p className="text-xs text-neutral-400 mt-0.5">
-          Selecione as tabelas que o caso de uso vai usar
+          {t('ai_builder.table_context_subtitle', 'Selecione as tabelas que o caso de uso vai usar')}
         </p>
         {totalSelected > 0 && (
           <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 rounded-full text-xs font-bold">
-            {totalSelected} tabela{totalSelected > 1 ? 's' : ''} no contexto
+            {t('ai_builder.tables_in_context', '{count} tabela(s) no contexto').replace('{count}', totalSelected.toString())}
           </div>
         )}
       </div>
@@ -104,7 +106,7 @@ export function TableSelector({
               : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
           }`}
         >
-          Existentes
+          {t('ai_builder.tab_existing', 'Existentes')}
         </button>
         <button
           onClick={() => setActiveTab('new')}
@@ -114,7 +116,7 @@ export function TableSelector({
               : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
           }`}
         >
-          Novas
+          {t('ai_builder.tab_new', 'Novas')}
         </button>
       </div>
 
@@ -128,14 +130,17 @@ export function TableSelector({
           ) : models.length === 0 ? (
             <div className="text-center py-6">
               <Database className="w-8 h-8 text-neutral-300 dark:text-neutral-700 mx-auto mb-2" />
-              <p className="text-xs text-neutral-400">Nenhuma tabela sincronizada.</p>
-              <p className="text-xs text-neutral-400">Sincronize o banco no Studio primeiro.</p>
+              <p className="text-xs text-neutral-400">{t('ai_builder.no_synced_tables', 'Nenhuma tabela sincronizada.')}</p>
+              <p className="text-xs text-neutral-400">{t('ai_builder.sync_first_hint', 'Sincronize o banco no Studio primeiro.')}</p>
             </div>
           ) : (
             models.map((model) => {
               const selected = isSelected(model)
               const expanded = expandedModels.has(model.id)
               const fieldCount = model.fields?.length || 0
+              const fieldLabel = fieldCount === 1
+                ? t('ai_builder.fields_count_single', '{count} campo').replace('{count}', fieldCount.toString())
+                : t('ai_builder.fields_count_plural', '{count} campos').replace('{count}', fieldCount.toString())
 
               if (model.id === 'error' || model.id === 'empty') {
                 return (
@@ -174,7 +179,7 @@ export function TableSelector({
                       <p className={`text-xs font-bold ${selected ? 'text-violet-700 dark:text-violet-300' : 'text-neutral-700 dark:text-neutral-300'}`}>
                         {model.db_table_name}
                       </p>
-                      <p className="text-xs text-neutral-400">{fieldCount} campo{fieldCount !== 1 ? 's' : ''}</p>
+                      <p className="text-xs text-neutral-400">{fieldLabel}</p>
                     </button>
 
                     {/* Expand */}
@@ -220,7 +225,7 @@ export function TableSelector({
       {activeTab === 'new' && (
         <div className="space-y-3">
           <p className="text-xs text-neutral-400 leading-relaxed">
-            Informe o nome das tabelas que precisam ser criadas. A IA vai gerar o SQL de migração para você.
+            {t('ai_builder.new_tables_desc', 'Informe o nome das tabelas que precisam ser criadas. A IA vai gerar o SQL de migração para você.')}
           </p>
 
           <div className="flex gap-2">
@@ -229,7 +234,7 @@ export function TableSelector({
               value={newTableInput}
               onChange={(e) => setNewTableInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addNewTable()}
-              placeholder="nome_da_tabela"
+              placeholder={t('ai_builder.new_table_placeholder', 'nome_da_tabela')}
               className="flex-grow px-3 py-2 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 text-neutral-900 dark:text-white font-mono"
             />
             <button
@@ -243,11 +248,11 @@ export function TableSelector({
 
           {newTables.length > 0 && (
             <div className="space-y-1.5">
-              {newTables.map((t, i) => (
+              {newTables.map((tItem, i) => (
                 <div key={i} className="flex items-center justify-between px-3 py-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl">
-                  <span className="text-xs font-mono text-amber-700 dark:text-amber-300">✨ {t}</span>
+                  <span className="text-xs font-mono text-amber-700 dark:text-amber-300">✨ {tItem}</span>
                   <button
-                    onClick={() => removeNewTable(t)}
+                    onClick={() => removeNewTable(tItem)}
                     className="text-amber-500 hover:text-amber-700 dark:hover:text-amber-300"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -259,7 +264,7 @@ export function TableSelector({
 
           {newTables.length === 0 && (
             <div className="text-center py-4">
-              <p className="text-xs text-neutral-400">Nenhuma tabela nova adicionada.</p>
+              <p className="text-xs text-neutral-400">{t('ai_builder.no_new_tables', 'Nenhuma tabela nova adicionada.')}</p>
             </div>
           )}
         </div>

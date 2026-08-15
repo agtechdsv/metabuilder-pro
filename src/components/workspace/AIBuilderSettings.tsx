@@ -57,7 +57,7 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
 
   const handleSave = async () => {
     if (!apiKey && !config) {
-      toast('Informe a chave de API.', 'error')
+      toast(t('workspace_components.ai_builder_settings.toast_enter_api_key', 'Informe a chave de API.'), 'error')
       return
     }
     setIsSaving(true)
@@ -76,14 +76,14 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
       })
       const data = await res.json()
       if (data.success) {
-        toast('Configuração de IA salva!', 'success')
+        toast(t('workspace_components.ai_builder_settings.toast_save_success', 'Configuração de IA salva!'), 'success')
         setApiKey('')
         fetchConfig()
       } else {
-        toast(data.error || 'Erro ao salvar.', 'error')
+        toast(data.error || t('workspace_components.ai_builder_settings.toast_save_error', 'Erro ao salvar.'), 'error')
       }
     } catch (e: any) {
-      toast(e.message || 'Erro ao salvar', 'error')
+      toast(e.message || t('workspace_components.ai_builder_settings.toast_save_error', 'Erro ao salvar.'), 'error')
     } finally {
       setIsSaving(false)
     }
@@ -97,15 +97,15 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
       })
       const data = await res.json()
       if (data.success) {
-        toast('Configurações excluídas com sucesso.', 'success')
+        toast(t('workspace_components.ai_builder_settings.toast_delete_success', 'Configurações excluídas com sucesso.'), 'success')
         setConfig(null)
         setApiKey('')
         setBaseUrl('')
       } else {
-        toast(data.error || 'Erro ao excluir configurações', 'error')
+        toast(data.error || t('workspace_components.ai_builder_settings.toast_delete_error', 'Erro ao excluir configurações'), 'error')
       }
     } catch (e: any) {
-      toast(e.message || 'Erro ao excluir', 'error')
+      toast(e.message || t('workspace_components.ai_builder_settings.toast_delete_error', 'Erro ao excluir configurações'), 'error')
     } finally {
       setIsSaving(false)
     }
@@ -113,7 +113,7 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
 
   const handleTest = async () => {
     if (!config && !apiKey) {
-      toast('Salve a configuração antes de testar.', 'error')
+      toast(t('workspace_components.ai_builder_settings.toast_test_save_first', 'Salve a configuração antes de testar.'), 'error')
       return
     }
     setIsTesting(true)
@@ -148,7 +148,7 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
         setTestResult({ ok: false, message: data.error || t('workspace_components.ai_builder_settings.connection_fail', 'Falha na conexão.') })
       }
     } catch (err: any) {
-      setTestResult({ ok: false, message: err.message || 'Erro de rede.' })
+      setTestResult({ ok: false, message: err.message || t('workspace_components.ai_builder_settings.network_error', 'Erro de rede.') })
     } finally {
       setIsTesting(false)
     }
