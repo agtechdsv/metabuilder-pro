@@ -21,6 +21,7 @@ import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { usePreview } from './PreviewContext'
 import { invoke } from '@tauri-apps/api/core'
+import { useI18n } from '@/i18n'
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
 
@@ -58,6 +59,7 @@ export function useIDE() {
 }
 
 export function IDESyncProvider({ children }: { children: ReactNode }) {
+  const { t } = useI18n()
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [target, setTarget] = useState<IDETarget | null>(null)
@@ -1102,7 +1104,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                       <FolderGit2 className="w-4 h-4" />
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-white leading-tight">IDE Local</span>
+                      <span className="text-sm font-bold text-white leading-tight">{t('workspace_components.ide_local.title', 'IDE Local')}</span>
                       <span className="text-xs text-neutral-500">{target.type === 'workspace' ? 'Workspace' : 'Projeto'}: {target.name}</span>
                     </div>
                   </div>
@@ -1117,14 +1119,14 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                             disabled={isDiscarding || isConfirming}
                             className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
                           >
-                            <XCircle className="w-3.5 h-3.5 text-red-400" /> {isDiscarding ? 'Descartando...' : 'Descartar'}
+                            <XCircle className="w-3.5 h-3.5 text-red-400" /> {isDiscarding ? t('workspace_components.ide_local.discarding', 'Descartando...') : t('workspace_components.ide_local.discard', 'Descartar')}
                           </button>
                           <button 
                             onClick={handleConfirmSync}
                             disabled={isDiscarding || isConfirming}
                             className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-colors shadow-lg shadow-emerald-500/20 disabled:opacity-50"
                           >
-                            {isConfirming ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />} {isConfirming ? 'Confirmando...' : 'Confirmar Merge'}
+                            {isConfirming ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />} {isConfirming ? t('workspace_components.ide_local.confirming', 'Confirmando...') : t('workspace_components.ide_local.confirm_merge', 'Confirmar Merge')}
                           </button>
                         </>
                       ) : (
@@ -1134,7 +1136,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                           className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-colors shadow-lg shadow-indigo-500/20 disabled:opacity-50"
                         >
                           <DownloadCloud className="w-3.5 h-3.5" /> 
-                          {isSyncing ? 'Sincronizando...' : 'Ejetar & Sincronizar'}
+                          {isSyncing ? t('workspace_components.ide_local.syncing', 'Sincronizando...') : t('workspace_components.ide_local.eject_sync', 'Ejetar & Sincronizar')}
                         </button>
                       )}
                       
@@ -1148,9 +1150,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                           className="bg-transparent text-xs text-neutral-300 font-mono px-2 py-1 outline-none min-w-[120px] h-full"
                         >
                           <option value="__NEW_BRANCH__" className="text-emerald-400 font-bold bg-neutral-900">
-                            + Nova Branch...
+                            {t('workspace_components.ide_local.new_branch', '+ Nova Branch...')}
                           </option>
-                          <optgroup label="Branches">
+                          <optgroup label={t('workspace_components.ide_local.branches_group', 'Branches')}>
                             {branches.map(b => (
                               <option key={b} value={b} className="bg-neutral-900 text-neutral-300">
                                 {b}
@@ -1164,7 +1166,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                         onClick={handlePushToRemote}
                         disabled={isPushing}
                         className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
-                        title="Push para Remoto (GitHub)"
+                        title={t('workspace_components.ide_local.push_tooltip', 'Push para Remoto (GitHub)')}
                       >
                         {isPushing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />} Push
                       </button>
@@ -1173,7 +1175,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                         onClick={handlePullFromRemote}
                         disabled={isPulling}
                         className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
-                        title="Pull do Remoto (GitHub)"
+                        title={t('workspace_components.ide_local.pull_tooltip', 'Pull do Remoto (GitHub)')}
                       >
                         {isPulling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} Pull
                       </button>
@@ -1181,15 +1183,15 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                       <button 
                         onClick={handleShowLogs}
                         className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg text-xs font-semibold transition-colors"
-                        title="Ver Histórico (Git Log)"
+                        title={t('workspace_components.ide_local.history_tooltip', 'Ver Histórico (Git Log)')}
                       >
-                        <History className="w-3.5 h-3.5" /> Histórico
+                        <History className="w-3.5 h-3.5" /> {t('workspace_components.ide_local.history_btn', 'Histórico')}
                       </button>
 
                       <button 
                         onClick={() => setShowGitSettings(true)}
                         className="flex items-center justify-center w-8 h-8 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg transition-colors border border-neutral-700"
-                        title="Configurações Git (Remote & Pipeline)"
+                        title={t('workspace_components.ide_local.git_settings_tooltip', 'Configurações Git (Remote & Pipeline)')}
                       >
                         <Settings className="w-4 h-4" />
                       </button>
@@ -1202,7 +1204,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                             ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400'
                             : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white hover:bg-neutral-700'
                         }`}
-                        title={showConsole ? 'Ocultar Console' : 'Mostrar Console'}
+                        title={showConsole ? t('workspace_components.ide_local.hide_console', 'Ocultar Console') : t('workspace_components.ide_local.show_console', 'Mostrar Console')}
                       >
                         <PanelBottomOpen className="w-4 h-4" />
                       </button>
@@ -1215,7 +1217,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                             ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400'
                             : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white hover:bg-neutral-700'
                         }`}
-                        title={showSidebar ? 'Ocultar Arquivos' : 'Mostrar Arquivos'}
+                        title={showSidebar ? t('workspace_components.ide_local.hide_files', 'Ocultar Arquivos') : t('workspace_components.ide_local.show_files', 'Mostrar Arquivos')}
                       >
                         <PanelLeftOpen className="w-4 h-4" />
                       </button>
@@ -1224,7 +1226,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     <button 
                       onClick={() => setIsMinimized(true)}
                       className="px-3 py-1.5 rounded-lg text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 transition-all flex items-center gap-2 text-xs font-bold" 
-                      title="Minimizar IDE"
+                      title={t('workspace_components.ide_local.minimize_ide', 'Minimizar IDE')}
                     >
                       <Minimize2 className="w-3.5 h-3.5" />
                     </button>
@@ -1232,7 +1234,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     <button 
                       onClick={closeIDE} 
                       className="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-800 hover:bg-red-500/80 text-neutral-300 hover:text-white transition-colors" 
-                      title="Fechar IDE"
+                      title={t('workspace_components.ide_local.close_ide', 'Fechar IDE')}
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -1261,20 +1263,20 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                                 onClick={() => setExplorerActiveTab('explorer')}
                                 className={`px-2.5 py-1.5 h-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 border-r border-neutral-800/60 transition-colors ${explorerActiveTab === 'explorer' ? 'text-indigo-400 bg-neutral-800/30' : 'text-neutral-500 hover:bg-neutral-800/20'}`}
                               >
-                                <Network className="w-3 h-3" /> Explorer
+                                <Network className="w-3 h-3" /> {t('workspace_components.ide_local.explorer', 'Explorer')}
                               </button>
                               <button 
                                 onClick={() => setExplorerActiveTab('trash')}
                                 className={`px-2.5 py-1.5 h-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 border-r border-neutral-800/60 transition-colors ${explorerActiveTab === 'trash' ? 'text-red-400 bg-red-900/10' : 'text-neutral-500 hover:bg-neutral-800/20'}`}
                               >
-                                <Trash2 className="w-3 h-3" /> Lixeira
+                                <Trash2 className="w-3 h-3" /> {t('workspace_components.ide_local.trash', 'Lixeira')}
                               </button>
                             </div>
                             <div className="flex items-center gap-0.5 px-2">
                               {explorerActiveTab === 'trash' && (fileTree.find(n => n.name === '.trash')?.children?.length || 0) > 0 && (
                                 <button
                                   onClick={() => setDeleteConfirm({ mode: 'empty' })}
-                                  title="Esvaziar Lixeira"
+                                  title={t('workspace_components.ide_local.empty_trash', 'Esvaziar Lixeira')}
                                   className="flex items-center justify-center w-5 h-5 rounded hover:bg-red-900/40 text-red-400 hover:text-red-300 transition-colors mr-1"
                                 >
                                   <Trash2 className="w-3 h-3" />
@@ -1283,7 +1285,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                               {undoStack.length > 0 && (
                                 <button
                                   onClick={handleUndo}
-                                  title="Desfazer (Ctrl+Z)"
+                                  title={t('workspace_components.ide_local.undo_tooltip', 'Desfazer (Ctrl+Z)')}
                                   className="flex items-center justify-center w-5 h-5 rounded hover:bg-neutral-700 text-indigo-400 hover:text-indigo-300 transition-colors mr-1"
                                 >
                                   <Undo className="w-3.5 h-3.5" />
@@ -1291,14 +1293,14 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                               )}
                               <button
                                 onClick={expandAll}
-                                title="Expandir tudo"
+                                title={t('workspace_components.ide_local.expand_all', 'Expandir tudo')}
                                 className="flex items-center justify-center w-5 h-5 rounded hover:bg-neutral-700 text-neutral-500 hover:text-neutral-200 transition-colors"
                               >
                                 <UnfoldVertical className="w-3 h-3" />
                               </button>
                               <button
                                 onClick={collapseAll}
-                                title="Retrair tudo"
+                                title={t('workspace_components.ide_local.collapse_all', 'Retrair tudo')}
                                 className="flex items-center justify-center w-5 h-5 rounded hover:bg-neutral-700 text-neutral-500 hover:text-neutral-200 transition-colors"
                               >
                                 <FoldVertical className="w-3 h-3" />
@@ -1327,7 +1329,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     {/* Editor */}
                     <div className="flex-1 flex flex-col min-w-0">
                       <div className="h-10 bg-[#1e1e1e] border-b border-neutral-800 flex items-center justify-between px-4 text-sm text-neutral-400">
-                        <span>{selectedFile ? selectedFile.replace(`AGTech/MetaBuilderPRO/${target.slug}/`, '') : 'Nenhum arquivo selecionado'}</span>
+                        <span>{selectedFile ? selectedFile.replace(`AGTech/MetaBuilderPRO/${target.slug}/`, '') : t('workspace_components.ide_local.no_file_selected', 'Nenhum arquivo selecionado')}</span>
                         {selectedFile && (
                           <button
                             onClick={() => {
@@ -1335,7 +1337,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                               setFileContent('')
                             }}
                             className="p-1 hover:bg-neutral-800 rounded text-neutral-500 hover:text-white transition-colors"
-                            title="Fechar arquivo"
+                            title={t('workspace_components.ide_local.close_file', 'Fechar arquivo')}
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -1345,7 +1347,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                         {isSyncing ? (
                           <div className="flex flex-col items-center justify-center h-full text-neutral-500 gap-4">
                             <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
-                            <span className="text-sm font-medium animate-pulse text-indigo-400">Sincronizando arquivos com a nuvem...</span>
+                            <span className="text-sm font-medium animate-pulse text-indigo-400">{t('workspace_components.ide_local.syncing_cloud', 'Sincronizando arquivos com a nuvem...')}</span>
                           </div>
                         ) : ideLoadingState.isLoading ? (
                           <div className="flex flex-col items-center justify-center h-full text-neutral-500 gap-4">
@@ -1372,7 +1374,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                           />
                         ) : (
                           <div className="h-full flex items-center justify-center text-neutral-600">
-                            Selecione um arquivo na árvore ao lado
+                            {t('workspace_components.ide_local.select_file_hint', 'Selecione um arquivo na árvore ao lado')}
                           </div>
                         )}
                       </div>
@@ -1745,7 +1747,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
               if (isTrashRoot) {
                 return (
                   <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-red-900/40 text-red-400 transition-colors" onClick={() => { setDeleteConfirm({ mode: 'empty' }); setCtxMenu(null) }}>
-                    <Trash2 className="w-3.5 h-3.5" /> Esvaziar Lixeira
+                    <Trash2 className="w-3.5 h-3.5" /> {t('workspace_components.ide_local.empty_trash', 'Esvaziar Lixeira')}
                   </button>
                 )
               }
@@ -1754,11 +1756,11 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                 return (
                   <>
                     <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-emerald-900/40 text-emerald-400 transition-colors" onClick={() => { handleRestoreFromTrash(selectedNodes); setCtxMenu(null) }}>
-                      <Undo2 className="w-3.5 h-3.5" /> Recuperar {selectedNodes.length > 1 ? `(${selectedNodes.length})` : ''}
+                      <Undo2 className="w-3.5 h-3.5" /> {t('workspace_components.ide_local.restore', 'Recuperar')} {selectedNodes.length > 1 ? `(${selectedNodes.length})` : ''}
                     </button>
                     <div className="border-t border-neutral-700 my-1" />
                     <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-red-900/40 text-red-400 transition-colors" onClick={() => { setDeleteConfirm({ mode: 'permanent', nodes: selectedNodes }); setCtxMenu(null) }}>
-                      <Trash2 className="w-3.5 h-3.5" /> Excluir Permanentemente
+                      <Trash2 className="w-3.5 h-3.5" /> {t('workspace_components.ide_local.delete_permanent', 'Excluir Permanentemente')}
                     </button>
                   </>
                 )
@@ -1769,14 +1771,14 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                   {ctxMenu.node.isDirectory && selectedNodes.length <= 1 && (
                     <>
                       <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-neutral-700/60 text-neutral-200 transition-colors" onClick={() => { setFileActionModal({ type: 'new-file', node: ctxMenu.node }); setFileActionInput(''); setCtxMenu(null) }}>
-                        <FilePlus className="w-3.5 h-3.5 text-blue-400" /> Novo Arquivo
+                        <FilePlus className="w-3.5 h-3.5 text-blue-400" /> {t('workspace_components.ide_local.new_file', 'Novo Arquivo')}
                       </button>
                       <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-neutral-700/60 text-neutral-200 transition-colors" onClick={() => { setFileActionModal({ type: 'new-folder', node: ctxMenu.node }); setFileActionInput(''); setCtxMenu(null) }}>
-                        <FolderPlus className="w-3.5 h-3.5 text-yellow-400" /> Nova Pasta
+                        <FolderPlus className="w-3.5 h-3.5 text-yellow-400" /> {t('workspace_components.ide_local.new_folder', 'Nova Pasta')}
                       </button>
                       {clipboard && (
                         <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-indigo-700/40 text-indigo-300 transition-colors" onClick={() => { handleCopyPasteNode(ctxMenu.node); setCtxMenu(null) }}>
-                          <ClipboardPaste className="w-3.5 h-3.5" /> Colar aqui {clipboard.nodes.length > 1 ? `(${clipboard.nodes.length})` : ''}
+                          <ClipboardPaste className="w-3.5 h-3.5" /> {t('workspace_components.ide_local.paste_here', 'Colar aqui')} {clipboard.nodes.length > 1 ? `(${clipboard.nodes.length})` : ''}
                         </button>
                       )}
                       <div className="border-t border-neutral-700 my-1" />
@@ -1784,18 +1786,18 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                   )}
                   {selectedNodes.length <= 1 && (
                     <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-neutral-700/60 text-neutral-200 transition-colors" onClick={() => { setFileActionModal({ type: 'rename', node: ctxMenu.node }); setFileActionInput(ctxMenu.node.name); setCtxMenu(null) }}>
-                      <Pencil className="w-3.5 h-3.5 text-emerald-400" /> Renomear
+                      <Pencil className="w-3.5 h-3.5 text-emerald-400" /> {t('workspace_components.ide_local.rename', 'Renomear')}
                     </button>
                   )}
                   <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-neutral-700/60 text-neutral-200 transition-colors" onClick={() => { setClipboard({ nodes: selectedNodes, op: 'copy' }); setCtxMenu(null) }}>
-                    <Copy className="w-3.5 h-3.5 text-sky-400" /> Copiar {selectedNodes.length > 1 ? `(${selectedNodes.length})` : ''}
+                    <Copy className="w-3.5 h-3.5 text-sky-400" /> {t('workspace_components.ide_local.copy', 'Copiar')} {selectedNodes.length > 1 ? `(${selectedNodes.length})` : ''}
                   </button>
                   <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-neutral-700/60 text-neutral-200 transition-colors" onClick={() => { setClipboard({ nodes: selectedNodes, op: 'cut' }); setCtxMenu(null) }}>
-                    <Scissors className="w-3.5 h-3.5 text-orange-400" /> Recortar {selectedNodes.length > 1 ? `(${selectedNodes.length})` : ''}
+                    <Scissors className="w-3.5 h-3.5 text-orange-400" /> {t('workspace_components.ide_local.cut', 'Recortar')} {selectedNodes.length > 1 ? `(${selectedNodes.length})` : ''}
                   </button>
                   <div className="border-t border-neutral-700 my-1" />
                   <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-red-900/40 text-red-400 transition-colors" onClick={() => { setDeleteConfirm({ mode: 'trash', nodes: selectedNodes }); setCtxMenu(null) }}>
-                    <Trash2 className="w-3.5 h-3.5" /> Deletar {selectedNodes.length > 1 ? `(${selectedNodes.length} itens)` : ctxMenu.node.isDirectory ? 'Pasta' : 'Arquivo'}
+                    <Trash2 className="w-3.5 h-3.5" /> {t('workspace_components.ide_local.delete', 'Deletar')} {selectedNodes.length > 1 ? `(${selectedNodes.length} itens)` : ctxMenu.node.isDirectory ? 'Pasta' : 'Arquivo'}
                   </button>
                 </>
               )
@@ -1827,7 +1829,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
               <Trash2 className="w-6 h-6 text-red-500" />
             </div>
             <h3 className="text-lg font-bold text-white mb-2">
-              {deleteConfirm.mode === 'empty' ? 'Esvaziar Lixeira' : 'Confirmar Exclusão'}
+              {deleteConfirm.mode === 'empty' ? t('workspace_components.ide_local.empty_trash', 'Esvaziar Lixeira') : t('workspace_components.ide_local.confirm_delete_title', 'Confirmar Exclusão')}
             </h3>
             
             {deleteConfirm.mode === 'empty' ? (
@@ -1854,7 +1856,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
             )}
 
             <div className="flex justify-end gap-3 mt-4">
-              <button onClick={() => setDeleteConfirm(null)} disabled={fileActionLoading} className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors">Cancelar</button>
+              <button onClick={() => setDeleteConfirm(null)} disabled={fileActionLoading} className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors">{t('workspace_components.ide_local.cancel', 'Cancelar')}</button>
               <button 
                 onClick={() => {
                   if (deleteConfirm.mode === 'trash' && deleteConfirm.nodes) handleDeleteNode(deleteConfirm.nodes)
@@ -1877,9 +1879,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
           <div className="bg-[#1e1e1e] border border-neutral-800 rounded-xl shadow-2xl w-full max-w-sm p-6">
             <h3 className="text-lg font-bold text-white mb-4">
-              {fileActionModal.type === 'rename' && 'Renomear'}
-              {fileActionModal.type === 'new-file' && 'Novo Arquivo'}
-              {fileActionModal.type === 'new-folder' && 'Nova Pasta'}
+              {fileActionModal.type === 'rename' && t('workspace_components.ide_local.rename', 'Renomear')}
+              {fileActionModal.type === 'new-file' && t('workspace_components.ide_local.new_file', 'Novo Arquivo')}
+              {fileActionModal.type === 'new-folder' && t('workspace_components.ide_local.new_folder', 'Nova Pasta')}
             </h3>
             <p className="text-xs text-neutral-500 mb-2">
               {fileActionModal.type === 'rename' && `Renomear "${fileActionModal.node?.name}"`}
@@ -1902,7 +1904,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
               className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 mb-4"
             />
             <div className="flex justify-end gap-3">
-              <button onClick={() => setFileActionModal(null)} className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors">Cancelar</button>
+              <button onClick={() => setFileActionModal(null)} className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors">{t('workspace_components.ide_local.cancel', 'Cancelar')}</button>
               <button
                 onClick={() => {
                   if (fileActionModal.type === 'rename' && fileActionModal.node) handleRenameNode(fileActionModal.node, fileActionInput)
@@ -1912,7 +1914,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                 className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50"
               >
                 {fileActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                {fileActionModal.type === 'rename' ? 'Renomear' : 'Criar'}
+                {fileActionModal.type === 'rename' ? t('workspace_components.ide_local.rename', 'Renomear') : 'Criar'}
               </button>
             </div>
           </div>

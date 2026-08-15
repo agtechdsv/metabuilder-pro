@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts'
 import { Clock, CheckCircle, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n'
 
 // ─── Helper Functions ─────────────────────────────────────────────────────────
 
@@ -43,32 +44,33 @@ export function getBillingTypeLabel(type?: string | null) {
 }
 
 export function StatusBadge({ status }: { status?: string | null }) {
+  const { t } = useI18n()
   const s = status?.toLowerCase()
   if (s === 'active' || s === 'received' || s === 'confirmed' || s === 'paid') {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-        <CheckCircle className="w-3.5 h-3.5" /> Ativo
+        <CheckCircle className="w-3.5 h-3.5" /> {t('client_views.shared.status_active', 'Ativo')}
       </span>
     )
   }
   if (s === 'canceled') {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400">
-        <Clock className="w-3.5 h-3.5" /> Cancelado
+        <Clock className="w-3.5 h-3.5" /> {t('client_views.shared.status_canceled', 'Cancelado')}
       </span>
     )
   }
   if (s === 'pending') {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
-        <Clock className="w-3.5 h-3.5 animate-pulse" /> Pendente
+        <Clock className="w-3.5 h-3.5 animate-pulse" /> {t('client_views.shared.status_pending', 'Pendente')}
       </span>
     )
   }
   if (s === 'overdue' || s === 'failed') {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400">
-        <AlertTriangle className="w-3.5 h-3.5" /> Atrasado
+        <AlertTriangle className="w-3.5 h-3.5" /> {t('client_views.shared.status_overdue', 'Atrasado')}
       </span>
     )
   }
@@ -117,12 +119,15 @@ export function LicenseGaugeCard({
   licensesUsed: number
   licensesTotal: number
 }) {
+  const { t } = useI18n()
   const pct = licensesTotal > 0 ? Math.min((licensesUsed / licensesTotal) * 100, 100) : 0
   const angle = -90 + (pct / 100) * 180
 
   return (
     <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 flex flex-col items-center justify-between shadow-sm hover:shadow-md transition-shadow h-full">
-      <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-2">Licenças</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-2">
+        {t('client_views.shared.licenses_gauge_title', 'Licenças')}
+      </p>
 
       <div className="relative w-full flex items-center justify-center my-1">
         <svg viewBox="0 0 100 55" className="w-32 h-auto overflow-visible">
@@ -167,7 +172,9 @@ export function LicenseGaugeCard({
         </svg>
       </div>
 
-      <p className="text-xs text-neutral-500 text-center mt-2">Usuários ativos vs. contratadas</p>
+      <p className="text-xs text-neutral-500 text-center mt-2">
+        {t('client_views.shared.licenses_gauge_sub', 'Usuários ativos vs. contratadas')}
+      </p>
     </div>
   )
 }
@@ -263,3 +270,4 @@ export function MiniBarChart({ data }: { data: { label: string; count: number; c
     </div>
   )
 }
+

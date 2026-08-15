@@ -291,10 +291,10 @@ export function WorkspaceManager({
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
       
-      toast('Workspace exportado com sucesso!', 'success')
+      toast(t('workspace_components.workspace_exported', 'Workspace exportado com sucesso!'), 'success')
     } catch (err: any) {
       console.error(err)
-      toast(err.message || 'Erro ao exportar workspace', 'error')
+      toast(err.message || t('workspace_components.workspace_export_error', 'Erro ao exportar workspace'), 'error')
     } finally {
       setExportingWorkspaceId(null)
     }
@@ -325,15 +325,15 @@ export function WorkspaceManager({
             {teamData && (!isGuest || initialGuestAccessLevel === 'global') && (
               <button
                 onClick={() => setIsTeamDrawerOpen(true)}
-                className="flex items-center gap-2 px-7 py-3 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all shadow-sm text-sm border border-neutral-200 dark:border-neutral-700 whitespace-nowrap active:scale-95"
+                className="flex items-center gap-2 px-7 py-3 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all shadow-sm text-sm border border-neutral-200 dark:border-neutral-700 whitespace-nowrap active:scale-95 cursor-pointer"
               >
-                <Users className="w-5 h-5" /> Gerenciar Equipe
+                <Users className="w-5 h-5" /> {t('workspace_components.manage_team', 'Gerenciar Equipe')}
               </button>
             )}
             {canCreateWorkspace && (
               <button
                 onClick={handleNewWorkspace}
-                className="flex items-center gap-2 px-7 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)] whitespace-nowrap text-sm active:scale-95"
+                className="flex items-center gap-2 px-7 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)] whitespace-nowrap text-sm active:scale-95 cursor-pointer"
               >
                 <Plus className="w-5 h-5" /> {t('dashboard.new_workspace')}
               </button>
@@ -351,7 +351,7 @@ export function WorkspaceManager({
             label: t('dashboard.stats.active_members'), 
             value: totalActiveMembers ?? (teamData ? (teamData.activeGuests || 0) + 1 : 1), 
             subtitle: (totalPendingMembers ?? (teamData?.pendingGuests || 0)) > 0 
-              ? `${totalPendingMembers ?? teamData?.pendingGuests} pendente(s)` 
+              ? `${totalPendingMembers ?? teamData?.pendingGuests} ${t('workspace_components.pending_suffix', 'pendente(s)')}` 
               : undefined,
             icon: Users, 
             color: 'green' 
@@ -383,35 +383,35 @@ export function WorkspaceManager({
             <button
               onClick={() => setActiveTab('workspaces')}
               className={cn(
-                "px-4 py-3 text-sm font-bold transition-all border-b-2",
+                "px-4 py-3 text-sm font-bold transition-all border-b-2 cursor-pointer",
                 activeTab === 'workspaces' 
                   ? "border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400" 
                   : "border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
               )}
             >
-              Seus Workspaces
+              {t('workspace_components.tabs_your_workspaces', 'Seus Workspaces')}
             </button>
             <button
               onClick={() => setActiveTab('tunnel')}
               className={cn(
-                "px-4 py-3 text-sm font-bold transition-all border-b-2",
+                "px-4 py-3 text-sm font-bold transition-all border-b-2 cursor-pointer",
                 activeTab === 'tunnel' 
                   ? "border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400" 
                   : "border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
               )}
             >
-              Gerenciador do Túnel
+              {t('workspace_components.tabs_tunnel_manager', 'Gerenciador do Túnel')}
             </button>
             <button
               onClick={() => setActiveTab('synced-dbs')}
               className={cn(
-                "px-4 py-3 text-sm font-bold transition-all border-b-2",
+                "px-4 py-3 text-sm font-bold transition-all border-b-2 cursor-pointer",
                 activeTab === 'synced-dbs' 
                   ? "border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400" 
                   : "border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
               )}
             >
-              Bancos Sincronizados
+              {t('workspace_components.tabs_synced_dbs', 'Bancos Sincronizados')}
             </button>
           </div>
         )}
@@ -426,12 +426,12 @@ export function WorkspaceManager({
             ) : activeTab === 'tunnel' ? (
               <>
                 <Network className="w-6 h-6 text-indigo-500" />
-                Gerenciador do Túnel
+                {t('workspace_components.tabs_tunnel_manager', 'Gerenciador do Túnel')}
               </>
             ) : (
               <>
                 <Database className="w-6 h-6 text-indigo-500" />
-                Bancos Sincronizados
+                {t('workspace_components.tabs_synced_dbs', 'Bancos Sincronizados')}
               </>
             )}
           </h3>
@@ -439,8 +439,8 @@ export function WorkspaceManager({
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors group"
-              title="Atualizar"
+              className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors group cursor-pointer"
+              title={t('workspace_components.refresh_tooltip', 'Atualizar')}
             >
               <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
             </button>
@@ -504,22 +504,22 @@ export function WorkspaceManager({
                               e.stopPropagation()
                               openPreview(`${window.location.origin}/${workspace.slug}`, `Portal: ${workspace.name}`)
                             }}
-                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
-                            title="Acessar Portal"
+                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400 cursor-pointer"
+                            title={t('workspace_components.project_card_tooltips.access_portal', 'Acessar Portal')}
                           >
                             <ArrowUpRight className="w-4 h-4" />
                           </button>
                         )}
                         {/* 2. Gerar App Desktop Nativo */}
-                        <ProGate gateType="desktop" tier={tier} featureName="Gerar App Desktop Nativo">
+                        <ProGate gateType="desktop" tier={tier} featureName={t('workspace_components.project_card_tooltips.generate_desktop', 'Gerar App Desktop Nativo')}>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedDesktopWorkspace(workspace);
                               setShowDesktopModal(true);
                             }}
-                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-emerald-500 hover:text-emerald-400"
-                            title="Gerar App Desktop Nativo"
+                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-emerald-500 hover:text-emerald-400 cursor-pointer"
+                            title={t('workspace_components.project_card_tooltips.generate_desktop', 'Gerar App Desktop Nativo')}
                           >
                             <Monitor className="w-4 h-4" />
                           </button>
@@ -527,10 +527,10 @@ export function WorkspaceManager({
                         {workspace.can_edit && (
                           <>
                             {/* 3. IDE Local */}
-                            <ProGate gateType="desktop" tier={tier} featureName="IDE Local (Ejetar & Sincronizar Workspace)">
+                            <ProGate gateType="desktop" tier={tier} featureName={t('workspace_components.project_card_tooltips.ide_local', 'IDE Local (Ejetar & Sincronizar)')}>
                               <button
-                                className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-                                title="IDE Local (Ejetar & Sincronizar Workspace)"
+                                className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
+                                title={t('workspace_components.project_card_tooltips.ide_local', 'IDE Local (Ejetar & Sincronizar)')}
                                 onClick={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
@@ -541,12 +541,12 @@ export function WorkspaceManager({
                               </button>
                             </ProGate>
                             {/* 4. Exportar Código Fonte */}
-                            <ProGate gateType="desktop" tier={tier} featureName="Exportar Código Fonte">
+                            <ProGate gateType="desktop" tier={tier} featureName={t('workspace_components.project_card_tooltips.export_source', 'Exportar Código Fonte (Next.js)')}>
                               <button
                                 onClick={(e) => handleExportWorkspace(e, workspace)}
                                 disabled={exportingWorkspaceId === workspace.id}
-                                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-500 disabled:opacity-50"
-                                title="Exportar Código Fonte (Next.js)"
+                                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-500 disabled:opacity-50 cursor-pointer"
+                                title={t('workspace_components.project_card_tooltips.export_source', 'Exportar Código Fonte (Next.js)')}
                               >
                                 {exportingWorkspaceId === workspace.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                               </button>
@@ -558,7 +558,7 @@ export function WorkspaceManager({
                                 e.stopPropagation()
                                 openDrawer(workspace)
                               }}
-                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
+                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400 cursor-pointer"
                               title={t('dashboard.edit_workspace')}
                             >
                               <Pencil className="w-4 h-4" />
@@ -569,7 +569,7 @@ export function WorkspaceManager({
                         {workspace.can_delete && (
                           <button
                             onClick={() => openDeleteModal(workspace)}
-                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400"
+                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400 cursor-pointer"
                             title={t('dashboard.delete_workspace')}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -583,8 +583,8 @@ export function WorkspaceManager({
                               setSelectedWorkspaceForAI(workspace.id);
                               setIsAIModalOpen(true);
                             }}
-                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-violet-500 hover:text-violet-400"
-                            title="Configurações AI Builder"
+                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-violet-500 hover:text-violet-400 cursor-pointer"
+                            title={t('workspace_components.project_card_tooltips.ai_builder', 'Configurações AI Builder')}
                           >
                             <Bot className="w-4 h-4" />
                           </button>
@@ -624,7 +624,7 @@ export function WorkspaceManager({
           {canCreateWorkspace && (
             <button
               onClick={handleNewWorkspace}
-              className="group p-8 bg-neutral-50 dark:bg-neutral-950 border border-dashed border-neutral-300 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-white dark:hover:bg-neutral-800 hover:border-indigo-500/30 transition-all min-h-[280px] shadow-inner dark:shadow-none"
+              className="group p-8 bg-neutral-50 dark:bg-neutral-950 border border-dashed border-neutral-300 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-white dark:hover:bg-neutral-800 hover:border-indigo-500/30 transition-all min-h-[280px] shadow-inner dark:shadow-none cursor-pointer"
             >
               <div className="w-16 h-16 bg-white dark:bg-neutral-950 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm dark:shadow-none">
                 <Plus className="w-8 h-8 text-neutral-400 group-hover:text-indigo-500" />
@@ -681,7 +681,7 @@ export function WorkspaceManager({
             <button
               type="submit"
               disabled={isSaving}
-              className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-800 text-white rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)]"
+              className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-800 text-white rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] cursor-pointer"
             >
               {isSaving ? t('common.loading') : selectedWorkspace ? t('common.save') : t('dashboard.new_workspace')}
             </button>
@@ -708,13 +708,13 @@ export function WorkspaceManager({
             <button
               onClick={handleDelete}
               disabled={isDeleting}
-              className="w-full py-4 bg-red-600 hover:bg-red-500 disabled:bg-neutral-800 text-white rounded-2xl font-bold transition-all shadow-[0_0_20px_rgba(220,38,38,0.2)]"
+              className="w-full py-4 bg-red-600 hover:bg-red-500 disabled:bg-neutral-800 text-white rounded-2xl font-bold transition-all shadow-[0_0_20px_rgba(220,38,38,0.2)] cursor-pointer"
             >
               {isDeleting ? t('common.loading') : t('dashboard.yes_delete')}
             </button>
             <button
               onClick={() => setIsDeleteModalOpen(false)}
-              className="w-full py-4 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all"
+              className="w-full py-4 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all cursor-pointer"
             >
               {t('common.cancel')}
             </button>
@@ -733,7 +733,7 @@ export function WorkspaceManager({
         <Modal
           isOpen={isCheckoutModalOpen}
           onClose={() => setIsCheckoutModalOpen(false)}
-          title="Assinatura MetaBuilder PRO"
+          title={t('workspace_components.sub_modal_title', 'Assinatura MetaBuilder PRO')}
           size="4xl"
         >
           <div className="max-h-[70vh] overflow-y-auto pr-1">
@@ -757,7 +757,7 @@ export function WorkspaceManager({
           contextType="workspace"
           contextId={selectedDesktopWorkspace.id}
           defaultName={selectedDesktopWorkspace.name}
-          defaultDescription="Portal de Aplicações do Workspace"
+          defaultDescription={t('workspace_components.default_portal_desc', 'Portal de Aplicações do Workspace')}
           defaultTunnelUrl={typeof window !== 'undefined' ? `${window.location.origin}/${selectedDesktopWorkspace.slug}` : ''}
         />
       )}
@@ -766,7 +766,7 @@ export function WorkspaceManager({
       <Modal
         isOpen={isAIModalOpen}
         onClose={() => setIsAIModalOpen(false)}
-        title="Configurações IA"
+        title={t('workspace_components.ai_modal_title', 'Configurações IA')}
       >
         <div className="p-2">
           {selectedWorkspaceForAI && (

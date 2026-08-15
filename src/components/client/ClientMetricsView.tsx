@@ -8,6 +8,7 @@ import {
   LogicTypeDoughnutChart,
   formatDate
 } from './ClientSharedComponents'
+import { useI18n } from '@/i18n'
 
 interface ClientMetricsViewProps {
   isRefreshing: boolean
@@ -38,13 +39,15 @@ export function ClientMetricsView({
   members,
   ownerGuests,
 }: ClientMetricsViewProps) {
+  const { t } = useI18n()
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="flex justify-end">
         <button
           onClick={() => refreshAllData()}
           disabled={isRefreshing}
-          title="Atualizar painel"
+          title={t('client_views.metrics.refresh_tooltip', 'Atualizar painel')}
           className="p-2 text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-800 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center justify-center disabled:opacity-50 group active:scale-95 duration-200"
         >
           <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
@@ -58,23 +61,23 @@ export function ClientMetricsView({
           licensesTotal={localProfile?.subscription_licenses ?? 0}
         />
         <KpiCard
-          label="Workspaces"
+          label={t('client_views.metrics.workspaces_kpi', 'Workspaces')}
           value={workspaces.length}
-          sub="Ambientes criados"
+          sub={t('client_views.metrics.workspaces_sub', 'Ambientes criados')}
           icon={Building2}
           color="bg-blue-500/10 text-blue-500"
         />
         <KpiCard
-          label="Projetos"
+          label={t('client_views.metrics.projects_kpi', 'Projetos')}
           value={projects.length}
-          sub="Em todos os workspaces"
+          sub={t('client_views.metrics.projects_sub', 'Em todos os workspaces')}
           icon={FolderKanban}
           color="bg-amber-500/10 text-amber-500"
         />
         <KpiCard
-          label="Casos de Uso"
+          label={t('client_views.metrics.use_cases_kpi', 'Casos de Uso')}
           value={useCases.length}
-          sub="Telas e funcionalidades"
+          sub={t('client_views.metrics.use_cases_sub', 'Telas e funcionalidades')}
           icon={Layers}
           color="bg-emerald-500/10 text-emerald-500"
         />
@@ -89,7 +92,9 @@ export function ClientMetricsView({
             <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
               <Building2 className="w-4 h-4" />
             </div>
-            <h3 className="text-sm font-bold text-neutral-800 dark:text-white">Projetos por Workspace</h3>
+            <h3 className="text-sm font-bold text-neutral-800 dark:text-white">
+              {t('client_views.metrics.projects_by_workspace', 'Projetos por Workspace')}
+            </h3>
           </div>
           {projectsByWorkspace.length > 0 ? (
             <MiniBarChart
@@ -100,7 +105,9 @@ export function ClientMetricsView({
               }))}
             />
           ) : (
-            <p className="text-xs text-neutral-400 text-center py-6">Nenhum workspace com projetos</p>
+            <p className="text-xs text-neutral-400 text-center py-6">
+              {t('client_views.metrics.no_workspaces_projects', 'Nenhum workspace com projetos')}
+            </p>
           )}
         </div>
 
@@ -110,7 +117,9 @@ export function ClientMetricsView({
             <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
               <FolderKanban className="w-4 h-4" />
             </div>
-            <h3 className="text-sm font-bold text-neutral-800 dark:text-white">Casos de Uso por Projeto</h3>
+            <h3 className="text-sm font-bold text-neutral-800 dark:text-white">
+              {t('client_views.metrics.use_cases_by_project', 'Casos de Uso por Projeto')}
+            </h3>
           </div>
           {useCasesByProject.length > 0 ? (
             <MiniBarChart
@@ -121,7 +130,9 @@ export function ClientMetricsView({
               }))}
             />
           ) : (
-            <p className="text-xs text-neutral-400 text-center py-6">Nenhum caso de uso encontrado</p>
+            <p className="text-xs text-neutral-400 text-center py-6">
+              {t('client_views.metrics.no_use_cases', 'Nenhum caso de uso encontrado')}
+            </p>
           )}
         </div>
 
@@ -137,12 +148,16 @@ export function ClientMetricsView({
               <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
                 <Zap className="w-4 h-4" />
               </div>
-              <h3 className="text-sm font-bold text-neutral-800 dark:text-white">Casos de Uso por Tipo</h3>
+              <h3 className="text-sm font-bold text-neutral-800 dark:text-white">
+                {t('client_views.metrics.use_cases_by_type', 'Casos de Uso por Tipo')}
+              </h3>
             </div>
             {useCasesByType.length > 0 ? (
               <LogicTypeDoughnutChart data={useCasesByType} />
             ) : (
-              <p className="text-xs text-neutral-400 text-center py-6">Nenhum caso de uso encontrado</p>
+              <p className="text-xs text-neutral-400 text-center py-6">
+                {t('client_views.metrics.no_use_cases', 'Nenhum caso de uso encontrado')}
+              </p>
             )}
           </div>
         </div>
@@ -152,17 +167,29 @@ export function ClientMetricsView({
           <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden shadow-sm md:col-span-2 flex flex-col justify-between">
             <div>
               <div className="p-6 border-b border-neutral-100 dark:border-neutral-800">
-                <h3 className="text-sm font-bold text-neutral-800 dark:text-white">Detalhamento por Workspace</h3>
+                <h3 className="text-sm font-bold text-neutral-800 dark:text-white">
+                  {t('client_views.metrics.workspace_detail_title', 'Detalhamento por Workspace')}
+                </h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/20">
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-500">Workspace</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-500 text-center">Projetos</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-500 text-center">Casos de Uso</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-500 text-center">Usuários</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-500">Criado em</th>
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-500">
+                        {t('client_views.metrics.table_workspace', 'Workspace')}
+                      </th>
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-500 text-center">
+                        {t('client_views.metrics.table_projects', 'Projetos')}
+                      </th>
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-500 text-center">
+                        {t('client_views.metrics.table_use_cases', 'Casos de Uso')}
+                      </th>
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-500 text-center">
+                        {t('client_views.metrics.table_users', 'Usuários')}
+                      </th>
+                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-500">
+                        {t('client_views.metrics.table_created_at', 'Criado em')}
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">

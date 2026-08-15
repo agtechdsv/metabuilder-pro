@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { KpiCard } from './ClientSharedComponents'
 import { Modal } from '@/components/ui/Modal'
+import { useI18n } from '@/i18n'
 
 interface ClientProductivityViewProps {
   prodFilterProject: string
@@ -52,19 +53,23 @@ export function ClientProductivityView({
   profiles,
   useCases
 }: ClientProductivityViewProps) {
+  const { t } = useI18n()
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Filtros de Produtividade */}
       <div className="flex flex-wrap items-center gap-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 shadow-sm">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Filtros:</span>
+          <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">
+            {t('client_views.productivity.filters_label', 'Filtros:')}
+          </span>
         </div>
         <select
           value={prodFilterProject}
           onChange={(e) => setProdFilterProject(e.target.value)}
           className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-700 dark:text-neutral-300 outline-none focus:border-indigo-500"
         >
-          <option value="all">Todos os Projetos</option>
+          <option value="all">{t('client_views.productivity.filter_all_projects', 'Todos os Projetos')}</option>
           {projects.map(p => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
@@ -75,9 +80,9 @@ export function ClientProductivityView({
           onChange={(e) => setProdFilterUser(e.target.value)}
           className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-700 dark:text-neutral-300 outline-none focus:border-indigo-500"
         >
-          <option value="all">Todos os Profissionais</option>
+          <option value="all">{t('client_views.productivity.filter_all_devs', 'Todos os Profissionais')}</option>
           {profiles.map(p => (
-            <option key={p.id} value={p.id}>{p.full_name || p.email || 'Desconhecido'}</option>
+            <option key={p.id} value={p.id}>{p.full_name || p.email || t('client_views.productivity.unknown_user', 'Desconhecido')}</option>
           ))}
         </select>
 
@@ -86,15 +91,15 @@ export function ClientProductivityView({
           onChange={(e) => setProdFilterPeriod(e.target.value)}
           className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-sm text-neutral-700 dark:text-neutral-300 outline-none focus:border-indigo-500"
         >
-          <option value="all">Todo o Período</option>
-          <option value="7d">Últimos 7 dias</option>
-          <option value="30d">Últimos 30 dias</option>
+          <option value="all">{t('client_views.productivity.filter_all_period', 'Todo o Período')}</option>
+          <option value="7d">{t('client_views.productivity.filter_7_days', 'Últimos 7 dias')}</option>
+          <option value="30d">{t('client_views.productivity.filter_30_days', 'Últimos 30 dias')}</option>
         </select>
         <div className="ml-auto">
           <button
             onClick={() => refreshAllData()}
             disabled={isRefreshing}
-            title="Atualizar painel"
+            title={t('client_views.productivity.refresh_tooltip', 'Atualizar painel')}
             className="p-2 text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 bg-neutral-100 dark:bg-neutral-800 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center justify-center disabled:opacity-50 group active:scale-95 duration-200"
           >
             <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
@@ -114,7 +119,7 @@ export function ClientProductivityView({
           )}
         >
           <Users className="w-4 h-4" />
-          <span>Resumo por DEV</span>
+          <span>{t('client_views.productivity.summary_tab', 'Resumo por DEV')}</span>
         </button>
         <button
           onClick={() => setProdSubTab('detailed')}
@@ -126,7 +131,7 @@ export function ClientProductivityView({
           )}
         >
           <Activity className="w-4 h-4" />
-          <span>Detalhado por DEV</span>
+          <span>{t('client_views.productivity.detailed_tab', 'Detalhado por DEV')}</span>
         </button>
       </div>
 
@@ -145,16 +150,16 @@ export function ClientProductivityView({
               {/* KPI Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <KpiCard
-                  label="Tempo Ativo Total"
+                  label={t('client_views.productivity.total_active_time', 'Tempo Ativo Total')}
                   value={`${Math.floor((filteredActivityLogs.reduce((acc, log) => acc + (log.active_time_seconds || 0), 0)) / 60)} min`}
-                  sub="Tempo gasto construindo na plataforma"
+                  sub={t('client_views.productivity.total_active_time_sub', 'Tempo gasto construindo na plataforma')}
                   icon={Clock}
                   color="bg-emerald-500/10 text-emerald-500"
                 />
                 <KpiCard
-                  label="Ações Realizadas"
+                  label={t('client_views.productivity.actions_performed', 'Ações Realizadas')}
                   value={filteredActivityLogs.reduce((acc, log) => acc + (log.actions_count || 0), 0)}
-                  sub="Interações com o Studio"
+                  sub={t('client_views.productivity.actions_performed_sub', 'Interações com o Studio')}
                   icon={Activity}
                   color="bg-indigo-500/10 text-indigo-500"
                 />
@@ -166,11 +171,15 @@ export function ClientProductivityView({
                   <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
                     <Users className="w-4 h-4" />
                   </div>
-                  <h3 className="text-sm font-bold text-neutral-800 dark:text-white">Produtividade por Profissional</h3>
+                  <h3 className="text-sm font-bold text-neutral-800 dark:text-white">
+                    {t('client_views.productivity.productivity_by_dev', 'Produtividade por Profissional')}
+                  </h3>
                 </div>
 
                 {filteredActivityLogs.length === 0 ? (
-                  <p className="text-sm text-neutral-500 text-center py-10">Nenhum dado de produtividade disponível para os filtros selecionados.</p>
+                  <p className="text-sm text-neutral-500 text-center py-10">
+                    {t('client_views.productivity.no_data', 'Nenhum dado de produtividade disponível para os filtros selecionados.')}
+                  </p>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {Object.entries(
@@ -183,7 +192,7 @@ export function ClientProductivityView({
                       }, {} as Record<string, { time: number, actions: number, sessions: number }>)
                     ).map(([userId, stats]: [string, any]) => {
                       const profile = profiles.find(p => p.id === userId)
-                      const name = profile?.full_name || profile?.email || 'Desenvolvedor'
+                      const name = profile?.full_name || profile?.email || t('client_views.productivity.dev_fallback', 'Desenvolvedor')
 
                       return (
                         <div key={userId} className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800">
@@ -195,15 +204,21 @@ export function ClientProductivityView({
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             <div>
-                              <span className="block text-[10px] text-neutral-500">Tempo Ativo</span>
+                              <span className="block text-[10px] text-neutral-500">
+                                {t('client_views.productivity.card_active_time', 'Tempo Ativo')}
+                              </span>
                               <span className="font-bold text-neutral-700 dark:text-neutral-300">{Math.floor(stats.time / 60)}m</span>
                             </div>
                             <div>
-                              <span className="block text-[10px] text-neutral-500">Ações</span>
+                              <span className="block text-[10px] text-neutral-500">
+                                {t('client_views.productivity.card_actions', 'Ações')}
+                              </span>
                               <span className="font-bold text-neutral-700 dark:text-neutral-300">{stats.actions}</span>
                             </div>
                             <div className="col-span-2 mt-1 pt-2 border-t border-neutral-200 dark:border-neutral-700">
-                              <span className="block text-[10px] text-neutral-500">Sessões</span>
+                              <span className="block text-[10px] text-neutral-500">
+                                {t('client_views.productivity.card_sessions', 'Sessões')}
+                              </span>
                               <span className="font-bold text-neutral-700 dark:text-neutral-300">{stats.sessions}</span>
                             </div>
                           </div>
@@ -222,29 +237,43 @@ export function ClientProductivityView({
                 <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
                   <Activity className="w-4 h-4" />
                 </div>
-                <h3 className="text-sm font-bold text-neutral-800 dark:text-white">Logs de Atividade Detalhados</h3>
+                <h3 className="text-sm font-bold text-neutral-800 dark:text-white">
+                  {t('client_views.productivity.detailed_logs_title', 'Logs de Atividade Detalhados')}
+                </h3>
               </div>
 
               {filteredActivityLogs.length === 0 ? (
-                <p className="text-sm text-neutral-500 text-center py-10">Nenhum dado de produtividade disponível para os filtros selecionados.</p>
+                <p className="text-sm text-neutral-500 text-center py-10">
+                  {t('client_views.productivity.no_data', 'Nenhum dado de produtividade disponível para os filtros selecionados.')}
+                </p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead>
                       <tr className="border-b border-neutral-100 dark:border-neutral-800">
-                        <th className="pb-3 text-xs font-black uppercase tracking-widest text-neutral-400">Profissional</th>
-                        <th className="pb-3 text-xs font-black uppercase tracking-widest text-neutral-400">Início da Sessão</th>
-                        <th className="pb-3 text-xs font-black uppercase tracking-widest text-neutral-400">Tempo Ativo</th>
-                        <th className="pb-3 text-xs font-black uppercase tracking-widest text-neutral-400">Ações</th>
-                        <th className="pb-3 text-xs font-black uppercase tracking-widest text-neutral-400 text-right">Ação</th>
+                        <th className="pb-3 text-xs font-black uppercase tracking-widest text-neutral-400">
+                          {t('client_views.productivity.table_dev', 'Profissional')}
+                        </th>
+                        <th className="pb-3 text-xs font-black uppercase tracking-widest text-neutral-400">
+                          {t('client_views.productivity.table_session_start', 'Início da Sessão')}
+                        </th>
+                        <th className="pb-3 text-xs font-black uppercase tracking-widest text-neutral-400">
+                          {t('client_views.productivity.table_active_time', 'Tempo Ativo')}
+                        </th>
+                        <th className="pb-3 text-xs font-black uppercase tracking-widest text-neutral-400">
+                          {t('client_views.productivity.table_actions', 'Ações')}
+                        </th>
+                        <th className="pb-3 text-xs font-black uppercase tracking-widest text-neutral-400 text-right">
+                          {t('client_views.productivity.table_action', 'Ação')}
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
                       {filteredActivityLogs.map((log) => {
                         const profile = profiles.find(p => p.id === log.user_id)
-                        const name = profile?.full_name || profile?.email || 'Desenvolvedor'
+                        const name = profile?.full_name || profile?.email || t('client_views.productivity.dev_fallback', 'Desenvolvedor')
                         const useCase = useCases.find(uc => uc.id === log.ui_view_id)
-                        const useCaseName = useCase ? useCase.name : 'Caso de Uso Removido/Desconhecido'
+                        const useCaseName = useCase ? useCase.name : t('client_views.productivity.unknown_usecase', 'Caso de Uso Removido/Desconhecido')
 
                         return (
                           <tr key={log.id} className="group hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
@@ -272,7 +301,7 @@ export function ClientProductivityView({
                                 }}
                                 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
                               >
-                                Ver log detalhado
+                                {t('client_views.productivity.view_detailed_log', 'Ver log detalhado')}
                               </button>
                             </td>
                           </tr>
@@ -291,8 +320,8 @@ export function ClientProductivityView({
       <Modal
         isOpen={!!selectedLog}
         onClose={handleCloseLogModal}
-        title="Detalhes do Log de Atividade"
-        description={selectedLog ? `Sessão iniciada em ${new Date(selectedLog.session_start).toLocaleString('pt-BR')}` : 'Eventos registrados nesta sessão'}
+        title={t('client_views.productivity.modal_title', 'Detalhes do Log de Atividade')}
+        description={selectedLog ? `${t('client_views.productivity.modal_session_started_at', 'Sessão iniciada em')} ${new Date(selectedLog.session_start).toLocaleString('pt-BR')}` : t('client_views.productivity.modal_session_events', 'Eventos registrados nesta sessão')}
         size="2xl"
       >
         <div className="flex flex-col gap-6 mt-2">
@@ -309,7 +338,7 @@ export function ClientProductivityView({
                 )}
               >
                 <Activity className="w-3.5 h-3.5" />
-                <span>Linha do Tempo</span>
+                <span>{t('client_views.productivity.timeline_tab', 'Linha do Tempo')}</span>
               </button>
               <button
                 onClick={() => setModalTab('raw')}
@@ -321,7 +350,7 @@ export function ClientProductivityView({
                 )}
               >
                 <Code className="w-3.5 h-3.5" />
-                <span>JSON Bruto</span>
+                <span>{t('client_views.productivity.raw_json_tab', 'JSON Bruto')}</span>
               </button>
             </div>
 
@@ -334,12 +363,12 @@ export function ClientProductivityView({
                   {copied ? (
                     <>
                       <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                      <span className="text-emerald-600 dark:text-emerald-400">Copiado!</span>
+                      <span className="text-emerald-600 dark:text-emerald-400">{t('client_views.productivity.copied_btn', 'Copiado!')}</span>
                     </>
                   ) : (
                     <>
                       <Copy className="w-3.5 h-3.5" />
-                      <span>Copiar JSON</span>
+                      <span>{t('client_views.productivity.copy_json_btn', 'Copiar JSON')}</span>
                     </>
                   )}
                 </button>
@@ -348,7 +377,7 @@ export function ClientProductivityView({
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-lg border border-indigo-100 dark:border-indigo-900/50 transition-colors duration-150"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Exportar JSON</span>
+                  <span>{t('client_views.productivity.export_json_btn', 'Exportar JSON')}</span>
                 </button>
               </div>
             )}
@@ -358,7 +387,9 @@ export function ClientProductivityView({
           <div className="min-h-[300px] max-h-[55vh] overflow-y-auto custom-scrollbar pr-1">
             {modalTab === 'visual' ? (
               eventsArray.length === 0 ? (
-                <p className="text-sm text-neutral-500 text-center py-12">Nenhum evento detalhado registrado nesta sessão.</p>
+                <p className="text-sm text-neutral-500 text-center py-12">
+                  {t('client_views.productivity.no_detailed_events', 'Nenhum evento detalhado registrado nesta sessão.')}
+                </p>
               ) : (
                 <div className="relative border-l-2 border-neutral-200 dark:border-neutral-800 ml-4 pl-6 space-y-6">
                   {eventsArray.map((event: any, idx: number) => {
@@ -423,7 +454,7 @@ export function ClientProductivityView({
 
                           <div className="flex items-center justify-between gap-4 mt-1">
                             <p className="text-xs font-bold text-neutral-700 dark:text-neutral-200 leading-relaxed">
-                              {event.detail || 'Sem descrição detalhada.'}
+                              {event.detail || t('client_views.productivity.no_detail_desc', 'Sem descrição detalhada.')}
                             </p>
                             {gapText && (
                               <div className={cn(
@@ -447,7 +478,7 @@ export function ClientProductivityView({
             ) : (
               <div className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 overflow-x-auto max-h-[50vh] overflow-y-auto custom-scrollbar">
                 <pre className="text-[10px] sm:text-xs text-neutral-800 dark:text-neutral-300 font-mono whitespace-pre-wrap">
-                  {selectedLog?.events ? JSON.stringify(selectedLog.events, null, 2) : 'Nenhum evento detalhado disponível.'}
+                  {selectedLog?.events ? JSON.stringify(selectedLog.events, null, 2) : t('client_views.productivity.no_detailed_available', 'Nenhum evento detalhado disponível.')}
                 </pre>
               </div>
             )}
@@ -459,7 +490,7 @@ export function ClientProductivityView({
               onClick={handleCloseLogModal}
               className="px-6 py-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-750 text-neutral-900 dark:text-white text-xs font-bold rounded-xl transition-colors"
             >
-              Fechar
+              {t('client_views.productivity.modal_close_btn', 'Fechar')}
             </button>
           </div>
         </div>
@@ -467,3 +498,4 @@ export function ClientProductivityView({
     </div>
   )
 }
+

@@ -10,6 +10,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useCheckoutState } from './hooks/useCheckoutState'
 import { CheckoutSuccessView } from './components/CheckoutSuccessView'
 import { CheckoutPaymentWaitView } from './components/CheckoutPaymentWaitView'
+import { useI18n } from '@/i18n'
 
 
 interface CheckoutClientProps {
@@ -23,6 +24,7 @@ interface CheckoutClientProps {
 }
 
 export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, workspaceSlug, user, profile, mode }: CheckoutClientProps) {
+  const { t } = useI18n()
   const state = useCheckoutState({ rules, initialLicenses, initialCycle, workspaceSlug, user, profile, mode })
   const {
     isUpgrade, licenses, setLicenses, cycle, setCycle, workspace,
@@ -54,7 +56,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
           }
         }}
         className="absolute top-6 right-6 p-2 rounded-2xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-750 text-neutral-400 hover:text-neutral-950 dark:text-neutral-400 dark:hover:text-white transition-all active:scale-90 z-20"
-        title="Fechar checkout"
+        title={t('checkout.close_tooltip', 'Fechar checkout')}
       >
         <X className="w-5 h-5" />
       </button>
@@ -62,10 +64,10 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
       {/* Modal Header */}
       <div className="space-y-2 mb-10 pr-12">
         <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-neutral-900 dark:text-white leading-[1.1]">
-          Finalizar <span className="text-indigo-600">Assinatura</span>
+          {t('checkout.title', 'Finalizar')} <span className="text-indigo-600">{t('checkout.title_highlight', 'Assinatura')}</span>
         </h1>
         <p className="text-neutral-500 dark:text-neutral-400 text-sm">
-          Insira seus dados de faturamento e inicie a automação profissional sem limites.
+          {t('checkout.subtitle', 'Insira seus dados de faturamento e inicie a automação profissional sem limites.')}
         </p>
       </div>
 
@@ -78,9 +80,9 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
               <div className="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-500 mb-2 border border-indigo-500/20">
                  <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1v2H9V7zm0 4h1v2H9v-2zm0 4h1v2H9v-2zm-3-8h1v2H6V7zm0 4h1v2H6v-2zm0 4h1v2H6v-2zm8-8h1v2h-1V7zm0 4h1v2h-1v-2zm0 4h1v2h-1v-2z" /></svg>
               </div>
-              <h2 className="text-3xl font-black text-neutral-900 dark:text-white">Plano Enterprise</h2>
+              <h2 className="text-3xl font-black text-neutral-900 dark:text-white">{t('checkout.enterprise_title', 'Plano Enterprise')}</h2>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-sm">
-                Para volumes de 50 ou mais licenças, oferecemos condições exclusivas, SLA dedicado e suporte prioritário.
+                {t('checkout.enterprise_desc', 'Para volumes de 50 ou mais licenças, oferecemos condições exclusivas, SLA dedicado e suporte prioritário.')}
               </p>
               <a 
                 href={`https://wa.me/5511999999999?text=Ol%C3%A1%2C%20tenho%20interesse%20em%20um%20plano%20Enterprise%20do%20MetaBuilder%20Pro%20para%20${licenses}%20licen%C3%A7as`} 
@@ -88,7 +90,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                 rel="noreferrer"
                 className="mt-4 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/25"
               >
-                Falar com Consultor
+                {t('checkout.enterprise_btn', 'Falar com Consultor')}
               </a>
             </div>
           </div>
@@ -100,24 +102,24 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
             <div className="bg-neutral-50/50 dark:bg-neutral-950/40 border border-neutral-200/50 dark:border-neutral-800/40 p-6 md:p-8 rounded-3xl space-y-6 shadow-sm">
               <h2 className="text-lg font-bold flex items-center gap-3 border-b border-neutral-150 dark:border-neutral-850/60 pb-4 text-neutral-900 dark:text-white">
                 <FileText className="w-5 h-5 text-indigo-500" />
-                1. Informações de Faturamento
+                {t('checkout.step1_title', '1. Informações de Faturamento')}
               </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">Nome / Razão Social</label>
+                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">{t('checkout.billing_name', 'Nome / Razão Social')}</label>
                   <input 
                     type="text" 
                     required
                     value={billingName}
                     onChange={(e) => setBillingName(e.target.value)}
-                    placeholder="Ex: Alexandre Santos"
+                    placeholder={t('checkout.billing_name_placeholder', 'Ex: Alexandre Santos')}
                     className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none text-neutral-900 dark:text-white transition-all shadow-sm focus:ring-2 focus:ring-indigo-500/25"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">CPF / CNPJ</label>
+                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">{t('checkout.cpf_cnpj', 'CPF / CNPJ')}</label>
                   <input 
                     type="text" 
                     required
@@ -129,25 +131,25 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">Telefone / Celular</label>
+                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">{t('checkout.phone', 'Telefone / Celular')}</label>
                   <input 
                     type="tel" 
                     required
                     value={billingPhone}
                     onChange={(e) => setBillingPhone(e.target.value)}
-                    placeholder="Ex: (11) 99999-9999"
+                    placeholder={t('checkout.phone_placeholder', 'Ex: (11) 99999-9999')}
                     className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none text-neutral-900 dark:text-white transition-all shadow-sm focus:ring-2 focus:ring-indigo-500/25"
                   />
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">E-mail para Notas e Cobranças</label>
+                  <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">{t('checkout.billing_email', 'E-mail para Notas e Cobranças')}</label>
                   <input 
                     type="email" 
                     required
                     value={billingEmail}
                     onChange={(e) => setBillingEmail(e.target.value)}
-                    placeholder="exemplo@empresa.com"
+                    placeholder={t('checkout.billing_email_placeholder', 'exemplo@empresa.com')}
                     className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none text-neutral-900 dark:text-white transition-all shadow-sm focus:ring-2 focus:ring-indigo-500/25"
                   />
                 </div>
@@ -159,7 +161,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
               <div className="bg-neutral-50/50 dark:bg-neutral-950/40 border border-neutral-200/50 dark:border-neutral-800/40 p-6 md:p-8 rounded-3xl space-y-6 shadow-sm">
               <h2 className="text-lg font-bold flex items-center gap-3 border-b border-neutral-150 dark:border-neutral-850/60 pb-4 text-neutral-900 dark:text-white">
                 <CreditCard className="w-5 h-5 text-indigo-500" />
-                2. Forma de Pagamento (ASAAS Gateway)
+                {t('checkout.step2_title', '2. Forma de Pagamento (ASAAS Gateway)')}
               </h2>
 
               {/* Payment Tabs */}
@@ -171,10 +173,10 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                     pix: <QrCode className="w-3.5 h-3.5 relative z-10" />,
                     boleto: <FileText className="w-3.5 h-3.5 relative z-10" />
                   }
-                  const labels = {
-                    card: 'Cartão',
-                    pix: 'Pix',
-                    boleto: 'Boleto'
+                  const labels: Record<string, string> = {
+                    card: t('checkout.payment_card', 'Cartão'),
+                    pix: t('checkout.payment_pix', 'Pix'),
+                    boleto: t('checkout.payment_boleto', 'Boleto')
                   }
                   
                   return (
@@ -199,7 +201,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                           ? 'text-neutral-900 dark:text-white' 
                           : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white'
                       }`}>
-                        {labels[method as keyof typeof labels]}
+                        {labels[method] || method}
                       </span>
                     </button>
                   )
@@ -222,7 +224,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                         <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/10 blur-2xl rounded-full"></div>
                         <div className="flex justify-between items-start z-10">
                           <div className="px-2.5 py-1 bg-white/10 rounded-lg border border-white/5 font-black text-[9px] uppercase tracking-widest">
-                            Checkout Seguro
+                            {t('checkout.secure_checkout', 'Checkout Seguro')}
                           </div>
                           <Lock className="w-4 h-4 text-white/40" />
                         </div>
@@ -232,13 +234,13 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                           </div>
                           <div className="flex justify-between items-end">
                             <div className="min-w-0 pr-4">
-                              <p className="text-[7px] uppercase tracking-widest text-white/45">Titular</p>
+                              <p className="text-[7px] uppercase tracking-widest text-white/45">{t('checkout.card_holder', 'Titular')}</p>
                               <p className="text-xs font-bold tracking-wide uppercase truncate max-w-[180px]">
-                                {cardName || 'Nome do Titular'}
+                                {cardName || t('checkout.card_holder_default', 'Nome do Titular')}
                               </p>
                             </div>
                             <div className="text-right shrink-0">
-                              <p className="text-[7px] uppercase tracking-widest text-white/45 font-mono">Validade</p>
+                              <p className="text-[7px] uppercase tracking-widest text-white/45 font-mono">{t('checkout.card_expiry', 'Validade')}</p>
                               <p className="text-xs font-bold tracking-wide font-mono">
                                 {cardExpiry || 'MM/AA'}
                               </p>
@@ -249,7 +251,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2 md:col-span-2">
-                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">Número do Cartão</label>
+                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">{t('checkout.card_number', 'Número do Cartão')}</label>
                           <input 
                             type="text" 
                             required={paymentMethod === 'card'}
@@ -261,19 +263,19 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                         </div>
 
                         <div className="space-y-2 md:col-span-2">
-                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">Nome no Cartão</label>
+                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">{t('checkout.card_name', 'Nome no Cartão')}</label>
                           <input 
                             type="text" 
                             required={paymentMethod === 'card'}
                             value={cardName}
                             onChange={(e) => setCardName(e.target.value)}
-                            placeholder="Como impresso no cartão"
+                            placeholder={t('checkout.card_name_placeholder', 'Como impresso no cartão')}
                             className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none text-neutral-900 dark:text-white uppercase transition-all focus:ring-2 focus:ring-indigo-500/25"
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">Validade</label>
+                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">{t('checkout.card_expiry', 'Validade')}</label>
                           <input 
                             type="text" 
                             required={paymentMethod === 'card'}
@@ -285,7 +287,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">CVV</label>
+                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">{t('checkout.cvv', 'CVV')}</label>
                           <input 
                             type="password" 
                             required={paymentMethod === 'card'}
@@ -297,7 +299,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">CEP do Titular</label>
+                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">{t('checkout.postal_code', 'CEP do Titular')}</label>
                           <input 
                             type="text" 
                             required={paymentMethod === 'card'}
@@ -309,13 +311,13 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">Número da Residência</label>
+                          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">{t('checkout.address_number', 'Número da Residência')}</label>
                           <input 
                             type="text" 
                             required={paymentMethod === 'card'}
                             value={billingAddressNumber}
                             onChange={(e) => setBillingAddressNumber(e.target.value)}
-                            placeholder="Ex: 123"
+                            placeholder={t('checkout.address_number_placeholder', 'Ex: 123')}
                             className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none text-neutral-900 dark:text-white transition-all focus:ring-2 focus:ring-indigo-500/25"
                           />
                         </div>
@@ -335,7 +337,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                         <QrCode className="w-8 h-8" />
                       </div>
                       <p className="max-w-xs mx-auto leading-relaxed">
-                        Ao clicar em finalizar, o Asaas gerará um QR Code Pix único e chave Copia e Cola para você realizar o pagamento com compensação em segundos.
+                        {t('checkout.pix_desc', 'Ao clicar em finalizar, o Asaas gerará um QR Code Pix único e chave Copia e Cola para você realizar o pagamento com compensação em segundos.')}
                       </p>
                     </motion.div>
                   )}
@@ -352,7 +354,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                         <FileText className="w-8 h-8" />
                       </div>
                       <p className="max-w-xs mx-auto leading-relaxed">
-                        Ao clicar em finalizar, geraremos um Boleto com código de barras e link em PDF. Você poderá efetuar o pagamento em qualquer agência, internet banking ou app.
+                        {t('checkout.boleto_desc', 'Ao clicar em finalizar, geraremos um Boleto com código de barras e link em PDF. Você poderá efetuar o pagamento em qualquer agência, internet banking ou app.')}
                       </p>
                     </motion.div>
                   )}
@@ -370,16 +372,16 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
               {isProcessing ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Processando no ASAAS...</span>
+                  <span>{t('checkout.processing_asaas', 'Processando no ASAAS...')}</span>
                 </>
               ) : !workspace ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Carregando ambiente...</span>
+                  <span>{t('checkout.loading_env', 'Carregando ambiente...')}</span>
                 </>
               ) : (
                 <>
-                  <span>Finalizar Assinatura</span>
+                  <span>{t('checkout.submit_btn', 'Finalizar Assinatura')}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -393,7 +395,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
           
           {/* License Selector */}
           <div className="bg-neutral-50/50 dark:bg-neutral-950/40 border border-neutral-200/50 dark:border-neutral-800/40 p-6 rounded-3xl mb-4 shadow-sm flex items-center justify-between z-20 relative">
-            <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300">Quantidade de Licenças</span>
+            <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300">{t('checkout.licenses_count', 'Quantidade de Licenças')}</span>
             <div className="flex items-center gap-4">
               <button 
                 type="button"
@@ -417,11 +419,11 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
           <div className="bg-neutral-100/60 dark:bg-neutral-900/40 backdrop-blur-md border border-neutral-200/50 dark:border-neutral-800/40 p-1.5 rounded-2xl flex items-center gap-1.5 w-full relative z-20 mb-4 shadow-inner">
             {(['monthly', 'quarterly', 'semiannual', 'yearly'] as const).map((c) => {
               const isSelected = cycle === c
-              const labels = {
-                monthly: 'Mensal',
-                quarterly: 'Trimestral',
-                semiannual: 'Semestral',
-                yearly: 'Anual'
+              const labels: Record<string, string> = {
+                monthly: t('checkout.cycles.monthly', 'Mensal'),
+                quarterly: t('checkout.cycles.quarterly', 'Trimestral'),
+                semiannual: t('checkout.cycles.semiannual', 'Semestral'),
+                yearly: t('checkout.cycles.yearly', 'Anual')
               }
               
               let discountLabel = ''
@@ -463,15 +465,15 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
           {/* Main Card Body */}
           <div className="bg-neutral-50/50 dark:bg-neutral-950/40 border border-neutral-200/50 dark:border-neutral-800/40 p-6 md:p-8 rounded-3xl space-y-6 shadow-sm relative z-10 transition-all duration-300">
             <h2 className="text-lg font-bold border-b border-neutral-150 dark:border-neutral-850/60 pb-4 text-neutral-900 dark:text-white">
-              Resumo do Pedido
+              {t('checkout.order_summary', 'Resumo do Pedido')}
             </h2>
 
             {/* Selected Plan Details */}
             <div className="space-y-6">
               <div className="flex justify-between items-start gap-4">
                 <div>
-                  <h3 className="text-xl font-black text-indigo-650 dark:text-indigo-400">Plano Pro</h3>
-                  <p className="text-xs text-neutral-400 mt-1 leading-relaxed">Pacote flexível com desconto progressivo por volume e prazo de renovação.</p>
+                  <h3 className="text-xl font-black text-indigo-650 dark:text-indigo-400">{t('checkout.pro_plan', 'Plano Pro')}</h3>
+                  <p className="text-xs text-neutral-400 mt-1 leading-relaxed">{t('checkout.pro_plan_desc', 'Pacote flexível com desconto progressivo por volume e prazo de renovação.')}</p>
                 </div>
                 {(() => {
                   const { total, monthlyEquivalent } = getCyclePrices(cycle)
@@ -479,7 +481,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                     <div className="text-right shrink-0">
                       {licenses >= 100 ? (
                         <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">
-                          Sob Consulta
+                          {t('checkout.under_consultation', 'Sob Consulta')}
                         </span>
                       ) : (
                         <>
@@ -487,11 +489,11 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                             R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           <span className="text-[9px] text-neutral-400 block font-bold mt-0.5">
-                            equiv. R$ {monthlyEquivalent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / mês
+                            {t('checkout.equiv', 'equiv.')} R$ {monthlyEquivalent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {t('checkout.per_month', '/ mês')}
                           </span>
                           {licenses > 1 && (
                             <span className="text-[9px] text-indigo-500 dark:text-indigo-400 block font-bold mt-0.5">
-                              equiv. R$ {(monthlyEquivalent / licenses).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / licença
+                              {t('checkout.equiv', 'equiv.')} R$ {(monthlyEquivalent / licenses).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {t('checkout.per_license', '/ licença')}
                             </span>
                           )}
                         </>
@@ -502,11 +504,11 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
               </div>
 
               <div className="p-4 bg-white dark:bg-neutral-900/60 rounded-2xl border border-neutral-150 dark:border-neutral-800/50 space-y-3">
-                <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Incluso no pacote:</p>
+                <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{t('checkout.included_in_package', 'Incluso no pacote:')}</p>
                 <ul className="space-y-2.5">
                   <li className="flex items-center gap-2 text-xs font-bold text-neutral-700 dark:text-neutral-200">
                     <CheckCircle2 className="w-4 h-4 text-indigo-500 shrink-0" />
-                    <span>{licenses} {licenses === 1 ? 'Licença Ativa' : 'Licenças Ativas'}</span>
+                    <span>{licenses} {licenses === 1 ? t('checkout.active_license_single', 'Licença Ativa') : t('checkout.active_license_plural', 'Licenças Ativas')}</span>
                   </li>
                   {featuresList.map((feat: string, index: number) => (
                     <li key={index} className="flex items-start gap-2.5 text-xs text-neutral-500 dark:text-neutral-450 leading-tight">
@@ -522,7 +524,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                 {isUpgrade && licenses < 100 && prorataDetails && prorataDetails.prorataValue > 0 && (
                   <div className="flex justify-between items-center mb-2 bg-indigo-50 dark:bg-indigo-500/10 p-3 rounded-xl border border-indigo-100 dark:border-indigo-500/20">
                     <span className="text-xs font-black uppercase tracking-wider text-indigo-800 dark:text-indigo-400">
-                      Cobrança Avulsa Hoje (Prorata)
+                      {t('checkout.prorata_today', 'Cobrança Avulsa Hoje (Prorata)')}
                     </span>
                     <span className="text-xl font-black text-indigo-650 dark:text-indigo-400 whitespace-nowrap flex-shrink-0 ml-4 text-right">
                       R$ {prorataDetails.prorataValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -532,16 +534,16 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                 
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-black uppercase tracking-wider text-neutral-400">
-                    {isUpgrade ? 'Valor da Assinatura (Próximo Ciclo)' : 'Total do Ciclo'}
+                    {isUpgrade ? t('checkout.next_cycle_value', 'Valor da Assinatura (Próximo Ciclo)') : t('checkout.total_cycle', 'Total do Ciclo')}
                   </span>
                   <span className="text-2xl font-black text-neutral-900 dark:text-white whitespace-nowrap flex-shrink-0 ml-4 text-right">
-                    {licenses >= 100 ? 'Sob Consulta' : `R$ ${getCyclePrices(cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    {licenses >= 100 ? t('checkout.under_consultation', 'Sob Consulta') : `R$ ${getCyclePrices(cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   </span>
                 </div>
                 {isUpgrade && licenses < 100 && (
                   <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl">
                     <p className="text-xs text-amber-800 dark:text-amber-400 font-medium">
-                      <strong>Atenção:</strong> Como este é um upgrade, será cobrado hoje apenas um <strong className="font-black uppercase">valor proporcional (prorata)</strong> referente aos dias restantes até a próxima fatura.
+                      {t('checkout.prorata_warning', 'Atenção: Como este é um upgrade, será cobrado hoje apenas um valor proporcional (prorata) referente aos dias restantes até a próxima fatura.')}
                     </p>
                   </div>
                 )}
@@ -552,9 +554,9 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
             <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900/60 border border-neutral-150 dark:border-neutral-800/50 flex items-start gap-3">
               <HelpCircle className="w-5 h-5 text-neutral-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Políticas de Licenciamento</p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400">{t('checkout.licensing_policies_title', 'Políticas de Licenciamento')}</p>
                 <p className="text-[9px] text-neutral-500 dark:text-neutral-450 mt-1 leading-normal">
-                  Sua assinatura permite criar e trabalhar em múltiplos workspaces. As licenças inclusas limitam o total de colaboradores simultâneos ativos no sistema. Cancelamento flexível a qualquer momento.
+                  {t('checkout.licensing_policies_desc', 'Sua assinatura permite criar e trabalhar em múltiplos workspaces. As licenças inclusas limitam o total de colaboradores simultâneos ativos no sistema. Cancelamento flexível a qualquer momento.')}
                 </p>
               </div>
             </div>

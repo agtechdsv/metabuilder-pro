@@ -10,6 +10,7 @@ import Editor from '@monaco-editor/react'
 import { Rnd } from 'react-rnd'
 import { createClient } from '@/utils/supabase/client'
 import { usePathname, useSearchParams, useRouter } from 'next/navigation'
+import { useI18n } from '@/i18n'
 
 function parseConnString(type: string, str: string) {
   let user = '', pass = '', host = '', port = '', db = '';
@@ -71,6 +72,7 @@ function buildConnString(type: string, parsed: {user: string, pass: string, host
 }
 
 export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: string }) {
+  const { t } = useI18n()
   const { toast } = useToast()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -413,15 +415,19 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
             <Network className="w-5 h-5 text-indigo-500" />
           </div>
           <div>
-            <h3 className="font-bold text-lg text-neutral-800 dark:text-neutral-100">Gerenciador do Túnel Local</h3>
-            <p className="text-sm text-neutral-500">Controle o daemon central que atende às conexões de todos os seus projetos deste ambiente.</p>
+            <h3 className="font-bold text-lg text-neutral-800 dark:text-neutral-100">
+              {t('workspace_components.tunnel_control.title', 'Gerenciador do Túnel Local')}
+            </h3>
+            <p className="text-sm text-neutral-500">
+              {t('workspace_components.tunnel_control.desc', 'Controle o daemon central que atende às conexões de todos os seus projetos deste ambiente.')}
+            </p>
           </div>
         </div>
         <button
           onClick={handleOpenConfig}
           className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 shrink-0"
         >
-          <FileJson className="w-4 h-4" /> Configurar (metabuilder.config.json)
+          <FileJson className="w-4 h-4" /> {t('workspace_components.tunnel_control.config_btn', 'Configurar (metabuilder.config.json)')}
         </button>
       </div>
 
@@ -431,11 +437,17 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
         <div className="bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 rounded-xl p-5">
           <div className="flex items-center gap-4 mb-6">
             <div className="flex-1">
-              <p className="text-xs uppercase tracking-widest font-black text-neutral-400">Estado do Serviço (cli-win.exe)</p>
+              <p className="text-xs uppercase tracking-widest font-black text-neutral-400">
+                {t('workspace_components.tunnel_control.status_title', 'Estado do Serviço (cli-win.exe)')}
+              </p>
               <div className="flex items-center gap-2 mt-1">
                 <div className={`w-3 h-3 rounded-full ${tunnelStatus === 'running' ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)] animate-pulse' : tunnelStatus === 'stopped' ? 'bg-red-500' : 'bg-neutral-400 animate-bounce'}`} />
                 <span className="font-bold text-neutral-700 dark:text-neutral-300">
-                  {tunnelStatus === 'running' ? 'Ativo e Rodando' : tunnelStatus === 'stopped' ? 'Parado' : 'Carregando...'}
+                  {tunnelStatus === 'running' 
+                    ? t('workspace_components.tunnel_control.status_running', 'Em Execução') 
+                    : tunnelStatus === 'stopped' 
+                    ? t('workspace_components.tunnel_control.status_stopped', 'Parado') 
+                    : t('workspace_components.tunnel_control.status_loading', 'Verificando...')}
                 </span>
               </div>
             </div>
@@ -453,14 +465,14 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
               onClick={() => handleProcessControl('start', 1)}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all ${tunnelStatus === 'stopped' ? 'bg-green-500 hover:bg-green-600 text-white shadow-md shadow-green-500/20' : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed'}`}
             >
-              <Play className="w-4 h-4" /> Iniciar Túnel
+              <Play className="w-4 h-4" /> {t('workspace_components.tunnel_control.start_tunnel', 'Iniciar Túnel')}
             </button>
             <button 
               disabled={tunnelStatus !== 'running'}
               onClick={() => handleProcessControl('stop')}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all ${tunnelStatus === 'running' ? 'bg-red-500 hover:bg-red-600 text-white shadow-md shadow-red-500/20' : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed'}`}
             >
-              <Square className="w-4 h-4" /> Parar Túnel
+              <Square className="w-4 h-4" /> {t('workspace_components.tunnel_control.stop_tunnel', 'Parar Túnel')}
             </button>
           </div>
           
@@ -470,17 +482,17 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
         <div className="bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 rounded-xl p-5 flex flex-col justify-between">
           <div>
             <h4 className="font-bold text-sm flex items-center gap-2 text-neutral-700 dark:text-neutral-300 mb-2">
-              <RefreshCw className="w-4 h-4 text-indigo-500" /> Sincronização Global (Introspecção)
+              <RefreshCw className="w-4 h-4 text-indigo-500" /> {t('workspace_components.tunnel_control.global_sync_title', 'Sincronização Global (Introspecção)')}
             </h4>
             <p className="text-xs text-neutral-500 mb-4">
-              Força a leitura de estrutura de todos os bancos de dados configurados no `metabuilder.config.json` ativo na máquina. Não afeta a execução do túnel.
+              {t('workspace_components.tunnel_control.global_sync_desc', 'Força a leitura de estrutura de todos os bancos de dados configurados no `metabuilder.config.json` ativo na máquina. Não afeta a execução do túnel.')}
             </p>
           </div>
           <button 
             onClick={handleSync}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
           >
-            <RefreshCw className="w-4 h-4" /> Disparar Sincronização Geral
+            <RefreshCw className="w-4 h-4" /> {t('workspace_components.tunnel_control.trigger_sync', 'Disparar Sincronização Geral')}
           </button>
         </div>
 
@@ -520,13 +532,13 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                        className={`text-sm font-bold px-4 py-1.5 rounded-lg transition-colors ${activeConfigTab === 'form' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
                        onClick={(e) => { e.stopPropagation(); setActiveConfigTab('form'); }}
                     >
-                       Formulário
+                       {t('workspace_components.tunnel_control.form_tab', 'Formulário')}
                     </button>
                     <button 
                        className={`text-sm font-bold px-4 py-1.5 rounded-lg transition-colors ${activeConfigTab === 'json' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
                        onClick={(e) => { e.stopPropagation(); setActiveConfigTab('json'); }}
                     >
-                       Editor JSON
+                       {t('workspace_components.tunnel_control.json_tab', 'Editor JSON')}
                     </button>
                   </div>
                 </div>
@@ -567,7 +579,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                       {/* Projetos / Conexões */}
                       <div>
                         <h4 className="font-bold text-lg text-neutral-800 dark:text-neutral-200 mb-4 flex items-center gap-2">
-                          <Network className="w-5 h-5 text-indigo-500" /> Projetos
+                          <Network className="w-5 h-5 text-indigo-500" /> {t('workspace_components.tunnel_control.projects_title', 'Projetos')}
                         </h4>
                         
                         {parsedConfig.connections?.map((projConfig: any, originalIdx: number) => {
@@ -739,7 +751,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                           }}
                           className="w-full py-4 border-2 border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500 font-bold text-sm rounded-2xl hover:border-indigo-500 hover:text-indigo-500 dark:hover:border-indigo-400 dark:hover:text-indigo-400 transition-colors"
                         >
-                          + Adicionar Projeto
+                          {t('workspace_components.tunnel_control.add_project', '+ Adicionar Projeto')}
                         </button>
                       </div>
 
@@ -872,7 +884,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                   onClick={() => setIsConfigModalOpen(false)}
                   className="px-6 py-2.5 rounded-xl font-bold text-sm text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                 >
-                  Cancelar
+                  {t('workspace_components.synced_dbs.rename_cancel', 'Cancelar')}
                 </button>
                 <button
                   onClick={handleSaveConfig}
@@ -881,7 +893,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                 >
                   {isSavingConfig ? 'Salvando...' : (
                     <>
-                      <Save className="w-4 h-4" /> Salvar Configuração
+                      <Save className="w-4 h-4" /> {t('workspace_components.tunnel_control.save_config', 'Salvar Configuração')}
                     </>
                   )}
                 </button>

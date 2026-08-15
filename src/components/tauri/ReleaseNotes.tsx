@@ -9,7 +9,7 @@ import remarkGfm from 'remark-gfm'
 import { useI18n } from '@/i18n/I18nContext'
 
 export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pill' }) {
-  const { language } = useI18n()
+  const { language, t } = useI18n()
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
   const [expandedNote, setExpandedNote] = useState<string | null>(null)
   const [releaseNotesList, setReleaseNotesList] = useState<any[]>([])
@@ -91,8 +91,8 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
                   <img src="/icon-desktop-square.png" alt="MetaBuilder PRO" className="w-8 h-8 object-contain" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold">Histórico de Atualizações</h3>
-                  <p className="text-xs text-neutral-500">Acompanhe as novidades do MetaBuilder PRO</p>
+                  <h3 className="text-lg font-bold">{t('release_notes.title', 'Histórico de Atualizações')}</h3>
+                  <p className="text-xs text-neutral-500">{t('release_notes.subtitle', 'Acompanhe as novidades do MetaBuilder PRO')}</p>
                 </div>
               </div>
               <button
@@ -107,7 +107,7 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
               {isFetchingNotes ? (
                 <div className="flex flex-col items-center justify-center py-10 opacity-50">
                   <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
-                  <p className="text-sm">Buscando histórico...</p>
+                  <p className="text-sm">{t('release_notes.fetching', 'Buscando histórico...')}</p>
                 </div>
               ) : (
                 <>
@@ -143,12 +143,12 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
                               {isUpdating ? (
                                 <>
                                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                  Atualizando...
+                                  {t('release_notes.updating', 'Atualizando...')}
                                 </>
                               ) : (
                                 <>
                                   <Download className="w-4 h-4" />
-                                  Atualizar para a versão {latest}
+                                  {t('release_notes.update_to_version', 'Atualizar para a versão {version}').replace('{version}', latest)}
                                 </>
                               )}
                             </button>
@@ -166,7 +166,7 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
                       const isLatest = i === 0
 
                       let finalBody = release.body
-                      if (finalBody === '' || !finalBody) finalBody = 'Sem detalhes para esta versão.'
+                      if (finalBody === '' || !finalBody) finalBody = t('release_notes.no_details', 'Sem detalhes para esta versão.')
 
                       return (
                         <div key={release.version} className={`relative flex items-center group is-active ${isExpanded ? 'justify-center' : 'justify-between md:justify-normal md:odd:flex-row-reverse'}`}>
@@ -187,11 +187,11 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
                             <div className="mb-2">
                               {isCurrent ? (
                                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
-                                  Versão Atual
+                                  {t('release_notes.current_version', 'Versão Atual')}
                                 </span>
                               ) : isLatest ? (
                                 <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider">
-                                  Nova Versão
+                                  {t('release_notes.new_version', 'Nova Versão')}
                                 </span>
                               ) : null}
                             </div>
@@ -200,7 +200,7 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
                               onClick={() => setExpandedNote(isExpanded ? null : release.version)}
                               className="flex items-center gap-1 text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                             >
-                              Release Notes
+                              {t('release_notes.notes_btn', 'Release Notes')}
                               {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             </button>
 
@@ -248,7 +248,7 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
                 onClick={() => setShowReleaseNotes(false)}
                 className="px-6 py-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-sm font-bold rounded-lg hover:opacity-90 transition-opacity"
               >
-                Fechar
+                {t('release_notes.close', 'Fechar')}
               </button>
             </div>
           </motion.div>
@@ -264,7 +264,7 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
           setExpandedNote(null)
           setShowReleaseNotes(true)
         }}
-        title="Ver Histórico de Atualizações"
+        title={t('release_notes.tooltip', 'Ver Histórico de Atualizações')}
         className={
           variant === 'header'
             ? "flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-indigo-600 hover:text-white hover:bg-indigo-600 dark:hover:bg-indigo-600 transition-colors shadow-sm cursor-pointer group"

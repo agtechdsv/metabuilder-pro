@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Bot, Key, Check, X, AlertCircle, Loader2, Zap } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/i18n'
 
 interface AIBuilderSettingsProps {
   workspaceId: string
@@ -17,6 +18,7 @@ const PROVIDERS = [
 ]
 
 export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps) {
+  const { t } = useI18n()
   const [config, setConfig] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -34,7 +36,6 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
   useEffect(() => {
     fetchConfig()
   }, [workspaceId])
-
 
   const fetchConfig = async () => {
     setIsLoading(true)
@@ -141,10 +142,10 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
           received += decoder.decode(value)
           if (received.includes('[DONE]')) break
         }
-        setTestResult({ ok: true, message: 'Conexão bem-sucedida! Sua chave está funcionando.' })
+        setTestResult({ ok: true, message: t('workspace_components.ai_builder_settings.connection_success', 'Conexão bem-sucedida! Sua chave está funcionando.') })
       } else {
         const data = await res.json()
-        setTestResult({ ok: false, message: data.error || 'Falha na conexão.' })
+        setTestResult({ ok: false, message: data.error || t('workspace_components.ai_builder_settings.connection_fail', 'Falha na conexão.') })
       }
     } catch (err: any) {
       setTestResult({ ok: false, message: err.message || 'Erro de rede.' })
@@ -159,12 +160,14 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
         <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <Bot className="w-8 h-8 text-white" />
         </div>
-        <h3 className="text-xl font-black text-neutral-900 dark:text-white mb-2">AI Builder</h3>
+        <h3 className="text-xl font-black text-neutral-900 dark:text-white mb-2">
+          {t('workspace_components.ai_builder_settings.pro_exclusive_title', 'AI Builder')}
+        </h3>
         <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4 max-w-sm mx-auto">
-          Gere casos de uso completos usando a IA de sua preferência. Recurso exclusivo do plano PRO.
+          {t('workspace_components.ai_builder_settings.pro_exclusive_desc', 'Gere casos de uso completos usando a IA de sua preferência. Recurso exclusivo do plano PRO.')}
         </p>
         <div className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-200 dark:bg-neutral-800 text-neutral-500 rounded-xl text-sm font-bold cursor-not-allowed">
-          🔒 Disponível no Plano PRO
+          {t('workspace_components.ai_builder_settings.pro_badge', '🔒 Disponível no Plano PRO')}
         </div>
       </div>
     )
@@ -186,14 +189,16 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
           <Bot className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h3 className="text-lg font-black text-neutral-900 dark:text-white">AI Builder</h3>
+          <h3 className="text-lg font-black text-neutral-900 dark:text-white">
+            {t('workspace_components.ai_builder_settings.title', 'AI Builder')}
+          </h3>
           <p className="text-xs text-neutral-500 dark:text-neutral-400">
-            Configure sua chave de API para gerar casos de uso com IA
+            {t('workspace_components.ai_builder_settings.subtitle', 'Configure sua chave de API para gerar casos de uso com IA')}
           </p>
         </div>
         {config && (
           <span className="ml-auto inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full text-xs font-bold">
-            <Check className="w-3 h-3" /> Configurado — {PROVIDERS.find(p => p.value === config.provider)?.label}
+            <Check className="w-3 h-3" /> {t('workspace_components.ai_builder_settings.configured_with', 'Configurado — {provider}').replace('{provider}', PROVIDERS.find(p => p.value === config.provider)?.label || '')}
           </span>
         )}
       </div>
@@ -203,7 +208,7 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
         {/* Provedor */}
         <div>
           <label className="block text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-2">
-            Provedor de IA
+            {t('workspace_components.ai_builder_settings.provider_label', 'Provedor de IA')}
           </label>
           <select
             value={provider}
@@ -230,7 +235,7 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
         {provider === 'custom' && (
           <div>
             <label className="block text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-2">
-              URL Base (ex: http://localhost:11434/v1)
+              {t('workspace_components.ai_builder_settings.base_url_label', 'URL Base (ex: http://localhost:11434/v1)')}
             </label>
             <input
               type="url"
@@ -245,7 +250,7 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
         {/* Modelo */}
         <div>
           <label className="block text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-2">
-            Modelo Padrão
+            {t('workspace_components.ai_builder_settings.default_model_label', 'Modelo Padrão')}
           </label>
           {selectedProvider && selectedProvider.models.length > 0 ? (
             <select
@@ -272,7 +277,7 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
         <div>
           <label className="block text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-2">
             <Key className="w-3 h-3 inline mr-1" />
-            Chave de API {config ? '(deixe em branco para manter a atual)' : ''}
+            {t('workspace_components.ai_builder_settings.api_key_label', 'Chave de API')} {config ? t('workspace_components.ai_builder_settings.api_key_keep_hint', '(deixe em branco para manter a atual)') : ''}
           </label>
           <input
             type="password"
@@ -282,7 +287,7 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
             className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 font-mono"
           />
           <p className="text-xs text-neutral-400 mt-1.5">
-            🔒 Sua chave é armazenada de forma segura e nunca é exposta no frontend.
+            {t('workspace_components.ai_builder_settings.api_key_security', '🔒 Sua chave é armazenada de forma segura e nunca é exposta no frontend.')}
           </p>
         </div>
 
@@ -306,7 +311,7 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
             className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-violet-600/20 transition-all disabled:opacity-50"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-            Salvar Configuração
+            {t('workspace_components.ai_builder_settings.save_config', 'Salvar Configuração')}
           </button>
           {config && (
             <button
@@ -315,7 +320,7 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
               className="flex items-center gap-2 px-5 py-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
             >
               {isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-              Testar Conexão
+              {t('workspace_components.ai_builder_settings.test_connection', 'Testar Conexão')}
             </button>
           )}
           {config && (
@@ -325,7 +330,7 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
               className="flex items-center gap-2 px-5 py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-xl text-sm font-bold transition-all disabled:opacity-50 ml-auto"
             >
               <X className="w-4 h-4" />
-              Excluir Configurações
+              {t('workspace_components.ai_builder_settings.delete_config', 'Excluir Configurações')}
             </button>
           )}
         </div>
@@ -335,9 +340,10 @@ export function AIBuilderSettings({ workspaceId, isPro }: AIBuilderSettingsProps
       <div className="flex items-start gap-3 p-4 bg-violet-50 dark:bg-violet-500/5 border border-violet-200 dark:border-violet-500/20 rounded-xl">
         <AlertCircle className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0 mt-0.5" />
         <p className="text-xs text-violet-700 dark:text-violet-300 leading-relaxed">
-          <strong>Dica de modelo:</strong> Para geração de código React, recomendamos <strong>GPT-4o</strong>, <strong>Claude Opus</strong> ou <strong>Gemini 2.0</strong> para melhores resultados. Modelos menores podem gerar código com erros.
+          <strong>{t('workspace_components.ai_builder_settings.model_tip', 'Dica de modelo:')}</strong> {t('workspace_components.ai_builder_settings.model_tip_desc', 'Para geração de código React, recomendamos GPT-4o, Claude Opus ou Gemini 2.0 para melhores resultados. Modelos menores podem gerar código com erros.')}
         </p>
       </div>
     </div>
   )
 }
+

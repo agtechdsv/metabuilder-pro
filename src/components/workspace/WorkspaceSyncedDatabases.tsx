@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import { Database, Pencil, Trash2, Loader2, AlertTriangle, Save, X } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
+import { useI18n } from '@/i18n'
 
 interface ProjectData {
   id: string
@@ -26,6 +27,7 @@ interface WorkspaceSyncedDatabasesProps {
 }
 
 export function WorkspaceSyncedDatabases({ workspaceId }: WorkspaceSyncedDatabasesProps = {}) {
+  const { t } = useI18n()
   const [loading, setLoading] = useState(true)
   const [groupedData, setGroupedData] = useState<GroupedData[]>([])
   const { toast } = useToast()
@@ -165,10 +167,10 @@ export function WorkspaceSyncedDatabases({ workspaceId }: WorkspaceSyncedDatabas
       <div className="p-6 border-b border-neutral-200 dark:border-neutral-800">
         <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
           <Database className="w-5 h-5 text-indigo-500" />
-          Bancos Sincronizados (Schemas)
+          {t('workspace_components.synced_dbs.title', 'Bancos Sincronizados (Schemas)')}
         </h2>
         <p className="text-sm text-neutral-500 mt-1">
-          Gerencie os schemas criados pela sincronização/introspecção em seus projetos. Você pode renomear conexões ou limpar schemas antigos para evitar duplicidade nas tabelas do seu projeto.
+          {t('workspace_components.synced_dbs.desc', 'Gerencie os schemas criados pela sincronização/introspecção em seus projetos. Você pode renomear conexões ou limpar schemas antigos para evitar duplicidade nas tabelas do seu projeto.')}
         </p>
       </div>
 
@@ -176,12 +178,12 @@ export function WorkspaceSyncedDatabases({ workspaceId }: WorkspaceSyncedDatabas
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 text-neutral-400">
             <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-4" />
-            <p>Carregando bancos sincronizados...</p>
+            <p>{t('workspace_components.synced_dbs.loading', 'Carregando bancos sincronizados...')}</p>
           </div>
         ) : groupedData.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-neutral-400">
             <Database className="w-12 h-12 mb-4 opacity-20" />
-            <p>Nenhum banco de dados sincronizado encontrado.</p>
+            <p>{t('workspace_components.synced_dbs.no_dbs_found', 'Nenhum banco de dados sincronizado encontrado.')}</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -193,7 +195,7 @@ export function WorkspaceSyncedDatabases({ workspaceId }: WorkspaceSyncedDatabas
                     <span className="text-xs text-neutral-500 font-mono">/{group.project.slug}</span>
                   </div>
                   <div className="text-xs font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
-                    {group.schemas.length} {group.schemas.length === 1 ? 'Schema' : 'Schemas'}
+                    {group.schemas.length} {group.schemas.length === 1 ? t('workspace_components.synced_dbs.single_schema', 'Schema') : t('workspace_components.synced_dbs.plural_schemas', 'Schemas')}
                   </div>
                 </div>
                 <div className="divide-y divide-neutral-100 dark:divide-neutral-850">
@@ -201,20 +203,22 @@ export function WorkspaceSyncedDatabases({ workspaceId }: WorkspaceSyncedDatabas
                     <div key={schema} className="px-5 py-4 flex items-center justify-between hover:bg-neutral-50/50 dark:hover:bg-neutral-900/20 transition-colors">
                       <div className="flex flex-col">
                         <span className="font-mono text-sm text-neutral-800 dark:text-neutral-200">{schema}</span>
-                        <span className="text-[10px] text-neutral-400 uppercase tracking-widest mt-1">Nome da Conexão</span>
+                        <span className="text-[10px] text-neutral-400 uppercase tracking-widest mt-1">
+                          {t('workspace_components.synced_dbs.conn_name_label', 'Nome da Conexão')}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEditClick(group.project.id, group.project.name, schema)}
                           className="p-2 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg transition-colors"
-                          title="Renomear Schema"
+                          title={t('workspace_components.synced_dbs.rename_schema_tooltip', 'Renomear Schema')}
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteClick(group.project.id, group.project.name, schema)}
                           className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
-                          title="Excluir Schema e Tabelas Vinculadas"
+                          title={t('workspace_components.synced_dbs.delete_schema_tooltip', 'Excluir Schema e Tabelas Vinculadas')}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -229,14 +233,18 @@ export function WorkspaceSyncedDatabases({ workspaceId }: WorkspaceSyncedDatabas
       </div>
 
       {/* Edit Modal */}
-      <Modal isOpen={isEditModalOpen} onClose={() => !isProcessing && setIsEditModalOpen(false)} title="Renomear Schema de Conexão">
+      <Modal isOpen={isEditModalOpen} onClose={() => !isProcessing && setIsEditModalOpen(false)} title={t('workspace_components.synced_dbs.rename_modal_title', 'Renomear Schema de Conexão')}>
         <div className="p-5 space-y-4">
           <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 p-3 rounded-xl text-sm border border-blue-100 dark:border-blue-800/30">
-            Isso atualizará o <strong>db_schema_name</strong> de todas as tabelas e modelos sincronizados no projeto <strong>{selectedItem?.projectName}</strong> que estão sob o schema atual (<strong>{selectedItem?.schemaName}</strong>).
+            {t('workspace_components.synced_dbs.rename_modal_desc', 'Isso atualizará o db_schema_name de todas as tabelas e modelos sincronizados no projeto {projectName} que estão sob o schema atual ({schemaName}).')
+              .replace('{projectName}', selectedItem?.projectName || '')
+              .replace('{schemaName}', selectedItem?.schemaName || '')}
           </div>
           
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Novo Nome do Schema (Connection Name)</label>
+            <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">
+              {t('workspace_components.synced_dbs.new_schema_name_label', 'Novo Nome do Schema (Connection Name)')}
+            </label>
             <input
               type="text"
               value={newSchemaName}
@@ -253,7 +261,7 @@ export function WorkspaceSyncedDatabases({ workspaceId }: WorkspaceSyncedDatabas
               disabled={isProcessing}
               className="px-5 py-2.5 text-sm font-bold text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
             >
-              Cancelar
+              {t('workspace_components.synced_dbs.rename_cancel', 'Cancelar')}
             </button>
             <button
               onClick={handleUpdateSchema}
@@ -261,21 +269,23 @@ export function WorkspaceSyncedDatabases({ workspaceId }: WorkspaceSyncedDatabas
               className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] disabled:opacity-50 flex items-center gap-2"
             >
               {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Salvar Alteração
+              {t('workspace_components.synced_dbs.rename_save', 'Salvar Alteração')}
             </button>
           </div>
         </div>
       </Modal>
 
       {/* Delete Modal */}
-      <Modal isOpen={isDeleteModalOpen} onClose={() => !isProcessing && setIsDeleteModalOpen(false)} title="Excluir Schema">
+      <Modal isOpen={isDeleteModalOpen} onClose={() => !isProcessing && setIsDeleteModalOpen(false)} title={t('workspace_components.synced_dbs.delete_modal_title', 'Excluir Schema')}>
         <div className="p-5 space-y-4">
           <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-2xl border border-red-100 dark:border-red-900/30">
             <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <h4 className="font-bold">Atenção! Esta ação é destrutiva.</h4>
+              <h4 className="font-bold">{t('workspace_components.synced_dbs.delete_warning_title', 'Atenção! Esta ação é destrutiva.')}</h4>
               <p className="text-sm">
-                Você está prestes a excluir <strong>todas as referências de tabelas</strong> do schema <strong>{selectedItem?.schemaName}</strong> no projeto <strong>{selectedItem?.projectName}</strong>.
+                {t('workspace_components.synced_dbs.delete_warning_desc', 'Você está prestes a excluir todas as referências de tabelas do schema {schemaName} no projeto {projectName}.')
+                  .replace('{schemaName}', selectedItem?.schemaName || '')
+                  .replace('{projectName}', selectedItem?.projectName || '')}
               </p>
             </div>
           </div>
@@ -290,7 +300,7 @@ export function WorkspaceSyncedDatabases({ workspaceId }: WorkspaceSyncedDatabas
               disabled={isProcessing}
               className="px-5 py-2.5 text-sm font-bold text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
             >
-              Cancelar
+              {t('workspace_components.synced_dbs.delete_cancel', 'Cancelar')}
             </button>
             <button
               onClick={handleDeleteSchema}
@@ -298,7 +308,7 @@ export function WorkspaceSyncedDatabases({ workspaceId }: WorkspaceSyncedDatabas
               className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] disabled:opacity-50 flex items-center gap-2"
             >
               {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              Excluir Schema
+              {t('workspace_components.synced_dbs.delete_confirm', 'Excluir Schema')}
             </button>
           </div>
         </div>

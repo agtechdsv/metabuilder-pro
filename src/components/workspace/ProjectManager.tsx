@@ -75,10 +75,10 @@ interface ProjectManagerProps {
   isOwner?: boolean
 }
 
-export function ProjectManager({ 
-  initialProjects, 
-  workspaceId, 
-  workspaceSlug, 
+export function ProjectManager({
+  initialProjects,
+  workspaceId,
+  workspaceSlug,
   workspaceName,
   canCreate = true,
   canDelete = true,
@@ -89,7 +89,7 @@ export function ProjectManager({
   isOwner = false
 }: ProjectManagerProps) {
   const [projects, setProjects] = useState<Project[]>(initialProjects)
-  
+
   // Sync state when Server Component re-renders with fresh data after router.refresh()
   useEffect(() => {
     setProjects(initialProjects)
@@ -105,10 +105,10 @@ export function ProjectManager({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [navigatingSlug, setNavigatingSlug] = useState<string | null>(null)
   const [isAIModalOpen, setIsAIModalOpen] = useState(false)
-  
+
   const [showDesktopModal, setShowDesktopModal] = useState(false)
   const [selectedDesktopProject, setSelectedDesktopProject] = useState<Project | null>(null)
-  
+
   const [isWorkspaceSettingsModalOpen, setIsWorkspaceSettingsModalOpen] = useState(false)
   const [workspaceFormData, setWorkspaceFormData] = useState({
     portal_logo_url: workspaceThemeConfig?.portal_logo_url || '',
@@ -171,7 +171,7 @@ export function ProjectManager({
       try {
         const { openPath } = await import('@tauri-apps/plugin-opener')
         await openPath(dir)
-      } catch {}
+      } catch { }
     }
   }
 
@@ -196,7 +196,7 @@ export function ProjectManager({
         const err = await res.json()
         throw new Error(err.error || 'Erro ao gerar código')
       }
-      
+
       const contentLength = Number(res.headers.get('content-length') || 0)
       const reader = res.body!.getReader()
       const chunks: Uint8Array[] = []
@@ -225,25 +225,25 @@ export function ProjectManager({
 
         const selectedDir = await open({ directory: true })
         if (!selectedDir || typeof selectedDir !== 'string') {
-           setDownloadModal(null)
-           return
+          setDownloadModal(null)
+          return
         }
 
         setDownloadModal(prev => prev ? { ...prev, phase: 'selecting', progress: 100 } : prev)
         toast('Extraindo projeto...', 'info')
 
         const zip = await JSZip.loadAsync(merged)
-        
+
         for (const relativePath of Object.keys(zip.files)) {
           const zipEntry = zip.files[relativePath]
           if (zipEntry.dir) continue
-          
+
           const fullPath = await join(selectedDir, relativePath)
           const dirPath = await dirname(fullPath)
-          
+
           try {
             await mkdir(dirPath, { recursive: true })
-          } catch (e) {}
+          } catch (e) { }
 
           const fileBytes = await zipEntry.async('uint8array')
           await writeFile(fullPath, fileBytes)
@@ -259,9 +259,9 @@ export function ProjectManager({
           toast('Dependências instaladas com sucesso!', 'success')
           try {
             const { sendNotification } = await import('@tauri-apps/plugin-notification')
-            sendNotification({ 
-              title: t('ide.project.eject_notif_title', 'Projeto Ejetado! 🎉'), 
-              body: t('ide.project.eject_notif_body', 'Os arquivos e dependências foram instalados com sucesso.') 
+            sendNotification({
+              title: t('ide.project.eject_notif_title', 'Projeto Ejetado! 🎉'),
+              body: t('ide.project.eject_notif_body', 'Os arquivos e dependências foram instalados com sucesso.')
             })
           } catch (err) { console.error('Native notification error', err) }
         }
@@ -276,8 +276,8 @@ export function ProjectManager({
         })
 
         if (confirm('Projeto ejetado e dependências instaladas! Deseja abrir no VS Code?')) {
-           const codeCmd = Command.create('code', ['.'], { cwd: selectedDir })
-           await codeCmd.execute()
+          const codeCmd = Command.create('code', ['.'], { cwd: selectedDir })
+          await codeCmd.execute()
         }
 
       } else {
@@ -458,24 +458,24 @@ export function ProjectManager({
   const saveWorkspaceSettings = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSavingWorkspaceSettings(true)
-    
+
     // Create new theme config combining old config with new portal settings
-    const newThemeConfig = { 
-      ...(workspaceThemeConfig || {}), 
-      portal_logo_url: workspaceFormData.portal_logo_url, 
-      portal_banner_url: workspaceFormData.portal_banner_url 
+    const newThemeConfig = {
+      ...(workspaceThemeConfig || {}),
+      portal_logo_url: workspaceFormData.portal_logo_url,
+      portal_banner_url: workspaceFormData.portal_banner_url
     }
 
     try {
       const { error } = await supabase
         .from('workspaces')
-        .update({ 
+        .update({
           theme_config: newThemeConfig
         })
         .eq('id', workspaceId)
 
       if (error) throw error
-      
+
       toast('Configurações do Workspace salvas com sucesso', 'success')
       setIsWorkspaceSettingsModalOpen(false)
       router.refresh()
@@ -578,7 +578,7 @@ export function ProjectManager({
               : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
           )}
         >
-          Projetos do Ecossistema
+          {t('workspace_components.tabs_your_workspaces', 'Projetos do Ecossistema')}
           {activeTab === 'projects' && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full shadow-[0_-2px_10px_rgba(79,70,229,0.5)]"></div>
           )}
@@ -594,7 +594,7 @@ export function ProjectManager({
                   : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
               )}
             >
-              Gerenciador do Túnel
+              {t('workspace_components.tabs_tunnel_manager', 'Gerenciador do Túnel')}
               {activeTab === 'tunnel' && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full shadow-[0_-2px_10px_rgba(79,70,229,0.5)]"></div>
               )}
@@ -608,7 +608,7 @@ export function ProjectManager({
                   : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
               )}
             >
-              Bancos Sincronizados
+              {t('workspace_components.tabs_synced_dbs', 'Bancos Sincronizados')}
               {activeTab === 'synced-dbs' && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full shadow-[0_-2px_10px_rgba(79,70,229,0.5)]"></div>
               )}
@@ -619,315 +619,315 @@ export function ProjectManager({
 
       {/* Grade de Projetos */}
       {activeTab === 'projects' && (
-      <section className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-bold flex items-center gap-3">
-            <Layers className="w-6 h-6 text-indigo-500" />
-            {t('dashboard.projects.your_projects')}
-          </h3>
-          <div className="flex items-center gap-4">
-            {canCreate && projects.some(p => p.theme_config?.show_in_portal) && (
-              <div className="flex items-center mr-4 border-r dark:border-neutral-800 pr-4">
-                <button
-                  onClick={() => setIsWorkspaceSettingsModalOpen(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold text-neutral-500 hover:text-indigo-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg uppercase tracking-widest transition-colors"
-                  title="Configurações do Portal"
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Personalizar Portal</span>
-                </button>
+        <section className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold flex items-center gap-3">
+              <Layers className="w-6 h-6 text-indigo-500" />
+              {t('dashboard.projects.your_projects')}
+            </h3>
+            <div className="flex items-center gap-4">
+              {canCreate && projects.some(p => p.theme_config?.show_in_portal) && (
+                <div className="flex items-center mr-4 border-r dark:border-neutral-800 pr-4">
+                  <button
+                    onClick={() => setIsWorkspaceSettingsModalOpen(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold text-neutral-500 hover:text-indigo-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg uppercase tracking-widest transition-colors"
+                    title={t('workspace_components.portal_modal.title', 'Configurações do Portal')}
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{t('workspace_components.portal_modal.customize_portal_btn', 'Personalizar Portal')}</span>
+                  </button>
+                </div>
+              )}
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors group"
+                title={t('workspace_components.refresh_tooltip', 'Atualizar')}
+              >
+                <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
+              </button>
+              <div className="text-xs font-bold text-neutral-500 uppercase tracking-widest">
+                {projects.length} {t('dashboard.projects.found')}
               </div>
-            )}
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors group"
-              title="Atualizar"
-            >
-              <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
-            </button>
-            <div className="text-xs font-bold text-neutral-500 uppercase tracking-widest">
-              {projects.length} {t('dashboard.projects.found')}
             </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-          {projects.map((project) => {
-            const isNavigating = navigatingSlug === project.slug;
-            return (
-              <div
-                key={project.id}
-                className={cn(
-                  "group relative p-5 bg-white dark:bg-neutral-950 border rounded-[2rem] transition-all shadow-sm hover:shadow-xl dark:shadow-none",
-                  isNavigating
-                    ? "border-indigo-500 bg-indigo-50/10 dark:bg-indigo-950/20 shadow-lg scale-[0.98] pointer-events-none"
-                    : "border-neutral-200 dark:border-neutral-800 hover:border-indigo-500/50"
-                )}
-              >
-                <div className="flex flex-col h-full gap-4">
-                  <div className="flex items-start justify-between">
-                    <Link
-                      href={`/admin/${workspaceSlug}/${project.slug}/studio`}
-                      onClick={() => setNavigatingSlug(project.slug)}
-                      className="flex flex-col gap-4 flex-1 min-w-0"
-                    >
-                      <div className={cn(
-                        "p-3 rounded-2xl w-fit transition-colors flex items-center justify-center min-w-[48px] min-h-[48px] border shrink-0",
-                        isNavigating
-                          ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-500"
-                          : "bg-neutral-100 dark:bg-neutral-800 border-transparent group-hover:bg-indigo-500/10"
-                      )}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+            {projects.map((project) => {
+              const isNavigating = navigatingSlug === project.slug;
+              return (
+                <div
+                  key={project.id}
+                  className={cn(
+                    "group relative p-5 bg-white dark:bg-neutral-950 border rounded-[2rem] transition-all shadow-sm hover:shadow-xl dark:shadow-none",
+                    isNavigating
+                      ? "border-indigo-500 bg-indigo-50/10 dark:bg-indigo-950/20 shadow-lg scale-[0.98] pointer-events-none"
+                      : "border-neutral-200 dark:border-neutral-800 hover:border-indigo-500/50"
+                  )}
+                >
+                  <div className="flex flex-col h-full gap-4">
+                    <div className="flex items-start justify-between">
+                      <Link
+                        href={`/admin/${workspaceSlug}/${project.slug}/studio`}
+                        onClick={() => setNavigatingSlug(project.slug)}
+                        className="flex flex-col gap-4 flex-1 min-w-0"
+                      >
                         <div className={cn(
-                          "transition-colors",
-                          isNavigating ? "text-indigo-500 animate-spin" : "text-neutral-400 group-hover:text-indigo-500"
+                          "p-3 rounded-2xl w-fit transition-colors flex items-center justify-center min-w-[48px] min-h-[48px] border shrink-0",
+                          isNavigating
+                            ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-500"
+                            : "bg-neutral-100 dark:bg-neutral-800 border-transparent group-hover:bg-indigo-500/10"
                         )}>
-                          {isNavigating ? (
-                            <Loader2 className="w-6 h-6" />
-                          ) : (
-                            <DynamicIcon icon={project.icon || 'Box'} size={24} />
+                          <div className={cn(
+                            "transition-colors",
+                            isNavigating ? "text-indigo-500 animate-spin" : "text-neutral-400 group-hover:text-indigo-500"
+                          )}>
+                            {isNavigating ? (
+                              <Loader2 className="w-6 h-6" />
+                            ) : (
+                              <DynamicIcon icon={project.icon || 'Box'} size={24} />
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-0.5 w-full min-w-0 pr-20">
+                          <h4 className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-white transition-colors truncate">{project.name}</h4>
+                          <p className="text-xs text-neutral-500 font-mono mt-0.5 truncate">/{project.slug}</p>
+                          {project.description && (
+                            <p className="text-xs text-neutral-500 dark:text-neutral-600 mt-2 line-clamp-2 leading-relaxed min-w-0">
+                              {project.description}
+                            </p>
                           )}
                         </div>
-                      </div>
-                      <div className="flex flex-col gap-0.5 w-full min-w-0 pr-20">
-                        <h4 className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-white transition-colors truncate">{project.name}</h4>
-                        <p className="text-xs text-neutral-500 font-mono mt-0.5 truncate">/{project.slug}</p>
-                        {project.description && (
-                          <p className="text-xs text-neutral-500 dark:text-neutral-600 mt-2 line-clamp-2 leading-relaxed min-w-0">
-                            {project.description}
-                          </p>
-                        )}
-                      </div>
-                    </Link>
+                      </Link>
 
-                    <div className="absolute top-5 right-5 flex flex-col items-end gap-2 z-20 pointer-events-none">
-                      <div className={`pointer-events-auto px-4 py-1.5 text-[10px] font-bold rounded-full border uppercase tracking-widest transition-all ${project.is_active
-                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                        : 'bg-red-500/10 text-red-500 border-red-500/20'
-                        }`}>
-                        {project.is_active ? t('dashboard.projects.status_active') : t('dashboard.projects.status_inactive')}
-                      </div>
+                      <div className="absolute top-5 right-5 flex flex-col items-end gap-2 z-20 pointer-events-none">
+                        <div className={`pointer-events-auto px-4 py-1.5 text-[10px] font-bold rounded-full border uppercase tracking-widest transition-all ${project.is_active
+                          ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                          : 'bg-red-500/10 text-red-500 border-red-500/20'
+                          }`}>
+                          {project.is_active ? t('dashboard.projects.status_active') : t('dashboard.projects.status_inactive')}
+                        </div>
 
-                      {!isNavigating && (
-                        <div className="pointer-events-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm p-1 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800">
-                          {/* 1. Acessar versão publicada */}
-                          <button
-                            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
-                            title="Acessar versão publicada"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openPreview(`${window.location.origin}/${workspaceSlug}/${project.slug}`, `Projeto: ${project.name}`)
-                            }}
-                          >
-                            <ArrowUpRight className="w-4 h-4" />
-                          </button>
-                          {/* 2. Gerar App Desktop Nativo */}
-                          <ProGate gateType="desktop" tier={tier || 'free'} featureName="Gerar App Desktop Nativo">
+                        {!isNavigating && (
+                          <div className="pointer-events-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm p-1 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800">
+                            {/* 1. Acessar versão publicada */}
                             <button
+                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
+                              title={t('workspace_components.project_card_tooltips.access_published', 'Acessar versão publicada')}
                               onClick={(e) => {
-                                e.preventDefault()
                                 e.stopPropagation()
-                                setSelectedDesktopProject(project)
-                                setShowDesktopModal(true)
+                                openPreview(`${window.location.origin}/${workspaceSlug}/${project.slug}`, `Projeto: ${project.name}`)
                               }}
-                              className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-                              title="Gerar App Desktop Nativo"
                             >
-                              <Monitor className="w-4 h-4" />
+                              <ArrowUpRight className="w-4 h-4" />
                             </button>
-                          </ProGate>
-                          {project.can_edit && (
-                            <>
-                              {/* 3. IDE Local */}
-                              <ProGate gateType="desktop" tier={tier || 'free'} featureName="IDE Local (Ejetar & Sincronizar)">
-                                <button
-                                  className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-                                  title="IDE Local (Ejetar & Sincronizar)"
-                                  onClick={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    openIDE({ type: 'project', id: project.id, name: project.name, slug: project.slug })
-                                  }}
-                                >
-                                  <FolderGit2 className="w-4 h-4" />
-                                </button>
-                              </ProGate>
-                              {/* 4. Exportar Código Fonte */}
-                              <ProGate gateType="desktop" tier={tier || 'free'} featureName="Exportar Código Fonte">
-                                <button
-                                  onClick={async (e) => {
+                            {/* 2. Gerar App Desktop Nativo */}
+                            <ProGate gateType="desktop" tier={tier || 'free'} featureName="Gerar App Desktop Nativo">
+                              <button
+                                onClick={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
-                                  
-                                  setExportDbType('supabase')
-                                  setExportDbUser('postgres')
-                                  setExportDbPassword('senha')
-                                  setExportDbUser('user')
-                                  setExportDbPassword('password')
-                                  setExportDbHost('localhost')
-                                  setExportDbPort('5432')
-                                  setExportDbName(`dataBase`)
-                                  setExportSupaUrl('')
-                                  setExportSupaAnonKey('')
-
-                                  // Fetch auth config to pre-select
-                                  const supabase = createClient()
-                                  const { data: authConf } = await supabase
-                                    .from('project_auth_config')
-                                    .select('auth_type, auth_config')
-                                    .eq('project_id', project.id)
-                                    .maybeSingle()
-
-                                  const authType = authConf?.auth_type || 'none'
-                                  setExportAuthStrategy(
-                                    authType === 'ldap' ? 'ldap' : 
-                                    authType === 'legacy' ? 'legacy' : 'none'
-                                  )
-
-                                  setExportAuthTableName(authConf?.auth_config?.legacy?.usersTable || authConf?.auth_config?.db_table_name || 'usuarios')
-                                  setExportAuthEmailCol(authConf?.auth_config?.legacy?.emailColumn || authConf?.auth_config?.db_email_column || 'email')
-                                  setExportAuthPassCol(authConf?.auth_config?.legacy?.passwordColumn || authConf?.auth_config?.db_password_column || 'senha')
-                                  setExportAuthHash(authConf?.auth_config?.legacy?.passwordHash || authConf?.auth_config?.db_password_hash || 'Bcrypt')
-
-                                  const { data: models, error: modelsError } = await supabase
-                                    .from('models')
-                                    .select('id, db_table_name')
-                                    .eq('project_id', project.id)
-                                    .order('db_table_name')
-                                  
-                                  if (models && models.length > 0) {
-                                    const { data: fields } = await supabase
-                                      .from('fields')
-                                      .select('id, db_column_name, model_id')
-                                      .in('model_id', models.map(m => m.id))
-                                    
-                                    const mappedModels = models.map(m => ({
-                                      ...m,
-                                      fields: fields?.filter(f => f.model_id === m.id) || []
-                                    }))
-                                    setExportModels(mappedModels)
-                                  } else {
-                                    console.error('Error fetching models:', modelsError)
-                                    setExportModels([])
-                                  }
-
-                                  setDownloadModal({
-                                    open: true,
-                                    phase: 'selecting',
-                                    fileName: `${project.slug || 'app'}-source-code.zip`,
-                                    progress: 0,
-                                    savedPath: '',
-                                    savedDir: '',
-                                    projectId: project.id,
-                                    authConfig: authConf?.auth_config
-                                  })
+                                  setSelectedDesktopProject(project)
+                                  setShowDesktopModal(true)
                                 }}
                                 className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-                                title="Exportar Código Fonte (Next.js)"
+                                title={t('workspace_components.project_card_tooltips.generate_desktop', 'Gerar App Desktop Nativo')}
                               >
-                                <Download className="w-4 h-4" />
-                                </button>
-                              </ProGate>
-                            </>
-                          )}
-                          {/* 5. Remover/Adicionar do Portal */}
-                          <button
-                            onClick={(e) => { e.preventDefault(); toggleProjectPortal(project); }}
-                            className={`p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ${project.theme_config?.show_in_portal ? 'text-indigo-500 hover:text-indigo-600' : 'text-neutral-400 hover:text-indigo-400'}`}
-                            title={project.theme_config?.show_in_portal ? 'Remover do Portal' : 'Adicionar ao Portal'}
-                          >
-                            <Database className="w-4 h-4" />
-                          </button>
-                          {/* 6. Desativar/Ativar */}
-                          {project.can_deactivate && (
-                            <button
-                              onClick={() => toggleActive(project)}
-                              className={`p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ${project.is_active ? 'text-neutral-500 hover:text-red-400' : 'text-neutral-500 hover:text-emerald-400'}`}
-                              title={project.is_active ? t('dashboard.projects.toggle_inactive') : t('dashboard.projects.toggle_active')}
-                            >
-                              {project.is_active ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
-                            </button>
-                          )}
-                          {/* 7. Editar Projeto */}
-                          {project.can_edit && (
-                            <button
-                              onClick={() => openDrawer(project)}
-                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
-                              title={t('dashboard.projects.edit_project')}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                          )}
-                          {/* 8. Excluir Projeto */}
-                          {project.can_delete && (
-                            <button
-                              onClick={() => openDeleteModal(project)}
-                              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400"
-                              title={t('dashboard.projects.delete_project')}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                                <Monitor className="w-4 h-4" />
+                              </button>
+                            </ProGate>
+                            {project.can_edit && (
+                              <>
+                                {/* 3. IDE Local */}
+                                <ProGate gateType="desktop" tier={tier || 'free'} featureName="IDE Local (Ejetar & Sincronizar)">
+                                  <button
+                                    className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                                    title={t('workspace_components.project_card_tooltips.ide_local', 'IDE Local (Ejetar & Sincronizar)')}
+                                    onClick={(e) => {
+                                      e.preventDefault()
+                                      e.stopPropagation()
+                                      openIDE({ type: 'project', id: project.id, name: project.name, slug: project.slug })
+                                    }}
+                                  >
+                                    <FolderGit2 className="w-4 h-4" />
+                                  </button>
+                                </ProGate>
+                                {/* 4. Exportar Código Fonte */}
+                                <ProGate gateType="desktop" tier={tier || 'free'} featureName="Exportar Código Fonte">
+                                  <button
+                                    onClick={async (e) => {
+                                      e.preventDefault()
+                                      e.stopPropagation()
 
-                  <div className="flex items-center justify-between pt-6 border-t border-neutral-100 dark:border-neutral-800/50">
-                    <div className="flex items-center gap-6">
-                      <div className="flex items-center gap-2">
-                        <Activity className="w-4 h-4 text-neutral-400" />
-                        <span className="text-xs font-bold text-neutral-400 tracking-tighter">
-                          {project.models?.[0]?.count || 0} {t('dashboard.projects.tables')}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Layers className="w-4 h-4 text-neutral-400" />
-                        <span className="text-xs font-bold text-neutral-400 tracking-tighter">
-                          {t('dashboard.projects.use_cases')}
-                        </span>
+                                      setExportDbType('supabase')
+                                      setExportDbUser('postgres')
+                                      setExportDbPassword('senha')
+                                      setExportDbUser('user')
+                                      setExportDbPassword('password')
+                                      setExportDbHost('localhost')
+                                      setExportDbPort('5432')
+                                      setExportDbName(`dataBase`)
+                                      setExportSupaUrl('')
+                                      setExportSupaAnonKey('')
+
+                                      // Fetch auth config to pre-select
+                                      const supabase = createClient()
+                                      const { data: authConf } = await supabase
+                                        .from('project_auth_config')
+                                        .select('auth_type, auth_config')
+                                        .eq('project_id', project.id)
+                                        .maybeSingle()
+
+                                      const authType = authConf?.auth_type || 'none'
+                                      setExportAuthStrategy(
+                                        authType === 'ldap' ? 'ldap' :
+                                          authType === 'legacy' ? 'legacy' : 'none'
+                                      )
+
+                                      setExportAuthTableName(authConf?.auth_config?.legacy?.usersTable || authConf?.auth_config?.db_table_name || 'usuarios')
+                                      setExportAuthEmailCol(authConf?.auth_config?.legacy?.emailColumn || authConf?.auth_config?.db_email_column || 'email')
+                                      setExportAuthPassCol(authConf?.auth_config?.legacy?.passwordColumn || authConf?.auth_config?.db_password_column || 'senha')
+                                      setExportAuthHash(authConf?.auth_config?.legacy?.passwordHash || authConf?.auth_config?.db_password_hash || 'Bcrypt')
+
+                                      const { data: models, error: modelsError } = await supabase
+                                        .from('models')
+                                        .select('id, db_table_name')
+                                        .eq('project_id', project.id)
+                                        .order('db_table_name')
+
+                                      if (models && models.length > 0) {
+                                        const { data: fields } = await supabase
+                                          .from('fields')
+                                          .select('id, db_column_name, model_id')
+                                          .in('model_id', models.map(m => m.id))
+
+                                        const mappedModels = models.map(m => ({
+                                          ...m,
+                                          fields: fields?.filter(f => f.model_id === m.id) || []
+                                        }))
+                                        setExportModels(mappedModels)
+                                      } else {
+                                        console.error('Error fetching models:', modelsError)
+                                        setExportModels([])
+                                      }
+
+                                      setDownloadModal({
+                                        open: true,
+                                        phase: 'selecting',
+                                        fileName: `${project.slug || 'app'}-source-code.zip`,
+                                        progress: 0,
+                                        savedPath: '',
+                                        savedDir: '',
+                                        projectId: project.id,
+                                        authConfig: authConf?.auth_config
+                                      })
+                                    }}
+                                    className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                                    title={t('workspace_components.project_card_tooltips.export_source', 'Exportar Código Fonte (Next.js)')}
+                                  >
+                                    <Download className="w-4 h-4" />
+                                  </button>
+                                </ProGate>
+                              </>
+                            )}
+                            {/* 5. Remover/Adicionar do Portal */}
+                            <button
+                              onClick={(e) => { e.preventDefault(); toggleProjectPortal(project); }}
+                              className={`p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ${project.theme_config?.show_in_portal ? 'text-indigo-500 hover:text-indigo-600' : 'text-neutral-400 hover:text-indigo-400'}`}
+                              title={project.theme_config?.show_in_portal ? t('workspace_components.portal_modal.remove_from_portal', 'Remover do Portal') : t('workspace_components.portal_modal.add_to_portal', 'Adicionar ao Portal')}
+                            >
+                              <Database className="w-4 h-4" />
+                            </button>
+                            {/* 6. Desativar/Ativar */}
+                            {project.can_deactivate && (
+                              <button
+                                onClick={() => toggleActive(project)}
+                                className={`p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ${project.is_active ? 'text-neutral-500 hover:text-red-400' : 'text-neutral-500 hover:text-emerald-400'}`}
+                                title={project.is_active ? t('dashboard.projects.toggle_inactive') : t('dashboard.projects.toggle_active')}
+                              >
+                                {project.is_active ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
+                              </button>
+                            )}
+                            {/* 7. Editar Projeto */}
+                            {project.can_edit && (
+                              <button
+                                onClick={() => openDrawer(project)}
+                                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
+                                title={t('dashboard.projects.edit_project')}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                            )}
+                            {/* 8. Excluir Projeto */}
+                            {project.can_delete && (
+                              <button
+                                onClick={() => openDeleteModal(project)}
+                                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400"
+                                title={t('dashboard.projects.delete_project')}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <Link
-                      href={`/admin/${workspaceSlug}/${project.slug}/studio`}
-                      onClick={() => setNavigatingSlug(project.slug)}
-                      className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm dark:shadow-none",
-                        isNavigating
-                          ? "bg-indigo-600 animate-pulse"
-                          : "bg-neutral-100 dark:bg-neutral-800 group-hover:bg-indigo-600"
-                      )}
-                    >
-                      {isNavigating ? (
-                        <Loader2 className="w-5 h-5 text-white animate-spin" />
-                      ) : (
-                        <ChevronRight className="w-5 h-5 text-neutral-400 group-hover:text-white" />
-                      )}
-                    </Link>
+
+                    <div className="flex items-center justify-between pt-6 border-t border-neutral-100 dark:border-neutral-800/50">
+                      <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2">
+                          <Activity className="w-4 h-4 text-neutral-400" />
+                          <span className="text-xs font-bold text-neutral-400 tracking-tighter">
+                            {project.models?.[0]?.count || 0} {t('dashboard.projects.tables')}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Layers className="w-4 h-4 text-neutral-400" />
+                          <span className="text-xs font-bold text-neutral-400 tracking-tighter">
+                            {t('dashboard.projects.use_cases')}
+                          </span>
+                        </div>
+                      </div>
+                      <Link
+                        href={`/admin/${workspaceSlug}/${project.slug}/studio`}
+                        onClick={() => setNavigatingSlug(project.slug)}
+                        className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm dark:shadow-none",
+                          isNavigating
+                            ? "bg-indigo-600 animate-pulse"
+                            : "bg-neutral-100 dark:bg-neutral-800 group-hover:bg-indigo-600"
+                        )}
+                      >
+                        {isNavigating ? (
+                          <Loader2 className="w-5 h-5 text-white animate-spin" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-neutral-400 group-hover:text-white" />
+                        )}
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
 
 
-          {/* Add New Card */}
-          {canCreate && (
-            <button
-              onClick={handleNewProject}
-              className="p-8 bg-neutral-50 dark:bg-neutral-950 border-2 border-dashed border-neutral-300 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-white dark:hover:bg-neutral-800 hover:border-indigo-500/30 transition-all group min-h-[250px] shadow-inner dark:shadow-none"
-            >
-              <div className="w-16 h-16 bg-white dark:bg-neutral-950 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm dark:shadow-none">
-                <Plus className="w-8 h-8 text-neutral-400 group-hover:text-indigo-500" />
-              </div>
-              <div className="text-center">
-                <p className="font-bold text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-neutral-200 transition-colors">{t('dashboard.projects.create_project_title')}</p>
-                <p className="text-xs text-neutral-400 dark:text-neutral-600 mt-1">{t('dashboard.projects.create_project_desc')}</p>
-              </div>
-            </button>
-          )}
-        </div>
-      </section>
+            {/* Add New Card */}
+            {canCreate && (
+              <button
+                onClick={handleNewProject}
+                className="p-8 bg-neutral-50 dark:bg-neutral-950 border-2 border-dashed border-neutral-300 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-white dark:hover:bg-neutral-800 hover:border-indigo-500/30 transition-all group min-h-[250px] shadow-inner dark:shadow-none"
+              >
+                <div className="w-16 h-16 bg-white dark:bg-neutral-950 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm dark:shadow-none">
+                  <Plus className="w-8 h-8 text-neutral-400 group-hover:text-indigo-500" />
+                </div>
+                <div className="text-center">
+                  <p className="font-bold text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-neutral-200 transition-colors">{t('dashboard.projects.create_project_title')}</p>
+                  <p className="text-xs text-neutral-400 dark:text-neutral-600 mt-1">{t('dashboard.projects.create_project_desc')}</p>
+                </div>
+              </button>
+            )}
+          </div>
+        </section>
       )}
 
       {/* Gerenciador do Túnel */}
@@ -1009,7 +1009,7 @@ export function ProjectManager({
               </div>
 
               {showIconPicker && (
-                <IconPicker 
+                <IconPicker
                   currentIcon={formData.icon || 'Box'}
                   onSelect={(icon) => setFormData({ ...formData, icon })}
                   onClose={() => setShowIconPicker(false)}
@@ -1018,8 +1018,12 @@ export function ProjectManager({
             </div>
             <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 space-y-6">
               <div className="space-y-1">
-                <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Portal & Branding</h4>
-                <p className="text-xs text-neutral-500">Configure a exibição deste projeto no Portal de Aplicações e a personalização da tela de login.</p>
+                <h4 className="text-sm font-bold text-neutral-900 dark:text-white">
+                  {t('workspace_components.portal_modal.portal_branding', 'Portal & Branding')}
+                </h4>
+                <p className="text-xs text-neutral-500">
+                  {t('workspace_components.portal_modal.portal_branding_desc', 'Configure a exibição deste projeto no Portal de Aplicações e a personalização da tela de login.')}
+                </p>
               </div>
 
               <div className="flex items-center gap-3 bg-indigo-50/50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/20 p-4 rounded-xl">
@@ -1031,12 +1035,14 @@ export function ProjectManager({
                   className="w-4 h-4 text-indigo-600 border-neutral-300 rounded focus:ring-indigo-500"
                 />
                 <label htmlFor="showInPortal" className="text-sm font-medium text-neutral-900 dark:text-white cursor-pointer select-none">
-                  Exibir no Portal de Aplicações
+                  {t('workspace_components.portal_modal.show_in_portal', 'Exibir no Portal de Aplicações')}
                 </label>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">URL da Logo (Opcional)</label>
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">
+                  {t('workspace_components.portal_modal.logo_url', 'Logo do Portal (Opcional)')}
+                </label>
                 <input
                   type="url"
                   value={formData.login_logo_url}
@@ -1047,7 +1053,9 @@ export function ProjectManager({
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">URL do Banner (Opcional)</label>
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">
+                  {t('workspace_components.portal_modal.banner_url', 'Banner do Portal (Opcional)')}
+                </label>
                 <input
                   type="url"
                   value={formData.login_banner_url}
@@ -1055,7 +1063,9 @@ export function ProjectManager({
                   placeholder="https://sua-empresa.com/banner.jpg"
                   className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none transition-all text-neutral-900 dark:text-white"
                 />
-                <p className="text-[10px] text-neutral-500 dark:text-neutral-600">Recomendado: Imagem vertical ou padrão geométrico.</p>
+                <p className="text-[10px] text-neutral-500 dark:text-neutral-600">
+                  {t('workspace_components.portal_modal.banner_hint', 'Recomendado: Imagem vertical ou padrão geométrico.')}
+                </p>
               </div>
             </div>
 
@@ -1125,20 +1135,24 @@ export function ProjectManager({
       <Modal
         isOpen={isWorkspaceSettingsModalOpen}
         onClose={() => setIsWorkspaceSettingsModalOpen(false)}
-        title="Configurações do Workspace"
+        title={t('workspace_components.portal_modal.title', 'Configurações do Portal')}
       >
         <form onSubmit={saveWorkspaceSettings} className="space-y-6">
           <div className="space-y-4">
-            
+
             <div className="p-4 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-2xl mb-4">
-              <h4 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mb-1">Aparência do Portal</h4>
+              <h4 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mb-1">
+                {t('workspace_components.portal_modal.appearance_title', 'Aparência do Portal')}
+              </h4>
               <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                Personalize as imagens que serão exibidas na tela de login global do Portal de Aplicações.
+                {t('workspace_components.portal_modal.appearance_desc', 'Personalize as imagens que serão exibidas na tela de login global do Portal de Aplicações.')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Logo do Portal (Opcional)</label>
+              <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">
+                {t('workspace_components.portal_modal.logo_url', 'Logo do Portal (Opcional)')}
+              </label>
               <input
                 type="url"
                 value={workspaceFormData.portal_logo_url}
@@ -1149,7 +1163,9 @@ export function ProjectManager({
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Banner do Portal (Opcional)</label>
+              <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">
+                {t('workspace_components.portal_modal.banner_url', 'Banner do Portal (Opcional)')}
+              </label>
               <input
                 type="url"
                 value={workspaceFormData.portal_banner_url}
@@ -1230,22 +1246,20 @@ export function ProjectManager({
                     <button
                       type="button"
                       onClick={() => setExportTab('database')}
-                      className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${
-                        exportTab === 'database' 
-                          ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' 
+                      className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${exportTab === 'database'
+                          ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                           : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
-                      }`}
+                        }`}
                     >
                       Banco de Dados
                     </button>
                     <button
                       type="button"
                       onClick={() => setExportTab('auth')}
-                      className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${
-                        exportTab === 'auth' 
-                          ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' 
+                      className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${exportTab === 'auth'
+                          ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                           : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
-                      }`}
+                        }`}
                     >
                       Autenticação (Login)
                     </button>
@@ -1258,15 +1272,13 @@ export function ProjectManager({
                         <button
                           type="button"
                           onClick={() => setExportDataMode('tunnel')}
-                          className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${
-                            exportDataMode === 'tunnel'
+                          className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${exportDataMode === 'tunnel'
                               ? 'border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10'
                               : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
-                          }`}
+                            }`}
                         >
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${
-                            exportDataMode === 'tunnel' ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'
-                          }`}>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${exportDataMode === 'tunnel' ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'
+                            }`}>
                             {exportDataMode === 'tunnel' && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
                           </div>
                           <div>
@@ -1279,15 +1291,13 @@ export function ProjectManager({
                         <button
                           type="button"
                           onClick={() => setExportDataMode('supabase')}
-                          className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${
-                            exportDataMode === 'supabase'
+                          className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${exportDataMode === 'supabase'
                               ? 'border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10'
                               : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
-                          }`}
+                            }`}
                         >
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${
-                            exportDataMode === 'supabase' ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'
-                          }`}>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${exportDataMode === 'supabase' ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'
+                            }`}>
                             {exportDataMode === 'supabase' && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
                           </div>
                           <div>
@@ -1300,15 +1310,13 @@ export function ProjectManager({
                         <button
                           type="button"
                           onClick={() => setExportDataMode('postgres')}
-                          className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${
-                            exportDataMode === 'postgres'
+                          className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${exportDataMode === 'postgres'
                               ? 'border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10'
                               : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
-                          }`}
+                            }`}
                         >
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${
-                            exportDataMode === 'postgres' ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'
-                          }`}>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${exportDataMode === 'postgres' ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'
+                            }`}>
                             {exportDataMode === 'postgres' && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
                           </div>
                           <div>
@@ -1408,7 +1416,7 @@ export function ProjectManager({
                   {/* Auth Tab */}
                   {exportTab === 'auth' && (
                     <div className="space-y-4 pt-4 max-h-[50vh] overflow-y-auto pr-2 pb-2">
-                      <div 
+                      <div
                         onClick={() => setExportAuthStrategy('none')}
                         className={cn(
                           "p-4 rounded-xl border border-white/10 cursor-pointer transition-all duration-200",
@@ -1426,7 +1434,7 @@ export function ProjectManager({
                         </p>
                       </div>
 
-                      <div 
+                      <div
                         onClick={() => setExportAuthStrategy('legacy')}
                         className={cn(
                           "p-4 rounded-xl border border-white/10 cursor-pointer transition-all duration-200",
@@ -1442,25 +1450,25 @@ export function ProjectManager({
                         <p className="text-sm text-gray-400 ml-7 mb-4">
                           O app exportado validará o login comparando com SUA tabela de usuários sincronizada.
                         </p>
-                        
+
                         {exportAuthStrategy === 'legacy' && (
                           <div className="ml-7 space-y-4 border-t border-white/10 pt-4">
                             <div>
                               <label className="block text-xs font-medium text-gray-400 mb-2">Driver de Conexão do BD Legado</label>
                               <div className="flex items-center space-x-4">
                                 <label className="flex items-center space-x-2 cursor-pointer">
-                                  <input 
-                                    type="radio" 
-                                    checked={exportLegacyDriver === 'supabase'} 
+                                  <input
+                                    type="radio"
+                                    checked={exportLegacyDriver === 'supabase'}
                                     onChange={() => setExportLegacyDriver('supabase')}
                                     className="text-[#5E2BFF] focus:ring-[#5E2BFF]"
                                   />
                                   <span className="text-xs">Supabase SDK</span>
                                 </label>
                                 <label className="flex items-center space-x-2 cursor-pointer">
-                                  <input 
-                                    type="radio" 
-                                    checked={exportLegacyDriver === 'postgres'} 
+                                  <input
+                                    type="radio"
+                                    checked={exportLegacyDriver === 'postgres'}
                                     onChange={() => setExportLegacyDriver('postgres')}
                                     className="text-[#5E2BFF] focus:ring-[#5E2BFF]"
                                   />
@@ -1512,7 +1520,7 @@ export function ProjectManager({
                         )}
                       </div>
 
-                      <div 
+                      <div
                         onClick={() => setExportAuthStrategy('ldap')}
                         className={cn(
                           "p-4 rounded-xl border border-white/10 cursor-pointer transition-all duration-200",
@@ -1542,7 +1550,7 @@ export function ProjectManager({
                                 <Copy className="w-3 h-3" />
                               </button>
                               <pre className="text-[10px] text-indigo-400 bg-neutral-950 p-3 rounded border border-neutral-800 overflow-x-auto font-mono leading-tight whitespace-pre">
-{`# Configurações do Active Directory (LDAP)
+                                {`# Configurações do Active Directory (LDAP)
 LDAP_URL="ldap://10.0.0.15:389"
 LDAP_BASE_DN="dc=empresa,dc=local"
 LDAP_BIND_DN="cn=metabuilder_service,ou=Services,dc=empresa,dc=local"
@@ -1559,9 +1567,9 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
                   <div className="flex gap-2.5 pt-4 border-t border-neutral-100 dark:border-neutral-800">
                     <button
                       onClick={() => handleStartExport(
-                        downloadModal.projectId!, 
-                        downloadModal.fileName, 
-                        exportDataMode, 
+                        downloadModal.projectId!,
+                        downloadModal.fileName,
+                        exportDataMode,
                         exportAuthStrategy,
                         exportLegacyDriver,
                         exportDataMode === 'postgres' ? {
