@@ -1,22 +1,4 @@
 {
-  "v1.1.11": {
-    "date": "2026-08-14",
-    "pt": [
-      "Novo Portal Público de Workspaces: compartilhe, visualize e gerencie seus projetos em um ambiente moderno e centralizado.",
-      "Gestão Completa de Espaços de Trabalho: novo painel intuitivo para criar, editar, organizar e administrar seus workspaces com máxima agilidade.",
-      "Sistema Modular de Autenticação e Permissões: controle avançado de segurança e acessos, com suporte à personalização visual da interface de login."
-    ],
-    "en": [
-      "New Public Workspace Portal: seamlessly share, view, and manage your projects from a modern, centralized hub.",
-      "Comprehensive Workspace Management: intuitive new control center to easily create, edit, organize, and administer all your workspaces.",
-      "Modular Authentication & Access Control: enhanced security with granular permission management and fully customizable login interfaces."
-    ],
-    "es": [
-      "Nuevo Portal Público de Espacios de Trabajo: comparta, visualice y gestione sus proyectos desde un entorno moderno y centralizado.",
-      "Gestión Completa de Espacios de Trabajo: nuevo panel intuitivo para crear, editar, organizar y administrar sus workspaces con agilidad.",
-      "Sistema Modular de Autenticación y Permisos: seguridad avanzada con control granular de accesos e interfaces de autenticación personalizables."
-    ]
-  },
   "v1.1.10": {
     "date": "2026-08-14",
     "pt": [
