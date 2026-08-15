@@ -1,19 +1,4 @@
 {
-  "v1.0.8": {
-    "date": "2026-08-14",
-    "pt": [
-      "Novo Gerador Automatizado de Código-Fonte: exportação e empacotamento inteligente de projetos em segundos.",
-      "Configuração Automática de Ambiente: simplificação do setup inicial com parametrização dinâmica de dependências e variáveis."
-    ],
-    "en": [
-      "New Automated Source Code Generator: smart export and full bundling of your projects in seconds.",
-      "Automated Environment Configuration: streamlined initial setup with dynamic handling of dependencies and environment variables."
-    ],
-    "es": [
-      "Nuevo Generador Automatizado de Código Fuente: exportación inteligente y empaquetado completo de sus proyectos en segundos.",
-      "Configuración Automática del Entorno: configuración inicial simplificada con gestión dinámica de dependencias y variables."
-    ]
-  },
   "v1.0.7": {
     "date": "2026-08-14",
     "pt": [
