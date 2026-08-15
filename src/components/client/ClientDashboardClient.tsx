@@ -366,7 +366,7 @@ export default function ClientDashboardClient({
                     className="flex items-center justify-center gap-2 h-11 px-4 rounded-xl text-sm font-bold transition-all duration-200 whitespace-nowrap bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700 shadow-sm"
                   >
                     <Users className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
-                    <span className="hidden sm:inline">{t('workspace.team', 'Equipe')}</span>
+                    <span className="hidden sm:inline">{t('client_dashboard.team', 'Equipe')}</span>
                   </button>
                 </>
               )}

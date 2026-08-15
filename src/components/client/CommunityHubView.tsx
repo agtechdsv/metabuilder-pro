@@ -25,9 +25,16 @@ export default function CommunityHubView({
   hideHeader?: boolean
   isSimulator?: boolean
 }) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const supabase = createClient()
   const imageInputRef = useRef<HTMLInputElement>(null)
+  
+  const getDisplayName = (name?: string | null) => {
+    if (!name || name === 'Membro' || name === 'Membro da Comunidade') {
+      return t('client_views.community.member_fallback', 'Membro da Comunidade')
+    }
+    return name
+  }
   
   const [activeSubTab, setActiveSubTab] = useState<'feed' | 'chat'>('feed')
   const [activeConnection, setActiveConnection] = useState<any>(null)
@@ -210,7 +217,7 @@ export default function CommunityHubView({
                             <img src={post.user.avatar} alt={post.user.name} className="w-10 h-10 rounded-full object-cover border border-neutral-200 dark:border-neutral-800" />
                             <div>
                               <h4 className="font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                                {post.user.name}
+                                {getDisplayName(post.user.name)}
                                 <span className={cn(
                                   "px-2 py-0.5 text-[9px] font-black uppercase rounded-full",
                                   post.user.role === 'ADMIN' && "bg-red-550/10 text-red-500",
@@ -224,7 +231,7 @@ export default function CommunityHubView({
                                 )}
                               </h4>
                               <span className="text-xs text-neutral-400">
-                                {new Date(post.created_at).toLocaleDateString('pt-BR', {
+                                {new Date(post.created_at).toLocaleDateString(language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR', {
                                   hour: '2-digit',
                                   minute: '2-digit'
                                 })}
@@ -333,7 +340,7 @@ export default function CommunityHubView({
                                       <div className="flex-1 space-y-1">
                                         <div className="flex items-center justify-between gap-2">
                                           <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="font-bold text-xs text-neutral-900 dark:text-white">{comment.user.name}</span>
+                                            <span className="font-bold text-xs text-neutral-900 dark:text-white">{getDisplayName(comment.user.name)}</span>
                                             <span className="px-1.5 py-0.2 bg-neutral-200 dark:bg-neutral-800 text-[8px] font-black uppercase text-neutral-500 rounded">
                                               {comment.user.role}
                                             </span>
@@ -343,7 +350,7 @@ export default function CommunityHubView({
                                           </div>
                                           <div className="flex items-center gap-1 shrink-0">
                                             <span className="text-[10px] text-neutral-400">
-                                              {new Date(comment.created_at).toLocaleDateString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                              {new Date(comment.created_at).toLocaleDateString(language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                             {/* Admin comment controls */}
                                             {isCurrentUserAdmin && (
@@ -452,7 +459,7 @@ export default function CommunityHubView({
                         </div>
                         <div>
                           <h4 className="font-bold text-sm text-neutral-900 dark:text-white flex items-center gap-2 leading-tight">
-                            {activeConnection.user.name}
+                            {getDisplayName(activeConnection.user.name)}
                             <span className="px-1.5 py-0.2 bg-indigo-500/10 text-indigo-500 text-[8px] font-black uppercase rounded">
                               {activeConnection.user.role}
                             </span>
@@ -493,7 +500,7 @@ export default function CommunityHubView({
                               "text-[9px] block text-right mt-1 font-semibold",
                               isMe ? "text-indigo-200" : "text-neutral-400"
                             )}>
-                              {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(msg.created_at).toLocaleTimeString(language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
                         </div>
@@ -555,7 +562,7 @@ export default function CommunityHubView({
                       <div className="flex items-center gap-3">
                         <img src={conn.user.avatar} alt={conn.user.name} className="w-8 h-8 rounded-full object-cover" />
                         <div>
-                          <h4 className="font-bold text-xs text-neutral-900 dark:text-white">{conn.user.name}</h4>
+                          <h4 className="font-bold text-xs text-neutral-900 dark:text-white">{getDisplayName(conn.user.name)}</h4>
                           <span className="text-[9px] font-bold text-neutral-400 uppercase">{conn.user.role}</span>
                         </div>
                       </div>
@@ -621,7 +628,7 @@ export default function CommunityHubView({
                         <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-neutral-900 rounded-full"></div>
                       </div>
                       <div>
-                        <h4 className="font-bold text-sm text-neutral-900 dark:text-white leading-tight">{conn.user.name}</h4>
+                        <h4 className="font-bold text-sm text-neutral-900 dark:text-white leading-tight">{getDisplayName(conn.user.name)}</h4>
                         <span className="text-[10px] font-bold text-neutral-500 uppercase">{conn.user.role}</span>
                       </div>
                     </div>
@@ -672,7 +679,7 @@ export default function CommunityHubView({
                         <div className="flex items-center gap-3">
                           <img src={sugg.avatar} alt={sugg.name} className="w-8 h-8 rounded-full object-cover" />
                           <div>
-                            <h4 className="font-bold text-xs text-neutral-900 dark:text-white leading-tight">{sugg.name}</h4>
+                            <h4 className="font-bold text-xs text-neutral-900 dark:text-white leading-tight">{getDisplayName(sugg.name)}</h4>
                             <span className="text-[9px] text-neutral-400 uppercase">{sugg.role}</span>
                           </div>
                         </div>
