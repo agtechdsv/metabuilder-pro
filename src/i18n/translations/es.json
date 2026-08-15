@@ -358,18 +358,42 @@
         "subtitle": "Configure las pantallas de su aplicación. Elija las tablas sincronizadas y defina cómo se deben mostrar los datos a sus usuarios.",
         "control_dashboard": "Panel de Control",
         "new_use_case": "Nuevo Caso de Uso",
-        "agent_status": "Estado del Agente",
+        "generate_with_ai": "Generar con IA",
+        "quick_start": "Inicio Rápido",
+        "new_prefix": "Nuevo",
+        "agent_status": "Estado del Agente & Conexión",
         "copy_token": "Copiar Token",
         "token_copied": "¡ID del Proyecto copiado!",
         "secret_token_copied": "¡Token Secreto copiado!",
         "no_token_available": "Ningún token disponible.",
         "use_cases": "Casos de Uso",
+        "fields_count": "campos configurados",
+        "sidebar": {
+          "dashboard": "Dashboard",
+          "data": "Datos & Esquemas",
+          "auth": "Autenticación",
+          "byoc": "BYOC",
+          "settings": "Configuración",
+          "tunnel_db_config": "Configuración de Bases (JSON)",
+          "terminal": "Terminal (PTY)",
+          "logs": "Registros del Sistema",
+          "sql_studio": "SQL Studio"
+        },
+        "filters": {
+          "sistema": "Sistema",
+          "dados": "Gestión de Datos y Registros",
+          "projetos": "Proyectos, Plazos y Cronogramas",
+          "mapas": "Mapeo, Flujos y Espacial",
+          "outros": "Inteligencia, Medios y Otros",
+          "avancado": "Avanzado e Híbrido"
+        },
         "tabs": {
           "use_cases": "Casos de Uso",
           "navigation": "Navegación",
           "enums": "Enums",
           "table_fields": "Tabla / Campos"
         },
+        "automations": "Automatizaciones / BPM",
         "automations_bpm": "Automatizaciones / BPM",
         "downloads_center": "Central de Descargas",
         "configure_module": "Configurar Módulo",
@@ -392,12 +416,19 @@
         "drag_items_here": "Arrastre elementos a este menú",
         "created_suffix": "Creados",
         "login_portal": "Portal de Inicio de Sesión",
-        "configure_login": "Configurar Inicio de Sesión",
+        "configure_login": "Configurar Inicio de Sesión & Seguridad",
         "configure": "Configurar",
+        "remove_from_menu": "Remover del Menú",
+        "add_to_menu": "Agregar al Menú",
+        "publish_changes_tooltip": "Publicar Cambios",
+        "publish_btn": "Publicar",
+        "discard_draft_tooltip": "Descartar Borrador",
+        "preview_draft_tooltip": "Visualizar Borrador",
+        "access_published_tooltip": "Acceder a versión publicada",
         "status_active": "Activo",
         "status_inactive": "Inactivo",
         "no_use_cases": "Aún no se han creado casos de uso.",
-        "start_now": "Empezar ahora",
+        "start_now": "Comience creando un nuevo caso de uso",
         "delete_confirm": {
           "title": "Confirmar Eliminación",
           "warning": "Esta acción es irreversible",
@@ -3103,109 +3134,72 @@
       "select_file_hint": "Seleccione un archivo en el árbol lateral"
     }
   },
-  "dashboard": {
-    "slug_hint": "Identificador único utilizado en las URLs",
-    "projects": {
-      "your_projects": "Proyectos del Ecosistema",
-      "found": "encontrados",
-      "new_project": "Nuevo Proyecto",
-      "edit_project": "Editar Proyecto",
-      "delete_project": "Eliminar Proyecto",
-      "confirm_delete_project": "¿Está seguro de que desea eliminar este proyecto?",
-      "delete_project_desc": "Esta acción no se puede deshacer y eliminará todas las tablas y vistas asociadas.",
-      "yes_delete": "Sí, eliminar",
-      "project_name": "Nombre del Proyecto",
-      "name_placeholder": "Ej: CRM de Ventas",
-      "project_slug": "Slug del Proyecto",
-      "project_description": "Descripción",
-      "desc_placeholder": "Describa el objetivo del proyecto",
-      "project_icon": "Icono del Proyecto",
-      "change_icon": "Cambiar Icono",
-      "status_active": "Activo",
-      "status_inactive": "Inactivo",
-      "status_title": "Estado del Proyecto",
-      "status_desc": "Los proyectos inactivos no son visibles en el portal",
-      "toggle_active": "Activar Proyecto",
-      "toggle_inactive": "Desactivar Proyecto",
-      "system_label": "Sistema",
-      "project_id": "ID del Proyecto",
-      "secret_token": "Token Secreto",
-      "copy": "Copiar",
-      "studio": {
-        "new_use_case": "Nuevo Caso de Uso",
-        "generate_with_ai": "Generar con IA",
-        "quick_start": "Inicio Rápido",
-        "new_prefix": "Nuevo",
-        "remove_from_menu": "Eliminar del Menú",
-        "add_to_menu": "Agregar al Menú",
-        "publish_changes_tooltip": "Publicar Cambios",
-        "publish_btn": "Publicar",
-        "discard_draft_tooltip": "Descartar Borrador",
-        "preview_draft_tooltip": "Previsualizar Borrador",
-        "access_published_tooltip": "Acceder a versión publicada",
-        "access_use_case": "Acceder al Caso de Uso",
-        "configure": "Configurar",
-        "configure_login": "Configurar Inicio de Sesión y Seguridad",
-        "login_portal": "Portal de Inicio de Sesión",
-        "downloads_center": "Centro de Descargas",
-        "access_downloads": "Acceder a Descargas",
-        "use_cases": "Casos de Uso",
-        "no_use_cases": "No se encontraron casos de uso",
-        "start_now": "Comience Creando un Nuevo Caso de Uso",
-        "created_suffix": "Creados",
-        "agent_status": "Estado del Agente y Conexión",
-        "token_copied": "¡ID copiado!",
-        "secret_token_copied": "¡Token secreto copiado!",
-        "no_token_available": "Ningún token disponible",
-        "status_active": "Activo",
-        "status_inactive": "Inactivo",
-        "sidebar": {
-          "dashboard": "Dashboard",
-          "data": "Datos y Esquemas",
-          "auth": "Autenticación",
-          "byoc": "BYOC",
-          "settings": "Configuración",
-          "tunnel_db_config": "Configuraciones de Bases de Datos (JSON)",
-          "terminal": "Terminal (PTY)",
-          "logs": "Registros del Sistema",
-          "sql_studio": "SQL Studio"
-        },
-        "stats": {
-          "synced_tables": "Tablas Sincronizadas",
-          "custom_views": "Casos de Uso Creados",
-          "export_retention": "Retención de Archivos"
-        },
-        "filters": {
-          "sistema": "Sistema",
-          "dados": "Gestión de Datos y Registros",
-          "projetos": "Proyectos, Plazos y Cronogramas",
-          "mapas": "Mapeo, Flujos y Espacial",
-          "outros": "Inteligencia, Medios y Otros",
-          "avancado": "Avanzado e Híbrido"
-        },
-        "toasts": {
-          "active_success": "¡Caso de uso activado con éxito!",
-          "inactive_success": "¡Caso de uso desactivado!",
-          "error_status": "Error al actualizar estado: ",
-          "bpm_config_success": "¡Configuraciones de BPM guardadas con éxito!"
-        }
-      }
-    }
-  },
   "wizard": {
+    "title": "Crear Caso de Uso",
+    "new_mode": "Modo Creación",
+    "edit_mode": "Modo Edición",
+    "steps": {
+      "logic": "Lógica",
+      "master_uc": "Caso de Uso Maestro",
+      "tables": "Tablas",
+      "layout": "Campos y Diseño",
+      "actions": "Consulta y Acciones Finales"
+    },
+    "buttons": {
+      "prev": "Atrás",
+      "next": "Siguiente",
+      "finish": "Finalizar y Guardar",
+      "update": "Actualizar Caso de Uso",
+      "saving": "Guardando...",
+      "updating": "Actualizando...",
+      "validation": {
+        "name_slug_required": "Nombre y Slug son obligatorios.",
+        "grid_required": "Seleccione al menos un campo para la Cuadrícula.",
+        "form_required": "Seleccione al menos un campo para el Formulario.",
+        "filter_required": "Seleccione al menos un campo de filtro."
+      }
+    },
     "logic": {
+      "title": "¿Cuál es el objetivo de este caso de uso?",
+      "subtitle": "Defina el nombre de la pantalla y seleccione la plantilla de interfaz ideal.",
+      "screen_name": "Nombre de la Pantalla / Módulo",
+      "screen_name_placeholder": "Ej: Registro de Clientes",
+      "slug_label": "Identificador en URL (Slug)",
+      "slug_placeholder": "clientes",
+      "categories": {
+        "dados": {
+          "title": "Gestión de Datos y Registros",
+          "desc": "Pantallas con listas, tablas, consultas y formularios de registro."
+        },
+        "projetos": {
+          "title": "Proyectos, Plazos y Cronogramas",
+          "desc": "Vistas en Kanban, Línea de Tiempo, Gantt y Calendarios."
+        },
+        "mapas": {
+          "title": "Mapeo, Flujos y Espacial",
+          "desc": "Mapas geoespaciales interactivos, diagramas de procesos y mapas mentales."
+        },
+        "outros": {
+          "title": "Inteligencia, Medios y Otros",
+          "desc": "Dashboards de Business Intelligence (BI) y galerías de archivos/medios."
+        },
+        "avancado": {
+          "title": "Avanzado e Híbrido",
+          "desc": "Lógicas personalizadas uniendo múltiples componentes y vistas."
+        }
+      },
       "types": {
-        "pesquisa_cadastro": { "title": "Búsqueda + Registro" },
-        "kanban": { "title": "Kanban" },
-        "timeline": { "title": "Línea de Tiempo / Feed" },
-        "gantt": { "title": "Gráfico de Gantt" },
-        "scheduler": { "title": "Agenda / Calendario" },
-        "blueprint": { "title": "Diagrama de Flujo (Blueprint)" },
-        "mapa_mental": { "title": "Mapa Mental" },
-        "map": { "title": "Vista de Mapa (Geoespacial)" },
-        "analytics": { "title": "Dashboard (BI)" },
-        "galeria": { "title": "Galería / Assets" },
-        "personalizado": { "title": "Personalizado (Híbrido)" }
+        "pesquisa_cadastro": { "title": "Búsqueda + Registro", "desc": "Pantallas completas gestionadas por diseño." },
+        "kanban": { "title": "Kanban", "desc": "Tableros visuales con tarjetas arrastrables." },
+        "timeline": { "title": "Línea de Tiempo / Feed", "desc": "Visualice registros en una línea de tiempo cronológica según una fecha." },
+        "gantt": { "title": "Gráfico de Gantt", "desc": "Gestione cronogramas y proyectos con un gráfico de Gantt." },
+        "scheduler": { "title": "Agenda / Calendario", "desc": "Citas, plazos, compromisos y tareas en calendario." },
+        "blueprint": { "title": "Diagrama de Flujo (Blueprint)", "desc": "Mapee procesos y flujos de trabajo interconectados dinámicamente." },
+        "mapa_mental": { "title": "Mapa Mental", "desc": "Jerarquías y árboles dinámicos." },
+        "map": { "title": "Vista de Mapa (Geoespacial)", "desc": "Visualice registros a través de marcadores interactivos y coordenadas en el mapa." },
+        "analytics": { "title": "Dashboard (BI)", "desc": "Indicadores de rendimiento, gráficos y KPIs." },
+        "galeria": { "title": "Galería / Assets", "desc": "Galería de medios, imágenes y documentos con descargas y redirecciones." },
+        "personalizado": { "title": "Personalizado (Híbrido)", "desc": "Lógicas personalizadas uniendo múltiples componentes y vistas." }
       }
     },
     "tables": {
@@ -3241,6 +3235,23 @@
       "form_subtitle_label": "Campo de Subtítulo (Opcional)",
       "form_subtitle_default": "Predeterminado (Muestra el ID del registro)",
       "form_subtitle_hint": "Reemplaza la visualización del ID del registro por el valor de este campo en el formulario.",
+      "subtitle": "Arrastre campos a esta zona para mostrarlos en pantalla",
+      "display_options": {
+        "list": "Lista",
+        "card": "Tarjeta",
+        "both": "Ambos"
+      },
+      "zones": {
+        "zone_01": "Zona 01",
+        "filter": "Filtro de Búsqueda",
+        "grid_cols": "GRID",
+        "zone_02": "Zona 02",
+        "grid": "Cuadrícula de Datos",
+        "zone_03": "Zona 03",
+        "form": "Formulario",
+        "kanban_card": "Campos de la Tarjeta",
+        "mindmap_nodes": "Campos del Mapa (Niveles)"
+      },
       "master": "Maestro",
       "detail": "Detalle",
       "subdetail": "Sub-Detalle",

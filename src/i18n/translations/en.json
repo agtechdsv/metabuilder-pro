@@ -280,18 +280,42 @@
         "subtitle": "Configure your application screens. Choose synchronized tables and define how data should be displayed to your users.",
         "control_dashboard": "Control Dashboard",
         "new_use_case": "New Use Case",
-        "agent_status": "Agent Status",
+        "generate_with_ai": "Generate with AI",
+        "quick_start": "Quick Start",
+        "new_prefix": "New",
+        "agent_status": "Agent & Connection Status",
         "copy_token": "Copy Token",
         "token_copied": "Project ID copied!",
         "secret_token_copied": "Secret Token copied!",
         "no_token_available": "No token available.",
         "use_cases": "Use Cases",
+        "fields_count": "configured fields",
+        "sidebar": {
+          "dashboard": "Dashboard",
+          "data": "Data & Schemas",
+          "auth": "Authentication",
+          "byoc": "BYOC",
+          "settings": "Settings",
+          "tunnel_db_config": "Database Configurations (JSON)",
+          "terminal": "Terminal (PTY)",
+          "logs": "System Logs",
+          "sql_studio": "SQL Studio"
+        },
+        "filters": {
+          "sistema": "System",
+          "dados": "Data & Records Management",
+          "projetos": "Projects, Deadlines & Timelines",
+          "mapas": "Mapping, Flows & Spatial",
+          "outros": "Intelligence, Media & Others",
+          "avancado": "Advanced & Hybrid"
+        },
         "tabs": {
           "use_cases": "Use Cases",
           "navigation": "Navigation",
           "enums": "Enums",
           "table_fields": "Table / Fields"
         },
+        "automations": "Automations / BPM",
         "automations_bpm": "Automations / BPM",
         "downloads_center": "Downloads Center",
         "configure_module": "Configure Module",
@@ -314,12 +338,19 @@
         "drag_items_here": "Drag items here",
         "created_suffix": "Created",
         "login_portal": "Login Portal",
-        "configure_login": "Configure Login",
+        "configure_login": "Configure Login & Security",
         "configure": "Configure",
+        "remove_from_menu": "Remove from Menu",
+        "add_to_menu": "Add to Menu",
+        "publish_changes_tooltip": "Publish Changes",
+        "publish_btn": "Publish",
+        "discard_draft_tooltip": "Discard Draft",
+        "preview_draft_tooltip": "Preview Draft",
+        "access_published_tooltip": "Access published version",
         "status_active": "Active",
         "status_inactive": "Inactive",
         "no_use_cases": "No use cases created yet.",
-        "start_now": "Start now",
+        "start_now": "Start Creating a New Use Case",
         "delete_confirm": {
           "title": "Confirm Deletion",
           "warning": "This action is irreversible",
@@ -3028,109 +3059,72 @@
       "select_file_hint": "Select a file from the tree on the left"
     }
   },
-  "dashboard": {
-    "slug_hint": "Unique identifier used in URLs",
-    "projects": {
-      "your_projects": "Ecosystem Projects",
-      "found": "found",
-      "new_project": "New Project",
-      "edit_project": "Edit Project",
-      "delete_project": "Delete Project",
-      "confirm_delete_project": "Are you sure you want to delete this project?",
-      "delete_project_desc": "This action cannot be undone and will remove all associated tables and views.",
-      "yes_delete": "Yes, delete",
-      "project_name": "Project Name",
-      "name_placeholder": "Ex: Sales CRM",
-      "project_slug": "Project Slug",
-      "project_description": "Description",
-      "desc_placeholder": "Describe the project objective",
-      "project_icon": "Project Icon",
-      "change_icon": "Change Icon",
-      "status_active": "Active",
-      "status_inactive": "Inactive",
-      "status_title": "Project Status",
-      "status_desc": "Inactive projects are not visible in the portal",
-      "toggle_active": "Activate Project",
-      "toggle_inactive": "Deactivate Project",
-      "system_label": "System",
-      "project_id": "Project ID",
-      "secret_token": "Secret Token",
-      "copy": "Copy",
-      "studio": {
-        "new_use_case": "New Use Case",
-        "generate_with_ai": "Generate with AI",
-        "quick_start": "Quick Start",
-        "new_prefix": "New",
-        "remove_from_menu": "Remove from Menu",
-        "add_to_menu": "Add to Menu",
-        "publish_changes_tooltip": "Publish Changes",
-        "publish_btn": "Publish",
-        "discard_draft_tooltip": "Discard Draft",
-        "preview_draft_tooltip": "Preview Draft",
-        "access_published_tooltip": "Access published version",
-        "access_use_case": "Access Use Case",
-        "configure": "Configure",
-        "configure_login": "Configure Login & Security",
-        "login_portal": "Login Portal",
-        "downloads_center": "Downloads Center",
-        "access_downloads": "Access Downloads",
-        "use_cases": "Use Cases",
-        "no_use_cases": "No use cases found",
-        "start_now": "Start by Creating a New Use Case",
-        "created_suffix": "Created",
-        "agent_status": "Agent & Connection Status",
-        "token_copied": "ID copied!",
-        "secret_token_copied": "Secret token copied!",
-        "no_token_available": "No token available",
-        "status_active": "Active",
-        "status_inactive": "Inactive",
-        "sidebar": {
-          "dashboard": "Dashboard",
-          "data": "Data & Schemas",
-          "auth": "Authentication",
-          "byoc": "BYOC",
-          "settings": "Settings",
-          "tunnel_db_config": "Database Configurations (JSON)",
-          "terminal": "Terminal (PTY)",
-          "logs": "System Logs",
-          "sql_studio": "SQL Studio"
-        },
-        "stats": {
-          "synced_tables": "Synced Tables",
-          "custom_views": "Created Use Cases",
-          "export_retention": "File Retention"
-        },
-        "filters": {
-          "sistema": "System",
-          "dados": "Data & Records Management",
-          "projetos": "Projects, Deadlines & Timelines",
-          "mapas": "Mapping, Flows & Spatial",
-          "outros": "Intelligence, Media & Others",
-          "avancado": "Advanced & Hybrid"
-        },
-        "toasts": {
-          "active_success": "Use case activated successfully!",
-          "inactive_success": "Use case deactivated!",
-          "error_status": "Error updating status: ",
-          "bpm_config_success": "BPM configurations saved successfully!"
-        }
-      }
-    }
-  },
   "wizard": {
+    "title": "Create Use Case",
+    "new_mode": "Creation Mode",
+    "edit_mode": "Edit Mode",
+    "steps": {
+      "logic": "Logic",
+      "master_uc": "Master Use Case",
+      "tables": "Tables",
+      "layout": "Fields & Layout",
+      "actions": "Query & Final Actions"
+    },
+    "buttons": {
+      "prev": "Back",
+      "next": "Next",
+      "finish": "Finish and Save",
+      "update": "Update Use Case",
+      "saving": "Saving...",
+      "updating": "Updating...",
+      "validation": {
+        "name_slug_required": "Name and Slug are required.",
+        "grid_required": "Select at least one field for the Grid.",
+        "form_required": "Select at least one field for the Form.",
+        "filter_required": "Select at least one filter field."
+      }
+    },
     "logic": {
+      "title": "What is the goal of this use case?",
+      "subtitle": "Define screen name and select the ideal interface template.",
+      "screen_name": "Screen / Module Name",
+      "screen_name_placeholder": "Ex: Customer Registration",
+      "slug_label": "URL Identifier (Slug)",
+      "slug_placeholder": "customers",
+      "categories": {
+        "dados": {
+          "title": "Data & Records Management",
+          "desc": "Screens with lists, tables, queries and registration forms."
+        },
+        "projetos": {
+          "title": "Projects, Deadlines & Timelines",
+          "desc": "Kanban, Timeline, Gantt and Calendar Schedule views."
+        },
+        "mapas": {
+          "title": "Mapping, Flows & Spatial",
+          "desc": "Interactive geospatial maps, process flowcharts and mind maps."
+        },
+        "outros": {
+          "title": "Intelligence, Media & Others",
+          "desc": "Business Intelligence (BI) Dashboards and file/media galleries."
+        },
+        "avancado": {
+          "title": "Advanced & Hybrid",
+          "desc": "Custom logic combining multiple components and views."
+        }
+      },
       "types": {
-        "pesquisa_cadastro": { "title": "Search + Registration" },
-        "kanban": { "title": "Kanban" },
-        "timeline": { "title": "Timeline / Feed" },
-        "gantt": { "title": "Gantt Chart" },
-        "scheduler": { "title": "Schedule / Calendar" },
-        "blueprint": { "title": "Flowchart (Blueprint)" },
-        "mapa_mental": { "title": "Mind Map" },
-        "map": { "title": "Map View (Geospatial)" },
-        "analytics": { "title": "Dashboard (BI)" },
-        "galeria": { "title": "Gallery / Assets" },
-        "personalizado": { "title": "Custom (Hybrid)" }
+        "pesquisa_cadastro": { "title": "Search + Registration", "desc": "Complete screens managed by layout." },
+        "kanban": { "title": "Kanban", "desc": "Visual boards with draggable cards." },
+        "timeline": { "title": "Timeline / Feed", "desc": "View records chronologically based on date." },
+        "gantt": { "title": "Gantt Chart", "desc": "Manage schedules and project timelines." },
+        "scheduler": { "title": "Schedule / Calendar", "desc": "Appointments, deadlines, commitments and calendar tasks." },
+        "blueprint": { "title": "Flowchart (Blueprint)", "desc": "Map dynamically interconnected processes and workflows." },
+        "mapa_mental": { "title": "Mind Map", "desc": "Dynamic hierarchies and relationship trees." },
+        "map": { "title": "Map View (Geospatial)", "desc": "View records through interactive markers and coordinates on the map." },
+        "analytics": { "title": "Dashboard (BI)", "desc": "Performance indicators, charts and KPIs." },
+        "galeria": { "title": "Gallery / Assets", "desc": "Media gallery, images and documents with download and redirects." },
+        "personalizado": { "title": "Custom (Hybrid)", "desc": "Custom logic combining multiple components and views." }
       }
     },
     "tables": {
@@ -3166,6 +3160,23 @@
       "form_subtitle_label": "Subtitle Field (Optional)",
       "form_subtitle_default": "Default (Displays record ID)",
       "form_subtitle_hint": "Replaces the record ID display with this field value in the form.",
+      "subtitle": "Drag fields to this zone to display them on screen",
+      "display_options": {
+        "list": "List",
+        "card": "Card",
+        "both": "Both"
+      },
+      "zones": {
+        "zone_01": "Zone 01",
+        "filter": "Search Filter",
+        "grid_cols": "GRID",
+        "zone_02": "Zone 02",
+        "grid": "Data Grid",
+        "zone_03": "Zone 03",
+        "form": "Form",
+        "kanban_card": "Card Fields",
+        "mindmap_nodes": "Map Fields (Levels)"
+      },
       "master": "Master",
       "detail": "Detail",
       "subdetail": "Sub-Detail",
