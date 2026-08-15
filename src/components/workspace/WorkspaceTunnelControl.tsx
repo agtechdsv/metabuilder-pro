@@ -522,9 +522,11 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
               <div className="drag-handle p-5 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center cursor-move shrink-0 bg-white dark:bg-neutral-900">
                 <div className="space-y-3 w-full">
                   <div>
-                    <h3 className="font-bold text-xl text-neutral-900 dark:text-white">Editar metabuilder.config.json</h3>
+                    <h3 className="font-bold text-xl text-neutral-900 dark:text-white">
+                      {t('workspace_components.tunnel_control.modal_title', 'Editar metabuilder.config.json')}
+                    </h3>
                     <p className="text-xs text-neutral-500 font-normal">
-                      Esta configuração será salva diretamente no AppData Local da IDE e será usada no próximo Início ou Sincronização.
+                      {t('workspace_components.tunnel_control.modal_desc', 'Esta configuração será salva diretamente no AppData Local da IDE e será usada no próximo Início ou Sincronização.')}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -571,8 +573,8 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                   !parsedConfig ? (
                     <div className="p-8 text-center flex flex-col items-center justify-center h-full text-red-500">
                       <AlertTriangle className="w-12 h-12 mb-4 opacity-50" />
-                      <h4 className="font-bold text-lg mb-2">JSON Inválido</h4>
-                      <p className="text-sm opacity-80">Não foi possível processar o arquivo de configuração atual.<br/>Corrija-o na aba "Editor JSON" para usar o formulário.</p>
+                      <h4 className="font-bold text-lg mb-2">{t('workspace_components.tunnel_control.invalid_json_title', 'JSON Inválido')}</h4>
+                      <p className="text-sm opacity-80">{t('workspace_components.tunnel_control.invalid_json_desc', 'Não foi possível processar o arquivo de configuração atual. Corrija-o na aba "Editor JSON" para usar o formulário.')}</p>
                     </div>
                   ) : (
                     <div className="p-6 overflow-y-auto h-full space-y-8 bg-neutral-50 dark:bg-neutral-900/50">
@@ -589,7 +591,9 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                           <div key={originalIdx} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-5 rounded-2xl mb-4 shadow-sm">
                             <div className="flex gap-4 items-end mb-4">
                                 <div className="flex-1">
-                                  <label className="block text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">Selecionar Projeto Existente</label>
+                                  <label className="block text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
+                                    {t('workspace_components.tunnel_control.select_existing_project', 'Selecionar Projeto Existente')}
+                                  </label>
                                   <select 
                                     className="w-full bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 font-medium outline-none focus:ring-2 focus:ring-indigo-500/50"
                                     value={projConfig.projectId || ''}
@@ -604,7 +608,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                       updateParsedConfig(newConfig);
                                     }}
                                   >
-                                      <option value="">Selecione um projeto para preencher os IDs...</option>
+                                      <option value="">{t('workspace_components.tunnel_control.select_project_placeholder', 'Selecione um projeto para preencher os IDs...')}</option>
                                       {availableProjects.map(p => (
                                         <option key={p.id} value={p.id}>{p.name}</option>
                                       ))}
@@ -617,7 +621,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                       updateParsedConfig(newConfig);
                                   }}
                                   className="p-2.5 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
-                                  title="Remover Projeto"
+                                  title={t('workspace_components.tunnel_control.remove_project', 'Remover Projeto')}
                                 >
                                   <X className="w-5 h-5" />
                                 </button>
@@ -625,7 +629,9 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                             
                             <div className="grid grid-cols-2 gap-4 mb-6">
                                 <div>
-                                  <label className="block text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">Project ID</label>
+                                  <label className="block text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
+                                    {t('workspace_components.tunnel_control.project_id_label', 'Project ID')}
+                                  </label>
                                   <input 
                                     readOnly
                                     value={projConfig.projectId || ''} 
@@ -633,7 +639,9 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">Secret Token</label>
+                                  <label className="block text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
+                                    {t('workspace_components.tunnel_control.secret_token_label', 'Secret Token')}
+                                  </label>
                                   <input 
                                     readOnly
                                     value={projConfig.secretToken || ''} 
@@ -643,7 +651,9 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                             </div>
 
                             <div className="pl-4 border-l-2 border-indigo-100 dark:border-indigo-500/20">
-                                <h5 className="font-bold text-sm text-neutral-700 dark:text-neutral-300 mb-3">Strings de Conexão</h5>
+                                <h5 className="font-bold text-sm text-neutral-700 dark:text-neutral-300 mb-3">
+                                  {t('workspace_components.tunnel_control.connection_strings', 'Strings de Conexão')}
+                                </h5>
                                 {projConfig.connectionsString?.map((connStr: any, connIdx: number) => {
                                   const parsedStr = parseConnString(connStr.type || 'postgres', connStr.connectionString || '');
                                   
@@ -670,7 +680,9 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                       
                                       <div className="grid grid-cols-2 gap-3 pr-10 mb-4">
                                         <div>
-                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Nome</label>
+                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">
+                                            {t('workspace_components.tunnel_control.conn_name', 'Nome')}
+                                          </label>
                                           <input 
                                             value={connStr.name || ''} 
                                             onChange={(e) => {
@@ -682,7 +694,9 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                           />
                                         </div>
                                         <div>
-                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Tipo</label>
+                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">
+                                            {t('workspace_components.tunnel_control.conn_type', 'Tipo')}
+                                          </label>
                                           <select 
                                             value={connStr.type || ''} 
                                             onChange={(e) => {
@@ -704,23 +718,33 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                       
                                       <div className="grid grid-cols-5 gap-3">
                                         <div className="col-span-1">
-                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Usuário</label>
+                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">
+                                            {t('workspace_components.tunnel_control.conn_user', 'Usuário')}
+                                          </label>
                                           <input value={parsedStr.user} onChange={e => handlePartChange('user', e.target.value)} className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500" />
                                         </div>
                                         <div className="col-span-1">
-                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Senha</label>
+                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">
+                                            {t('workspace_components.tunnel_control.conn_pass', 'Senha')}
+                                          </label>
                                           <input type="password" value={parsedStr.pass} onChange={e => handlePartChange('pass', e.target.value)} className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500" />
                                         </div>
                                         <div className="col-span-1">
-                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Host/IP</label>
+                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">
+                                            {t('workspace_components.tunnel_control.conn_host', 'Host/IP')}
+                                          </label>
                                           <input value={parsedStr.host} onChange={e => handlePartChange('host', e.target.value)} className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500" />
                                         </div>
                                         <div className="col-span-1">
-                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Porta</label>
+                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">
+                                            {t('workspace_components.tunnel_control.conn_port', 'Porta')}
+                                          </label>
                                           <input value={parsedStr.port} onChange={e => handlePartChange('port', e.target.value)} className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500" />
                                         </div>
                                         <div className="col-span-1">
-                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">Database/SID</label>
+                                          <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1">
+                                            {t('workspace_components.tunnel_control.conn_db', 'Database/SID')}
+                                          </label>
                                           <input value={parsedStr.db} onChange={e => handlePartChange('db', e.target.value)} className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm p-2 outline-none focus:border-indigo-500" />
                                         </div>
                                       </div>
@@ -736,7 +760,10 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                   }}
                                   className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 mt-2 flex items-center gap-1 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1.5 rounded-lg transition-colors w-fit"
                                 >
-                                  + Nova Conexão para {availableProjects.find(p => p.id === projConfig.projectId)?.name || 'este projeto'}
+                                  {t('workspace_components.tunnel_control.new_connection_for', '+ Nova Conexão para {name}').replace(
+                                    '{name}', 
+                                    availableProjects.find(p => p.id === projConfig.projectId)?.name || t('workspace_components.tunnel_control.new_connection_this_project', 'este projeto')
+                                  )}
                                 </button>
                             </div>
                           </div>
@@ -774,12 +801,14 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                   }}
                                   className="w-5 h-5 rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
                                 />
-                                Habilitar Autenticação LDAP
+                                {t('workspace_components.tunnel_control.ldap_enable', 'Habilitar Autenticação LDAP')}
                               </label>
                               
                               <div className={`grid grid-cols-2 gap-4 transition-opacity duration-200 ${!parsedConfig.ldap.enabled ? 'opacity-40 pointer-events-none' : ''}`}>
                                 <div>
-                                    <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">URL do Servidor</label>
+                                    <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">
+                                      {t('workspace_components.tunnel_control.ldap_server_url', 'URL do Servidor')}
+                                    </label>
                                     <input 
                                       value={parsedConfig.ldap.url || ''}
                                       onChange={(e) => {
@@ -787,12 +816,14 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                         newConfig.ldap.url = e.target.value;
                                         updateParsedConfig(newConfig);
                                       }}
-                                      placeholder="Ex: ldap://10.0.0.15:389"
+                                      placeholder={t('workspace_components.tunnel_control.ldap_server_placeholder', 'Ex: ldap://10.0.0.15:389')}
                                       className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50" 
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Base DN</label>
+                                    <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">
+                                      {t('workspace_components.tunnel_control.ldap_base_dn', 'Base DN')}
+                                    </label>
                                     <input 
                                       value={parsedConfig.ldap.baseDn || ''}
                                       onChange={(e) => {
@@ -800,12 +831,14 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                         newConfig.ldap.baseDn = e.target.value;
                                         updateParsedConfig(newConfig);
                                       }}
-                                      placeholder="Ex: dc=empresa,dc=local"
+                                      placeholder={t('workspace_components.tunnel_control.ldap_base_placeholder', 'Ex: dc=empresa,dc=local')}
                                       className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50" 
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Bind DN (Usuário Serviço)</label>
+                                    <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">
+                                      {t('workspace_components.tunnel_control.ldap_bind_dn', 'Bind DN (Usuário Serviço)')}
+                                    </label>
                                     <input 
                                       value={parsedConfig.ldap.bindDn || ''}
                                       onChange={(e) => {
@@ -813,12 +846,14 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                         newConfig.ldap.bindDn = e.target.value;
                                         updateParsedConfig(newConfig);
                                       }}
-                                      placeholder="Ex: cn=servico,ou=Services,dc=empresa,dc=local"
+                                      placeholder={t('workspace_components.tunnel_control.ldap_bind_placeholder', 'Ex: cn=servico,ou=Services,dc=empresa,dc=local')}
                                       className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50" 
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Senha (Bind Password)</label>
+                                    <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">
+                                      {t('workspace_components.tunnel_control.ldap_bind_pass', 'Senha (Bind Password)')}
+                                    </label>
                                     <input 
                                       type="password"
                                       value={parsedConfig.ldap.bindPassword || ''}
@@ -831,7 +866,9 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                     />
                                 </div>
                                 <div className="col-span-2">
-                                    <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Search Filter</label>
+                                    <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">
+                                      {t('workspace_components.tunnel_control.ldap_search_filter', 'Search Filter')}
+                                    </label>
                                     <input 
                                       value={parsedConfig.ldap.searchFilter || ''}
                                       onChange={(e) => {
@@ -839,7 +876,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                                         newConfig.ldap.searchFilter = e.target.value;
                                         updateParsedConfig(newConfig);
                                       }}
-                                      placeholder="Ex: (sAMAccountName={{username}})"
+                                      placeholder={t('workspace_components.tunnel_control.ldap_filter_placeholder', 'Ex: (sAMAccountName={{username}})')}
                                       className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50" 
                                     />
                                 </div>
@@ -861,7 +898,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                             }}
                             className="w-full py-4 border-2 border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500 font-bold text-sm rounded-2xl hover:border-indigo-500 hover:text-indigo-500 dark:hover:border-indigo-400 dark:hover:text-indigo-400 transition-colors"
                           >
-                            + Adicionar Configuração LDAP
+                            {t('workspace_components.tunnel_control.add_ldap_config', '+ Adicionar Configuração LDAP')}
                           </button>
                         )}
                       </div>
@@ -874,7 +911,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                 <div className="px-5 py-3 bg-amber-500/10 border-t border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs flex items-start gap-2 shrink-0">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                   <p>
-                    <strong>Dica:</strong> Se você gerar um projeto antes de editar esta configuração, algumas propriedades como o <code>projectId</code> e o <code>secretToken</code> já virão preenchidas automaticamente para você, facilitando bastante o processo!
+                    <strong>{t('workspace_components.tunnel_control.tip_title', 'Dica:')}</strong> {t('workspace_components.tunnel_control.tip_desc', 'Se você gerar um projeto antes de editar esta configuração, algumas propriedades como o projectId e o secretToken já virão preenchidas automaticamente para você, facilitando bastante o processo!')}
                   </p>
                 </div>
               )}
@@ -891,7 +928,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                   disabled={isSavingConfig}
                   className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all disabled:opacity-50"
                 >
-                  {isSavingConfig ? 'Salvando...' : (
+                  {isSavingConfig ? t('workspace_components.tunnel_control.saving', 'Salvando...') : (
                     <>
                       <Save className="w-4 h-4" /> {t('workspace_components.tunnel_control.save_config', 'Salvar Configuração')}
                     </>
