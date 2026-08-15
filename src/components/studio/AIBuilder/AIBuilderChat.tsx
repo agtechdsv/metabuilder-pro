@@ -221,7 +221,10 @@ export function AIBuilderChat({
 
       if (!res.ok) {
         const err = await res.json()
-        throw new Error(err.error || 'Erro desconhecido')
+        if (err.code === 'NO_AI_KEY_CONFIGURED' || (typeof err.error === 'string' && err.error.includes('Nenhuma chave de IA configurada'))) {
+          throw new Error(t('ai_builder.no_key_configured', 'Nenhuma chave de IA configurada para este workspace.'))
+        }
+        throw new Error(err.error || t('ai_builder.unknown_error', 'Erro desconhecido'))
       }
 
       const reader = res.body!.getReader()
@@ -344,12 +347,12 @@ export function AIBuilderChat({
           {
             id: Date.now().toString(),
             role: 'system',
-            content: '⚠️ **Aviso:** Ocorreu um erro ao interpretar o código gerado pela IA (o formato retornou corrompido ou incompleto). Você pode tentar copiar o código manualmente da resposta acima, ou pedir para a IA gerar novamente com a mensagem "Tente novamente".',
+            content: t('ai_builder.parse_failed_warning', '⚠️ **Aviso:** Ocorreu um erro ao interpretar o código gerado pela IA (o formato retornou corrompido ou incompleto). Você pode tentar copiar o código manualmente da resposta acima, ou pedir para a IA gerar novamente com a mensagem "Tente novamente".'),
           }
         ])
       }
     } catch (err: any) {
-      toast(err.message || 'Erro ao comunicar com a IA', 'error')
+      toast(err.message || t('ai_builder.error_communication', 'Erro ao comunicar com a IA'), 'error')
       setMessages((prev) => prev.filter((m) => m.id !== assistantMessageId))
     } finally {
       setIsLoading(false)

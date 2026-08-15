@@ -983,7 +983,7 @@ export function StudioDashboardClient({
                   onClick={handleRefresh}
                   disabled={isRefreshing}
                   className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors group"
-                  title="Atualizar"
+                  title={t('dashboard.projects.studio.refresh_tooltip', 'Atualizar')}
                 >
                   <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
                 </button>

@@ -1589,7 +1589,7 @@ export default function AuthSettingsPage() {
                   onClick={handleRefreshData}
                   disabled={isRefreshing}
                   className="p-2.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl transition-all flex items-center justify-center group shadow-sm"
-                  title="Atualizar"
+                  title={t('dashboard.projects.studio.refresh_tooltip', 'Atualizar')}
                 >
                   <RefreshCw className={`w-4 h-4 transition-transform duration-500 ease-out ${isRefreshing ? 'animate-spin' : 'group-hover:rotate-180'}`} />
                 </button>

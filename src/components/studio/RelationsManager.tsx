@@ -17,6 +17,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n'
 
 interface RelationsManagerProps {
   project: any
@@ -42,6 +43,7 @@ const RELATION_TYPE_LABELS: Record<string, string> = {
 }
 
 export function RelationsManager({ project, models }: RelationsManagerProps) {
+  const { t } = useI18n()
   const supabase = createClient()
   const { toast } = useToast()
 
@@ -314,7 +316,7 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
             onClick={handleRefresh}
             disabled={isRefreshing}
             className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-all group"
-            title="Atualizar"
+            title={t('dashboard.projects.studio.refresh_tooltip', 'Atualizar')}
           >
             <RefreshCw className={cn('w-4 h-4 transition-transform duration-500', isRefreshing && 'animate-spin')} />
           </button>

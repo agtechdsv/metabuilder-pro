@@ -81,6 +81,12 @@ export function AIBuilderMessageBubble({ message }: AIBuilderMessageBubbleProps)
   const { t } = useI18n()
   const isUser = message.role === 'user'
   const isJson = message.parsedSuccessfully === true
+
+  let displayContent = message.content
+  if (message.id === 'welcome') {
+    displayContent = t('ai_builder.welcome_create', '👋 Olá! Sou seu assistente de geração de casos de uso.\n\nDescreva o que você precisa e eu vou gerar o componente React completo, pronto para usar no seu projeto!\n\n**Dicas:**\n- Selecione as tabelas que o caso de uso vai usar no painel à esquerda\n- Você pode enviar um arquivo de especificação (PDF, TXT, MD)\n- Quando estiver satisfeito com o resultado, clique em **Gerar** para eu produzir o código')
+  }
+
   return (
     <div className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
       {/* Avatar */}
@@ -108,7 +114,7 @@ export function AIBuilderMessageBubble({ message }: AIBuilderMessageBubbleProps)
             {t('ai_builder.code_generated_success', '✅ Código gerado! A tela de revisão foi aberta automaticamente.')}
           </div>
         ) : (
-          <SimpleMarkdown text={message.content} />
+          <SimpleMarkdown text={displayContent} />
         )}
         {message.isStreaming && message.content && (
           <span className="inline-block w-1 h-4 bg-violet-500 animate-pulse ml-0.5 align-middle" />

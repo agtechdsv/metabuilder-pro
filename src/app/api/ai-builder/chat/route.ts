@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     .maybeSingle()
 
   if (!aiConfig) {
-    return NextResponse.json({ error: 'Nenhuma chave de IA configurada para este workspace.' }, { status: 400 })
+    return NextResponse.json({ error: 'Nenhuma chave de IA configurada para este workspace.', code: 'NO_AI_KEY_CONFIGURED' }, { status: 400 })
   }
 
   // Busca histórico de mensagens da sessão

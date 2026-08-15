@@ -8,6 +8,7 @@ import {
   CheckCircle, XCircle, BarChart2, Play, Pause
 } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/i18n'
 
 const LOG_TYPES = ['SQL_SELECT', 'SQL_WRITE', 'SQL_ERROR', 'BPM', 'SYNC', 'TUNNEL']
 
@@ -28,6 +29,7 @@ interface ProjectLogsTabProps {
 }
 
 export default function ProjectLogsTab({ project, supabase: supabaseProp }: ProjectLogsTabProps) {
+  const { t } = useI18n()
   const supabase = supabaseProp || createClient()
   const { toast } = useToast()
 
@@ -401,7 +403,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
           {/* Actions */}
           <button onClick={() => { loadLogs(); loadStats() }} disabled={isLoadingLogs}
             className="p-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-indigo-400 transition-colors"
-            title="Atualizar"
+            title={t('dashboard.projects.studio.refresh_tooltip', 'Atualizar')}
           >
             <RefreshCw className={`w-3.5 h-3.5 text-neutral-500 ${isLoadingLogs ? 'animate-spin' : ''}`} />
           </button>
