@@ -787,7 +787,7 @@ export function StudioDashboardClient({
                     className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-violet-500/20 active:scale-95 disabled:opacity-50"
                   >
                     {isCheckingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    Gerar com IA
+                    {t('dashboard.projects.studio.generate_with_ai', 'Gerar com IA')}
                   </button>
                 )}
               </div>
@@ -937,16 +937,17 @@ export function StudioDashboardClient({
                 <div className="flex items-center gap-1 bg-white dark:bg-neutral-900/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 hidden xl:flex shadow-inner">
                   <span className="text-[9px] font-black uppercase text-indigo-400/80 dark:text-indigo-500/80 tracking-widest px-3 border-r border-neutral-200 dark:border-neutral-800 mr-1 flex items-center gap-1.5">
                     <Plus className="w-3 h-3" />
-                    Quick Start
+                    {t('dashboard.projects.studio.quick_start', 'Quick Start')}
                   </span>
                   {QUICK_START_LOGICS.map(logic => {
                     const Icon = logic.icon;
+                    const localizedTitle = t(`wizard.logic.types.${logic.id}.title`, logic.title)
                     return (
                       <button
                         key={logic.id}
                         type="button"
-                        onClick={() => setQuickStartModal({ isOpen: true, logicType: logic.id, logicName: logic.title, name: '', slug: '' })}
-                        title={`Novo ${logic.title}`}
+                        onClick={() => setQuickStartModal({ isOpen: true, logicType: logic.id, logicName: localizedTitle, name: '', slug: '' })}
+                        title={`${t('dashboard.projects.studio.new_prefix', 'Novo')} ${localizedTitle}`}
                         className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-95"
                       >
                         <Icon className="w-4 h-4" />
@@ -960,11 +961,12 @@ export function StudioDashboardClient({
                   {filterOptions.map(f => {
                     const Icon = f.icon
                     const isActive = activeFilter === f.id
+                    const localizedFilterTitle = t(`dashboard.projects.studio.filters.${f.id}`, f.title)
                     return (
                       <button
                         key={f.id}
                         onClick={() => setActiveFilter(isActive ? null : f.id)}
-                        title={f.title}
+                        title={localizedFilterTitle}
                         className={cn(
                           "p-1.5 rounded-lg transition-all",
                           isActive
@@ -1285,7 +1287,7 @@ export function StudioDashboardClient({
                             <button
                               onClick={() => handleRemoveFromMenu(view)}
                               className="relative p-2 text-indigo-500 bg-indigo-500/10 hover:bg-rose-500/10 hover:text-rose-500 rounded-xl transition-all group"
-                              title="Remover do Menu"
+                              title={t('dashboard.projects.studio.remove_from_menu', 'Remover do Menu')}
                             >
                               <Menu className="w-4 h-4" />
                               <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full flex items-center justify-center text-white border-2 border-white dark:border-neutral-900 shadow-sm">
@@ -1296,7 +1298,7 @@ export function StudioDashboardClient({
                             <button
                               onClick={() => handleAddToMenu(view)}
                               className="p-2 text-neutral-300 hover:text-indigo-500 hover:bg-indigo-500/10 rounded-xl transition-all"
-                              title={t('dashboard.projects.studio.add_to_menu')}
+                              title={t('dashboard.projects.studio.add_to_menu', 'Adicionar ao Menu')}
                             >
                               <Menu className="w-4 h-4" />
                             </button>
@@ -1327,17 +1329,17 @@ export function StudioDashboardClient({
                                   setIsPublishModalOpen(true)
                                 }}
                                 className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 rounded-2xl border border-emerald-200 dark:border-emerald-500/30 transition-all text-emerald-600 dark:text-emerald-500 shadow-sm group/publish-draft"
-                                title="Publicar Alterações"
+                                title={t('dashboard.projects.studio.publish_changes_tooltip', 'Publicar Alterações')}
                               >
                                 <UploadCloud className="w-5 h-5 group-hover/publish-draft:scale-110 transition-transform" />
-                                <span className="text-xs font-bold">Publicar</span>
+                                <span className="text-xs font-bold">{t('dashboard.projects.studio.publish_btn', 'Publicar')}</span>
                               </button>
                               
                               {view.draft_config && view.status !== 'draft' && (
                                 <button
                                   onClick={() => handleDiscardDraft(view)}
                                   className="w-[42px] shrink-0 flex items-center justify-center bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 rounded-2xl border border-rose-200 dark:border-rose-500/30 transition-all text-rose-600 dark:text-rose-500 shadow-sm"
-                                  title="Descartar Rascunho"
+                                  title={t('dashboard.projects.studio.discard_draft_tooltip', 'Descartar Rascunho')}
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -1358,8 +1360,8 @@ export function StudioDashboardClient({
                               className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
                             >
                               {(view.layout_config?.generated_by_ai === true || view.draft_config?.generated_by_ai === true)
-                                ? <><Sparkles className="w-4 h-4" /> Configurar</>
-                                : <><Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure')}</>
+                                ? <><Sparkles className="w-4 h-4" /> {t('dashboard.projects.studio.configure', 'Configurar')}</>
+                                : <><Settings2 className="w-4 h-4" /> {t('dashboard.projects.studio.configure', 'Configurar')}</>
                               }
                             </button>
                             {(view.draft_config || !view.layout_config || Object.keys(view.layout_config).length === 0 || view.status === 'draft') && (
@@ -1368,7 +1370,7 @@ export function StudioDashboardClient({
                                   <button
                                     onClick={() => openPreview(`${window.location.origin}/${workspace_slug}/${project_slug}/${view.slug}?preview=draft`, `Rascunho: ${view.name}`)}
                                     className="w-14 flex items-center justify-center bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 rounded-2xl border border-amber-200 dark:border-amber-500/30 transition-all text-amber-600 dark:text-amber-500 shadow-sm group/preview animate-pulse"
-                                    title="Visualizar Rascunho"
+                                    title={t('dashboard.projects.studio.preview_draft_tooltip', 'Visualizar Rascunho')}
                                   >
                                     <Eye className="w-5 h-5 group-hover/preview:scale-110 transition-transform" />
                                   </button>
@@ -1379,7 +1381,7 @@ export function StudioDashboardClient({
                               <button
                                 onClick={() => openPreview(`${window.location.origin}/${workspace_slug}/${project_slug}/${view.slug}`, `Publicado: ${view.name}`)}
                                 className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-indigo-600 dark:hover:text-white shadow-sm group/publish"
-                                title="Acessar versão publicada"
+                                title={t('dashboard.projects.studio.access_published_tooltip', 'Acessar versão publicada')}
                               >
                                 <ArrowRight className="w-5 h-5 group-hover/publish:translate-x-0.5 transition-transform" />
                               </button>
@@ -1392,7 +1394,7 @@ export function StudioDashboardClient({
                             onClick={() => openPreview(`${window.location.origin}/${workspace_slug}/${project_slug}/${view.slug}`, `Acessar: ${view.name}`)}
                             className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl text-[10px] font-black tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-neutral-900/10 dark:shadow-white/5"
                           >
-                            <ArrowRight className="w-4 h-4" /> {t('dashboard.projects.studio.access_use_case')}
+                            <ArrowRight className="w-4 h-4" /> {t('dashboard.projects.studio.access_use_case', 'Acessar Caso de Uso')}
                           </button>
                         )
                       )}

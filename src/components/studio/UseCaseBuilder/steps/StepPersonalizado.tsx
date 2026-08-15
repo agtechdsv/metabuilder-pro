@@ -251,21 +251,21 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
               <Share2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div className="flex-1 space-y-3">
-              <p className="text-[11px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400 mb-1">Santo Graal ativo</p>
+              <p className="text-[11px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400 mb-1">{t('wizard.tables.santo_graal_active', 'Santo Graal ativo')}</p>
               <p className="text-[11px] text-indigo-600 dark:text-indigo-400 leading-relaxed">
-                O sistema detecta automaticamente todas as tabelas relacionadas à tabela raiz do caso de uso mestre.
+                {t('wizard.tables.santo_graal_desc', 'O sistema detecta automaticamente todas as tabelas relacionadas à tabela raiz e disponibiliza seus campos na etapa seguinte.')}
               </p>
               <div className="flex items-center gap-3 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900/50 w-fit">
-                <label className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Profundidade Máxima (Níveis)</label>
+                <label className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">{t('wizard.tables.max_depth_label', 'Profundidade Máxima (Níveis)')}</label>
                 <select
                   value={config.layout_config?.max_relation_depth || 2}
                   onChange={e => setConfig({ ...config, layout_config: { ...config.layout_config, max_relation_depth: parseInt(e.target.value, 10) } })}
                   className="text-xs bg-white dark:bg-neutral-900 border border-indigo-200 dark:border-indigo-800 rounded px-2 py-1 outline-none text-indigo-900 dark:text-indigo-300 cursor-pointer"
                 >
-                  <option value={1}>1 Nível (Apenas Relacionamentos Diretos)</option>
-                  <option value={2}>2 Níveis (Padrão - Inclui Nível 2)</option>
-                  <option value={3}>3 Níveis (Profundo)</option>
-                  <option value={4}>4 Níveis (Extremo - Pode causar lentidão)</option>
+                  <option value={1}>{t('wizard.tables.depth_1', '1 Nível (Apenas Relacionamentos Diretos)')}</option>
+                  <option value={2}>{t('wizard.tables.depth_2', '2 Níveis (Padrão - Inclui Nível 2)')}</option>
+                  <option value={3}>{t('wizard.tables.depth_3', '3 Níveis (Profundo)')}</option>
+                  <option value={4}>{t('wizard.tables.depth_4', '4 Níveis (Extremo - Pode causar lentidão)')}</option>
                 </select>
               </div>
             </div>
@@ -277,18 +277,18 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
       <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20"><Database className="w-4 h-4" /></div>
-          <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Configuração de Padrões</h4>
+          <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.layout.pattern_config', 'Configuração de Padrões')}</h4>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-3">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Registros por Página (LIMIT)</label>
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.records_per_page', 'Registros por Página (LIMIT)')}</label>
             <input
               type="number" min="1" max="500" placeholder="Ex: 50"
               value={config.layout_config.items_per_page || ''}
               onChange={e => setConfig({ ...config, layout_config: { ...config.layout_config, items_per_page: e.target.value ? parseInt(e.target.value, 10) : undefined } })}
               className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
             />
-            <p className="text-[10px] text-neutral-400 font-medium italic ml-1">Deixe em branco para usar o padrão do sistema.</p>
+            <p className="text-[10px] text-neutral-400 font-medium italic ml-1">{t('wizard.layout.records_per_page_hint', 'Deixe em branco para usar o padrão do sistema.')}</p>
           </div>
         </div>
       </div>

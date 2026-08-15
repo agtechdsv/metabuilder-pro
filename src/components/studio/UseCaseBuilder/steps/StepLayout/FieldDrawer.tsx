@@ -28,7 +28,7 @@ export function FieldDrawer({
                     drawerActiveTab === 'geral' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
                   )}
                 >
-                  GERAL
+                  {t('wizard.layout.drawer.tabs.general', 'Geral')}
                   {drawerActiveTab === 'geral' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
                 </button>
                 <button
@@ -38,7 +38,7 @@ export function FieldDrawer({
                     drawerActiveTab === 'estilos' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
                   )}
                 >
-                  ESTILOS
+                  {t('wizard.layout.drawer.tabs.styles', 'Estilos')}
                   {drawerActiveTab === 'estilos' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
                 </button>
                 <button
@@ -48,7 +48,7 @@ export function FieldDrawer({
                     drawerActiveTab === 'logica' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
                   )}
                 >
-                  FÓRMULA
+                  {t('wizard.layout.drawer.tabs.formula', 'Fórmula')}
                   {drawerActiveTab === 'logica' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
                 </button>
               </div>
@@ -58,7 +58,7 @@ export function FieldDrawer({
               <div className="flex justify-end px-6 mt-3">
                  <button onClick={() => reloadFieldDefaults(editingFieldId)} className="text-[9px] text-indigo-500 font-bold hover:underline flex items-center gap-1.5 transition-all opacity-80 hover:opacity-100">
                    <RefreshCw className="w-3 h-3" />
-                   Restaurar Padrões Globais
+                   {t('wizard.layout.drawer.restore_defaults', 'Restaurar Padrões Globais')}
                  </button>
               </div>
             )}
@@ -185,20 +185,20 @@ export function FieldDrawer({
                       {editingFieldZone === 'filter' && (
                         <div className="space-y-4">
                           <div className="space-y-2">
-                            <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Operador de Filtro (Busca)</label>
+                            <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.filter_operator', 'Operador de Filtro (Busca)')}</label>
                             <select
                               value={currentFieldMeta.content?.filter_operator || 'ilike'}
                               onChange={e => updateMeta('content', 'filter_operator', e.target.value)}
                               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none cursor-pointer focus:border-indigo-500 transition-colors"
                             >
-                              <option value="ilike">Contém (Busca por texto - Padrão)</option>
-                              <option value="=">Igual (=)</option>
-                              <option value=">">Maior que (&gt;)</option>
-                              <option value=">=">Maior ou igual (&gt;=)</option>
-                              <option value="<">Menor que (&lt;)</option>
-                              <option value="<=">Menor ou igual (&lt;=)</option>
-                              <option value="!=">Diferente (!=)</option>
-                              <option value="between">Intervalo (De / Até)</option>
+                              <option value="ilike">{t('wizard.layout.drawer.filter_operators.ilike', 'Contém (Busca por texto - Padrão)')}</option>
+                              <option value="=">{t('wizard.layout.drawer.filter_operators.equal', 'Igual (=)')}</option>
+                              <option value=">">{t('wizard.layout.drawer.filter_operators.gt', 'Maior que (>)')}</option>
+                              <option value=">=">{t('wizard.layout.drawer.filter_operators.gte', 'Maior ou igual (>=)')}</option>
+                              <option value="<">{t('wizard.layout.drawer.filter_operators.lt', 'Menor que (<)')}</option>
+                              <option value="<=">{t('wizard.layout.drawer.filter_operators.lte', 'Menor ou igual (<=)')}</option>
+                              <option value="!=">{t('wizard.layout.drawer.filter_operators.neq', 'Diferente (!=)')}</option>
+                              <option value="between">{t('wizard.layout.drawer.filter_operators.between', 'Intervalo (De / Até)')}</option>
                             </select>
                           </div>
 
@@ -210,14 +210,14 @@ export function FieldDrawer({
                               <div className="space-y-4">
                                 {isDateField && (
                                   <div className="space-y-2">
-                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Tipo de Valor Padrão</label>
+                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.default_val_type', 'Tipo de Valor Padrão')}</label>
                                     <select
                                       value={currentFieldMeta.content?.default_value_type || 'fixed'}
                                       onChange={e => updateMeta('content', 'default_value_type', e.target.value)}
                                       className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
                                     >
-                                      <option value="fixed">Fixo (Escolher Data)</option>
-                                      <option value="relative">Dinâmico (Últimos...)</option>
+                                      <option value="fixed">{t('wizard.layout.drawer.default_val_fixed', 'Fixo (Escolher Data)')}</option>
+                                      <option value="relative">{t('wizard.layout.drawer.default_val_relative', 'Dinâmico (Últimos...)')}</option>
                                     </select>
                                   </div>
                                 )}
@@ -225,7 +225,7 @@ export function FieldDrawer({
                                 {currentFieldMeta.content?.default_value_type === 'relative' && isDateField ? (
                                   <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-2">
-                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Quantidade</label>
+                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.quantity', 'Quantidade')}</label>
                                       <input
                                         type="number"
                                         min="1"
@@ -236,7 +236,7 @@ export function FieldDrawer({
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Unidade</label>
+                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.unit', 'Unidade')}</label>
                                       <select
                                         value={currentFieldMeta.content?.default_value_relative_unit || 'days'}
                                         onChange={e => updateMeta('content', 'default_value_relative_unit', e.target.value)}
@@ -253,7 +253,7 @@ export function FieldDrawer({
                                 ) : currentFieldMeta.content?.filter_operator === 'between' ? (
                                   <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-2">
-                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor Padrão (De)</label>
+                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.default_val_from', 'Valor Padrão (De)')}</label>
                                       <input
                                         type={inputType}
                                         placeholder="Ex: 2024-01-01"
@@ -263,7 +263,7 @@ export function FieldDrawer({
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor Padrão (Até)</label>
+                                      <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.default_val_to', 'Valor Padrão (Até)')}</label>
                                       <input
                                         type={inputType}
                                         placeholder="Ex: 2024-12-31"
@@ -275,10 +275,10 @@ export function FieldDrawer({
                                   </div>
                                 ) : (
                                   <div className="space-y-2">
-                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">Valor Padrão Inicial</label>
+                                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.default_val_initial', 'Valor Padrão Inicial')}</label>
                                     <input
                                       type={inputType}
-                                      placeholder="Valor que inicia na busca"
+                                      placeholder={t('wizard.layout.drawer.default_val_placeholder', 'Valor que inicia na busca')}
                                       value={currentFieldMeta.content?.default_value || ''}
                                       onChange={e => updateMeta('content', 'default_value', e.target.value)}
                                       className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
@@ -412,7 +412,7 @@ export function FieldDrawer({
                     <div className="space-y-4">
                       <div className="space-y-4">
                         <div className="p-3 bg-neutral-50 dark:bg-neutral-900/30 border border-neutral-100 dark:border-neutral-800 rounded-xl space-y-3">
-                          <h4 className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Layout Padrão (Página)</h4>
+                          <h4 className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">{t('wizard.layout.drawer.default_page_layout', 'Layout Padrão (Página)')}</h4>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.grid_span', 'Ocupar Colunas')}</label>
@@ -421,18 +421,18 @@ export function FieldDrawer({
                                 onChange={e => updateMeta('component', 'gridSpan', e.target.value)}
                                 className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs font-bold outline-none"
                               >
-                                <option value="1">1 Coluna</option>
-                                <option value="2">2 Colunas</option>
-                                <option value="3">3 Colunas</option>
-                                <option value="4">4 Colunas</option>
-                                <option value="5">5 Colunas</option>
-                                <option value="6">6 Colunas (Metade)</option>
-                                <option value="7">7 Colunas</option>
-                                <option value="8">8 Colunas</option>
-                                <option value="9">9 Colunas</option>
-                                <option value="10">10 Colunas</option>
-                                <option value="11">11 Colunas</option>
-                                <option value="12">12 Colunas (Inteira)</option>
+                                <option value="1">{t('wizard.layout.drawer.cols_1', '1 Coluna')}</option>
+                                <option value="2">{t('wizard.layout.drawer.cols_2', '2 Colunas')}</option>
+                                <option value="3">{t('wizard.layout.drawer.cols_3', '3 Colunas')}</option>
+                                <option value="4">{t('wizard.layout.drawer.cols_4', '4 Colunas')}</option>
+                                <option value="5">{t('wizard.layout.drawer.cols_5', '5 Colunas')}</option>
+                                <option value="6">{t('wizard.layout.drawer.cols_6', '6 Colunas (Metade)')}</option>
+                                <option value="7">{t('wizard.layout.drawer.cols_7', '7 Colunas')}</option>
+                                <option value="8">{t('wizard.layout.drawer.cols_8', '8 Colunas')}</option>
+                                <option value="9">{t('wizard.layout.drawer.cols_9', '9 Colunas')}</option>
+                                <option value="10">{t('wizard.layout.drawer.cols_10', '10 Colunas')}</option>
+                                <option value="11">{t('wizard.layout.drawer.cols_11', '11 Colunas')}</option>
+                                <option value="12">{t('wizard.layout.drawer.cols_12', '12 Colunas (Inteira)')}</option>
                               </select>
                             </div>
                             <div className="space-y-2">
@@ -471,7 +471,7 @@ export function FieldDrawer({
                         </div>
 
                         <div className="p-3 bg-neutral-50 dark:bg-neutral-900/30 border border-neutral-100 dark:border-neutral-800 rounded-xl space-y-3">
-                          <h4 className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Layout Modal / Drawer</h4>
+                          <h4 className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">{t('wizard.layout.drawer.modal_drawer_layout', 'Layout Modal / Drawer')}</h4>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.grid_span', 'Ocupar Colunas')}</label>
@@ -480,18 +480,18 @@ export function FieldDrawer({
                                 onChange={e => updateMeta('component', 'modalGridSpan', e.target.value)}
                                 className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs font-bold outline-none"
                               >
-                                <option value="1">1 Coluna</option>
-                                <option value="2">2 Colunas</option>
-                                <option value="3">3 Colunas</option>
-                                <option value="4">4 Colunas</option>
-                                <option value="5">5 Colunas</option>
-                                <option value="6">6 Colunas (Metade)</option>
-                                <option value="7">7 Colunas</option>
-                                <option value="8">8 Colunas</option>
-                                <option value="9">9 Colunas</option>
-                                <option value="10">10 Colunas</option>
-                                <option value="11">11 Colunas</option>
-                                <option value="12">12 Colunas (Inteira)</option>
+                                <option value="1">{t('wizard.layout.drawer.cols_1', '1 Coluna')}</option>
+                                <option value="2">{t('wizard.layout.drawer.cols_2', '2 Colunas')}</option>
+                                <option value="3">{t('wizard.layout.drawer.cols_3', '3 Colunas')}</option>
+                                <option value="4">{t('wizard.layout.drawer.cols_4', '4 Colunas')}</option>
+                                <option value="5">{t('wizard.layout.drawer.cols_5', '5 Colunas')}</option>
+                                <option value="6">{t('wizard.layout.drawer.cols_6', '6 Colunas (Metade)')}</option>
+                                <option value="7">{t('wizard.layout.drawer.cols_7', '7 Colunas')}</option>
+                                <option value="8">{t('wizard.layout.drawer.cols_8', '8 Colunas')}</option>
+                                <option value="9">{t('wizard.layout.drawer.cols_9', '9 Colunas')}</option>
+                                <option value="10">{t('wizard.layout.drawer.cols_10', '10 Colunas')}</option>
+                                <option value="11">{t('wizard.layout.drawer.cols_11', '11 Colunas')}</option>
+                                <option value="12">{t('wizard.layout.drawer.cols_12', '12 Colunas (Inteira)')}</option>
                               </select>
                             </div>
                             <div className="space-y-2">

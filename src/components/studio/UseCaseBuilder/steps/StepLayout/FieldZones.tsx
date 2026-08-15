@@ -278,14 +278,14 @@ export function FieldZones({
         )}
 
       <div className="space-y-6 mt-8">
-        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Configurações do Formulário</label>
+        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.form_config_title', 'Configurações do Formulário')}</label>
         <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-4 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Título do Formulário (Opcional)</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.form_title_label', 'Título do Formulário (Opcional)')}</label>
               <input
                 type="text"
-                placeholder="Ex: Editar Registro"
+                placeholder={t('wizard.layout.form_title_placeholder', 'Ex: Editar Registro')}
                 value={(config.layout_config as any).form_header_title || ''}
                 onChange={e => setConfig({
                   ...config,
@@ -293,11 +293,11 @@ export function FieldZones({
                 })}
                 className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all"
               />
-              <p className="text-[9px] text-neutral-400 mt-1 italic">Sobrescreve o título padrão do formulário (ex: "Editar", "Novo"). Suporta tradução se usar chaves de dicionário.</p>
+              <p className="text-[9px] text-neutral-400 mt-1 italic">{t('wizard.layout.form_title_hint', 'Sobrescreve o título padrão do formulário (ex: "Editar", "Novo"). Suporta tradução se usar chaves de dicionário.')}</p>
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Subtítulo (Opcional)</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.form_subtitle_label', 'Campo de Subtítulo (Opcional)')}</label>
               <select
                 value={(config.layout_config as any).form_header_subtitle_field || ''}
                 onChange={e => setConfig({
@@ -306,14 +306,14 @@ export function FieldZones({
                 })}
                 className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all"
               >
-                <option value="">Padrão (Exibe o ID do registro)</option>
+                <option value="">{t('wizard.layout.form_subtitle_default', 'Padrão (Exibe o ID do registro)')}</option>
                 {models.filter((m: any) => config.selected_models.includes(m.id)).flatMap((m: any) => m.fields).map((f: any) => (
                   <option key={`opt-sub-${f.id}`} value={f.db_column_name}>
                     {getFieldName(f.id)} ({f.data_type})
                   </option>
                 ))}
               </select>
-              <p className="text-[9px] text-neutral-400 mt-1 italic">Substitui a exibição do ID do registro pelo valor deste campo no formulário.</p>
+              <p className="text-[9px] text-neutral-400 mt-1 italic">{t('wizard.layout.form_subtitle_hint', 'Substitui a exibição do ID do registro pelo valor deste campo no formulário.')}</p>
             </div>
           </div>
         </div>

@@ -32,7 +32,7 @@ export function FieldSourcePanel({
                   <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-all" />
                   <input
                     type="text"
-                    placeholder="Pesquisar tabelas ou campos..."
+                    placeholder={t('wizard.layout.search_tables_or_fields', 'Pesquisar tabelas ou campos...')}
                     value={fieldSearchTerm}
                     onChange={e => setFieldSearchTerm(e.target.value)}
                     className="w-full pl-9 pr-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[10px] font-bold outline-none focus:border-indigo-500 transition-all shadow-sm"
@@ -46,7 +46,7 @@ export function FieldSourcePanel({
                   <div className="flex items-center gap-2 px-4 py-3 bg-neutral-50/50 dark:bg-neutral-900/20">
                     <div className="w-1.5 h-3.5 bg-indigo-500 rounded-full"></div>
                     <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-800 dark:text-neutral-200">
-                      Ferramentas Virtuais
+                      {t('wizard.layout.virtual_tools', 'Ferramentas Virtuais')}
                     </h4>
                   </div>
                   <div className="p-4 pt-2 flex flex-col gap-2">
@@ -57,7 +57,7 @@ export function FieldSourcePanel({
                           <span className="text-indigo-600 dark:text-indigo-400 font-black text-[10px]">fx</span>
                         </div>
                         <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
-                          Campo Calculado (em branco)
+                          {t('wizard.layout.calc_field_blank', 'Campo Calculado (em branco)')}
                         </span>
                       </div>
                       <Plus className="w-3.5 h-3.5 text-indigo-300 group-hover:text-indigo-500 transition-all" />
@@ -90,7 +90,7 @@ export function FieldSourcePanel({
                     <div className="flex items-center gap-2 px-4 py-3 bg-indigo-50/50 dark:bg-indigo-900/20">
                       <div className="w-1.5 h-3.5 bg-indigo-600 rounded-full"></div>
                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-800 dark:text-indigo-200">
-                        Componentes BYOC
+                        {t('wizard.layout.byoc_components', 'Componentes BYOC')}
                       </h4>
                     </div>
                     <div className="p-4 pt-2 flex flex-col gap-2">

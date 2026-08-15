@@ -62,42 +62,42 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
     {
       href: `${base}/byoc`,
       icon: Code2,
-      label: 'BYOC',
+      label: t('dashboard.projects.studio.sidebar.byoc', 'BYOC'),
       active: pathname.includes('/studio/byoc'),
       gate: 'desktop'
     },
     {
       href: `${base}/settings`,
       icon: Settings2,
-      label: t('dashboard.projects.studio.sidebar.settings'),
+      label: t('dashboard.projects.studio.sidebar.settings', 'Configurações'),
       active: pathname.includes('/studio/settings'),
       gate: null
     },
     {
       href: `${base}/tunnel`,
       icon: Network,
-      label: 'Configurações de Bancos (JSON)',
+      label: t('dashboard.projects.studio.sidebar.tunnel_db_config', 'Configurações de Bancos (JSON)'),
       active: pathname.includes('/studio/tunnel'),
       gate: 'desktop'
     },
     {
       href: `${base}/terminal`,
       icon: Terminal,
-      label: 'Terminal (PTY)',
+      label: t('dashboard.projects.studio.sidebar.terminal', 'Terminal (PTY)'),
       active: pathname.includes('/studio/terminal'),
       gate: 'desktop'
     },
     {
       href: `${base}/logs`,
       icon: ScrollText,
-      label: 'Logs',
+      label: t('dashboard.projects.studio.sidebar.logs', 'Logs do Sistema'),
       active: pathname.includes('/studio/logs'),
       gate: 'pro'
     },
     {
       href: `${base}/sql`,
       icon: Server,
-      label: 'SQL Studio',
+      label: t('dashboard.projects.studio.sidebar.sql_studio', 'SQL Studio'),
       active: pathname.includes('/studio/sql'),
       gate: 'desktop'
     }
