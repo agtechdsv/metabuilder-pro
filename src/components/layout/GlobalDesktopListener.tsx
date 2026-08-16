@@ -176,7 +176,10 @@ export function GlobalDesktopListener() {
         console.log('[TraySync] update_tray_menu succeeded');
       } catch (e: any) {
         console.error('[TraySync] Failed to sync tray menu:', e);
-        toast('Erro no Tray: ' + (e.message || String(e)), 'error');
+        const errMsg = String(e.message || e);
+        if (!errMsg.includes('not allowed by ACL') && !errMsg.includes('not found')) {
+          toast('Erro no Tray: ' + errMsg, 'error');
+        }
       }
     };
 

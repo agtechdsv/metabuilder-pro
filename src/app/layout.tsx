@@ -50,6 +50,17 @@ export default async function RootLayout({
             __html: `
               if (window.__TAURI_INTERNALS__ || window.__TAURI__ || window.__TAURI_IPC__) {
                 document.documentElement.classList.add('is-tauri');
+                
+                // Força o logout na IDE a cada vez que ela é fechada e reaberta.
+                if (!sessionStorage.getItem('ide_started')) {
+                  sessionStorage.setItem('ide_started', 'true');
+                  const keys = Object.keys(localStorage);
+                  for (const key of keys) {
+                    if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+                      localStorage.removeItem(key);
+                    }
+                  }
+                }
               }
             `
           }}
