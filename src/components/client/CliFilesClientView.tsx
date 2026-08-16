@@ -53,6 +53,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
   const [dbName, setDbName] = useState('')
   const [dbUser, setDbUser] = useState('')
   const [dbPass, setDbPass] = useState('')
+  const [dbConnName, setDbConnName] = useState('')
   const [isDownloading, setIsDownloading] = useState(false)
 
   // IDE Download modal state
@@ -327,6 +328,9 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
 
         if (jsonContent.connections && jsonContent.connections.length > 0) {
           if (jsonContent.connections[0].connectionsString && jsonContent.connections[0].connectionsString.length > 0) {
+            if (dbConnName) {
+              jsonContent.connections[0].connectionsString[0].name = dbConnName
+            }
             jsonContent.connections[0].connectionsString[0].type = dbType
             jsonContent.connections[0].connectionsString[0].connectionString = connectionString
           }
@@ -815,6 +819,14 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
               <div className="space-y-3">
                 <label className="text-xs font-bold uppercase tracking-widest text-neutral-500">{t('client_views.downloads.template_db_conn', 'Conexão do Banco de Dados (Opcional)')}</label>
                 <p className="text-[11px] text-neutral-400 mb-2">{t('client_views.downloads.template_db_hint', 'Preencha se quiser que a string de conexão já venha montada no JSON.')}</p>
+
+                <div className="mb-3">
+                  <input
+                    type="text" placeholder={t('client_views.downloads.template_conn_name', 'Nome da Conexão (ex: erp, crm)')}
+                    value={dbConnName} onChange={(e) => setDbConnName(e.target.value)}
+                    className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl px-4 py-3 text-sm font-medium text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <select
