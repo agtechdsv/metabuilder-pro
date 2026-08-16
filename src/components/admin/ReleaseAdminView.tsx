@@ -461,25 +461,40 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
                           }
                         }}
                       />
-                      <div className="space-y-1 w-full">
+                      <div className="space-y-3 w-full">
                         <div className="flex items-center gap-2">
                           <h3 className="font-bold text-gray-900 dark:text-white">{release.name}</h3>
                           <span className="px-2 py-0.5 text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 rounded-full font-mono">{release.tag_name}</span>
                         </div>
-                    <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                      <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(release.published_at).toLocaleDateString()} às {new Date(release.published_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                      <span className="flex items-center gap-1"><DownloadCloud className="w-3.5 h-3.5" /> {release.assets.length} assets disponíveis</span>
+                        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                          <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(release.published_at).toLocaleDateString()} às {new Date(release.published_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span className="flex items-center gap-1"><DownloadCloud className="w-3.5 h-3.5" /> {release.assets.length} assets disponíveis</span>
+                        </div>
+                        {release.assets && release.assets.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {release.assets.map((asset: any) => (
+                              <a 
+                                key={asset.id} 
+                                href={asset.browser_download_url} 
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-colors shadow-sm"
+                                title={`Baixar ${asset.name} (${(asset.size / 1024 / 1024).toFixed(2)} MB)`}
+                              >
+                                <DownloadCloud className="w-3.5 h-3.5" /> 
+                                {asset.name}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  </div>
-                  <div className="flex items-center justify-end shrink-0 gap-2">
+                  <div className="flex items-start justify-end shrink-0 gap-2">
                     {release.html_url && (
                       <button 
                         onClick={() => window.open(release.html_url, '_blank')} 
                         className="p-2 text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg transition-colors"
-                        title="Acessar Download no GitHub"
+                        title="Ver no GitHub"
                       >
-                        <DownloadCloud className="w-5 h-5" />
+                        <ExternalLink className="w-5 h-5" />
                       </button>
                     )}
                     {deleteConfirmTag === release.tag_name ? (
