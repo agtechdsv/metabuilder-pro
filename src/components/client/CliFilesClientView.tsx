@@ -92,7 +92,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
     // Fetch desktop builds (Workspaces & Projects)
     const { data: buildsData, error: buildsError } = await supabase
       .from('desktop_builds')
-      .select('*, project:projects(name), workspace:workspaces(name)')
+      .select('*')
       .eq('status', 'success')
       .not('download_url', 'is', null)
       .order('created_at', { ascending: false })

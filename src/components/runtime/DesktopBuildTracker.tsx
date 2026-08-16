@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Loader2, CheckCircle2, X, Download, Monitor } from 'lucide-react'
+import { Loader2, CheckCircle2, X, Download, Cloud, Package, Terminal, Archive, UploadCloud } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -15,6 +15,8 @@ export function DesktopBuildTracker() {
   const [job, setJob] = useState<BuildJob | null>(null)
   const [status, setStatus] = useState<'pending' | 'success' | 'error'>('pending')
   const [isVisible, setIsVisible] = useState(false)
+  const [stepMessage, setStepMessage] = useState('Iniciando infraestrutura na Nuvem...')
+  const [stepIndex, setStepIndex] = useState(0)
   const supabase = createClient()
   const router = useRouter()
 
@@ -34,6 +36,7 @@ export function DesktopBuildTracker() {
   useEffect(() => {
     if (!job || status !== 'pending') return
 
+    // Poll the database for the actual status
     const interval = setInterval(async () => {
       const { data, error } = await supabase
         .from('desktop_builds')
@@ -50,12 +53,35 @@ export function DesktopBuildTracker() {
       }
     }, 5000)
 
-    return () => clearInterval(interval)
+    // Simulate progress messages based on typical Github Actions execution time
+    let timeElapsed = 0;
+    const progressInterval = setInterval(() => {
+      timeElapsed += 5; // runs every 5 seconds
+      
+      if (timeElapsed >= 180) { // 3 minutos
+        setStepMessage('Finalizando e transferindo o arquivo...')
+        setStepIndex(4)
+      } else if (timeElapsed >= 120) { // 2 minutos
+        setStepMessage('Empacotando instalador nativo (.msi)...')
+        setStepIndex(3)
+      } else if (timeElapsed >= 45) { // 45 segundos
+        setStepMessage('Compilando motor Rust e Webviews...')
+        setStepIndex(2)
+      } else if (timeElapsed >= 15) { // 15 segundos
+        setStepMessage('Instalando dependências e SDKs...')
+        setStepIndex(1)
+      }
+    }, 5000);
+
+    return () => {
+      clearInterval(interval)
+      clearInterval(progressInterval)
+    }
   }, [job, status, supabase])
 
   const handleDownloadClick = () => {
     setIsVisible(false)
-    router.push('/client/downloads?tab=workspaces')
+    router.push('/client/dashboard?tab=downloads')
   }
 
   return (
@@ -76,13 +102,22 @@ export function DesktopBuildTracker() {
               }`}>
                 {status === 'success' ? <CheckCircle2 className="w-5 h-5" /> :
                  status === 'error' ? <X className="w-5 h-5" /> :
-                 <Loader2 className="w-5 h-5 animate-spin" />}
+                 (
+                   <div className="relative flex items-center justify-center">
+                     <Loader2 className="w-8 h-8 animate-spin absolute opacity-20" />
+                     {stepIndex === 0 && <Cloud className="w-4 h-4 animate-pulse" />}
+                     {stepIndex === 1 && <Package className="w-4 h-4 animate-pulse" />}
+                     {stepIndex === 2 && <Terminal className="w-4 h-4 animate-pulse" />}
+                     {stepIndex === 3 && <Archive className="w-4 h-4 animate-pulse" />}
+                     {stepIndex === 4 && <UploadCloud className="w-4 h-4 animate-pulse" />}
+                   </div>
+                 )}
               </div>
               <div>
                 <h4 className="text-sm font-bold text-neutral-900 dark:text-white">
                   {status === 'success' ? 'Instalador Pronto!' :
                    status === 'error' ? 'Erro na Geração' :
-                   'Gerando App Desktop...'}
+                   stepMessage}
                 </h4>
                 <p className="text-xs text-neutral-500 max-w-[200px] truncate">
                   {job.appName}
