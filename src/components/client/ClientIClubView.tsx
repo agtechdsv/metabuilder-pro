@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Check, Copy, Layers, Loader2, TrendingUp, Users, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n'
+import { getLocalizedIClubRuleName } from '@/lib/iclub'
 
 interface ClientIClubViewProps {
   loadingIClub: boolean
@@ -17,7 +18,7 @@ export function ClientIClubView({
   localProfile,
   toast,
 }: ClientIClubViewProps) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const [copied, setCopied] = useState(false)
 
   return (
@@ -50,7 +51,7 @@ export function ClientIClubView({
                       <Zap className="w-4 h-4" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-black text-white">{rule.name}</h4>
+                      <h4 className="text-xs font-black text-white">{getLocalizedIClubRuleName(rule.name, language)}</h4>
                       <p className="text-[10px] text-indigo-200/80 mt-1">
                         {rule.benefit_type === 'volume_license'
                           ? t('client_views.iclub.volume_license_desc', 'Ganha {count} licença grátis a cada {target} contratadas.').replace('{count}', String(Number(rule.reward_value))).replace('{target}', String(rule.target_count))

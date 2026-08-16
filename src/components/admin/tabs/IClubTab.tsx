@@ -1,8 +1,10 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Pencil, Trash2, Loader2, X, AlertTriangle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, X, AlertTriangle, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Modal } from '@/components/ui/Modal'
+import { useI18n } from '@/i18n'
+import { getLocalizedIClubRuleName } from '@/lib/iclub'
 import { useIClubAdmin } from '../hooks/useIClubAdmin'
 
 interface IClubTabProps {
@@ -10,15 +12,19 @@ interface IClubTabProps {
 }
 
 export function IClubTab({ hook }: IClubTabProps) {
+  const { language } = useI18n()
   const {
     iclubRules,
     isLoadingRules,
     isRuleModalOpen,
     setIsRuleModalOpen,
     editingRule,
-    setEditingRule,
-    ruleName,
-    setRuleName,
+    ruleNamePt,
+    setRuleNamePt,
+    ruleNameEn,
+    setRuleNameEn,
+    ruleNameEs,
+    setRuleNameEs,
     ruleBenefitType,
     setRuleBenefitType,
     ruleTargetCount,
@@ -35,6 +41,8 @@ export function IClubTab({ hook }: IClubTabProps) {
     ruleToDelete,
     setRuleToDelete,
     isDeletingRule,
+    openNewRuleModal,
+    openEditRuleModal,
     handleSaveRule,
     handleConfirmDeleteRule
   } = hook
@@ -54,16 +62,7 @@ export function IClubTab({ hook }: IClubTabProps) {
           <span className="text-xs font-bold text-neutral-500">Configure as regras de pontuação e fidelidade do iClub</span>
           <button
             type="button"
-            onClick={() => {
-              setEditingRule(null)
-              setRuleName('')
-              setRuleBenefitType('referral_discount')
-              setRuleTargetCount(1)
-              setRuleRewardType('percent_discount')
-              setRuleRewardValue(5)
-              setRuleIsActive(true)
-              setIsRuleModalOpen(true)
-            }}
+            onClick={openNewRuleModal}
             className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-750 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md shadow-indigo-500/10 flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -79,75 +78,78 @@ export function IClubTab({ hook }: IClubTabProps) {
           </div>
         ) : iclubRules.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {iclubRules.map(rule => (
-              <div
-                key={rule.id}
-                className={cn(
-                  "bg-white dark:bg-neutral-900/40 border rounded-[2rem] p-8 shadow-sm flex flex-col justify-between relative backdrop-blur-sm",
-                  rule.is_active ? "border-neutral-200 dark:border-neutral-850" : "border-dashed border-neutral-200 dark:border-neutral-800 opacity-60"
-                )}
-              >
-                {!rule.is_active && (
-                  <span className="absolute top-4 left-4 px-2 py-0.5 bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 text-[8px] font-black uppercase tracking-wider rounded">Inativo</span>
-                )}
+            {iclubRules.map(rule => {
+              const currentName = getLocalizedIClubRuleName(rule.name, language)
+              const nameObj = typeof rule.name === 'object' && rule.name !== null ? rule.name : null
 
-                {/* Actions */}
-                <div className="absolute top-4 right-4 flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingRule(rule)
-                      setRuleName(rule.name)
-                      setRuleBenefitType(rule.benefit_type as any)
-                      setRuleTargetCount(rule.target_count)
-                      setRuleRewardType(rule.reward_type as any)
-                      setRuleRewardValue(Number(rule.reward_value))
-                      setRuleIsActive(rule.is_active)
-                      setIsRuleModalOpen(true)
-                    }}
-                    className="p-2 bg-neutral-50 dark:bg-neutral-950 text-neutral-400 hover:text-indigo-500 dark:hover:text-indigo-400 rounded-xl transition-all shadow-sm"
-                    title="Editar regra"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRuleToDelete(rule)
-                      setIsDeleteRuleModalOpen(true)
-                    }}
-                    className="p-2 bg-neutral-50 dark:bg-neutral-950 text-neutral-400 hover:text-red-500 rounded-xl transition-all shadow-sm"
-                    title="Excluir regra"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+              return (
+                <div
+                  key={rule.id}
+                  className={cn(
+                    "bg-white dark:bg-neutral-900/40 border rounded-[2rem] p-8 shadow-sm flex flex-col justify-between relative backdrop-blur-sm",
+                    rule.is_active ? "border-neutral-200 dark:border-neutral-850" : "border-dashed border-neutral-200 dark:border-neutral-800 opacity-60"
+                  )}
+                >
+                  {!rule.is_active && (
+                    <span className="absolute top-4 left-4 px-2 py-0.5 bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 text-[8px] font-black uppercase tracking-wider rounded">Inativo</span>
+                  )}
 
-                <div className="space-y-4 pt-2">
-                  <div>
-                    <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">
-                      Tipo: {rule.benefit_type === 'volume_license' ? 'Volume de Licenças' : 'Indicação'}
-                    </span>
-                    <h4 className="text-xl font-black text-neutral-900 dark:text-white mt-1">{rule.name}</h4>
+                  {/* Actions */}
+                  <div className="absolute top-4 right-4 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => openEditRuleModal(rule)}
+                      className="p-2 bg-neutral-50 dark:bg-neutral-950 text-neutral-400 hover:text-indigo-500 dark:hover:text-indigo-400 rounded-xl transition-all shadow-sm"
+                      title="Editar regra"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRuleToDelete(rule)
+                        setIsDeleteRuleModalOpen(true)
+                      }}
+                      className="p-2 bg-neutral-50 dark:bg-neutral-950 text-neutral-400 hover:text-red-500 rounded-xl transition-all shadow-sm"
+                      title="Excluir regra"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
-                  <div className="space-y-1.5 text-xs text-neutral-600 dark:text-neutral-350">
-                    <p>
-                      <span className="font-bold text-neutral-400">Meta: </span>
-                      A cada <strong className="text-neutral-850 dark:text-white">{rule.target_count}</strong> {rule.benefit_type === 'volume_license' ? 'licenças contratadas' : 'indicações ativas'}
-                    </p>
-                    <p>
-                      <span className="font-bold text-neutral-400">Recompensa: </span>
-                      <strong className="text-indigo-600 dark:text-indigo-400">
-                        {rule.reward_type === 'free_license'
-                          ? `${Number(rule.reward_value)} Licença(s) Grátis`
-                          : `${Number(rule.reward_value)}% de Desconto`}
-                      </strong>
-                    </p>
+                  <div className="space-y-4 pt-2">
+                    <div>
+                      <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">
+                        Tipo: {rule.benefit_type === 'volume_license' ? 'Volume de Licenças' : 'Indicação'}
+                      </span>
+                      <h4 className="text-xl font-black text-neutral-900 dark:text-white mt-1">{currentName}</h4>
+                      {nameObj && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {nameObj.pt && <span className="text-[9px] px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-350 font-medium">🇧🇷 {nameObj.pt}</span>}
+                          {nameObj.en && <span className="text-[9px] px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-350 font-medium">🇺🇸 {nameObj.en}</span>}
+                          {nameObj.es && <span className="text-[9px] px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-350 font-medium">🇪🇸 {nameObj.es}</span>}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5 text-xs text-neutral-600 dark:text-neutral-350">
+                      <p>
+                        <span className="font-bold text-neutral-400">Meta: </span>
+                        A cada <strong className="text-neutral-850 dark:text-white">{rule.target_count}</strong> {rule.benefit_type === 'volume_license' ? 'licenças contratadas' : 'indicações ativas'}
+                      </p>
+                      <p>
+                        <span className="font-bold text-neutral-400">Recompensa: </span>
+                        <strong className="text-indigo-600 dark:text-indigo-400">
+                          {rule.reward_type === 'free_license'
+                            ? `${Number(rule.reward_value)} Licença(s) Grátis`
+                            : `${Number(rule.reward_value)}% de Desconto`}
+                        </strong>
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         ) : (
           <div className="py-12 text-center text-neutral-400 italic bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] text-xs">
@@ -168,7 +170,8 @@ export function IClubTab({ hook }: IClubTabProps) {
             >
               {/* Modal Header */}
               <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-850 flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-widest text-indigo-500">
+                <span className="text-xs font-black uppercase tracking-widest text-indigo-500 flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
                   {editingRule ? 'Editar Regra iClub' : 'Nova Regra iClub'}
                 </span>
                 <button
@@ -182,18 +185,61 @@ export function IClubTab({ hook }: IClubTabProps) {
 
               {/* Modal Form */}
               <form onSubmit={handleSaveRule} className="flex-grow flex flex-col">
-                <div className="p-6 space-y-4">
-                  {/* Name */}
-                  <div>
-                    <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider mb-1.5 block">Nome da Regra</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ex: Licença Grátis a cada 12 contratadas"
-                      value={ruleName}
-                      onChange={(e) => setRuleName(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-100"
-                    />
+                <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                  {/* Multilingual Names Section */}
+                  <div className="space-y-3 p-4 bg-neutral-50/70 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase text-neutral-500 dark:text-neutral-400 tracking-wider flex items-center gap-1.5">
+                        <Globe className="w-3.5 h-3.5 text-indigo-500" /> Nome da Regra (Multilíngue)
+                      </span>
+                      <span className="text-[9px] text-neutral-400 font-bold">PT / EN / ES</span>
+                    </div>
+
+                    {/* PT */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 flex items-center gap-1.5">
+                          <span>🇧🇷</span> Português
+                        </label>
+                        <span className="text-[9px] text-indigo-500 font-bold uppercase">Principal</span>
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ex: Desconto por Indicação Ativa"
+                        value={ruleNamePt}
+                        onChange={(e) => setRuleNamePt(e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-100"
+                      />
+                    </div>
+
+                    {/* EN */}
+                    <div>
+                      <label className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 mb-1 flex items-center gap-1.5">
+                        <span>🇺🇸</span> English (Inglês)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Active Referral Discount"
+                        value={ruleNameEn}
+                        onChange={(e) => setRuleNameEn(e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-100"
+                      />
+                    </div>
+
+                    {/* ES */}
+                    <div>
+                      <label className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 mb-1 flex items-center gap-1.5">
+                        <span>🇪🇸</span> Español (Espanhol)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Descuento por Referido Activo"
+                        value={ruleNameEs}
+                        onChange={(e) => setRuleNameEs(e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-100"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -205,8 +251,8 @@ export function IClubTab({ hook }: IClubTabProps) {
                         onChange={(e) => setRuleBenefitType(e.target.value as any)}
                         className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-100"
                       >
-                        <option value="volume_license">Volume de Licenças</option>
                         <option value="referral_discount">Indicação Convertida</option>
+                        <option value="volume_license">Volume de Licenças</option>
                       </select>
                     </div>
 
@@ -233,8 +279,8 @@ export function IClubTab({ hook }: IClubTabProps) {
                         onChange={(e) => setRuleRewardType(e.target.value as any)}
                         className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-100"
                       >
-                        <option value="free_license">Licença Grátis</option>
                         <option value="percent_discount">Desconto em Porcentagem</option>
+                        <option value="free_license">Licença Grátis</option>
                       </select>
                     </div>
 
@@ -312,7 +358,7 @@ export function IClubTab({ hook }: IClubTabProps) {
             <div>
               <p className="text-sm font-black">Você tem certeza absoluta?</p>
               <p className="text-xs opacity-90 mt-0.5">
-                A regra <span className="font-bold">"{ruleToDelete?.name}"</span> será removida permanentemente.
+                A regra <span className="font-bold">"{getLocalizedIClubRuleName(ruleToDelete?.name, language)}"</span> será removida permanentemente.
               </p>
             </div>
           </div>

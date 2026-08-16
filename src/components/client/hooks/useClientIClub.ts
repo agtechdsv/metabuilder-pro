@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { getIClubDashboardData, IClubRule, IClubReferral, IClubReward } from '@/app/actions/iclub'
+import { getIClubDashboardData } from '@/app/actions/iclub'
+import type { IClubRule, IClubReferral, IClubReward } from '@/lib/iclub'
 
 interface UseClientIClubProps {
   activeTab: string

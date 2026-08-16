@@ -3,38 +3,7 @@
 import { createClient, createAdminClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
-
-
-export interface IClubRule {
-  id?: string
-  name: string
-  benefit_type: 'volume_license' | 'referral_discount'
-  target_count: number
-  reward_type: 'free_license' | 'percent_discount'
-  reward_value: number
-  is_active: boolean
-  created_at?: string
-}
-
-export interface IClubReferral {
-  id: string
-  referrer_id: string
-  referred_id: string | null
-  referred_email: string
-  status: 'registered' | 'subscribed' | 'reward_applied'
-  created_at: string
-  referred_name?: string | null
-}
-
-export interface IClubReward {
-  id: string
-  user_id: string
-  reward_type: 'free_license' | 'percent_discount'
-  reward_value: number
-  status: 'active' | 'applied' | 'expired'
-  notes: string | null
-  created_at: string
-}
+import type { IClubRule, IClubReferral, IClubReward } from '@/lib/iclub'
 
 // Helper to check super admin authorization
 async function checkSuperAdmin() {
@@ -159,8 +128,23 @@ export async function saveIClubAdminRule(rule: Partial<IClubRule>) {
   try {
     const { adminSupabase } = await checkSuperAdmin()
 
+    let namePayload: any = rule.name
+    if (typeof namePayload === 'string') {
+      try {
+        namePayload = JSON.parse(namePayload)
+      } catch {
+        namePayload = { pt: rule.name, en: rule.name, es: rule.name }
+      }
+    } else if (typeof namePayload === 'object' && namePayload !== null) {
+      namePayload = {
+        pt: namePayload.pt || namePayload.en || namePayload.es || '',
+        en: namePayload.en || namePayload.pt || namePayload.es || '',
+        es: namePayload.es || namePayload.pt || namePayload.en || ''
+      }
+    }
+
     const ruleData = {
-      name: rule.name,
+      name: namePayload,
       benefit_type: rule.benefit_type,
       target_count: rule.target_count,
       reward_type: rule.reward_type,
