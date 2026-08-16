@@ -327,7 +327,6 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
 
         if (jsonContent.connections && jsonContent.connections.length > 0) {
           if (jsonContent.connections[0].connectionsString && jsonContent.connections[0].connectionsString.length > 0) {
-            jsonContent.connections[0].connectionsString[0].name = 'erp'
             jsonContent.connections[0].connectionsString[0].type = dbType
             jsonContent.connections[0].connectionsString[0].connectionString = connectionString
           }
