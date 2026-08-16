@@ -3033,7 +3033,17 @@
       "error_start_download": "Falha ao iniciar download",
       "alert_install_error": "Não foi possível executar o instalador: ",
       "toast_template_success": "Template baixado com sucesso!",
-      "toast_template_error": "Erro ao processar template: "
+      "toast_template_error": "Erro ao processar template: ",
+      "delete_tooltip": "Excluir arquivo",
+      "delete_modal_title": "Excluir Arquivo",
+      "delete_modal_desc": "Esta ação removerá o arquivo permanentemente.",
+      "delete_confirm_q": "Você tem certeza absoluta?",
+      "delete_warning": "O arquivo \"{name}\" será removido do bucket de armazenamento e o registro será excluído permanentemente da tabela.",
+      "cancel": "Cancelar",
+      "deleting": "Excluindo...",
+      "confirm_delete": "Confirmar Exclusão",
+      "delete_success": "Arquivo excluído com sucesso!",
+      "delete_error": "Erro ao excluir o arquivo."
     },
     "community": {
       "tag": "MetaBuilders Community",

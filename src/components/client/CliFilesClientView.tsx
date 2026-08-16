@@ -1,10 +1,10 @@
-'use client'
-
 import { useState, useEffect, useRef } from 'react'
 import { IdeUpdaterButton } from '@/components/runtime/IdeUpdaterButton'
 import { createClient } from '@/utils/supabase/client'
-import { Download, File as FileIcon, Loader2, RefreshCw, Filter, X, History, FolderOpen, Play, CheckCircle, ExternalLink } from 'lucide-react'
+import { Download, File as FileIcon, Loader2, RefreshCw, Filter, X, History, FolderOpen, Play, CheckCircle, ExternalLink, Trash2, AlertTriangle } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
+import { Modal } from '@/components/ui/Modal'
+import { deleteDownloadItem } from '@/app/actions/downloads'
 import { isTauri } from '@/utils/tauriUtils'
 import { useI18n } from '@/i18n'
 
@@ -25,6 +25,14 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
   const [files, setFiles] = useState<any[]>([])
   const [desktopBuilds, setDesktopBuilds] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
+  // Delete modal state
+  const [fileToDelete, setFileToDelete] = useState<{
+    file: any
+    context: 'desktop_build' | 'app_download'
+    displayName: string
+  } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Tab & Filter state — devOnly users are locked to the IDE tab
   const [mainTab, setMainTab] = useState<'ide' | 'utils' | 'workspaces'>('ide')
@@ -346,6 +354,23 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
     setIsDownloading(false)
   }
 
+  const handleConfirmDelete = async () => {
+    if (!fileToDelete) return
+    setIsDeleting(true)
+    const res = await deleteDownloadItem({
+      id: fileToDelete.file.id,
+      context: fileToDelete.context
+    })
+    setIsDeleting(false)
+    if (res.success) {
+      toast(t('client_views.downloads.delete_success', 'Arquivo excluído com sucesso!'), 'success')
+      setFileToDelete(null)
+      fetchFiles()
+    } else {
+      toast(res.error || t('client_views.downloads.delete_error', 'Erro ao excluir o arquivo.'), 'error')
+    }
+  }
+
   const getCategoryLabel = (cat: string) => {
     switch (cat) {
       case 'cli-win': return t('client_views.downloads.cat_cli_win', 'CLI (Windows)')
@@ -573,7 +598,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('client_views.downloads.th_file_name', 'Nome do Arquivo')}</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('client_views.downloads.th_category', 'Categoria')}</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('client_views.downloads.th_size', 'Tamanho')}</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">{t('client_views.downloads.th_download', 'Download')}</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">{t('client_views.downloads.table_actions', 'Ações')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -624,13 +649,22 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                       {displaySize}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => handleDownloadClick(file)}
-                        className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg font-bold text-xs uppercase tracking-widest transition-colors flex items-center gap-2 ml-auto"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span>{t('client_views.downloads.download_btn', 'Baixar')}</span>
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleDownloadClick(file)}
+                          className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg font-bold text-xs uppercase tracking-widest transition-colors flex items-center gap-2"
+                        >
+                          <Download className="w-4 h-4" />
+                          <span>{t('client_views.downloads.download_btn', 'Baixar')}</span>
+                        </button>
+                        <button
+                          onClick={() => setFileToDelete({ file, context: isWorkspaceTab ? 'desktop_build' : 'app_download', displayName })}
+                          className="p-2 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-lg transition-colors flex items-center justify-center group"
+                          title={t('client_views.downloads.delete_tooltip', 'Excluir arquivo')}
+                        >
+                          <Trash2 className="w-4 h-4 transition-transform group-hover:scale-110" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -836,6 +870,60 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!fileToDelete}
+        onClose={() => {
+          if (!isDeleting) setFileToDelete(null)
+        }}
+        title={t('client_views.downloads.delete_modal_title', 'Excluir Arquivo')}
+        description={t('client_views.downloads.delete_modal_desc', 'Esta ação removerá o arquivo permanentemente.')}
+        size="md"
+      >
+        <div className="space-y-6">
+          <div className="flex items-center gap-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-600 dark:text-red-400">
+            <div className="p-2.5 bg-red-500/20 rounded-xl shrink-0">
+              <AlertTriangle className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <p className="text-sm font-black">{t('client_views.downloads.delete_confirm_q', 'Você tem certeza absoluta?')}</p>
+              <p className="text-xs opacity-90 mt-0.5">
+                {t('client_views.downloads.delete_warning', 'O arquivo "{name}" será removido do bucket de armazenamento e o registro será excluído permanentemente da tabela.').replace('{name}', fileToDelete?.displayName || '')}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={() => setFileToDelete(null)}
+              className="h-10 px-5 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 font-bold text-xs uppercase tracking-widest border border-neutral-200 dark:border-neutral-700 rounded-xl transition-all"
+            >
+              {t('client_views.downloads.cancel', 'Cancelar')}
+            </button>
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={handleConfirmDelete}
+              className="h-10 px-6 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md shadow-red-500/20 flex items-center gap-2"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>{t('client_views.downloads.deleting', 'Excluindo...')}</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  <span>{t('client_views.downloads.confirm_delete', 'Confirmar Exclusão')}</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
     </div>
   )

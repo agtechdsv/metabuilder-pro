@@ -3032,7 +3032,17 @@
       "error_start_download": "Failed to start download",
       "alert_install_error": "Could not run installer: ",
       "toast_template_success": "Template downloaded successfully!",
-      "toast_template_error": "Error processing template: "
+      "toast_template_error": "Error processing template: ",
+      "delete_tooltip": "Delete file",
+      "delete_modal_title": "Delete File",
+      "delete_modal_desc": "This action will permanently remove the file.",
+      "delete_confirm_q": "Are you absolutely sure?",
+      "delete_warning": "The file \"{name}\" will be removed from the storage bucket and its record will be permanently deleted from the database.",
+      "cancel": "Cancel",
+      "deleting": "Deleting...",
+      "confirm_delete": "Confirm Deletion",
+      "delete_success": "File deleted successfully!",
+      "delete_error": "Error deleting file."
     },
     "community": {
       "tag": "MetaBuilders Community",

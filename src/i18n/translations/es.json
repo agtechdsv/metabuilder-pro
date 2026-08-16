@@ -3103,7 +3103,17 @@
       "error_start_download": "Fallo al iniciar descarga",
       "alert_install_error": "No se pudo ejecutar el instalador: ",
       "toast_template_success": "¡Plantilla descargada con éxito!",
-      "toast_template_error": "Error al procesar la plantilla: "
+      "toast_template_error": "Error al procesar la plantilla: ",
+      "delete_tooltip": "Eliminar archivo",
+      "delete_modal_title": "Eliminar Archivo",
+      "delete_modal_desc": "Esta acción eliminará el archivo permanentemente.",
+      "delete_confirm_q": "¿Está absolutamente seguro?",
+      "delete_warning": "El archivo \"{name}\" se eliminará del bucket de almacenamiento y el registro se eliminará permanentemente de la base de datos.",
+      "cancel": "Cancelar",
+      "deleting": "Eliminando...",
+      "confirm_delete": "Confirmar Eliminación",
+      "delete_success": "¡Archivo eliminado con éxito!",
+      "delete_error": "Error al eliminar el archivo."
     },
     "community": {
       "tag": "Comunidad MetaBuilders",
