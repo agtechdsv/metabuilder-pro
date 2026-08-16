@@ -157,7 +157,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Build disparado com sucesso.'
+      message: 'Build disparado com sucesso.',
+      jobId: desktopBuild.id
     })
   } catch (error: any) {
     console.error('Build API Error:', error)

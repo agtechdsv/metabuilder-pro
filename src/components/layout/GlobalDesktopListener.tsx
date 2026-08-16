@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { isTauri } from '@/utils/tauriUtils'
 import { useToast } from '@/components/ui/Toast'
+import { DesktopBuildTracker } from '@/components/runtime/DesktopBuildTracker'
 
 export function GlobalDesktopListener() {
   const router = useRouter()
@@ -195,5 +196,5 @@ export function GlobalDesktopListener() {
     };
   }, [pathname, router, toast]);
 
-  return null;
+  return <DesktopBuildTracker />;
 }

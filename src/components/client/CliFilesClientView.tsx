@@ -92,7 +92,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
     // Fetch desktop builds (Workspaces & Projects)
     const { data: buildsData, error: buildsError } = await supabase
       .from('desktop_builds')
-      .select('*')
+      .select('*, project:projects(name), workspace:workspaces(name)')
       .eq('status', 'success')
       .not('download_url', 'is', null)
       .order('created_at', { ascending: false })
@@ -618,12 +618,12 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                 const isWorkspaceTab = mainTab === 'workspaces';
                 const displayName = isWorkspaceTab
                   ? (file.context_type === 'project' 
-                      ? projects.find(p => p.id === file.context_id)?.name || t('client_views.downloads.unknown_project', 'Projeto Desconhecido')
-                      : t('client_views.downloads.workspace_app', 'Workspace App'))
+                      ? file.project?.name || projects.find(p => p.id === file.context_id)?.name || t('client_views.downloads.unknown_project', 'Projeto Desconhecido')
+                      : file.workspace?.name || t('client_views.downloads.workspace_app', 'Workspace App'))
                   : file.name;
                   
                 const displayVersion = isWorkspaceTab
-                  ? new Date(file.created_at).toLocaleDateString()
+                  ? new Date(file.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
                   : `v${file.version}`;
                   
                 const displayCategory = isWorkspaceTab

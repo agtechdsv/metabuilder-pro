@@ -30,11 +30,9 @@ export function DesktopAppGeneratorModal({
   const [tunnelUrl, setTunnelUrl] = useState(defaultTunnelUrl || '')
 
   const [isGenerating, setIsGenerating] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
-      setIsSuccess(false)
       setIsGenerating(false)
       setAppName(defaultName || '')
       setAppDescription(defaultDescription || '')
@@ -100,7 +98,15 @@ export function DesktopAppGeneratorModal({
         throw new Error('Falha ao iniciar geração')
       }
 
-      setIsSuccess(true)
+      const responseData = await response.json()
+      const jobId = responseData.jobId
+
+      if (jobId && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('START_DESKTOP_BUILD_TRACKER', {
+          detail: { jobId, appName: appName || 'App' }
+        }))
+      }
+
       try {
         const { isTauri } = await import('@/utils/tauriUtils')
         if (isTauri()) {
@@ -111,6 +117,8 @@ export function DesktopAppGeneratorModal({
           })
         }
       } catch {}
+
+      onClose()
     } catch (error) {
       console.error(error)
       alert('Erro ao gerar aplicativo: ' + (error as Error).message)
@@ -156,26 +164,6 @@ export function DesktopAppGeneratorModal({
 
             {/* Body */}
             <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
-              {isSuccess ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6">
-                    <CheckCircle2 className="w-10 h-10 text-emerald-500" />
-                  </div>
-                  <h3 className="text-2xl font-black mb-2 text-neutral-900 dark:text-white">
-                    {t('workspace_components.desktop_generator.success_title', 'Build Iniciado na Nuvem!')}
-                  </h3>
-                  <p className="text-neutral-500 mb-8 max-w-sm">
-                    {t('workspace_components.desktop_generator.success_desc', 'A infraestrutura do GitHub Actions está compilando o seu instalador Windows. Isso pode levar de 3 a 5 minutos. Assim que estiver pronto, o arquivo {file} ficará disponível na sua Central de Downloads.')
-                      .replace('{file}', `${appName || 'App'}.msi`)}
-                  </p>
-                  <button
-                    onClick={onClose}
-                    className="px-8 py-3 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold rounded-xl shadow-xl hover:scale-105 active:scale-95 transition-all"
-                  >
-                    {t('workspace_components.desktop_generator.understood_close', 'Entendido, Fechar')}
-                  </button>
-                </div>
-              ) : (
                 <div className="space-y-6">
                   {/* Info Box */}
                   <div className="p-4 rounded-xl border border-indigo-200 dark:border-indigo-900/30 bg-indigo-50 dark:bg-indigo-500/5 text-sm text-indigo-800 dark:text-indigo-300">
@@ -278,11 +266,9 @@ export function DesktopAppGeneratorModal({
                     </div>
                   </div>
                 </div>
-              )}
             </div>
 
             {/* Footer */}
-            {!isSuccess && (
               <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 flex items-center justify-end gap-3">
                 <button
                   onClick={onClose}
@@ -309,7 +295,6 @@ export function DesktopAppGeneratorModal({
                   )}
                 </button>
               </div>
-            )}
           </motion.div>
         </div>
       )}
