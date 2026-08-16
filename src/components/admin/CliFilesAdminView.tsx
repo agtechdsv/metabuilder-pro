@@ -142,6 +142,19 @@ export function CliFilesAdminView() {
     setDeleteConfirm({ id, bucketPath, name, category })
   }
 
+  const handleDownloadFile = async (bucketPath: string, name: string) => {
+    try {
+      const { data, error } = await supabase.storage.from('releases').createSignedUrl(bucketPath, 60 * 60)
+      if (error || !data) {
+        toast('Erro ao gerar link de download: ' + (error?.message || 'Erro desconhecido'), 'error')
+        return
+      }
+      window.open(data.signedUrl, '_blank')
+    } catch (e: any) {
+      toast('Falha ao tentar baixar: ' + e.message, 'error')
+    }
+  }
+
   const confirmDelete = async () => {
     if (!deleteConfirm) return
 
@@ -331,13 +344,22 @@ export function CliFilesAdminView() {
                     </button>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => handleDeleteClick(file.id, file.bucket_path, file.name, file.category)}
-                      className="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 text-neutral-400 hover:text-red-500 rounded-lg transition-colors"
-                      title="Excluir Arquivo"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => handleDownloadFile(file.bucket_path, file.name)}
+                        className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 text-neutral-400 hover:text-indigo-500 rounded-lg transition-colors"
+                        title="Baixar Arquivo"
+                      >
+                        <Download className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(file.id, file.bucket_path, file.name, file.category)}
+                        className="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 text-neutral-400 hover:text-red-500 rounded-lg transition-colors"
+                        title="Excluir Arquivo"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

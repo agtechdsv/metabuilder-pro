@@ -472,7 +472,16 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
                     </div>
                   </div>
                   </div>
-                  <div className="flex items-center justify-end shrink-0">
+                  <div className="flex items-center justify-end shrink-0 gap-2">
+                    {release.html_url && (
+                      <button 
+                        onClick={() => window.open(release.html_url, '_blank')} 
+                        className="p-2 text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg transition-colors"
+                        title="Acessar Download no GitHub"
+                      >
+                        <DownloadCloud className="w-5 h-5" />
+                      </button>
+                    )}
                     {deleteConfirmTag === release.tag_name ? (
                       <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-200">
                         <span className="text-xs font-bold text-red-500 mr-2">Excluir Tudo?</span>
