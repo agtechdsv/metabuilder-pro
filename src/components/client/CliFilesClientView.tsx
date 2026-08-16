@@ -598,7 +598,9 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('client_views.downloads.th_file_name', 'Nome do Arquivo')}</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('client_views.downloads.th_category', 'Categoria')}</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('client_views.downloads.th_size', 'Tamanho')}</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">{t('client_views.downloads.table_actions', 'Ações')}</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">
+                {mainTab === 'workspaces' ? t('client_views.downloads.table_actions', 'Ações') : t('client_views.downloads.th_download', 'Download')}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -657,13 +659,15 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                           <Download className="w-4 h-4" />
                           <span>{t('client_views.downloads.download_btn', 'Baixar')}</span>
                         </button>
-                        <button
-                          onClick={() => setFileToDelete({ file, context: isWorkspaceTab ? 'desktop_build' : 'app_download', displayName })}
-                          className="p-2 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-lg transition-colors flex items-center justify-center group"
-                          title={t('client_views.downloads.delete_tooltip', 'Excluir arquivo')}
-                        >
-                          <Trash2 className="w-4 h-4 transition-transform group-hover:scale-110" />
-                        </button>
+                        {isWorkspaceTab && (
+                          <button
+                            onClick={() => setFileToDelete({ file, context: 'desktop_build', displayName })}
+                            className="p-2 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-lg transition-colors flex items-center justify-center group"
+                            title={t('client_views.downloads.delete_tooltip', 'Excluir arquivo')}
+                          >
+                            <Trash2 className="w-4 h-4 transition-transform group-hover:scale-110" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
