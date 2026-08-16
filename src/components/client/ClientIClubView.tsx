@@ -67,43 +67,53 @@ export function ClientIClubView({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Link de Indicação */}
             <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="p-2 bg-indigo-500/10 text-indigo-500 rounded-xl">
-                    <Users className="w-4.5 h-4.5" />
-                  </div>
-                  <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">{t('client_views.iclub.referral_tag', 'Convite iClub')}</span>
-                </div>
-                <h3 className="text-lg font-black text-neutral-900 dark:text-white">{t('client_views.iclub.referral_title', 'Indique & Ganhe')}</h3>
-                <p className="text-xs text-neutral-500 mt-1.5 leading-relaxed">
-                  {t('client_views.iclub.referral_desc', 'Copie o link abaixo e compartilhe. Quando seu indicado assinar qualquer plano, seu desconto de 5% será aplicado automaticamente — e {bold}.')
-                    .replace('{bold}', t('client_views.iclub.referral_bold', 'se mantém vitalício enquanto ele continuar ativo como assinante!'))}
-                </p>
-              </div>
+              {(() => {
+                const referralRule = iclubData.rules.find((r: any) => r.benefit_type === 'referral_discount');
+                const referralDiscount = referralRule ? Math.round(Number(referralRule.reward_value)) : 5;
 
-              <div className="mt-6 space-y-2">
-                <span className="text-[9px] font-black uppercase text-neutral-400 tracking-wider">{t('client_views.iclub.referral_link_label', 'Seu Link de Indicação')}</span>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={typeof window !== 'undefined' ? `${window.location.origin}/?ref=${iclubData.referralCode}` : ''}
-                    className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-[11px] font-mono text-neutral-700 dark:text-neutral-300 w-full focus:outline-none"
-                  />
-                  <button
-                    onClick={() => {
-                      const link = typeof window !== 'undefined' ? `${window.location.origin}/?ref=${iclubData.referralCode}` : '';
-                      navigator.clipboard.writeText(link);
-                      setCopied(true);
-                      toast(t('client_views.iclub.referral_copied_toast', 'Link de indicação copiado!'), 'success');
-                      setTimeout(() => setCopied(false), 2000);
-                    }}
-                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center shrink-0"
-                  >
-                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
+                return (
+                  <>
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="p-2 bg-indigo-500/10 text-indigo-500 rounded-xl">
+                          <Users className="w-4.5 h-4.5" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">{t('client_views.iclub.referral_tag', 'Convite iClub')}</span>
+                      </div>
+                      <h3 className="text-lg font-black text-neutral-900 dark:text-white">{t('client_views.iclub.referral_title', 'Indique & Ganhe')}</h3>
+                      <p className="text-xs text-neutral-500 mt-1.5 leading-relaxed">
+                        {t('client_views.iclub.referral_desc', 'Copie o link abaixo e compartilhe. Quando seu indicado assinar qualquer plano, seu desconto de {percent}% será aplicado automaticamente — e {bold}.')
+                          .replace('{percent}', String(referralDiscount))
+                          .replace('{bold}', t('client_views.iclub.referral_bold', 'se mantém vitalício enquanto ele continuar ativo como assinante!'))}
+                      </p>
+                    </div>
+
+                    <div className="mt-6 space-y-2">
+                      <span className="text-[9px] font-black uppercase text-neutral-400 tracking-wider">{t('client_views.iclub.referral_link_label', 'Seu Link de Indicação')}</span>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={typeof window !== 'undefined' ? `${window.location.origin}/?ref=${iclubData.referralCode}` : ''}
+                          className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-[11px] font-mono text-neutral-700 dark:text-neutral-300 w-full focus:outline-none"
+                        />
+                        <button
+                          onClick={() => {
+                            const link = typeof window !== 'undefined' ? `${window.location.origin}/?ref=${iclubData.referralCode}` : '';
+                            navigator.clipboard.writeText(link);
+                            setCopied(true);
+                            toast(t('client_views.iclub.referral_copied_toast', 'Link de indicação copiado!'), 'success');
+                            setTimeout(() => setCopied(false), 2000);
+                          }}
+                          className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center shrink-0"
+                        >
+                          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Progresso de Licenças por Volume */}
@@ -163,6 +173,9 @@ export function ClientIClubView({
             {/* Desconto Acumulado */}
             <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
               {(() => {
+                const referralRule = iclubData.rules.find((r: any) => r.benefit_type === 'referral_discount');
+                const referralDiscount = referralRule ? Math.round(Number(referralRule.reward_value)) : 5;
+
                 const totalDiscount = iclubData.rewards
                   .filter((r: any) => r.reward_type === 'percent_discount' && r.status === 'active')
                   .reduce((sum: number, r: any) => sum + Number(r.reward_value), 0);
@@ -178,7 +191,8 @@ export function ClientIClubView({
                       </div>
                       <h3 className="text-lg font-black text-neutral-900 dark:text-white">{t('client_views.iclub.discount_title', 'Faturamento iClub')}</h3>
                       <p className="text-xs text-neutral-550 mt-1.5 leading-relaxed text-neutral-500">
-                        {t('client_views.iclub.discount_desc_full', 'Indicações que se tornarem assinantes concedem 5% de desconto de forma cumulativa na sua próxima fatura. O desconto é vitalício: enquanto o indicado permanecer assinante ativo, você continua descontando a cada renovação.')}
+                        {t('client_views.iclub.discount_desc_full', 'Indicações que se tornarem assinantes concedem {percent}% de desconto de forma cumulativa na sua próxima fatura. O desconto é vitalício: enquanto o indicado permanecer assinante ativo, você continua descontando a cada renovação.')
+                          .replace('{percent}', String(referralDiscount))}
                       </p>
                     </div>
 
