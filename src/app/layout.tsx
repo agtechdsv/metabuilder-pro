@@ -54,10 +54,22 @@ export default async function RootLayout({
                 // Força o logout na IDE a cada vez que ela é fechada e reaberta.
                 if (!sessionStorage.getItem('ide_started')) {
                   sessionStorage.setItem('ide_started', 'true');
+                  
+                  // Clear localStorage
                   const keys = Object.keys(localStorage);
                   for (const key of keys) {
-                    if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+                    if (key.startsWith('sb-') && key.includes('-auth-token')) {
                       localStorage.removeItem(key);
+                    }
+                  }
+                  
+                  // Clear Cookies
+                  const cookies = document.cookie.split(';');
+                  for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.startsWith('sb-') && cookie.includes('-auth-token')) {
+                      const name = cookie.split('=')[0];
+                      document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
                     }
                   }
                 }
