@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Rocket, FileText, CheckCircle2, AlertCircle, Loader2, Terminal, GitCommit, UploadCloud, ExternalLink, Trash2, Calendar, DownloadCloud, X } from 'lucide-react'
+import { Rocket, FileText, CheckCircle2, AlertCircle, Loader2, Terminal, GitCommit, UploadCloud, ExternalLink, Trash2, Calendar, DownloadCloud, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 
@@ -27,6 +27,7 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [deleteConfirmTag, setDeleteConfirmTag] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [expandedReleaseTag, setExpandedReleaseTag] = useState<string | null>(null)
   
   // Bulk Delete State
   const [selectedReleases, setSelectedReleases] = useState<string[]>([])
@@ -471,18 +472,39 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
                           <span className="flex items-center gap-1"><DownloadCloud className="w-3.5 h-3.5" /> {release.assets.length} assets disponíveis</span>
                         </div>
                         {release.assets && release.assets.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {release.assets.map((asset: any) => (
-                              <a 
-                                key={asset.id} 
-                                href={asset.browser_download_url} 
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-colors shadow-sm"
-                                title={`Baixar ${asset.name} (${(asset.size / 1024 / 1024).toFixed(2)} MB)`}
-                              >
-                                <DownloadCloud className="w-3.5 h-3.5" /> 
-                                {asset.name}
-                              </a>
-                            ))}
+                          <div className="mt-2">
+                            <div 
+                              className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 w-fit font-semibold transition-colors"
+                              onClick={() => setExpandedReleaseTag(expandedReleaseTag === release.tag_name ? null : release.tag_name)}
+                            >
+                              {expandedReleaseTag === release.tag_name ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                              <span>{expandedReleaseTag === release.tag_name ? 'Ocultar arquivos' : 'Ver arquivos para download'}</span>
+                            </div>
+                            
+                            <AnimatePresence>
+                              {expandedReleaseTag === release.tag_name && (
+                                <motion.div 
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="flex flex-wrap gap-2 mt-3 p-3 bg-zinc-100/50 dark:bg-black/20 border border-zinc-200 dark:border-zinc-800 rounded-xl">
+                                    {release.assets.map((asset: any) => (
+                                      <a 
+                                        key={asset.id} 
+                                        href={asset.browser_download_url} 
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-colors shadow-sm"
+                                        title={`Baixar ${asset.name} (${(asset.size / 1024 / 1024).toFixed(2)} MB)`}
+                                      >
+                                        <DownloadCloud className="w-3.5 h-3.5" /> 
+                                        {asset.name}
+                                      </a>
+                                    ))}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
                         )}
                       </div>
