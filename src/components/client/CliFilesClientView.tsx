@@ -129,7 +129,17 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
       }
     }
     checkVersion()
-  }, [])
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const subtab = params.get('subtab')
+      if (subtab === 'workspaces' || subtab === 'utils' || subtab === 'ide') {
+        if (!devOnly || subtab === 'ide') {
+          setMainTab(subtab)
+        }
+      }
+    }
+  }, [devOnly])
 
   const handleDownloadClick = async (file: any) => {
     if (file.category === 'template') {

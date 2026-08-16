@@ -17,6 +17,7 @@ export function DesktopBuildTracker() {
   const [isVisible, setIsVisible] = useState(false)
   const [stepMessage, setStepMessage] = useState('Iniciando infraestrutura na Nuvem...')
   const [stepIndex, setStepIndex] = useState(0)
+  const [progress, setProgress] = useState(15)
   const supabase = createClient()
   const router = useRouter()
 
@@ -61,15 +62,19 @@ export function DesktopBuildTracker() {
       if (timeElapsed >= 180) { // 3 minutos
         setStepMessage('Finalizando e transferindo o arquivo...')
         setStepIndex(4)
+        setProgress(95)
       } else if (timeElapsed >= 120) { // 2 minutos
         setStepMessage('Empacotando instalador nativo (.msi)...')
         setStepIndex(3)
+        setProgress(85)
       } else if (timeElapsed >= 45) { // 45 segundos
         setStepMessage('Compilando motor Rust e Webviews...')
         setStepIndex(2)
+        setProgress(65)
       } else if (timeElapsed >= 15) { // 15 segundos
         setStepMessage('Instalando dependências e SDKs...')
         setStepIndex(1)
+        setProgress(35)
       }
     }, 5000);
 
@@ -81,7 +86,7 @@ export function DesktopBuildTracker() {
 
   const handleDownloadClick = () => {
     setIsVisible(false)
-    router.push('/client/dashboard?tab=downloads')
+    router.push('/client/dashboard?tab=downloads&subtab=workspaces')
   }
 
   return (
@@ -134,7 +139,12 @@ export function DesktopBuildTracker() {
 
           {status === 'pending' && (
             <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-1.5 rounded-full overflow-hidden mt-1">
-              <div className="h-full bg-indigo-500 w-1/3 animate-pulse rounded-full" />
+              <div 
+                className="h-full bg-indigo-500 rounded-full transition-all duration-1000 ease-out relative overflow-hidden" 
+                style={{ width: `${progress}%` }}
+              >
+                <div className="absolute top-0 left-0 w-full h-full bg-white/20 animate-pulse" />
+              </div>
             </div>
           )}
 
