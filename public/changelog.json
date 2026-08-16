@@ -1,4 +1,19 @@
 {
+  "v1.0.5": {
+    "date": "2026-08-16",
+    "pt": [
+      "Novo Rastreador de Builds Desktop: Acompanhe o status, progresso e histórico de compilações em tempo real com facilidade.",
+      "Central de Gerenciamento de Arquivos e Workspaces: Interface dedicada para download simplificado de arquivos e organização inteligente dos seus espaços de trabalho."
+    ],
+    "en": [
+      "New Desktop Build Tracker: Easily monitor build progress, status, and history in real time.",
+      "File & Workspace Management Hub: A dedicated interface for seamless build downloads and smarter workspace organization."
+    ],
+    "es": [
+      "Nuevo Rastreador de Builds Desktop: Monitorea el progreso, estado e historial de compilaciones en tiempo real con facilidad.",
+      "Centro de Gestión de Archivos y Espacios de Trabajo: Interfaz dedicada para descargas ágiles y organización inteligente de tus workspaces."
+    ]
+  },
   "v1.0.4": {
     "date": "2026-08-16",
     "pt": [
