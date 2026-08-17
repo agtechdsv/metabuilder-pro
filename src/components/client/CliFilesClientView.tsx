@@ -676,7 +676,7 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                 }
                   
                 const displayVersion = isWorkspaceTab
-                  ? new Date(file.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+                  ? (file.version ? `v${file.version} (${new Date(file.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })})` : new Date(file.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }))
                   : `v${file.version}`;
                   
                 const displayCategory = isWorkspaceTab

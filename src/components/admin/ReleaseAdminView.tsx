@@ -53,6 +53,29 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
   }
 
   useEffect(() => {
+    const fetchLatestVersion = async () => {
+      try {
+        const res = await fetch('/api/admin/release/history')
+        const data = await res.json()
+        if (data.releases && data.releases.length > 0) {
+          const latestTag = data.releases[0].tag_name || ''
+          const versionNumber = latestTag.replace(/^v/, '')
+          const parts = versionNumber.split('.')
+          if (parts.length === 3) {
+            const nextPatch = parseInt(parts[2]) + 1
+            setVersion(`${parts[0]}.${parts[1]}.${nextPatch}`)
+          } else {
+            setVersion(versionNumber)
+          }
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    }
+    fetchLatestVersion()
+  }, [])
+
+  useEffect(() => {
     if (activeTab === 'history') {
       fetchHistory()
     }

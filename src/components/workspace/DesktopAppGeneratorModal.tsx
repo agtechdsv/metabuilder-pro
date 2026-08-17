@@ -28,6 +28,7 @@ export function DesktopAppGeneratorModal({
   const [iconBase64, setIconBase64] = useState<string | null>(null)
   const [dbConnectionString, setDbConnectionString] = useState('')
   const [tunnelUrl, setTunnelUrl] = useState(defaultTunnelUrl || '')
+  const [version, setVersion] = useState('1.0.0')
 
   const [isGenerating, setIsGenerating] = useState(false)
 
@@ -39,8 +40,36 @@ export function DesktopAppGeneratorModal({
       setTunnelUrl(defaultTunnelUrl || '')
       setIconBase64(null)
       setDbConnectionString('')
+      
+      // Fetch last version to suggest next
+      const fetchLastVersion = async () => {
+        try {
+          const { createClient } = await import('@/utils/supabase/client')
+          const supabase = createClient()
+          const { data } = await supabase
+            .from('desktop_builds')
+            .select('version')
+            .eq('context_id', contextId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single()
+            
+          if (data?.version) {
+            const parts = data.version.split('.')
+            if (parts.length === 3) {
+              const nextPatch = parseInt(parts[2]) + 1
+              setVersion(`${parts[0]}.${parts[1]}.${nextPatch}`)
+            } else {
+              setVersion(data.version)
+            }
+          } else {
+            setVersion('1.0.0')
+          }
+        } catch(e) {}
+      }
+      fetchLastVersion()
     }
-  }, [isOpen, defaultName, defaultDescription, defaultTunnelUrl])
+  }, [isOpen, defaultName, defaultDescription, defaultTunnelUrl, contextId])
 
   const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -90,7 +119,8 @@ export function DesktopAppGeneratorModal({
           appDescription,
           iconBase64,
           dbConnectionString,
-          tunnelUrl
+          tunnelUrl,
+          version
         })
       })
 
@@ -195,6 +225,19 @@ export function DesktopAppGeneratorModal({
                           value={appDescription}
                           onChange={e => setAppDescription(e.target.value)}
                           placeholder={t('workspace_components.desktop_generator.short_desc_placeholder', 'Ex: Sistema de Gestão Interna')}
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2">
+                          Versão do App
+                        </label>
+                        <input
+                          type="text"
+                          value={version}
+                          onChange={e => setVersion(e.target.value)}
+                          placeholder="Ex: 1.0.0"
                           className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                         />
                       </div>
