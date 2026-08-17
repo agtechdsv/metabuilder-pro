@@ -1,19 +1,4 @@
 {
-  "v1.0.6": {
-    "date": "2026-08-17",
-    "pt": [
-      "Nova Central de Downloads Desktop: Gerencie e acesse suas compilações de aplicativos desktop em uma interface unificada e intuitiva.",
-      "Acompanhamento de Progresso em Tempo Real: Visualize o status detalhado de download e geração de builds com integração nativa e indicador de progresso dinâmico."
-    ],
-    "en": [
-      "New Desktop Downloads Hub: Seamlessly manage and access your desktop application builds from a unified, intuitive interface.",
-      "Real-Time Download Tracking: Monitor the progress of your downloads and builds with native, accurate live status updates."
-    ],
-    "es": [
-      "Nuevo Centro de Descargas Desktop: Administre y acceda a las compilaciones de sus aplicaciones de escritorio desde una interfaz unificada e intuitiva.",
-      "Seguimiento de Descargas en Tiempo Real: Visualice el progreso detallado de la descarga y generación de builds con integración nativa y actualizaciones en vivo."
-    ]
-  },
   "v1.0.5": {
     "date": "2026-08-16",
     "pt": [
