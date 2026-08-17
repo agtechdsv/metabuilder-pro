@@ -128,7 +128,8 @@ export function DesktopAppGeneratorModal({
       })
 
       if (!response.ok) {
-        throw new Error('Falha ao iniciar geração')
+        const errJson = await response.json().catch(() => null)
+        throw new Error(errJson?.details || errJson?.error || 'Falha ao iniciar geração')
       }
 
       const responseData = await response.json()

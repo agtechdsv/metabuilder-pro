@@ -63,23 +63,43 @@ export async function POST(req: Request) {
     const expiresAt = new Date()
     expiresAt.setHours(expiresAt.getHours() + 48)
 
-    const { data: desktopBuild, error: buildInsertError } = await supabase
+    const insertPayload: any = {
+      user_id: user.id,
+      context_type: contextType,
+      context_id: contextId,
+      status: 'pending',
+      expires_at: expiresAt.toISOString(),
+      version: version || '1.0.0'
+    }
+    if (releaseNotes) {
+      insertPayload.release_notes = releaseNotes
+    }
+
+    let { data: desktopBuild, error: buildInsertError } = await supabase
       .from('desktop_builds')
-      .insert({
-        user_id: user.id,
-        context_type: contextType,
-        context_id: contextId,
-        status: 'pending',
-        expires_at: expiresAt.toISOString(),
-        version: version || '1.0.0',
-        release_notes: releaseNotes || null
-      })
+      .insert(insertPayload)
       .select('id')
       .single()
 
+    // Fallback: se a coluna release_notes ainda não existir no Supabase, tenta sem ela
+    if (buildInsertError && releaseNotes) {
+      console.warn('Tentativa com release_notes falhou, tentando fallback sem release_notes:', buildInsertError)
+      delete insertPayload.release_notes
+      const retryResult = await supabase
+        .from('desktop_builds')
+        .insert(insertPayload)
+        .select('id')
+        .single()
+      desktopBuild = retryResult.data
+      buildInsertError = retryResult.error
+    }
+
     if (buildInsertError || !desktopBuild) {
       console.error('Falha ao criar registro de build:', buildInsertError)
-      return NextResponse.json({ error: 'Falha ao inicializar o processo de build.' }, { status: 500 })
+      return NextResponse.json({ 
+        error: 'Falha ao inicializar o processo de build.',
+        details: buildInsertError?.message || 'Erro desconhecido'
+      }, { status: 500 })
     }
 
     // 4.2 Upload do ícone personalizado para o Supabase Storage se fornecido
