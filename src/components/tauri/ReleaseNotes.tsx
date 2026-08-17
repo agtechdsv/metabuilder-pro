@@ -31,7 +31,8 @@ export function ReleaseNotes({
   const [releaseNotesList, setReleaseNotesList] = useState<any[]>([])
   const [isFetchingNotes, setIsFetchingNotes] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
-  const [localVersion, setLocalVersion] = useState<string | null>(null)
+  const [localVersion, setLocalVersion] = useState<string | null>(null)  // display string
+  const [rawVersion, setRawVersion] = useState<string | null>(null)      // pure semver "1.0.0"
   const [mounted, setMounted] = useState(false)
   const [resolvedAppName, setResolvedAppName] = useState(initialAppName || '')
   const [resolvedIcon, setResolvedIcon] = useState<string | null>(initialIcon || null)
@@ -50,10 +51,12 @@ export function ReleaseNotes({
       try {
         const { getVersion } = await import('@tauri-apps/api/app')
         const v = await getVersion()
+        setRawVersion(v)  // e.g. "1.0.0" — used for comparison
         setLocalVersion(contextType === 'ide' ? `IDE Engine v${v}` : `v${v}`)
       } catch (e: any) {
-        console.error('Failed to get Tauri version', e)
-        setLocalVersion(`Erro: ${e.message || String(e)}`)
+        // ACL blocked or not available — stay silent, rawVersion stays null
+        console.warn('getVersion() not available in this context:', e?.message)
+        setLocalVersion(null)
       }
     }
     checkVersion()
@@ -110,7 +113,7 @@ export function ReleaseNotes({
 
   const effectiveTitle = contextType === 'ide'
     ? t('release_notes.title', 'Histórico de Atualizações')
-    : `${resolvedAppName || initialAppName || 'Aplicativo'} — Histórico de Versões${localVersion ? ` (${localVersion})` : ''}`
+    : `${resolvedAppName || initialAppName || 'Aplicativo'} — Histórico de Versões`
 
   const effectiveSubtitle = contextType === 'ide'
     ? t('release_notes.subtitle', 'Acompanhe as novidades do MetaBuilder PRO')
@@ -162,12 +165,11 @@ export function ReleaseNotes({
                 </div>
               ) : (
                 <>
-                  {releaseNotesList.length > 0 && localVersion && (
+                  {releaseNotesList.length > 0 && (
                     (() => {
-                      const installed = localVersion.replace('IDE Engine v', '').replace('v', '').trim()
-                      const latest = releaseNotesList[0]?.version?.replace('v', '')?.trim()
-                      const isTauriDesktop = localVersion && !localVersion.includes('Web App') && !localVersion.includes('Erro')
-                      const isOutdated = isTauriDesktop && latest && installed !== latest
+                      const installed = rawVersion  // pure "1.0.0" — null if ACL blocked
+                      const latest = releaseNotesList[0]?.version?.replace(/^v/, '')?.trim()
+                      const isOutdated = latest && (installed === null || installed !== latest)
 
                       if (isOutdated) {
                         return (
@@ -225,7 +227,8 @@ export function ReleaseNotes({
 
                   <div className="space-y-8 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-neutral-200 dark:before:via-neutral-800 before:to-transparent">
                     {releaseNotesList.map((release, i) => {
-                      const isCurrent = localVersion ? localVersion.includes(release.version.replace('v', '')) : false
+                      const releaseVer = release.version.replace(/^v/, '').trim()
+                      const isCurrent = rawVersion ? rawVersion === releaseVer : false
                       const isExpanded = expandedNote === release.version
                       const isLatest = i === 0
 
