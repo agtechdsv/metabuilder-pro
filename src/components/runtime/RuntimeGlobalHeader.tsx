@@ -1,6 +1,7 @@
 'use client'
 
-import { useParams, usePathname } from 'next/navigation'
+import { useParams, usePathname, useSearchParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { PanelLeftClose, PanelLeftOpen, Box, Home, ChevronRight, LayoutGrid } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { RuntimeHeaderActions } from '@/components/runtime/RuntimeHeaderActions'
@@ -33,6 +34,24 @@ export function RuntimeGlobalHeader({
   const { t } = useI18n()
   const params = useParams()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [isStandalone, setIsStandalone] = useState(false)
+
+  useEffect(() => {
+    const isParam = searchParams?.get('standalone') === 'true' || searchParams?.get('mode') === 'standalone'
+    if (isParam) {
+      setIsStandalone(true)
+      try {
+        sessionStorage.setItem(`standalone_${project.id}`, 'true')
+      } catch {}
+    } else {
+      try {
+        if (sessionStorage.getItem(`standalone_${project.id}`) === 'true') {
+          setIsStandalone(true)
+        }
+      } catch {}
+    }
+  }, [searchParams, project.id])
   
   const viewSlug = params?.view_slug as string
   const folderId = params?.folder_id?.[0] as string
@@ -55,8 +74,8 @@ export function RuntimeGlobalHeader({
         {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
       </button>
 
-      {/* Return to Portal (Only if accessed via Workspace Dash) */}
-      {baseUrl === `/${workspaceSlug}/${projectSlug}` && (
+      {/* Return to Portal (Only if accessed via Workspace Dash and not in standalone project mode) */}
+      {!isStandalone && baseUrl === `/${workspaceSlug}/${projectSlug}` && (
         <Link 
           href={`/${workspaceSlug}`}
           className="group flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-100/50 hover:bg-indigo-50 dark:bg-neutral-800/30 dark:hover:bg-indigo-500/10 text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 border border-transparent hover:border-indigo-200/50 dark:hover:border-indigo-500/30 transition-all text-[10px] font-black uppercase tracking-widest"

@@ -1207,7 +1207,7 @@ export function ProjectManager({
           contextId={selectedDesktopProject.id}
           defaultName={selectedDesktopProject.name}
           defaultDescription={selectedDesktopProject.description || ''}
-          defaultTunnelUrl={typeof window !== 'undefined' ? `${window.location.origin}/${workspaceSlug}/${selectedDesktopProject.slug}` : ''}
+          defaultTunnelUrl={typeof window !== 'undefined' ? `${window.location.origin}/${workspaceSlug}/${selectedDesktopProject.slug}?standalone=true` : ''}
         />
       )}
 

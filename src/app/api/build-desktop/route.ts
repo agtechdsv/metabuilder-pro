@@ -141,10 +141,13 @@ export async function POST(req: Request) {
           appName,
           appDescription,
           dbConnectionString,
-          tunnelUrl,
+          tunnelUrl: contextType === 'project' && tunnelUrl && !tunnelUrl.includes('standalone=true')
+            ? `${tunnelUrl}${tunnelUrl.includes('?') ? '&' : '?'}standalone=true`
+            : tunnelUrl,
           iconUrl, // Enviado como URL em vez do Base64 bruto para não exceder limites do Github
           contextType,
           contextId,
+          version: version || '1.0.0',
           userId: user.id,
           ...schemaPayload
         }

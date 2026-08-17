@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { LayoutTemplate, AlertCircle, Loader2, Eye, EyeOff, Fingerprint, ArrowLeft } from 'lucide-react'
 import { HeaderActions } from '@/components/layout/HeaderActions'
@@ -35,6 +35,7 @@ export function LoginPortalClient({
   customDomainType
 }: LoginPortalClientProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
   const { t } = useI18n()
 
@@ -46,6 +47,23 @@ export function LoginPortalClient({
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [showMfaModal, setShowMfaModal] = useState(false)
   const [pendingMfaUser, setPendingMfaUser] = useState<any>(null)
+  const [isStandalone, setIsStandalone] = useState(false)
+
+  useEffect(() => {
+    const isParam = searchParams?.get('standalone') === 'true' || searchParams?.get('mode') === 'standalone'
+    if (isParam) {
+      setIsStandalone(true)
+      try {
+        sessionStorage.setItem(`standalone_${project.id}`, 'true')
+      } catch {}
+    } else {
+      try {
+        if (sessionStorage.getItem(`standalone_${project.id}`) === 'true') {
+          setIsStandalone(true)
+        }
+      } catch {}
+    }
+  }, [searchParams, project.id])
 
   // Pre-load theme styles
   const theme = visualConfig.theme || 'dark'
@@ -238,12 +256,13 @@ export function LoginPortalClient({
     document.cookie = `${cookieName}=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=86400; SameSite=Lax`
     
     // Redireciona para o portal principal
+    const appendStandalone = isStandalone ? '?standalone=true' : ''
     if (isCustomDomain && customDomainType === 'workspace') {
-      window.location.href = `/${projectSlug}`
+      window.location.href = `/${projectSlug}${appendStandalone}`
     } else if (isCustomDomain) {
-      window.location.href = `/`
+      window.location.href = `/${appendStandalone}`
     } else {
-      window.location.href = `/${workspaceSlug}/${projectSlug}`
+      window.location.href = `/${workspaceSlug}/${projectSlug}${appendStandalone}`
     }
   }
   
@@ -406,7 +425,7 @@ export function LoginPortalClient({
               )}
 
               
-              {workspaceSlug && (
+              {!isStandalone && workspaceSlug && (
                 <div className="mt-6 text-center border-t border-neutral-100 dark:border-neutral-800 pt-6">
                   <a 
                     href={`/${workspaceSlug}`}

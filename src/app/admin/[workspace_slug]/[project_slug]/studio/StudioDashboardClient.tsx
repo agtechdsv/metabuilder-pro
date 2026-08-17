@@ -1621,7 +1621,7 @@ export function StudioDashboardClient({
           contextId={project.id}
           defaultName={project.name}
           defaultDescription={project.description || ''}
-          defaultTunnelUrl={typeof window !== 'undefined' ? `${window.location.origin}/${project.workspace?.slug || 'workspace'}/${project.slug}` : ''}
+          defaultTunnelUrl={typeof window !== 'undefined' ? `${window.location.origin}/${project.workspace?.slug || 'workspace'}/${project.slug}?standalone=true` : ''}
         />
 
         <Modal
